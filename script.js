@@ -418,17 +418,50 @@ function generateCoachingScript(metrics, strugglingAreas) {
     const firstName = metrics.name.trim().split(' ')[0];
     
     if (strugglingAreas.length === 0) {
-        return `${firstName}, your performance metrics demonstrate that you are consistently meeting or exceeding all targets. Continue building on these strengths!`;
+        const celebrationPhrases = [
+            `${firstName}, I want to take a moment to recognize your excellent work. You're hitting all your targets—keep up the great performance!`,
+            `${firstName}, your metrics are solid across the board. You're demonstrating consistent excellence. Great job!`,
+            `${firstName}, I'm impressed with your performance. You're meeting or exceeding every target. This is exactly what we want to see.`,
+            `Great work, ${firstName}! Your metrics show you're performing at a high level across all areas. Keep this momentum going!`
+        ];
+        return celebrationPhrases[Math.floor(Math.random() * celebrationPhrases.length)];
     }
     
-    let script = `${firstName}, I'd like to discuss opportunities for your continued professional development. I've identified ${strugglingAreas.length} area${strugglingAreas.length > 1 ? 's' : ''} where we can focus:\n\n`;
+    const openingPhrases = [
+        `Hi ${firstName}, I wanted to sit down and talk with you about your performance. I've looked at your metrics, and I'd like to help you improve in a few areas.`,
+        `${firstName}, thanks for taking the time to meet. I've reviewed your performance data, and I want to work with you on some development opportunities I've identified.`,
+        `${firstName}, I'd like to have a conversation with you about your continued growth. I see some areas where we can focus your efforts over the next period.`,
+        `${firstName}, let's talk about your performance. I've identified a few metrics where I think you have real opportunity to step up your game.`
+    ];
+    
+    let script = openingPhrases[Math.floor(Math.random() * openingPhrases.length)];
+    script += ` Specifically, I want to focus on ${strugglingAreas.length} area${strugglingAreas.length > 1 ? 's' : ''} where I know you can make real progress:\n\n`;
     
     strugglingAreas.forEach((area, index) => {
-        const tips = IMPROVEMENT_TIPS[area.metricKey] || 'Work with your supervisor on strategies.';
-        script += `${index + 1}. ${area.metricLabel}: Currently at ${area.actual}, target is ${area.target}.\n   HOW TO IMPROVE: ${tips}\n`;
+        const tips = IMPROVEMENT_TIPS[area.metricKey] || 'Let\'s work together on a strategy.';
+        const transitions = [
+            `First, let's talk about your ${area.metricLabel}.`,
+            `Let's start with ${area.metricLabel}.`,
+            `On ${area.metricLabel}—`,
+            `Looking at ${area.metricLabel},`
+        ];
+        
+        const transition = transitions[Math.floor(Math.random() * transitions.length)];
+        script += `${transition} You're currently at ${area.actual}, and we need to get you to ${area.target}. Here's what I want to see you focus on: ${tips}\n`;
+        
+        if (index < strugglingAreas.length - 1) {
+            script += `\n`;
+        }
     });
     
-    script += `\nLet's schedule regular check-ins to monitor progress. I'm committed to supporting your development.`;
+    const closingPhrases = [
+        `\n\nThese areas aren't about criticism—they're about helping you succeed. I know you can improve here, and I'm going to be with you every step of the way. Let's set up weekly check-ins so we can track your progress and make adjustments as needed. What do you think? Do you have any questions or concerns about this plan?`,
+        `\n\nI genuinely believe you're capable of hitting these targets. The good news is these are all things we can work on together. I'll check in with you regularly to see how you're progressing, and I'm here if you need resources or support. Sound good?`,
+        `\n\nLook, I'm not saying this to be critical—I'm saying it because I want to see you succeed. These improvements will make a real difference in your career. Let's set up a plan to tackle these together. I'm committed to helping you get there.`,
+        `\n\nThe bottom line is: I see potential in you, and I want to help you reach it. We'll tackle these areas one step at a time. I'd like to touch base weekly so we can celebrate wins and adjust our approach if needed. Are you ready to make this happen?`
+    ];
+    
+    script += closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
     
     return script;
 }
