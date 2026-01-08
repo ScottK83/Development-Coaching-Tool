@@ -37,6 +37,42 @@ header h1 {
     opacity: 0.9;
 }
 
+.header-nav {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.nav-tab {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.nav-tab:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.nav-tab.active {
+    background: white;
+    color: #003DA5;
+    border-color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
 main {
     padding: 30px;
 }
@@ -276,4 +312,22 @@ main {
     .results-header h2 {
         margin-bottom: 15px;
     }
+}
+
+.metric-editor {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.metric-editor h3 {
+    color: #003DA5;
+    margin-bottom: 15px;
+}
+
+.metric-editor-content {
+    display: grid;
+    gap: 15px;
 }

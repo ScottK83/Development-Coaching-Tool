@@ -11,10 +11,15 @@
         <header>
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching and resources for employee development</p>
+            <nav class="header-nav">
+                <button id="tabCoaching" class="nav-tab active" data-tab="coaching">Coaching</button>
+                <button id="tabResources" class="nav-tab" data-tab="resources">Manage Resources</button>
+            </nav>
         </header>
 
         <main>
-            <form id="coachingForm">
+            <!-- Coaching Tab -->
+            <div id="coachingTab" class="tab-content active">
                 <!-- Employee Information -->
                 <section class="form-section">
                     <h2>Employee Information</h2>
@@ -162,6 +167,17 @@
                     </section>
                 </div>
             </section>
+            </div>
+
+            <!-- Resources Management Tab -->
+            <div id="resourcesTab" class="tab-content">
+                <section class="form-section">
+                    <h2>Manage Custom Resources</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Add custom resources, links, and training materials for each metric. If you don't add resources here, the system will suggest finding resources online.</p>
+                    
+                    <div id="metricsResourcesManager"></div>
+                </section>
+            </div>
         </main>
     </div>
 
