@@ -193,7 +193,18 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`,
         `${employeeName}, let's talk about where you are and where we can help you get to. I've pulled your recent performance data and want to work with you on next steps.`,
         `Hey ${employeeName}, I wanted to connect with you about some areas where I think focused effort will really pay off for you.`,
-        `${employeeName}, I've been looking at your numbers and want to have an honest conversation about your development. This is about helping you succeed.`
+        `${employeeName}, I've been looking at your numbers and want to have an honest conversation about your development. This is about helping you succeed.`,
+        `${employeeName}, thanks for making time. I want to talk through some specific areas where I see opportunities for you to level up.`,
+        `Hi ${employeeName}, I pulled your recent metrics and think we should have a conversation about what's working and where we can improve.`,
+        `${employeeName}, I'm reaching out because I want to invest in your growth. Let's discuss some specific areas where you can make progress.`,
+        `Hey ${employeeName}, I've been reviewing your performance and I see some clear paths to improvement. Let's walk through them together.`,
+        `${employeeName}, I care about your success, so I want to be direct about some areas where you're not hitting the mark yet.`,
+        `Hi ${employeeName}, let's have a real conversation about your metrics. I'm here to help you figure out what needs to change.`,
+        `${employeeName}, I wanted to connect about your development. There are a few things I think we should focus on moving forward.`,
+        `Hey ${employeeName}, I know you're working hard, and I want to help you work smarter. Let's talk about a few key areas.`,
+        `${employeeName}, I've been tracking your performance and want to discuss how we can get you where you need to be.`,
+        `Hi ${employeeName}, I value our one-on-ones and wanted to use this time to dig into some specific improvement areas with you.`,
+        `${employeeName}, let's be real—there are some gaps we need to close. But I'm confident we can tackle them together.`
     ];
 
     const closings = [
@@ -203,7 +214,18 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         `I see a lot of potential in you, and I'm committed to helping you succeed. Let's reconnect soon.`,
         `Bottom line: I'm invested in your success. Let's set up time to check in regularly and make sure you're on track.`,
         `These changes won't happen overnight, but I know you can do this. Let's plan to meet weekly and track your progress together.`,
-        `I'm here as a resource for you. Reach out anytime you need help or have questions. Let's schedule our next check-in.`
+        `I'm here as a resource for you. Reach out anytime you need help or have questions. Let's schedule our next check-in.`,
+        `This is about setting you up for long-term success. Let's check in next week and see how things are going.`,
+        `I want to see you succeed, and I'm going to support you through this. Let's keep the conversation going.`,
+        `You've got what it takes—let's just sharpen these areas. Touch base with me in a few days on your progress.`,
+        `I'm not worried about you getting there. Just need to see consistent effort on these points. Let's talk again soon.`,
+        `We'll get through this together. Reach out if you hit any roadblocks or need guidance.`,
+        `I believe in you, and I know you can turn this around. Let's meet regularly to track your wins.`,
+        `Small improvements add up. Let's focus on progress, not perfection, and check in weekly.`,
+        `I'm committed to helping you grow. Let's make this a priority and revisit in our next one-on-one.`,
+        `This is fixable, and you're capable. Let's partner on this and celebrate the progress you make.`,
+        `You're not in this alone—I'm here to help you every step of the way. Let's connect again next week.`,
+        `Keep me posted on how it's going. I'm available anytime you need to talk through challenges.`
     ];
 
     const opening = openings[Math.floor(Math.random() * openings.length)];
