@@ -14,7 +14,7 @@ const TARGETS = {
         transfers: { max: 6 },
         overallSentiment: { min: 88 },
         positiveWord: { min: 86 },
-        negativeWord: { max: 17 }, // Below 83% is bad
+        negativeWord: { max: 17 },
         managingEmotions: { min: 95 },
         aht: { max: 440 },
         acw: { max: 60 },
@@ -71,7 +71,7 @@ async function searchForResources(strugglingAreas) {
 
     const resources = [];
     
-    // Build search URLs for each struggling area (user can click to explore)
+    // Build search URLs for each struggling area
     for (const query of searchQueries) {
         resources.push({
             query: query,
@@ -94,25 +94,62 @@ function generateEmailContent(employeeName, coachingEmail) {
 }
 
 // Initialize knowledge base URL fields
+function initializeKBFields() {
+    const container = document.getElementById('kbUrlsContainer');
+    container.innerHTML = `
+        <div class="form-group">
+            <label for="generalKB">General Knowledge Base (applies to all areas):</label>
+            <input type="url" id="generalKB" placeholder="https://example.com/kb">
+            <small>Leave blank if not needed</small>
+        </div>
+    `;
+}
+
+// Fetch and extract relevant content from a URL
+async function fetchKBContent(url, metric = '') {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'text/html,application/xhtml+xml' }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Remove script and style tags
+        doc.querySelectorAll('script, style').forEach(el => el.remove());
+
+        // Extract text content
+        let text = doc.body.innerText || doc.innerText;
+        
+        // Clean up excessive whitespace
+        text = text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 20)
+            .join('\n')
+            .substring(0, 1500);
+
+        return text || '';
+    } catch (error) {
+        console.warn(`Could not fetch KB from ${url}:`, error.message);
+        return '';
+    }
+}
+
+// Identify struggling areas
 function identifyStrugglingAreas(metrics) {
     const struggling = [];
     
-    // Check reliability metrics (0 is good)
-    if (metrics.safetyHazards > TARGETS.reliability.safetyHazards) {
-        struggling.push('safetyHazards');
-    }
-    if (metrics.accComplaints > TARGETS.reliability.accComplaints) {
-        struggling.push('accComplaints');
-    }
-    if (metrics.phishingClicks > TARGETS.reliability.phishingClicks) {
-        struggling.push('phishingClicks');
-    }
-    if (metrics.redFlags > TARGETS.reliability.redFlags) {
-        struggling.push('redFlags');
-    }
-    if (metrics.depositWaiver > TARGETS.reliability.depositWaiver) {
-        struggling.push('depositWaiver');
-    }
+    // Check reliability metrics
+    if (metrics.safetyHazards > TARGETS.reliability.safetyHazards) struggling.push('safetyHazards');
+    if (metrics.accComplaints > TARGETS.reliability.accComplaints) struggling.push('accComplaints');
+    if (metrics.phishingClicks > TARGETS.reliability.phishingClicks) struggling.push('phishingClicks');
+    if (metrics.redFlags > TARGETS.reliability.redFlags) struggling.push('redFlags');
+    if (metrics.depositWaiver > TARGETS.reliability.depositWaiver) struggling.push('depositWaiver');
 
     // Check driver metrics
     const driverMetrics = [
@@ -144,47 +181,11 @@ function identifyStrugglingAreas(metrics) {
     return struggling;
 }
 
-// Fetch and extract relevant content from a URL
-async function fetchKBContent(url, metric = '') {
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Accept': 'text/html,application/xhtml+xml' }
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        // Remove script and style tags
-        doc.querySelectorAll('script, style').forEach(el => el.remove());
-
-        // Extract text content
-        let text = doc.body.innerText || doc.innerText;
-        
-        // Clean up excessive whitespace
-        text = text
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 20) // Keep meaningful paragraphs
-            .join('\n')
-            .substring(0, 1500); // Limit to reasonable excerpt length
-
-        return text || '';
-    } catch (error) {
-        console.warn(`Could not fetch KB from ${url}:`, error.message);
-        return '';
-    }
-}
-
 // Generate coaching script with KB content
 async function generateCoachingScript(employeeName, pronouns, metrics, kbContent = '') {
     const pronounForms = getPronounForms(pronouns);
     const strugglingAreas = identifyStrugglingAreas(metrics);
 
-    // Multiple opening phrases for variety
     const openings = [
         `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
         `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
@@ -192,7 +193,6 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`
     ];
 
-    // Multiple closing phrases for variety
     const closings = [
         `I'm confident that with focus on these areas, you'll see real improvement. Let's touch base in two weeks to check progress.`,
         `I believe in your potential and want to support you in getting to the next level. Let's work together on this.`,
@@ -215,7 +215,6 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
             coachingBody += `${index + 1}. ${tip}\n`;
         });
 
-        // Add KB content if available
         if (kbContent.trim()) {
             coachingBody += `\n---\n\nHere are some relevant resources that might help:\n\n${kbContent}\n\n---\n`;
         }
@@ -226,36 +225,6 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
     coachingBody += `\n\n${closing}`;
 
     return coachingBody;
-}
-
-// Initialize knowledge base URL fields
-function initializeKBFields() {
-    const container = document.getElementById('kbUrlsContainer');
-    container.innerHTML = `
-        <div class="form-group">
-            <label for="generalKB">General Knowledge Base (applies to all areas):</label>
-            <input type="url" id="generalKB" placeholder="https://example.com/kb">
-            <small>Leave blank if not needed</small>
-        </div>
-    `;
-}
-
-// Display results
-async function displayResults(emailContent, employeeName, strugglingAreas) {
-    document.getElementById('resultName').textContent = employeeName;
-    document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
-    document.getElementById('resultsSection').style.display = 'block';
-    document.getElementById('coachingForm').style.display = 'none';
-    
-    // Search for and display relevant resources
-    const resources = await searchForResources(strugglingAreas);
-    displayResourceLinks(resources);
-    
-    // Store email content for Outlook integration
-    window.currentEmailData = {
-        name: employeeName,
-        content: emailContent
-    };
 }
 
 // Display resource links
@@ -283,9 +252,26 @@ function displayResourceLinks(resources) {
     container.innerHTML = html;
 }
 
-// Copy email to clipboard
+// Display results
+async function displayResults(emailContent, employeeName, strugglingAreas) {
+    document.getElementById('resultName').textContent = employeeName;
+    document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('coachingForm').style.display = 'none';
+    
+    // Search for and display relevant resources
+    const resources = await searchForResources(strugglingAreas);
+    displayResourceLinks(resources);
+    
+    // Store email content for Outlook integration
+    window.currentEmailData = {
+        name: employeeName,
+        content: emailContent
+    };
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize KB fields
     initializeKBFields();
 
     // Copy button
@@ -305,12 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const { name, content } = window.currentEmailData;
         const emailData = generateEmailContent(name, content);
         
-        // Create mailto link
         const subject = encodeURIComponent(emailData.subject);
         const body = encodeURIComponent(emailData.body);
         const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
         
-        // Open in default email client
         window.location.href = mailtoLink;
     });
 
@@ -329,14 +313,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const employeeName = document.getElementById('employeeName').value;
         const pronouns = document.getElementById('pronouns').value;
 
+        if (!employeeName || !pronouns) {
+            alert('Please fill in employee name and pronouns');
+            return;
+        }
+
         const metrics = {
-            // Reliability
             safetyHazards: parseFloat(document.getElementById('safetyHazards').value) || 0,
             accComplaints: parseFloat(document.getElementById('accComplaints').value) || 0,
             phishingClicks: parseFloat(document.getElementById('phishingClicks').value) || 0,
             redFlags: parseFloat(document.getElementById('redFlags').value) || 0,
             depositWaiver: parseFloat(document.getElementById('depositWaiver').value) || 0,
-            // Driver
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
             cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
             fcr: parseFloat(document.getElementById('fcr').value) || 0,
@@ -351,10 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
             reliability: parseFloat(document.getElementById('reliability').value) || 0
         };
 
-        // Identify struggling areas
         const strugglingAreas = identifyStrugglingAreas(metrics);
 
-        // Fetch KB content if provided
         let kbContent = '';
         const generalKBUrl = document.getElementById('generalKB')?.value;
         
@@ -365,53 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Generate coaching script
         const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent);
         displayResults(coachingEmail, employeeName, strugglingAreas);
     });
 });
-
-function getPronounForms(pronouns) {
-    const pronounMap = {
-        'he/him': ['he', 'him', 'his'],
-        'she/her': ['she', 'her', 'her'],
-        'they/them': ['they', 'them', 'their']
-    };
-    return pronounMap[pronouns] || ['they', 'them', 'their'];
-}
-
-function displayResources(strugglingAreas) {
-    const customResources = JSON.parse(localStorage.getItem('customResources') || '{}');
-    let html = '<h3>Development Resources by Metric</h3>';
-    
-    if (strugglingAreas.length === 0) {
-        html += '<div class="empty-state"><p>No additional resources needed.</p></div>';
-    } else {
-        strugglingAreas.forEach(area => {
-            html += `<div class="metric-resources"><h4>${area.metricLabel}</h4>`;
-            
-            const hasCustom = customResources[area.metricKey] && customResources[area.metricKey].some(r => r.title || r.url);
-            
-            if (hasCustom) {
-                html += `<div class="resource-links"><strong>Custom Resources:</strong>`;
-                customResources[area.metricKey].forEach(resource => {
-                    if (resource.title || resource.url) {
-                        html += `<a href="${resource.url || '#'}" class="resource-link" ${resource.url ? 'target="_blank"' : ''}>${resource.title || resource.url}</a>`;
-                    }
-                });
-                html += `</div>`;
-            } else {
-                html += `<div class="resource-links"><p style="color: #999; font-size: 0.9em;">📝 No custom resources added. Go to "Manage Resources" tab to add training materials, OSCAR links, etc.</p>`;
-                html += `<a href="https://www.google.com/search?q=${encodeURIComponent(area.metricLabel + ' improvement tips')}" class="resource-link" target="_blank">🔍 Search Google for "${area.metricLabel}"</a></div>`;
-            }
-            
-            html += `</div>`;
-        });
-    }
-    
-    document.getElementById('resourcesSection').innerHTML = html;
-}
-
-const style = document.createElement('style');
-style.textContent = `.metric-editor { margin-bottom: 30px; padding: 20px; background: white; border: 1px solid #ddd; border-radius: 8px; } .metric-editor h3 { color: #003DA5; margin-bottom: 15px; } .metric-editor-content { display: grid; gap: 15px; }`;
-document.head.appendChild(style);
