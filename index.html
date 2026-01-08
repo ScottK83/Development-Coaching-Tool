@@ -148,14 +148,22 @@
             <section id="resultsSection" style="display: none;">
                 <div class="results-header">
                     <h2>Coaching Email for <span id="resultName"></span></h2>
-                    <button id="copyEmail" class="btn-primary">Copy to Clipboard</button>
-                    <button id="newCoaching" class="btn-secondary">Generate New Email</button>
+                    <div class="button-group">
+                        <button id="copyEmail" class="btn-primary">Copy to Clipboard</button>
+                        <button id="outlookEmail" class="btn-primary">Open in Outlook</button>
+                        <button id="newCoaching" class="btn-secondary">Generate New Email</button>
+                    </div>
                 </div>
 
                 <div class="coaching-content">
                     <section class="coaching-section">
                         <h3>Email Ready to Send</h3>
                         <div id="coachingEmail" class="coaching-script"></div>
+                    </section>
+                    
+                    <section class="coaching-section">
+                        <h3>Relevant Resources</h3>
+                        <div id="resourcesLinks"></div>
                     </section>
                 </div>
             </section>

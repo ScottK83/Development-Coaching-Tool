@@ -48,7 +48,52 @@ function getPronounForms(pronounString) {
     };
     return pronounMap[pronounString] || pronounMap['they/them'];
 }
-// Identify struggling areas
+
+// Search the web for relevant resources
+async function searchForResources(strugglingAreas) {
+    const searchQueries = strugglingAreas.map(metric => {
+        const metricLabels = {
+            scheduleAdherence: "schedule adherence work training",
+            fcr: "first call resolution customer service",
+            transfers: "reducing transfers call center",
+            overallSentiment: "customer sentiment positive tone",
+            positiveWord: "positive communication customer service",
+            negativeWord: "avoiding negative language customer service",
+            managingEmotions: "emotional intelligence workplace",
+            aht: "call handling time efficiency",
+            acw: "after call work documentation",
+            holdTime: "reducing hold time customer service",
+            reliability: "attendance reliability workplace",
+            cxRepOverall: "customer experience excellence"
+        };
+        return metricLabels[metric] || metric;
+    });
+
+    const resources = [];
+    
+    // Build search URLs for each struggling area (user can click to explore)
+    for (const query of searchQueries) {
+        resources.push({
+            query: query,
+            searchUrl: `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+        });
+    }
+    
+    return resources;
+}
+
+// Generate email subject and body
+function generateEmailContent(employeeName, coachingEmail) {
+    const firstName = employeeName.trim().split(' ')[0];
+    const subject = `Development Coaching - ${firstName}'s Performance Review`;
+    
+    return {
+        subject: subject,
+        body: coachingEmail
+    };
+}
+
+// Initialize knowledge base URL fields
 function identifyStrugglingAreas(metrics) {
     const struggling = [];
     
@@ -97,6 +142,41 @@ function identifyStrugglingAreas(metrics) {
     });
 
     return struggling;
+}
+
+// Fetch and extract relevant content from a URL
+async function fetchKBContent(url, metric = '') {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'text/html,application/xhtml+xml' }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Remove script and style tags
+        doc.querySelectorAll('script, style').forEach(el => el.remove());
+
+        // Extract text content
+        let text = doc.body.innerText || doc.innerText;
+        
+        // Clean up excessive whitespace
+        text = text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 20) // Keep meaningful paragraphs
+            .join('\n')
+            .substring(0, 1500); // Limit to reasonable excerpt length
+
+        return text || '';
+    } catch (error) {
+        console.warn(`Could not fetch KB from ${url}:`, error.message);
+        return '';
+    }
 }
 
 // Generate coaching script with KB content
@@ -148,12 +228,59 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
     return coachingBody;
 }
 
+// Initialize knowledge base URL fields
+function initializeKBFields() {
+    const container = document.getElementById('kbUrlsContainer');
+    container.innerHTML = `
+        <div class="form-group">
+            <label for="generalKB">General Knowledge Base (applies to all areas):</label>
+            <input type="url" id="generalKB" placeholder="https://example.com/kb">
+            <small>Leave blank if not needed</small>
+        </div>
+    `;
+}
+
 // Display results
-function displayResults(emailContent, employeeName) {
+async function displayResults(emailContent, employeeName, strugglingAreas) {
     document.getElementById('resultName').textContent = employeeName;
     document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
     document.getElementById('resultsSection').style.display = 'block';
     document.getElementById('coachingForm').style.display = 'none';
+    
+    // Search for and display relevant resources
+    const resources = await searchForResources(strugglingAreas);
+    displayResourceLinks(resources);
+    
+    // Store email content for Outlook integration
+    window.currentEmailData = {
+        name: employeeName,
+        content: emailContent
+    };
+}
+
+// Display resource links
+function displayResourceLinks(resources) {
+    const container = document.getElementById('resourcesLinks');
+    
+    if (resources.length === 0) {
+        container.innerHTML = '<p>No resources found.</p>';
+        return;
+    }
+    
+    let html = '<p>Click below to search for resources related to struggling areas:</p><ul class="resource-list">';
+    
+    resources.forEach(resource => {
+        html += `
+            <li>
+                <a href="${resource.searchUrl}" target="_blank" rel="noopener noreferrer" class="resource-link">
+                    ${resource.query}
+                </a>
+            </li>
+        `;
+    });
+    
+    html += '</ul>';
+    container.innerHTML = html;
 }
 
 // Copy email to clipboard
@@ -169,6 +296,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => {
             alert('Failed to copy. Please try again.');
         });
+    });
+
+    // Outlook button
+    document.getElementById('outlookEmail')?.addEventListener('click', () => {
+        if (!window.currentEmailData) return;
+        
+        const { name, content } = window.currentEmailData;
+        const emailData = generateEmailContent(name, content);
+        
+        // Create mailto link
+        const subject = encodeURIComponent(emailData.subject);
+        const body = encodeURIComponent(emailData.body);
+        const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+        
+        // Open in default email client
+        window.location.href = mailtoLink;
     });
 
     // New email button
@@ -208,6 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
             reliability: parseFloat(document.getElementById('reliability').value) || 0
         };
 
+        // Identify struggling areas
+        const strugglingAreas = identifyStrugglingAreas(metrics);
+
         // Fetch KB content if provided
         let kbContent = '';
         const generalKBUrl = document.getElementById('generalKB')?.value;
@@ -221,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Generate coaching script
         const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent);
-        displayResults(coachingEmail, employeeName);
+        displayResults(coachingEmail, employeeName, strugglingAreas);
     });
 });
 
