@@ -189,15 +189,15 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
     const openings = [
         `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
         `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
-        `${employeeName}, I appreciate your commitment to the team. I wanted to discuss some areas where I see real potential for ${pronounForms.object} to grow.`,
+        `${employeeName}, I appreciate your commitment to the team. I wanted to discuss some areas where I see real potential for you to grow.`,
         `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`
     ];
 
     const closings = [
         `I'm confident that with focus on these areas, you'll see real improvement. Let's touch base in two weeks to check progress.`,
         `I believe in your potential and want to support you in getting to the next level. Let's work together on this.`,
-        `${pronounForms.possessive.charAt(0).toUpperCase() + pronounForms.possessive.slice(1)} growth is important to me, and I'm here to help. When can we check in again?`,
-        `I see a lot of potential in ${pronounForms.object}, and I'm committed to helping ${pronounForms.object} succeed. Let's reconnect soon.`
+        `Your growth is important to me, and I'm here to help. When can we check in again?`,
+        `I see a lot of potential in you, and I'm committed to helping you succeed. Let's reconnect soon.`
     ];
 
     const opening = openings[Math.floor(Math.random() * openings.length)];
@@ -219,7 +219,7 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
             coachingBody += `\n---\n\nHere are some relevant resources that might help:\n\n${kbContent}\n\n---\n`;
         }
 
-        coachingBody += `\nI see real potential in ${pronounForms.object}, and these improvements will make a meaningful difference in your development.`;
+        coachingBody += `\nI see real potential in you, and these improvements will make a meaningful difference in your development.`;
     }
 
     coachingBody += `\n\n${closing}`;
