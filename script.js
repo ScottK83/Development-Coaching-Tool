@@ -186,6 +186,10 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
     const pronounForms = getPronounForms(pronouns);
     const strugglingAreas = identifyStrugglingAreas(metrics);
 
+    // Get history for this employee to avoid repeating
+    const history = getEmployeeHistory(employeeName);
+    const usedCombos = history.map(h => `${h.openingIndex}-${h.closingIndex}`);
+
     const openings = [
         `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
         `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
@@ -228,8 +232,23 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         `Keep me posted on how it's going. I'm available anytime you need to talk through challenges.`
     ];
 
-    const opening = openings[Math.floor(Math.random() * openings.length)];
-    const closing = closings[Math.floor(Math.random() * closings.length)];
+    // Find unused combination
+    let openingIndex, closingIndex;
+    let attempts = 0;
+    do {
+        openingIndex = Math.floor(Math.random() * openings.length);
+        closingIndex = Math.floor(Math.random() * closings.length);
+        attempts++;
+        // If we've tried 50 times and all combos are used, reset history for this person
+        if (attempts > 50) {
+            console.warn(`All combinations used for ${employeeName}, resetting history`);
+            clearEmployeeHistory(employeeName);
+            break;
+        }
+    } while (usedCombos.includes(`${openingIndex}-${closingIndex}`));
+
+    const opening = openings[openingIndex];
+    const closing = closings[closingIndex];
 
     let coachingBody = opening + '\n\n';
 
@@ -260,7 +279,104 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
 
     coachingBody += `\n\n${closing}`;
 
+    // Save to history
+    saveToHistory(employeeName, coachingBody, openingIndex, closingIndex, strugglingAreas);
+
     return coachingBody;
+}
+
+// History tracking functions
+function getEmployeeHistory(employeeName) {
+    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    return history[employeeName] || [];
+}
+
+function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, strugglingAreas) {
+    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    
+    if (!history[employeeName]) {
+        history[employeeName] = [];
+    }
+    
+    history[employeeName].push({
+        date: new Date().toISOString(),
+        content: emailContent,
+        openingIndex: openingIndex,
+        closingIndex: closingIndex,
+        strugglingAreas: strugglingAreas
+    });
+    
+    localStorage.setItem('coachingHistory', JSON.stringify(history));
+}
+
+function clearEmployeeHistory(employeeName) {
+    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    delete history[employeeName];
+    localStorage.setItem('coachingHistory', JSON.stringify(history));
+}
+
+function getAllHistory() {
+    return JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+}
+
+function clearAllHistory() {
+    localStorage.removeItem('coachingHistory');
+    alert('All history cleared!');
+    location.reload();
+}
+
+function showHistory() {
+    const history = getAllHistory();
+    const historyContent = document.getElementById('historyContent');
+    
+    if (Object.keys(history).length === 0) {
+        historyContent.innerHTML = '<p class="empty-state">No coaching emails sent yet.</p>';
+    } else {
+        let html = '';
+        
+        for (const [name, emails] of Object.entries(history)) {
+            html += `<div class="history-employee">
+                <h3>${name} (${emails.length} email${emails.length > 1 ? 's' : ''})</h3>`;
+            
+            emails.forEach((email, index) => {
+                const date = new Date(email.date).toLocaleString();
+                html += `
+                    <div class="history-item">
+                        <div class="history-header">
+                            <strong>Email #${index + 1}</strong>
+                            <span>${date}</span>
+                        </div>
+                        <div class="history-preview">${email.content.substring(0, 200).replace(/\n/g, ' ')}...</div>
+                        <button class="btn-secondary view-full" data-name="${name}" data-index="${index}">View Full Email</button>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+        
+        historyContent.innerHTML = html;
+        
+        // Add click handlers for "View Full Email" buttons
+        document.querySelectorAll('.view-full').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const name = e.target.dataset.name;
+                const index = parseInt(e.target.dataset.index);
+                showFullEmail(name, index);
+            });
+        });
+    }
+    
+    document.getElementById('historySection').style.display = 'block';
+    document.getElementById('coachingForm').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+}
+
+function showFullEmail(name, index) {
+    const history = getAllHistory();
+    const email = history[name][index];
+    
+    alert(`Full Email to ${name}:\n\n${email.content}`);
 }
 
 // Display resource links
@@ -308,6 +424,24 @@ async function displayResults(emailContent, employeeName, strugglingAreas, resou
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeKBFields();
+
+    // View history button
+    document.getElementById('viewHistory')?.addEventListener('click', () => {
+        showHistory();
+    });
+
+    // Close history button
+    document.getElementById('closeHistory')?.addEventListener('click', () => {
+        document.getElementById('historySection').style.display = 'none';
+        document.getElementById('coachingForm').style.display = 'block';
+    });
+
+    // Clear all history button
+    document.getElementById('clearAllHistory')?.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all email history? This cannot be undone.')) {
+            clearAllHistory();
+        }
+    });
 
     // Copy button
     document.getElementById('copyEmail')?.addEventListener('click', () => {

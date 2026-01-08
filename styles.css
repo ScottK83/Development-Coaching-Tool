@@ -237,6 +237,52 @@ button {
     padding-left: 20px;
 }
 
+.resource-link:hover {
+    background: #bbdefb;
+    padding-left: 20px;
+}
+
+.history-employee {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #003DA5;
+}
+
+.history-employee h3 {
+    color: #003DA5;
+    margin-bottom: 15px;
+}
+
+.history-item {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.history-preview {
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.view-full {
+    padding: 8px 15px;
+    font-size: 0.9em;
+}
+
 @media (max-width: 768px) {
     header h1 {
         font-size: 1.8em;
