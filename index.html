@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Development Coaching Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Development Coaching Tool</h1>
+            <p class="subtitle">Personalized coaching and resources for employee development</p>
+        </header>
+
+        <main>
+            <form id="coachingForm">
+                <!-- Employee Information -->
+                <section class="form-section">
+                    <h2>Employee Information</h2>
+                    <div class="form-group">
+                        <label for="employeeName">Employee Name:</label>
+                        <input type="text" id="employeeName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pronouns">Pronouns:</label>
+                        <select id="pronouns" required>
+                            <option value="">Select pronouns</option>
+                            <option value="he/him">He/Him</option>
+                            <option value="she/her">She/Her</option>
+                            <option value="they/them">They/Them</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Metrics Input -->
+                <section class="form-section">
+                    <h2>Performance Metrics</h2>
+                    
+                    <h3>Reliability Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="form-group">
+                            <label for="safetyHazards">Emergency Safety Hazard Infractions:</label>
+                            <input type="number" id="safetyHazards" min="0" value="0" required>
+                            <span class="target">Target: 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="accComplaints">Substantiated ACC Complaints:</label>
+                            <input type="number" id="accComplaints" min="0" value="0" required>
+                            <span class="target">Target: 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="phishingClicks">Clicks on Phishing Emails:</label>
+                            <input type="number" id="phishingClicks" min="0" value="0" required>
+                            <span class="target">Target: 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="redFlags">Red Flag Events:</label>
+                            <input type="number" id="redFlags" min="0" value="0" required>
+                            <span class="target">Target: 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="depositWaiver">Deposit Waiver Accuracy (Infractions):</label>
+                            <input type="number" id="depositWaiver" min="0" value="0" required>
+                            <span class="target">Target: 0</span>
+                        </div>
+                    </div>
+
+                    <h3>Driver & Sub-driver Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="form-group">
+                            <label for="scheduleAdherence">Schedule Adherence (%):</label>
+                            <input type="number" id="scheduleAdherence" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 93%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cxRepOverall">CX Rep Overall (%):</label>
+                            <input type="number" id="cxRepOverall" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 80%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="fcr">First Call Resolution (%):</label>
+                            <input type="number" id="fcr" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 70%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="transfers">Transfers (%):</label>
+                            <input type="number" id="transfers" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: <6%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="overallSentiment">Overall Sentiment (%):</label>
+                            <input type="number" id="overallSentiment" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 88%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="positiveWord">Positive Word Choice (%):</label>
+                            <input type="number" id="positiveWord" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 86%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="negativeWord">Negative Word (%):</label>
+                            <input type="number" id="negativeWord" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 83%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="managingEmotions">Managing Emotions (%):</label>
+                            <input type="number" id="managingEmotions" min="0" max="100" step="0.1" required>
+                            <span class="target">Target: 95%</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="aht">AHT (seconds):</label>
+                            <input type="number" id="aht" min="0" step="1" required>
+                            <span class="target">Target: ≤440s</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="acw">ACW (seconds):</label>
+                            <input type="number" id="acw" min="0" step="1" required>
+                            <span class="target">Target: ≤60s</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="holdTime">Hold Time (seconds):</label>
+                            <input type="number" id="holdTime" min="0" step="1" required>
+                            <span class="target">Target: ≤30s</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="reliability">Reliability (hours):</label>
+                            <input type="number" id="reliability" min="0" step="0.1" required>
+                            <span class="target">Target: ≤16hrs</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Buttons -->
+                <section class="form-section">
+                    <button type="submit" class="btn-primary">Generate Coaching Plan</button>
+                    <button type="reset" class="btn-secondary">Clear Form</button>
+                </section>
+            </form>
+
+            <!-- Results Section -->
+            <section id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h2>Coaching Plan for <span id="resultName"></span></h2>
+                    <button id="newCoaching" class="btn-secondary">Generate New Plan</button>
+                </div>
+
+                <div class="coaching-content">
+                    <section id="strugglingAreasSection" class="coaching-section">
+                        <h3>Areas Requiring Focus</h3>
+                        <div id="strugglingAreas"></div>
+                    </section>
+
+                    <section class="coaching-section">
+                        <h3>Personalized Coaching Script</h3>
+                        <div id="coachingScript" class="coaching-script"></div>
+                    </section>
+
+                    <section id="resourcesSection" class="coaching-section">
+                        <h3>Development Resources by Metric</h3>
+                        <div id="resourcesList"></div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
