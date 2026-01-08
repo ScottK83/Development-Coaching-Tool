@@ -10,16 +10,11 @@
     <div class="container">
         <header>
             <h1>Development Coaching Tool</h1>
-            <p class="subtitle">Personalized coaching and resources for employee development</p>
-            <nav class="header-nav">
-                <button id="tabCoaching" class="nav-tab active" data-tab="coaching">Coaching</button>
-                <button id="tabResources" class="nav-tab" data-tab="resources">Manage Resources</button>
-            </nav>
+            <p class="subtitle">Personalized coaching with knowledge base guidance</p>
         </header>
 
         <main>
-            <!-- Coaching Tab -->
-            <div id="coachingTab" class="tab-content active">
+            <form id="coachingForm">
                 <!-- Employee Information -->
                 <section class="form-section">
                     <h2>Employee Information</h2>
@@ -41,7 +36,6 @@
                 <!-- Metrics Input -->
                 <section class="form-section">
                     <h2>Performance Metrics</h2>
-                    
                     <h3>Reliability Metrics</h3>
                     <div class="metrics-grid">
                         <div class="form-group">
@@ -136,9 +130,16 @@
                     </div>
                 </section>
 
+                <!-- Knowledge Base URLs -->
+                <section class="form-section">
+                    <h2>Knowledge Base (Optional)</h2>
+                    <p style="color: #666; font-size: 0.95em; margin-bottom: 15px;">Add links to relevant knowledge base articles. The system will pull relevant excerpts to include in the coaching email.</p>
+                    <div id="kbUrlsContainer"></div>
+                </section>
+
                 <!-- Buttons -->
                 <section class="form-section">
-                    <button type="submit" class="btn-primary">Generate Coaching Plan</button>
+                    <button type="submit" class="btn-primary">Generate Coaching Email</button>
                     <button type="reset" class="btn-secondary">Clear Form</button>
                 </section>
             </form>
@@ -146,38 +147,18 @@
             <!-- Results Section -->
             <section id="resultsSection" style="display: none;">
                 <div class="results-header">
-                    <h2>Coaching Plan for <span id="resultName"></span></h2>
-                    <button id="newCoaching" class="btn-secondary">Generate New Plan</button>
+                    <h2>Coaching Email for <span id="resultName"></span></h2>
+                    <button id="copyEmail" class="btn-primary">Copy to Clipboard</button>
+                    <button id="newCoaching" class="btn-secondary">Generate New Email</button>
                 </div>
 
                 <div class="coaching-content">
-                    <section id="strugglingAreasSection" class="coaching-section">
-                        <h3>Areas Requiring Focus</h3>
-                        <div id="strugglingAreas"></div>
-                    </section>
-
                     <section class="coaching-section">
-                        <h3>Personalized Coaching Script</h3>
-                        <div id="coachingScript" class="coaching-script"></div>
-                    </section>
-
-                    <section id="resourcesSection" class="coaching-section">
-                        <h3>Development Resources by Metric</h3>
-                        <div id="resourcesList"></div>
+                        <h3>Email Ready to Send</h3>
+                        <div id="coachingEmail" class="coaching-script"></div>
                     </section>
                 </div>
             </section>
-            </div>
-
-            <!-- Resources Management Tab -->
-            <div id="resourcesTab" class="tab-content">
-                <section class="form-section">
-                    <h2>Manage Custom Resources</h2>
-                    <p style="margin-bottom: 20px; color: #666;">Add custom resources, links, and training materials for each metric. If you don't add resources here, the system will suggest finding resources online.</p>
-                    
-                    <div id="metricsResourcesManager"></div>
-                </section>
-            </div>
         </main>
     </div>
 

@@ -1,470 +1,229 @@
+// Target metrics for comparison
 const TARGETS = {
     reliability: {
-        safetyHazards: { value: 0, type: 'exact', label: 'Emergency Safety Hazard Infractions' },
-        accComplaints: { value: 0, type: 'exact', label: 'Substantiated ACC Complaints' },
-        phishingClicks: { value: 0, type: 'exact', label: 'Clicks on Phishing Emails' },
-        redFlags: { value: 0, type: 'exact', label: 'Red Flag Events' },
-        depositWaiver: { value: 0, type: 'exact', label: 'Deposit Waiver Accuracy Infractions' }
+        safetyHazards: 0,
+        accComplaints: 0,
+        phishingClicks: 0,
+        redFlags: 0,
+        depositWaiver: 0
     },
-    drivers: {
-        scheduleAdherence: { value: 93, type: 'min', label: 'Schedule Adherence' },
-        cxRepOverall: { value: 80, type: 'min', label: 'CX Rep Overall' },
-        fcr: { value: 70, type: 'min', label: 'First Call Resolution' },
-        transfers: { value: 6, type: 'max', label: 'Transfers' },
-        overallSentiment: { value: 88, type: 'min', label: 'Overall Sentiment' },
-        positiveWord: { value: 86, type: 'min', label: 'Positive Word Choice' },
-        negativeWord: { value: 83, type: 'min', label: 'Negative Word' },
-        managingEmotions: { value: 95, type: 'min', label: 'Managing Emotions' },
-        aht: { value: 440, type: 'max', label: 'Average Handle Time' },
-        acw: { value: 60, type: 'max', label: 'ACW' },
-        holdTime: { value: 30, type: 'max', label: 'Hold Time' },
-        reliability: { value: 16, type: 'max', label: 'Reliability Hours' }
+    driver: {
+        scheduleAdherence: { min: 93 },
+        cxRepOverall: { min: 80 },
+        fcr: { min: 70 },
+        transfers: { max: 6 },
+        overallSentiment: { min: 88 },
+        positiveWord: { min: 86 },
+        negativeWord: { max: 17 }, // Below 83% is bad
+        managingEmotions: { min: 95 },
+        aht: { max: 440 },
+        acw: { max: 60 },
+        holdTime: { max: 30 },
+        reliability: { max: 16 }
     }
 };
 
+// Improvement tips for each metric
 const IMPROVEMENT_TIPS = {
-    scheduleAdherence: 'Set alarms 10 minutes before start time, plan commute night before, communicate delays immediately, log in exactly on time.',
-    cxRepOverall: 'Document interactions accurately, follow protocols consistently, respond within SLAs, seek supervisor feedback regularly.',
-    fcr: 'Understand issue fully before resolving, use knowledge base, have tools ready, consult before transferring.',
-    transfers: 'Exhaust all troubleshooting options, provide complete context to receiving dept, set customer expectations.',
-    overallSentiment: 'Use empathetic tone, acknowledge frustrations, provide solutions with confidence, end calls positively.',
-    positiveWord: 'Replace "I can\'t" with "Here\'s what I can do", use customer-focused language, practice positive alternatives.',
-    negativeWord: 'Create personal banned words list, identify triggers, practice neutral language, review recordings.',
-    managingEmotions: 'Use deep breathing, practice mindfulness, manage stress during breaks, reflect on difficult calls.',
-    aht: 'Have scripts ready, use keyboard shortcuts, stay solution-focused, avoid unnecessary conversation.',
-    acw: 'Complete documentation immediately, use templates, minimize personal breaks, focus only on notes.',
-    holdTime: 'Gather info first, use warm transfers, check departments before holding, set clear expectations.',
-    reliability: 'Track time away from desk, minimize personal time, plan breaks strategically.',
-    safetyHazards: 'Report all safety concerns immediately, follow protocols, attend training, be aware of hazards.',
-    accComplaints: 'Follow service protocols, document thoroughly, address concerns professionally.',
-    phishingClicks: 'Be suspicious of unexpected emails, never click unknown links, verify sender identity, report suspicious emails.',
-    redFlags: 'Know what constitutes a red flag, report immediately, document observations, follow escalation procedures.',
-    depositWaiver: 'Verify all information, double-check calculations, review guidelines, ask for clarification when unsure.'
+    scheduleAdherence: "Schedule Adherence: Focus on being present for all scheduled shifts. This is foundational to your team relying on you.",
+    cxRepOverall: "Customer Experience: Every interaction is an opportunity to exceed expectations. Work on consistency and attention to detail.",
+    fcr: "First Call Resolution: Before transferring, confirm you've exhausted available resources. Take time to understand the full issue first.",
+    transfers: "Transfers: Reduce transfers by building your product knowledge and taking time to fully understand customer needs before responding.",
+    overallSentiment: "Overall Sentiment: Let your enthusiasm for helping customers shine through. Your tone sets the temperature for the conversation.",
+    positiveWord: "Positive Word Choice: Use constructive language. Say 'Let me find out' instead of 'I don't know' to maintain customer confidence.",
+    negativeWord: "Negative Word Choice: Avoid language that sounds dismissive. Replace 'You'll have to...' with 'Let me help you...'",
+    managingEmotions: "Managing Emotions: You're doing great here! Keep maintaining composure even during challenging interactions.",
+    aht: "Average Handle Time: Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps.",
+    acw: "After Call Work: Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy.",
+    holdTime: "Hold Time: Minimize hold time by gathering information upfront. It improves customer experience and efficiency.",
+    reliability: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
 };
 
-let currentMetrics = {};
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTabs();
-    initializeResourcesManager();
-    setupFormHandlers();
-});
-
-function initializeTabs() {
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            switchTab(tabName);
-        });
-    });
-}
-
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-    
-    document.getElementById(tabName + 'Tab').classList.add('active');
-    document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
-}
-
-function initializeResourcesManager() {
-    const metricsManager = document.getElementById('metricsResourcesManager');
-    let html = '';
-    
-    const allMetrics = { ...TARGETS.reliability, ...TARGETS.drivers };
-    
-    for (const [key, target] of Object.entries(allMetrics)) {
-        html += `
-            <div class="metric-editor">
-                <h3>${target.label}</h3>
-                <div class="metric-editor-content">
-                    <div class="form-group">
-                        <label>Resource 1 - Title:</label>
-                        <input type="text" class="resource-title" data-metric="${key}" data-index="0" placeholder="e.g., Training Video Title">
-                    </div>
-                    <div class="form-group">
-                        <label>Resource 1 - URL:</label>
-                        <input type="text" class="resource-url" data-metric="${key}" data-index="0" placeholder="e.g., https://example.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Resource 2 - Title:</label>
-                        <input type="text" class="resource-title" data-metric="${key}" data-index="1" placeholder="e.g., Guide or Article">
-                    </div>
-                    <div class="form-group">
-                        <label>Resource 2 - URL:</label>
-                        <input type="text" class="resource-url" data-metric="${key}" data-index="1" placeholder="e.g., https://example.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Resource 3 - Title:</label>
-                        <input type="text" class="resource-title" data-metric="${key}" data-index="2" placeholder="e.g., Internal Training">
-                    </div>
-                    <div class="form-group">
-                        <label>Resource 3 - URL:</label>
-                        <input type="text" class="resource-url" data-metric="${key}" data-index="2" placeholder="e.g., https://example.com">
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    metricsManager.innerHTML = html;
-    
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'btn-primary';
-    saveBtn.textContent = 'Save All Resources';
-    saveBtn.addEventListener('click', saveCustomResources);
-    metricsManager.appendChild(saveBtn);
-    
-    loadCustomResources();
-}
-
-function loadCustomResources() {
-    const customResources = JSON.parse(localStorage.getItem('customResources') || '{}');
-    
-    for (const [metric, resources] of Object.entries(customResources)) {
-        if (Array.isArray(resources)) {
-            resources.forEach((resource, index) => {
-                const titleInput = document.querySelector(`input.resource-title[data-metric="${metric}"][data-index="${index}"]`);
-                const urlInput = document.querySelector(`input.resource-url[data-metric="${metric}"][data-index="${index}"]`);
-                
-                if (titleInput && resource.title) titleInput.value = resource.title;
-                if (urlInput && resource.url) urlInput.value = resource.url;
-            });
-        }
-    }
-}
-
-function saveCustomResources() {
-    const customResources = {};
-    
-    document.querySelectorAll('input.resource-title').forEach(input => {
-        const metric = input.dataset.metric;
-        const index = parseInt(input.dataset.index);
-        const title = input.value.trim();
-        const urlInput = document.querySelector(`input.resource-url[data-metric="${metric}"][data-index="${index}"]`);
-        const url = urlInput ? urlInput.value.trim() : '';
-        
-        if (title || url) {
-            if (!customResources[metric]) {
-                customResources[metric] = [{}, {}, {}];
-            }
-            customResources[metric][index] = { title, url };
-        }
-    });
-    
-    localStorage.setItem('customResources', JSON.stringify(customResources));
-    alert('Resources saved successfully!');
-}
-
-function setupFormHandlers() {
-    const coachingTab = document.getElementById('coachingTab');
-    
-    coachingTab.innerHTML = `
-        <form id="coachingForm">
-            <section class="form-section">
-                <h2>Employee Information</h2>
-                <div class="form-group">
-                    <label for="employeeName">Employee Name:</label>
-                    <input type="text" id="employeeName" required>
-                </div>
-                <div class="form-group">
-                    <label for="pronouns">Pronouns:</label>
-                    <select id="pronouns" required>
-                        <option value="">Select pronouns</option>
-                        <option value="he/him">He/Him</option>
-                        <option value="she/her">She/Her</option>
-                        <option value="they/them">They/Them</option>
-                    </select>
-                </div>
-            </section>
-
-            <section class="form-section">
-                <h2>Performance Metrics</h2>
-                <h3>Reliability Metrics</h3>
-                <div class="metrics-grid">
-                    <div class="form-group">
-                        <label for="safetyHazards">Emergency Safety Hazard Infractions:</label>
-                        <input type="number" id="safetyHazards" min="0" value="0" required>
-                        <span class="target">Target: 0</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="accComplaints">Substantiated ACC Complaints:</label>
-                        <input type="number" id="accComplaints" min="0" value="0" required>
-                        <span class="target">Target: 0</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="phishingClicks">Clicks on Phishing Emails:</label>
-                        <input type="number" id="phishingClicks" min="0" value="0" required>
-                        <span class="target">Target: 0</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="redFlags">Red Flag Events:</label>
-                        <input type="number" id="redFlags" min="0" value="0" required>
-                        <span class="target">Target: 0</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="depositWaiver">Deposit Waiver Accuracy (Infractions):</label>
-                        <input type="number" id="depositWaiver" min="0" value="0" required>
-                        <span class="target">Target: 0</span>
-                    </div>
-                </div>
-
-                <h3>Driver & Sub-driver Metrics</h3>
-                <div class="metrics-grid">
-                    <div class="form-group">
-                        <label for="scheduleAdherence">Schedule Adherence (%):</label>
-                        <input type="number" id="scheduleAdherence" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 93%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="cxRepOverall">CX Rep Overall (%):</label>
-                        <input type="number" id="cxRepOverall" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 80%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="fcr">First Call Resolution (%):</label>
-                        <input type="number" id="fcr" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 70%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="transfers">Transfers (%):</label>
-                        <input type="number" id="transfers" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: <6%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="overallSentiment">Overall Sentiment (%):</label>
-                        <input type="number" id="overallSentiment" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 88%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="positiveWord">Positive Word Choice (%):</label>
-                        <input type="number" id="positiveWord" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 86%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="negativeWord">Negative Word (%):</label>
-                        <input type="number" id="negativeWord" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 83%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="managingEmotions">Managing Emotions (%):</label>
-                        <input type="number" id="managingEmotions" min="0" max="100" step="0.1" required>
-                        <span class="target">Target: 95%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="aht">AHT (seconds):</label>
-                        <input type="number" id="aht" min="0" step="1" required>
-                        <span class="target">Target: ≤440s</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="acw">ACW (seconds):</label>
-                        <input type="number" id="acw" min="0" step="1" required>
-                        <span class="target">Target: ≤60s</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="holdTime">Hold Time (seconds):</label>
-                        <input type="number" id="holdTime" min="0" step="1" required>
-                        <span class="target">Target: ≤30s</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="reliability">Reliability (hours):</label>
-                        <input type="number" id="reliability" min="0" step="0.1" required>
-                        <span class="target">Target: ≤16hrs</span>
-                    </div>
-                </div>
-            </section>
-
-            <section class="form-section">
-                <button type="submit" class="btn-primary">Generate Coaching Plan</button>
-                <button type="reset" class="btn-secondary">Clear Form</button>
-            </section>
-        </form>
-
-        <section id="resultsSection" style="display: none;">
-            <div class="results-header">
-                <h2>Coaching Plan for <span id="resultName"></span></h2>
-                <button id="newCoaching" class="btn-secondary">Generate New Plan</button>
-            </div>
-            <div class="coaching-content">
-                <section id="strugglingAreasSection" class="coaching-section">
-                    <h3>Areas Requiring Focus</h3>
-                    <div id="strugglingAreas"></div>
-                </section>
-                <section class="coaching-section">
-                    <h3>Personalized Coaching Script</h3>
-                    <div id="coachingScript" class="coaching-script"></div>
-                </section>
-                <section id="resourcesSection" class="coaching-section">
-                    <h3>Development Resources by Metric</h3>
-                    <div id="resourcesList"></div>
-                </section>
-            </div>
-        </section>
-    `;
-    
-    document.getElementById('coachingForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        generateCoachingPlan();
-    });
-    
-    document.getElementById('coachingForm').addEventListener('reset', function() {
-        document.getElementById('resultsSection').style.display = 'none';
-    });
-    
-    document.getElementById('newCoaching').addEventListener('click', function() {
-        document.getElementById('coachingForm').reset();
-        document.getElementById('resultsSection').style.display = 'none';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
-
-function generateCoachingPlan() {
-    const employeeName = document.getElementById('employeeName').value;
-    const pronouns = document.getElementById('pronouns').value;
-    
-    currentMetrics = {
-        name: employeeName,
-        pronouns: pronouns,
-        reliability: {
-            safetyHazards: parseFloat(document.getElementById('safetyHazards').value),
-            accComplaints: parseFloat(document.getElementById('accComplaints').value),
-            phishingClicks: parseFloat(document.getElementById('phishingClicks').value),
-            redFlags: parseFloat(document.getElementById('redFlags').value),
-            depositWaiver: parseFloat(document.getElementById('depositWaiver').value)
-        },
-        drivers: {
-            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value),
-            cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value),
-            fcr: parseFloat(document.getElementById('fcr').value),
-            transfers: parseFloat(document.getElementById('transfers').value),
-            overallSentiment: parseFloat(document.getElementById('overallSentiment').value),
-            positiveWord: parseFloat(document.getElementById('positiveWord').value),
-            negativeWord: parseFloat(document.getElementById('negativeWord').value),
-            managingEmotions: parseFloat(document.getElementById('managingEmotions').value),
-            aht: parseFloat(document.getElementById('aht').value),
-            acw: parseFloat(document.getElementById('acw').value),
-            holdTime: parseFloat(document.getElementById('holdTime').value),
-            reliability: parseFloat(document.getElementById('reliability').value)
-        }
+// Pronouns handling
+function getPronounForms(pronounString) {
+    const pronounMap = {
+        'he/him': { subject: 'he', object: 'him', possessive: 'his', reflexive: 'himself' },
+        'she/her': { subject: 'she', object: 'her', possessive: 'her', reflexive: 'herself' },
+        'they/them': { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' }
     };
-    
-    const strugglingAreas = identifyStrugglingAreas(currentMetrics);
-    displayResults(strugglingAreas);
-    document.getElementById('resultsSection').style.display = 'block';
-    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+    return pronounMap[pronounString] || pronounMap['they/them'];
 }
-
+// Identify struggling areas
 function identifyStrugglingAreas(metrics) {
     const struggling = [];
     
-    for (const [key, value] of Object.entries(metrics.reliability)) {
-        const target = TARGETS.reliability[key];
-        if (value !== target.value) {
-            struggling.push({
-                metricKey: key,
-                metricLabel: target.label,
-                actual: value,
-                target: target.value,
-                type: target.type
-            });
-        }
+    // Check reliability metrics (0 is good)
+    if (metrics.safetyHazards > TARGETS.reliability.safetyHazards) {
+        struggling.push('safetyHazards');
     }
-    
-    for (const [key, value] of Object.entries(metrics.drivers)) {
-        const target = TARGETS.drivers[key];
-        let isStrugging = false;
-        
-        if (target.type === 'min' && value < target.value) {
-            isStrugging = true;
-        } else if (target.type === 'max' && value > target.value) {
-            isStrugging = true;
-        }
-        
-        if (isStrugging) {
-            struggling.push({
-                metricKey: key,
-                metricLabel: target.label,
-                actual: value,
-                target: target.value,
-                type: target.type
-            });
-        }
+    if (metrics.accComplaints > TARGETS.reliability.accComplaints) {
+        struggling.push('accComplaints');
     }
-    
+    if (metrics.phishingClicks > TARGETS.reliability.phishingClicks) {
+        struggling.push('phishingClicks');
+    }
+    if (metrics.redFlags > TARGETS.reliability.redFlags) {
+        struggling.push('redFlags');
+    }
+    if (metrics.depositWaiver > TARGETS.reliability.depositWaiver) {
+        struggling.push('depositWaiver');
+    }
+
+    // Check driver metrics
+    const driverMetrics = [
+        { key: 'scheduleAdherence', value: metrics.scheduleAdherence, target: TARGETS.driver.scheduleAdherence },
+        { key: 'cxRepOverall', value: metrics.cxRepOverall, target: TARGETS.driver.cxRepOverall },
+        { key: 'fcr', value: metrics.fcr, target: TARGETS.driver.fcr },
+        { key: 'transfers', value: metrics.transfers, target: TARGETS.driver.transfers },
+        { key: 'overallSentiment', value: metrics.overallSentiment, target: TARGETS.driver.overallSentiment },
+        { key: 'positiveWord', value: metrics.positiveWord, target: TARGETS.driver.positiveWord },
+        { key: 'negativeWord', value: metrics.negativeWord, target: TARGETS.driver.negativeWord },
+        { key: 'managingEmotions', value: metrics.managingEmotions, target: TARGETS.driver.managingEmotions },
+        { key: 'aht', value: metrics.aht, target: TARGETS.driver.aht },
+        { key: 'acw', value: metrics.acw, target: TARGETS.driver.acw },
+        { key: 'holdTime', value: metrics.holdTime, target: TARGETS.driver.holdTime },
+        { key: 'reliability', value: metrics.reliability, target: TARGETS.driver.reliability }
+    ];
+
+    driverMetrics.forEach(metric => {
+        const target = metric.target;
+        const isMin = 'min' in target;
+        
+        if (isMin && metric.value < target.min) {
+            struggling.push(metric.key);
+        } else if (!isMin && metric.value > target.max) {
+            struggling.push(metric.key);
+        }
+    });
+
     return struggling;
 }
 
-function displayResults(strugglingAreas) {
-    const firstName = currentMetrics.name.trim().split(' ')[0];
-    document.getElementById('resultName').textContent = firstName;
-    
+// Generate coaching script with KB content
+async function generateCoachingScript(employeeName, pronouns, metrics, kbContent = '') {
+    const pronounForms = getPronounForms(pronouns);
+    const strugglingAreas = identifyStrugglingAreas(metrics);
+
+    // Multiple opening phrases for variety
+    const openings = [
+        `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
+        `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
+        `${employeeName}, I appreciate your commitment to the team. I wanted to discuss some areas where I see real potential for ${pronounForms.object} to grow.`,
+        `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`
+    ];
+
+    // Multiple closing phrases for variety
+    const closings = [
+        `I'm confident that with focus on these areas, you'll see real improvement. Let's touch base in two weeks to check progress.`,
+        `I believe in your potential and want to support you in getting to the next level. Let's work together on this.`,
+        `${pronounForms.possessive.charAt(0).toUpperCase() + pronounForms.possessive.slice(1)} growth is important to me, and I'm here to help. When can we check in again?`,
+        `I see a lot of potential in ${pronounForms.object}, and I'm committed to helping ${pronounForms.object} succeed. Let's reconnect soon.`
+    ];
+
+    const opening = openings[Math.floor(Math.random() * openings.length)];
+    const closing = closings[Math.floor(Math.random() * closings.length)];
+
+    let coachingBody = opening + '\n\n';
+
     if (strugglingAreas.length === 0) {
-        document.getElementById('strugglingAreasSection').innerHTML = `<h3>Areas Requiring Focus</h3><div class="empty-state"><p>🎉 All metrics are meeting targets!</p></div>`;
+        coachingBody += `Based on your metrics, you're performing at or above targets across the board. That's excellent work! Keep up the momentum and continue to model these behaviors for the team.`;
     } else {
-        let html = '<h3>Areas Requiring Focus</h3>';
-        strugglingAreas.forEach(area => {
-            html += `<div class="struggling-area"><h4>${area.metricLabel}</h4><p><strong>Current:</strong> ${area.actual} | <strong>Target:</strong> ${area.target}</p></div>`;
+        coachingBody += `I've identified a few areas where I think we can focus your energy:\n\n`;
+
+        strugglingAreas.forEach((area, index) => {
+            const tip = IMPROVEMENT_TIPS[area] || `Focus on improving ${area}`;
+            coachingBody += `${index + 1}. ${tip}\n`;
         });
-        document.getElementById('strugglingAreasSection').innerHTML = html;
+
+        // Add KB content if available
+        if (kbContent.trim()) {
+            coachingBody += `\n---\n\nHere are some relevant resources that might help:\n\n${kbContent}\n\n---\n`;
+        }
+
+        coachingBody += `\nI see real potential in ${pronounForms.object}, and these improvements will make a meaningful difference in your development.`;
     }
-    
-    const coachingScript = generateCoachingScript(currentMetrics, strugglingAreas);
-    document.getElementById('coachingScript').textContent = coachingScript;
-    
-    displayResources(strugglingAreas);
+
+    coachingBody += `\n\n${closing}`;
+
+    return coachingBody;
 }
 
-function generateCoachingScript(metrics, strugglingAreas) {
-    const firstName = metrics.name.trim().split(' ')[0];
-    
-    if (strugglingAreas.length === 0) {
-        const celebrationPhrases = [
-            `${firstName}, I want to take a moment to recognize your excellent work. You're hitting all your targets—keep up the great performance!`,
-            `${firstName}, your metrics are solid across the board. You're demonstrating consistent excellence. Great job!`,
-            `${firstName}, I'm impressed with your performance. You're meeting or exceeding every target. This is exactly what we want to see.`,
-            `Great work, ${firstName}! Your metrics show you're performing at a high level across all areas. Keep this momentum going!`
-        ];
-        return celebrationPhrases[Math.floor(Math.random() * celebrationPhrases.length)];
-    }
-    
-    const openingPhrases = [
-        `Hi ${firstName}, I wanted to sit down and talk with you about your performance. I've looked at your metrics, and I'd like to help you improve in a few areas.`,
-        `${firstName}, thanks for taking the time to meet. I've reviewed your performance data, and I want to work with you on some development opportunities I've identified.`,
-        `${firstName}, I'd like to have a conversation with you about your continued growth. I see some areas where we can focus your efforts over the next period.`,
-        `${firstName}, let's talk about your performance. I've identified a few metrics where I think you have real opportunity to step up your game.`
-    ];
-    
-    let script = openingPhrases[Math.floor(Math.random() * openingPhrases.length)];
-    script += ` Specifically, I want to focus on ${strugglingAreas.length} area${strugglingAreas.length > 1 ? 's' : ''} where I know you can make real progress:\n\n`;
-    
-    strugglingAreas.forEach((area, index) => {
-        const tips = IMPROVEMENT_TIPS[area.metricKey] || 'Let\'s work together on a strategy.';
-        const transitions = [
-            `First, let's talk about your ${area.metricLabel}.`,
-            `Let's start with ${area.metricLabel}.`,
-            `On ${area.metricLabel}—`,
-            `Looking at ${area.metricLabel},`
-        ];
-        
-        const transition = transitions[Math.floor(Math.random() * transitions.length)];
-        script += `${transition} You're currently at ${area.actual}, and we need to get you to ${area.target}. Here's what I want to see you focus on: ${tips}\n`;
-        
-        if (index < strugglingAreas.length - 1) {
-            script += `\n`;
-        }
-    });
-    
-    const closingPhrases = [
-        `\n\nThese areas aren't about criticism—they're about helping you succeed. I know you can improve here, and I'm going to be with you every step of the way. Let's set up weekly check-ins so we can track your progress and make adjustments as needed. What do you think? Do you have any questions or concerns about this plan?`,
-        `\n\nI genuinely believe you're capable of hitting these targets. The good news is these are all things we can work on together. I'll check in with you regularly to see how you're progressing, and I'm here if you need resources or support. Sound good?`,
-        `\n\nLook, I'm not saying this to be critical—I'm saying it because I want to see you succeed. These improvements will make a real difference in your career. Let's set up a plan to tackle these together. I'm committed to helping you get there.`,
-        `\n\nThe bottom line is: I see potential in you, and I want to help you reach it. We'll tackle these areas one step at a time. I'd like to touch base weekly so we can celebrate wins and adjust our approach if needed. Are you ready to make this happen?`
-    ];
-    
-    script += closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
-    
-    return script;
+// Display results
+function displayResults(emailContent, employeeName) {
+    document.getElementById('resultName').textContent = employeeName;
+    document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('coachingForm').style.display = 'none';
 }
+
+// Copy email to clipboard
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize KB fields
+    initializeKBFields();
+
+    // Copy button
+    document.getElementById('copyEmail')?.addEventListener('click', () => {
+        const email = document.getElementById('coachingEmail').innerText;
+        navigator.clipboard.writeText(email).then(() => {
+            alert('Email copied to clipboard!');
+        }).catch(() => {
+            alert('Failed to copy. Please try again.');
+        });
+    });
+
+    // New email button
+    document.getElementById('newCoaching')?.addEventListener('click', () => {
+        document.getElementById('coachingForm').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('coachingForm').reset();
+        initializeKBFields();
+    });
+
+    // Form submission
+    document.getElementById('coachingForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const employeeName = document.getElementById('employeeName').value;
+        const pronouns = document.getElementById('pronouns').value;
+
+        const metrics = {
+            // Reliability
+            safetyHazards: parseFloat(document.getElementById('safetyHazards').value) || 0,
+            accComplaints: parseFloat(document.getElementById('accComplaints').value) || 0,
+            phishingClicks: parseFloat(document.getElementById('phishingClicks').value) || 0,
+            redFlags: parseFloat(document.getElementById('redFlags').value) || 0,
+            depositWaiver: parseFloat(document.getElementById('depositWaiver').value) || 0,
+            // Driver
+            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
+            cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
+            fcr: parseFloat(document.getElementById('fcr').value) || 0,
+            transfers: parseFloat(document.getElementById('transfers').value) || 0,
+            overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
+            positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
+            negativeWord: parseFloat(document.getElementById('negativeWord').value) || 0,
+            managingEmotions: parseFloat(document.getElementById('managingEmotions').value) || 0,
+            aht: parseFloat(document.getElementById('aht').value) || 0,
+            acw: parseFloat(document.getElementById('acw').value) || 0,
+            holdTime: parseFloat(document.getElementById('holdTime').value) || 0,
+            reliability: parseFloat(document.getElementById('reliability').value) || 0
+        };
+
+        // Fetch KB content if provided
+        let kbContent = '';
+        const generalKBUrl = document.getElementById('generalKB')?.value;
+        
+        if (generalKBUrl) {
+            kbContent = await fetchKBContent(generalKBUrl);
+            if (kbContent) {
+                kbContent = `**Related Knowledge Base Content:**\n\n${kbContent}`;
+            }
+        }
+
+        // Generate coaching script
+        const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent);
+        displayResults(coachingEmail, employeeName);
+    });
+});
 
 function getPronounForms(pronouns) {
     const pronounMap = {
