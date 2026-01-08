@@ -182,7 +182,7 @@ function identifyStrugglingAreas(metrics) {
 }
 
 // Generate coaching script with KB content
-async function generateCoachingScript(employeeName, pronouns, metrics, kbContent = '') {
+async function generateCoachingScript(employeeName, pronouns, metrics, kbContent = '', resourceLinks = []) {
     const pronounForms = getPronounForms(pronouns);
     const strugglingAreas = identifyStrugglingAreas(metrics);
 
@@ -190,14 +190,20 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
         `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
         `${employeeName}, I appreciate your commitment to the team. I wanted to discuss some areas where I see real potential for you to grow.`,
-        `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`
+        `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`,
+        `${employeeName}, let's talk about where you are and where we can help you get to. I've pulled your recent performance data and want to work with you on next steps.`,
+        `Hey ${employeeName}, I wanted to connect with you about some areas where I think focused effort will really pay off for you.`,
+        `${employeeName}, I've been looking at your numbers and want to have an honest conversation about your development. This is about helping you succeed.`
     ];
 
     const closings = [
         `I'm confident that with focus on these areas, you'll see real improvement. Let's touch base in two weeks to check progress.`,
         `I believe in your potential and want to support you in getting to the next level. Let's work together on this.`,
         `Your growth is important to me, and I'm here to help. When can we check in again?`,
-        `I see a lot of potential in you, and I'm committed to helping you succeed. Let's reconnect soon.`
+        `I see a lot of potential in you, and I'm committed to helping you succeed. Let's reconnect soon.`,
+        `Bottom line: I'm invested in your success. Let's set up time to check in regularly and make sure you're on track.`,
+        `These changes won't happen overnight, but I know you can do this. Let's plan to meet weekly and track your progress together.`,
+        `I'm here as a resource for you. Reach out anytime you need help or have questions. Let's schedule our next check-in.`
     ];
 
     const opening = openings[Math.floor(Math.random() * openings.length)];
@@ -220,6 +226,14 @@ async function generateCoachingScript(employeeName, pronouns, metrics, kbContent
         }
 
         coachingBody += `\nI see real potential in you, and these improvements will make a meaningful difference in your development.`;
+        
+        // Add resource links if available
+        if (resourceLinks && resourceLinks.length > 0) {
+            coachingBody += `\n\nI've found some resources that might help:\n`;
+            resourceLinks.forEach(resource => {
+                coachingBody += `• ${resource.query}: ${resource.searchUrl}\n`;
+            });
+        }
     }
 
     coachingBody += `\n\n${closing}`;
@@ -253,14 +267,13 @@ function displayResourceLinks(resources) {
 }
 
 // Display results
-async function displayResults(emailContent, employeeName, strugglingAreas) {
+async function displayResults(emailContent, employeeName, strugglingAreas, resources) {
     document.getElementById('resultName').textContent = employeeName;
     document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
     document.getElementById('resultsSection').style.display = 'block';
     document.getElementById('coachingForm').style.display = 'none';
     
-    // Search for and display relevant resources
-    const resources = await searchForResources(strugglingAreas);
+    // Display resource links in separate section
     displayResourceLinks(resources);
     
     // Store email content for Outlook integration
@@ -350,7 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent);
-        displayResults(coachingEmail, employeeName, strugglingAreas);
+        // Generate resources for email
+        const resources = await searchForResources(strugglingAreas);
+        
+        const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent, resources);
+        displayResults(coachingEmail, employeeName, strugglingAreas, resources);
     });
 });
