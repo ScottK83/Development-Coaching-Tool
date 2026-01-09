@@ -671,7 +671,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Coaching email for ${employeeName}, CSR. 250 words max. Friendly tone. Start "Hey ${employeeName}!"\n\n`;
+        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Conversational, use contractions. Start "Hey ${employeeName}!"\n\n`;
 
         // Add wins if any
         if (wins.length > 0) {
@@ -711,7 +711,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             prompt += `${isRepeat ? 'REPEAT - be direct:\n' : 'IMPROVE:\n'}`;
             detailedStruggles.forEach(s => prompt += `• ${s}\n`);
             
-            prompt += `\nTIPS:\n`;
+            prompt += `\nTIPS (bullet format):\n`;
             strugglingAreas.forEach(area => {
                 prompt += `• ${AREA_NAMES[area]}: ${getRandomTip(area)}\n`;
             });
@@ -719,6 +719,8 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             if (hasReliabilityIssue && metrics.reliability >= 16) {
                 prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
+            
+            prompt += `\n\nFor each tip: Start with "You're at X, need Y" then give casual advice. For word choice tips, use "Instead of [X], try [Y]" with examples.`;
         }
         
         // Add custom notes if provided
