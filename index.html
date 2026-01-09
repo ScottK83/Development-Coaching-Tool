@@ -12,8 +12,9 @@
         <header>
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
-            <div style="margin-top: 15px;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
                 <button id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
+                <button id="manageTips" class="btn-secondary">💡 Manage Tips</button>
             </div>
         </header>
 
@@ -206,6 +207,15 @@
                     </div>
                 </div>
                 <div id="dashboardContent" style="margin-top: 20px;"></div>
+            </section>
+
+            <!-- Tips Management Section -->
+            <section id="tipsManagementSection" style="display: none;">
+                <div class="results-header">
+                    <h2>💡 Manage Coaching Tips</h2>
+                    <button id="closeTipsManagement" class="btn-secondary">Close</button>
+                </div>
+                <div id="tipsManagementContent" style="margin-top: 20px;"></div>
             </section>
         </main>
     </div>

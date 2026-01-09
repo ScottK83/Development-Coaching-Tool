@@ -179,6 +179,137 @@ function mergeTips() {
     customTips = merged;
 }
 
+// Show tips management interface
+function showTipsManagement() {
+    const content = document.getElementById('tipsManagementContent');
+    
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666;">Manage coaching tips for each metric. Delete irrelevant tips or add your own custom tips.</p>
+        </div>
+    `;
+    
+    // Get all metrics
+    const metrics = Object.keys(AREA_NAMES);
+    
+    metrics.forEach(metricKey => {
+        const metricName = AREA_NAMES[metricKey];
+        const tips = customTips[metricKey] || [];
+        
+        html += `
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: white;">
+                <h3 style="color: #003DA5; margin-bottom: 15px;">${metricName}</h3>
+                
+                <div id="tips-${metricKey}" style="margin-bottom: 15px;">
+        `;
+        
+        if (tips.length === 0) {
+            html += `<p style="color: #999; font-style: italic;">No tips available for this metric.</p>`;
+        } else {
+            tips.forEach((tip, index) => {
+                html += `
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; align-items: start;">
+                        <div style="flex: 1;">
+                            <textarea id="tip-${metricKey}-${index}" style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;">${tip}</textarea>
+                        </div>
+                        <button onclick="saveTipEdit('${metricKey}', ${index})" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">💾 Save</button>
+                        <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">🗑️ Delete</button>
+                    </div>
+                `;
+            });
+        }
+        
+        html += `
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <textarea id="newTip-${metricKey}" placeholder="Add a new tip for ${metricName}..." style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+                    <button onclick="addNewTip('${metricKey}')" style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 5px;">➕ Add Tip</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    content.innerHTML = html;
+    
+    // Show the section
+    document.getElementById('tipsManagementSection').style.display = 'block';
+    document.getElementById('coachingForm').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'none';
+    document.getElementById('historySection').style.display = 'none';
+}
+
+// Add a new tip
+function addNewTip(metricKey) {
+    const textarea = document.getElementById(`newTip-${metricKey}`);
+    const newTip = textarea.value.trim();
+    
+    if (!newTip) {
+        alert('Please enter a tip before adding.');
+        return;
+    }
+    
+    // Add to user tips
+    if (!userTips[metricKey]) {
+        userTips[metricKey] = [];
+    }
+    userTips[metricKey].push(newTip);
+    
+    // Save and refresh
+    saveUserTips(userTips);
+    mergeTips();
+    showTipsManagement();
+    
+    alert('Tip added successfully!');
+}
+
+// Save edited tip
+function saveTipEdit(metricKey, tipIndex) {
+    const textarea = document.getElementById(`tip-${metricKey}-${tipIndex}`);
+    const editedTip = textarea.value.trim();
+    
+    if (!editedTip) {
+        alert('Tip cannot be empty. Use delete if you want to remove it.');
+        return;
+    }
+    
+    // Update the tip in customTips and userTips
+    if (!userTips[metricKey]) {
+        userTips[metricKey] = [];
+    }
+    
+    // Replace in both
+    customTips[metricKey][tipIndex] = editedTip;
+    userTips[metricKey] = customTips[metricKey];
+    
+    // Save and refresh
+    saveUserTips(userTips);
+    showTipsManagement();
+    
+    alert('Tip updated successfully!');
+}
+
+// Delete a tip
+function deleteTip(metricKey, tipIndex) {
+    if (!confirm('Are you sure you want to delete this tip?')) {
+        return;
+    }
+    
+    // Remove from customTips
+    customTips[metricKey].splice(tipIndex, 1);
+    
+    // Update userTips to match
+    userTips[metricKey] = customTips[metricKey];
+    
+    // Save and refresh
+    saveUserTips(userTips);
+    mergeTips();
+    showTipsManagement();
+    
+    alert('Tip deleted successfully!');
+}
+
 // Get random tip for a metric
 function getRandomTip(metric) {
     // First check custom tips
@@ -671,6 +802,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Employee dashboard button
     document.getElementById('employeeDashboard')?.addEventListener('click', () => {
         showEmployeeDashboard();
+    });
+
+    // Manage Tips button
+    document.getElementById('manageTips')?.addEventListener('click', () => {
+        showTipsManagement();
+    });
+
+    // Close Tips Management button
+    document.getElementById('closeTipsManagement')?.addEventListener('click', () => {
+        document.getElementById('tipsManagementSection').style.display = 'none';
+        document.getElementById('coachingForm').style.display = 'block';
     });
 
     // Close history button
