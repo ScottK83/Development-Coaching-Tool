@@ -671,7 +671,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Conversational, use contractions. Start "Hey ${employeeName}!"\n\n`;
+        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Conversational - like talking to a friend. Use contractions, vary sentence length, be natural. Start "Hey ${employeeName}!"\n\n`;
 
         // Add wins if any
         if (wins.length > 0) {
@@ -708,7 +708,12 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             const hasReliabilityIssue = strugglingAreas.includes('reliability');
             const isRepeat = isRepeatCoaching && strugglingAreas.some(area => areaCounts[area] > 0);
             
-            prompt += `${isRepeat ? 'REPEAT - be direct:\n' : 'IMPROVE:\n'}`;
+            if (isRepeat) {
+                prompt += `REPEAT COACHING - Use NEW wording, different examples, fresh approach. Don't repeat previous phrases:\n`;
+            } else {
+                prompt += `IMPROVE:\n`;
+            }
+            
             detailedStruggles.forEach(s => prompt += `• ${s}\n`);
             
             prompt += `\nTIPS (bullet format):\n`;
@@ -720,7 +725,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
                 prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
             
-            prompt += `\n\nFor each tip: Start with "You're at X, need Y" then give casual advice. For word choice tips, use "Instead of [X], try [Y]" with examples.`;
+            prompt += `\n\nFor each tip: Start with "You're at X, need Y" then give casual, specific advice with real examples. For word choice tips, use "Instead of [X], try [Y]" format. Mix up your phrasing - keep it fresh and varied each time.`;
         }
         
         // Add custom notes if provided
