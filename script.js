@@ -11,6 +11,7 @@ const TARGETS = {
         scheduleAdherence: { min: 93 },
         cxRepOverall: { min: 80 },
         fcr: { min: 70 },
+        overallExperience: { min: 80 },
         transfers: { max: 6 },
         overallSentiment: { min: 88 },
         positiveWord: { min: 86 },
@@ -33,6 +34,7 @@ const AREA_NAMES = {
     scheduleAdherence: 'Schedule Adherence',
     cxRepOverall: 'Customer Experience',
     fcr: 'First Call Resolution',
+    overallExperience: 'Overall Experience',
     transfers: 'Transfers',
     overallSentiment: 'Overall Sentiment',
     positiveWord: 'Positive Word Choice',
@@ -199,6 +201,7 @@ function identifyStrugglingAreas(metrics) {
         { key: 'scheduleAdherence', value: metrics.scheduleAdherence, target: TARGETS.driver.scheduleAdherence },
         { key: 'cxRepOverall', value: metrics.cxRepOverall, target: TARGETS.driver.cxRepOverall },
         { key: 'fcr', value: metrics.fcr, target: TARGETS.driver.fcr },
+        { key: 'overallExperience', value: metrics.overallExperience, target: TARGETS.driver.overallExperience },
         { key: 'transfers', value: metrics.transfers, target: TARGETS.driver.transfers },
         { key: 'overallSentiment', value: metrics.overallSentiment, target: TARGETS.driver.overallSentiment },
         { key: 'positiveWord', value: metrics.positiveWord, target: TARGETS.driver.positiveWord },
@@ -211,8 +214,8 @@ function identifyStrugglingAreas(metrics) {
     ];
 
     driverMetrics.forEach(metric => {
-        // Skip survey-based metrics (FCR, CX Rep Overall) if they're empty (no surveys)
-        if ((metric.key === 'fcr' || metric.key === 'cxRepOverall') && (metric.value === '' || metric.value === null || metric.value === undefined)) {
+        // Skip survey-based metrics (FCR, CX Rep Overall, Overall Experience) if they're empty (no surveys)
+        if ((metric.key === 'fcr' || metric.key === 'cxRepOverall' || metric.key === 'overallExperience') && (metric.value === '' || metric.value === null || metric.value === undefined)) {
             return; // Skip this metric
         }
         
@@ -381,6 +384,7 @@ function diagnoseTrends(employeeName) {
         { key: 'scheduleAdherence', name: 'Schedule Adherence', unit: '%', target: TARGETS.driver.scheduleAdherence, isMin: true },
         { key: 'cxRepOverall', name: 'CX Rep Overall', unit: '%', target: TARGETS.driver.cxRepOverall, isMin: true },
         { key: 'fcr', name: 'First Call Resolution', unit: '%', target: TARGETS.driver.fcr, isMin: true },
+        { key: 'overallExperience', name: 'Overall Experience', unit: '%', target: TARGETS.driver.overallExperience, isMin: true },
         { key: 'transfers', name: 'Transfers', unit: '%', target: TARGETS.driver.transfers, isMin: false },
         { key: 'overallSentiment', name: 'Overall Sentiment', unit: '%', target: TARGETS.driver.overallSentiment, isMin: true },
         { key: 'positiveWord', name: 'Positive Word', unit: '%', target: TARGETS.driver.positiveWord, isMin: true },
@@ -759,6 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parseSurveyPercentage(row['RepSat%']),
                         fcr: parseSurveyPercentage(row['FCR%']),
+                        overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
                         transfers: parsePercentage(row['TransferS%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
@@ -814,6 +819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('scheduleAdherence').value = employee.scheduleAdherence ?? '';
         document.getElementById('cxRepOverall').value = employee.cxRepOverall ?? '';
         document.getElementById('fcr').value = employee.fcr ?? '';
+        document.getElementById('overallExperience').value = employee.overallExperience ?? '';
         document.getElementById('transfers').value = employee.transfers ?? '';
         document.getElementById('aht').value = employee.aht ?? '';
         document.getElementById('acw').value = employee.acw ?? '';
@@ -985,6 +991,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
             cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
             fcr: parseFloat(document.getElementById('fcr').value) || 0,
+            overallExperience: parseFloat(document.getElementById('overallExperience').value) || 0,
             transfers: parseFloat(document.getElementById('transfers').value) || 0,
             overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
             positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
@@ -1023,6 +1030,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         if (metrics.fcr && metrics.fcr >= TARGETS.driver.fcr.min) {
             wins.push(`FCR: ${metrics.fcr}% (Target: ${TARGETS.driver.fcr.min}%)`);
+        }
+        if (metrics.overallExperience && metrics.overallExperience >= TARGETS.driver.overallExperience.min) {
+            wins.push(`Overall Experience: ${metrics.overallExperience}% (Target: ${TARGETS.driver.overallExperience.min}%)`);
         }
         if (metrics.overallSentiment >= TARGETS.driver.overallSentiment.min) {
             wins.push(`Overall Sentiment: ${metrics.overallSentiment}% (Target: ${TARGETS.driver.overallSentiment.min}%)`);
