@@ -621,14 +621,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
-                        transfers: parsePercentage(row['TransferPct%']),
+                        transfers: parsePercentage(row['TransferS$']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
-                        holdTime: parsePercentage(row['Hold%']),
-                        reliability: parsePercentage(row['Reliability %']),
+                        holdTime: parseSeconds(row['Hold']),
+                        reliability: parsePercentage(row['Reliability Hrs']),
                         overallSentiment: parsePercentage(row['OverallSentimentScores%']),
                         positiveWord: parsePercentage(row['PositiveWordScores%']),
-                        negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
+                        negativeWord: parsePercentage(row['AvoidNegativeWordScores']),
                         managingEmotions: parsePercentage(row['ManageEmotionsScores'])
                     };
                     
