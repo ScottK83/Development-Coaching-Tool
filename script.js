@@ -1328,9 +1328,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const selectedIndex = e.target.value;
         
         if (selectedIndex === '' || !uploadedEmployeeData || uploadedEmployeeData.length === 0) {
-            // Hide metrics section if no employee selected
+            // Hide sections if no employee selected
             const metricsSection = document.getElementById('metricsSection');
+            const employeeInfoSection = document.getElementById('employeeInfoSection');
             if (metricsSection) metricsSection.style.display = 'none';
+            if (employeeInfoSection) employeeInfoSection.style.display = 'none';
             return;
         }
         
@@ -1340,8 +1342,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // Show metrics section
+        // Show employee info and metrics sections
+        const employeeInfoSection = document.getElementById('employeeInfoSection');
         const metricsSection = document.getElementById('metricsSection');
+        if (employeeInfoSection) employeeInfoSection.style.display = 'block';
         if (metricsSection) metricsSection.style.display = 'block';
         
         // Populate all form fields
