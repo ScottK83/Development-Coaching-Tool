@@ -700,6 +700,19 @@ WRITING GUIDELINES:
 FORMATTING:
 - NO em dashes (—) - use regular hyphens (-) or commas instead
 - Keep punctuation simple
+- Vary sentence length - mix short and longer sentences
+- Don't make every paragraph the same length
+- Use fragments occasionally if it sounds natural ("Really strong work on that.")
+
+CRITICAL - AVOID AI PATTERNS:
+- DON'T use bullet points or numbered lists
+- DON'T structure tips as "1. Do this, 2. Do that, 3. Try this"
+- Write tips in flowing paragraph form, naturally woven into the conversation
+- Vary sentence structure - don't start every sentence the same way
+- Use contractions naturally (you're, I'd, let's, don't)
+- Add slight imperfections - not everything needs to be perfectly parallel or balanced
+- Avoid phrases like "I hope this helps" or "Feel free to reach out" - too generic/AI
+- Don't over-explain - real people assume context and leave things implied
 
 CONTEXT:
 ${employeeName} is a customer service representative handling utility customer calls, billing inquiries, service requests, and technical support.
