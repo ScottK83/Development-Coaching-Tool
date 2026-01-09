@@ -716,24 +716,45 @@ function showEmployeeDashboard() {
     if (Object.keys(history).length === 0) {
         dashboardContent.innerHTML = '<p class="empty-state">No employees coached yet.</p>';
     } else {
-        // Get all unique date ranges
+        // Get all unique employees and date ranges
+        const allEmployees = Object.keys(history).sort();
         const allDateRanges = new Set();
+        const allDates = new Set();
+        
         Object.values(history).forEach(sessions => {
             sessions.forEach(s => {
                 if (s.dateRange) allDateRanges.add(s.dateRange);
+                const sessionDate = new Date(s.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                allDates.add(sessionDate);
             });
         });
         
         const sortedDateRanges = Array.from(allDateRanges).sort().reverse();
+        const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
         
-        let html = '<div style="margin-bottom: 20px;">';
-        html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Week:</label>';
-        html += '<select id="weekFilter" onchange="filterDashboardByWeek(this.value)" style="width: 100%; max-width: 400px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
-        html += '<option value="">All Weeks</option>';
-        sortedDateRanges.forEach(range => {
-            html += `<option value="${range}">${range}</option>`;
+        let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">';
+        
+        // Employee filter
+        html += '<div>';
+        html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Employee:</label>';
+        html += '<select id="employeeFilter" onchange="filterDashboard()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
+        html += '<option value="">All Employees</option>';
+        allEmployees.forEach(emp => {
+            html += `<option value="${emp}">${emp}</option>`;
         });
         html += '</select></div>';
+        
+        // Date filter
+        html += '<div>';
+        html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Date:</label>';
+        html += '<select id="dateFilter" onchange="filterDashboard()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
+        html += '<option value="">All Dates</option>';
+        sortedDates.forEach(date => {
+            html += `<option value="${date}">${date}</option>`;
+        });
+        html += '</select></div>';
+        
+        html += '</div>';
         
         // Sort employees alphabetically
         const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
@@ -769,7 +790,7 @@ function showEmployeeDashboard() {
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
                 html += `
-                    <div data-week="${session.dateRange || ''}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
+                    <div data-employee="${name}" data-date="${date}" data-week="${session.dateRange || ''}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
                         <button onclick="if(confirm('Delete this session?')) deleteSession('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${index})" 
                                 style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
                         <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${date}</div>
@@ -816,24 +837,34 @@ function showEmployeeDashboard() {
     document.getElementById('historySection').style.display = 'none';
 }
 
-// Filter dashboard by week
-function filterDashboardByWeek(weekRange) {
+// Filter dashboard by employee and date
+function filterDashboard() {
+    const selectedEmployee = document.getElementById('employeeFilter')?.value || '';
+    const selectedDate = document.getElementById('dateFilter')?.value || '';
     const history = getAllHistory();
-    const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
     
-    sortedEmployees.forEach(([name, sessions]) => {
+    Object.keys(history).forEach(name => {
         const uniqueId = name.replace(/\s+/g, '-');
+        const employeeCard = document.getElementById(`employee-card-${uniqueId}`);
         const employeeDiv = document.getElementById(`employee-${uniqueId}`);
         
-        if (!employeeDiv) return;
+        if (!employeeCard || !employeeDiv) return;
         
-        // Filter sessions
-        const sessionDivs = employeeDiv.querySelectorAll('[data-week]');
+        // Check employee filter
+        const employeeMatches = !selectedEmployee || name === selectedEmployee;
+        
+        // Filter sessions by date
+        const sessionDivs = employeeDiv.querySelectorAll('[data-date]');
         let visibleCount = 0;
         
         sessionDivs.forEach(div => {
-            const sessionWeek = div.getAttribute('data-week');
-            if (!weekRange || sessionWeek === weekRange) {
+            const sessionEmployee = div.getAttribute('data-employee');
+            const sessionDate = div.getAttribute('data-date');
+            
+            const employeeFilterMatch = !selectedEmployee || sessionEmployee === selectedEmployee;
+            const dateFilterMatch = !selectedDate || sessionDate === selectedDate;
+            
+            if (employeeFilterMatch && dateFilterMatch) {
                 div.style.display = 'block';
                 visibleCount++;
             } else {
@@ -841,10 +872,11 @@ function filterDashboardByWeek(weekRange) {
             }
         });
         
-        // Hide employee if no sessions match filter
-        const parentCard = document.getElementById(`employee-card-${uniqueId}`);
-        if (parentCard) {
-            parentCard.style.display = visibleCount > 0 ? 'block' : 'none';
+        // Hide employee card if no sessions match or employee doesn't match filter
+        if (!employeeMatches || visibleCount === 0) {
+            employeeCard.style.display = 'none';
+        } else {
+            employeeCard.style.display = 'block';
         }
     });
 }
