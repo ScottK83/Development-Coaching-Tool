@@ -335,19 +335,77 @@ function showHistory() {
         let html = '';
         
         for (const [name, emails] of Object.entries(history)) {
+            // Count how many times each area has been coached for this employee
+            const areaCounts = {};
+            emails.forEach(entry => {
+                if (entry.strugglingAreas) {
+                    entry.strugglingAreas.forEach(area => {
+                        areaCounts[area] = (areaCounts[area] || 0) + 1;
+                    });
+                }
+            });
+            
+            // Convert to readable names
+            const areaNames = {
+                scheduleAdherence: 'Schedule Adherence',
+                cxRepOverall: 'Customer Experience',
+                fcr: 'First Call Resolution',
+                transfers: 'Transfers',
+                overallSentiment: 'Overall Sentiment',
+                positiveWord: 'Positive Word Choice',
+                negativeWord: 'Negative Word Choice',
+                managingEmotions: 'Managing Emotions',
+                aht: 'Average Handle Time',
+                acw: 'After Call Work',
+                holdTime: 'Hold Time',
+                reliability: 'Reliability',
+                safetyHazards: 'Safety Hazards',
+                accComplaints: 'ACC Complaints',
+                phishingClicks: 'Phishing Clicks',
+                redFlags: 'Red Flag Events',
+                depositWaiver: 'Deposit Waiver'
+            };
+            
             html += `<div class="history-employee">
                 <h3>${name} (${emails.length} email${emails.length > 1 ? 's' : ''})</h3>`;
             
+            // Show coaching counts by area
+            if (Object.keys(areaCounts).length > 0) {
+                html += `<div style="margin: 10px 0; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <strong>Coached on:</strong><br>`;
+                
+                const sortedAreas = Object.entries(areaCounts)
+                    .sort((a, b) => b[1] - a[1]) // Sort by count, highest first
+                    .map(([area, count]) => {
+                        const readable = areaNames[area] || area;
+                        const color = count >= 3 ? '#dc3545' : count >= 2 ? '#ff9800' : '#28a745';
+                        return `<span style="display: inline-block; margin: 3px 8px 3px 0; padding: 3px 8px; background: ${color}; color: white; border-radius: 3px; font-size: 0.9em;">
+                            ${readable}: ${count}x
+                        </span>`;
+                    });
+                
+                html += sortedAreas.join('');
+                html += `</div>`;
+            }
+            
+            // Show individual emails
             emails.forEach((email, index) => {
                 const date = new Date(email.date).toLocaleString();
+                const strugglingList = email.strugglingAreas && email.strugglingAreas.length > 0 
+                    ? email.strugglingAreas.map(a => areaNames[a] || a).join(', ')
+                    : 'No issues identified';
+                
                 html += `
                     <div class="history-item">
                         <div class="history-header">
                             <strong>Email #${index + 1}</strong>
                             <span>${date}</span>
                         </div>
-                        <div class="history-preview">${email.content.substring(0, 200).replace(/\n/g, ' ')}...</div>
-                        <button class="btn-secondary view-full" data-name="${name}" data-index="${index}">View Full Email</button>
+                        <div style="font-size: 0.9em; color: #666; margin: 5px 0;">
+                            <strong>Areas:</strong> ${strugglingList}
+                        </div>
+                        <div class="history-preview">${email.content ? email.content.substring(0, 200).replace(/\n/g, ' ') + '...' : 'No email content saved'}</div>
+                        ${email.content ? `<button class="btn-secondary view-full" data-name="${name}" data-index="${index}">View Full Email</button>` : ''}
                     </div>
                 `;
             });
