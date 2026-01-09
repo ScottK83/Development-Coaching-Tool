@@ -1981,7 +1981,7 @@ function initApp() {
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Sound like a real person - not AI. Vary your word choices, use different sentence structures, throw in casual phrases ("I noticed", "By the way", "Quick thing", "Real talk"). Use contractions naturally. Sometimes start sentences with "And" or "But". Mix long and short sentences. Be specific but not robotic. NO EM DASHES (—) - use commas, periods, or regular hyphens (-) instead. Start "Hey ${employeeName}!"\n\n`;
+        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Sound like a real person - not AI. Vary your word choices, use different sentence structures. These casual phrases are examples - base your response on variations of them: "I noticed", "By the way", "Quick thing", "Real talk". Use contractions naturally. Sometimes start sentences with "And" or "But". Mix long and short sentences. Be specific but not robotic. NO EM DASHES (—) - use commas, periods, or regular hyphens (-) instead. Start "Hey ${employeeName}!"\n\n`;
 
         // Add wins if any
         if (wins.length > 0) {
