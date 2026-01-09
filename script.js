@@ -564,6 +564,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== EXCEL UPLOAD FUNCTIONALITY ==========
     
     let uploadedEmployeeData = []; // Store parsed employee data
+    let rawExcelData = []; // Store raw Excel data for debugging
     let dateRange = ''; // Store date range from Excel
 
     // Show date range input when file is selected
@@ -611,6 +612,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Debug: Log first row to see column names
                 console.log('Excel columns found:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
                 console.log('First row data:', jsonData[0]);
+                
+                // Store raw data for later debugging
+                rawExcelData = jsonData;
                 
                 // Parse and store employee data
                 uploadedEmployeeData = jsonData.map(row => {
@@ -679,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const employee = uploadedEmployeeData[selectedIndex];
         console.log('Selected employee data:', employee);
-        console.log('Selected employee raw data from Excel:', jsonData[selectedIndex]);
+        console.log('Selected employee raw data from Excel:', rawExcelData[selectedIndex]);
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
