@@ -581,8 +581,8 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
 
     // Open Copilot button
     document.getElementById('openCopilot')?.addEventListener('click', () => {
-        // Use Microsoft 365 Copilot URL for enterprise users
-        window.open('https://copilot.cloud.microsoft/', '_blank');
+        // Use Microsoft 365 Copilot chat URL for enterprise users
+        window.open('https://copilot.cloud.microsoft/chat', '_blank');
     });
 
     // New email button
