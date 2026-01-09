@@ -627,7 +627,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
-                        transfers: parsePercentage(row['TransferS%']),
+                        transfers: (() => {
+                            const val = parsePercentage(row['TransferS%']);
+                            if (firstName === 'Caylie') console.log('Caylie TransferS% parsing:', row['TransferS%'], '->', val);
+                            return val;
+                        })(),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
