@@ -841,7 +841,4 @@ START: "Hey ${employeeName}!"
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('coachingForm').style.display = 'none';
     });
-});\nALSO: "${customNotes}"\n`;
-        }
-
-        prompt += `\n\nEND: S
+});
