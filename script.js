@@ -831,6 +831,10 @@ CONTEXT - KEY METRICS:
             prompt += `1. The specific action to take (concrete, tactical)\n`;
             prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
             prompt += `3. Examples or scripts when helpful\n\n`;
+            prompt += `SPECIAL NOTE - For Negative Word Choice or Positive Word coaching:\n`;
+            prompt += `Always provide specific phrase swaps. Show what to STOP saying and what to SAY INSTEAD.\n`;
+            prompt += `Example format: "Swap 'I can't do that' with 'Here's what I can do for you' - customers respond better to solutions, and it keeps your score from spiking."\n`;
+            prompt += `Common swaps: "can't/won't" → "here's what I can do" | "you'll have to" → "I can help you with" | "but" → "and" or reframe positively\n\n`;
             prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
         
