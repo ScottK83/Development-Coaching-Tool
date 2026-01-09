@@ -751,11 +751,13 @@ ${employeeName} is a customer service representative handling utility customer c
                     prompt += `\n🚨 RELIABILITY (${metrics.reliability} hours): This is about being present and scheduled. Emphasize:\n`;
                     prompt += `- They need to use PTOST for the first 40 hours of any unplanned time and schedule it in Verint ahead of time\n`;
                     prompt += `- Double-check Verint entries match what payroll shows\n`;
+                    prompt += `- If they think this is an error, they should review their Verint time entries - make sure days off are coded as PTOST (if unplanned) or Planned (if scheduled ahead)\n`;
                     prompt += `- Plan their time off well ahead - don't wait until the last minute\n`;
                     prompt += `- Make every effort to be there when scheduled. Reliability = showing up consistently.\n`;
                     prompt += `Failure to follow PTOST procedures = disciplinary action.\n\n`;
                 } else {
                     prompt += `\n⚠️ RELIABILITY: Focus on being present and scheduled. Tips should emphasize:\n`;
+                    prompt += `- If they think the reliability hours are wrong, have them double-check Verint - make sure time off is coded correctly (PTOST vs Planned)\n`;
                     prompt += `- Schedule time off well in advance in Verint - don't wait until the last minute\n`;
                     prompt += `- Make every effort to show up for scheduled shifts\n`;
                     prompt += `- Reliability = consistency and being there when you're supposed to be\n\n`;
