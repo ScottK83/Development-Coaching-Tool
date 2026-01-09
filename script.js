@@ -708,7 +708,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== EXCEL UPLOAD FUNCTIONALITY ==========
     
     let uploadedEmployeeData = [];
-    let dateRange = '';
 
     // Show date range input when file is selected
     document.getElementById('excelFile')?.addEventListener('change', (e) => {
@@ -989,9 +988,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
 
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
-            fcr: parseFloat(document.getElementById('fcr').value) || 0,
-            overallExperience: parseFloat(document.getElementById('overallExperience').value) || 0,
+            cxRepOverall: document.getElementById('cxRepOverall').value ? parseFloat(document.getElementById('cxRepOverall').value) : '',
+            fcr: document.getElementById('fcr').value ? parseFloat(document.getElementById('fcr').value) : '',
+            overallExperience: document.getElementById('overallExperience').value ? parseFloat(document.getElementById('overallExperience').value) : '',
             transfers: parseFloat(document.getElementById('transfers').value) || 0,
             overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
             positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
