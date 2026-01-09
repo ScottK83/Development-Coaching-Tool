@@ -679,6 +679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const employee = uploadedEmployeeData[selectedIndex];
         console.log('Selected employee data:', employee);
+        console.log('Selected employee raw data from Excel:', jsonData[selectedIndex]);
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
