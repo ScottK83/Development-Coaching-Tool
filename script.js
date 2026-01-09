@@ -293,9 +293,6 @@ function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, s
     
     history[employeeName].push({
         date: new Date().toISOString(),
-        content: emailContent,
-        openingIndex: openingIndex,
-        closingIndex: closingIndex,
         strugglingAreas: strugglingAreas
     });
     
@@ -381,7 +378,7 @@ function showHistory() {
                 html += `</div>`;
             }
             
-            // Show individual emails
+            // Show individual coaching sessions
             emails.forEach((email, index) => {
                 const date = new Date(email.date).toLocaleString();
                 const strugglingList = email.strugglingAreas && email.strugglingAreas.length > 0 
@@ -391,14 +388,12 @@ function showHistory() {
                 html += `
                     <div class="history-item">
                         <div class="history-header">
-                            <strong>Email #${index + 1}</strong>
+                            <strong>Coaching Session #${index + 1}</strong>
                             <span>${date}</span>
                         </div>
                         <div style="font-size: 0.9em; color: #666; margin: 5px 0;">
                             <strong>Areas:</strong> ${strugglingList}
                         </div>
-                        <div class="history-preview">${email.content ? email.content.substring(0, 200).replace(/\n/g, ' ') + '...' : 'No email content saved'}</div>
-                        ${email.content ? `<button class="btn-secondary view-full" data-name="${name}" data-index="${index}">View Full Email</button>` : ''}
                     </div>
                 `;
             });
@@ -407,15 +402,6 @@ function showHistory() {
         }
         
         historyContent.innerHTML = html;
-        
-        // Add click handlers for "View Full Email" buttons
-        document.querySelectorAll('.view-full').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const name = e.target.dataset.name;
-                const index = parseInt(e.target.dataset.index);
-                showFullEmail(name, index);
-            });
-        });
     }
     
     document.getElementById('historySection').style.display = 'block';
@@ -423,11 +409,53 @@ function showHistory() {
     document.getElementById('resultsSection').style.display = 'none';
 }
 
-function showFullEmail(name, index) {
+function exportHistory() {
     const history = getAllHistory();
-    const email = history[name][index];
-    
-    alert(`Full Email to ${name}:\n\n${email.content}`);
+    const dataStr = JSON.stringify(history, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `coaching-history-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    alert('✅ History exported! You can commit this file to Git.');
+}
+
+function importHistory() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedHistory = JSON.parse(event.target.result);
+                const existingHistory = getAllHistory();
+                
+                // Merge histories
+                for (const [name, emails] of Object.entries(importedHistory)) {
+                    if (!existingHistory[name]) {
+                        existingHistory[name] = emails;
+                    } else {
+                        // Add only new entries (by date)
+                        const existingDates = new Set(existingHistory[name].map(e => e.date));
+                        const newEntries = emails.filter(e => !existingDates.has(e.date));
+                        existingHistory[name].push(...newEntries);
+                    }
+                }
+                
+                localStorage.setItem('coachingHistory', JSON.stringify(existingHistory));
+                alert('✅ History imported successfully!');
+                location.reload();
+            } catch (error) {
+                alert('❌ Error importing file. Make sure it\'s a valid coaching history JSON file.');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 }
 
 // Display resource links
@@ -482,6 +510,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('viewHistory')?.addEventListener('click', () => {
         showHistory();
     });
+
+    // Export history button
+    document.getElementById('exportHistory')?.addEventListener('click', exportHistory);
+
+    // Import history button
+    document.getElementById('importHistory')?.addEventListener('click', importHistory);
 
     // Close history button
     document.getElementById('closeHistory')?.addEventListener('click', () => {
@@ -784,8 +818,8 @@ ${employeeName} is a customer service representative handling utility customer c
             });
             prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
             
-            prompt += `TIPS (2-3 actionable strategies):\n`;
-            prompt += `Use BULLET POINTS. Address ALL struggling areas. Include concrete examples/scripts. Vary your approach every time.\n\n`;
+            prompt += `TIPS (2-4 actionable strategies):\n`;
+            prompt += `Use BULLET POINTS. These should have real substance - include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
         }
         
         // Add KB content if available
