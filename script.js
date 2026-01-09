@@ -782,7 +782,9 @@ ${employeeName} is a customer service representative handling utility customer c
             prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention specific resources if relevant to their struggling areas)`;
         }
         
-        prompt += `\n\nEND THE EMAIL:\nClose casually like "Let me know if you want to chat about any of this!" or "Happy to walk through this with you anytime!"\n\n`;
+        prompt += `\n\nEND THE EMAIL:\nAfter providing the tips, add a casual closing paragraph:\n`;
+        prompt += `"These are some things I'd love for you to try in your day to day. Let me know how they work, and if you want to chat about any of this!"\n`;
+        prompt += `Or similar casual, supportive closing that invites follow-up conversation.\n\n`;
         prompt += `Generate only the email body. No subject line. Start directly with "Hey ${employeeName}! Was looking at your metrics..."`;
         
         // Save to history
