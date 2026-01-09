@@ -805,13 +805,23 @@ ${employeeName} is a customer service representative handling utility customer c
             prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention specific resources if relevant to their struggling areas)`;
         }
         
-        prompt += `\n\nEND THE EMAIL:\nAfter providing the tips, add a casual closing paragraph. VARY THE CLOSING - pick one of these styles or create similar:\n`;
+        prompt += `\n\nEND THE EMAIL:\nAfter providing the tips, add a casual closing paragraph. VARY THE CLOSING NATURALLY - use these as inspiration but create unique variations each time:\n`;
         prompt += `- "These are some things I'd love for you to try in your day to day. Let me know how they work, and if you want to chat about any of this!"\n`;
         prompt += `- "Give these a shot and let me know how it goes. Happy to talk through any of it if you want!"\n`;
         prompt += `- "Try these out over the next few days and see how they feel. Always here if you want to brainstorm!"\n`;
         prompt += `- "Let me know if any of these land for you. We can always hop on a quick call to walk through them!"\n`;
         prompt += `- "I think these could really help - give them a try and keep me posted on how it's going!"\n`;
-        prompt += `Make it casual, supportive, and inviting for follow-up. Mix it up each time.\n\n`;
+        prompt += `- "Excited to see how these work for you. Reach out anytime if you want to talk strategy!"\n`;
+        prompt += `- "Let me know what you think about these. Always happy to jump on a call if you need support!"\n`;
+        prompt += `- "Give these a test run and circle back with me on what clicks. I'm here if you need anything!"\n`;
+        prompt += `- "Try working these into your calls and let's connect on how they're going. My door's always open!"\n`;
+        prompt += `- "Start with these and see what works best for your style. Holler if you want to dig deeper on any of it!"\n`;
+        prompt += `- "I'd love to hear how these play out for you. Don't hesitate to reach out if you want to chat!"\n`;
+        prompt += `- "Put these into practice and keep me in the loop on your progress. Here whenever you need me!"\n`;
+        prompt += `- "See how these feel over the next week or so. Always down to talk through anything that comes up!"\n`;
+        prompt += `- "Give these a go and let me know what's working. We can adjust as needed - just say the word!"\n`;
+        prompt += `- "Looking forward to seeing these help. Swing by or shoot me a message anytime to discuss!"\n`;
+        prompt += `DON'T use the exact same closing twice. Create natural variations that sound casual, supportive, and inviting for follow-up. Make it sound like a real person wrote it, not a template.\n\n`;
         prompt += `Generate only the email body. No subject line. Start directly with "Hey ${employeeName}! Was looking at your metrics..."`;
         
         // Save to history
