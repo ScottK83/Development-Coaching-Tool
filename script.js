@@ -1167,10 +1167,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const emailData = generateEmailContent(employeeName, content);
         
-        const to = encodeURIComponent(emailData.to);
+        // Don't encode the email address in 'to' field
         const subject = encodeURIComponent(emailData.subject);
         const body = encodeURIComponent(emailData.body);
-        const mailtoLink = `mailto:${to}?subject=${subject}&body=${body}`;
+        const mailtoLink = `mailto:${emailData.to}?subject=${subject}&body=${body}`;
         
         window.location.href = mailtoLink;
     });
