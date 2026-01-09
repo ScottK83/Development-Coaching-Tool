@@ -837,7 +837,7 @@ METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = a
                 const exampleTip = getRandomTip(area);
                 prompt += `- ${areaNames[area]}: "${exampleTip}" (explain WHY this helps)\n`;
             });
-            prompt += `\nUse bullet points. Be specific and actionable. Include examples when helpful. For word choice issues, show phrase swaps (STOP saying X → SAY this instead).\n\n`;
+            prompt += `\nFor each tip: Start with their current number vs target (e.g., "You're at 85%, need 88%"). Then give conversational advice - casual, direct, like talking to a friend. Show them the impact. For word choice, give phrase swaps: "Stop saying [X] → Say [Y] instead" with quick examples.\n\n`;
         }
         
         // Add custom notes if provided
