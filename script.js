@@ -53,6 +53,7 @@ const TARGETS = {
 let customTips = {};
 let serverTips = {}; // Tips from server
 let userTips = {};   // Custom tips added by user
+let hiddenTips = {}; // Tips hidden (e.g., server tips soft-deleted)
 
 // Shared area names mapping
 const AREA_NAMES = {
@@ -142,6 +143,17 @@ function loadUserTips() {
     }
 }
 
+// Load hidden tips map from localStorage
+function loadHiddenTips() {
+    try {
+        const saved = localStorage.getItem('hiddenTips');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading hidden tips:', error);
+        return {};
+    }
+}
+
 // Save user's custom tips to localStorage
 function saveUserTips(tips) {
     try {
@@ -152,13 +164,23 @@ function saveUserTips(tips) {
     }
 }
 
+// Save hidden tips map to localStorage
+function saveHiddenTips(tips) {
+    try {
+        localStorage.setItem('hiddenTips', JSON.stringify(tips));
+    } catch (error) {
+        console.error('Error saving hidden tips:', error);
+    }
+}
+
 // Merge server and user tips
 function mergeTips() {
     const merged = {};
-    
+    const hidden = hiddenTips || {};
+
     // Start with server tips
     Object.entries(serverTips).forEach(([metric, tips]) => {
-        merged[metric] = [...tips];
+        merged[metric] = tips.filter(tip => !(hidden[metric] || []).includes(tip));
     });
     
     // Add user tips
@@ -166,7 +188,8 @@ function mergeTips() {
         if (!merged[metric]) {
             merged[metric] = [];
         }
-        merged[metric].push(...tips);
+        const filtered = tips.filter(tip => !(hidden[metric] || []).includes(tip));
+        merged[metric].push(...filtered);
     });
     
     customTips = merged;
@@ -295,27 +318,38 @@ function saveTipEdit(metricKey, tipIndex) {
     alert('Tip updated successfully!');
 }
 
-// Delete a tip
+// Delete a tip (soft-delete server tips, remove user tips)
 function deleteTip(metricKey, tipIndex) {
     if (!confirm('Are you sure you want to delete this tip?')) {
         return;
     }
-    
-    // Remove from customTips
-    customTips[metricKey].splice(tipIndex, 1);
-    
-    // Rebuild userTips from scratch - only include what's left in customTips that isn't from serverTips
+    const existing = customTips[metricKey] || [];
+    const tipValue = existing[tipIndex];
+    if (tipValue === undefined) {
+        alert('Tip not found.');
+        return;
+    }
+
+    // Remove from the rendered list
+    existing.splice(tipIndex, 1);
+
     const serverTipsForMetric = serverTips[metricKey] || [];
-    const remainingTips = customTips[metricKey] || [];
-    
-    // Only keep tips that are NOT in the original server tips
+    const remainingTips = existing || [];
+
+    // Track hidden tips so server tips stay removed after merge
+    if (!hiddenTips[metricKey]) hiddenTips[metricKey] = [];
+    if (!hiddenTips[metricKey].includes(tipValue)) {
+        hiddenTips[metricKey].push(tipValue);
+    }
+
+    // Only keep user tips that remain (not hidden) and not in server tips
     userTips[metricKey] = remainingTips.filter(tip => !serverTipsForMetric.includes(tip));
-    
-    // Save and refresh
+
+    saveHiddenTips(hiddenTips);
     saveUserTips(userTips);
     mergeTips();
     showMetricTips(metricKey);
-    
+
     alert('Tip deleted successfully!');
 }
 
@@ -1069,6 +1103,7 @@ function initApp() {
         try {
             serverTips = await loadServerTips();
             userTips = loadUserTips();
+            hiddenTips = loadHiddenTips();
             mergeTips();
             console.log('✅ Tips loaded successfully');
         } catch (error) {
