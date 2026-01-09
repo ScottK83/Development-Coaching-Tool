@@ -162,6 +162,8 @@ function showTipsManagement() {
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
+    const customNotesSection = document.getElementById('customNotesSection');
+    if (customNotesSection) customNotesSection.style.display = 'none';
 }
 
 // Show tips for selected metric
@@ -727,6 +729,8 @@ function showEmployeeDashboard() {
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
     document.getElementById('tipsManagementSection').style.display = 'none';
+    const customNotesSection = document.getElementById('customNotesSection');
+    if (customNotesSection) customNotesSection.style.display = 'none';
 }
 
 // Update date range dropdown based on selected employee
@@ -1002,6 +1006,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeTipsManagement')?.addEventListener('click', () => {
         document.getElementById('tipsManagementSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
+        const customNotesSection = document.getElementById('customNotesSection');
+        if (customNotesSection) customNotesSection.style.display = 'block';
     });
 
     // Metric dropdown change
@@ -1111,6 +1117,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dashboardSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('tipsManagementSection').style.display = 'none';
+        const customNotesSection = document.getElementById('customNotesSection');
+        if (customNotesSection) customNotesSection.style.display = 'block';
     });
 
     // Back to form button
@@ -1119,6 +1127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
         document.getElementById('tipsManagementSection').style.display = 'none';
+        const customNotesSection = document.getElementById('customNotesSection');
+        if (customNotesSection) customNotesSection.style.display = 'block';
     });
 
     // Clear all history buttons (both in history and dashboard sections)
