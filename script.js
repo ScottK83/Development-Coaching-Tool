@@ -825,13 +825,13 @@ CONTEXT - KEY METRICS:
             });
             prompt += `Vary how you describe gaps - don't always use the same phrasing patterns or structure. Sometimes brief, sometimes more context.\n\n`;
             
-            prompt += `TIPS (2-4 strategies):\n`;
-            prompt += `Use LABELED SECTIONS (e.g., "**Hold Time:**"). Vary tip structure each time:\n`;
-            prompt += `- Sometimes bullet points, sometimes numbered, sometimes paragraph form\n`;
-            prompt += `- Change how you introduce tips (don't always say "Try..." or "Focus on...")\n`;
-            prompt += `- Vary the WHY placement - sometimes before the action, sometimes after\n`;
-            prompt += `- Mix up specificity - sometimes give detailed steps, sometimes quick tactical shifts\n`;
-            prompt += `Make each tip feel different from previous emails.\n\n`;
+            prompt += `TIPS (2-4 actionable strategies):\n`;
+            prompt += `Use BULLET POINTS with LABELED SECTIONS (e.g., "**Hold Time:**").\n`;
+            prompt += `CRITICAL - Every tip must include:\n`;
+            prompt += `1. The specific action to take (concrete, tactical)\n`;
+            prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
+            prompt += `3. Examples or scripts when helpful\n\n`;
+            prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
         
         // Add KB content if available
