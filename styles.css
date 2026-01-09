@@ -224,13 +224,6 @@ button {
     font-style: italic;
 }
 
-.empty-state {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-    font-style: italic;
-}
-
 .resource-list {
     list-style: none;
     padding: 0;
@@ -249,11 +242,6 @@ button {
     border-radius: 5px;
     border-left: 4px solid #0056B3;
     transition: all 0.3s ease;
-}
-
-.resource-link:hover {
-    background: #bbdefb;
-    padding-left: 20px;
 }
 
 .resource-link:hover {

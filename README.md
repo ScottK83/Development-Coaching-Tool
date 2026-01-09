@@ -22,11 +22,6 @@ A personalized employee development coaching application that identifies perform
 - After-Call Work (ACW)
 - Hold Time
 - Reliability Hours
-- Safety Hazards
-- ACC Complaints
-- Phishing Email Clicks
-- Red Flag Events
-- Deposit Waiver Accuracy
 
 ## Tech Stack
 - HTML5

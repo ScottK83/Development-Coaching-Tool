@@ -1,12 +1,5 @@
 // Target metrics for comparison
 const TARGETS = {
-    reliability: {
-        safetyHazards: 0,
-        accComplaints: 0,
-        phishingClicks: 0,
-        redFlags: 0,
-        depositWaiver: 0
-    },
     driver: {
         scheduleAdherence: { min: 93 },
         cxRepOverall: { min: 80 },
@@ -62,7 +55,6 @@ const IMPROVEMENT_TIPS = {
     reliability: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
 };
 
-// Pronouns handling
 // Generate email subject and body
 function generateEmailContent(employeeName, coachingEmail) {
     const nameParts = employeeName.trim().split(' ');
@@ -76,46 +68,6 @@ function generateEmailContent(employeeName, coachingEmail) {
         subject: subject,
         body: coachingEmail
     };
-}
-
-// Load and parse CSV tips file
-function loadCustomTips(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            try {
-                const csv = e.target.result;
-                const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
-                
-                // Skip header row
-                const dataLines = lines.slice(1);
-                
-                // Parse CSV and group by metric
-                const tips = {};
-                dataLines.forEach(line => {
-                    // Simple CSV parser (handles quotes)
-                    const match = line.match(/^([^,]+),"?([^"]*)"?$/);
-                    if (match) {
-                        const metric = match[1].trim();
-                        const tip = match[2].trim();
-                        
-                        if (!tips[metric]) {
-                            tips[metric] = [];
-                        }
-                        tips[metric].push(tip);
-                    }
-                });
-                
-                resolve(tips);
-            } catch (error) {
-                reject(error);
-            }
-        };
-        
-        reader.onerror = () => reject(reader.error);
-        reader.readAsText(file);
-    });
 }
 
 // Load tips from server
@@ -425,16 +377,6 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
     }
 }
 
-function clearEmployeeHistory(employeeName) {
-    try {
-        const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
-        delete history[employeeName];
-        localStorage.setItem('coachingHistory', JSON.stringify(history));
-    } catch (error) {
-        console.error('Error clearing history:', error);
-    }
-}
-
 function getAllHistory() {
     try {
         return JSON.parse(localStorage.getItem('coachingHistory') || '{}');
@@ -464,80 +406,6 @@ function deleteSession(employeeName, sessionIndex) {
         localStorage.setItem('coachingHistory', JSON.stringify(history));
         showEmployeeDashboard(); // Refresh the display
     }
-}
-
-function showHistory() {
-    const history = getAllHistory();
-    const historyContent = document.getElementById('historyContent');
-    
-    if (Object.keys(history).length === 0) {
-        historyContent.innerHTML = '<p class="empty-state">No coaching emails sent yet.</p>';
-    } else {
-        let html = '';
-        
-        for (const [name, emails] of Object.entries(history)) {
-            // Count how many times each area has been coached for this employee
-            const areaCounts = {};
-            emails.forEach(entry => {
-                if (entry.strugglingAreas) {
-                    entry.strugglingAreas.forEach(area => {
-                        areaCounts[area] = (areaCounts[area] || 0) + 1;
-                    });
-                }
-            });
-            
-            html += `<div class="history-employee">
-                <h3>${name} (${emails.length} email${emails.length > 1 ? 's' : ''})</h3>`;
-            
-            // Show coaching counts by area
-            if (Object.keys(areaCounts).length > 0) {
-                html += `<div style="margin: 10px 0; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                    <strong>Coached on:</strong><br>`;
-                
-                const sortedAreas = Object.entries(areaCounts)
-                    .sort((a, b) => b[1] - a[1]) // Sort by count, highest first
-                    .map(([area, count]) => {
-                        const readable = AREA_NAMES[area] || area;
-                        const color = count >= 3 ? '#dc3545' : count >= 2 ? '#ff9800' : '#28a745';
-                        return `<span style="display: inline-block; margin: 3px 8px 3px 0; padding: 3px 8px; background: ${color}; color: white; border-radius: 3px; font-size: 0.9em;">
-                            ${readable}: ${count}x
-                        </span>`;
-                    });
-                
-                html += sortedAreas.join('');
-                html += `</div>`;
-            }
-            
-            // Show individual coaching sessions
-            emails.forEach((email, index) => {
-                const date = new Date(email.date).toLocaleString();
-                const strugglingList = email.strugglingAreas && email.strugglingAreas.length > 0 
-                    ? email.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')
-                    : 'No issues identified';
-                
-                html += `
-                    <div class="history-item">
-                        <div class="history-header">
-                            <strong>Coaching Session #${index + 1}</strong>
-                            <span>${date}</span>
-                        </div>
-                        <div style="font-size: 0.9em; color: #666; margin: 5px 0;">
-                            <strong>Areas:</strong> ${strugglingList}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += `</div>`;
-        }
-        
-        historyContent.innerHTML = html;
-    }
-    
-    document.getElementById('historySection').style.display = 'block';
-    document.getElementById('coachingForm').style.display = 'none';
-    document.getElementById('resultsSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'none';
 }
 
 // Diagnose trends for an employee
@@ -714,7 +582,7 @@ function showEmployeeDashboard() {
     const dashboardContent = document.getElementById('dashboardContent');
 
     if (Object.keys(history).length === 0) {
-        dashboardContent.innerHTML = '<p class="empty-state">No employees coached yet.</p>';
+        dashboardContent.innerHTML = '<p class="empty-state">No employee data loaded yet.</p>';
     } else {
         // Get all unique employees and date ranges
         const allEmployees = Object.keys(history).sort();
@@ -732,7 +600,32 @@ function showEmployeeDashboard() {
         const sortedDateRanges = Array.from(allDateRanges).sort().reverse();
         const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
         
-        let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">';
+        let html = `
+        <!-- Employee and Date Range Selector -->
+        <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+            <h3 style="color: #003DA5; margin-bottom: 15px;">📊 Quick Analysis: View Employee Trends</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Employee:</label>
+                    <select id="trendEmployeeSelect" onchange="updateDateRangeOptions()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
+                        <option value="">-- Choose an employee --</option>
+                        ${allEmployees.map(emp => `<option value="${emp}">${emp}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Date Range:</label>
+                    <select id="trendDateRangeSelect" onchange="showEmployeeTrendData()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;" disabled>
+                        <option value="">-- Choose a date range --</option>
+                    </select>
+                </div>
+            </div>
+            <div id="trendDataDisplay" style="display: none; margin-top: 20px; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <!-- Trend data will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">`;
         
         // Employee filter
         html += '<div>';
@@ -837,6 +730,131 @@ function showEmployeeDashboard() {
     document.getElementById('historySection').style.display = 'none';
 }
 
+// Update date range dropdown based on selected employee
+function updateDateRangeOptions() {
+    const selectedEmployee = document.getElementById('trendEmployeeSelect')?.value || '';
+    const dateRangeSelect = document.getElementById('trendDateRangeSelect');
+    const trendDataDisplay = document.getElementById('trendDataDisplay');
+    
+    if (!dateRangeSelect) return;
+    
+    // Hide previous trend data
+    if (trendDataDisplay) trendDataDisplay.style.display = 'none';
+    
+    if (!selectedEmployee) {
+        dateRangeSelect.disabled = true;
+        dateRangeSelect.innerHTML = '<option value="">-- Choose a date range --</option>';
+        return;
+    }
+    
+    const history = getAllHistory();
+    const employeeSessions = history[selectedEmployee] || [];
+    
+    // Get unique date ranges for this employee
+    const dateRanges = [...new Set(employeeSessions.map(s => s.dateRange).filter(dr => dr))];
+    
+    if (dateRanges.length === 0) {
+        dateRangeSelect.disabled = true;
+        dateRangeSelect.innerHTML = '<option value="">No date ranges available</option>';
+        return;
+    }
+    
+    // Sort date ranges (most recent first)
+    dateRanges.sort().reverse();
+    
+    dateRangeSelect.disabled = false;
+    dateRangeSelect.innerHTML = '<option value="">-- Choose a date range --</option>' + 
+        dateRanges.map(dr => `<option value="${dr}">${dr}</option>`).join('');
+}
+
+// Show employee trend data for selected employee and date range
+function showEmployeeTrendData() {
+    const selectedEmployee = document.getElementById('trendEmployeeSelect')?.value || '';
+    const selectedDateRange = document.getElementById('trendDateRangeSelect')?.value || '';
+    const trendDataDisplay = document.getElementById('trendDataDisplay');
+    
+    if (!trendDataDisplay || !selectedEmployee || !selectedDateRange) {
+        if (trendDataDisplay) trendDataDisplay.style.display = 'none';
+        return;
+    }
+    
+    const history = getAllHistory();
+    const employeeSessions = history[selectedEmployee] || [];
+    
+    // Find the session for this date range
+    const session = employeeSessions.find(s => s.dateRange === selectedDateRange);
+    
+    if (!session || !session.metrics) {
+        trendDataDisplay.innerHTML = '<p style="color: #999; font-style: italic;">No data available for this date range.</p>';
+        trendDataDisplay.style.display = 'block';
+        return;
+    }
+    
+    const metrics = session.metrics;
+    const sessionDate = new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const strugglingAreas = session.strugglingAreas || [];
+    const wasCoached = strugglingAreas.length > 0;
+    
+    // Build metrics display
+    let html = `
+        <div style="border-bottom: 2px solid #003DA5; padding-bottom: 10px; margin-bottom: 15px;">
+            <h4 style="color: #003DA5; margin: 0;">${selectedEmployee} - ${selectedDateRange}</h4>
+            <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Uploaded: ${sessionDate}</div>
+            ${wasCoached ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;"><strong>⚠️ Coached on:</strong> ${strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')}</div>` : '<div style="margin-top: 8px; color: #28a745; font-weight: bold;">✅ Meeting all targets - No coaching needed</div>'}
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+    `;
+    
+    // Display all metrics with target comparison
+    const metricsList = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', target: TARGETS.driver.scheduleAdherence.min, isMin: true },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '%', target: TARGETS.driver.cxRepOverall.min, isMin: true },
+        { key: 'fcr', label: 'First Call Resolution', unit: '%', target: TARGETS.driver.fcr.min, isMin: true },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '%', target: TARGETS.driver.overallExperience.min, isMin: true },
+        { key: 'transfers', label: 'Transfers', unit: '%', target: TARGETS.driver.transfers.max, isMin: false },
+        { key: 'overallSentiment', label: 'Overall Sentiment', unit: '%', target: TARGETS.driver.overallSentiment.min, isMin: true },
+        { key: 'positiveWord', label: 'Positive Word', unit: '%', target: TARGETS.driver.positiveWord.min, isMin: true },
+        { key: 'negativeWord', label: 'Negative Word', unit: '%', target: TARGETS.driver.negativeWord.min, isMin: true },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', target: TARGETS.driver.managingEmotions.min, isMin: true },
+        { key: 'aht', label: 'AHT', unit: 's', target: TARGETS.driver.aht.max, isMin: false },
+        { key: 'acw', label: 'ACW', unit: 's', target: TARGETS.driver.acw.max, isMin: false },
+        { key: 'holdTime', label: 'Hold Time', unit: 's', target: TARGETS.driver.holdTime.max, isMin: false },
+        { key: 'reliability', label: 'Reliability', unit: ' hrs', target: TARGETS.driver.reliability.max, isMin: false }
+    ];
+    
+    metricsList.forEach(metric => {
+        const value = metrics[metric.key];
+        
+        // Skip empty survey-based metrics
+        if ((metric.key === 'fcr' || metric.key === 'cxRepOverall' || metric.key === 'overallExperience') && 
+            (value === '' || value === null || value === undefined)) {
+            return;
+        }
+        
+        if (value !== undefined && value !== '' && value !== null) {
+            const meetingTarget = metric.isMin ? value >= metric.target : value <= metric.target;
+            const statusIcon = meetingTarget ? '✅' : '⚠️';
+            const statusColor = meetingTarget ? '#28a745' : '#dc3545';
+            const bgColor = strugglingAreas.includes(metric.key) ? '#fff3cd' : '#f8f9fa';
+            
+            html += `
+                <div style="padding: 12px; background: ${bgColor}; border-radius: 5px; border: 1px solid #ddd;">
+                    <div style="font-size: 0.85em; color: #666; margin-bottom: 5px;">${metric.label}</div>
+                    <div style="font-size: 1.4em; font-weight: bold; color: ${statusColor};">${statusIcon} ${value}${metric.unit}</div>
+                    <div style="font-size: 0.8em; color: #666; margin-top: 3px;">Target: ${metric.isMin ? '≥' : '≤'}${metric.target}${metric.unit}</div>
+                    ${strugglingAreas.includes(metric.key) ? '<div style="font-size: 0.75em; color: #856404; margin-top: 3px; font-weight: bold;">📋 Coached</div>' : ''}
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+    
+    trendDataDisplay.innerHTML = html;
+    trendDataDisplay.style.display = 'block';
+}
+
 // Filter dashboard by employee and date
 function filterDashboard() {
     const selectedEmployee = document.getElementById('employeeFilter')?.value || '';
@@ -879,84 +897,6 @@ function filterDashboard() {
             employeeCard.style.display = 'block';
         }
     });
-}
-
-function exportHistory() {
-    const history = getAllHistory();
-    
-    // Convert to CSV format with metrics and follow-up columns
-    let csvContent = 'Employee Name,Date,Coaching Areas,Schedule Adherence,CX Rep Overall,FCR,Transfers,Overall Sentiment,Positive Word,Negative Word,Managing Emotions,AHT,ACW,Hold Time,Reliability,Follow-Up Date,Follow-Up Metrics,Improved?\n';
-
-    for (const [employeeName, sessions] of Object.entries(history)) {
-        sessions.forEach(session => {
-            const date = new Date(session.date).toLocaleDateString();
-            const areas = session.strugglingAreas.join('; ');
-            
-            // Get metric values if available
-            const metrics = session.metrics || {};
-            const scheduleAdherence = metrics.scheduleAdherence || '';
-            const cxRepOverall = metrics.cxRepOverall || '';
-            const fcr = metrics.fcr || '';
-            const transfers = metrics.transfers || '';
-            const overallSentiment = metrics.overallSentiment || '';
-            const positiveWord = metrics.positiveWord || '';
-            const negativeWord = metrics.negativeWord || '';
-            const managingEmotions = metrics.managingEmotions || '';
-            const aht = metrics.aht || '';
-            const acw = metrics.acw || '';
-            const holdTime = metrics.holdTime || '';
-            const reliability = metrics.reliability || '';
-            
-            csvContent += `"${employeeName}","${date}","${areas}",${scheduleAdherence},${cxRepOverall},${fcr},${transfers},${overallSentiment},${positiveWord},${negativeWord},${managingEmotions},${aht},${acw},${holdTime},${reliability},"","",""\n`;
-        });
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `coaching-history-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    alert('✅ History exported to CSV! Open in Excel to track follow-ups.');
-}
-
-function importHistory() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const importedHistory = JSON.parse(event.target.result);
-                const existingHistory = getAllHistory();
-                
-                // Merge histories
-                for (const [name, emails] of Object.entries(importedHistory)) {
-                    if (!existingHistory[name]) {
-                        existingHistory[name] = emails;
-                    } else {
-                        // Add only new entries (by date)
-                        const existingDates = new Set(existingHistory[name].map(e => e.date));
-                        const newEntries = emails.filter(e => !existingDates.has(e.date));
-                        existingHistory[name].push(...newEntries);
-                    }
-                }
-                
-                localStorage.setItem('coachingHistory', JSON.stringify(existingHistory));
-                alert('✅ History imported successfully!');
-                location.reload();
-            } catch (error) {
-                alert('❌ Error importing file. Make sure it\'s a valid coaching history JSON file.');
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
 }
 
 // Initialize on page load
@@ -1118,13 +1058,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     let uploadedEmployeeData = [];
 
-    // Show date range input when file is selected
-    document.getElementById('excelFile')?.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            document.getElementById('dateRangeInputContainer').style.display = 'block';
-        }
-    });
-
     // Make entire date input field clickable to open calendar
     document.getElementById('startDate')?.addEventListener('click', function() {
         this.showPicker();
@@ -1134,13 +1067,108 @@ document.addEventListener('DOMContentLoaded', async () => {
         this.showPicker();
     });
 
+    // Validate date range and enable/disable Load Data button
+    function validateDateRange() {
+        const startDate = document.getElementById('startDate')?.value || '';
+        const endDate = document.getElementById('endDate')?.value || '';
+        const loadBtn = document.getElementById('loadDataBtn');
+        const validationMsg = document.getElementById('dateValidationMsg');
+        const fileInput = document.getElementById('excelFile');
+        
+        if (!loadBtn) return;
+        
+        const hasFile = fileInput?.files && fileInput.files.length > 0;
+        
+        // Default to disabled state
+        loadBtn.disabled = true;
+        loadBtn.style.background = '#ccc';
+        loadBtn.style.opacity = '0.5';
+        loadBtn.style.cursor = 'not-allowed';
+        
+        if (!hasFile) {
+            if (validationMsg) {
+                validationMsg.textContent = '⚠️ Please select a file first';
+                validationMsg.style.display = 'block';
+            }
+            return;
+        }
+        
+        if (!startDate || !endDate) {
+            if (validationMsg) {
+                validationMsg.textContent = '⚠️ Please enter both Start and End dates to load data';
+                validationMsg.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Check if end date is after start date
+        if (new Date(endDate) < new Date(startDate)) {
+            if (validationMsg) {
+                validationMsg.textContent = '⚠️ End date must be after or equal to start date';
+                validationMsg.style.display = 'block';
+            }
+            return;
+        }
+        
+        // All validation passed - enable button
+        loadBtn.disabled = false;
+        loadBtn.style.background = 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)';
+        loadBtn.style.opacity = '1';
+        loadBtn.style.cursor = 'pointer';
+        if (validationMsg) {
+            validationMsg.textContent = '✅ Ready to load data';
+            validationMsg.style.color = '#28a745';
+            validationMsg.style.display = 'block';
+        }
+    }
+
+    // Add listeners to date inputs
+    document.getElementById('startDate')?.addEventListener('change', validateDateRange);
+    document.getElementById('startDate')?.addEventListener('input', validateDateRange);
+    document.getElementById('endDate')?.addEventListener('change', validateDateRange);
+    document.getElementById('endDate')?.addEventListener('input', validateDateRange);
+    
+    document.getElementById('excelFile')?.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            const container = document.getElementById('dateRangeInputContainer');
+            if (container) {
+                container.style.display = 'block';
+            }
+            validateDateRange();
+        } else {
+            // If file is cleared, reset everything
+            const container = document.getElementById('dateRangeInputContainer');
+            if (container) container.style.display = 'none';
+            validateDateRange();
+        }
+    });
+    
+    // Initialize button state on page load
+    setTimeout(() => validateDateRange(), 100);
+
     // Load and parse Excel file
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
         const file = fileInput.files[0];
+        const startDate = document.getElementById('startDate')?.value || '';
+        const endDate = document.getElementById('endDate')?.value || '';
         
+        // CRITICAL: Validate everything before proceeding
         if (!file) {
-            alert('Please select an Excel file first');
+            alert('❌ Please select an Excel file first');
+            return;
+        }
+
+        if (!startDate || !endDate) {
+            alert('❌ Both Start and End dates are REQUIRED.\n\nPlease select the date range for this data before loading.');
+            document.getElementById('startDate')?.focus();
+            return;
+        }
+        
+        // Validate date order
+        if (new Date(endDate) < new Date(startDate)) {
+            alert('❌ End date must be after or equal to start date.');
+            document.getElementById('endDate')?.focus();
             return;
         }
 
@@ -1200,7 +1228,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 document.getElementById('employeeSelectContainer').style.display = 'block';
                 document.getElementById('dateRangeInputContainer').style.display = 'block';
-                alert(`✅ Loaded ${uploadedEmployeeData.length} employees from spreadsheet!`);
+                
+                // Immediately save all employees to history
+                bulkSaveUploadedEmployees();
+                
+                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data has been saved to Employee History for trend analysis.`);
+                
+                // Auto-open Employee Dashboard to view the data
+                showEmployeeDashboard();
                 
             } catch (error) {
                 console.error('Error parsing Excel:', error);
@@ -1297,16 +1332,74 @@ document.addEventListener('DOMContentLoaded', async () => {
         return parseFloat(parsed.toFixed(2));
     }
 
+    // Bulk-save all uploaded employees into history immediately after load
+    function bulkSaveUploadedEmployees() {
+        try {
+            if (!uploadedEmployeeData || uploadedEmployeeData.length === 0) {
+                console.log('No employee data to save');
+                return;
+            }
+            
+            const startDate = document.getElementById('startDate')?.value || '';
+            const endDate = document.getElementById('endDate')?.value || '';
+            const dateRangeLabel = startDate && endDate ? `${startDate} to ${endDate}` : '';
+            
+            if (!dateRangeLabel) {
+                console.warn('No date range available for saving');
+                return;
+            }
+            
+            let savedCount = 0;
+            let skippedCount = 0;
 
-    // Copy button
-    document.getElementById('copyEmail')?.addEventListener('click', () => {
-        const email = document.getElementById('coachingEmail').innerText;
-        navigator.clipboard.writeText(email).then(() => {
-            alert('Email copied to clipboard!');
-        }).catch(() => {
-            alert('Failed to copy. Please try again.');
-        });
-    });
+            uploadedEmployeeData.forEach(emp => {
+                const name = emp.name || '';
+                if (!name) {
+                    console.log('Skipping employee with no name');
+                    return;
+                }
+
+                // Check for duplicate sessions with same date range
+                const existingSessions = getEmployeeHistory(name);
+                const exists = (existingSessions || []).some(s => (s.dateRange || '') === dateRangeLabel);
+                
+                if (exists) {
+                    console.log(`Skipping ${name} - already has data for ${dateRangeLabel}`);
+                    skippedCount++;
+                    return;
+                }
+
+                const metrics = {
+                    scheduleAdherence: emp.scheduleAdherence,
+                    cxRepOverall: emp.cxRepOverall || '',
+                    fcr: emp.fcr || '',
+                    overallExperience: emp.overallExperience || '',
+                    transfers: emp.transfers,
+                    overallSentiment: emp.overallSentiment,
+                    positiveWord: emp.positiveWord,
+                    negativeWord: emp.negativeWord,
+                    managingEmotions: emp.managingEmotions,
+                    aht: emp.aht,
+                    acw: emp.acw,
+                    holdTime: emp.holdTime,
+                    reliability: emp.reliability
+                };
+
+                // Identify struggling areas for this employee
+                const strugglingAreas = identifyStrugglingAreas(metrics);
+                
+                // Save to history
+                saveToHistory(name, strugglingAreas, metrics, dateRangeLabel);
+                savedCount++;
+                console.log(`Saved ${name} for ${dateRangeLabel}`);
+            });
+            
+            console.log(`Bulk save complete: ${savedCount} saved, ${skippedCount} skipped (duplicates)`);
+        } catch (e) {
+            console.error('Bulk save failed:', e);
+        }
+    }
+
 
     // Update currentEmailData when user pastes generated email
     document.getElementById('generatedEmail')?.addEventListener('input', (e) => {
@@ -1346,27 +1439,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = mailtoLink;
     });
 
-    // AI Coaching Tips button
-    document.getElementById('getAITips')?.addEventListener('click', () => {
-        if (!window.currentStrugglingAreas || window.currentStrugglingAreas.length === 0) {
-            alert('No struggling areas identified. Employee is meeting all targets!');
-            return;
-        }
-        
-        const readableAreas = window.currentStrugglingAreas
-            .map(area => AREA_NAMES[area] || area)
-            .join(', ');
-        
-        // Create AI prompt
-        const prompt = `Provide 3-4 specific, actionable coaching tips for a customer service representative struggling with: ${readableAreas}
-
-Be supportive, concrete, and practical. Format your response as a bulleted list.`;
-        
-        // Open Microsoft Copilot with pre-filled prompt
-        const copilotUrl = `https://copilot.microsoft.com/?prompt=${encodeURIComponent(prompt)}`;
-        window.open(copilotUrl, '_blank');
-    });
-
     // Copy prompt button - also auto-opens Copilot
     document.getElementById('copyPrompt')?.addEventListener('click', () => {
         const prompt = document.getElementById('aiPrompt').value;
@@ -1377,12 +1449,6 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
         });
-    });
-
-    // Open Copilot button
-    document.getElementById('openCopilot')?.addEventListener('click', () => {
-        // Use Microsoft 365 Copilot chat URL for enterprise users
-        window.open('https://copilot.microsoft.com/', '_blank');
     });
 
     // New email button
