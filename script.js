@@ -658,21 +658,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         const employee = uploadedEmployeeData[selectedIndex];
+        console.log('Selected employee data:', employee);
         
         // Populate all form fields
-        document.getElementById('employeeName').value = employee.name;
-        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence;
-        document.getElementById('cxRepOverall').value = employee.cxRepOverall;
-        document.getElementById('fcr').value = employee.fcr;
-        document.getElementById('transfers').value = employee.transfers;
-        document.getElementById('aht').value = employee.aht;
-        document.getElementById('acw').value = employee.acw;
-        document.getElementById('holdTime').value = employee.holdTime;
-        document.getElementById('reliability').value = employee.reliability;
-        document.getElementById('overallSentiment').value = employee.overallSentiment;
-        document.getElementById('positiveWord').value = employee.positiveWord;
-        document.getElementById('negativeWord').value = employee.negativeWord;
-        document.getElementById('managingEmotions').value = employee.managingEmotions;
+        document.getElementById('employeeName').value = employee.name || '';
+        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence || '';
+        document.getElementById('cxRepOverall').value = employee.cxRepOverall || '';
+        document.getElementById('fcr').value = employee.fcr || '';
+        document.getElementById('transfers').value = employee.transfers || '';
+        document.getElementById('aht').value = employee.aht || '';
+        document.getElementById('acw').value = employee.acw || '';
+        document.getElementById('holdTime').value = employee.holdTime || '';
+        document.getElementById('reliability').value = employee.reliability || '';
+        document.getElementById('overallSentiment').value = employee.overallSentiment || '';
+        document.getElementById('positiveWord').value = employee.positiveWord || '';
+        document.getElementById('negativeWord').value = employee.negativeWord || '';
+        document.getElementById('managingEmotions').value = employee.managingEmotions || '';
         
         // Scroll to form
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
