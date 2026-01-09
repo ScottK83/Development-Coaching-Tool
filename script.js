@@ -828,6 +828,12 @@ CONTEXT - KEY METRICS:
             prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
         
+        // Add custom notes if provided
+        const customNotes = document.getElementById('customNotes')?.value.trim();
+        if (customNotes) {
+            prompt += `\nCUSTOM FEEDBACK TO INCLUDE:\n"${customNotes}"\nReword this naturally and incorporate it into the appropriate section of the email. Don't quote it directly - make it sound like your own words in the casual coaching tone.\n\n`;
+        }
+        
         prompt += `CLOSING: Vary structure and tone each time. Keep brief but fresh.\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
