@@ -766,8 +766,16 @@ ${employeeName} is a customer service representative handling utility customer c
                     detail = `${readable}: Currently at ${metrics.transfers}%, need to get under ${TARGETS.driver.transfers.max}%`;
                 } else if (area === 'overallSentiment' && metrics.overallSentiment < TARGETS.driver.overallSentiment.min) {
                     detail = `${readable}: Currently at ${metrics.overallSentiment}%, need to hit ${TARGETS.driver.overallSentiment.min}%`;
+                } else if (area === 'positiveWord' && metrics.positiveWord < TARGETS.driver.positiveWord.min) {
+                    detail = `${readable}: Currently at ${metrics.positiveWord}%, need to hit ${TARGETS.driver.positiveWord.min}%`;
+                } else if (area === 'negativeWord' && metrics.negativeWord > TARGETS.driver.negativeWord.max) {
+                    detail = `${readable}: Currently at ${metrics.negativeWord}%, need to get under ${TARGETS.driver.negativeWord.max}%`;
+                } else if (area === 'managingEmotions' && metrics.managingEmotions < TARGETS.driver.managingEmotions.min) {
+                    detail = `${readable}: Currently at ${metrics.managingEmotions}%, need to hit ${TARGETS.driver.managingEmotions.min}%`;
                 } else if (area === 'aht' && metrics.aht > TARGETS.driver.aht.max) {
                     detail = `${readable}: Currently at ${metrics.aht} seconds, need to get under ${TARGETS.driver.aht.max} seconds`;
+                } else if (area === 'acw' && metrics.acw > TARGETS.driver.acw.max) {
+                    detail = `${readable}: Currently at ${metrics.acw} seconds, need to get under ${TARGETS.driver.acw.max} seconds`;
                 } else if (area === 'holdTime' && metrics.holdTime > TARGETS.driver.holdTime.max) {
                     detail = `${readable}: Currently at ${metrics.holdTime} seconds, need to get under ${TARGETS.driver.holdTime.max} seconds`;
                 } else if (area === 'reliability' && metrics.reliability > TARGETS.driver.reliability.max) {
@@ -806,6 +814,8 @@ ${employeeName} is a customer service representative handling utility customer c
             
             prompt += `\n\nACTIONABLE TIPS (2-3 HIGH-IMPACT strategies):\n`;
             prompt += `Using your knowledge of customer service best practices, coaching methods, and utility industry customer service, generate 2-3 HIGHLY EFFECTIVE, specific tips that will have measurable impact on their metrics.\n\n`;
+            prompt += `🎯 CRITICAL: ADDRESS EVERY STRUGGLING AREA mentioned above. If multiple areas are listed, make sure your tips cover ALL of them, not just one.\n`;
+            prompt += `For example, if both "Negative Word Choice" and "Hold Time" are struggling, provide at least one tip for EACH area.\n\n`;
             prompt += `Requirements for tips:\n`;
             prompt += `- Immediately actionable (can implement on their next call)\n`;
             prompt += `- Specific to utility customer service context (billing, service requests, outages, technical issues)\n`;
