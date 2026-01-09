@@ -639,7 +639,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         overallSentiment: parsePercentage(row['OverallSentimentScore%']),
                         positiveWord: parsePercentage(row['PositiveWordScore%']),
                         negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
-                        managingEmotions: parsePercentage(row['ManageEmotionsScore%'])
+                        managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
+                        surveyTotal: parseInt(row['OE Survey Total']) || 0
                     };
                     
                     // Debug log first employee to see what's missing
@@ -691,6 +692,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
+        document.getElementById('surveyTotal').value = employee.surveyTotal || 0;
         document.getElementById('scheduleAdherence').value = employee.scheduleAdherence || '';
         document.getElementById('cxRepOverall').value = employee.cxRepOverall || '';
         document.getElementById('fcr').value = employee.fcr || '';
