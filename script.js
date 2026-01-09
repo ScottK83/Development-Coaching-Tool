@@ -771,11 +771,11 @@ KEY METRICS EXPLAINED:
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nVARY THE WINS HEADER - Don't always say "Solid Wins" or the same phrase. Create unique variations each time like:\n`;
+            prompt += `\nWINS HEADER - Be genuinely celebratory and enthusiastic. Make it sound like you really took the time to review their work and are excited about their progress. Examples for inspiration (but CREATE YOUR OWN unique variation - don't just pick one of these):\n`;
             prompt += `"You've Got Some Real Wins Here" | "Let's Start With the Good Stuff" | "Few Things You're Crushing" | "Some Really Strong Numbers" | "A Few Standouts in Your Metrics" | "You're Doing Great in a Few Key Areas"\n`;
-            prompt += `\nVARY THE OPENING - Create a unique opening each time. These are just examples for inspiration - make up your own natural variations:\n`;
+            prompt += `\nOPENING SENTENCE - Sound thoughtful and personal, like you actually reviewed their metrics carefully. Examples for inspiration (CREATE YOUR OWN):\n`;
             prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..."\n`;
-            prompt += `\nVARY WIN DESCRIPTIONS - Mix up your language naturally: "doing really well", "nailing", "on point", "solid", "strong", "on track", "looking good"\n\n`;
+            prompt += `\nWIN DESCRIPTIONS - Be enthusiastic and genuine. Vary your language: "doing really well", "nailing", "on point", "solid", "strong", "on track", "looking good", "really impressed", "crushing it", "exactly where you need to be"\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
