@@ -271,6 +271,102 @@ function showHistory() {
     document.getElementById('historySection').style.display = 'block';
     document.getElementById('coachingForm').style.display = 'none';
     document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'none';
+}
+
+// Show employee dashboard with expandable history per employee
+function showEmployeeDashboard() {
+    const history = getAllHistory();
+    const dashboardContent = document.getElementById('dashboardContent');
+
+    if (Object.keys(history).length === 0) {
+        dashboardContent.innerHTML = '<p class="empty-state">No employees coached yet.</p>';
+    } else {
+        // Sort employees alphabetically
+        const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
+
+        const areaNames = {
+            scheduleAdherence: 'Schedule Adherence',
+            cxRepOverall: 'Customer Experience',
+            fcr: 'First Call Resolution',
+            transfers: 'Transfers',
+            overallSentiment: 'Overall Sentiment',
+            positiveWord: 'Positive Word Choice',
+            negativeWord: 'Negative Word Choice',
+            managingEmotions: 'Managing Emotions',
+            aht: 'Average Handle Time',
+            acw: 'After Call Work',
+            holdTime: 'Hold Time',
+            reliability: 'Reliability'
+        };
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+
+        sortedEmployees.forEach(([name, sessions]) => {
+            const sessionCount = sessions.length;
+            const uniqueId = name.replace(/\s+/g, '-');
+
+            html += `
+                <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #f8f9fa; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" 
+                         onclick="document.getElementById('employee-${uniqueId}').style.display = document.getElementById('employee-${uniqueId}').style.display === 'none' ? 'block' : 'none'">
+                        <div>
+                            <strong style="font-size: 1.1em;">${name}</strong>
+                            <span style="margin-left: 10px; color: #666; font-size: 0.9em;">(${sessionCount} coaching session${sessionCount > 1 ? 's' : ''})</span>
+                        </div>
+                        <span style="font-size: 1.2em;">▼</span>
+                    </div>
+                    <div id="employee-${uniqueId}" style="display: none; padding: 15px; background: white;">
+            `;
+
+            // Show each coaching session
+            sessions.forEach((session, index) => {
+                const date = new Date(session.date).toLocaleDateString();
+                const areas = session.strugglingAreas.map(a => areaNames[a] || a).join(', ');
+                
+                html += `
+                    <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa;">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${date}</div>
+                        <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
+                `;
+
+                // Show metrics if available
+                if (session.metrics) {
+                    html += '<div style="font-size: 0.9em; color: #555; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 5px;">';
+                    
+                    if (session.metrics.scheduleAdherence) html += `<div>Schedule: ${session.metrics.scheduleAdherence}%</div>`;
+                    if (session.metrics.fcr) html += `<div>FCR: ${session.metrics.fcr}%</div>`;
+                    if (session.metrics.transfers) html += `<div>Transfers: ${session.metrics.transfers}%</div>`;
+                    if (session.metrics.aht) html += `<div>AHT: ${session.metrics.aht}s</div>`;
+                    if (session.metrics.acw) html += `<div>ACW: ${session.metrics.acw}s</div>`;
+                    if (session.metrics.holdTime) html += `<div>Hold: ${session.metrics.holdTime}s</div>`;
+                    if (session.metrics.reliability) html += `<div>Reliability: ${session.metrics.reliability} hrs</div>`;
+                    if (session.metrics.overallSentiment) html += `<div>Sentiment: ${session.metrics.overallSentiment}%</div>`;
+                    if (session.metrics.positiveWord) html += `<div>Positive: ${session.metrics.positiveWord}%</div>`;
+                    if (session.metrics.negativeWord) html += `<div>Negative: ${session.metrics.negativeWord}%</div>`;
+                    if (session.metrics.managingEmotions) html += `<div>Emotions: ${session.metrics.managingEmotions}%</div>`;
+                    if (session.metrics.cxRepOverall) html += `<div>CX Rep: ${session.metrics.cxRepOverall}%</div>`;
+                    
+                    html += '</div>';
+                }
+
+                html += `</div>`;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        dashboardContent.innerHTML = html;
+    }
+
+    document.getElementById('dashboardSection').style.display = 'block';
+    document.getElementById('coachingForm').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('historySection').style.display = 'none';
 }
 
 function exportHistory() {
@@ -446,8 +542,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Import history button
     document.getElementById('importHistory')?.addEventListener('click', importHistory);
-document.getElementById('closeHistory')?.addEventListener('click', () => {
+
+    // Employee dashboard button
+    document.getElementById('employeeDashboard')?.addEventListener('click', () => {
+        showEmployeeDashboard();
+    });
+
+    // Close history button
+    document.getElementById('closeHistory')?.addEventListener('click', () => {
         document.getElementById('historySection').style.display = 'none';
+        document.getElementById('coachingForm').style.display = 'block';
+    });
+
+    // Close dashboard button
+    document.getElementById('closeDashboard')?.addEventListener('click', () => {
+        document.getElementById('dashboardSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
     });
 

@@ -15,6 +15,7 @@
                 <button id="viewHistory" class="btn-secondary">📊 View Coaching History</button>
                 <button id="exportHistory" class="btn-secondary" style="margin-left: 10px;">💾 Export to File</button>
                 <button id="importHistory" class="btn-secondary" style="margin-left: 10px;">📁 Import from File</button>
+                <button id="employeeDashboard" class="btn-secondary" style="margin-left: 10px;">👥 Employee Dashboard</button>
             </div>
             <div style="margin-top: 15px; padding: 10px; background: #e8f4f8; border-radius: 5px;">
                 <label for="tipsFile" style="cursor: pointer; display: inline-block;">
@@ -154,6 +155,15 @@
                 </div>
                 <div id="historyContent"></div>
                 <button id="clearAllHistory" class="btn-secondary" style="margin-top: 20px;">Clear All History</button>
+            </section>
+
+            <!-- Employee Dashboard Section -->
+            <section id="dashboardSection" style="display: none;">
+                <div class="results-header">
+                    <h2>👥 Employee Dashboard</h2>
+                    <button id="closeDashboard" class="btn-secondary">Close</button>
+                </div>
+                <div id="dashboardContent" style="margin-top: 20px;"></div>
             </section>
         </main>
     </div>
