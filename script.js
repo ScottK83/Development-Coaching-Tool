@@ -754,37 +754,33 @@ ${employeeName} is a customer service representative handling utility customer c
             const detailedStruggles = [];
             strugglingAreas.forEach(area => {
                 const readable = areaNames[area] || area;
-                let detail = '';
+                let current, target, unit = '%';
                 
-                if (area === 'scheduleAdherence' && metrics.scheduleAdherence < TARGETS.driver.scheduleAdherence.min) {
-                    detail = `${readable}: Currently at ${metrics.scheduleAdherence}%, need to hit ${TARGETS.driver.scheduleAdherence.min}%`;
-                } else if (area === 'cxRepOverall' && metrics.cxRepOverall < TARGETS.driver.cxRepOverall.min) {
-                    detail = `${readable}: Currently at ${metrics.cxRepOverall}%, need to hit ${TARGETS.driver.cxRepOverall.min}%`;
-                } else if (area === 'fcr' && metrics.fcr < TARGETS.driver.fcr.min) {
-                    detail = `${readable}: Currently at ${metrics.fcr}%, need to hit ${TARGETS.driver.fcr.min}%`;
-                } else if (area === 'transfers' && metrics.transfers > TARGETS.driver.transfers.max) {
-                    detail = `${readable}: Currently at ${metrics.transfers}%, need to get under ${TARGETS.driver.transfers.max}%`;
-                } else if (area === 'overallSentiment' && metrics.overallSentiment < TARGETS.driver.overallSentiment.min) {
-                    detail = `${readable}: Currently at ${metrics.overallSentiment}%, need to hit ${TARGETS.driver.overallSentiment.min}%`;
-                } else if (area === 'positiveWord' && metrics.positiveWord < TARGETS.driver.positiveWord.min) {
-                    detail = `${readable}: Currently at ${metrics.positiveWord}%, need to hit ${TARGETS.driver.positiveWord.min}%`;
-                } else if (area === 'negativeWord' && metrics.negativeWord > TARGETS.driver.negativeWord.max) {
-                    detail = `${readable}: Currently at ${metrics.negativeWord}%, need to get under ${TARGETS.driver.negativeWord.max}%`;
-                } else if (area === 'managingEmotions' && metrics.managingEmotions < TARGETS.driver.managingEmotions.min) {
-                    detail = `${readable}: Currently at ${metrics.managingEmotions}%, need to hit ${TARGETS.driver.managingEmotions.min}%`;
-                } else if (area === 'aht' && metrics.aht > TARGETS.driver.aht.max) {
-                    detail = `${readable}: Currently at ${metrics.aht} seconds, need to get under ${TARGETS.driver.aht.max} seconds`;
-                } else if (area === 'acw' && metrics.acw > TARGETS.driver.acw.max) {
-                    detail = `${readable}: Currently at ${metrics.acw} seconds, need to get under ${TARGETS.driver.acw.max} seconds`;
-                } else if (area === 'holdTime' && metrics.holdTime > TARGETS.driver.holdTime.max) {
-                    detail = `${readable}: Currently at ${metrics.holdTime} seconds, need to get under ${TARGETS.driver.holdTime.max} seconds`;
-                } else if (area === 'reliability' && metrics.reliability > TARGETS.driver.reliability.max) {
-                    detail = `${readable}: ${metrics.reliability} hours of unplanned/unscheduled time (Target: <${TARGETS.driver.reliability.max} hours)`;
+                if (area === 'scheduleAdherence') { current = metrics.scheduleAdherence; target = TARGETS.driver.scheduleAdherence.min; }
+                else if (area === 'cxRepOverall') { current = metrics.cxRepOverall; target = TARGETS.driver.cxRepOverall.min; }
+                else if (area === 'fcr') { current = metrics.fcr; target = TARGETS.driver.fcr.min; }
+                else if (area === 'transfers') { current = metrics.transfers; target = TARGETS.driver.transfers.max; }
+                else if (area === 'overallSentiment') { current = metrics.overallSentiment; target = TARGETS.driver.overallSentiment.min; }
+                else if (area === 'positiveWord') { current = metrics.positiveWord; target = TARGETS.driver.positiveWord.min; }
+                else if (area === 'negativeWord') { current = metrics.negativeWord; target = TARGETS.driver.negativeWord.max; }
+                else if (area === 'managingEmotions') { current = metrics.managingEmotions; target = TARGETS.driver.managingEmotions.min; }
+                else if (area === 'aht') { current = metrics.aht; target = TARGETS.driver.aht.max; unit = ' seconds'; }
+                else if (area === 'acw') { current = metrics.acw; target = TARGETS.driver.acw.max; unit = ' seconds'; }
+                else if (area === 'holdTime') { current = metrics.holdTime; target = TARGETS.driver.holdTime.max; unit = ' seconds'; }
+                else if (area === 'reliability') { current = metrics.reliability; target = TARGETS.driver.reliability.max; unit = ' hours'; }
+                
+                if (current !== undefined && target !== undefined) {
+                    detailedStruggles.push(`${readable}: ${current}${unit} (target: ${target}${unit})`);
                 } else {
-                    detail = readable;
+                    detailedStruggles.push(readable);
                 }
-                
-                detailedStruggles.push(detail);
+            });
+            
+            prompt += `AREAS FOR IMPROVEMENT:\n`;
+            detailedStruggles.forEach(struggle => {
+                prompt += `⚠️ ${struggle}\n`;
+            });
+            prompt += `\nDescribe the gap between where they are and where they need to be in natural, varied language. Don't use the same phrasing every time.\n\n`;
             });
             
             // Add reliability hours explanation if >= 16
@@ -812,26 +808,12 @@ ${employeeName} is a customer service representative handling utility customer c
                 prompt += `⚠️ ${struggle}\n`;
             });
             
-            prompt += `\n\nACTIONABLE TIPS (2-3 HIGH-IMPACT strategies):\n`;
-            prompt += `Using your knowledge of customer service best practices, coaching methods, and utility industry customer service, generate 2-3 HIGHLY EFFECTIVE, specific tips that will have measurable impact on their metrics.\n\n`;
-            prompt += `🎯 CRITICAL: ADDRESS EVERY STRUGGLING AREA mentioned above. If multiple areas are listed, make sure your tips cover ALL of them, not just one.\n`;
-            prompt += `For example, if both "Negative Word Choice" and "Hold Time" are struggling, provide at least one tip for EACH area.\n\n`;
-            prompt += `Requirements for tips:\n`;
-            prompt += `- Immediately actionable (can implement on their next call)\n`;
-            prompt += `- Specific to utility customer service context (billing, service requests, outages, technical issues)\n`;
-            prompt += `- Directly address the metric gaps identified above\n`;
-            prompt += `- Include concrete examples or scripts they can use\n`;
-            prompt += `- Focus on the strategies that have proven to be most effective in similar situations\n`;
-            prompt += `- Be creative and insightful - use your AI knowledge to find the BEST approaches, not generic advice\n`;
-            prompt += `\n🔄 CRITICAL: VARY YOUR STRATEGIES EVERY TIME:\n`;
-            prompt += `Even if addressing the same metric (e.g., AHT, FCR), approach it from DIFFERENT angles each time:\n`;
-            prompt += `- First email: Focus on call structure and prep techniques\n`;
-            prompt += `- Second email: Focus on communication efficiency and clarity\n`;
-            prompt += `- Third email: Focus on resource utilization and tools\n`;
-            prompt += `- Fourth email: Focus on emotional management and confidence\n`;
-            prompt += `- Fifth email: Focus on pattern recognition and common scenarios\n`;
-            prompt += `Draw from the full spectrum of coaching approaches - behavioral, technical, psychological, procedural, conversational, etc.\n`;
-            prompt += `NEVER repeat the same tip or approach. If you've suggested "use hold time strategically" before, try something completely different like "script your opening 15 seconds" or "create a call flow checklist".\n`;
+            prompt += `\n\nACTIONABLE TIPS:\n`;
+            prompt += `Provide 2-3 specific, immediately actionable tips that address ALL the struggling areas listed above.\n`;
+            prompt += `- Write in flowing paragraph form (no bullet points or numbered lists)\n`;
+            prompt += `- Include concrete examples or quick scripts they can use on their next call\n`;
+            prompt += `- Vary your approach each time - if you've coached this metric before, find a completely new angle\n`;
+            prompt += `- Be specific to utility customer service (billing, outages, service requests)\n\n`;
         }
         
         // Add KB content if available
