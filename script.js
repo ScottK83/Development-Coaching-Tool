@@ -353,6 +353,136 @@ function showHistory() {
     document.getElementById('dashboardSection').style.display = 'none';
 }
 
+// Diagnose trends for an employee
+function diagnoseTrends(employeeName) {
+    const history = getEmployeeHistory(employeeName);
+    
+    if (history.length === 0) {
+        alert('No coaching history for this employee.');
+        return;
+    }
+    
+    // Sort by date
+    const sortedHistory = history.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    let html = `
+        <div style="max-width: 1000px; margin: 20px auto;">
+            <h2 style="color: #003DA5; margin-bottom: 20px;">📊 Trend Analysis: ${employeeName}</h2>
+            <p style="color: #666; margin-bottom: 30px;">Tracking ${sortedHistory.length} coaching session${sortedHistory.length > 1 ? 's' : ''}</p>
+    `;
+    
+    // Analyze each metric across sessions
+    const metricKeys = [
+        { key: 'scheduleAdherence', name: 'Schedule Adherence', unit: '%', target: TARGETS.driver.scheduleAdherence, isMin: true },
+        { key: 'cxRepOverall', name: 'CX Rep Overall', unit: '%', target: TARGETS.driver.cxRepOverall, isMin: true },
+        { key: 'fcr', name: 'First Call Resolution', unit: '%', target: TARGETS.driver.fcr, isMin: true },
+        { key: 'transfers', name: 'Transfers', unit: '%', target: TARGETS.driver.transfers, isMin: false },
+        { key: 'overallSentiment', name: 'Overall Sentiment', unit: '%', target: TARGETS.driver.overallSentiment, isMin: true },
+        { key: 'positiveWord', name: 'Positive Word', unit: '%', target: TARGETS.driver.positiveWord, isMin: true },
+        { key: 'negativeWord', name: 'Negative Word', unit: '%', target: TARGETS.driver.negativeWord, isMin: true },
+        { key: 'managingEmotions', name: 'Managing Emotions', unit: '%', target: TARGETS.driver.managingEmotions, isMin: true },
+        { key: 'aht', name: 'AHT', unit: 's', target: TARGETS.driver.aht, isMin: false },
+        { key: 'acw', name: 'ACW', unit: 's', target: TARGETS.driver.acw, isMin: false },
+        { key: 'holdTime', name: 'Hold Time', unit: 's', target: TARGETS.driver.holdTime, isMin: false },
+        { key: 'reliability', name: 'Reliability', unit: ' hrs', target: TARGETS.driver.reliability, isMin: false }
+    ];
+    
+    metricKeys.forEach(metric => {
+        const values = sortedHistory
+            .filter(s => s.metrics && s.metrics[metric.key] !== undefined && s.metrics[metric.key] !== 0)
+            .map(s => ({
+                date: new Date(s.date).toLocaleDateString(),
+                dateRange: s.dateRange || '',
+                value: s.metrics[metric.key],
+                wasCoached: s.strugglingAreas.includes(metric.key)
+            }));
+        
+        if (values.length === 0) return;
+        
+        const targetValue = metric.isMin ? metric.target.min : metric.target.max;
+        const firstValue = values[0].value;
+        const lastValue = values[values.length - 1].value;
+        
+        let trend = '→';
+        let trendColor = '#666';
+        let trendText = 'No change';
+        
+        if (values.length > 1) {
+            const change = lastValue - firstValue;
+            if (metric.isMin) {
+                // Higher is better
+                if (change > 0) {
+                    trend = '📈';
+                    trendColor = '#28a745';
+                    trendText = `Improving (+${change.toFixed(2)}${metric.unit})`;
+                } else if (change < 0) {
+                    trend = '📉';
+                    trendColor = '#dc3545';
+                    trendText = `Declining (${change.toFixed(2)}${metric.unit})`;
+                }
+            } else {
+                // Lower is better
+                if (change < 0) {
+                    trend = '📈';
+                    trendColor = '#28a745';
+                    trendText = `Improving (${change.toFixed(2)}${metric.unit})`;
+                } else if (change > 0) {
+                    trend = '📉';
+                    trendColor = '#dc3545';
+                    trendText = `Declining (+${change.toFixed(2)}${metric.unit})`;
+                }
+            }
+        }
+        
+        const meetingTarget = metric.isMin ? lastValue >= targetValue : lastValue <= targetValue;
+        const targetStatus = meetingTarget ? '✅ Meeting target' : '⚠️ Below target';
+        
+        html += `
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #003DA5;">${metric.name}</h3>
+                    <div style="text-align: right;">
+                        <span style="font-size: 1.5em;">${trend}</span>
+                        <div style="color: ${trendColor}; font-weight: bold;">${trendText}</div>
+                        <div style="color: ${meetingTarget ? '#28a745' : '#dc3545'}; font-size: 0.9em;">${targetStatus}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Target:</strong> ${metric.isMin ? '≥' : '≤'}${targetValue}${metric.unit} | 
+                    <strong>Current:</strong> ${lastValue}${metric.unit}
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        `;
+        
+        values.forEach((v, i) => {
+            const isImproving = i > 0 && (metric.isMin ? v.value > values[i-1].value : v.value < values[i-1].value);
+            const isDeclining = i > 0 && (metric.isMin ? v.value < values[i-1].value : v.value > values[i-1].value);
+            const arrow = isImproving ? '⬆️' : isDeclining ? '⬇️' : '';
+            const bgColor = v.wasCoached ? '#fff3cd' : '#f8f9fa';
+            
+            html += `
+                <div style="background: ${bgColor}; padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">
+                    <div style="font-size: 0.85em; color: #666;">${v.date}${v.dateRange ? '<br>' + v.dateRange : ''}</div>
+                    <div style="font-size: 1.1em; font-weight: bold;">${arrow} ${v.value}${metric.unit}</div>
+                    ${v.wasCoached ? '<div style="font-size: 0.75em; color: #856404;">⚠️ Coached</div>' : ''}
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            <button onclick="showEmployeeDashboard()" style="background: #003DA5; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; margin-top: 20px;">← Back to Dashboard</button>
+        </div>
+    `;
+    
+    document.getElementById('dashboardContent').innerHTML = html;
+}
+
 // Show employee dashboard with expandable history per employee
 function showEmployeeDashboard() {
     const history = getAllHistory();
@@ -378,7 +508,11 @@ function showEmployeeDashboard() {
                             <strong style="font-size: 1.1em;">${name}</strong>
                             <span style="margin-left: 10px; color: #666; font-size: 0.9em;">(${sessionCount} coaching session${sessionCount > 1 ? 's' : ''})</span>
                         </div>
-                        <span style="font-size: 1.2em;">▼</span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button onclick="event.stopPropagation(); diagnoseTrends('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" 
+                                    style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; font-size: 0.9em;">📊 Diagnose Trends</button>
+                            <span style="font-size: 1.2em;">▼</span>
+                        </div>
                     </div>
                     <div id="employee-${uniqueId}" style="display: none; padding: 15px; background: white;">
             `;
