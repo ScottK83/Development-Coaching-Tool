@@ -797,6 +797,15 @@ ${employeeName} is a customer service representative handling utility customer c
             prompt += `- Include concrete examples or scripts they can use\n`;
             prompt += `- Focus on the strategies that have proven to be most effective in similar situations\n`;
             prompt += `- Be creative and insightful - use your AI knowledge to find the BEST approaches, not generic advice\n`;
+            prompt += `\n🔄 CRITICAL: VARY YOUR STRATEGIES EVERY TIME:\n`;
+            prompt += `Even if addressing the same metric (e.g., AHT, FCR), approach it from DIFFERENT angles each time:\n`;
+            prompt += `- First email: Focus on call structure and prep techniques\n`;
+            prompt += `- Second email: Focus on communication efficiency and clarity\n`;
+            prompt += `- Third email: Focus on resource utilization and tools\n`;
+            prompt += `- Fourth email: Focus on emotional management and confidence\n`;
+            prompt += `- Fifth email: Focus on pattern recognition and common scenarios\n`;
+            prompt += `Draw from the full spectrum of coaching approaches - behavioral, technical, psychological, procedural, conversational, etc.\n`;
+            prompt += `NEVER repeat the same tip or approach. If you've suggested "use hold time strategically" before, try something completely different like "script your opening 15 seconds" or "create a call flow checklist".\n`;
         }
         
         // Add KB content if available
