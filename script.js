@@ -614,7 +614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
-                        transfers: parsePercentage(row['TransferS$']),
+                        transfers: parsePercentage(row['TransferS%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
