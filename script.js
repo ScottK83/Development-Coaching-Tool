@@ -1808,9 +1808,9 @@ function initApp() {
 
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: document.getElementById('cxRepOverall').value ? parseFloat(document.getElementById('cxRepOverall').value) : '',
-            fcr: document.getElementById('fcr').value ? parseFloat(document.getElementById('fcr').value) : '',
-            overallExperience: document.getElementById('overallExperience').value ? parseFloat(document.getElementById('overallExperience').value) : '',
+            cxRepOverall: document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
+            fcr: document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
+            overallExperience: document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
             transfers: parseFloat(document.getElementById('transfers').value) || 0,
             overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
             positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
