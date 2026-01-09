@@ -1056,19 +1056,21 @@ function filterDashboard() {
     });
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', async () => {
+// Initialize app robustly whether DOMContentLoaded has fired or not
+function initApp() {
     console.log('🚀 Coaching Tool Initialized');
     
     // Auto-load tips from server and user storage
-    try {
-        serverTips = await loadServerTips();
-        userTips = loadUserTips();
-        mergeTips();
-        console.log('✅ Tips loaded successfully');
-    } catch (error) {
-        console.warn('⚠️ Using fallback tips:', error);
-    }
+    (async () => {
+        try {
+            serverTips = await loadServerTips();
+            userTips = loadUserTips();
+            mergeTips();
+            console.log('✅ Tips loaded successfully');
+        } catch (error) {
+            console.warn('⚠️ Using fallback tips:', error);
+        }
+    })();
 
     // Employee dashboard button
     const dashboardBtn = document.getElementById('employeeDashboard');
@@ -1884,4 +1886,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Scroll to top of results
         document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-});
+// Run initializer immediately if DOM is already parsed; otherwise wait
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
