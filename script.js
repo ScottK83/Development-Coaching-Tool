@@ -607,19 +607,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // Parse and store employee data
                 uploadedEmployeeData = jsonData.map(row => {
-                    // Name is in the GOAL: column, format is "LastName, FirstName"
-                    const fullName = row['GOAL:'] || '';
+                    // Name column format is "LastName, FirstName"
+                    const fullName = row['Name'] || '';
                     const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
                     
                     return {
                         name: firstName,
                         scheduleAdherence: parsePercentage(row['Adherence']),
-                        cxRepOverall: parsePercentage(row['CX Overall Experience\n(Surveys)']),
+                        cxRepOverall: parsePercentage(row['CX Overall Experience (Surveys)']),
                         fcr: parsePercentage(row['FCR (Surveys)']),
                         transfers: parsePercentage(row['% of Transfers']),
-                        aht: parseSeconds(row['Average Handle Time (AHT) in Seconds (AHT time + hold time + ACW in seconds)']),
-                        acw: parseSeconds(row['After Call Work (ACW) in Seconds\n(Surveys not ready time / wrap-up)']),
-                        holdTime: parseSeconds(row['Hold Time in Seconds (per call on  hold over AHT)']),
+                        aht: parseSeconds(row['Average Handle Time (AHT) in Seconds (AHT = talk time + hold time + ACW in seconds)']),
+                        acw: parseSeconds(row['After Call Work (ACW) in Seconds (Surveys not ready time / wrap-up)']),
+                        holdTime: parseSeconds(row['Hold Time in Seconds (part of AHT)']),
                         reliability: parseHours(row['This Report Meeting']),
                         overallSentiment: parsePercentage(row['Overall Sentiment']),
                         positiveWord: parsePercentage(row['Positive Word Choice']),
