@@ -14,7 +14,7 @@ const TARGETS = {
         transfers: { max: 6 },
         overallSentiment: { min: 88 },
         positiveWord: { min: 86 },
-        negativeWord: { max: 17 },
+        negativeWord: { min: 83 },
         managingEmotions: { min: 95 },
         aht: { max: 440 },
         acw: { max: 60 },
@@ -25,6 +25,29 @@ const TARGETS = {
 
 // Custom tips loaded from CSV
 let customTips = {};
+let serverTips = {}; // Tips from server
+let userTips = {};   // Custom tips added by user
+
+// Shared area names mapping
+const AREA_NAMES = {
+    scheduleAdherence: 'Schedule Adherence',
+    cxRepOverall: 'Customer Experience',
+    fcr: 'First Call Resolution',
+    transfers: 'Transfers',
+    overallSentiment: 'Overall Sentiment',
+    positiveWord: 'Positive Word Choice',
+    negativeWord: 'Avoid Negative Word Choice',
+    managingEmotions: 'Managing Emotions',
+    aht: 'Average Handle Time',
+    acw: 'After Call Work',
+    holdTime: 'Hold Time',
+    reliability: 'Reliability',
+    safetyHazards: 'Safety Hazards',
+    accComplaints: 'ACC Complaints',
+    phishingClicks: 'Phishing Clicks',
+    redFlags: 'Red Flag Events',
+    depositWaiver: 'Deposit Waiver'
+};
 
 // Improvement tips for each metric (fallback if no CSV loaded)
 const IMPROVEMENT_TIPS = {
@@ -94,6 +117,66 @@ function loadCustomTips(file) {
     });
 }
 
+// Load tips from server
+async function loadServerTips() {
+    try {
+        const response = await fetch('tips.csv');
+        const csv = await response.text();
+        const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+        const dataLines = lines.slice(1);
+        
+        const tips = {};
+        dataLines.forEach(line => {
+            const match = line.match(/^([^,]+),"?([^"]*)"?$/);
+            if (match) {
+                const metric = match[1].trim();
+                const tip = match[2].trim();
+                
+                if (!tips[metric]) {
+                    tips[metric] = [];
+                }
+                tips[metric].push(tip);
+            }
+        });
+        
+        return tips;
+    } catch (error) {
+        console.error('Error loading server tips:', error);
+        return {};
+    }
+}
+
+// Load user's custom tips from localStorage
+function loadUserTips() {
+    const saved = localStorage.getItem('userCustomTips');
+    return saved ? JSON.parse(saved) : {};
+}
+
+// Save user's custom tips to localStorage
+function saveUserTips(tips) {
+    localStorage.setItem('userCustomTips', JSON.stringify(tips));
+}
+
+// Merge server and user tips
+function mergeTips() {
+    const merged = {};
+    
+    // Start with server tips
+    Object.entries(serverTips).forEach(([metric, tips]) => {
+        merged[metric] = [...tips];
+    });
+    
+    // Add user tips
+    Object.entries(userTips).forEach(([metric, tips]) => {
+        if (!merged[metric]) {
+            merged[metric] = [];
+        }
+        merged[metric].push(...tips);
+    });
+    
+    customTips = merged;
+}
+
 // Get random tip for a metric
 function getRandomTip(metric) {
     // First check custom tips
@@ -147,7 +230,7 @@ function getEmployeeHistory(employeeName) {
     return history[employeeName] || [];
 }
 
-function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, strugglingAreas, metrics = null) {
+function saveToHistory(employeeName, strugglingAreas, metrics = null) {
     const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
 
     if (!history[employeeName]) {
@@ -156,11 +239,12 @@ function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, s
 
     history[employeeName].push({
         date: new Date().toISOString(),
-        strugglingAreas: strugglingAreas,
-        metrics: metrics
+        strugglingAreas,
+        metrics
     });
     
     localStorage.setItem('coachingHistory', JSON.stringify(history));
+    console.log('✅ Saved to history:', employeeName, strugglingAreas);
 }
 
 function clearEmployeeHistory(employeeName) {
@@ -199,27 +283,6 @@ function showHistory() {
                 }
             });
             
-            // Convert to readable names
-            const areaNames = {
-                scheduleAdherence: 'Schedule Adherence',
-                cxRepOverall: 'Customer Experience',
-                fcr: 'First Call Resolution',
-                transfers: 'Transfers',
-                overallSentiment: 'Overall Sentiment',
-                positiveWord: 'Positive Word Choice',
-                negativeWord: 'Negative Word Choice',
-                managingEmotions: 'Managing Emotions',
-                aht: 'Average Handle Time',
-                acw: 'After Call Work',
-                holdTime: 'Hold Time',
-                reliability: 'Reliability',
-                safetyHazards: 'Safety Hazards',
-                accComplaints: 'ACC Complaints',
-                phishingClicks: 'Phishing Clicks',
-                redFlags: 'Red Flag Events',
-                depositWaiver: 'Deposit Waiver'
-            };
-            
             html += `<div class="history-employee">
                 <h3>${name} (${emails.length} email${emails.length > 1 ? 's' : ''})</h3>`;
             
@@ -231,7 +294,7 @@ function showHistory() {
                 const sortedAreas = Object.entries(areaCounts)
                     .sort((a, b) => b[1] - a[1]) // Sort by count, highest first
                     .map(([area, count]) => {
-                        const readable = areaNames[area] || area;
+                        const readable = AREA_NAMES[area] || area;
                         const color = count >= 3 ? '#dc3545' : count >= 2 ? '#ff9800' : '#28a745';
                         return `<span style="display: inline-block; margin: 3px 8px 3px 0; padding: 3px 8px; background: ${color}; color: white; border-radius: 3px; font-size: 0.9em;">
                             ${readable}: ${count}x
@@ -246,7 +309,7 @@ function showHistory() {
             emails.forEach((email, index) => {
                 const date = new Date(email.date).toLocaleString();
                 const strugglingList = email.strugglingAreas && email.strugglingAreas.length > 0 
-                    ? email.strugglingAreas.map(a => areaNames[a] || a).join(', ')
+                    ? email.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')
                     : 'No issues identified';
                 
                 html += `
@@ -277,6 +340,8 @@ function showHistory() {
 // Show employee dashboard with expandable history per employee
 function showEmployeeDashboard() {
     const history = getAllHistory();
+    
+    console.log('📊 Dashboard history:', history);
     const dashboardContent = document.getElementById('dashboardContent');
 
     if (Object.keys(history).length === 0) {
@@ -284,21 +349,6 @@ function showEmployeeDashboard() {
     } else {
         // Sort employees alphabetically
         const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
-
-        const areaNames = {
-            scheduleAdherence: 'Schedule Adherence',
-            cxRepOverall: 'Customer Experience',
-            fcr: 'First Call Resolution',
-            transfers: 'Transfers',
-            overallSentiment: 'Overall Sentiment',
-            positiveWord: 'Positive Word Choice',
-            negativeWord: 'Negative Word Choice',
-            managingEmotions: 'Managing Emotions',
-            aht: 'Average Handle Time',
-            acw: 'After Call Work',
-            holdTime: 'Hold Time',
-            reliability: 'Reliability'
-        };
 
         let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
 
@@ -322,11 +372,11 @@ function showEmployeeDashboard() {
             // Show each coaching session
             sessions.forEach((session, index) => {
                 const date = new Date(session.date).toLocaleDateString();
-                const areas = session.strugglingAreas.map(a => areaNames[a] || a).join(', ');
+                const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
                 html += `
                     <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa;">
-                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${date}</div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} (${date})</div>
                         <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
                 `;
 
@@ -407,11 +457,16 @@ function exportHistory() {
     link.click();
     URL.revokeObjectURL(url);
     alert('✅ History exported to CSV! Open in Excel to track follow-ups.');
+}
+
+function importHistory() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'application/json';
     input.onchange = (e) => {
         const file = e.target.files[0];
+        if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
@@ -442,62 +497,49 @@ function exportHistory() {
     input.click();
 }
 
-// Display resource links
-function displayResourceLinks(resources) {
-    const container = document.getElementById('resourcesLinks');
-    
-    if (resources.length === 0) {
-        container.innerHTML = '<p>No resources found.</p>';
-        return;
-    }
-    
-    let html = '<p>Click below to search for resources related to struggling areas:</p><ul class="resource-list">';
-    
-    resources.forEach(resource => {
-        html += `
-            <li>
-                <a href="${resource.searchUrl}" target="_blank" rel="noopener noreferrer" class="resource-link">
-                    ${resource.query}
-                </a>
-            </li>
-        `;
-    });
-    
-    html += '</ul>';
-    container.innerHTML = html;
-}
-
-// Display results
-async function displayResults(emailContent, employeeName, strugglingAreas, resources) {
-    document.getElementById('resultName').textContent = employeeName;
-    document.getElementById('coachingEmail').innerHTML = emailContent.replace(/\n/g, '<br>');
-    document.getElementById('resultsSection').style.display = 'block';
-    document.getElementById('coachingForm').style.display = 'none';
-    
-    // Display resource links in separate section
-    displayResourceLinks(resources);
-    
-    // Store email content and struggling areas for later use
-    window.currentEmailData = {
-        name: employeeName,
-        content: emailContent
-    };
-    
-    window.currentStrugglingAreas = strugglingAreas;
-}
-
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    // CSV file loader
+document.addEventListener('DOMContentLoaded', async () => {
+    // Auto-load tips from server and user storage
+    try {
+        serverTips = await loadServerTips();
+        userTips = loadUserTips();
+        mergeTips();
+        
+        const totalTips = Object.values(customTips).reduce((sum, tips) => sum + tips.length, 0);
+        const metricsCount = Object.keys(customTips).length;
+        const serverCount = Object.values(serverTips).reduce((sum, tips) => sum + tips.length, 0);
+        const userCount = Object.values(userTips).reduce((sum, tips) => sum + tips.length, 0);
+        
+        let statusMsg = `✅ ${totalTips} tips loaded (${serverCount} default`;
+        if (userCount > 0) {
+            statusMsg += ` + ${userCount} custom)`;
+        } else {
+            statusMsg += `)`;
+        }
+        
+        document.getElementById('tipsStatus').textContent = statusMsg;
+        document.getElementById('tipsStatus').style.color = '#28a745';
+    } catch (error) {
+        document.getElementById('tipsStatus').textContent = `⚠️ Using fallback tips`;
+        document.getElementById('tipsStatus').style.color = '#ff9800';
+    }
+
+    // CSV file loader (override with custom file)
     document.getElementById('tipsFile')?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         
         try {
-            customTips = await loadCustomTips(file);
+            const loadedTips = await loadCustomTips(file);
+            userTips = loadedTips;
+            saveUserTips(userTips);
+            mergeTips();
+            
             const totalTips = Object.values(customTips).reduce((sum, tips) => sum + tips.length, 0);
             const metricsCount = Object.keys(customTips).length;
-            document.getElementById('tipsStatus').textContent = `✅ Loaded ${totalTips} tips for ${metricsCount} metrics`;
+            const userCount = Object.values(userTips).reduce((sum, tips) => sum + tips.length, 0);
+            
+            document.getElementById('tipsStatus').textContent = `✅ ${totalTips} tips loaded (includes ${userCount} from your file)`;
             document.getElementById('tipsStatus').style.color = '#28a745';
             document.getElementById('viewTips').style.display = 'inline-block';
         } catch (error) {
@@ -598,29 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Convert struggling areas to readable names
-        const areaNames = {
-            scheduleAdherence: 'Schedule Adherence',
-            cxRepOverall: 'Customer Experience',
-            fcr: 'First Call Resolution',
-            transfers: 'Transfers',
-            overallSentiment: 'Overall Sentiment',
-            positiveWord: 'Positive Word Choice',
-            negativeWord: 'Negative Word Choice',
-            managingEmotions: 'Managing Emotions',
-            aht: 'Average Handle Time',
-            acw: 'After Call Work',
-            holdTime: 'Hold Time',
-            reliability: 'Reliability',
-            safetyHazards: 'Safety Hazards',
-            accComplaints: 'ACC Complaints',
-            phishingClicks: 'Phishing Clicks',
-            redFlags: 'Red Flag Events',
-            depositWaiver: 'Deposit Waiver'
-        };
-        
         const readableAreas = window.currentStrugglingAreas
-            .map(area => areaNames[area] || area)
+            .map(area => AREA_NAMES[area] || area)
             .join(', ');
         
         // Create AI prompt
@@ -700,27 +721,6 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             }
         });
         
-        // Convert struggling areas to readable names
-        const areaNames = {
-            scheduleAdherence: 'Schedule Adherence',
-            cxRepOverall: 'Customer Experience',
-            fcr: 'First Call Resolution',
-            transfers: 'Transfers',
-            overallSentiment: 'Overall Sentiment',
-            positiveWord: 'Positive Word Choice',
-            negativeWord: 'Negative Word Choice',
-            managingEmotions: 'Managing Emotions',
-            aht: 'Average Handle Time',
-            acw: 'After Call Work',
-            holdTime: 'Hold Time',
-            reliability: 'Reliability',
-            safetyHazards: 'Safety Hazards',
-            accComplaints: 'ACC Complaints',
-            phishingClicks: 'Phishing Clicks',
-            redFlags: 'Red Flag Events',
-            depositWaiver: 'Deposit Waiver'
-        };
-        
         // Identify wins (metrics exceeding targets)
         const wins = [];
         if (metrics.scheduleAdherence >= TARGETS.driver.scheduleAdherence.min) {
@@ -746,11 +746,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write a casual coaching email to ${employeeName}, a CSR at APS utility.
+        let prompt = `Write coaching email to ${employeeName}, CSR at APS. Up to 250 words, friendly peer tone.
 
-TONE: Friendly peer/supervisor (150-200 words). Natural, conversational - use contractions, mix short/long sentences. NO corporate jargon.
-
-METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = average of Positive Word + Negative Word + Managing Emotions | FCR = First Call Resolution | Hold Time = on hold | AHT = total call time | ACW = after-call notes | Schedule Adherence = logged in on time | Reliability = unplanned absences (PTOST hours)
+START: "Hey ${employeeName}!"
 
 `;
 
@@ -760,16 +758,16 @@ METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = a
             wins.forEach(win => {
                 prompt += `✅ ${win}\n`;
             });
-            prompt += `Celebrate genuinely. Vary how you present wins each time.\n\n`;
+            prompt += `\n`;
         }
 
         if (strugglingAreas.length === 0) {
-            prompt += `${employeeName} is meeting or exceeding ALL targets! Write an enthusiastic congratulatory email recognizing their excellent performance.`;
+            prompt += `Meeting ALL targets! Write congratulatory email.`;
         } else {
             // Build detailed metrics for struggling areas
             const detailedStruggles = [];
             strugglingAreas.forEach(area => {
-                const readable = areaNames[area] || area;
+                const readable = AREA_NAMES[area] || area;
                 let current, target, unit = '%';
                 
                 if (area === 'scheduleAdherence') { current = metrics.scheduleAdherence; target = TARGETS.driver.scheduleAdherence.min; }
@@ -778,7 +776,7 @@ METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = a
                 else if (area === 'transfers') { current = metrics.transfers; target = TARGETS.driver.transfers.max; }
                 else if (area === 'overallSentiment') { current = metrics.overallSentiment; target = TARGETS.driver.overallSentiment.min; }
                 else if (area === 'positiveWord') { current = metrics.positiveWord; target = TARGETS.driver.positiveWord.min; }
-                else if (area === 'negativeWord') { current = metrics.negativeWord; target = TARGETS.driver.negativeWord.max; }
+                else if (area === 'negativeWord') { current = metrics.negativeWord; target = TARGETS.driver.negativeWord.min; }
                 else if (area === 'managingEmotions') { current = metrics.managingEmotions; target = TARGETS.driver.managingEmotions.min; }
                 else if (area === 'aht') { current = metrics.aht; target = TARGETS.driver.aht.max; unit = ' seconds'; }
                 else if (area === 'acw') { current = metrics.acw; target = TARGETS.driver.acw.max; unit = ' seconds'; }
@@ -792,52 +790,38 @@ METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = a
                 }
             });
             
-            // Add reliability context
             const hasReliabilityIssue = strugglingAreas.includes('reliability');
-            if (hasReliabilityIssue) {
-                if (metrics.reliability >= 16) {
-                    prompt += `\n🚨 RELIABILITY (${metrics.reliability} hours): This is about being present and scheduled. Emphasize:\n`;
-                    prompt += `- They need to use PTOST for the first 40 hours of any unplanned time and schedule it in Verint ahead of time\n`;
-                    prompt += `- Double-check Verint entries match what payroll shows\n`;
-                    prompt += `- If they think this is an error, they should review their Verint time entries - make sure days off are coded as PTOST (if unplanned) or Planned (if scheduled ahead)\n`;
-                    prompt += `- Plan their time off well ahead - don't wait until the last minute\n`;
-                    prompt += `- Make every effort to be there when scheduled. Reliability = showing up consistently.\n`;
-                    prompt += `Failure to follow PTOST procedures = disciplinary action.\n\n`;
-                } else {
-                    prompt += `\n⚠️ RELIABILITY: Focus on being present and scheduled. Tips should emphasize:\n`;
-                    prompt += `- If they think the reliability hours are wrong, have them double-check Verint - make sure time off is coded correctly (PTOST vs Planned)\n`;
-                    prompt += `- Schedule time off well in advance in Verint - don't wait until the last minute\n`;
-                    prompt += `- Make every effort to show up for scheduled shifts\n`;
-                    prompt += `- Reliability = consistency and being there when you're supposed to be\n\n`;
-                }
-            }
             
             if (!isRepeatCoaching) {
-                prompt += `Transition naturally to improvement areas.\n\n`;
+                prompt += `IMPROVE:\n`;
             } else {
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
-                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
-                    prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Use NEW approaches.\n\n`;
+                    const repeatReadable = repeatAreas.map(area => `${AREA_NAMES[area]} (${areaCounts[area]}x)`).join(', ');
+                    prompt += `REPEAT AREAS (${repeatReadable}) - be more direct:\n`;
                 } else {
-                    prompt += `Transition naturally to improvement areas.\n\n`;
+                    prompt += `IMPROVE:\n`;
                 }
             }
             
-            prompt += `AREAS FOR IMPROVEMENT:\n`;
             detailedStruggles.forEach(struggle => {
-                prompt += `⚠️ ${struggle}\n`;
+                prompt += `• ${struggle}\n`;
             });
             prompt += `\n`;
 
-            prompt += `COACHING TIPS (provide one for EACH area above):\n`;
+            prompt += `TIPS (bullet each):\n`;
             
             // Add example tips from CSV if available
             strugglingAreas.forEach(area => {
                 const exampleTip = getRandomTip(area);
-                prompt += `- ${areaNames[area]}: "${exampleTip}" (explain WHY this helps)\n`;
+                prompt += `• ${AREA_NAMES[area]}: "${exampleTip}"\n`;
             });
-            prompt += `\nFor each tip: Start with their current number vs target (e.g., "You're at 85%, need 88%"). Then give conversational advice - casual, direct, like talking to a friend. Show them the impact. For word choice, give phrase swaps: "Instead of saying [X], try [Y]" with quick examples.\n\n`;
+            
+            if (hasReliabilityIssue && metrics.reliability >= 16) {
+                prompt += `\n(Reliability = PTOST procedures. Code unplanned time in Verint ahead of time. Failure to follow = disciplinary action.)\n`;
+            }
+            
+            prompt += `\nFor each tip: State current vs target, then give conversational advice with examples. For word choice, use "Instead of [X], try [Y]" format.`;
         }
         
         // Add custom notes if provided
@@ -848,10 +832,16 @@ METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = a
 
         prompt += `Keep it brief, friendly, and natural. Start with "Hey ${employeeName}!" End with supportive closing.`;
         
+        // Save to history
+        saveToHistory(employeeName, strugglingAreas, metrics);
+        
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('coachingForm').style.display = 'none';
     });
-});
+});\nALSO: "${customNotes}"\n`;
+        }
+
+        prompt += `\n\nEND: S
