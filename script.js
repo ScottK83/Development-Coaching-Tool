@@ -719,12 +719,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Update currentEmailData when user pastes generated email
+    document.getElementById('generatedEmail')?.addEventListener('input', (e) => {
+        const content = e.target.value.trim();
+        const employeeName = document.getElementById('resultName').textContent;
+        
+        if (content && employeeName) {
+            window.currentEmailData = {
+                name: employeeName,
+                content: content
+            };
+        }
+    });
+
     // Outlook button
     document.getElementById('outlookEmail')?.addEventListener('click', () => {
-        if (!window.currentEmailData) return;
+        const content = document.getElementById('generatedEmail')?.value.trim();
+        const employeeName = document.getElementById('resultName').textContent;
         
-        const { name, content } = window.currentEmailData;
-        const emailData = generateEmailContent(name, content);
+        if (!content) {
+            alert('Please paste the generated email from Copilot first!');
+            return;
+        }
+        
+        if (!employeeName) {
+            alert('Employee name not found!');
+            return;
+        }
+        
+        const emailData = generateEmailContent(employeeName, content);
         
         const subject = encodeURIComponent(emailData.subject);
         const body = encodeURIComponent(emailData.body);
