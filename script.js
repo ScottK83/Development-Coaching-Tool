@@ -655,8 +655,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         serverTips = await loadServerTips();
         userTips = loadUserTips();
         mergeTips();
-        
-        console.log('✅ Tips auto-loaded from server');
+    } catch (error) {
+        console.warn('⚠️ Using fallback tips:', error);
     }
 
     // Employee dashboard button
