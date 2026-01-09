@@ -77,9 +77,17 @@
                     </div>
                     <div id="employeeSelectContainer" style="display: none; margin-top: 15px;">
                         <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
+                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
                         <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                             <option value="">-- Choose an employee --</option>
                         </select>
+                    </div>
+
+                    <!-- Data Backup / Restore -->
+                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="exportDataBtn" class="btn-secondary">💾 Backup Data (JSON)</button>
+                        <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
+                        <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                     </div>
                 </section>
 
@@ -191,6 +199,7 @@
                     <h2>AI Prompt for <span id="resultName"></span></h2>
                     <div class="button-group">
                         <button type="button" id="copyPrompt" class="btn-primary">📋 Copy & Open Copilot</button>
+                        <button type="button" id="exportPdfBtn" class="btn-secondary">🖨️ Print / PDF</button>
                         <button type="button" id="newCoaching" class="btn-secondary">🔄 New Prompt</button>
                     </div>
                 </div>

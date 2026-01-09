@@ -26,6 +26,10 @@ function showOnlySection(sectionId) {
     }
 }
 
+function exportToPDF() {
+    window.print();
+}
+
 // Target metrics for comparison
 const TARGETS = {
     driver: {
@@ -1238,6 +1242,19 @@ function initApp() {
         document.getElementById('tipsFileInput').click();
     });
 
+    // Backup/restore all app data
+    document.getElementById('exportDataBtn')?.addEventListener('click', exportAppData);
+    document.getElementById('importDataBtn')?.addEventListener('click', () => {
+        document.getElementById('dataFileInput')?.click();
+    });
+    document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            importAppData(file);
+        }
+        e.target.value = '';
+    });
+
     // Handle file import
     document.getElementById('tipsFileInput')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -1335,6 +1352,94 @@ function initApp() {
     
     let uploadedEmployeeData = [];
 
+    function renderEmployeeDropdown(filterText = '') {
+        const dropdown = document.getElementById('employeeSelect');
+        if (!dropdown) return;
+        const search = filterText.trim().toLowerCase();
+        dropdown.innerHTML = '<option value="">-- Choose an employee --</option>';
+        uploadedEmployeeData.forEach((emp, index) => {
+            if (!search || emp.name.toLowerCase().includes(search)) {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = emp.name;
+                dropdown.appendChild(option);
+            }
+        });
+    }
+
+    function exportAppData() {
+        try {
+            const backup = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                coachingHistory: JSON.parse(localStorage.getItem('coachingHistory') || '{}'),
+                userCustomTips: loadUserTips()
+            };
+
+            const dataStr = JSON.stringify(backup, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `coaching-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            alert('✅ Backup created. Save the JSON file safely.');
+        } catch (e) {
+            console.error('Backup failed', e);
+            alert('❌ Backup failed. See console for details.');
+        }
+    }
+
+    function importAppData(file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (!data || typeof data !== 'object') {
+                    alert('❌ Invalid backup file.');
+                    return;
+                }
+
+                const incomingHistory = data.coachingHistory || {};
+                const incomingTips = data.userCustomTips || {};
+                const merge = confirm('Merge with existing data?\nOK = Merge, Cancel = Replace.');
+
+                let finalHistory = {};
+                if (merge) {
+                    const existingHistory = getAllHistory();
+                    finalHistory = { ...existingHistory };
+                    Object.entries(incomingHistory).forEach(([name, sessions]) => {
+                        if (!Array.isArray(sessions)) return;
+                        const current = finalHistory[name] || [];
+                        const combined = [...current];
+                        sessions.forEach(s => {
+                            const key = `${s.dateRange || ''}|${s.date || ''}`;
+                            const exists = combined.some(cs => `${cs.dateRange || ''}|${cs.date || ''}` === key);
+                            if (!exists) combined.push(s);
+                        });
+                        finalHistory[name] = combined;
+                    });
+                } else {
+                    finalHistory = incomingHistory;
+                }
+
+                localStorage.setItem('coachingHistory', JSON.stringify(finalHistory));
+                userTips = incomingTips || {};
+                saveUserTips(userTips);
+                mergeTips();
+                if (typeof initializeQuickAccess === 'function') {
+                    initializeQuickAccess();
+                }
+                alert('✅ Data restored successfully.');
+            } catch (e) {
+                console.error('Import failed', e);
+                alert('❌ Could not import backup. Make sure it is a valid JSON export.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     // Make entire date input field clickable to open calendar
     document.getElementById('startDate')?.addEventListener('click', function() {
         this.showPicker();
@@ -1418,6 +1523,10 @@ function initApp() {
             if (container) container.style.display = 'none';
             validateDateRange();
         }
+    });
+
+    document.getElementById('employeeSearch')?.addEventListener('input', (e) => {
+        renderEmployeeDropdown(e.target.value || '');
     });
 
     // Initialize button state on page load with error handling
@@ -1514,15 +1623,8 @@ function initApp() {
                 }).filter(emp => emp.name);
                 
                 // Populate dropdown
-                const dropdown = document.getElementById('employeeSelect');
-                dropdown.innerHTML = '<option value="">-- Choose an employee --</option>';
-                
-                uploadedEmployeeData.forEach((emp, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = emp.name;
-                    dropdown.appendChild(option);
-                });
+                const searchValue = document.getElementById('employeeSearch')?.value || '';
+                renderEmployeeDropdown(searchValue);
                 
                 document.getElementById('employeeSelectContainer').style.display = 'block';
                 document.getElementById('dateRangeInputContainer').style.display = 'block';
@@ -1972,6 +2074,10 @@ function initApp() {
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
         });
+    });
+
+    document.getElementById('exportPdfBtn')?.addEventListener('click', () => {
+        exportToPDF();
     });
 
     // New email button
