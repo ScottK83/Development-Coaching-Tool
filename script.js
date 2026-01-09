@@ -591,25 +591,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('dateRangeDisplay').textContent = `📅 Date Range: ${dateRange}`;
                 }
                 
-                // Convert to JSON - manually specify header row and data range
-                // Row 1: Date range (YTD - 2025)
-                // Row 2: Column headers (Name, Calls Handled, % of Transfers, etc.)
-                // Row 3: GOAL row (skip this)
-                // Rows 4-19: Employee data
-                
-                // First get headers from row 2
-                const headerRange = XLSX.utils.sheet_to_json(firstSheet, { 
-                    range: 'A2:Z2',
-                    header: 1,
+                // Convert to JSON - Row 2 has headers, Row 3 is GOAL (skip), Rows 4-19 are employees
+                // Read everything from row 2 onwards
+                const allData = XLSX.utils.sheet_to_json(firstSheet, { 
+                    range: 1, // Start from row 2 (0-indexed, row 1)
                     defval: ''
                 });
                 
-                // Then get data from rows 4-19 using those headers
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-                    range: 'A4:Z19', // Employee data rows
-                    header: headerRange[0], // Use headers from row 2
-                    defval: ''
-                });
+                // Skip the first row (GOAL row) and only take rows 2-17 (which are employee rows 4-19)
+                const jsonData = allData.slice(1, 17);
                 
                 // Debug: Log first row to see column names
                 console.log('Excel columns found:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
