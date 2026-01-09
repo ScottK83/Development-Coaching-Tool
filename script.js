@@ -722,10 +722,9 @@ ${employeeName} is a customer service representative handling utility customer c
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nVARY THE OPENING - Create a unique opening each time. Examples (DON'T copy):\n`;
-            prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..." | "Pulled your metrics today - got some wins to talk about..." | "Had a chance to look at your recent performance - solid work on a few fronts..."\n`;
-            prompt += `Mix it up naturally. Sound like a real person.\n`;
-            prompt += `\nVARY WIN DESCRIPTIONS TOO - Don't repeat: "doing really well", "nailing", "on point", "solid", "strong", "great job", "on track", "maintaining well", "looking strong"\n\n`;
+            prompt += `\nVARY THE OPENING - Create a unique opening each time. These are just examples for inspiration - make up your own natural variations:\n`;
+            prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..."\n`;
+            prompt += `\nVARY WIN DESCRIPTIONS - Mix up your language naturally: "doing really well", "nailing", "on point", "solid", "strong", "on track", "looking good"\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
