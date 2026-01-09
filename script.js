@@ -411,15 +411,26 @@ function showHistory() {
 
 function exportHistory() {
     const history = getAllHistory();
-    const dataStr = JSON.stringify(history, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    
+    // Convert to CSV format
+    let csvContent = 'Employee Name,Date,Coaching Areas\n';
+    
+    for (const [employeeName, sessions] of Object.entries(history)) {
+        sessions.forEach(session => {
+            const date = new Date(session.date).toLocaleDateString();
+            const areas = session.strugglingAreas.join('; ');
+            csvContent += `"${employeeName}","${date}","${areas}"\n`;
+        });
+    }
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `coaching-history-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `coaching-history-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    alert('✅ History exported! You can commit this file to Git.');
+    alert('✅ History exported to CSV! You can open it in Excel.');
 }
 
 function importHistory() {
