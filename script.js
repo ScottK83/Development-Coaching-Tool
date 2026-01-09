@@ -828,26 +828,16 @@ CONTEXT - KEY METRICS:
             prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
         
-        // Add KB content if available
-        const generalKBUrl = document.getElementById('generalKB')?.value;
-        if (generalKBUrl) {
-            prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
-        }
-        
         prompt += `CLOSING: Vary structure and tone each time. Keep brief but fresh.\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
         saveToHistory(employeeName, '', 0, 0, strugglingAreas);
         
-        console.log('Displaying results section...');
-        
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
-        // Display the prompt
-        document.getElementById('resultName').textContent = employeeName;
-        document.getElementById('aiPrompt').value = prompt;
-        document.getElementById('resultsSection').style.display = 'block';
-        document.getElementById('coachingForm').style.display = 'none'
+        document.getElementById('coachingForm').style.display = 'none';
+    });
+});
