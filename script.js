@@ -723,6 +723,8 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         // Build comprehensive Copilot prompt
         let prompt = `You are writing a casual coaching email to ${employeeName}, a CSR at APS utility taking inbound phone calls.
 
+CRITICAL: EVERY email must sound COMPLETELY DIFFERENT. Do NOT reuse the same opening, structure, transitions, or phrasing. Treat each email like a fresh conversation - vary EVERYTHING.
+
 TONE & STYLE:
 - Casual, friendly, like a peer/supervisor (150-200 words)
 - Sound natural - use contractions, vary sentence structure, mix short/long sentences
@@ -745,10 +747,11 @@ CONTEXT - KEY METRICS:
             wins.forEach(win => {
                 prompt += `✅ ${win}\n`;
             });
-            prompt += `Be genuinely celebratory. Sound thoughtful and personal - like you reviewed their work carefully. CREATE unique variations (don't rotate examples):\n`;
-            prompt += `Header ideas: "Real Wins Here" | "Let's Start With the Good Stuff" | "Few Things You're Crushing"\n`;
-            prompt += `Opening ideas: "Looking at your metrics - good stuff happening..." | "Checked your numbers - few things to celebrate..."\n`;
-            prompt += `Vary descriptions: "nailing", "on point", "solid", "crushing it", "exactly where you need to be"\n\n`;
+            prompt += `VARY EVERYTHING - opening sentence structure, how you list wins, header phrasing, word choice. Each email should feel like a different conversation:\n`;
+            prompt += `- Opening: Change sentence structure each time (don't always start "Was looking at your metrics...")\n`;
+            prompt += `- Wins presentation: Sometimes list them upfront, sometimes weave into narrative, sometimes group by theme\n`;
+            prompt += `- Header: Fresh phrasing every time - not just word swaps\n`;
+            prompt += `- Tone: Vary energy level - sometimes excited, sometimes matter-of-fact but supportive, sometimes impressed\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
@@ -801,14 +804,18 @@ CONTEXT - KEY METRICS:
             }
             
             if (!isRepeatCoaching) {
-                prompt += `TRANSITION: Casually move from wins to improvement areas.\n\n`;
+                prompt += `TRANSITION: Vary how you shift to improvement areas. Don't always say "That said" or "Now, shifting over." Try different structures:\n`;
+                prompt += `- Blend it naturally into the conversation\n`;
+                prompt += `- Use a question or reflection\n`;
+                prompt += `- Jump right in without formal transition\n`;
+                prompt += `- Use different connecting phrases each time\n\n`;
             } else {
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
                     const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
                     prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Find NEW approaches - don't repeat previous advice.\n\n`;
                 } else {
-                    prompt += `TRANSITION: Casually move from wins to improvement areas.\n\n`;
+                    prompt += `TRANSITION: Vary how you shift to improvement areas. Don't always say "That said" or "Now, shifting over." Try different structures each time.\n\n`;
                 }
             }
             
@@ -816,10 +823,15 @@ CONTEXT - KEY METRICS:
             detailedStruggles.forEach(struggle => {
                 prompt += `⚠️ ${struggle}\n`;
             });
-            prompt += `Describe gaps naturally and casually. CREATE unique phrasing each time.\n\n`;
+            prompt += `Vary how you describe gaps - don't always use the same phrasing patterns or structure. Sometimes brief, sometimes more context.\n\n`;
             
             prompt += `TIPS (2-4 strategies):\n`;
-            prompt += `Use BULLET POINTS with LABELED SECTIONS (e.g., "**Hold Time:**"). For each tip, explain WHY it matters (customer impact, efficiency, scores). Include specific examples/scripts. CREATE unique approaches - don't repeat yourself.\n\n`;
+            prompt += `Use LABELED SECTIONS (e.g., "**Hold Time:**"). Vary tip structure each time:\n`;
+            prompt += `- Sometimes bullet points, sometimes numbered, sometimes paragraph form\n`;
+            prompt += `- Change how you introduce tips (don't always say "Try..." or "Focus on...")\n`;
+            prompt += `- Vary the WHY placement - sometimes before the action, sometimes after\n`;
+            prompt += `- Mix up specificity - sometimes give detailed steps, sometimes quick tactical shifts\n`;
+            prompt += `Make each tip feel different from previous emails.\n\n`;
         }
         
         // Add KB content if available
@@ -828,9 +840,11 @@ CONTEXT - KEY METRICS:
             prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `CLOSING:\nBe casual, reference checking metrics next week. CREATE unique variations each time:\n`;
-        prompt += `"Try these and let me know next week how you feel - we'll revisit metrics!"\n`;
-        prompt += `"Give these a shot this week, we'll check your numbers next week!"\n`;
+        prompt += `CLOSING:\nVary closing structure completely each time. Don't just swap words in the same sentence pattern:\n`;
+        prompt += `- Sometimes mention metrics check first, sometimes end with it\n`;
+        prompt += `- Vary how you invite follow-up (question, statement, casual suggestion)\n`;
+        prompt += `- Change the energy/tone (encouraging, matter-of-fact, collaborative)\n`;
+        prompt += `- Keep it brief but make it sound fresh\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
