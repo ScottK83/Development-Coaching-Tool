@@ -591,9 +591,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('dateRangeDisplay').textContent = `📅 Date Range: ${dateRange}`;
                 }
                 
-                // Convert to JSON (row 1 is date, row 2 is headers, row 3+ is data)
+                // Convert to JSON (row 1 is date, row 2 is headers, rows 4-19 are employees)
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-                    range: 1, // Start from row 2 (0-indexed, so row 1) which has the headers
+                    range: 'A3:Z19', // Read from row 4 to row 19 (A3 includes row 3 as headers)
                     defval: '' // Default value for empty cells
                 });
                 
