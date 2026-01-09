@@ -582,7 +582,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
     // Open Copilot button
     document.getElementById('openCopilot')?.addEventListener('click', () => {
         // Use Microsoft 365 Copilot chat URL for enterprise users
-        window.open('https://copilot.cloud.microsoft/chat', '_blank');
+        window.open('https://copilot.microsoft.com/', '_blank');
     });
 
     // New email button
@@ -728,7 +728,10 @@ ${employeeName} is a customer service representative handling utility customer c
             prompt += `- "Took a look at your numbers this morning - you're doing well in several spots..."\n`;
             prompt += `- "Wanted to touch base on your metrics - there's definitely some wins to talk about..."\n`;
             prompt += `- "Just finished going through your performance data and saw some positives..."\n`;
-            prompt += `MIX IT UP NATURALLY - don't use the exact same phrasing twice. Vary your word choice, sentence structure, and tone. Sound like a real person, not a template.\n\n`;
+            prompt += `MIX IT UP NATURALLY - don't use the exact same phrasing twice. Vary your word choice, sentence structure, and tone. Sound like a real person, not a template.\n`;
+            prompt += `\nVARY HOW YOU DESCRIBE THE WINS TOO - Don't always say "crushing it" or "killing it". Mix up your language throughout the email:\n`;
+            prompt += `- "doing really well", "nailing", "on point", "solid work", "strong performance", "great job", "impressive", "handling well", "excelling at", "on track", "right where we need you", "maintaining well", "keeping it consistent", "really good", "doing great", "looking strong", "hitting the mark"\n`;
+            prompt += `Keep the language fresh and natural. Don't repeat the same praise words within a single email.\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
