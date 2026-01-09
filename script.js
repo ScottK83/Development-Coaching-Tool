@@ -800,18 +800,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
         document.getElementById('surveyTotal').value = employee.surveyTotal || 0;
-        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence || '';
-        document.getElementById('cxRepOverall').value = employee.cxRepOverall || '';
-        document.getElementById('fcr').value = employee.fcr || '';
-        document.getElementById('transfers').value = employee.transfers || '';
-        document.getElementById('aht').value = employee.aht || '';
-        document.getElementById('acw').value = employee.acw || '';
-        document.getElementById('holdTime').value = employee.holdTime || '';
-        document.getElementById('reliability').value = employee.reliability || '';
-        document.getElementById('overallSentiment').value = employee.overallSentiment || '';
-        document.getElementById('positiveWord').value = employee.positiveWord || '';
-        document.getElementById('negativeWord').value = employee.negativeWord || '';
-        document.getElementById('managingEmotions').value = employee.managingEmotions || '';
+        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence ?? '';
+        document.getElementById('cxRepOverall').value = employee.cxRepOverall ?? '';
+        document.getElementById('fcr').value = employee.fcr ?? '';
+        document.getElementById('transfers').value = employee.transfers ?? '';
+        document.getElementById('aht').value = employee.aht ?? '';
+        document.getElementById('acw').value = employee.acw ?? '';
+        document.getElementById('holdTime').value = employee.holdTime ?? '';
+        document.getElementById('reliability').value = employee.reliability ?? '';
+        document.getElementById('overallSentiment').value = employee.overallSentiment ?? '';
+        document.getElementById('positiveWord').value = employee.positiveWord ?? '';
+        document.getElementById('negativeWord').value = employee.negativeWord ?? '';
+        document.getElementById('managingEmotions').value = employee.managingEmotions ?? '';
         
         // Scroll to form
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -819,27 +819,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Helper functions to parse Excel data
     function parsePercentage(value) {
-        if (!value && value !== 0) return '0';
-        if (value === 'N/A' || value === 'n/a') return '0';
+        if (!value && value !== 0) return 0;
+        if (value === 'N/A' || value === 'n/a') return 0;
         // If already a decimal (0.83), convert to percentage (83)
         if (typeof value === 'number' && value <= 1) {
-            return (value * 100).toFixed(2);
+            return parseFloat((value * 100).toFixed(2));
         }
         // If string with %, remove it
         if (typeof value === 'string' && value.includes('%')) {
-            return parseFloat(value.replace('%', ''));
+            const parsed = parseFloat(value.replace('%', ''));
+            return isNaN(parsed) ? 0 : parsed;
         }
-        return parseFloat(value) || '0';
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     function parseSeconds(value) {
         if (!value && value !== 0) return '';
-        return Math.round(parseFloat(value)) || '';
+        const parsed = parseFloat(value);
+        if (isNaN(parsed)) return '';
+        return Math.round(parsed);
     }
 
     function parseHours(value) {
         if (!value && value !== 0) return '';
-        return parseFloat(value).toFixed(2) || '';
+        const parsed = parseFloat(value);
+        if (isNaN(parsed)) return '';
+        return parseFloat(parsed.toFixed(2));
     }
 
 
