@@ -252,6 +252,8 @@ function showMetricTips(metricKey) {
 // Add a new tip
 function addNewTip(metricKey) {
     const textarea = document.getElementById(`newTip-${metricKey}`);
+    if (!textarea) return;
+    
     const newTip = textarea.value.trim();
     
     if (!newTip) {
@@ -276,6 +278,8 @@ function addNewTip(metricKey) {
 // Save edited tip
 function saveTipEdit(metricKey, tipIndex) {
     const textarea = document.getElementById(`tip-${metricKey}-${tipIndex}`);
+    if (!textarea) return;
+    
     const editedTip = textarea.value.trim();
     
     if (!editedTip) {
