@@ -2035,7 +2035,7 @@ function initApp() {
                 prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
             
-            prompt += `\n\nFORMATTING: Only bold the metric name at the start of each tip (e.g., **Schedule Adherence:** then regular text). Do NOT bold anything else in the email body.\n\nFor each tip: Mix up how you phrase things. Sometimes say "You're at X, need Y", other times "Currently at X, let's get to Y", or "Target is Y, you're at X". Give casual, real-world advice with specific examples. For word choice tips, vary between "Instead of [X], try [Y]", "Swap [X] for [Y]", or "When you say [X], consider [Y]". Sound like a coworker giving friendly advice, not a textbook. Use different transitions: "Here's the thing", "So", "Also", "One more thing", "Real quick". Never repeat the same phrasing structure twice in a row.`;
+            prompt += `\n\nFORMATTING: Only bold the metric name at the start of each tip (e.g., **Schedule Adherence:** then regular text). Do NOT bold anything else in the email body.\n\nFor each tip: Mix up how you phrase things. These are example phrasings - vary based on them: "You're at X, need Y", "Currently at X, let's get to Y", or "Target is Y, you're at X". Give casual, real-world advice with specific examples. For word choice tips, these are example variations - create similar ones: "Instead of [X], try [Y]", "Swap [X] for [Y]", or "When you say [X], consider [Y]". Sound like a coworker giving friendly advice, not a textbook. These are example transitions - use variations: "Here's the thing", "So", "Also", "One more thing", "Real quick". Never repeat the same phrasing structure twice in a row.`;
         }
         
         // Add custom notes if provided
