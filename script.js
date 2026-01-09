@@ -1416,6 +1416,11 @@ function initApp() {
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
         const selectedIndex = e.target.value;
         
+        const pastContainer = document.getElementById('pastDateRangesContainer');
+        const pastSelect = document.getElementById('pastDateRanges');
+        if (pastSelect) pastSelect.innerHTML = '<option value="">-- Select a past date range --</option>';
+        if (pastContainer) pastContainer.style.display = 'none';
+        
         if (selectedIndex === '' || !uploadedEmployeeData || uploadedEmployeeData.length === 0) {
             // Hide sections if no employee selected
             const metricsSection = document.getElementById('metricsSection');
@@ -1457,11 +1462,51 @@ function initApp() {
         // Calculate and display YTD comparison
         displayYTDComparison(employee.name, employee);
         
+        // Populate past date ranges for selected employee
+        try {
+            const sessions = getEmployeeHistory(employee.name) || [];
+            const uniqueRanges = Array.from(new Set(sessions
+                .map(s => s.dateRange)
+                .filter(r => r && typeof r === 'string' && r.includes(' to '))));
+            if (uniqueRanges.length > 0) {
+                uniqueRanges.forEach(range => {
+                    const opt = document.createElement('option');
+                    opt.value = range;
+                    opt.textContent = range;
+                    pastSelect.appendChild(opt);
+                });
+                pastContainer.style.display = 'block';
+            }
+        } catch (err) {
+            console.warn('Could not populate past ranges:', err);
+        }
+        
         // Clear generated email textarea
         document.getElementById('generatedEmail').value = '';
         
         // Scroll to form
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // When a past date range is selected, populate start/end dates
+    document.getElementById('pastDateRanges')?.addEventListener('change', (e) => {
+        const range = e.target.value;
+        if (!range) return;
+        const parts = range.split(' to ');
+        if (parts.length === 2) {
+            const [start, end] = parts;
+            const startInput = document.getElementById('startDate');
+            const endInput = document.getElementById('endDate');
+            if (startInput && endInput) {
+                startInput.value = start;
+                endInput.value = end;
+                // Ensure container is visible and validation reflects new values
+                const container = document.getElementById('dateRangeInputContainer');
+                if (container) container.style.display = 'block';
+                // Re-validate to enable Load Data
+                try { validateDateRange(); } catch {}
+            }
+        }
     });
 
     // Helper functions to parse Excel data

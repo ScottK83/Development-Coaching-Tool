@@ -38,6 +38,12 @@
                                 <input type="date" id="endDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;" required>
                             </div>
                         </div>
+                        <div id="pastDateRangesContainer" style="display: none; margin: 8px 0 12px;">
+                            <label for="pastDateRanges" style="font-size: 0.9em; color: #666; display: block; margin-bottom: 6px;">📁 Past Date Ranges for Selected Employee:</label>
+                            <select id="pastDateRanges" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Select a past date range --</option>
+                            </select>
+                        </div>
                         <button type="button" id="loadDataBtn" class="btn-secondary" style="background: #ccc; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load Data</button>
                         <p id="dateValidationMsg" style="color: #dc3545; font-size: 0.9em; margin-top: 8px;">⚠️ Please select a file and enter both Start and End dates</p>
                     </div>
