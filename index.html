@@ -148,24 +148,26 @@
             <!-- Results Section -->
             <section id="resultsSection" style="display: none;">
                 <div class="results-header">
-                    <h2>Coaching Email for <span id="resultName"></span></h2>
+                    <h2>AI Prompt for <span id="resultName"></span></h2>
                     <div class="button-group">
-                        <button id="copyEmail" class="btn-primary">Copy to Clipboard</button>
-                        <button id="outlookEmail" class="btn-primary">Open in Outlook</button>
-                        <button id="getAITips" class="btn-ai">🤖 Get AI Coaching Tips</button>
+                        <button id="copyPrompt" class="btn-primary">📋 Copy Prompt</button>
+                        <button id="openCopilot" class="btn-ai">🤖 Open Copilot</button>
                         <button id="newCoaching" class="btn-secondary">Generate New Email</button>
                     </div>
                 </div>
 
                 <div class="coaching-content">
                     <section class="coaching-section">
-                        <h3>Email Ready to Send</h3>
-                        <div id="coachingEmail" class="coaching-script"></div>
-                    </section>
-                    
-                    <section class="coaching-section">
-                        <h3>Relevant Resources</h3>
-                        <div id="resourcesLinks"></div>
+                        <h3>Copilot AI Prompt</h3>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            <strong>Instructions:</strong><br>
+                            1. Click "Copy Prompt" below<br>
+                            2. Click "Open Copilot" to launch Microsoft Copilot<br>
+                            3. Paste the prompt into Copilot<br>
+                            4. Copilot will generate your personalized coaching email<br>
+                            5. Copy the email from Copilot and send via Outlook
+                        </p>
+                        <textarea id="aiPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
                     </section>
                 </div>
             </section>

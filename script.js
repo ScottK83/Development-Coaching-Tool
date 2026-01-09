@@ -511,6 +511,21 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         window.open(copilotUrl, '_blank');
     });
 
+    // Copy prompt button
+    document.getElementById('copyPrompt')?.addEventListener('click', () => {
+        const prompt = document.getElementById('aiPrompt').value;
+        navigator.clipboard.writeText(prompt).then(() => {
+            alert('✅ Prompt copied to clipboard!\n\nNow click "Open Copilot" and paste it there.');
+        }).catch(() => {
+            alert('Failed to copy. Please select the text and copy manually.');
+        });
+    });
+
+    // Open Copilot button
+    document.getElementById('openCopilot')?.addEventListener('click', () => {
+        window.open('https://copilot.microsoft.com/', '_blank');
+    });
+
     // New email button
     document.getElementById('newCoaching')?.addEventListener('click', () => {
         document.getElementById('coachingForm').style.display = 'block';
@@ -608,11 +623,10 @@ For each struggling area, provide specific, practical coaching advice that ${emp
         
         prompt += `\n\nGenerate only the email body. Start directly with the message content - no subject line or formal greeting needed.`;
         
-        // Open Microsoft Copilot with the prompt
-        const copilotUrl = `https://copilot.microsoft.com/?prompt=${encodeURIComponent(prompt)}`;
-        window.open(copilotUrl, '_blank');
-        
-        // Show helpful message
-        alert(`Opening Microsoft Copilot to generate your coaching email for ${employeeName}.\n\nCopilot will write a personalized email based on their performance metrics.\n\nCopy the email from Copilot and send it via Outlook!`);
+        // Display the prompt instead of trying to auto-fill Copilot
+        document.getElementById('resultName').textContent = employeeName;
+        document.getElementById('aiPrompt').value = prompt;
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('coachingForm').style.display = 'none';
     });
 });
