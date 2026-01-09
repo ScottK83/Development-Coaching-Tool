@@ -715,7 +715,7 @@ function showEmployeeDashboard() {
             const uniqueId = name.replace(/\s+/g, '-');
 
             const safeName = escapeHtml(name);
-            const safeNameForJs = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'";
+            const safeNameForJs = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             
             html += `
                 <div id="employee-card-${uniqueId}" style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -741,7 +741,7 @@ function showEmployeeDashboard() {
                 const weekLabel = session.dateRange || 'No week set';
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
-                const safeNameForDelete = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'";
+                const safeNameForDelete = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                 const safeDateLabel = escapeHtml(date);
                 const safeWeekLabel = escapeHtml(weekLabel);
                 const safeAreas = escapeHtml(areas);
