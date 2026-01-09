@@ -765,12 +765,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         fcr: parseSurveyPercentage(row['FCR%']),
                         overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
                         transfers: (() => {
-                            // Debug for transfers column
+                            // Try multiple column name variations
+                            const val = parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']);
                             if (firstName === 'Alyssa') {
-                                console.log('Alyssa row keys with "transfer":', Object.keys(row).filter(k => k.toLowerCase().includes('transfer')));
-                                console.log('Alyssa TransferS% value:', row['TransferS%']);
+                                console.log('Alyssa transfers parsed:', val);
                             }
-                            return parsePercentage(row['TransferS%']);
+                            return val;
                         })(),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
