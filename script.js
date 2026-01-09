@@ -539,10 +539,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         e.preventDefault();
 
         const employeeName = document.getElementById('employeeName').value;
-        const pronouns = document.getElementById('pronouns').value;
 
-        if (!employeeName || !pronouns) {
-            alert('Please fill in employee name and pronouns');
+        if (!employeeName) {
+            alert('Please fill in employee name');
             return;
         }
 
@@ -628,15 +627,17 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `You are a direct, professional supervisor writing a coaching email to ${employeeName} (pronouns: ${pronouns}).
+        let prompt = `You are a casual, supportive supervisor writing a coaching email to ${employeeName}.
 
 WRITING GUIDELINES:
-- Keep it concise and action-focused (150-200 words max)
-- Be professional and direct - avoid overly emotional or therapy-like language
+- Keep it concise and conversational (150-200 words max)
+- Use a CASUAL, friendly tone - like you're chatting over coffee
+- Be direct and honest, but approachable and relaxed
+- NO corporate jargon or overly formal language
 - NO phrases like "I know you've been working through challenges" or "you're not alone"
-- Focus on metrics, actions, and results - not feelings
+- Focus on metrics and actionable steps, but keep it light
 - Use "you/your" (second person) throughout
-- Be warm but businesslike
+- Sound like a real person, not a robot
 
 `;
 
