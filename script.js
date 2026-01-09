@@ -685,35 +685,37 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `You are a casual, supportive supervisor writing a coaching email to ${employeeName}.
+        let prompt = `You are writing a casual coaching email to ${employeeName}, a customer service associate at a utility company.
 
 WRITING GUIDELINES:
 - Keep it concise and conversational (150-200 words max)
-- Use a CASUAL, friendly tone - like you're chatting over coffee
-- Be direct and honest, but approachable and relaxed
+- Use a VERY CASUAL, friendly tone - like a peer or casual supervisor
+- Start with "Hey ${employeeName}! Was looking at your metrics, and I wanted to say..."
+- Be direct, honest, and approachable
 - NO corporate jargon or overly formal language
-- NO phrases like "I know you've been working through challenges" or "you're not alone"
-- Focus on metrics and actionable steps, but keep it light
-- Use "you/your" (second person) throughout
-- Sound like a real person, not a robot
+- Use "you/your" throughout
+- Sound natural and human
 
 FORMATTING:
 - NO em dashes (—) - use regular hyphens (-) or commas instead
-- Keep punctuation simple and clean
+- Keep punctuation simple
+
+CONTEXT:
+${employeeName} is a customer service representative handling utility customer calls, billing inquiries, service requests, and technical support.
 
 `;
 
         // Add wins section if applicable
         if (wins.length > 0) {
-            prompt += `CELEBRATE THESE WINS FIRST:\n`;
+            prompt += `CELEBRATE WINS (mention scores AND targets):\n`;
             wins.forEach(win => {
-                prompt += `✅ ${win}\n`;
+                prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nAcknowledge these briefly and specifically.\n\n`;
+            prompt += `\nStart by calling out these wins specifically. Example: "great job on schedule adherence at 93%" or "killing it with customer experience at 80%"\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
-            prompt += `PERFORMANCE STATUS: ${employeeName} is meeting or exceeding ALL targets! Write a congratulatory email recognizing their excellent performance and encouraging them to maintain this momentum.`;
+            prompt += `${employeeName} is meeting or exceeding ALL targets! Write an enthusiastic congratulatory email recognizing their excellent performance.`;
         } else {
             // Build detailed metrics for struggling areas
             const detailedStruggles = [];
@@ -722,19 +724,19 @@ FORMATTING:
                 let detail = '';
                 
                 if (area === 'scheduleAdherence' && metrics.scheduleAdherence < TARGETS.driver.scheduleAdherence.min) {
-                    detail = `${readable}: ${metrics.scheduleAdherence}% (Target: ${TARGETS.driver.scheduleAdherence.min}%)`;
+                    detail = `${readable}: Currently at ${metrics.scheduleAdherence}%, need to hit ${TARGETS.driver.scheduleAdherence.min}%`;
                 } else if (area === 'cxRepOverall' && metrics.cxRepOverall < TARGETS.driver.cxRepOverall.min) {
-                    detail = `${readable}: ${metrics.cxRepOverall}% (Target: ${TARGETS.driver.cxRepOverall.min}%)`;
+                    detail = `${readable}: Currently at ${metrics.cxRepOverall}%, need to hit ${TARGETS.driver.cxRepOverall.min}%`;
                 } else if (area === 'fcr' && metrics.fcr < TARGETS.driver.fcr.min) {
-                    detail = `${readable}: ${metrics.fcr}% (Target: ${TARGETS.driver.fcr.min}%)`;
+                    detail = `${readable}: Currently at ${metrics.fcr}%, need to hit ${TARGETS.driver.fcr.min}%`;
                 } else if (area === 'transfers' && metrics.transfers > TARGETS.driver.transfers.max) {
-                    detail = `${readable}: ${metrics.transfers}% (Target: <${TARGETS.driver.transfers.max}%)`;
+                    detail = `${readable}: Currently at ${metrics.transfers}%, need to get under ${TARGETS.driver.transfers.max}%`;
                 } else if (area === 'overallSentiment' && metrics.overallSentiment < TARGETS.driver.overallSentiment.min) {
-                    detail = `${readable}: ${metrics.overallSentiment}% (Target: ${TARGETS.driver.overallSentiment.min}%)`;
+                    detail = `${readable}: Currently at ${metrics.overallSentiment}%, need to hit ${TARGETS.driver.overallSentiment.min}%`;
                 } else if (area === 'aht' && metrics.aht > TARGETS.driver.aht.max) {
-                    detail = `${readable}: ${metrics.aht} seconds (Target: <${TARGETS.driver.aht.max} seconds)`;
+                    detail = `${readable}: Currently at ${metrics.aht} seconds, need to get under ${TARGETS.driver.aht.max} seconds`;
                 } else if (area === 'holdTime' && metrics.holdTime > TARGETS.driver.holdTime.max) {
-                    detail = `${readable}: ${metrics.holdTime} seconds (Target: <${TARGETS.driver.holdTime.max} seconds)`;
+                    detail = `${readable}: Currently at ${metrics.holdTime} seconds, need to get under ${TARGETS.driver.holdTime.max} seconds`;
                 } else {
                     detail = readable;
                 }
@@ -743,35 +745,45 @@ FORMATTING:
             });
             
             if (!isRepeatCoaching) {
-                // First time coaching - be direct
-                prompt += `OPENING: Start with "From your recent metrics, I can see you have struggles in: ${detailedStruggles.join(', ')}"\n\n`;
+                // First time coaching - casual intro after wins
+                prompt += `TRANSITION TO AREAS FOR GROWTH:\nAfter celebrating wins, transition casually like: "Now let's talk about a couple areas where we can level up..."\n\n`;
             } else {
-                // Repeat coaching - acknowledge previous attempts
+                // Repeat coaching - more serious but still casual
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
-                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (coached ${areaCounts[area]} time${areaCounts[area] > 1 ? 's' : ''})`).join(', ');
-                    prompt += `OPENING: Start with "We've discussed ${repeatReadable} before, and I'm seeing it's still needing attention."\n\n`;
-                    prompt += `⚠️ CRITICAL: DO NOT repeat previous coaching advice. You must find NEW strategies and approaches.\n\n`;
+                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
+                    prompt += `⚠️ REPEAT ISSUES ALERT:\nWe've talked about ${repeatReadable} before. Be more direct and serious. Example: "I need to be real with you - we've talked about AHT three times now and it's still not where it needs to be."\n\n`;
+                    prompt += `⚠️ CRITICAL: DO NOT repeat previous coaching advice. Find COMPLETELY NEW strategies and approaches.\n\n`;
                 } else {
-                    prompt += `OPENING: Start with "From your recent metrics, I can see you have struggles in: ${detailedStruggles.join(', ')}"\n\n`;
+                    prompt += `TRANSITION TO AREAS FOR GROWTH:\nAfter celebrating wins, transition casually like: "Now let's talk about a couple areas where we can level up..."\n\n`;
                 }
             }
             
-            prompt += `AREAS FOR IMPROVEMENT (focus on 2-3 most critical):\n`;
+            prompt += `AREAS FOR IMPROVEMENT (include current score vs target):\n`;
             detailedStruggles.forEach(struggle => {
                 prompt += `⚠️ ${struggle}\n`;
             });
             
-            prompt += `\nProvide 2-3 specific, actionable steps they can implement immediately. Be direct and practical.`;
+            prompt += `\n\nACTIONABLE TIPS (2-3 HIGH-IMPACT strategies):\n`;
+            prompt += `Provide specific, practical tips that will have REAL impact. These should be:\n`;
+            prompt += `- Immediately actionable (can start today)\n`;
+            prompt += `- Specific to utility customer service (billing issues, service requests, technical problems)\n`;
+            prompt += `- Focused on the biggest gap areas\n`;
+            prompt += `- Concrete examples they can use on their next call\n`;
+            prompt += `\nExample good tips:\n`;
+            prompt += `- For AHT: "Try using your warm transfer script before putting customers on hold - it actually saves time and they feel more informed"\n`;
+            prompt += `- For FCR: "Before transferring, take 30 seconds to check if the answer is in the billing FAQ - 80% of transfers could be resolved there"\n`;
+            prompt += `- For Sentiment: "Start every call with 'I'm here to help get this sorted for you' - sets positive tone immediately"\n`;
         }
         
         // Add KB content if available
         const generalKBUrl = document.getElementById('generalKB')?.value;
         if (generalKBUrl) {
-            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention relevant resources if applicable)`;
+            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention specific resources if relevant to their struggling areas)`;
         }
         
-        prompt += `\n\nGenerate only the email body. No subject line. Start directly with the message.`;
+        prompt += `\n\nEND THE EMAIL:\nClose casually like "Let me know if you want to chat about any of this!" or "Happy to walk through this with you anytime!"\n\n`;
+        prompt += `Generate only the email body. No subject line. Start directly with "Hey ${employeeName}! Was looking at your metrics..."`;
         
         // Save to history
         saveToHistory(employeeName, '', 0, 0, strugglingAreas);
