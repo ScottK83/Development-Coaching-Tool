@@ -701,13 +701,9 @@ FORMATTING:
 - NO em dashes (—) - use regular hyphens (-) or commas instead
 - Keep punctuation simple
 - Vary sentence length - mix short and longer sentences
-- Don't make every paragraph the same length
-- Use fragments occasionally if it sounds natural ("Really strong work on that.")
+- Use bullet points if they make tips clearer and more actionable
 
-CRITICAL - AVOID AI PATTERNS:
-- DON'T use bullet points or numbered lists
-- DON'T structure tips as "1. Do this, 2. Do that, 3. Try this"
-- Write tips in flowing paragraph form, naturally woven into the conversation
+AVOID AI PATTERNS:
 - Vary sentence structure - don't start every sentence the same way
 - Use contractions naturally (you're, I'd, let's, don't)
 - Add slight imperfections - not everything needs to be perfectly parallel or balanced
@@ -776,70 +772,45 @@ ${employeeName} is a customer service representative handling utility customer c
                 }
             });
             
+            // Add reliability hours explanation if >= 16
+            if (metrics.reliability >= 16) {
+                prompt += `\n🚨 RELIABILITY: ${metrics.reliability} hours of unplanned time. Emphasize they MUST use PTOST for the first 40 hours and schedule in Verint ahead of time. Failure = disciplinary action.\n\n`;
+            }
+            
+            if (!isRepeatCoaching) {
+                prompt += `TRANSITION: After celebrating wins, transition casually to improvement areas.\n\n`;
+            } else {
+                const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
+                if (repeatAreas.length > 0) {
+                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
+                    prompt += `⚠️ REPEAT COACHING ALERT: We've discussed ${repeatReadable} before. Be more direct. DO NOT repeat previous advice - find completely NEW approaches.\n\n`;
+                } else {
+                    prompt += `TRANSITION: After celebrating wins, transition casually to improvement areas.\n\n`;
+                }
+            }
+            
             prompt += `AREAS FOR IMPROVEMENT:\n`;
             detailedStruggles.forEach(struggle => {
                 prompt += `⚠️ ${struggle}\n`;
             });
-            prompt += `\nDescribe the gap between where they are and where they need to be in natural, varied language. Don't use the same phrasing every time.\n\n`;
-            });
+            prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
             
-            // Add reliability hours explanation if >= 16
-            if (metrics.reliability >= 16) {
-                prompt += `\n🚨 IMPORTANT RELIABILITY CONTEXT:\nThe ${metrics.reliability} hours represent unplanned and unscheduled time off. You MUST emphasize:\n- They need to use PTOST (Paid Time Off Short Term) to cover the first 40 hours of unscheduled/unplanned absences\n- They must schedule this time in Verint ahead of time whenever possible\n- Failure to properly schedule and utilize PTOST will result in disciplinary action per company policy\nBe direct but supportive about this. Example: "I also need to talk about the reliability hours - those ${metrics.reliability} hours are unplanned time, and it's critical that you're using PTOST to cover any absences and scheduling them in Verint ahead of time. This isn't optional - if we don't see that happening, we'll have to move into disciplinary action."\n\n`;
-            }
-            
-            if (!isRepeatCoaching) {
-                // First time coaching - casual intro after wins
-                prompt += `TRANSITION TO AREAS FOR GROWTH:\nAfter celebrating wins, transition casually like: "Now let's talk about a couple areas where we can level up..."\n\n`;
-            } else {
-                // Repeat coaching - more serious but still casual
-                const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
-                if (repeatAreas.length > 0) {
-                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
-                    prompt += `⚠️ REPEAT ISSUES ALERT:\nWe've talked about ${repeatReadable} before. Be more direct and serious. Example: "I need to be real with you - we've talked about AHT three times now and it's still not where it needs to be."\n\n`;
-                    prompt += `⚠️ CRITICAL: DO NOT repeat previous coaching advice. Find COMPLETELY NEW strategies and approaches.\n\n`;
-                } else {
-                    prompt += `TRANSITION TO AREAS FOR GROWTH:\nAfter celebrating wins, transition casually like: "Now let's talk about a couple areas where we can level up..."\n\n`;
-                }
-            }
-            
-            prompt += `AREAS FOR IMPROVEMENT (include current score vs target):\n`;
-            detailedStruggles.forEach(struggle => {
-                prompt += `⚠️ ${struggle}\n`;
-            });
-            
-            prompt += `\n\nACTIONABLE TIPS:\n`;
-            prompt += `Provide 2-3 specific, immediately actionable tips that address ALL the struggling areas listed above.\n`;
-            prompt += `- Write in flowing paragraph form (no bullet points or numbered lists)\n`;
-            prompt += `- Include concrete examples or quick scripts they can use on their next call\n`;
-            prompt += `- Vary your approach each time - if you've coached this metric before, find a completely new angle\n`;
-            prompt += `- Be specific to utility customer service (billing, outages, service requests)\n\n`;
+            prompt += `TIPS (2-3 actionable strategies):\n`;
+            prompt += `Address ALL struggling areas. Use bullet points or paragraphs - whatever's clearest. Include concrete examples/scripts. Vary your approach every time.\n\n`;
         }
         
         // Add KB content if available
         const generalKBUrl = document.getElementById('generalKB')?.value;
         if (generalKBUrl) {
-            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention specific resources if relevant to their struggling areas)`;
+            prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `\n\nEND THE EMAIL:\nAfter providing the tips, add a casual closing paragraph. VARY THE CLOSING NATURALLY - use these as inspiration but create unique variations each time:\n`;
-        prompt += `- "These are some things I'd love for you to try in your day to day. Let me know how they work, and if you want to chat about any of this!"\n`;
-        prompt += `- "Give these a shot and let me know how it goes. Happy to talk through any of it if you want!"\n`;
-        prompt += `- "Try these out over the next few days and see how they feel. Always here if you want to brainstorm!"\n`;
-        prompt += `- "Let me know if any of these land for you. We can always hop on a quick call to walk through them!"\n`;
-        prompt += `- "I think these could really help - give them a try and keep me posted on how it's going!"\n`;
-        prompt += `- "Excited to see how these work for you. Reach out anytime if you want to talk strategy!"\n`;
-        prompt += `- "Let me know what you think about these. Always happy to jump on a call if you need support!"\n`;
-        prompt += `- "Give these a test run and circle back with me on what clicks. I'm here if you need anything!"\n`;
-        prompt += `- "Try working these into your calls and let's connect on how they're going. My door's always open!"\n`;
-        prompt += `- "Start with these and see what works best for your style. Holler if you want to dig deeper on any of it!"\n`;
-        prompt += `- "I'd love to hear how these play out for you. Don't hesitate to reach out if you want to chat!"\n`;
-        prompt += `- "Put these into practice and keep me in the loop on your progress. Here whenever you need me!"\n`;
-        prompt += `- "See how these feel over the next week or so. Always down to talk through anything that comes up!"\n`;
-        prompt += `- "Give these a go and let me know what's working. We can adjust as needed - just say the word!"\n`;
-        prompt += `- "Looking forward to seeing these help. Swing by or shoot me a message anytime to discuss!"\n`;
-        prompt += `DON'T use the exact same closing twice. Create natural variations that sound casual, supportive, and inviting for follow-up. Make it sound like a real person wrote it, not a template.\n\n`;
-        prompt += `Generate only the email body. No subject line. Start directly with "Hey ${employeeName}! Was looking at your metrics..."`;
+        prompt += `CLOSING:\nVary it each time - be casual, supportive, invite follow-up. Examples:\n`;
+        prompt += `"Give these a shot and let me know how it goes!"\n`;
+        prompt += `"Try these out and circle back if you want to chat!"\n`;
+        prompt += `"Let me know what works - always here to help!"\n`;
+        prompt += `Create your own natural variation. Don't repeat the same closing.\n\n`;
+        prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
         saveToHistory(employeeName, '', 0, 0, strugglingAreas);
