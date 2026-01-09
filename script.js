@@ -712,7 +712,14 @@ ${employeeName} is a customer service representative handling utility customer c
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nStart by calling out these wins specifically. Example: "great job on schedule adherence at 93%" or "killing it with customer experience at 80%"\n\n`;
+            prompt += `\nVARY THE OPENING - pick one of these styles to start the email after "Hey ${employeeName}!":\n`;
+            prompt += `- "Was looking at your metrics and wanted to call out some wins..."\n`;
+            prompt += `- "I was pulling your numbers and there's some really good stuff happening..."\n`;
+            prompt += `- "Checked out your latest metrics - you're doing great on a few things..."\n`;
+            prompt += `- "Looking at your performance, and I gotta say there are some bright spots..."\n`;
+            prompt += `- "Been reviewing your metrics and wanted to highlight what's working..."\n`;
+            prompt += `- "Just went through your numbers and there's definitely some stuff to celebrate..."\n`;
+            prompt += `Then naturally call out the specific wins with their scores. Mix up how you phrase it each time.\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
