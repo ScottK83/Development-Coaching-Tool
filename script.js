@@ -1567,6 +1567,45 @@ function initApp() {
         statusEl.textContent = 'Showing current metrics vs targets (with previous/YTD deltas when available).';
     });
 
+    document.getElementById('compositeScoreBtn')?.addEventListener('click', () => {
+        const surveyTotalInput = parseInt(document.getElementById('surveyTotal').value, 10) || 0;
+        const hasSurveys = surveyTotalInput > 0;
+
+        const metrics = {
+            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
+            cxRepOverall: hasSurveys && document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
+            fcr: hasSurveys && document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
+            overallExperience: hasSurveys && document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
+            transfers: parseFloat(document.getElementById('transfers').value) || 0,
+            overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
+            positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
+            negativeWord: parseFloat(document.getElementById('negativeWord').value) || 0,
+            managingEmotions: parseFloat(document.getElementById('managingEmotions').value) || 0,
+            aht: parseFloat(document.getElementById('aht').value) || 0,
+            acw: parseFloat(document.getElementById('acw').value) || 0,
+            holdTime: parseFloat(document.getElementById('holdTime').value) || 0,
+            reliability: parseFloat(document.getElementById('reliability').value) || 0
+        };
+
+        const compositeEl = document.getElementById('compositeScore');
+        const compositeStatus = document.getElementById('compositeScoreStatus');
+        if (!compositeEl || !compositeStatus) return;
+
+        const { score, detail } = computeCompositeScore(metrics);
+        if (score === null) {
+            compositeEl.style.display = 'block';
+            compositeEl.innerHTML = '<p style="color: #666;">No metrics available to compute score.</p>';
+            compositeStatus.textContent = detail;
+            return;
+        }
+
+        const rounded = score.toFixed(1);
+        const color = score >= 100 ? '#28a745' : score >= 90 ? '#ffc107' : '#dc3545';
+        compositeEl.style.display = 'block';
+        compositeEl.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;"><div style="font-size: 2em; font-weight: 700; color: ${color};">${rounded}</div><div style="color: #555;">Composite score (>=100 means at/above targets after normalization).</div></div>`;
+        compositeStatus.textContent = detail;
+    });
+
     // Initialize button state on page load with error handling
     setTimeout(() => {
         try {
@@ -2384,4 +2423,45 @@ function buildConsolidatedMetrics(employeeName, currentMetrics) {
 
     html += '</tbody></table>';
     return html;
+}
+
+// Compute a simple composite score (average of normalized ratios to target)
+function computeCompositeScore(currentMetrics) {
+    const targetMap = {
+        scheduleAdherence: { target: TARGETS.driver.scheduleAdherence.min, type: 'min' },
+        cxRepOverall: { target: TARGETS.driver.cxRepOverall.min, type: 'min' },
+        fcr: { target: TARGETS.driver.fcr.min, type: 'min' },
+        overallExperience: { target: TARGETS.driver.overallExperience.min, type: 'min' },
+        transfers: { target: TARGETS.driver.transfers.max, type: 'max' },
+        overallSentiment: { target: TARGETS.driver.overallSentiment.min, type: 'min' },
+        positiveWord: { target: TARGETS.driver.positiveWord.min, type: 'min' },
+        negativeWord: { target: TARGETS.driver.negativeWord.min, type: 'min' },
+        managingEmotions: { target: TARGETS.driver.managingEmotions.min, type: 'min' },
+        aht: { target: TARGETS.driver.aht.max, type: 'max' },
+        acw: { target: TARGETS.driver.acw.max, type: 'max' },
+        holdTime: { target: TARGETS.driver.holdTime.max, type: 'max' },
+        reliability: { target: TARGETS.driver.reliability.max, type: 'max' }
+    };
+
+    const contributions = [];
+
+    Object.entries(targetMap).forEach(([key, meta]) => {
+        const raw = currentMetrics[key];
+        if (raw === '' || raw === null || raw === undefined || isNaN(parseFloat(raw))) return;
+        const val = parseFloat(raw);
+        if (val === 0 && meta.type === 'max') {
+            return; // avoid divide by zero
+        }
+        const ratio = meta.type === 'min' ? val / meta.target : meta.target / val;
+        // Cap ratio to avoid extreme influence, map to 0-150%
+        const normalized = Math.max(0, Math.min(1.5, ratio));
+        contributions.push(normalized * 100);
+    });
+
+    if (contributions.length === 0) {
+        return { score: null, detail: 'No metrics available to compute score.' };
+    }
+
+    const avg = contributions.reduce((a, b) => a + b, 0) / contributions.length;
+    return { score: avg, detail: `Averaged ${contributions.length} metrics; capped ratios at 150%.` };
 }
