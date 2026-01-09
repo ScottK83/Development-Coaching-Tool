@@ -568,6 +568,20 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
 
         const strugglingAreas = identifyStrugglingAreas(metrics);
         
+        // Check coaching history for this employee
+        const history = getEmployeeHistory(employeeName);
+        const isRepeatCoaching = history.length > 0;
+        
+        // Count how many times each area has been coached
+        const areaCounts = {};
+        history.forEach(entry => {
+            if (entry.strugglingAreas) {
+                entry.strugglingAreas.forEach(area => {
+                    areaCounts[area] = (areaCounts[area] || 0) + 1;
+                });
+            }
+        });
+        
         // Convert struggling areas to readable names
         const areaNames = {
             scheduleAdherence: 'Schedule Adherence',
@@ -589,41 +603,117 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             depositWaiver: 'Deposit Waiver'
         };
         
+        // Identify wins (metrics exceeding targets)
+        const wins = [];
+        if (metrics.scheduleAdherence >= TARGETS.driver.scheduleAdherence.min) {
+            wins.push(`Schedule Adherence: ${metrics.scheduleAdherence}% (Target: ${TARGETS.driver.scheduleAdherence.min}%)`);
+        }
+        if (metrics.cxRepOverall >= TARGETS.driver.cxRepOverall.min) {
+            wins.push(`Customer Experience: ${metrics.cxRepOverall}% (Target: ${TARGETS.driver.cxRepOverall.min}%)`);
+        }
+        if (metrics.fcr >= TARGETS.driver.fcr.min) {
+            wins.push(`FCR: ${metrics.fcr}% (Target: ${TARGETS.driver.fcr.min}%)`);
+        }
+        if (metrics.overallSentiment >= TARGETS.driver.overallSentiment.min) {
+            wins.push(`Overall Sentiment: ${metrics.overallSentiment}% (Target: ${TARGETS.driver.overallSentiment.min}%)`);
+        }
+        if (metrics.managingEmotions >= TARGETS.driver.managingEmotions.min) {
+            wins.push(`Managing Emotions: ${metrics.managingEmotions}% (Target: ${TARGETS.driver.managingEmotions.min}%)`);
+        }
+        if (metrics.transfers <= TARGETS.driver.transfers.max) {
+            wins.push(`Transfers: ${metrics.transfers}% (Target: <${TARGETS.driver.transfers.max}%)`);
+        }
+        if (metrics.aht <= TARGETS.driver.aht.max) {
+            wins.push(`AHT: ${metrics.aht} seconds (Target: <${TARGETS.driver.aht.max} seconds)`);
+        }
+        
         // Build comprehensive Copilot prompt
-        let prompt = `You are a supportive supervisor writing a conversational one-on-one coaching email to ${employeeName} (pronouns: ${pronouns}).
+        let prompt = `You are a direct, professional supervisor writing a coaching email to ${employeeName} (pronouns: ${pronouns}).
 
-Write a warm, encouraging coaching email (200-300 words) that:
-
-1. Opens with genuine appreciation and acknowledgment of their efforts
-2. Addresses their specific performance areas with empathy and understanding
-3. Provides 2-3 concrete, actionable improvement tips
-4. Ends with confidence in their potential and offers ongoing support
-5. Uses "you/your" (second person) throughout - never use he/she/him/her/they/them
-6. Maintains a conversational, authentic tone - avoid corporate jargon
+WRITING GUIDELINES:
+- Keep it concise and action-focused (150-200 words max)
+- Be professional and direct - avoid overly emotional or therapy-like language
+- NO phrases like "I know you've been working through challenges" or "you're not alone"
+- Focus on metrics, actions, and results - not feelings
+- Use "you/your" (second person) throughout
+- Be warm but businesslike
 
 `;
+
+        // Add wins section if applicable
+        if (wins.length > 0) {
+            prompt += `CELEBRATE THESE WINS FIRST:\n`;
+            wins.forEach(win => {
+                prompt += `✅ ${win}\n`;
+            });
+            prompt += `\nAcknowledge these briefly and specifically.\n\n`;
+        }
 
         if (strugglingAreas.length === 0) {
             prompt += `PERFORMANCE STATUS: ${employeeName} is meeting or exceeding ALL targets! Write a congratulatory email recognizing their excellent performance and encouraging them to maintain this momentum.`;
         } else {
-            const readableAreas = strugglingAreas
-                .map(area => areaNames[area] || area)
-                .join(', ');
+            // Build detailed metrics for struggling areas
+            const detailedStruggles = [];
+            strugglingAreas.forEach(area => {
+                const readable = areaNames[area] || area;
+                let detail = '';
+                
+                if (area === 'scheduleAdherence' && metrics.scheduleAdherence < TARGETS.driver.scheduleAdherence.min) {
+                    detail = `${readable}: ${metrics.scheduleAdherence}% (Target: ${TARGETS.driver.scheduleAdherence.min}%)`;
+                } else if (area === 'cxRepOverall' && metrics.cxRepOverall < TARGETS.driver.cxRepOverall.min) {
+                    detail = `${readable}: ${metrics.cxRepOverall}% (Target: ${TARGETS.driver.cxRepOverall.min}%)`;
+                } else if (area === 'fcr' && metrics.fcr < TARGETS.driver.fcr.min) {
+                    detail = `${readable}: ${metrics.fcr}% (Target: ${TARGETS.driver.fcr.min}%)`;
+                } else if (area === 'transfers' && metrics.transfers > TARGETS.driver.transfers.max) {
+                    detail = `${readable}: ${metrics.transfers}% (Target: <${TARGETS.driver.transfers.max}%)`;
+                } else if (area === 'overallSentiment' && metrics.overallSentiment < TARGETS.driver.overallSentiment.min) {
+                    detail = `${readable}: ${metrics.overallSentiment}% (Target: ${TARGETS.driver.overallSentiment.min}%)`;
+                } else if (area === 'aht' && metrics.aht > TARGETS.driver.aht.max) {
+                    detail = `${readable}: ${metrics.aht} seconds (Target: <${TARGETS.driver.aht.max} seconds)`;
+                } else if (area === 'holdTime' && metrics.holdTime > TARGETS.driver.holdTime.max) {
+                    detail = `${readable}: ${metrics.holdTime} seconds (Target: <${TARGETS.driver.holdTime.max} seconds)`;
+                } else {
+                    detail = readable;
+                }
+                
+                detailedStruggles.push(detail);
+            });
             
-            prompt += `AREAS NEEDING IMPROVEMENT: ${readableAreas}
-
-For each struggling area, provide specific, practical coaching advice that ${employeeName} can implement immediately. Be supportive and focus on growth mindset.`;
+            if (!isRepeatCoaching) {
+                // First time coaching - be direct
+                prompt += `OPENING: Start with "From your recent metrics, I can see you have struggles in: ${detailedStruggles.join(', ')}"\n\n`;
+            } else {
+                // Repeat coaching - acknowledge previous attempts
+                const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
+                if (repeatAreas.length > 0) {
+                    const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (coached ${areaCounts[area]} time${areaCounts[area] > 1 ? 's' : ''})`).join(', ');
+                    prompt += `OPENING: Start with "We've discussed ${repeatReadable} before, and I'm seeing it's still needing attention."\n\n`;
+                    prompt += `⚠️ CRITICAL: DO NOT repeat previous coaching advice. You must find NEW strategies and approaches.\n\n`;
+                } else {
+                    prompt += `OPENING: Start with "From your recent metrics, I can see you have struggles in: ${detailedStruggles.join(', ')}"\n\n`;
+                }
+            }
+            
+            prompt += `AREAS FOR IMPROVEMENT (focus on 2-3 most critical):\n`;
+            detailedStruggles.forEach(struggle => {
+                prompt += `⚠️ ${struggle}\n`;
+            });
+            
+            prompt += `\nProvide 2-3 specific, actionable steps they can implement immediately. Be direct and practical.`;
         }
         
         // Add KB content if available
         const generalKBUrl = document.getElementById('generalKB')?.value;
         if (generalKBUrl) {
-            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Consider mentioning relevant resources or guidance from this knowledge base if applicable)`;
+            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Mention relevant resources if applicable)`;
         }
         
-        prompt += `\n\nGenerate only the email body. Start directly with the message content - no subject line or formal greeting needed.`;
+        prompt += `\n\nGenerate only the email body. No subject line. Start directly with the message.`;
         
-        // Display the prompt instead of trying to auto-fill Copilot
+        // Save to history
+        saveToHistory(employeeName, '', 0, 0, strugglingAreas);
+        
+        // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
