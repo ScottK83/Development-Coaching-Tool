@@ -699,6 +699,7 @@ WRITING GUIDELINES:
 
 FORMATTING:
 - NO em dashes (—) - use regular hyphens (-) or commas instead
+- Use % symbol, don't spell out "percent"
 - Keep punctuation simple
 - Vary sentence length - mix short and longer sentences
 - Use bullet points if they make tips clearer and more actionable
@@ -721,26 +722,10 @@ ${employeeName} is a customer service representative handling utility customer c
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nVARY THE OPENING - Create a unique, natural opening each time. Use these as inspiration but DON'T copy them directly:\n`;
-            prompt += `- "Was looking at your metrics and wanted to call out some wins..."\n`;
-            prompt += `- "I was pulling your numbers and there's some really good stuff happening..."\n`;
-            prompt += `- "Checked out your latest metrics - you're doing great on a few things..."\n`;
-            prompt += `- "Looking at your performance, and I gotta say there are some bright spots..."\n`;
-            prompt += `- "Been reviewing your metrics and wanted to highlight what's working..."\n`;
-            prompt += `- "Just went through your numbers and there's definitely some stuff to celebrate..."\n`;
-            prompt += `- "Had a chance to look at your recent performance - some really solid work here..."\n`;
-            prompt += `- "Pulled your metrics today and wanted to give you some props..."\n`;
-            prompt += `- "Been meaning to reach out - saw your numbers and there's some good news..."\n`;
-            prompt += `- "Quick look at your metrics shows you're nailing a few key areas..."\n`;
-            prompt += `- "Reviewing your performance and wanted to start with what's going well..."\n`;
-            prompt += `- "Your latest metrics came across my desk - let's talk about what's working..."\n`;
-            prompt += `- "Took a look at your numbers this morning - you're doing well in several spots..."\n`;
-            prompt += `- "Wanted to touch base on your metrics - there's definitely some wins to talk about..."\n`;
-            prompt += `- "Just finished going through your performance data and saw some positives..."\n`;
-            prompt += `MIX IT UP NATURALLY - don't use the exact same phrasing twice. Vary your word choice, sentence structure, and tone. Sound like a real person, not a template.\n`;
-            prompt += `\nVARY HOW YOU DESCRIBE THE WINS TOO - Don't always say "crushing it" or "killing it". Mix up your language throughout the email:\n`;
-            prompt += `- "doing really well", "nailing", "on point", "solid work", "strong performance", "great job", "impressive", "handling well", "excelling at", "on track", "right where we need you", "maintaining well", "keeping it consistent", "really good", "doing great", "looking strong", "hitting the mark"\n`;
-            prompt += `Keep the language fresh and natural. Don't repeat the same praise words within a single email.\n\n`;
+            prompt += `\nVARY THE OPENING - Create a unique opening each time. Examples (DON'T copy):\n`;
+            prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..." | "Pulled your metrics today - got some wins to talk about..." | "Had a chance to look at your recent performance - solid work on a few fronts..."\n`;
+            prompt += `Mix it up naturally. Sound like a real person.\n`;
+            prompt += `\nVARY WIN DESCRIPTIONS TOO - Don't repeat: "doing really well", "nailing", "on point", "solid", "strong", "great job", "on track", "maintaining well", "looking strong"\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
