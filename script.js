@@ -562,11 +562,13 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         window.open(copilotUrl, '_blank');
     });
 
-    // Copy prompt button
+    // Copy prompt button - also auto-opens Copilot
     document.getElementById('copyPrompt')?.addEventListener('click', () => {
         const prompt = document.getElementById('aiPrompt').value;
         navigator.clipboard.writeText(prompt).then(() => {
-            alert('✅ Prompt copied to clipboard!\n\nNow click "Open Copilot" and paste it there.');
+            alert('✅ Prompt copied!\n\nOpening Copilot - paste it there.');
+            // Auto-open Copilot after copying
+            window.open('https://copilot.microsoft.com/', '_blank');
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
         });

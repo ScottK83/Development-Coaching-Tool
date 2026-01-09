@@ -111,24 +111,24 @@
                 <div class="results-header">
                     <h2>AI Prompt for <span id="resultName"></span></h2>
                     <div class="button-group">
-                        <button type="button" id="copyPrompt" class="btn-primary">📋 Copy Prompt</button>
-                        <button type="button" id="openCopilot" class="btn-ai">🤖 Open Copilot</button>
+                        <button type="button" id="copyPrompt" class="btn-primary">📋 Copy & Open Copilot</button>
                         <button type="button" id="newCoaching" class="btn-secondary">Generate New Email</button>
                     </div>
                 </div>
 
                 <div class="coaching-content">
                     <section class="coaching-section">
-                        <h3>Copilot AI Prompt</h3>
+                        <h3>Ready to Generate Email</h3>
                         <p style="color: #666; margin-bottom: 15px;">
-                            <strong>Instructions:</strong><br>
-                            1. Click "Copy Prompt" below<br>
-                            2. Click "Open Copilot" to launch Microsoft Copilot<br>
-                            3. Paste the prompt into Copilot<br>
-                            4. Copilot will generate your personalized coaching email<br>
-                            5. Copy the email from Copilot and send via Outlook
-                        </p>
-                        <textarea id="aiPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
+                            <strong>Click the button above to:</strong><br>
+                            1. Copy the AI prompt to your clipboard<br>
+                            2. Automatically open Microsoft Copilot<br>
+                    <section class="coaching-section" style="display: none;">
+                        <h3>AI Prompt (for reference)</h3>
+                        <details>
+                            <summary style="cursor: pointer; color: #003DA5; font-weight: bold; margin-bottom: 10px;">Click to view full prompt</summary>
+                            <textarea id="aiPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
+                        </details>
                     </section>
                 </div>
             </section>
