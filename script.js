@@ -23,7 +23,10 @@ const TARGETS = {
     }
 };
 
-// Improvement tips for each metric
+// Custom tips loaded from CSV
+let customTips = {};
+
+// Improvement tips for each metric (fallback if no CSV loaded)
 const IMPROVEMENT_TIPS = {
     scheduleAdherence: "Schedule Adherence: Focus on being present for all scheduled shifts. This is foundational to your team relying on you.",
     cxRepOverall: "Customer Experience: Every interaction is an opportunity to exceed expectations. Work on consistency and attention to detail.",
@@ -49,6 +52,59 @@ function generateEmailContent(employeeName, coachingEmail) {
         subject: subject,
         body: coachingEmail
     };
+}
+
+// Load and parse CSV tips file
+function loadCustomTips(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const csv = e.target.result;
+                const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+                
+                // Skip header row
+                const dataLines = lines.slice(1);
+                
+                // Parse CSV and group by metric
+                const tips = {};
+                dataLines.forEach(line => {
+                    // Simple CSV parser (handles quotes)
+                    const match = line.match(/^([^,]+),"?([^"]*)"?$/);
+                    if (match) {
+                        const metric = match[1].trim();
+                        const tip = match[2].trim();
+                        
+                        if (!tips[metric]) {
+                            tips[metric] = [];
+                        }
+                        tips[metric].push(tip);
+                    }
+                });
+                
+                resolve(tips);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file);
+    });
+}
+
+// Get random tip for a metric
+function getRandomTip(metric) {
+    // First check custom tips
+    if (customTips[metric] && customTips[metric].length > 0) {
+        const tips = customTips[metric];
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        return randomTip;
+    }
+    
+    // Fallback to default tips
+    return IMPROVEMENT_TIPS[metric] || `Focus on improving ${metric}`;
 }
 
 // Identify struggling areas
@@ -322,6 +378,23 @@ async function displayResults(emailContent, employeeName, strugglingAreas, resou
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // CSV file loader
+    document.getElementById('tipsFile')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            customTips = await loadCustomTips(file);
+            const totalTips = Object.values(customTips).reduce((sum, tips) => sum + tips.length, 0);
+            const metricsCount = Object.keys(customTips).length;
+            document.getElementById('tipsStatus').textContent = `✅ Loaded ${totalTips} tips for ${metricsCount} metrics`;
+            document.getElementById('tipsStatus').style.color = '#28a745';
+        } catch (error) {
+            document.getElementById('tipsStatus').textContent = `❌ Error loading file: ${error.message}`;
+            document.getElementById('tipsStatus').style.color = '#dc3545';
+        }
+    });
+
     // View history button
     document.getElementById('viewHistory')?.addEventListener('click', () => {
         showHistory();
@@ -626,6 +699,15 @@ CONTEXT - KEY METRICS:
             prompt += `1. The specific action to take (concrete, tactical)\n`;
             prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
             prompt += `3. Examples or scripts when helpful\n\n`;
+            
+            // Add example tips from CSV if available
+            prompt += `EXAMPLE COACHING IDEAS (use as inspiration, reword naturally):\n`;
+            strugglingAreas.forEach(area => {
+                const exampleTip = getRandomTip(area);
+                prompt += `- ${areaNames[area]}: "${exampleTip}"\n`;
+            });
+            prompt += `\n`;
+            
             prompt += `For Word Choice coaching: Provide specific phrase swaps (what to STOP → what to SAY INSTEAD) from real utility CS scenarios. Explain WHY the new phrasing works better.\n\n`;
             prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
