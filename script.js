@@ -844,7 +844,7 @@ KEY METRICS EXPLAINED:
             prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
             
             prompt += `TIPS (2-4 actionable strategies):\n`;
-            prompt += `Use BULLET POINTS. These should have real substance - include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
+            prompt += `Use BULLET POINTS with LABELED SECTIONS. Before each bullet point or group of bullets, add a bold header or underlined text showing which metric you're addressing (e.g., "**Hold Time:**" or "__Negative Word Choice:__"). This helps them know exactly what each tip improves. Include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
         }
         
         // Add KB content if available
