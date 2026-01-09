@@ -738,12 +738,19 @@ ${employeeName} is a customer service representative handling utility customer c
                     detail = `${readable}: Currently at ${metrics.aht} seconds, need to get under ${TARGETS.driver.aht.max} seconds`;
                 } else if (area === 'holdTime' && metrics.holdTime > TARGETS.driver.holdTime.max) {
                     detail = `${readable}: Currently at ${metrics.holdTime} seconds, need to get under ${TARGETS.driver.holdTime.max} seconds`;
+                } else if (area === 'reliability' && metrics.reliability > TARGETS.driver.reliability.max) {
+                    detail = `${readable}: ${metrics.reliability} hours of unplanned/unscheduled time (Target: <${TARGETS.driver.reliability.max} hours)`;
                 } else {
                     detail = readable;
                 }
                 
                 detailedStruggles.push(detail);
             });
+            
+            // Add reliability hours explanation if >= 16
+            if (metrics.reliability >= 16) {
+                prompt += `\n🚨 IMPORTANT RELIABILITY CONTEXT:\nThe ${metrics.reliability} hours represent unplanned and unscheduled time off. You MUST emphasize:\n- They need to use PTOST (Paid Time Off Short Term) to cover the first 40 hours of unscheduled/unplanned absences\n- They must schedule this time in Verint ahead of time whenever possible\n- Failure to properly schedule and utilize PTOST will result in disciplinary action per company policy\nBe direct but supportive about this. Example: "I also need to talk about the reliability hours - those ${metrics.reliability} hours are unplanned time, and it's critical that you're using PTOST to cover any absences and scheduling them in Verint ahead of time. This isn't optional - if we don't see that happening, we'll have to move into disciplinary action."\n\n`;
+            }
             
             if (!isRepeatCoaching) {
                 // First time coaching - casual intro after wins
