@@ -1476,6 +1476,19 @@ function initApp() {
                     pastSelect.appendChild(opt);
                 });
                 pastContainer.style.display = 'block';
+                
+                // Auto-select most recent range (last one in sessions)
+                const mostRecent = sessions[sessions.length - 1]?.dateRange;
+                if (mostRecent && mostRecent.includes(' to ')) {
+                    pastSelect.value = mostRecent;
+                    // Auto-populate the date fields
+                    const parts = mostRecent.split(' to ');
+                    if (parts.length === 2) {
+                        document.getElementById('startDate').value = parts[0];
+                        document.getElementById('endDate').value = parts[1];
+                        try { validateDateRange(); } catch {}
+                    }
+                }
             }
         } catch (err) {
             console.warn('Could not populate past ranges:', err);
