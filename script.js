@@ -644,8 +644,6 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             return;
         }
 
-        console.log('Form submitted for:', employeeName);
-
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
             cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
@@ -661,11 +659,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             reliability: parseFloat(document.getElementById('reliability').value) || 0
         };
 
-        console.log('Metrics:', metrics);
-
         const strugglingAreas = identifyStrugglingAreas(metrics);
-        
-        console.log('Struggling areas:', strugglingAreas);
         
         // Check coaching history for this employee
         const history = getEmployeeHistory(employeeName);
@@ -865,8 +859,8 @@ CONTEXT - KEY METRICS:
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
-        document.getElementById('coachingForm').style.display = 'none';
-        
-        console.log('Results section displayed');
-    });
-});
+        // Display the prompt
+        document.getElementById('resultName').textContent = employeeName;
+        document.getElementById('aiPrompt').value = prompt;
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('coachingForm').style.display = 'none'
