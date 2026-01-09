@@ -211,6 +211,11 @@ function identifyStrugglingAreas(metrics) {
     ];
 
     driverMetrics.forEach(metric => {
+        // Skip survey-based metrics (FCR, CX Rep Overall) if they're empty (no surveys)
+        if ((metric.key === 'fcr' || metric.key === 'cxRepOverall') && (metric.value === '' || metric.value === null || metric.value === undefined)) {
+            return; // Skip this metric
+        }
+        
         const target = metric.target;
         const isMin = 'min' in target;
         
@@ -746,8 +751,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const employeeData = {
                         name: firstName,
                         scheduleAdherence: parsePercentage(row['Adherence%']),
-                        cxRepOverall: parsePercentage(row['RepSat%']),
-                        fcr: parsePercentage(row['FCR%']),
+                        cxRepOverall: parseSurveyPercentage(row['RepSat%']),
+                        fcr: parseSurveyPercentage(row['FCR%']),
                         transfers: parsePercentage(row['TransferS%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
@@ -834,6 +839,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         return isNaN(parsed) ? 0 : parsed;
     }
 
+    // For survey-based metrics - return empty string for N/A instead of 0
+    function parseSurveyPercentage(value) {
+        if (!value && value !== 0) return '';
+        if (value === 'N/A' || value === 'n/a') return '';
+        // If already a decimal (0.83), convert to percentage (83)
+        if (typeof value === 'number' && value <= 1) {
+            return parseFloat((value * 100).toFixed(2));
+        }
+        // If string with %, remove it
+        if (typeof value === 'string' && value.includes('%')) {
+            const parsed = parseFloat(value.replace('%', ''));
+            return isNaN(parsed) ? '' : parsed;
+        }
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? '' : parsed;
+    }
+
     function parseSeconds(value) {
         if (!value && value !== 0) return '';
         const parsed = parseFloat(value);
@@ -842,9 +864,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function parseHours(value) {
-        if (!value && value !== 0) return '';
+        if (!value && value !== 0) return 0;  // Default to 0 for blank reliability
         const parsed = parseFloat(value);
-        if (isNaN(parsed)) return '';
+        if (isNaN(parsed)) return 0;
         return parseFloat(parsed.toFixed(2));
     }
 
@@ -989,10 +1011,11 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         if (metrics.scheduleAdherence >= TARGETS.driver.scheduleAdherence.min) {
             wins.push(`Schedule Adherence: ${metrics.scheduleAdherence}% (Target: ${TARGETS.driver.scheduleAdherence.min}%)`);
         }
-        if (metrics.cxRepOverall >= TARGETS.driver.cxRepOverall.min) {
+        // Only include survey-based metrics if they have values
+        if (metrics.cxRepOverall && metrics.cxRepOverall >= TARGETS.driver.cxRepOverall.min) {
             wins.push(`Customer Experience: ${metrics.cxRepOverall}% (Target: ${TARGETS.driver.cxRepOverall.min}%)`);
         }
-        if (metrics.fcr >= TARGETS.driver.fcr.min) {
+        if (metrics.fcr && metrics.fcr >= TARGETS.driver.fcr.min) {
             wins.push(`FCR: ${metrics.fcr}% (Target: ${TARGETS.driver.fcr.min}%)`);
         }
         if (metrics.overallSentiment >= TARGETS.driver.overallSentiment.min) {
