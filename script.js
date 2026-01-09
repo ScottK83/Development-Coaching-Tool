@@ -712,14 +712,23 @@ ${employeeName} is a customer service representative handling utility customer c
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
-            prompt += `\nVARY THE OPENING - pick one of these styles to start the email after "Hey ${employeeName}!":\n`;
+            prompt += `\nVARY THE OPENING - Create a unique, natural opening each time. Use these as inspiration but DON'T copy them directly:\n`;
             prompt += `- "Was looking at your metrics and wanted to call out some wins..."\n`;
             prompt += `- "I was pulling your numbers and there's some really good stuff happening..."\n`;
             prompt += `- "Checked out your latest metrics - you're doing great on a few things..."\n`;
             prompt += `- "Looking at your performance, and I gotta say there are some bright spots..."\n`;
             prompt += `- "Been reviewing your metrics and wanted to highlight what's working..."\n`;
             prompt += `- "Just went through your numbers and there's definitely some stuff to celebrate..."\n`;
-            prompt += `Then naturally call out the specific wins with their scores. Mix up how you phrase it each time.\n\n`;
+            prompt += `- "Had a chance to look at your recent performance - some really solid work here..."\n`;
+            prompt += `- "Pulled your metrics today and wanted to give you some props..."\n`;
+            prompt += `- "Been meaning to reach out - saw your numbers and there's some good news..."\n`;
+            prompt += `- "Quick look at your metrics shows you're nailing a few key areas..."\n`;
+            prompt += `- "Reviewing your performance and wanted to start with what's going well..."\n`;
+            prompt += `- "Your latest metrics came across my desk - let's talk about what's working..."\n`;
+            prompt += `- "Took a look at your numbers this morning - you're doing well in several spots..."\n`;
+            prompt += `- "Wanted to touch base on your metrics - there's definitely some wins to talk about..."\n`;
+            prompt += `- "Just finished going through your performance data and saw some positives..."\n`;
+            prompt += `MIX IT UP NATURALLY - don't use the exact same phrasing twice. Vary your word choice, sentence structure, and tone. Sound like a real person, not a template.\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
