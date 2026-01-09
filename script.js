@@ -721,61 +721,34 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `You are writing a casual coaching email to ${employeeName}, a customer service associate at a utility company.
+        let prompt = `You are writing a casual coaching email to ${employeeName}, a CSR at APS utility taking inbound phone calls.
 
-WRITING GUIDELINES:
-- Keep it concise and conversational (150-200 words max)
-- Use a VERY CASUAL, friendly tone - like a peer or casual supervisor
-- Start with "Hey ${employeeName}! Was looking at your metrics, and I wanted to say..."
-- Be direct, honest, and approachable
-- NO corporate jargon or overly formal language
-- Use "you/your" throughout
-- Sound natural and human
+TONE & STYLE:
+- Casual, friendly, like a peer/supervisor (150-200 words)
+- Sound natural - use contractions, vary sentence structure, mix short/long sentences
+- NO corporate jargon, AI phrases like "I hope this helps", or over-explaining
+- Use % symbol, regular hyphens (not em dashes), bullet points for clarity
 
-FORMATTING:
-- NO em dashes (—) - use regular hyphens (-) or commas instead
-- Use % symbol, don't spell out "percent"
-- Keep punctuation simple
-- Vary sentence length - mix short and longer sentences
-- Use bullet points if they make tips clearer and more actionable
-
-AVOID AI PATTERNS:
-- Vary sentence structure - don't start every sentence the same way
-- Use contractions naturally (you're, I'd, let's, don't)
-- Add slight imperfections - not everything needs to be perfectly parallel or balanced
-- Avoid phrases like "I hope this helps" or "Feel free to reach out" - too generic/AI
-- Don't over-explain - real people assume context and leave things implied
-
-CONTEXT:
-${employeeName} is a customer service representative taking inbound phone calls for a utility company (APS). They handle billing inquiries, service requests, outages, and technical support over the phone.
-
-KEY METRICS EXPLAINED:
-- CX Rep Overall = post-call customer survey scores. Customers rate the rep after the call ends.
-- Overall Sentiment = average of Positive Word Choice + Negative Word Choice + Managing Emotions. Measures overall tone/vibe during calls.
-- Positive Word Choice = using encouraging, helpful language during calls
-- Negative Word = avoiding negative phrasing ("can't", "won't", "but", etc.)
-- Managing Emotions = staying calm and professional with upset customers
-- FCR (First Call Resolution) = resolving issues on the first call without callbacks
-- Transfers = sending calls to other departments
-- Hold Time = how long customers are on hold (not talking to anyone). Goal: minimize putting customers on hold.
-- AHT (Average Handle Time) = total call duration including hold time
-- ACW (After Call Work) = time spent documenting/wrapping up after the call ends
-- Schedule Adherence = being available and logged in when scheduled
-- Reliability = unplanned time off (PTOST hours)
+CONTEXT - KEY METRICS:
+- CX Rep Overall = post-call customer survey scores
+- Overall Sentiment = average of Positive Word + Negative Word + Managing Emotions
+- Positive Word = encouraging language | Negative Word = avoiding "can't", "won't", etc. | Managing Emotions = staying calm with upset customers
+- FCR = First Call Resolution | Transfers = sending to other departments
+- Hold Time = customers on hold (not talking) | AHT = total call time | ACW = after-call documentation
+- Schedule Adherence = logged in when scheduled | Reliability = unplanned time off (PTOST hours)
 
 `;
 
         // Add wins section if applicable
         if (wins.length > 0) {
-            prompt += `CELEBRATE WINS (mention scores AND targets):\n`;
+            prompt += `WINS (mention scores AND targets):\n`;
             wins.forEach(win => {
-                prompt += `✅ ${win} - Great work!\n`;
+                prompt += `✅ ${win}\n`;
             });
-            prompt += `\nWINS HEADER - Be genuinely celebratory and enthusiastic. Make it sound like you really took the time to review their work and are excited about their progress. Examples for inspiration (but CREATE YOUR OWN unique variation - don't just pick one of these):\n`;
-            prompt += `"You've Got Some Real Wins Here" | "Let's Start With the Good Stuff" | "Few Things You're Crushing" | "Some Really Strong Numbers" | "A Few Standouts in Your Metrics" | "You're Doing Great in a Few Key Areas"\n`;
-            prompt += `\nOPENING SENTENCE - Sound thoughtful and personal, like you actually reviewed their metrics carefully. Examples for inspiration (CREATE YOUR OWN):\n`;
-            prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..."\n`;
-            prompt += `\nWIN DESCRIPTIONS - Be enthusiastic and genuine. Vary your language: "doing really well", "nailing", "on point", "solid", "strong", "on track", "looking good", "really impressed", "crushing it", "exactly where you need to be"\n\n`;
+            prompt += `Be genuinely celebratory. Sound thoughtful and personal - like you reviewed their work carefully. CREATE unique variations (don't rotate examples):\n`;
+            prompt += `Header ideas: "Real Wins Here" | "Let's Start With the Good Stuff" | "Few Things You're Crushing"\n`;
+            prompt += `Opening ideas: "Looking at your metrics - good stuff happening..." | "Checked your numbers - few things to celebrate..."\n`;
+            prompt += `Vary descriptions: "nailing", "on point", "solid", "crushing it", "exactly where you need to be"\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
@@ -828,14 +801,14 @@ KEY METRICS EXPLAINED:
             }
             
             if (!isRepeatCoaching) {
-                prompt += `TRANSITION: After celebrating wins, transition casually to improvement areas.\n\n`;
+                prompt += `TRANSITION: Casually move from wins to improvement areas.\n\n`;
             } else {
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
                     const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
-                    prompt += `⚠️ REPEAT COACHING ALERT: We've discussed ${repeatReadable} before. Be more direct. DO NOT repeat previous advice - find completely NEW approaches.\n\n`;
+                    prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Find NEW approaches - don't repeat previous advice.\n\n`;
                 } else {
-                    prompt += `TRANSITION: After celebrating wins, transition casually to improvement areas.\n\n`;
+                    prompt += `TRANSITION: Casually move from wins to improvement areas.\n\n`;
                 }
             }
             
@@ -843,10 +816,10 @@ KEY METRICS EXPLAINED:
             detailedStruggles.forEach(struggle => {
                 prompt += `⚠️ ${struggle}\n`;
             });
-            prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
+            prompt += `Describe gaps naturally and casually. CREATE unique phrasing each time.\n\n`;
             
-            prompt += `TIPS (2-4 actionable strategies):\n`;
-            prompt += `Use BULLET POINTS with LABELED SECTIONS. Before each bullet point or group of bullets, add a bold header or underlined text showing which metric you're addressing (e.g., "**Hold Time:**" or "__Negative Word Choice:__"). For each tip, briefly explain WHY it matters (the impact on customers, efficiency, or their scores). Include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
+            prompt += `TIPS (2-4 strategies):\n`;
+            prompt += `Use BULLET POINTS with LABELED SECTIONS (e.g., "**Hold Time:**"). For each tip, explain WHY it matters (customer impact, efficiency, scores). Include specific examples/scripts. CREATE unique approaches - don't repeat yourself.\n\n`;
         }
         
         // Add KB content if available
@@ -855,11 +828,9 @@ KEY METRICS EXPLAINED:
             prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `CLOSING:\nVary it each time - be casual, reference checking metrics again next week. Examples:\n`;
-        prompt += `"Try these out and let me know next week how you feel - we'll revisit the metrics again!"\n`;
-        prompt += `"Give these a shot this week, and we'll look at your numbers together next week to see how it's going!"\n`;
-        prompt += `"Work on these this week, and let me know how it feels when we check your metrics next week!"\n`;
-        prompt += `Create your own natural variation that mentions revisiting metrics next week. Don't repeat the same closing.\n\n`;
+        prompt += `CLOSING:\nBe casual, reference checking metrics next week. CREATE unique variations each time:\n`;
+        prompt += `"Try these and let me know next week how you feel - we'll revisit metrics!"\n`;
+        prompt += `"Give these a shot this week, we'll check your numbers next week!"\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
