@@ -581,7 +581,8 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
 
     // Open Copilot button
     document.getElementById('openCopilot')?.addEventListener('click', () => {
-        window.open('https://copilot.microsoft.com/', '_blank');
+        // Use Bing Chat URL which redirects to Copilot chat interface directly
+        window.open('https://www.bing.com/chat', '_blank');
     });
 
     // New email button
