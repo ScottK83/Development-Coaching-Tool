@@ -587,18 +587,14 @@ function showEmployeeDashboard() {
         // Get all unique employees and date ranges
         const allEmployees = Object.keys(history).sort();
         const allDateRanges = new Set();
-        const allDates = new Set();
         
         Object.values(history).forEach(sessions => {
             sessions.forEach(s => {
                 if (s.dateRange) allDateRanges.add(s.dateRange);
-                const sessionDate = new Date(s.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-                allDates.add(sessionDate);
             });
         });
         
         const sortedDateRanges = Array.from(allDateRanges).sort().reverse();
-        const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
         
         let html = `
         <!-- Employee and Date Range Selector -->
@@ -642,8 +638,8 @@ function showEmployeeDashboard() {
         html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Date:</label>';
         html += '<select id="dateFilter" onchange="filterDashboard()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
         html += '<option value="">All Dates</option>';
-        sortedDates.forEach(date => {
-            html += `<option value="${date}">${date}</option>`;
+        sortedDateRanges.forEach(dateRange => {
+            html += `<option value="${dateRange}">${dateRange}</option>`;
         });
         html += '</select></div>';
         
@@ -728,6 +724,7 @@ function showEmployeeDashboard() {
     document.getElementById('coachingForm').style.display = 'none';
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
+    document.getElementById('tipsManagementSection').style.display = 'none';
 }
 
 // Update date range dropdown based on selected employee
@@ -858,7 +855,7 @@ function showEmployeeTrendData() {
 // Filter dashboard by employee and date
 function filterDashboard() {
     const selectedEmployee = document.getElementById('employeeFilter')?.value || '';
-    const selectedDate = document.getElementById('dateFilter')?.value || '';
+    const selectedDateRange = document.getElementById('dateFilter')?.value || '';
     const history = getAllHistory();
     
     Object.keys(history).forEach(name => {
@@ -871,16 +868,16 @@ function filterDashboard() {
         // Check employee filter
         const employeeMatches = !selectedEmployee || name === selectedEmployee;
         
-        // Filter sessions by date
-        const sessionDivs = employeeDiv.querySelectorAll('[data-date]');
+        // Filter sessions by date range
+        const sessionDivs = employeeDiv.querySelectorAll('[data-employee]');
         let visibleCount = 0;
         
         sessionDivs.forEach(div => {
             const sessionEmployee = div.getAttribute('data-employee');
-            const sessionDate = div.getAttribute('data-date');
+            const sessionDateRange = div.getAttribute('data-week');
             
             const employeeFilterMatch = !selectedEmployee || sessionEmployee === selectedEmployee;
-            const dateFilterMatch = !selectedDate || sessionDate === selectedDate;
+            const dateFilterMatch = !selectedDateRange || sessionDateRange === selectedDateRange;
             
             if (employeeFilterMatch && dateFilterMatch) {
                 div.style.display = 'block';
@@ -1032,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeDashboard')?.addEventListener('click', () => {
         document.getElementById('dashboardSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
+        document.getElementById('tipsManagementSection').style.display = 'none';
     });
 
     // Back to form button
@@ -1039,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dashboardSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('tipsManagementSection').style.display = 'none';
     });
 
     // Clear all history buttons (both in history and dashboard sections)
@@ -1232,10 +1231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Immediately save all employees to history
                 bulkSaveUploadedEmployees();
                 
-                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data has been saved to Employee History for trend analysis.`);
-                
-                // Auto-open Employee Dashboard to view the data
-                showEmployeeDashboard();
+                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data saved to Employee History.\n\nYou can now select an employee from the dropdown to coach them, or view trends in Employee History.`);
                 
             } catch (error) {
                 console.error('Error parsing Excel:', error);
@@ -1455,6 +1451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('newCoaching')?.addEventListener('click', () => {
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('tipsManagementSection').style.display = 'none';
         document.getElementById('generatedEmail').value = '';
         document.getElementById('coachingForm').reset();
     });
@@ -1605,5 +1602,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('coachingForm').style.display = 'none';
+        document.getElementById('tipsManagementSection').style.display = 'none';
     });
 });
