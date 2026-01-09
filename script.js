@@ -639,6 +639,10 @@ WRITING GUIDELINES:
 - Use "you/your" (second person) throughout
 - Sound like a real person, not a robot
 
+FORMATTING:
+- NO em dashes (—) - use regular hyphens (-) or commas instead
+- Keep punctuation simple and clean
+
 `;
 
         // Add wins section if applicable
