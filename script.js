@@ -144,13 +144,6 @@ async function fetchKBContent(url, metric = '') {
 function identifyStrugglingAreas(metrics) {
     const struggling = [];
     
-    // Check reliability metrics
-    if (metrics.safetyHazards > TARGETS.reliability.safetyHazards) struggling.push('safetyHazards');
-    if (metrics.accComplaints > TARGETS.reliability.accComplaints) struggling.push('accComplaints');
-    if (metrics.phishingClicks > TARGETS.reliability.phishingClicks) struggling.push('phishingClicks');
-    if (metrics.redFlags > TARGETS.reliability.redFlags) struggling.push('redFlags');
-    if (metrics.depositWaiver > TARGETS.reliability.depositWaiver) struggling.push('depositWaiver');
-
     // Check driver metrics
     const driverMetrics = [
         { key: 'scheduleAdherence', value: metrics.scheduleAdherence, target: TARGETS.driver.scheduleAdherence },
@@ -605,11 +598,6 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
 
         const metrics = {
-            safetyHazards: parseFloat(document.getElementById('safetyHazards').value) || 0,
-            accComplaints: parseFloat(document.getElementById('accComplaints').value) || 0,
-            phishingClicks: parseFloat(document.getElementById('phishingClicks').value) || 0,
-            redFlags: parseFloat(document.getElementById('redFlags').value) || 0,
-            depositWaiver: parseFloat(document.getElementById('depositWaiver').value) || 0,
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
             cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
             fcr: parseFloat(document.getElementById('fcr').value) || 0,
