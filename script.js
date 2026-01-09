@@ -616,9 +616,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
         document.getElementById('coachingForm').reset();
-        initializeKBFields();
     });
-// Form submission - Open Copilot with full email generation prompt
+
+    // Form submission - Open Copilot with full email generation prompt
     document.getElementById('coachingForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
