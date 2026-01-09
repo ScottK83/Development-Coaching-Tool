@@ -599,22 +599,24 @@ function showEmployeeDashboard() {
         let html = `
         <!-- Employee and Date Range Selector -->
         <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
-            <h3 style="color: #003DA5; margin-bottom: 15px;">📊 Quick Analysis: View Employee Trends</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Employee:</label>
-                    <select id="trendEmployeeSelect" onchange="updateDateRangeOptions()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
-                        <option value="">-- Choose an employee --</option>
-                        ${allEmployees.map(emp => `<option value="${emp}">${emp}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Date Range:</label>
-                    <select id="trendDateRangeSelect" onchange="showEmployeeTrendData()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;" disabled>
-                        <option value="">-- Choose a date range --</option>
-                    </select>
-                </div>
+            <h3 style="color: #003DA5; margin-bottom: 15px;">📊 Track Coaching Effectiveness</h3>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95em;">Select an employee to view their performance across different reporting periods and see if coaching helped improve their metrics.</p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">1️⃣ Select Employee:</label>
+                <select id="trendEmployeeSelect" onchange="updateDateRangeOptions()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
+                    <option value="">-- Choose an employee --</option>
+                    ${allEmployees.map(emp => `<option value="${emp}">${emp}</option>`).join('')}
+                </select>
             </div>
+            
+            <div id="dateRangeContainer" style="display: none; margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">2️⃣ Select Reporting Period:</label>
+                <select id="trendDateRangeSelect" onchange="showEmployeeTrendData()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
+                    <option value="">-- Choose a date range --</option>
+                </select>
+            </div>
+            
             <div id="trendDataDisplay" style="display: none; margin-top: 20px; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
                 <!-- Trend data will be displayed here -->
             </div>
@@ -731,15 +733,16 @@ function showEmployeeDashboard() {
 function updateDateRangeOptions() {
     const selectedEmployee = document.getElementById('trendEmployeeSelect')?.value || '';
     const dateRangeSelect = document.getElementById('trendDateRangeSelect');
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
     const trendDataDisplay = document.getElementById('trendDataDisplay');
     
-    if (!dateRangeSelect) return;
+    if (!dateRangeSelect || !dateRangeContainer) return;
     
     // Hide previous trend data
     if (trendDataDisplay) trendDataDisplay.style.display = 'none';
     
     if (!selectedEmployee) {
-        dateRangeSelect.disabled = true;
+        dateRangeContainer.style.display = 'none';
         dateRangeSelect.innerHTML = '<option value="">-- Choose a date range --</option>';
         return;
     }
@@ -751,7 +754,7 @@ function updateDateRangeOptions() {
     const dateRanges = [...new Set(employeeSessions.map(s => s.dateRange).filter(dr => dr))];
     
     if (dateRanges.length === 0) {
-        dateRangeSelect.disabled = true;
+        dateRangeContainer.style.display = 'none';
         dateRangeSelect.innerHTML = '<option value="">No date ranges available</option>';
         return;
     }
@@ -759,7 +762,7 @@ function updateDateRangeOptions() {
     // Sort date ranges (most recent first)
     dateRanges.sort().reverse();
     
-    dateRangeSelect.disabled = false;
+    dateRangeContainer.style.display = 'block';
     dateRangeSelect.innerHTML = '<option value="">-- Choose a date range --</option>' + 
         dateRanges.map(dr => `<option value="${dr}">${dr}</option>`).join('');
 }
@@ -792,12 +795,18 @@ function showEmployeeTrendData() {
     const strugglingAreas = session.strugglingAreas || [];
     const wasCoached = strugglingAreas.length > 0;
     
-    // Build metrics display
+    // Find previous session for comparison
+    const allSessions = employeeSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const currentIndex = allSessions.findIndex(s => s.dateRange === selectedDateRange);
+    const previousSession = currentIndex > 0 ? allSessions[currentIndex - 1] : null;
+    
+    // Build metrics display with comparison
     let html = `
         <div style="border-bottom: 2px solid #003DA5; padding-bottom: 10px; margin-bottom: 15px;">
             <h4 style="color: #003DA5; margin: 0;">${selectedEmployee} - ${selectedDateRange}</h4>
             <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Uploaded: ${sessionDate}</div>
             ${wasCoached ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;"><strong>⚠️ Coached on:</strong> ${strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')}</div>` : '<div style="margin-top: 8px; color: #28a745; font-weight: bold;">✅ Meeting all targets - No coaching needed</div>'}
+            ${previousSession ? `<div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 3px; font-size: 0.9em;">📈 Comparing to previous period: ${previousSession.dateRange}</div>` : ''}
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
@@ -833,20 +842,92 @@ function showEmployeeTrendData() {
             const meetingTarget = metric.isMin ? value >= metric.target : value <= metric.target;
             const statusIcon = meetingTarget ? '✅' : '⚠️';
             const statusColor = meetingTarget ? '#28a745' : '#dc3545';
-            const bgColor = strugglingAreas.includes(metric.key) ? '#fff3cd' : '#f8f9fa';
+            const wasCoached = strugglingAreas.includes(metric.key);
+            
+            // Compare with previous period if available
+            let comparisonHTML = '';
+            if (previousSession && previousSession.metrics && previousSession.metrics[metric.key]) {
+                const prevValue = previousSession.metrics[metric.key];
+                const change = value - prevValue;
+                const wasCoachedinPrevious = (previousSession.strugglingAreas || []).includes(metric.key);
+                
+                if (change !== 0) {
+                    const isImprovement = metric.isMin ? change > 0 : change < 0;
+                    const changeIcon = isImprovement ? '📈' : '📉';
+                    const changeColor = isImprovement ? '#28a745' : '#dc3545';
+                    const changeText = Math.abs(change).toFixed(2);
+                    
+                    comparisonHTML = `<div style="font-size: 0.75em; margin-top: 5px; color: ${changeColor}; font-weight: bold;">${changeIcon} ${isImprovement ? '+' : ''}${change > 0 ? '+' : ''}${changeText}${metric.unit} from last period</div>`;
+                    
+                    // Special highlight if this was coached and improved
+                    if (wasCoachedinPrevious && isImprovement) {
+                        comparisonHTML = `<div style="font-size: 0.75em; margin-top: 5px; padding: 4px; background: #d4edda; border-radius: 3px; color: #155724; font-weight: bold;">🎯 Coaching worked! +${changeText}${metric.unit}</div>`;
+                    }
+                }
+            }
+            
+            const bgColor = wasCoached ? '#fff3cd' : '#f8f9fa';
             
             html += `
                 <div style="padding: 12px; background: ${bgColor}; border-radius: 5px; border: 1px solid #ddd;">
                     <div style="font-size: 0.85em; color: #666; margin-bottom: 5px;">${metric.label}</div>
                     <div style="font-size: 1.4em; font-weight: bold; color: ${statusColor};">${statusIcon} ${value}${metric.unit}</div>
                     <div style="font-size: 0.8em; color: #666; margin-top: 3px;">Target: ${metric.isMin ? '≥' : '≤'}${metric.target}${metric.unit}</div>
-                    ${strugglingAreas.includes(metric.key) ? '<div style="font-size: 0.75em; color: #856404; margin-top: 3px; font-weight: bold;">📋 Coached</div>' : ''}
+                    ${wasCoached ? '<div style="font-size: 0.75em; color: #856404; margin-top: 3px; font-weight: bold;">📋 Coached this period</div>' : ''}
+                    ${comparisonHTML}
                 </div>
             `;
         }
     });
     
     html += '</div>';
+    
+    // Add coaching effectiveness summary if previous session exists
+    if (previousSession) {
+        const prevCoached = previousSession.strugglingAreas || [];
+        const improved = [];
+        const declined = [];
+        
+        prevCoached.forEach(area => {
+            const currentVal = metrics[area];
+            const prevVal = previousSession.metrics ? previousSession.metrics[area] : null;
+            
+            if (currentVal !== undefined && prevVal !== undefined && currentVal !== '' && prevVal !== '') {
+                const metricDef = metricsList.find(m => m.key === area);
+                if (metricDef) {
+                    const change = currentVal - prevVal;
+                    const isImprovement = metricDef.isMin ? change > 0 : change < 0;
+                    
+                    if (isImprovement) {
+                        improved.push(AREA_NAMES[area] || area);
+                    } else if (change < 0 && metricDef.isMin || change > 0 && !metricDef.isMin) {
+                        declined.push(AREA_NAMES[area] || area);
+                    }
+                }
+            }
+        });
+        
+        if (improved.length > 0 || declined.length > 0) {
+            html += `
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #ddd;">
+                    <h4 style="color: #003DA5; margin: 0 0 10px 0;">📊 Coaching Impact Summary</h4>
+            `;
+            
+            if (improved.length > 0) {
+                html += `<div style="margin-bottom: 8px; padding: 8px; background: #d4edda; border-left: 3px solid #28a745; border-radius: 3px;">
+                    <strong style="color: #155724;">✅ Improved After Coaching (${improved.length}):</strong> ${improved.join(', ')}
+                </div>`;
+            }
+            
+            if (declined.length > 0) {
+                html += `<div style="padding: 8px; background: #f8d7da; border-left: 3px solid #dc3545; border-radius: 3px;">
+                    <strong style="color: #721c24;">⚠️ Still Needs Work (${declined.length}):</strong> ${declined.join(', ')}
+                </div>`;
+            }
+            
+            html += '</div>';
+        }
+    }
     
     trendDataDisplay.innerHTML = html;
     trendDataDisplay.style.display = 'block';
