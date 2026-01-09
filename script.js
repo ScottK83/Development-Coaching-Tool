@@ -1072,6 +1072,117 @@ function initApp() {
         }
     })();
 
+    // Initialize Quick Access if history exists
+    function initializeQuickAccess() {
+        const history = getAllHistory();
+        const allDateRanges = new Set();
+        
+        Object.values(history).forEach(sessions => {
+            sessions.forEach(s => {
+                if (s.dateRange) allDateRanges.add(s.dateRange);
+            });
+        });
+        
+        const quickContainer = document.getElementById('quickAccessContainer');
+        const divider = document.getElementById('dividerContainer');
+        const quickDateRange = document.getElementById('quickDateRange');
+        
+        if (allDateRanges.size > 0) {
+            quickContainer.style.display = 'block';
+            divider.style.display = 'block';
+            
+            // Populate date ranges (most recent first)
+            Array.from(allDateRanges).sort().reverse().forEach(range => {
+                const opt = document.createElement('option');
+                opt.value = range;
+                opt.textContent = range;
+                quickDateRange.appendChild(opt);
+            });
+        }
+    }
+    
+    // Update employees for selected quick access date range
+    window.updateQuickAccessEmployees = function() {
+        const selectedRange = document.getElementById('quickDateRange')?.value || '';
+        const employeeSelect = document.getElementById('quickEmployee');
+        if (!employeeSelect) return;
+        
+        employeeSelect.innerHTML = '<option value="">-- Choose employee --</option>';
+        
+        if (!selectedRange) return;
+        
+        const history = getAllHistory();
+        const employeesInRange = new Set();
+        
+        Object.entries(history).forEach(([empName, sessions]) => {
+            if (sessions.some(s => s.dateRange === selectedRange)) {
+                employeesInRange.add(empName);
+            }
+        });
+        
+        Array.from(employeesInRange).sort().forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            employeeSelect.appendChild(opt);
+        });
+    };
+    
+    // Load selected employee from quick access
+    document.getElementById('quickAccessLoadBtn')?.addEventListener('click', () => {
+        const selectedRange = document.getElementById('quickDateRange')?.value || '';
+        const selectedEmployee = document.getElementById('quickEmployee')?.value || '';
+        
+        if (!selectedRange || !selectedEmployee) {
+            alert('Please select both a date range and employee');
+            return;
+        }
+        
+        const history = getAllHistory();
+        const sessions = history[selectedEmployee] || [];
+        const session = sessions.find(s => s.dateRange === selectedRange);
+        
+        if (!session || !session.metrics) {
+            alert('No data found for this employee and date range');
+            return;
+        }
+        
+        // Populate form with historical data
+        const metrics = session.metrics;
+        document.getElementById('employeeName').value = selectedEmployee;
+        document.getElementById('surveyTotal').value = session.metrics.surveyTotal || 0;
+        document.getElementById('scheduleAdherence').value = metrics.scheduleAdherence ?? '';
+        document.getElementById('cxRepOverall').value = metrics.cxRepOverall ?? '';
+        document.getElementById('fcr').value = metrics.fcr ?? '';
+        document.getElementById('overallExperience').value = metrics.overallExperience ?? '';
+        document.getElementById('transfers').value = metrics.transfers ?? '';
+        document.getElementById('aht').value = metrics.aht ?? '';
+        document.getElementById('acw').value = metrics.acw ?? '';
+        document.getElementById('holdTime').value = metrics.holdTime ?? '';
+        document.getElementById('reliability').value = metrics.reliability ?? '';
+        document.getElementById('overallSentiment').value = metrics.overallSentiment ?? '';
+        document.getElementById('positiveWord').value = metrics.positiveWord ?? '';
+        document.getElementById('negativeWord').value = metrics.negativeWord ?? '';
+        document.getElementById('managingEmotions').value = metrics.managingEmotions ?? '';
+        
+        // Set dates
+        const parts = selectedRange.split(' to ');
+        if (parts.length === 2) {
+            document.getElementById('startDate').value = parts[0];
+            document.getElementById('endDate').value = parts[1];
+        }
+        
+        // Show sections
+        document.getElementById('employeeInfoSection').style.display = 'block';
+        document.getElementById('metricsSection').style.display = 'block';
+        
+        // Display YTD comparison
+        displayYTDComparison(selectedEmployee, metrics);
+        
+        // Scroll to employee name
+        document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
     // Employee dashboard button
     const dashboardBtn = document.getElementById('employeeDashboard');
     console.log('Dashboard button found:', dashboardBtn);
@@ -1314,6 +1425,9 @@ function initApp() {
     
     // Initialize button state on page load
     setTimeout(() => validateDateRange(), 100);
+    
+    // Initialize quick access on page load
+    setTimeout(() => initializeQuickAccess(), 100);
 
     // Load and parse Excel file
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
