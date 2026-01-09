@@ -739,15 +739,18 @@ CONTEXT:
 ${employeeName} is a customer service representative taking inbound phone calls for a utility company (APS). They handle billing inquiries, service requests, outages, and technical support over the phone.
 
 KEY METRICS EXPLAINED:
+- CX Rep Overall = post-call customer survey scores. Customers rate the rep after the call ends.
+- Overall Sentiment = average of Positive Word Choice + Negative Word Choice + Managing Emotions. Measures overall tone/vibe during calls.
+- Positive Word Choice = using encouraging, helpful language during calls
+- Negative Word = avoiding negative phrasing ("can't", "won't", "but", etc.)
+- Managing Emotions = staying calm and professional with upset customers
+- FCR (First Call Resolution) = resolving issues on the first call without callbacks
+- Transfers = sending calls to other departments
 - Hold Time = how long customers are on hold (not talking to anyone). Goal: minimize putting customers on hold.
 - AHT (Average Handle Time) = total call duration including hold time
 - ACW (After Call Work) = time spent documenting/wrapping up after the call ends
-- FCR (First Call Resolution) = resolving issues on the first call without callbacks
-- Transfers = sending calls to other departments
 - Schedule Adherence = being available and logged in when scheduled
 - Reliability = unplanned time off (PTOST hours)
-- Sentiment/Word Choice = how positive/negative their language is during calls
-- Managing Emotions = staying calm and professional with upset customers
 
 `;
 
