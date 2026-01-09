@@ -414,11 +414,13 @@ async function displayResults(emailContent, employeeName, strugglingAreas, resou
     // Display resource links in separate section
     displayResourceLinks(resources);
     
-    // Store email content for Outlook integration
+    // Store email content and struggling areas for later use
     window.currentEmailData = {
         name: employeeName,
         content: emailContent
     };
+    
+    window.currentStrugglingAreas = strugglingAreas;
 }
 
 // Initialize on page load
@@ -465,6 +467,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
         
         window.location.href = mailtoLink;
+    });
+
+    // AI Coaching Tips button
+    document.getElementById('getAITips')?.addEventListener('click', () => {
+        if (!window.currentStrugglingAreas || window.currentStrugglingAreas.length === 0) {
+            alert('No struggling areas identified. Employee is meeting all targets!');
+            return;
+        }
+        
+        // Convert struggling areas to readable names
+        const areaNames = {
+            scheduleAdherence: 'Schedule Adherence',
+            cxRepOverall: 'Customer Experience',
+            fcr: 'First Call Resolution',
+            transfers: 'Transfers',
+            overallSentiment: 'Overall Sentiment',
+            positiveWord: 'Positive Word Choice',
+            negativeWord: 'Negative Word Choice',
+            managingEmotions: 'Managing Emotions',
+            aht: 'Average Handle Time',
+            acw: 'After Call Work',
+            holdTime: 'Hold Time',
+            reliability: 'Reliability',
+            safetyHazards: 'Safety Hazards',
+            accComplaints: 'ACC Complaints',
+            phishingClicks: 'Phishing Clicks',
+            redFlags: 'Red Flag Events',
+            depositWaiver: 'Deposit Waiver'
+        };
+        
+        const readableAreas = window.currentStrugglingAreas
+            .map(area => areaNames[area] || area)
+            .join(', ');
+        
+        // Create AI prompt
+        const prompt = `Provide 3-4 specific, actionable coaching tips for a customer service representative struggling with: ${readableAreas}
+
+Be supportive, concrete, and practical. Format your response as a bulleted list.`;
+        
+        // Open Microsoft Copilot with pre-filled prompt
+        const copilotUrl = `https://copilot.microsoft.com/?prompt=${encodeURIComponent(prompt)}`;
+        window.open(copilotUrl, '_blank');
     });
 
     // New email button
