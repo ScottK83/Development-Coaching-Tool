@@ -628,8 +628,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
                         transfers: (() => {
-                            const val = parsePercentage(row['TransferS%']);
-                            if (firstName === 'Caylie') console.log('Caylie TransferS% parsing:', row['TransferS%'], '->', val);
+                            // Try multiple column name variations
+                            const val = parsePercentage(row['TransferS%'] || row['TransferS% '] || row['Transfers%'] || row['TransferPct%']);
+                            if (firstName === 'Caylie') {
+                                console.log('Caylie row keys:', Object.keys(row).filter(k => k.toLowerCase().includes('transfer')));
+                                console.log('Caylie TransferS% parsing:', row['TransferS%'], '->', val);
+                            }
                             return val;
                         })(),
                         aht: parseSeconds(row['AHT']),
