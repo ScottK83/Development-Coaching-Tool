@@ -626,10 +626,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
                         reliability: parsePercentage(row['Reliability Hrs']),
-                        overallSentiment: parsePercentage(row['OverallSentimentScores%']),
-                        positiveWord: parsePercentage(row['PositiveWordScores%']),
-                        negativeWord: parsePercentage(row['AvoidNegativeWordScores']),
-                        managingEmotions: parsePercentage(row['ManageEmotionsScores'])
+                        overallSentiment: parsePercentage(row['OverallSentimentScore%']),
+                        positiveWord: parsePercentage(row['PositiveWordScore%']),
+                        negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
+                        managingEmotions: parsePercentage(row['ManageEmotionsScore%'])
                     };
                     
                     // Debug log first employee to see what's missing
@@ -699,7 +699,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Helper functions to parse Excel data
     function parsePercentage(value) {
-        if (!value && value !== 0) return '';
+        if (!value && value !== 0) return '0';
+        if (value === 'N/A' || value === 'n/a') return '0';
         // If already a decimal (0.83), convert to percentage (83)
         if (typeof value === 'number' && value <= 1) {
             return (value * 100).toFixed(2);
@@ -708,7 +709,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof value === 'string' && value.includes('%')) {
             return parseFloat(value.replace('%', ''));
         }
-        return parseFloat(value) || '';
+        return parseFloat(value) || '0';
     }
 
     function parseSeconds(value) {
