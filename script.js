@@ -774,7 +774,7 @@ ${employeeName} is a customer service representative handling utility customer c
             
             // Add reliability hours explanation if >= 16
             if (metrics.reliability >= 16) {
-                prompt += `\n🚨 RELIABILITY: ${metrics.reliability} hours of unplanned time. Emphasize they MUST use PTOST for the first 40 hours and schedule in Verint ahead of time. Failure = disciplinary action.\n\n`;
+                prompt += `\n🚨 RELIABILITY: ${metrics.reliability} hours of unplanned time. Emphasize they MUST use PTOST for the first 40 hours and schedule in Verint ahead of time. Tell them to double-check that their Verint entries match what payroll shows. Failure = disciplinary action.\n\n`;
             }
             
             if (!isRepeatCoaching) {
@@ -796,7 +796,7 @@ ${employeeName} is a customer service representative handling utility customer c
             prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
             
             prompt += `TIPS (2-3 actionable strategies):\n`;
-            prompt += `Address ALL struggling areas. Use bullet points or paragraphs - whatever's clearest. Include concrete examples/scripts. Vary your approach every time.\n\n`;
+            prompt += `Use BULLET POINTS. Address ALL struggling areas. Include concrete examples/scripts. Vary your approach every time.\n\n`;
         }
         
         // Add KB content if available
