@@ -764,7 +764,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         cxRepOverall: parseSurveyPercentage(row['RepSat%']),
                         fcr: parseSurveyPercentage(row['FCR%']),
                         overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
-                        transfers: parsePercentage(row['TransferS%']),
+                        transfers: (() => {
+                            // Debug for transfers column
+                            if (firstName === 'Alyssa') {
+                                console.log('Alyssa row keys with "transfer":', Object.keys(row).filter(k => k.toLowerCase().includes('transfer')));
+                                console.log('Alyssa TransferS% value:', row['TransferS%']);
+                            }
+                            return parsePercentage(row['TransferS%']);
+                        })(),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
