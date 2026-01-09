@@ -505,85 +505,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         userTips = loadUserTips();
         mergeTips();
         
-        const totalTips = Object.values(customTips).reduce((sum, tips) => sum + tips.length, 0);
-        const metricsCount = Object.keys(customTips).length;
-        const serverCount = Object.values(serverTips).reduce((sum, tips) => sum + tips.length, 0);
-        const userCount = Object.values(userTips).reduce((sum, tips) => sum + tips.length, 0);
-        
-        let statusMsg = `✅ ${totalTips} tips loaded (${serverCount} default`;
-        if (userCount > 0) {
-            statusMsg += ` + ${userCount} custom)`;
-        } else {
-            statusMsg += `)`;
-        }
-        
-        document.getElementById('tipsStatus').textContent = statusMsg;
-        document.getElementById('tipsStatus').style.color = '#28a745';
+        console.log('✅ Tips auto-loaded from server');
     } catch (error) {
-        document.getElementById('tipsStatus').textContent = `⚠️ Using fallback tips`;
-        document.getElementById('tipsStatus').style.color = '#ff9800';
+        console.warn('⚠️ Using fallback tips:', error);
     }
-
-    // CSV file loader (override with custom file)
-    document.getElementById('tipsFile')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const loadedTips = await loadCustomTips(file);
-            userTips = loadedTips;
-            saveUserTips(userTips);
-            mergeTips();
-            
-            const totalTips = Object.values(customTips).reduce((sum, tips) => sum + tips.length, 0);
-            const metricsCount = Object.keys(customTips).length;
-            const userCount = Object.values(userTips).reduce((sum, tips) => sum + tips.length, 0);
-            
-            document.getElementById('tipsStatus').textContent = `✅ ${totalTips} tips loaded (includes ${userCount} from your file)`;
-            document.getElementById('tipsStatus').style.color = '#28a745';
-            document.getElementById('viewTips').style.display = 'inline-block';
-        } catch (error) {
-            document.getElementById('tipsStatus').textContent = `❌ Error loading file: ${error.message}`;
-            document.getElementById('tipsStatus').style.color = '#dc3545';
-            document.getElementById('viewTips').style.display = 'none';
-        }
-    });
-
-    // View loaded tips button
-    document.getElementById('viewTips')?.addEventListener('click', () => {
-        if (Object.keys(customTips).length === 0) {
-            alert('No tips loaded yet. Please upload a CSV file first.');
-            return;
-        }
-        
-        // Create downloadable CSV content
-        let csvContent = 'Metric,Tip\n';
-        Object.entries(customTips).forEach(([metric, tips]) => {
-            tips.forEach(tip => {
-                csvContent += `${metric},"${tip.replace(/"/g, '""')}"\n`;
-            });
-        });
-        
-        // Create blob and download
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'my-loaded-tips.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    // View history button
-    document.getElementById('viewHistory')?.addEventListener('click', () => {
-        showHistory();
-    });
-
-    // Export history button
-    document.getElementById('exportHistory')?.addEventListener('click', exportHistory);
-
-    // Import history button
-    document.getElementById('importHistory')?.addEventListener('click', importHistory);
 
     // Employee dashboard button
     document.getElementById('employeeDashboard')?.addEventListener('click', () => {
@@ -827,10 +752,10 @@ START: "Hey ${employeeName}!"
         // Add custom notes if provided
         const customNotes = document.getElementById('customNotes')?.value.trim();
         if (customNotes) {
-            prompt += `\nALSO INCLUDE: "${customNotes}" (reword naturally in your coaching tone)\n\n`;
+            prompt += `\n\nALSO: "${customNotes}"\n`;
         }
 
-        prompt += `Keep it brief, friendly, and natural. Start with "Hey ${employeeName}!" End with supportive closing.`;
+        prompt += `\n\nEND: Supportive closing.`;
         
         // Save to history
         saveToHistory(employeeName, strugglingAreas, metrics);
