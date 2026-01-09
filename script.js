@@ -287,17 +287,19 @@ function saveTipEdit(metricKey, tipIndex) {
         return;
     }
     
-    // Update the tip in customTips and userTips
-    if (!userTips[metricKey]) {
-        userTips[metricKey] = [];
-    }
-    
-    // Replace in both
+    // Update the tip in customTips
     customTips[metricKey][tipIndex] = editedTip;
-    userTips[metricKey] = customTips[metricKey];
+    
+    // Rebuild userTips from scratch - only include what's in customTips that isn't from serverTips
+    const serverTipsForMetric = serverTips[metricKey] || [];
+    const allTips = customTips[metricKey] || [];
+    
+    // Only keep tips that are NOT in the original server tips OR have been modified
+    userTips[metricKey] = allTips.filter(tip => !serverTipsForMetric.includes(tip));
     
     // Save and refresh
     saveUserTips(userTips);
+    mergeTips();
     showMetricTips(metricKey);
     
     alert('Tip updated successfully!');
@@ -312,8 +314,12 @@ function deleteTip(metricKey, tipIndex) {
     // Remove from customTips
     customTips[metricKey].splice(tipIndex, 1);
     
-    // Update userTips to match
-    userTips[metricKey] = customTips[metricKey];
+    // Rebuild userTips from scratch - only include what's left in customTips that isn't from serverTips
+    const serverTipsForMetric = serverTips[metricKey] || [];
+    const remainingTips = customTips[metricKey] || [];
+    
+    // Only keep tips that are NOT in the original server tips
+    userTips[metricKey] = remainingTips.filter(tip => !serverTipsForMetric.includes(tip));
     
     // Save and refresh
     saveUserTips(userTips);
