@@ -1058,24 +1058,39 @@ function filterDashboard() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Coaching Tool Initialized');
+    
     // Auto-load tips from server and user storage
     try {
         serverTips = await loadServerTips();
         userTips = loadUserTips();
         mergeTips();
+        console.log('✅ Tips loaded successfully');
     } catch (error) {
         console.warn('⚠️ Using fallback tips:', error);
     }
 
     // Employee dashboard button
-    document.getElementById('employeeDashboard')?.addEventListener('click', () => {
-        showEmployeeDashboard();
-    });
+    const dashboardBtn = document.getElementById('employeeDashboard');
+    console.log('Dashboard button found:', dashboardBtn);
+    if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', (e) => {
+            console.log('Dashboard button clicked');
+            e.preventDefault();
+            showEmployeeDashboard();
+        });
+    }
 
     // Manage Tips button
-    document.getElementById('manageTips')?.addEventListener('click', () => {
-        showTipsManagement();
-    });
+    const tipsBtn = document.getElementById('manageTips');
+    console.log('Tips button found:', tipsBtn);
+    if (tipsBtn) {
+        tipsBtn.addEventListener('click', (e) => {
+            console.log('Tips button clicked');
+            e.preventDefault();
+            showTipsManagement();
+        });
+    }
 
     // Close Tips Management button
     document.getElementById('closeTipsManagement')?.addEventListener('click', () => {
