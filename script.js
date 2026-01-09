@@ -1886,6 +1886,7 @@ function initApp() {
         // Scroll to top of results
         document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+}
 // Run initializer immediately if DOM is already parsed; otherwise wait
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
