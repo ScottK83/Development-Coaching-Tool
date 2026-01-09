@@ -688,8 +688,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('resultsSection').style.display = 'none';
     });
 
-    // Clear all history button
-    document.getElementById('clearAllHistory')?.addEventListener('click', () => {
+    // Clear all history buttons (both in history and dashboard sections)
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all email history? This cannot be undone.')) {
+            clearAllHistory();
+        }
+    });
+    
+    document.getElementById('clearDashboardHistoryBtn')?.addEventListener('click', () => {
         if (confirm('Are you sure you want to clear all email history? This cannot be undone.')) {
             clearAllHistory();
         }
