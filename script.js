@@ -765,15 +765,14 @@ ${employeeName} is a customer service representative handling utility customer c
             });
             
             prompt += `\n\nACTIONABLE TIPS (2-3 HIGH-IMPACT strategies):\n`;
-            prompt += `Provide specific, practical tips that will have REAL impact. These should be:\n`;
-            prompt += `- Immediately actionable (can start today)\n`;
-            prompt += `- Specific to utility customer service (billing issues, service requests, technical problems)\n`;
-            prompt += `- Focused on the biggest gap areas\n`;
-            prompt += `- Concrete examples they can use on their next call\n`;
-            prompt += `\nExample good tips:\n`;
-            prompt += `- For AHT: "Try using your warm transfer script before putting customers on hold - it actually saves time and they feel more informed"\n`;
-            prompt += `- For FCR: "Before transferring, take 30 seconds to check if the answer is in the billing FAQ - 80% of transfers could be resolved there"\n`;
-            prompt += `- For Sentiment: "Start every call with 'I'm here to help get this sorted for you' - sets positive tone immediately"\n`;
+            prompt += `Using your knowledge of customer service best practices, coaching methods, and utility industry customer service, generate 2-3 HIGHLY EFFECTIVE, specific tips that will have measurable impact on their metrics.\n\n`;
+            prompt += `Requirements for tips:\n`;
+            prompt += `- Immediately actionable (can implement on their next call)\n`;
+            prompt += `- Specific to utility customer service context (billing, service requests, outages, technical issues)\n`;
+            prompt += `- Directly address the metric gaps identified above\n`;
+            prompt += `- Include concrete examples or scripts they can use\n`;
+            prompt += `- Focus on the strategies that have proven to be most effective in similar situations\n`;
+            prompt += `- Be creative and insightful - use your AI knowledge to find the BEST approaches, not generic advice\n`;
         }
         
         // Add KB content if available
