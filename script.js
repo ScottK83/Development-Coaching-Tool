@@ -1,3 +1,31 @@
+// Utility functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showOnlySection(sectionId) {
+    const sections = [
+        { id: 'coachingForm', conditional: false },
+        { id: 'resultsSection', conditional: false },
+        { id: 'dashboardSection', conditional: false },
+        { id: 'historySection', conditional: false },
+        { id: 'tipsManagementSection', conditional: false }
+    ];
+    
+    sections.forEach(section => {
+        const el = document.getElementById(section.id);
+        if (el) el.style.display = (section.id === sectionId) ? 'block' : 'none';
+    });
+    
+    // Handle conditional sections
+    const customNotesSection = document.getElementById('customNotesSection');
+    if (customNotesSection) {
+        customNotesSection.style.display = (sectionId === 'coachingForm') ? 'block' : 'none';
+    }
+}
+
 // Target metrics for comparison
 const TARGETS = {
     driver: {
@@ -157,13 +185,7 @@ function showTipsManagement() {
     document.getElementById('tipsManagementContent').innerHTML = '<p style="color: #999; font-style: italic; text-align: center; padding: 40px;">Select a metric from the dropdown above to view and manage its tips.</p>';
     
     // Show the section
-    document.getElementById('tipsManagementSection').style.display = 'block';
-    document.getElementById('coachingForm').style.display = 'none';
-    document.getElementById('resultsSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('historySection').style.display = 'none';
-    const customNotesSection = document.getElementById('customNotesSection');
-    if (customNotesSection) customNotesSection.style.display = 'none';
+    showOnlySection('tipsManagementSection');
 }
 
 // Show tips for selected metric
@@ -374,8 +396,40 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
         
         localStorage.setItem('coachingHistory', JSON.stringify(history));
     } catch (error) {
-        console.error('Error saving history:', error);
-        alert('Warning: Could not save coaching history. Storage may be full.');
+        if (error.name === 'QuotaExceededError') {
+            console.warn('Storage quota exceeded, attempting cleanup...');
+            if (confirm('⚠️ Storage is full! Would you like to keep only the last 15 sessions per employee and try again?')) {
+                try {
+                    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+                    // Keep only last 15 sessions per employee
+                    Object.keys(history).forEach(name => {
+                        if (history[name].length > 15) {
+                            history[name] = history[name].slice(-15);
+                        }
+                    });
+                    localStorage.setItem('coachingHistory', JSON.stringify(history));
+                    
+                    // Try saving again
+                    if (!history[employeeName]) history[employeeName] = [];
+                    history[employeeName].push({
+                        date: new Date().toISOString(),
+                        dateRange: dateRange || '',
+                        strugglingAreas,
+                        metrics
+                    });
+                    localStorage.setItem('coachingHistory', JSON.stringify(history));
+                    console.log('✅ Storage cleaned up and data saved successfully');
+                } catch (retryError) {
+                    console.error('Cleanup failed:', retryError);
+                    alert('❌ Could not save coaching history even after cleanup. Please export your data and clear history.');
+                }
+            } else {
+                alert('❌ Data not saved. Please clear some history to continue.');
+            }
+        } else {
+            console.error('Error saving history:', error);
+            alert('Warning: Could not save coaching history. Error: ' + error.message);
+        }
     }
 }
 
@@ -422,9 +476,11 @@ function diagnoseTrends(employeeName) {
     // Sort by date
     const sortedHistory = history.sort((a, b) => new Date(a.date) - new Date(b.date));
     
+    const safeEmployeeName = escapeHtml(employeeName);
+    
     let html = `
         <div style="max-width: 1000px; margin: 20px auto;">
-            <h2 style="color: #003DA5; margin-bottom: 20px;">📊 Trend Analysis: ${employeeName}</h2>
+            <h2 style="color: #003DA5; margin-bottom: 20px;">📊 Trend Analysis: ${safeEmployeeName}</h2>
             <p style="color: #666; margin-bottom: 30px;">Tracking ${sortedHistory.length} coaching session${sortedHistory.length > 1 ? 's' : ''}</p>
     `;
     
@@ -658,16 +714,19 @@ function showEmployeeDashboard() {
             const sessionCount = sessions.length;
             const uniqueId = name.replace(/\s+/g, '-');
 
+            const safeName = escapeHtml(name);
+            const safeNameForJs = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'";
+            
             html += `
                 <div id="employee-card-${uniqueId}" style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                     <div style="background: #f8f9fa; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" 
                          onclick="document.getElementById('employee-${uniqueId}').style.display = document.getElementById('employee-${uniqueId}').style.display === 'none' ? 'block' : 'none'">
                         <div>
-                            <strong style="font-size: 1.1em;">${name}</strong>
+                            <strong style="font-size: 1.1em;">${safeName}</strong>
                             <span style="margin-left: 10px; color: #666; font-size: 0.9em;">(${sessionCount} coaching session${sessionCount > 1 ? 's' : ''})</span>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <button onclick="event.stopPropagation(); diagnoseTrends('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" 
+                            <button onclick="event.stopPropagation(); diagnoseTrends('${safeNameForJs}')" 
                                     style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; font-size: 0.9em;">📊 Diagnose Trends</button>
                             <span style="font-size: 1.2em;">▼</span>
                         </div>
@@ -682,13 +741,18 @@ function showEmployeeDashboard() {
                 const weekLabel = session.dateRange || 'No week set';
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
+                const safeNameForDelete = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'";
+                const safeDateLabel = escapeHtml(date);
+                const safeWeekLabel = escapeHtml(weekLabel);
+                const safeAreas = escapeHtml(areas);
+                
                 html += `
-                    <div data-employee="${name}" data-date="${date}" data-week="${session.dateRange || ''}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
-                        <button onclick="if(confirm('Delete this session?')) deleteSession('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${index})" 
+                    <div data-employee="${escapeHtml(name)}" data-date="${safeDateLabel}" data-week="${escapeHtml(session.dateRange || '')}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
+                        <button onclick="if(confirm('Delete this session?')) deleteSession('${safeNameForDelete}', ${index})" 
                                 style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
-                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${date}</div>
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📅 Week: ${weekLabel}</div>
-                        <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${safeDateLabel}</div>
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📅 Week: ${safeWeekLabel}</div>
+                        <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${safeAreas}</div>
                 `;
 
                 // Show metrics if available
@@ -724,13 +788,7 @@ function showEmployeeDashboard() {
         dashboardContent.innerHTML = html;
     }
 
-    document.getElementById('dashboardSection').style.display = 'block';
-    document.getElementById('coachingForm').style.display = 'none';
-    document.getElementById('resultsSection').style.display = 'none';
-    document.getElementById('historySection').style.display = 'none';
-    document.getElementById('tipsManagementSection').style.display = 'none';
-    const customNotesSection = document.getElementById('customNotesSection');
-    if (customNotesSection) customNotesSection.style.display = 'none';
+    showOnlySection('dashboardSection');
 }
 
 // Update date range dropdown based on selected employee
@@ -805,9 +863,12 @@ function showEmployeeTrendData() {
     const previousSession = currentIndex > 0 ? allSessions[currentIndex - 1] : null;
     
     // Build metrics display with comparison
+    const safeEmployee = escapeHtml(selectedEmployee);
+    const safeDateRange = escapeHtml(selectedDateRange);
+    
     let html = `
         <div style="border-bottom: 2px solid #003DA5; padding-bottom: 10px; margin-bottom: 15px;">
-            <h4 style="color: #003DA5; margin: 0;">${selectedEmployee} - ${selectedDateRange}</h4>
+            <h4 style="color: #003DA5; margin: 0;">${safeEmployee} - ${safeDateRange}</h4>
             <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Uploaded: ${sessionDate}</div>
             ${wasCoached ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;"><strong>⚠️ Coached on:</strong> ${strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')}</div>` : '<div style="margin-top: 8px; color: #28a745; font-weight: bold;">✅ Meeting all targets - No coaching needed</div>'}
             ${previousSession ? `<div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 3px; font-size: 0.9em;">📈 Comparing to previous period: ${previousSession.dateRange}</div>` : ''}
@@ -1018,10 +1079,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Close Tips Management button
     document.getElementById('closeTipsManagement')?.addEventListener('click', () => {
-        document.getElementById('tipsManagementSection').style.display = 'none';
-        document.getElementById('coachingForm').style.display = 'block';
-        const customNotesSection = document.getElementById('customNotesSection');
-        if (customNotesSection) customNotesSection.style.display = 'block';
+        showOnlySection('coachingForm');
     });
 
     // Metric dropdown change
@@ -1122,27 +1180,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Close history button
     document.getElementById('closeHistory')?.addEventListener('click', () => {
-        document.getElementById('historySection').style.display = 'none';
-        document.getElementById('coachingForm').style.display = 'block';
+        showOnlySection('coachingForm');
     });
 
     // Close dashboard button
     document.getElementById('closeDashboard')?.addEventListener('click', () => {
-        document.getElementById('dashboardSection').style.display = 'none';
-        document.getElementById('coachingForm').style.display = 'block';
-        document.getElementById('tipsManagementSection').style.display = 'none';
-        const customNotesSection = document.getElementById('customNotesSection');
-        if (customNotesSection) customNotesSection.style.display = 'block';
+        showOnlySection('coachingForm');
     });
 
     // Back to form button
     document.getElementById('backToForm')?.addEventListener('click', () => {
-        document.getElementById('dashboardSection').style.display = 'none';
-        document.getElementById('coachingForm').style.display = 'block';
-        document.getElementById('resultsSection').style.display = 'none';
-        document.getElementById('tipsManagementSection').style.display = 'none';
-        const customNotesSection = document.getElementById('customNotesSection');
-        if (customNotesSection) customNotesSection.style.display = 'block';
+        showOnlySection('coachingForm');
     });
 
     // Clear all history buttons (both in history and dashboard sections)
@@ -1667,9 +1715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // New email button
     document.getElementById('newCoaching')?.addEventListener('click', () => {
-        document.getElementById('coachingForm').style.display = 'block';
-        document.getElementById('resultsSection').style.display = 'none';
-        document.getElementById('tipsManagementSection').style.display = 'none';
+        showOnlySection('coachingForm');
         document.getElementById('generatedEmail').value = '';
         document.getElementById('coachingForm').reset();
     });
@@ -1818,8 +1864,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
-        document.getElementById('resultsSection').style.display = 'block';
-        document.getElementById('coachingForm').style.display = 'none';
-        document.getElementById('tipsManagementSection').style.display = 'none';
+        showOnlySection('resultsSection');
+        
+        // Scroll to top of results
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 });
