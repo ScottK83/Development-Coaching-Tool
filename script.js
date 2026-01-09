@@ -590,6 +590,11 @@ function diagnoseTrends(employeeName) {
         const meetingTarget = metric.isMin ? lastValue >= targetValue : lastValue <= targetValue;
         const targetStatus = meetingTarget ? '✅ Meeting target' : '⚠️ Below target';
         
+        // Create visual bar chart
+        const minValue = Math.min(...values.map(v => v.value));
+        const maxValue = Math.max(...values.map(v => v.value));
+        const range = maxValue - minValue || 1;
+        
         html += `
             <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: white;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -600,10 +605,42 @@ function diagnoseTrends(employeeName) {
                         <div style="color: ${meetingTarget ? '#28a745' : '#dc3545'}; font-size: 0.9em;">${targetStatus}</div>
                     </div>
                 </div>
-                <div style="margin-bottom: 10px;">
+                <div style="margin-bottom: 15px;">
                     <strong>Target:</strong> ${metric.isMin ? '≥' : '≤'}${targetValue}${metric.unit} | 
                     <strong>Current:</strong> ${lastValue}${metric.unit}
                 </div>
+                
+                <!-- Visual Chart -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: flex-end; gap: 5px; height: 150px; border-bottom: 2px solid #ddd; padding-bottom: 5px;">
+        `;
+        
+        values.forEach((v, i) => {
+            const heightPercent = range > 0 ? ((v.value - minValue) / range) * 100 : 50;
+            const isImproving = i > 0 && (metric.isMin ? v.value > values[i-1].value : v.value < values[i-1].value);
+            const isDeclining = i > 0 && (metric.isMin ? v.value < values[i-1].value : v.value > values[i-1].value);
+            const barColor = v.wasCoached ? '#ffc107' : isImproving ? '#28a745' : isDeclining ? '#dc3545' : '#007bff';
+            const dateShort = v.dateRange || v.date.substring(0, 5);
+            
+            html += `
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+                    <div style="font-weight: bold; font-size: 0.85em; margin-bottom: 3px; color: ${barColor};">${v.value}${metric.unit}</div>
+                    <div style="width: 100%; height: ${heightPercent}%; min-height: 10px; background: ${barColor}; border-radius: 4px 4px 0 0; transition: all 0.3s;"></div>
+                    <div style="font-size: 0.75em; color: #666; margin-top: 5px; writing-mode: vertical-rl; transform: rotate(180deg);">${dateShort}</div>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.85em; color: #666;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #ffc107; border-radius: 2px; margin-right: 5px;"></span>Coached
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 2px; margin-left: 15px; margin-right: 5px;"></span>Improving
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 2px; margin-left: 15px; margin-right: 5px;"></span>Declining
+                    </div>
+                </div>
+                
+                <!-- Session Details -->
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         `;
         
@@ -615,7 +652,7 @@ function diagnoseTrends(employeeName) {
             
             html += `
                 <div style="background: ${bgColor}; padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">
-                    <div style="font-size: 0.85em; color: #666;">${v.date}${v.dateRange ? '<br>' + v.dateRange : ''}</div>
+                    <div style="font-size: 0.85em; color: #666;">${v.date}${v.dateRange ? '<br>Week: ' + v.dateRange : ''}</div>
                     <div style="font-size: 1.1em; font-weight: bold;">${arrow} ${v.value}${metric.unit}</div>
                     ${v.wasCoached ? '<div style="font-size: 0.75em; color: #856404;">⚠️ Coached</div>' : ''}
                 </div>
@@ -644,17 +681,36 @@ function showEmployeeDashboard() {
     if (Object.keys(history).length === 0) {
         dashboardContent.innerHTML = '<p class="empty-state">No employees coached yet.</p>';
     } else {
+        // Get all unique date ranges
+        const allDateRanges = new Set();
+        Object.values(history).forEach(sessions => {
+            sessions.forEach(s => {
+                if (s.dateRange) allDateRanges.add(s.dateRange);
+            });
+        });
+        
+        const sortedDateRanges = Array.from(allDateRanges).sort().reverse();
+        
+        let html = '<div style="margin-bottom: 20px;">';
+        html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Week:</label>';
+        html += '<select id="weekFilter" onchange="filterDashboardByWeek(this.value)" style="width: 100%; max-width: 400px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
+        html += '<option value="">All Weeks</option>';
+        sortedDateRanges.forEach(range => {
+            html += `<option value="${range}">${range}</option>`;
+        });
+        html += '</select></div>';
+        
         // Sort employees alphabetically
         const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
 
-        let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+        html += '<div id="employeeList" style="display: flex; flex-direction: column; gap: 15px;">';
 
         sortedEmployees.forEach(([name, sessions]) => {
             const sessionCount = sessions.length;
             const uniqueId = name.replace(/\s+/g, '-');
 
             html += `
-                <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                <div id="employee-card-${uniqueId}" style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                     <div style="background: #f8f9fa; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" 
                          onclick="document.getElementById('employee-${uniqueId}').style.display = document.getElementById('employee-${uniqueId}').style.display === 'none' ? 'block' : 'none'">
                         <div>
@@ -672,15 +728,17 @@ function showEmployeeDashboard() {
 
             // Show each coaching session
             sessions.forEach((session, index) => {
-                const date = new Date(session.date).toLocaleDateString();
-                const dateRangeLabel = session.dateRange ? ` - ${session.dateRange}` : '';
+                const sessionDate = new Date(session.date);
+                const date = sessionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const weekLabel = session.dateRange || 'No week set';
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
                 html += `
-                    <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
+                    <div data-week="${session.dateRange || ''}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
                         <button onclick="if(confirm('Delete this session?')) deleteSession('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${index})" 
                                 style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
-                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} (${date}${dateRangeLabel})</div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${date}</div>
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📅 Week: ${weekLabel}</div>
                         <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
                 `;
 
@@ -721,6 +779,39 @@ function showEmployeeDashboard() {
     document.getElementById('coachingForm').style.display = 'none';
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
+}
+
+// Filter dashboard by week
+function filterDashboardByWeek(weekRange) {
+    const history = getAllHistory();
+    const sortedEmployees = Object.entries(history).sort((a, b) => a[0].localeCompare(b[0]));
+    
+    sortedEmployees.forEach(([name, sessions]) => {
+        const uniqueId = name.replace(/\s+/g, '-');
+        const employeeDiv = document.getElementById(`employee-${uniqueId}`);
+        
+        if (!employeeDiv) return;
+        
+        // Filter sessions
+        const sessionDivs = employeeDiv.querySelectorAll('[data-week]');
+        let visibleCount = 0;
+        
+        sessionDivs.forEach(div => {
+            const sessionWeek = div.getAttribute('data-week');
+            if (!weekRange || sessionWeek === weekRange) {
+                div.style.display = 'block';
+                visibleCount++;
+            } else {
+                div.style.display = 'none';
+            }
+        });
+        
+        // Hide employee if no sessions match filter
+        const parentCard = document.getElementById(`employee-card-${uniqueId}`);
+        if (parentCard) {
+            parentCard.style.display = visibleCount > 0 ? 'block' : 'none';
+        }
+    });
 }
 
 function exportHistory() {
