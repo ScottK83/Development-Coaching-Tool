@@ -559,6 +559,138 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // ========== EXCEL UPLOAD FUNCTIONALITY ==========
+    
+    let uploadedEmployeeData = []; // Store parsed employee data
+    let dateRange = ''; // Store date range from Excel
+
+    // Load and parse Excel file
+    document.getElementById('loadDataBtn')?.addEventListener('click', () => {
+        const fileInput = document.getElementById('excelFile');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('Please select an Excel file first');
+            return;
+        }
+
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Get first sheet
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                
+                // Extract date range from A1 (e.g., "YTD - 2025")
+                dateRange = firstSheet['A1'] ? firstSheet['A1'].v : '';
+                if (dateRange) {
+                    document.getElementById('dateRangeDisplay').style.display = 'block';
+                    document.getElementById('dateRangeDisplay').textContent = `📅 Date Range: ${dateRange}`;
+                }
+                
+                // Convert to JSON (starts from row 3, row 1 is date, row 2 is headers)
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+                    range: 2, // Start from row 3 (0-indexed, so row 2)
+                    defval: '' // Default value for empty cells
+                });
+                
+                // Parse and store employee data
+                uploadedEmployeeData = jsonData.map(row => ({
+                    name: row['Name'] || '',
+                    scheduleAdherence: parsePercentage(row['Adherence']),
+                    cxRepOverall: parsePercentage(row['CX Overall Experience\\n(Surveys)']),
+                    fcr: parsePercentage(row['FCR (Surveys)']),
+                    transfers: parsePercentage(row['% of Transfers']),
+                    aht: parseSeconds(row['Average Handle Time (AHT) in Seconds (AHT time + hold time + ACW in seconds)']),
+                    acw: parseSeconds(row['After Call Work (ACW) in Seconds\\n(Surveys not ready time / wrap-up)']),
+                    holdTime: parseSeconds(row['Hold Time in Seconds (per call on  hold over AHT)']),
+                    reliability: parseHours(row['This Report Meeting']),
+                    overallSentiment: parsePercentage(row['Overall Sentiment']),
+                    positiveWord: parsePercentage(row['Positive Word Choice']),
+                    negativeWord: parsePercentage(row['Avoids Negative Word Choice']),
+                    managingEmotions: parsePercentage(row['Manage Emotions'])
+                })).filter(emp => emp.name); // Remove empty rows
+                
+                // Populate dropdown
+                const dropdown = document.getElementById('employeeSelect');
+                dropdown.innerHTML = '<option value=\"\">-- Choose an employee --</option>';
+                
+                uploadedEmployeeData.forEach((emp, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = emp.name;
+                    dropdown.appendChild(option);
+                });
+                
+                document.getElementById('employeeSelectContainer').style.display = 'block';
+                alert(`✅ Loaded ${uploadedEmployeeData.length} employees from spreadsheet!`);
+                
+            } catch (error) {
+                console.error('Error parsing Excel:', error);
+                alert('Error reading Excel file. Please make sure it\\'s formatted correctly.');
+            }
+        };
+        
+        reader.readAsArrayBuffer(file);
+    });
+
+    // Auto-populate form when employee selected
+    document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
+        const selectedIndex = e.target.value;
+        
+        if (selectedIndex === '') {
+            return; // No selection
+        }
+        
+        const employee = uploadedEmployeeData[selectedIndex];
+        
+        // Populate all form fields
+        document.getElementById('employeeName').value = employee.name;
+        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence;
+        document.getElementById('cxRepOverall').value = employee.cxRepOverall;
+        document.getElementById('fcr').value = employee.fcr;
+        document.getElementById('transfers').value = employee.transfers;
+        document.getElementById('aht').value = employee.aht;
+        document.getElementById('acw').value = employee.acw;
+        document.getElementById('holdTime').value = employee.holdTime;
+        document.getElementById('reliability').value = employee.reliability;
+        document.getElementById('overallSentiment').value = employee.overallSentiment;
+        document.getElementById('positiveWord').value = employee.positiveWord;
+        document.getElementById('negativeWord').value = employee.negativeWord;
+        document.getElementById('managingEmotions').value = employee.managingEmotions;
+        
+        // Scroll to form
+        document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Helper functions to parse Excel data
+    function parsePercentage(value) {
+        if (!value && value !== 0) return '';
+        // If already a decimal (0.83), convert to percentage (83)
+        if (typeof value === 'number' && value <= 1) {
+            return (value * 100).toFixed(2);
+        }
+        // If string with %, remove it
+        if (typeof value === 'string' && value.includes('%')) {
+            return parseFloat(value.replace('%', ''));
+        }
+        return parseFloat(value) || '';
+    }
+
+    function parseSeconds(value) {
+        if (!value && value !== 0) return '';
+        return Math.round(parseFloat(value)) || '';
+    }
+
+    function parseHours(value) {
+        if (!value && value !== 0) return '';
+        return parseFloat(value).toFixed(2) || '';
+    }
+
+
     // Copy button
     document.getElementById('copyEmail')?.addEventListener('click', () => {
         const email = document.getElementById('coachingEmail').innerText;

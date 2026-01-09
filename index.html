@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -18,6 +19,22 @@
 
         <main>
             <form id="coachingForm">
+                <!-- Excel Upload Section -->
+                <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
+                    <h2>📊 Upload Spreadsheet</h2>
+                    <div class="form-group">
+                        <input type="file" id="excelFile" accept=".xlsx, .xls" style="margin-bottom: 10px;">
+                        <button type="button" id="loadDataBtn" class="btn-secondary" style="background: #2196F3; color: white;">📂 Load Data</button>
+                    </div>
+                    <div id="dateRangeDisplay" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; font-weight: bold;"></div>
+                    <div id="employeeSelectContainer" style="display: none; margin-top: 15px;">
+                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
+                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                            <option value="">-- Choose an employee --</option>
+                        </select>
+                    </div>
+                </section>
+
                 <!-- Employee Information -->
                 <section class="form-section">
                     <h2>Employee Information</h2>
