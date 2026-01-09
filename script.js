@@ -230,7 +230,7 @@ function getEmployeeHistory(employeeName) {
     return history[employeeName] || [];
 }
 
-function saveToHistory(employeeName, strugglingAreas, metrics = null) {
+function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange = null) {
     const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
 
     if (!history[employeeName]) {
@@ -239,6 +239,7 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null) {
 
     history[employeeName].push({
         date: new Date().toISOString(),
+        dateRange: dateRange || '',
         strugglingAreas,
         metrics
     });
@@ -388,13 +389,14 @@ function showEmployeeDashboard() {
             // Show each coaching session
             sessions.forEach((session, index) => {
                 const date = new Date(session.date).toLocaleDateString();
+                const dateRangeLabel = session.dateRange ? ` - ${session.dateRange}` : '';
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
                 html += `
                     <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
                         <button onclick="if(confirm('Delete this session?')) deleteSession('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${index})" 
                                 style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
-                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} (${date})</div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} (${date}${dateRangeLabel})</div>
                         <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
                 `;
 
@@ -604,23 +606,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Parse and store employee data
                 uploadedEmployeeData = jsonData.map(row => {
                     // Name column format is "LastName, FirstName"
-                    const fullName = row['Name'] || '';
+                    const fullName = row['Name (Last, First)'] || '';
                     const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
                     
                     return {
                         name: firstName,
                         scheduleAdherence: parsePercentage(row['Adherence']),
-                        cxRepOverall: parsePercentage(row['CX Overall Experience (Surveys)']),
-                        fcr: parsePercentage(row['FCR (Surveys)']),
-                        transfers: parsePercentage(row['% of Transfers']),
-                        aht: parseSeconds(row['Average Handle Time (AHT) in Seconds (AHT = talk time + hold time + ACW in seconds)']),
-                        acw: parseSeconds(row['After Call Work (ACW) in Seconds (Surveys not ready time / wrap-up)']),
-                        holdTime: parseSeconds(row['Hold Time in Seconds (part of AHT)']),
-                        reliability: parseHours(row['This Report Meeting']),
-                        overallSentiment: parsePercentage(row['Overall Sentiment']),
-                        positiveWord: parsePercentage(row['Positive Word Choice']),
-                        negativeWord: parsePercentage(row['Avoids Negative Word Choice']),
-                        managingEmotions: parsePercentage(row['Manage Emotions'])
+                        cxRepOverall: parsePercentage(row['OverallCXExperience%']),
+                        fcr: parsePercentage(row['FCR%']),
+                        transfers: parsePercentage(row['TransferPct']),
+                        aht: parseSeconds(row['AHT']),
+                        acw: parseSeconds(row['ACW']),
+                        holdTime: parsePercentage(row['Hold%']),
+                        reliability: parsePercentage(row['Reliability %']),
+                        overallSentiment: parsePercentage(row['OverallSentimentScores%']),
+                        positiveWord: parsePercentage(row['PositiveWordScore%']),
+                        negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
+                        managingEmotions: parsePercentage(row['ManageEmotionsScore%'])
                     };
                 }).filter(emp => emp.name); // Remove empty rows
                 
@@ -628,7 +630,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // Populate dropdown
                 const dropdown = document.getElementById('employeeSelect');
-                dropdown.innerHTML = '<option value=\"\">-- Choose an employee --</option>';
+                dropdown.innerHTML = '<option value="">-- Choose an employee --</option>';
                 
                 uploadedEmployeeData.forEach((emp, index) => {
                     const option = document.createElement('option');
@@ -638,6 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 
                 document.getElementById('employeeSelectContainer').style.display = 'block';
+                document.getElementById('dateRangeInputContainer').style.display = 'block';
                 alert(`✅ Loaded ${uploadedEmployeeData.length} employees from spreadsheet!`);
                 
             } catch (error) {
@@ -904,8 +907,9 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             prompt += `\n\n${customNotes}`;
         }
         
-        // Save to history
-        saveToHistory(employeeName, strugglingAreas, metrics);
+        // Save to history with date range
+        const userDateRange = document.getElementById('dateRangeInput')?.value || '';
+        saveToHistory(employeeName, strugglingAreas, metrics, userDateRange);
         
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
