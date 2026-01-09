@@ -618,8 +618,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     const employeeData = {
                         name: firstName,
-                        scheduleAdherence: parsePercentage(row['Adherence']),
-                        cxRepOverall: parsePercentage(row['OverallCXExperience%']),
+                        scheduleAdherence: parsePercentage(row['Adherence%']),
+                        cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
                         transfers: parsePercentage(row['TransferPct']),
                         aht: parseSeconds(row['AHT']),
