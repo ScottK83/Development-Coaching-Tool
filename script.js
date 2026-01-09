@@ -630,7 +630,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
             } catch (error) {
                 console.error('Error parsing Excel:', error);
-                alert('Error reading Excel file. Please make sure it\\'s formatted correctly.');
+                alert('Error reading Excel file. Please make sure it is formatted correctly.');
             }
         };
         
