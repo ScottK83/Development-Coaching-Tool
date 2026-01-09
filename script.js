@@ -43,12 +43,7 @@ const AREA_NAMES = {
     aht: 'Average Handle Time',
     acw: 'After Call Work',
     holdTime: 'Hold Time',
-    reliability: 'Reliability',
-    safetyHazards: 'Safety Hazards',
-    accComplaints: 'ACC Complaints',
-    phishingClicks: 'Phishing Clicks',
-    redFlags: 'Red Flag Events',
-    depositWaiver: 'Deposit Waiver'
+    reliability: 'Reliability'
 };
 
 // Improvement tips for each metric (fallback if no CSV loaded)
@@ -70,10 +65,14 @@ const IMPROVEMENT_TIPS = {
 // Pronouns handling
 // Generate email subject and body
 function generateEmailContent(employeeName, coachingEmail) {
-    const firstName = employeeName.trim().split(' ')[0];
-    const subject = `Development Coaching - ${firstName}'s Performance Review`;
+    const nameParts = employeeName.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    const emailAddress = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@aps.com`;
+    const subject = `Quick Check-In: Let's Chat About Your Metrics!`;
     
     return {
+        to: emailAddress,
         subject: subject,
         body: coachingEmail
     };
@@ -181,56 +180,19 @@ function mergeTips() {
 
 // Show tips management interface
 function showTipsManagement() {
-    const content = document.getElementById('tipsManagementContent');
+    // Populate dropdown
+    const metricSelect = document.getElementById('metricSelect');
+    metricSelect.innerHTML = '<option value="">-- Choose a metric --</option>';
     
-    let html = `
-        <div style="margin-bottom: 20px;">
-            <p style="color: #666;">Manage coaching tips for each metric. Delete irrelevant tips or add your own custom tips.</p>
-        </div>
-    `;
-    
-    // Get all metrics
-    const metrics = Object.keys(AREA_NAMES);
-    
-    metrics.forEach(metricKey => {
-        const metricName = AREA_NAMES[metricKey];
-        const tips = customTips[metricKey] || [];
-        
-        html += `
-            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: white;">
-                <h3 style="color: #003DA5; margin-bottom: 15px;">${metricName}</h3>
-                
-                <div id="tips-${metricKey}" style="margin-bottom: 15px;">
-        `;
-        
-        if (tips.length === 0) {
-            html += `<p style="color: #999; font-style: italic;">No tips available for this metric.</p>`;
-        } else {
-            tips.forEach((tip, index) => {
-                html += `
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; align-items: start;">
-                        <div style="flex: 1;">
-                            <textarea id="tip-${metricKey}-${index}" style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;">${tip}</textarea>
-                        </div>
-                        <button onclick="saveTipEdit('${metricKey}', ${index})" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">💾 Save</button>
-                        <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">🗑️ Delete</button>
-                    </div>
-                `;
-            });
-        }
-        
-        html += `
-                </div>
-                
-                <div style="margin-top: 15px;">
-                    <textarea id="newTip-${metricKey}" placeholder="Add a new tip for ${metricName}..." style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
-                    <button onclick="addNewTip('${metricKey}')" style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 5px;">➕ Add Tip</button>
-                </div>
-            </div>
-        `;
+    Object.keys(AREA_NAMES).forEach(metricKey => {
+        const option = document.createElement('option');
+        option.value = metricKey;
+        option.textContent = AREA_NAMES[metricKey];
+        metricSelect.appendChild(option);
     });
     
-    content.innerHTML = html;
+    // Clear content initially
+    document.getElementById('tipsManagementContent').innerHTML = '<p style="color: #999; font-style: italic; text-align: center; padding: 40px;">Select a metric from the dropdown above to view and manage its tips.</p>';
     
     // Show the section
     document.getElementById('tipsManagementSection').style.display = 'block';
@@ -238,6 +200,53 @@ function showTipsManagement() {
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'none';
     document.getElementById('historySection').style.display = 'none';
+}
+
+// Show tips for selected metric
+function showMetricTips(metricKey) {
+    if (!metricKey) {
+        document.getElementById('tipsManagementContent').innerHTML = '<p style="color: #999; font-style: italic; text-align: center; padding: 40px;">Select a metric from the dropdown above to view and manage its tips.</p>';
+        return;
+    }
+    
+    const content = document.getElementById('tipsManagementContent');
+    const metricName = AREA_NAMES[metricKey];
+    const tips = customTips[metricKey] || [];
+    
+    let html = `
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: white;">
+            <h3 style="color: #003DA5; margin-bottom: 15px;">${metricName}</h3>
+            
+            <div id="tips-${metricKey}" style="margin-bottom: 15px;">
+    `;
+    
+    if (tips.length === 0) {
+        html += `<p style="color: #999; font-style: italic;">No tips available for this metric.</p>`;
+    } else {
+        tips.forEach((tip, index) => {
+            html += `
+                <div style="display: flex; gap: 10px; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; align-items: start;">
+                    <div style="flex: 1;">
+                        <textarea id="tip-${metricKey}-${index}" style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;">${tip}</textarea>
+                    </div>
+                    <button onclick="saveTipEdit('${metricKey}', ${index})" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">💾 Save</button>
+                    <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">🗑️ Delete</button>
+                </div>
+            `;
+        });
+    }
+    
+    html += `
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <textarea id="newTip-${metricKey}" placeholder="Add a new tip for ${metricName}..." style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+                <button onclick="addNewTip('${metricKey}')" style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 5px;">➕ Add Tip</button>
+            </div>
+        </div>
+    `;
+    
+    content.innerHTML = html;
 }
 
 // Add a new tip
@@ -259,7 +268,7 @@ function addNewTip(metricKey) {
     // Save and refresh
     saveUserTips(userTips);
     mergeTips();
-    showTipsManagement();
+    showMetricTips(metricKey);
     
     alert('Tip added successfully!');
 }
@@ -285,7 +294,7 @@ function saveTipEdit(metricKey, tipIndex) {
     
     // Save and refresh
     saveUserTips(userTips);
-    showTipsManagement();
+    showMetricTips(metricKey);
     
     alert('Tip updated successfully!');
 }
@@ -305,7 +314,7 @@ function deleteTip(metricKey, tipIndex) {
     // Save and refresh
     saveUserTips(userTips);
     mergeTips();
-    showTipsManagement();
+    showMetricTips(metricKey);
     
     alert('Tip deleted successfully!');
 }
@@ -815,6 +824,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('coachingForm').style.display = 'block';
     });
 
+    // Metric dropdown change
+    document.getElementById('metricSelect')?.addEventListener('change', (e) => {
+        showMetricTips(e.target.value);
+    });
+
+    // Export Tips button
+    document.getElementById('exportTips')?.addEventListener('click', () => {
+        const tipsData = {
+            exportDate: new Date().toISOString(),
+            version: '1.0',
+            customTips: userTips
+        };
+        
+        const dataStr = JSON.stringify(tipsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `coaching-tips-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        alert('✅ Tips exported successfully!');
+    });
+
+    // Import Tips button
+    document.getElementById('importTips')?.addEventListener('click', () => {
+        document.getElementById('tipsFileInput').click();
+    });
+
+    // Handle file import
+    document.getElementById('tipsFileInput')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                
+                if (!importedData.customTips) {
+                    alert('❌ Invalid tips file format.');
+                    return;
+                }
+                
+                // Merge imported tips with existing
+                const confirmMerge = confirm('Do you want to MERGE these tips with your existing tips?\n\nClick OK to merge (keeps your current tips + adds new ones)\nClick Cancel to REPLACE all your tips with imported ones');
+                
+                if (confirmMerge) {
+                    // Merge: combine both
+                    Object.keys(importedData.customTips).forEach(metricKey => {
+                        if (!userTips[metricKey]) {
+                            userTips[metricKey] = [];
+                        }
+                        importedData.customTips[metricKey].forEach(tip => {
+                            if (!userTips[metricKey].includes(tip)) {
+                                userTips[metricKey].push(tip);
+                            }
+                        });
+                    });
+                } else {
+                    // Replace: overwrite completely
+                    Object.assign(userTips, importedData.customTips);
+                }
+                
+                saveUserTips(userTips);
+                mergeTips();
+                
+                // Refresh current view if a metric is selected
+                const currentMetric = document.getElementById('metricSelect').value;
+                if (currentMetric) {
+                    showMetricTips(currentMetric);
+                }
+                
+                alert('✅ Tips imported successfully!');
+            } catch (error) {
+                alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+        
+        // Reset input so same file can be selected again
+        e.target.value = '';
+    });
+
     // Close history button
     document.getElementById('closeHistory')?.addEventListener('click', () => {
         document.getElementById('historySection').style.display = 'none';
@@ -971,6 +1067,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('negativeWord').value = employee.negativeWord ?? '';
         document.getElementById('managingEmotions').value = employee.managingEmotions ?? '';
         
+        // Clear generated email textarea
+        document.getElementById('generatedEmail').value = '';
+        
         // Scroll to form
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
@@ -1064,9 +1163,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const emailData = generateEmailContent(employeeName, content);
         
+        const to = encodeURIComponent(emailData.to);
         const subject = encodeURIComponent(emailData.subject);
         const body = encodeURIComponent(emailData.body);
-        const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+        const mailtoLink = `mailto:${to}?subject=${subject}&body=${body}`;
         
         window.location.href = mailtoLink;
     });
@@ -1114,6 +1214,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
     document.getElementById('newCoaching')?.addEventListener('click', () => {
         document.getElementById('coachingForm').style.display = 'block';
         document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('generatedEmail').value = '';
         document.getElementById('coachingForm').reset();
     });
 
@@ -1189,7 +1290,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Conversational - like talking to a friend. Use contractions, vary sentence length, be natural. Start "Hey ${employeeName}!"\n\n`;
+        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Sound like a real person - not AI. Vary your word choices, use different sentence structures, throw in casual phrases ("I noticed", "By the way", "Quick thing", "Real talk"). Use contractions naturally. Sometimes start sentences with "And" or "But". Mix long and short sentences. Be specific but not robotic. NO EM DASHES (—) - use commas, periods, or regular hyphens (-) instead. Start "Hey ${employeeName}!"\n\n`;
 
         // Add wins if any
         if (wins.length > 0) {
@@ -1243,7 +1344,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
                 prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
             
-            prompt += `\n\nFor each tip: Start with "You're at X, need Y" then give casual, specific advice with real examples. For word choice tips, use "Instead of [X], try [Y]" format. Mix up your phrasing - keep it fresh and varied each time.`;
+            prompt += `\n\nFORMATTING: Only bold the metric name at the start of each tip (e.g., **Schedule Adherence:** then regular text). Do NOT bold anything else in the email body.\n\nFor each tip: Mix up how you phrase things. Sometimes say "You're at X, need Y", other times "Currently at X, let's get to Y", or "Target is Y, you're at X". Give casual, real-world advice with specific examples. For word choice tips, vary between "Instead of [X], try [Y]", "Swap [X] for [Y]", or "When you say [X], consider [Y]". Sound like a coworker giving friendly advice, not a textbook. Use different transitions: "Here's the thing", "So", "Also", "One more thing", "Real quick". Never repeat the same phrasing structure twice in a row.`;
         }
         
         // Add custom notes if provided
