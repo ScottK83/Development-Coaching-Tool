@@ -573,6 +573,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Make entire date input field clickable to open calendar
+    document.getElementById('startDate')?.addEventListener('click', function() {
+        this.showPicker();
+    });
+    
+    document.getElementById('endDate')?.addEventListener('click', function() {
+        this.showPicker();
+    });
+
     // Load and parse Excel file
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
