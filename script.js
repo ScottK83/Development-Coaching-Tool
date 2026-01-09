@@ -566,6 +566,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     let uploadedEmployeeData = []; // Store parsed employee data
     let dateRange = ''; // Store date range from Excel
 
+    // Show date range input when file is selected
+    document.getElementById('excelFile')?.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            document.getElementById('dateRangeInputContainer').style.display = 'block';
+        }
+    });
+
     // Load and parse Excel file
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
@@ -609,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const fullName = row['Name (Last, First)'] || '';
                     const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
                     
-                    return {
+                    const employeeData = {
                         name: firstName,
                         scheduleAdherence: parsePercentage(row['Adherence']),
                         cxRepOverall: parsePercentage(row['OverallCXExperience%']),
@@ -624,6 +631,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
                         managingEmotions: parsePercentage(row['ManageEmotionsScore%'])
                     };
+                    
+                    // Debug log first employee to see what's missing
+                    if (firstName === jsonData[0]['Name (Last, First)']?.split(',')[1]?.trim()) {
+                        console.log('First employee parsed:', employeeData);
+                        console.log('Raw row data:', row);
+                    }
+                    
+                    return employeeData;
                 }).filter(emp => emp.name); // Remove empty rows
                 
                 console.log('Parsed employees:', uploadedEmployeeData.length, uploadedEmployeeData);

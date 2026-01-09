@@ -24,13 +24,13 @@
                     <h2>📊 Upload Spreadsheet</h2>
                     <div class="form-group">
                         <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
+                    </div>
+                    <div id="dateRangeInputContainer" style="display: none; margin-top: 10px;">
+                        <label for="dateRangeInput" style="font-weight: bold; display: block; margin-bottom: 5px;">📅 Date Range (e.g., "Week 1 - Jan 2026", "Q4 2025"):</label>
+                        <input type="text" id="dateRangeInput" placeholder="Enter date range..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
                         <button type="button" id="loadDataBtn" class="btn-secondary" style="background: #2196F3; color: white;">📂 Load Data</button>
                     </div>
                     <div id="dateRangeDisplay" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; font-weight: bold;"></div>
-                    <div id="dateRangeInputContainer" style="display: none; margin-top: 10px;">
-                        <label for="dateRangeInput" style="font-weight: bold; display: block; margin-bottom: 5px;">📅 Date Range (e.g., "Week 1 - Jan 2026", "Q4 2025"):</label>
-                        <input type="text" id="dateRangeInput" placeholder="Enter date range..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    </div>
                     <div id="employeeSelectContainer" style="display: none; margin-top: 15px;">
                         <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
                         <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
