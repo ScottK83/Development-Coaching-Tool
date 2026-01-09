@@ -771,6 +771,8 @@ KEY METRICS EXPLAINED:
             wins.forEach(win => {
                 prompt += `✅ ${win} - Great work!\n`;
             });
+            prompt += `\nVARY THE WINS HEADER - Don't always say "Solid Wins" or the same phrase. Create unique variations each time like:\n`;
+            prompt += `"You've Got Some Real Wins Here" | "Let's Start With the Good Stuff" | "Few Things You're Crushing" | "Some Really Strong Numbers" | "A Few Standouts in Your Metrics" | "You're Doing Great in a Few Key Areas"\n`;
             prompt += `\nVARY THE OPENING - Create a unique opening each time. These are just examples for inspiration - make up your own natural variations:\n`;
             prompt += `"Was looking at your metrics - some good stuff happening..." | "Checked your numbers this morning - few things to celebrate..." | "Been reviewing your performance - wanted to highlight what's working..."\n`;
             prompt += `\nVARY WIN DESCRIPTIONS - Mix up your language naturally: "doing really well", "nailing", "on point", "solid", "strong", "on track", "looking good"\n\n`;
@@ -844,7 +846,7 @@ KEY METRICS EXPLAINED:
             prompt += `Describe the gap naturally and casually. Vary your phrasing.\n\n`;
             
             prompt += `TIPS (2-4 actionable strategies):\n`;
-            prompt += `Use BULLET POINTS with LABELED SECTIONS. Before each bullet point or group of bullets, add a bold header or underlined text showing which metric you're addressing (e.g., "**Hold Time:**" or "__Negative Word Choice:__"). This helps them know exactly what each tip improves. Include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
+            prompt += `Use BULLET POINTS with LABELED SECTIONS. Before each bullet point or group of bullets, add a bold header or underlined text showing which metric you're addressing (e.g., "**Hold Time:**" or "__Negative Word Choice:__"). For each tip, briefly explain WHY it matters (the impact on customers, efficiency, or their scores). Include concrete examples, specific scripts, or detailed steps. Don't worry about length if it adds value. Address ALL struggling areas. Vary your approach every time.\n\n`;
         }
         
         // Add KB content if available
@@ -853,11 +855,11 @@ KEY METRICS EXPLAINED:
             prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `CLOSING:\nVary it each time - be casual, supportive, invite honest feedback. Examples:\n`;
-        prompt += `"Give these a shot and let me know how they work - good, bad, or indifferent!"\n`;
-        prompt += `"Try these out and circle back - let me know what lands and what doesn't!"\n`;
-        prompt += `"Let me know if any of this helps or if we need to adjust the approach!"\n`;
-        prompt += `Create your own natural variation that invites honest feedback. Don't repeat the same closing.\n\n`;
+        prompt += `CLOSING:\nVary it each time - be casual, reference checking metrics again next week. Examples:\n`;
+        prompt += `"Try these out and let me know next week how you feel - we'll revisit the metrics again!"\n`;
+        prompt += `"Give these a shot this week, and we'll look at your numbers together next week to see how it's going!"\n`;
+        prompt += `"Work on these this week, and let me know how it feels when we check your metrics next week!"\n`;
+        prompt += `Create your own natural variation that mentions revisiting metrics next week. Don't repeat the same closing.\n\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
