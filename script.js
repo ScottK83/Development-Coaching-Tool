@@ -1822,9 +1822,9 @@ function initApp() {
 
                 const metrics = {
                     scheduleAdherence: emp.scheduleAdherence,
-                    cxRepOverall: emp.cxRepOverall || '',
-                    fcr: emp.fcr || '',
-                    overallExperience: emp.overallExperience || '',
+                    cxRepOverall: emp.cxRepOverall ?? '',
+                    fcr: emp.fcr ?? '',
+                    overallExperience: emp.overallExperience ?? '',
                     transfers: emp.transfers,
                     overallSentiment: emp.overallSentiment,
                     positiveWord: emp.positiveWord,
