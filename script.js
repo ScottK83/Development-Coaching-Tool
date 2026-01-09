@@ -93,18 +93,6 @@ function generateEmailContent(employeeName, coachingEmail) {
     };
 }
 
-// Initialize knowledge base URL fields
-function initializeKBFields() {
-    const container = document.getElementById('kbUrlsContainer');
-    container.innerHTML = `
-        <div class="form-group">
-            <label for="generalKB">General Knowledge Base (applies to all areas):</label>
-            <input type="url" id="generalKB" placeholder="https://example.com/kb">
-            <small>Leave blank if not needed</small>
-        </div>
-    `;
-}
-
 // Fetch and extract relevant content from a URL
 async function fetchKBContent(url, metric = '') {
     try {
@@ -527,9 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Import history button
     document.getElementById('importHistory')?.addEventListener('click', importHistory);
-
-    // Close history button
-    document.getElementById('closeHistory')?.addEventListener('click', () => {
+document.getElementById('closeHistory')?.addEventListener('click', () => {
         document.getElementById('historySection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
     });
@@ -632,8 +618,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         document.getElementById('coachingForm').reset();
         initializeKBFields();
     });
-
-    // Form submission - Open Copilot with full email generation prompt
+// Form submission - Open Copilot with full email generation prompt
     document.getElementById('coachingForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
