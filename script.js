@@ -147,16 +147,17 @@ function getEmployeeHistory(employeeName) {
     return history[employeeName] || [];
 }
 
-function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, strugglingAreas) {
+function saveToHistory(employeeName, emailContent, openingIndex, closingIndex, strugglingAreas, metrics = null) {
     const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
-    
+
     if (!history[employeeName]) {
         history[employeeName] = [];
     }
-    
+
     history[employeeName].push({
         date: new Date().toISOString(),
-        strugglingAreas: strugglingAreas
+        strugglingAreas: strugglingAreas,
+        metrics: metrics
     });
     
     localStorage.setItem('coachingHistory', JSON.stringify(history));
@@ -275,17 +276,33 @@ function showHistory() {
 function exportHistory() {
     const history = getAllHistory();
     
-    // Convert to CSV format
-    let csvContent = 'Employee Name,Date,Coaching Areas\n';
-    
+    // Convert to CSV format with metrics and follow-up columns
+    let csvContent = 'Employee Name,Date,Coaching Areas,Schedule Adherence,CX Rep Overall,FCR,Transfers,Overall Sentiment,Positive Word,Negative Word,Managing Emotions,AHT,ACW,Hold Time,Reliability,Follow-Up Date,Follow-Up Metrics,Improved?\n';
+
     for (const [employeeName, sessions] of Object.entries(history)) {
         sessions.forEach(session => {
             const date = new Date(session.date).toLocaleDateString();
             const areas = session.strugglingAreas.join('; ');
-            csvContent += `"${employeeName}","${date}","${areas}"\n`;
+            
+            // Get metric values if available
+            const metrics = session.metrics || {};
+            const scheduleAdherence = metrics.scheduleAdherence || '';
+            const cxRepOverall = metrics.cxRepOverall || '';
+            const fcr = metrics.fcr || '';
+            const transfers = metrics.transfers || '';
+            const overallSentiment = metrics.overallSentiment || '';
+            const positiveWord = metrics.positiveWord || '';
+            const negativeWord = metrics.negativeWord || '';
+            const managingEmotions = metrics.managingEmotions || '';
+            const aht = metrics.aht || '';
+            const acw = metrics.acw || '';
+            const holdTime = metrics.holdTime || '';
+            const reliability = metrics.reliability || '';
+            
+            csvContent += `"${employeeName}","${date}","${areas}",${scheduleAdherence},${cxRepOverall},${fcr},${transfers},${overallSentiment},${positiveWord},${negativeWord},${managingEmotions},${aht},${acw},${holdTime},${reliability},"","",""\n`;
         });
     }
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -293,10 +310,7 @@ function exportHistory() {
     link.download = `coaching-history-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    alert('✅ History exported to CSV! You can open it in Excel.');
-}
-
-function importHistory() {
+    alert('✅ History exported to CSV! Open in Excel to track follow-ups.');
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'application/json';
@@ -749,7 +763,7 @@ CONTEXT - KEY METRICS:
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
-        saveToHistory(employeeName, '', 0, 0, strugglingAreas);
+        saveToHistory(employeeName, '', 0, 0, strugglingAreas, metrics);
         
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
