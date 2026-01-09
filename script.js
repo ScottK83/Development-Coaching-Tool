@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
-                        reliability: parsePercentage(row['Reliability Hrs']),
+                        reliability: parseHours(row['Reliability Hrs']),
                         overallSentiment: parsePercentage(row['OverallSentimentScore%']),
                         positiveWord: parsePercentage(row['PositiveWordScore%']),
                         negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
