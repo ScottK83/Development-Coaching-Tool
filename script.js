@@ -747,11 +747,7 @@ CONTEXT - KEY METRICS:
             wins.forEach(win => {
                 prompt += `✅ ${win}\n`;
             });
-            prompt += `VARY EVERYTHING - opening sentence structure, how you list wins, header phrasing, word choice. Each email should feel like a different conversation:\n`;
-            prompt += `- Opening: Change sentence structure each time (don't always start "Was looking at your metrics...")\n`;
-            prompt += `- Wins presentation: Sometimes list them upfront, sometimes weave into narrative, sometimes group by theme\n`;
-            prompt += `- Header: Fresh phrasing every time - not just word swaps\n`;
-            prompt += `- Tone: Vary energy level - sometimes excited, sometimes matter-of-fact but supportive, sometimes impressed\n\n`;
+            prompt += `Be genuinely celebratory. Vary opening structure, wins presentation (list/narrative/grouped), header phrasing, and energy level each time.\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
@@ -804,18 +800,14 @@ CONTEXT - KEY METRICS:
             }
             
             if (!isRepeatCoaching) {
-                prompt += `TRANSITION: Vary how you shift to improvement areas. Don't always say "That said" or "Now, shifting over." Try different structures:\n`;
-                prompt += `- Blend it naturally into the conversation\n`;
-                prompt += `- Use a question or reflection\n`;
-                prompt += `- Jump right in without formal transition\n`;
-                prompt += `- Use different connecting phrases each time\n\n`;
+                prompt += `TRANSITION: Vary how you shift to improvement areas (blend naturally, different phrases, or skip formal transitions).\n\n`;
             } else {
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
                     const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
                     prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Find NEW approaches - don't repeat previous advice.\n\n`;
                 } else {
-                    prompt += `TRANSITION: Vary how you shift to improvement areas. Don't always say "That said" or "Now, shifting over." Try different structures each time.\n\n`;
+                    prompt += `TRANSITION: Vary how you shift to improvement areas.\n\n`;
                 }
             }
             
@@ -832,8 +824,7 @@ CONTEXT - KEY METRICS:
             prompt += `1. The specific action to take (concrete, tactical)\n`;
             prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
             prompt += `3. Examples or scripts when helpful\n\n`;
-            prompt += `SPECIAL NOTE - For Negative Word Choice or Positive Word coaching:\n`;
-            prompt += `Think deeply about the actual phrases they might be using that are hurting their score. Provide specific, creative phrase swaps - show exactly what to STOP saying and what to SAY INSTEAD. Don't use generic examples. Think about real customer service scenarios and what language shifts would genuinely improve the interaction. Explain WHY the new phrasing works better (customer response, tone impact, score improvement).\n\n`;
+            prompt += `For Word Choice coaching: Provide specific phrase swaps (what to STOP → what to SAY INSTEAD) from real utility CS scenarios. Explain WHY the new phrasing works better.\n\n`;
             prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
         }
         
@@ -843,11 +834,7 @@ CONTEXT - KEY METRICS:
             prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `CLOSING:\nVary closing structure completely each time. Don't just swap words in the same sentence pattern:\n`;
-        prompt += `- Sometimes mention metrics check first, sometimes end with it\n`;
-        prompt += `- Vary how you invite follow-up (question, statement, casual suggestion)\n`;
-        prompt += `- Change the energy/tone (encouraging, matter-of-fact, collaborative)\n`;
-        prompt += `- Keep it brief but make it sound fresh\n`;
+        prompt += `CLOSING: Vary structure and tone each time. Keep brief but fresh.\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
