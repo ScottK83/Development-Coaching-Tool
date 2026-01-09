@@ -263,6 +263,22 @@ function clearAllHistory() {
     location.reload();
 }
 
+// Delete a specific session for an employee
+function deleteSession(employeeName, sessionIndex) {
+    const history = getAllHistory();
+    if (history[employeeName]) {
+        history[employeeName].splice(sessionIndex, 1);
+        
+        // If no sessions left for this employee, remove the employee entirely
+        if (history[employeeName].length === 0) {
+            delete history[employeeName];
+        }
+        
+        localStorage.setItem('coachingHistory', JSON.stringify(history));
+        showEmployeeDashboard(); // Refresh the display
+    }
+}
+
 function showHistory() {
     const history = getAllHistory();
     const historyContent = document.getElementById('historyContent');
@@ -375,7 +391,9 @@ function showEmployeeDashboard() {
                 const areas = session.strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ');
                 
                 html += `
-                    <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa;">
+                    <div style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
+                        <button onclick="if(confirm('Delete this session?')) deleteSession('${name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${index})" 
+                                style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
                         <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} (${date})</div>
                         <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${areas}</div>
                 `;
@@ -525,6 +543,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeDashboard')?.addEventListener('click', () => {
         document.getElementById('dashboardSection').style.display = 'none';
         document.getElementById('coachingForm').style.display = 'block';
+    });
+
+    // Back to form button
+    document.getElementById('backToForm')?.addEventListener('click', () => {
+        document.getElementById('dashboardSection').style.display = 'none';
+        document.getElementById('coachingForm').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
     });
 
     // Clear all history button

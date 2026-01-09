@@ -11,9 +11,8 @@
         <header>
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
-            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <div style="margin-top: 15px;">
                 <button id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
-                <button id="clearAllHistory" class="btn-secondary" style="background: #dc3545; color: white;">🗑️ Clear All History</button>
             </div>
         </header>
 
@@ -150,7 +149,11 @@
             <section id="dashboardSection" style="display: none;">
                 <div class="results-header">
                     <h2>👥 Employee Dashboard</h2>
-                    <button id="closeDashboard" class="btn-secondary">Close</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="backToForm" class="btn-secondary">← Back to Form</button>
+                        <button id="clearAllHistory" class="btn-secondary" style="background: #dc3545; color: white;">🗑️ Clear All History</button>
+                        <button id="closeDashboard" class="btn-secondary">Close</button>
+                    </div>
                 </div>
                 <div id="dashboardContent" style="margin-top: 20px;"></div>
             </section>
