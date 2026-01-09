@@ -644,6 +644,8 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             return;
         }
 
+        console.log('Form submitted for:', employeeName);
+
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
             cxRepOverall: parseFloat(document.getElementById('cxRepOverall').value) || 0,
@@ -659,7 +661,11 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
             reliability: parseFloat(document.getElementById('reliability').value) || 0
         };
 
+        console.log('Metrics:', metrics);
+
         const strugglingAreas = identifyStrugglingAreas(metrics);
+        
+        console.log('Struggling areas:', strugglingAreas);
         
         // Check coaching history for this employee
         const history = getEmployeeHistory(employeeName);
@@ -825,9 +831,10 @@ CONTEXT - KEY METRICS:
             });
             prompt += `Vary how you describe gaps - don't always use the same phrasing patterns or structure. Sometimes brief, sometimes more context.\n\n`;
             
-            prompt += `TIPS (2-4 actionable strategies):\n`;
+            prompt += `TIPS:\n`;
+            prompt += `CRITICAL: You MUST provide a labeled tip for EVERY struggling area listed above. Do not skip any. If there are 3 struggling areas, provide 3 tips. If there are 5, provide 5 tips.\n\n`;
             prompt += `Use BULLET POINTS with LABELED SECTIONS (e.g., "**Hold Time:**").\n`;
-            prompt += `CRITICAL - Every tip must include:\n`;
+            prompt += `Every tip must include:\n`;
             prompt += `1. The specific action to take (concrete, tactical)\n`;
             prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
             prompt += `3. Examples or scripts when helpful\n\n`;
@@ -852,10 +859,14 @@ CONTEXT - KEY METRICS:
         // Save to history
         saveToHistory(employeeName, '', 0, 0, strugglingAreas);
         
+        console.log('Displaying results section...');
+        
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
         document.getElementById('aiPrompt').value = prompt;
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('coachingForm').style.display = 'none';
+        
+        console.log('Results section displayed');
     });
 });
