@@ -853,11 +853,11 @@ KEY METRICS EXPLAINED:
             prompt += `KNOWLEDGE BASE: ${generalKBUrl} - Mention if relevant.\n\n`;
         }
         
-        prompt += `CLOSING:\nVary it each time - be casual, supportive, invite follow-up. Examples:\n`;
-        prompt += `"Give these a shot and let me know how it goes!"\n`;
-        prompt += `"Try these out and circle back if you want to chat!"\n`;
-        prompt += `"Let me know what works - always here to help!"\n`;
-        prompt += `Create your own natural variation. Don't repeat the same closing.\n\n`;
+        prompt += `CLOSING:\nVary it each time - be casual, supportive, invite honest feedback. Examples:\n`;
+        prompt += `"Give these a shot and let me know how they work - good, bad, or indifferent!"\n`;
+        prompt += `"Try these out and circle back - let me know what lands and what doesn't!"\n`;
+        prompt += `"Let me know if any of this helps or if we need to adjust the approach!"\n`;
+        prompt += `Create your own natural variation that invites honest feedback. Don't repeat the same closing.\n\n`;
         prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
         
         // Save to history
