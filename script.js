@@ -621,15 +621,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
-                        transfers: parsePercentage(row['TransferPct']),
+                        transfers: parsePercentage(row['TransferPct%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parsePercentage(row['Hold%']),
                         reliability: parsePercentage(row['Reliability %']),
                         overallSentiment: parsePercentage(row['OverallSentimentScores%']),
-                        positiveWord: parsePercentage(row['PositiveWordScore%']),
+                        positiveWord: parsePercentage(row['PositiveWordScores%']),
                         negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
-                        managingEmotions: parsePercentage(row['ManageEmotionsScore%'])
+                        managingEmotions: parsePercentage(row['ManageEmotionsScores'])
                     };
                     
                     // Debug log first employee to see what's missing
