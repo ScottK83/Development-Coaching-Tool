@@ -245,7 +245,6 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
     });
     
     localStorage.setItem('coachingHistory', JSON.stringify(history));
-    console.log('✅ Saved to history:', employeeName, strugglingAreas);
 }
 
 function clearEmployeeHistory(employeeName) {
@@ -357,8 +356,6 @@ function showHistory() {
 // Show employee dashboard with expandable history per employee
 function showEmployeeDashboard() {
     const history = getAllHistory();
-    
-    console.log('📊 Dashboard history:', history);
     const dashboardContent = document.getElementById('dashboardContent');
 
     if (Object.keys(history).length === 0) {
@@ -526,8 +523,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mergeTips();
         
         console.log('✅ Tips auto-loaded from server');
-    } catch (error) {
-        console.warn('⚠️ Using fallback tips:', error);
     }
 
     // Employee dashboard button
@@ -563,9 +558,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== EXCEL UPLOAD FUNCTIONALITY ==========
     
-    let uploadedEmployeeData = []; // Store parsed employee data
-    let rawExcelData = []; // Store raw Excel data for debugging
-    let dateRange = ''; // Store date range from Excel
+    let uploadedEmployeeData = [];
+    let dateRange = '';
 
     // Show date range input when file is selected
     document.getElementById('excelFile')?.addEventListener('change', (e) => {
@@ -605,16 +599,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // Convert to JSON - For raw data sheet, row 1 has headers, row 2+ is data
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-                    range: 0, // Start from row 1 (0-indexed, row 0)
+                    range: 0,
                     defval: ''
                 });
-                
-                // Debug: Log first row to see column names
-                console.log('Excel columns found:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
-                console.log('First row data:', jsonData[0]);
-                
-                // Store raw data for later debugging
-                rawExcelData = jsonData;
                 
                 // Parse and store employee data
                 uploadedEmployeeData = jsonData.map(row => {
@@ -627,15 +614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         scheduleAdherence: parsePercentage(row['Adherence%']),
                         cxRepOverall: parsePercentage(row['RepSat%']),
                         fcr: parsePercentage(row['FCR%']),
-                        transfers: (() => {
-                            // Try multiple column name variations
-                            const val = parsePercentage(row['TransferS%'] || row['TransferS% '] || row['Transfers%'] || row['TransferPct%']);
-                            if (firstName === 'Caylie') {
-                                console.log('Caylie row keys:', Object.keys(row).filter(k => k.toLowerCase().includes('transfer')));
-                                console.log('Caylie TransferS% parsing:', row['TransferS%'], '->', val);
-                            }
-                            return val;
-                        })(),
+                        transfers: parsePercentage(row['TransferS%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
@@ -647,16 +626,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         surveyTotal: parseInt(row['OE Survey Total']) || 0
                     };
                     
-                    // Debug log first employee to see what's missing
-                    if (firstName === jsonData[0]['Name (Last, First)']?.split(',')[1]?.trim()) {
-                        console.log('First employee parsed:', employeeData);
-                        console.log('Raw row data:', row);
-                    }
-                    
                     return employeeData;
-                }).filter(emp => emp.name); // Remove empty rows
-                
-                console.log('Parsed employees:', uploadedEmployeeData.length, uploadedEmployeeData);
+                }).filter(emp => emp.name);
                 
                 // Populate dropdown
                 const dropdown = document.getElementById('employeeSelect');
@@ -691,8 +662,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         const employee = uploadedEmployeeData[selectedIndex];
-        console.log('Selected employee data:', employee);
-        console.log('Selected employee raw data from Excel:', rawExcelData[selectedIndex]);
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
