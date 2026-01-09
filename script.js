@@ -1115,7 +1115,7 @@ function initApp() {
         const employeesInRange = new Set();
         
         Object.entries(history).forEach(([empName, sessions]) => {
-            if (sessions.some(s => s.dateRange === selectedRange)) {
+            if (Array.isArray(sessions) && sessions.some(s => s.dateRange === selectedRange)) {
                 employeesInRange.add(empName);
             }
         });
@@ -1140,36 +1140,33 @@ function initApp() {
         
         const history = getAllHistory();
         const sessions = history[selectedEmployee] || [];
-        const session = sessions.find(s => s.dateRange === selectedRange);
         
-        if (!session || !session.metrics) {
-            alert('No data found for this employee and date range');
+        if (!Array.isArray(sessions) || sessions.length === 0) {
+            alert('No sessions found for this employee.');
+            return;
+        }
+        
+        const session = sessions.find(s => s && s.dateRange === selectedRange);
+        
+        if (!session || !session.metrics || typeof session.metrics !== 'object') {
+            alert('No data found for this employee and date range.');
             return;
         }
         
         // Populate form with historical data
         const metrics = session.metrics;
-        document.getElementById('employeeName').value = selectedEmployee;
-        document.getElementById('surveyTotal').value = session.metrics.surveyTotal || 0;
-        document.getElementById('scheduleAdherence').value = metrics.scheduleAdherence ?? '';
-        document.getElementById('cxRepOverall').value = metrics.cxRepOverall ?? '';
-        document.getElementById('fcr').value = metrics.fcr ?? '';
-        document.getElementById('overallExperience').value = metrics.overallExperience ?? '';
-        document.getElementById('transfers').value = metrics.transfers ?? '';
-        document.getElementById('aht').value = metrics.aht ?? '';
-        document.getElementById('acw').value = metrics.acw ?? '';
-        document.getElementById('holdTime').value = metrics.holdTime ?? '';
-        document.getElementById('reliability').value = metrics.reliability ?? '';
-        document.getElementById('overallSentiment').value = metrics.overallSentiment ?? '';
-        document.getElementById('positiveWord').value = metrics.positiveWord ?? '';
-        document.getElementById('negativeWord').value = metrics.negativeWord ?? '';
-        document.getElementById('managingEmotions').value = metrics.managingEmotions ?? '';
-        
-        // Set dates
+        const safeEmployeeName = escapeHtml(selectedEmployee);
+        document.getElementById('employeeName').value = safeEmployeeName;
+        const surveyTotalValue = typeof metrics.surveyTotal === 'number' ? metrics.surveyTotal : 0;
+        populateMetricInputs(metrics, surveyTotalValue);
+
+        // Set dates with validation
         const parts = selectedRange.split(' to ');
-        if (parts.length === 2) {
-            document.getElementById('startDate').value = parts[0];
-            document.getElementById('endDate').value = parts[1];
+        if (parts.length === 2 && parts[0] && parts[1]) {
+            document.getElementById('startDate').value = parts[0].trim();
+            document.getElementById('endDate').value = parts[1].trim();
+        } else {
+            console.warn('Invalid date range format:', selectedRange);
         }
         
         // Show sections
@@ -1422,12 +1419,24 @@ function initApp() {
             validateDateRange();
         }
     });
-    
-    // Initialize button state on page load
-    setTimeout(() => validateDateRange(), 100);
-    
-    // Initialize quick access on page load
-    setTimeout(() => initializeQuickAccess(), 100);
+
+    // Initialize button state on page load with error handling
+    setTimeout(() => {
+        try {
+            validateDateRange();
+        } catch (e) {
+            console.warn('Error validating date range during init:', e);
+        }
+    }, 150);
+
+    // Initialize quick access on page load (staggered to ensure DOM stability)
+    setTimeout(() => {
+        try {
+            initializeQuickAccess();
+        } catch (e) {
+            console.warn('Error initializing quick access:', e);
+        }
+    }, 200);
 
     // Load and parse Excel file
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
@@ -1494,6 +1503,12 @@ function initApp() {
                         managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
                         surveyTotal: parseInt(row['OE Survey Total']) || 0
                     };
+
+                    if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
+                        employeeData.cxRepOverall = '';
+                        employeeData.fcr = '';
+                        employeeData.overallExperience = '';
+                    }
                     
                     return employeeData;
                 }).filter(emp => emp.name);
@@ -1558,20 +1573,7 @@ function initApp() {
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
-        document.getElementById('surveyTotal').value = employee.surveyTotal || 0;
-        document.getElementById('scheduleAdherence').value = employee.scheduleAdherence ?? '';
-        document.getElementById('cxRepOverall').value = employee.cxRepOverall ?? '';
-        document.getElementById('fcr').value = employee.fcr ?? '';
-        document.getElementById('overallExperience').value = employee.overallExperience ?? '';
-        document.getElementById('transfers').value = employee.transfers ?? '';
-        document.getElementById('aht').value = employee.aht ?? '';
-        document.getElementById('acw').value = employee.acw ?? '';
-        document.getElementById('holdTime').value = employee.holdTime ?? '';
-        document.getElementById('reliability').value = employee.reliability ?? '';
-        document.getElementById('overallSentiment').value = employee.overallSentiment ?? '';
-        document.getElementById('positiveWord').value = employee.positiveWord ?? '';
-        document.getElementById('negativeWord').value = employee.negativeWord ?? '';
-        document.getElementById('managingEmotions').value = employee.managingEmotions ?? '';
+        populateMetricInputs(employee, employee.surveyTotal ?? 0);
         
         // Calculate and display YTD comparison
         displayYTDComparison(employee.name, employee);
@@ -1683,6 +1685,75 @@ function initApp() {
         if (isNaN(parsed)) return 0;
         return parseFloat(parsed.toFixed(2));
     }
+
+    // Highlight metric inputs based on targets
+    function applyMetricHighlights() {
+        const configs = [
+            { id: 'scheduleAdherence', target: TARGETS.driver.scheduleAdherence.min, type: 'min' },
+            { id: 'cxRepOverall', target: TARGETS.driver.cxRepOverall.min, type: 'min' },
+            { id: 'fcr', target: TARGETS.driver.fcr.min, type: 'min' },
+            { id: 'overallExperience', target: TARGETS.driver.overallExperience.min, type: 'min' },
+            { id: 'transfers', target: TARGETS.driver.transfers.max, type: 'max' },
+            { id: 'overallSentiment', target: TARGETS.driver.overallSentiment.min, type: 'min' },
+            { id: 'positiveWord', target: TARGETS.driver.positiveWord.min, type: 'min' },
+            { id: 'negativeWord', target: TARGETS.driver.negativeWord.min, type: 'min' },
+            { id: 'managingEmotions', target: TARGETS.driver.managingEmotions.min, type: 'min' },
+            { id: 'aht', target: TARGETS.driver.aht.max, type: 'max' },
+            { id: 'acw', target: TARGETS.driver.acw.max, type: 'max' },
+            { id: 'holdTime', target: TARGETS.driver.holdTime.max, type: 'max' },
+            { id: 'reliability', target: TARGETS.driver.reliability.max, type: 'max' }
+        ];
+
+        configs.forEach(cfg => {
+            const el = document.getElementById(cfg.id);
+            if (!el) return;
+
+            const val = parseFloat(el.value);
+            if (isNaN(val)) {
+                el.style.background = '';
+                el.style.borderColor = '';
+                return;
+            }
+
+            const meets = cfg.type === 'min' ? val >= cfg.target : val <= cfg.target;
+            el.style.background = meets ? '#d4edda' : '#fff3cd';
+            el.style.borderColor = meets ? '#28a745' : '#ffc107';
+        });
+    }
+
+    // Populate metrics, blank survey fields when no surveys, then apply highlights
+    function populateMetricInputs(metrics = {}, surveyTotal = 0) {
+        const hasSurveys = Number(surveyTotal) > 0;
+        const setVal = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        };
+
+        setVal('surveyTotal', hasSurveys ? surveyTotal : '');
+        setVal('scheduleAdherence', metrics.scheduleAdherence ?? '');
+        setVal('cxRepOverall', hasSurveys ? (metrics.cxRepOverall ?? '') : '');
+        setVal('fcr', hasSurveys ? (metrics.fcr ?? '') : '');
+        setVal('overallExperience', hasSurveys ? (metrics.overallExperience ?? '') : '');
+        setVal('transfers', metrics.transfers ?? '');
+        setVal('aht', metrics.aht ?? '');
+        setVal('acw', metrics.acw ?? '');
+        setVal('holdTime', metrics.holdTime ?? '');
+        setVal('reliability', metrics.reliability ?? '');
+        setVal('overallSentiment', metrics.overallSentiment ?? '');
+        setVal('positiveWord', metrics.positiveWord ?? '');
+        setVal('negativeWord', metrics.negativeWord ?? '');
+        setVal('managingEmotions', metrics.managingEmotions ?? '');
+
+        applyMetricHighlights();
+    }
+
+    // Recalculate highlights when user edits metrics manually
+    ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'acw', 'holdTime', 'reliability', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', applyMetricHighlights);
+        }
+    });
 
     // Calculate and display YTD comparison
     function displayYTDComparison(employeeName, currentMetrics) {
@@ -1833,7 +1904,8 @@ function initApp() {
                     aht: emp.aht,
                     acw: emp.acw,
                     holdTime: emp.holdTime,
-                    reliability: emp.reliability
+                    reliability: emp.reliability,
+                    surveyTotal: emp.surveyTotal ?? 0
                 };
 
                 // Identify struggling areas for this employee
@@ -1920,11 +1992,14 @@ function initApp() {
             return;
         }
 
+        const surveyTotalInput = parseInt(document.getElementById('surveyTotal').value, 10) || 0;
+        const hasSurveys = surveyTotalInput > 0;
+
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
-            fcr: document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
-            overallExperience: document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
+            cxRepOverall: hasSurveys && document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
+            fcr: hasSurveys && document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
+            overallExperience: hasSurveys && document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
             transfers: parseFloat(document.getElementById('transfers').value) || 0,
             overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
             positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
@@ -1933,7 +2008,8 @@ function initApp() {
             aht: parseFloat(document.getElementById('aht').value) || 0,
             acw: parseFloat(document.getElementById('acw').value) || 0,
             holdTime: parseFloat(document.getElementById('holdTime').value) || 0,
-            reliability: parseFloat(document.getElementById('reliability').value) || 0
+            reliability: parseFloat(document.getElementById('reliability').value) || 0,
+            surveyTotal: surveyTotalInput
         };
 
         const strugglingAreas = identifyStrugglingAreas(metrics);
