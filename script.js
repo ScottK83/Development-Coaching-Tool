@@ -671,25 +671,17 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write coaching email to ${employeeName}, CSR at APS. Up to 250 words, friendly peer tone.
+        let prompt = `Coaching email for ${employeeName}, CSR. 250 words max. Friendly tone. Start "Hey ${employeeName}!"\n\n`;
 
-START: "Hey ${employeeName}!"
-
-`;
-
-        // Add wins section if applicable
+        // Add wins if any
         if (wins.length > 0) {
-            prompt += `WINS:\n`;
-            wins.forEach(win => {
-                prompt += `✅ ${win}\n`;
-            });
-            prompt += `\n`;
+            prompt += `WINS: ${wins.join(', ')}\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
-            prompt += `Meeting ALL targets! Write congratulatory email.`;
+            prompt += `All targets met! Congratulate them.`;
         } else {
-            // Build detailed metrics for struggling areas
+            // Build metrics list
             const detailedStruggles = [];
             strugglingAreas.forEach(area => {
                 const readable = AREA_NAMES[area] || area;
@@ -703,59 +695,37 @@ START: "Hey ${employeeName}!"
                 else if (area === 'positiveWord') { current = metrics.positiveWord; target = TARGETS.driver.positiveWord.min; }
                 else if (area === 'negativeWord') { current = metrics.negativeWord; target = TARGETS.driver.negativeWord.min; }
                 else if (area === 'managingEmotions') { current = metrics.managingEmotions; target = TARGETS.driver.managingEmotions.min; }
-                else if (area === 'aht') { current = metrics.aht; target = TARGETS.driver.aht.max; unit = ' seconds'; }
-                else if (area === 'acw') { current = metrics.acw; target = TARGETS.driver.acw.max; unit = ' seconds'; }
-                else if (area === 'holdTime') { current = metrics.holdTime; target = TARGETS.driver.holdTime.max; unit = ' seconds'; }
-                else if (area === 'reliability') { current = metrics.reliability; target = TARGETS.driver.reliability.max; unit = ' hours'; }
+                else if (area === 'aht') { current = metrics.aht; target = TARGETS.driver.aht.max; unit = ' sec'; }
+                else if (area === 'acw') { current = metrics.acw; target = TARGETS.driver.acw.max; unit = ' sec'; }
+                else if (area === 'holdTime') { current = metrics.holdTime; target = TARGETS.driver.holdTime.max; unit = ' sec'; }
+                else if (area === 'reliability') { current = metrics.reliability; target = TARGETS.driver.reliability.max; unit = ' hrs'; }
                 
                 if (current !== undefined && target !== undefined) {
-                    detailedStruggles.push(`${readable}: ${current}${unit} (target: ${target}${unit})`);
-                } else {
-                    detailedStruggles.push(readable);
+                    detailedStruggles.push(`${readable}: ${current}${unit} (need: ${target}${unit})`);
                 }
             });
             
             const hasReliabilityIssue = strugglingAreas.includes('reliability');
+            const isRepeat = isRepeatCoaching && strugglingAreas.some(area => areaCounts[area] > 0);
             
-            if (!isRepeatCoaching) {
-                prompt += `IMPROVE:\n`;
-            } else {
-                const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
-                if (repeatAreas.length > 0) {
-                    const repeatReadable = repeatAreas.map(area => `${AREA_NAMES[area]} (${areaCounts[area]}x)`).join(', ');
-                    prompt += `REPEAT AREAS (${repeatReadable}) - be more direct:\n`;
-                } else {
-                    prompt += `IMPROVE:\n`;
-                }
-            }
+            prompt += `${isRepeat ? 'REPEAT - be direct:\n' : 'IMPROVE:\n'}`;
+            detailedStruggles.forEach(s => prompt += `• ${s}\n`);
             
-            detailedStruggles.forEach(struggle => {
-                prompt += `• ${struggle}\n`;
-            });
-            prompt += `\n`;
-
-            prompt += `TIPS (bullet each):\n`;
-            
-            // Add example tips from CSV if available
+            prompt += `\nTIPS:\n`;
             strugglingAreas.forEach(area => {
-                const exampleTip = getRandomTip(area);
-                prompt += `• ${AREA_NAMES[area]}: "${exampleTip}"\n`;
+                prompt += `• ${AREA_NAMES[area]}: ${getRandomTip(area)}\n`;
             });
             
             if (hasReliabilityIssue && metrics.reliability >= 16) {
-                prompt += `\n(Reliability = PTOST procedures. Code unplanned time in Verint ahead of time. Failure to follow = disciplinary action.)\n`;
+                prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
-            
-            prompt += `\nFor each tip: State current vs target, then give conversational advice with examples. For word choice, use "Instead of [X], try [Y]" format.`;
         }
         
         // Add custom notes if provided
         const customNotes = document.getElementById('customNotes')?.value.trim();
         if (customNotes) {
-            prompt += `\n\nALSO: "${customNotes}"\n`;
+            prompt += `\n\n${customNotes}`;
         }
-
-        prompt += `\n\nEND: Supportive closing.`;
         
         // Save to history
         saveToHistory(employeeName, strugglingAreas, metrics);
