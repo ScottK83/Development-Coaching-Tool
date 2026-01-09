@@ -593,13 +593,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Get first sheet
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 
-                // Extract date range from A1 (e.g., "YTD - 2025")
-                dateRange = firstSheet['A1'] ? firstSheet['A1'].v : '';
-                if (dateRange) {
-                    document.getElementById('dateRangeDisplay').style.display = 'block';
-                    document.getElementById('dateRangeDisplay').textContent = `📅 Date Range: ${dateRange}`;
-                }
-                
                 // Convert to JSON - For raw data sheet, row 1 has headers, row 2+ is data
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
                     range: 0, // Start from row 1 (0-indexed, row 0)
