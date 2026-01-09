@@ -597,15 +597,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     defval: '' // Default value for empty cells
                 });
                 
+                // Debug: Log first row to see column names
+                console.log('Excel columns found:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
+                console.log('First row data:', jsonData[0]);
+                
                 // Parse and store employee data
                 uploadedEmployeeData = jsonData.map(row => ({
                     name: row['Name'] || '',
                     scheduleAdherence: parsePercentage(row['Adherence']),
-                    cxRepOverall: parsePercentage(row['CX Overall Experience\\n(Surveys)']),
+                    cxRepOverall: parsePercentage(row['CX Overall Experience\n(Surveys)']),
                     fcr: parsePercentage(row['FCR (Surveys)']),
                     transfers: parsePercentage(row['% of Transfers']),
                     aht: parseSeconds(row['Average Handle Time (AHT) in Seconds (AHT time + hold time + ACW in seconds)']),
-                    acw: parseSeconds(row['After Call Work (ACW) in Seconds\\n(Surveys not ready time / wrap-up)']),
+                    acw: parseSeconds(row['After Call Work (ACW) in Seconds\n(Surveys not ready time / wrap-up)']),
                     holdTime: parseSeconds(row['Hold Time in Seconds (per call on  hold over AHT)']),
                     reliability: parseHours(row['This Report Meeting']),
                     overallSentiment: parsePercentage(row['Overall Sentiment']),
@@ -613,6 +617,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     negativeWord: parsePercentage(row['Avoids Negative Word Choice']),
                     managingEmotions: parsePercentage(row['Manage Emotions'])
                 })).filter(emp => emp.name); // Remove empty rows
+                
+                console.log('Parsed employees:', uploadedEmployeeData.length, uploadedEmployeeData);
                 
                 // Populate dropdown
                 const dropdown = document.getElementById('employeeSelect');
