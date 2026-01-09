@@ -746,33 +746,21 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `You are writing a casual coaching email to ${employeeName}, a CSR at APS utility taking inbound phone calls.
+        let prompt = `Write a casual coaching email to ${employeeName}, a CSR at APS utility.
 
-CRITICAL: EVERY email must sound COMPLETELY DIFFERENT. Do NOT reuse the same opening, structure, transitions, or phrasing. Treat each email like a fresh conversation - vary EVERYTHING.
+TONE: Friendly peer/supervisor (150-200 words). Natural, conversational - use contractions, mix short/long sentences. NO corporate jargon.
 
-TONE & STYLE:
-- Casual, friendly, like a peer/supervisor (150-200 words)
-- Sound natural - use contractions, vary sentence structure, mix short/long sentences
-- NO corporate jargon, AI phrases like "I hope this helps", or over-explaining
-- Use % symbol, regular hyphens (not em dashes), bullet points for clarity
-
-CONTEXT - KEY METRICS:
-- CX Rep Overall = post-call customer survey scores
-- Overall Sentiment = average of Positive Word + Negative Word + Managing Emotions
-- Positive Word = encouraging language | Negative Word = avoiding "can't", "won't", etc. | Managing Emotions = staying calm with upset customers
-- FCR = First Call Resolution | Transfers = sending to other departments
-- Hold Time = customers on hold (not talking) | AHT = total call time | ACW = after-call documentation
-- Schedule Adherence = logged in when scheduled | Reliability = unplanned time off (PTOST hours)
+METRICS CONTEXT: CX Rep Overall = customer survey scores | Overall Sentiment = average of Positive Word + Negative Word + Managing Emotions | FCR = First Call Resolution | Hold Time = on hold | AHT = total call time | ACW = after-call notes | Schedule Adherence = logged in on time | Reliability = unplanned absences (PTOST hours)
 
 `;
 
         // Add wins section if applicable
         if (wins.length > 0) {
-            prompt += `WINS (mention scores AND targets):\n`;
+            prompt += `WINS:\n`;
             wins.forEach(win => {
                 prompt += `✅ ${win}\n`;
             });
-            prompt += `Be genuinely celebratory. Vary opening structure, wins presentation (list/narrative/grouped), header phrasing, and energy level each time.\n\n`;
+            prompt += `Celebrate genuinely. Vary how you present wins each time.\n\n`;
         }
 
         if (strugglingAreas.length === 0) {
@@ -825,14 +813,14 @@ CONTEXT - KEY METRICS:
             }
             
             if (!isRepeatCoaching) {
-                prompt += `TRANSITION: Vary how you shift to improvement areas (blend naturally, different phrases, or skip formal transitions).\n\n`;
+                prompt += `Transition naturally to improvement areas.\n\n`;
             } else {
                 const repeatAreas = strugglingAreas.filter(area => areaCounts[area] > 0);
                 if (repeatAreas.length > 0) {
                     const repeatReadable = repeatAreas.map(area => `${areaNames[area]} (${areaCounts[area]}x)`).join(', ');
-                    prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Find NEW approaches - don't repeat previous advice.\n\n`;
+                    prompt += `⚠️ REPEAT COACHING (${repeatReadable}): Be more direct. Use NEW approaches.\n\n`;
                 } else {
-                    prompt += `TRANSITION: Vary how you shift to improvement areas.\n\n`;
+                    prompt += `Transition naturally to improvement areas.\n\n`;
                 }
             }
             
@@ -840,39 +828,25 @@ CONTEXT - KEY METRICS:
             detailedStruggles.forEach(struggle => {
                 prompt += `⚠️ ${struggle}\n`;
             });
-            prompt += `Vary how you describe gaps - don't always use the same phrasing patterns or structure. Sometimes brief, sometimes more context.\n\n`;
-            
-            prompt += `TIPS:\n`;
-            prompt += `CRITICAL: You MUST provide a labeled tip for EVERY struggling area listed above. Do not skip any. If there are 3 struggling areas, provide 3 tips. If there are 5, provide 5 tips.\n\n`;
-            prompt += `Use BULLET POINTS with LABELED SECTIONS (e.g., "**Hold Time:**").\n`;
-            prompt += `Every tip must include:\n`;
-            prompt += `1. The specific action to take (concrete, tactical)\n`;
-            prompt += `2. WHY it matters - explain the impact on customers, efficiency, or their scores. Make the WHY compelling and clear.\n`;
-            prompt += `3. Examples or scripts when helpful\n\n`;
+            prompt += `\n`;
+
+            prompt += `COACHING TIPS (provide one for EACH area above):\n`;
             
             // Add example tips from CSV if available
-            prompt += `EXAMPLE COACHING IDEAS (use as inspiration, reword naturally):\n`;
             strugglingAreas.forEach(area => {
                 const exampleTip = getRandomTip(area);
-                prompt += `- ${areaNames[area]}: "${exampleTip}"\n`;
+                prompt += `- ${areaNames[area]}: "${exampleTip}" (explain WHY this helps)\n`;
             });
-            prompt += `\n`;
-            
-            prompt += `For Word Choice coaching: Provide specific phrase swaps (what to STOP → what to SAY INSTEAD) from real utility CS scenarios. Explain WHY the new phrasing works better.\n\n`;
-            prompt += `Focus on quality over quantity. Each tip should be substantive and genuinely helpful. Vary how you introduce tips (don't always say "Try..." or "Focus on..."). Make each tip feel different from previous coaching sessions.\n\n`;
+            prompt += `\nUse bullet points. Be specific and actionable. Include examples when helpful. For word choice issues, show phrase swaps (STOP saying X → SAY this instead).\n\n`;
         }
         
         // Add custom notes if provided
         const customNotes = document.getElementById('customNotes')?.value.trim();
         if (customNotes) {
-            prompt += `\nCUSTOM FEEDBACK TO INCLUDE:\n"${customNotes}"\nReword this naturally and incorporate it into the appropriate section of the email. Don't quote it directly - make it sound like your own words in the casual coaching tone.\n\n`;
+            prompt += `\nALSO INCLUDE: "${customNotes}" (reword naturally in your coaching tone)\n\n`;
         }
-        
-        prompt += `CLOSING: Vary structure and tone each time. Keep brief but fresh.\n`;
-        prompt += `Generate email body only. No subject. Start with "Hey ${employeeName}!"`;
-        
-        // Save to history
-        saveToHistory(employeeName, '', 0, 0, strugglingAreas, metrics);
+
+        prompt += `Keep it brief, friendly, and natural. Start with "Hey ${employeeName}!" End with supportive closing.`;
         
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
