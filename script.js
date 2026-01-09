@@ -1328,7 +1328,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const selectedIndex = e.target.value;
         
         if (selectedIndex === '' || !uploadedEmployeeData || uploadedEmployeeData.length === 0) {
-            return; // No selection or no data
+            // Hide metrics section if no employee selected
+            const metricsSection = document.getElementById('metricsSection');
+            if (metricsSection) metricsSection.style.display = 'none';
+            return;
         }
         
         const employee = uploadedEmployeeData[selectedIndex];
@@ -1336,6 +1339,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('Error: Employee data not found.');
             return;
         }
+        
+        // Show metrics section
+        const metricsSection = document.getElementById('metricsSection');
+        if (metricsSection) metricsSection.style.display = 'block';
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
@@ -1353,6 +1360,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('positiveWord').value = employee.positiveWord ?? '';
         document.getElementById('negativeWord').value = employee.negativeWord ?? '';
         document.getElementById('managingEmotions').value = employee.managingEmotions ?? '';
+        
+        // Calculate and display YTD comparison
+        displayYTDComparison(employee.name, employee);
         
         // Clear generated email textarea
         document.getElementById('generatedEmail').value = '';
@@ -1407,6 +1417,105 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return 0;
         return parseFloat(parsed.toFixed(2));
+    }
+
+    // Calculate and display YTD comparison
+    function displayYTDComparison(employeeName, currentMetrics) {
+        const ytdContainer = document.getElementById('ytdComparison');
+        if (!ytdContainer) return;
+        
+        const history = getAllHistory();
+        const employeeSessions = history[employeeName] || [];
+        
+        if (employeeSessions.length === 0) {
+            ytdContainer.style.display = 'none';
+            return;
+        }
+        
+        // Calculate YTD averages
+        const metricSums = {};
+        const metricCounts = {};
+        
+        employeeSessions.forEach(session => {
+            if (!session.metrics) return;
+            
+            Object.keys(session.metrics).forEach(key => {
+                const value = session.metrics[key];
+                if (value !== '' && value !== null && value !== undefined) {
+                    if (!metricSums[key]) {
+                        metricSums[key] = 0;
+                        metricCounts[key] = 0;
+                    }
+                    metricSums[key] += parseFloat(value);
+                    metricCounts[key]++;
+                }
+            });
+        });
+        
+        const ytdAverages = {};
+        Object.keys(metricSums).forEach(key => {
+            ytdAverages[key] = metricSums[key] / metricCounts[key];
+        });
+        
+        // Compare current to YTD
+        const comparisons = [];
+        const metricDefs = [
+            { key: 'scheduleAdherence', name: 'Schedule Adherence', unit: '%', isMin: true },
+            { key: 'transfers', name: 'Transfers', unit: '%', isMin: false },
+            { key: 'overallSentiment', name: 'Overall Sentiment', unit: '%', isMin: true },
+            { key: 'aht', name: 'AHT', unit: 's', isMin: false },
+            { key: 'acw', name: 'ACW', unit: 's', isMin: false }
+        ];
+        
+        metricDefs.forEach(metric => {
+            const currentValue = currentMetrics[metric.key];
+            const ytdValue = ytdAverages[metric.key];
+            
+            if (currentValue !== undefined && currentValue !== '' && ytdValue !== undefined) {
+                const diff = currentValue - ytdValue;
+                const isBetter = metric.isMin ? diff > 0 : diff < 0;
+                
+                if (Math.abs(diff) > 0.01) {
+                    comparisons.push({
+                        name: metric.name,
+                        current: currentValue,
+                        ytd: ytdValue.toFixed(2),
+                        diff: diff.toFixed(2),
+                        unit: metric.unit,
+                        isBetter: isBetter
+                    });
+                }
+            }
+        });
+        
+        if (comparisons.length === 0) {
+            ytdContainer.style.display = 'none';
+            return;
+        }
+        
+        // Display comparison
+        let html = `
+            <strong style="color: #003DA5;">📊 YTD Performance vs This Report (${employeeSessions.length} period${employeeSessions.length > 1 ? 's' : ''} tracked):</strong>
+            <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+        `;
+        
+        comparisons.forEach(comp => {
+            const icon = comp.isBetter ? '⬆️' : '⬇️';
+            const color = comp.isBetter ? '#28a745' : '#dc3545';
+            const sign = comp.diff > 0 ? '+' : '';
+            
+            html += `
+                <span style="display: inline-block; padding: 5px 10px; background: white; border-radius: 4px; border: 1px solid ${color}; font-size: 0.85em;">
+                    <strong style="color: ${color};">${icon} ${comp.name}:</strong> 
+                    ${comp.current}${comp.unit} 
+                    <span style="color: #666;">(YTD avg: ${comp.ytd}${comp.unit}, ${sign}${comp.diff}${comp.unit})</span>
+                </span>
+            `;
+        });
+        
+        html += '</div>';
+        ytdContainer.innerHTML = html;
+        ytdContainer.style.display = 'block';
     }
 
     // Bulk-save all uploaded employees into history immediately after load
