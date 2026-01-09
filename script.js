@@ -744,9 +744,22 @@ ${employeeName} is a customer service representative handling utility customer c
                 }
             });
             
-            // Add reliability hours explanation if >= 16
-            if (metrics.reliability >= 16) {
-                prompt += `\n🚨 RELIABILITY: ${metrics.reliability} hours of unplanned time. Emphasize they MUST use PTOST for the first 40 hours and schedule in Verint ahead of time. Tell them to double-check that their Verint entries match what payroll shows. Failure = disciplinary action.\n\n`;
+            // Add reliability context
+            const hasReliabilityIssue = strugglingAreas.includes('reliability');
+            if (hasReliabilityIssue) {
+                if (metrics.reliability >= 16) {
+                    prompt += `\n🚨 RELIABILITY (${metrics.reliability} hours): This is about being present and scheduled. Emphasize:\n`;
+                    prompt += `- They need to use PTOST for the first 40 hours of any unplanned time and schedule it in Verint ahead of time\n`;
+                    prompt += `- Double-check Verint entries match what payroll shows\n`;
+                    prompt += `- Plan their time off well ahead - don't wait until the last minute\n`;
+                    prompt += `- Make every effort to be there when scheduled. Reliability = showing up consistently.\n`;
+                    prompt += `Failure to follow PTOST procedures = disciplinary action.\n\n`;
+                } else {
+                    prompt += `\n⚠️ RELIABILITY: Focus on being present and scheduled. Tips should emphasize:\n`;
+                    prompt += `- Schedule time off well in advance in Verint - don't wait until the last minute\n`;
+                    prompt += `- Make every effort to show up for scheduled shifts\n`;
+                    prompt += `- Reliability = consistency and being there when you're supposed to be\n\n`;
+                }
             }
             
             if (!isRepeatCoaching) {
