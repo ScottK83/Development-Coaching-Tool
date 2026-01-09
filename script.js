@@ -764,14 +764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         cxRepOverall: parseSurveyPercentage(row['RepSat%']),
                         fcr: parseSurveyPercentage(row['FCR%']),
                         overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
-                        transfers: (() => {
-                            // Try multiple column name variations
-                            const val = parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']);
-                            if (firstName === 'Alyssa') {
-                                console.log('Alyssa transfers parsed:', val);
-                            }
-                            return val;
-                        })(),
+                        transfers: parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']),
                         aht: parseSeconds(row['AHT']),
                         acw: parseSeconds(row['ACW']),
                         holdTime: parseSeconds(row['Hold']),
