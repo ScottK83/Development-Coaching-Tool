@@ -40,48 +40,6 @@ const IMPROVEMENT_TIPS = {
 };
 
 // Pronouns handling
-function getPronounForms(pronounString) {
-    const pronounMap = {
-        'he/him': { subject: 'he', object: 'him', possessive: 'his', reflexive: 'himself' },
-        'she/her': { subject: 'she', object: 'her', possessive: 'her', reflexive: 'herself' },
-        'they/them': { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' }
-    };
-    return pronounMap[pronounString] || pronounMap['they/them'];
-}
-
-// Search the web for relevant resources
-async function searchForResources(strugglingAreas) {
-    const searchQueries = strugglingAreas.map(metric => {
-        const metricLabels = {
-            scheduleAdherence: "schedule adherence work training",
-            fcr: "first call resolution customer service",
-            transfers: "reducing transfers call center",
-            overallSentiment: "customer sentiment positive tone",
-            positiveWord: "positive communication customer service",
-            negativeWord: "avoiding negative language customer service",
-            managingEmotions: "emotional intelligence workplace",
-            aht: "call handling time efficiency",
-            acw: "after call work documentation",
-            holdTime: "reducing hold time customer service",
-            reliability: "attendance reliability workplace",
-            cxRepOverall: "customer experience excellence"
-        };
-        return metricLabels[metric] || metric;
-    });
-
-    const resources = [];
-    
-    // Build search URLs for each struggling area
-    for (const query of searchQueries) {
-        resources.push({
-            query: query,
-            searchUrl: `https://www.bing.com/search?q=${encodeURIComponent(query)}`
-        });
-    }
-    
-    return resources;
-}
-
 // Generate email subject and body
 function generateEmailContent(employeeName, coachingEmail) {
     const firstName = employeeName.trim().split(' ')[0];
@@ -91,41 +49,6 @@ function generateEmailContent(employeeName, coachingEmail) {
         subject: subject,
         body: coachingEmail
     };
-}
-
-// Fetch and extract relevant content from a URL
-async function fetchKBContent(url, metric = '') {
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Accept': 'text/html,application/xhtml+xml' }
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        // Remove script and style tags
-        doc.querySelectorAll('script, style').forEach(el => el.remove());
-
-        // Extract text content
-        let text = doc.body.innerText || doc.innerText;
-        
-        // Clean up excessive whitespace
-        text = text
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 20)
-            .join('\n')
-            .substring(0, 1500);
-
-        return text || '';
-    } catch (error) {
-        console.warn(`Could not fetch KB from ${url}:`, error.message);
-        return '';
-    }
 }
 
 // Identify struggling areas
@@ -160,110 +83,6 @@ function identifyStrugglingAreas(metrics) {
     });
 
     return struggling;
-}
-
-// Generate coaching script with KB content
-async function generateCoachingScript(employeeName, pronouns, metrics, kbContent = '', resourceLinks = []) {
-    const pronounForms = getPronounForms(pronouns);
-    const strugglingAreas = identifyStrugglingAreas(metrics);
-
-    // Get history for this employee to avoid repeating
-    const history = getEmployeeHistory(employeeName);
-    const usedCombos = history.map(h => `${h.openingIndex}-${h.closingIndex}`);
-
-    const openings = [
-        `Hi ${employeeName}, I wanted to sit down with you today to discuss some opportunities for growth in your role.`,
-        `${employeeName}, thanks for taking time to meet. I'd like to have a coaching conversation about your performance and how I can support your development.`,
-        `${employeeName}, I appreciate your commitment to the team. I wanted to discuss some areas where I see real potential for you to grow.`,
-        `Hi ${employeeName}, I've been reviewing your metrics and wanted to have a conversation about moving forward together.`,
-        `${employeeName}, let's talk about where you are and where we can help you get to. I've pulled your recent performance data and want to work with you on next steps.`,
-        `Hey ${employeeName}, I wanted to connect with you about some areas where I think focused effort will really pay off for you.`,
-        `${employeeName}, I've been looking at your numbers and want to have an honest conversation about your development. This is about helping you succeed.`,
-        `${employeeName}, thanks for making time. I want to talk through some specific areas where I see opportunities for you to level up.`,
-        `Hi ${employeeName}, I pulled your recent metrics and think we should have a conversation about what's working and where we can improve.`,
-        `${employeeName}, I'm reaching out because I want to invest in your growth. Let's discuss some specific areas where you can make progress.`,
-        `Hey ${employeeName}, I've been reviewing your performance and I see some clear paths to improvement. Let's walk through them together.`,
-        `${employeeName}, I care about your success, so I want to be direct about some areas where you're not hitting the mark yet.`,
-        `Hi ${employeeName}, let's have a real conversation about your metrics. I'm here to help you figure out what needs to change.`,
-        `${employeeName}, I wanted to connect about your development. There are a few things I think we should focus on moving forward.`,
-        `Hey ${employeeName}, I know you're working hard, and I want to help you work smarter. Let's talk about a few key areas.`,
-        `${employeeName}, I've been tracking your performance and want to discuss how we can get you where you need to be.`,
-        `Hi ${employeeName}, I value our one-on-ones and wanted to use this time to dig into some specific improvement areas with you.`,
-        `${employeeName}, let's be real—there are some gaps we need to close. But I'm confident we can tackle them together.`
-    ];
-
-    const closings = [
-        `I'm confident that with focus on these areas, you'll see real improvement. Let's touch base in two weeks to check progress.`,
-        `I believe in your potential and want to support you in getting to the next level. Let's work together on this.`,
-        `Your growth is important to me, and I'm here to help. When can we check in again?`,
-        `I see a lot of potential in you, and I'm committed to helping you succeed. Let's reconnect soon.`,
-        `Bottom line: I'm invested in your success. Let's set up time to check in regularly and make sure you're on track.`,
-        `These changes won't happen overnight, but I know you can do this. Let's plan to meet weekly and track your progress together.`,
-        `I'm here as a resource for you. Reach out anytime you need help or have questions. Let's schedule our next check-in.`,
-        `This is about setting you up for long-term success. Let's check in next week and see how things are going.`,
-        `I want to see you succeed, and I'm going to support you through this. Let's keep the conversation going.`,
-        `You've got what it takes—let's just sharpen these areas. Touch base with me in a few days on your progress.`,
-        `I'm not worried about you getting there. Just need to see consistent effort on these points. Let's talk again soon.`,
-        `We'll get through this together. Reach out if you hit any roadblocks or need guidance.`,
-        `I believe in you, and I know you can turn this around. Let's meet regularly to track your wins.`,
-        `Small improvements add up. Let's focus on progress, not perfection, and check in weekly.`,
-        `I'm committed to helping you grow. Let's make this a priority and revisit in our next one-on-one.`,
-        `This is fixable, and you're capable. Let's partner on this and celebrate the progress you make.`,
-        `You're not in this alone—I'm here to help you every step of the way. Let's connect again next week.`,
-        `Keep me posted on how it's going. I'm available anytime you need to talk through challenges.`
-    ];
-
-    // Find unused combination
-    let openingIndex, closingIndex;
-    let attempts = 0;
-    do {
-        openingIndex = Math.floor(Math.random() * openings.length);
-        closingIndex = Math.floor(Math.random() * closings.length);
-        attempts++;
-        // If we've tried 50 times and all combos are used, reset history for this person
-        if (attempts > 50) {
-            console.warn(`All combinations used for ${employeeName}, resetting history`);
-            clearEmployeeHistory(employeeName);
-            break;
-        }
-    } while (usedCombos.includes(`${openingIndex}-${closingIndex}`));
-
-    const opening = openings[openingIndex];
-    const closing = closings[closingIndex];
-
-    let coachingBody = opening + '\n\n';
-
-    if (strugglingAreas.length === 0) {
-        coachingBody += `Based on your metrics, you're performing at or above targets across the board. That's excellent work! Keep up the momentum and continue to model these behaviors for the team.`;
-    } else {
-        coachingBody += `I've identified a few areas where I think we can focus your energy:\n\n`;
-
-        strugglingAreas.forEach((area, index) => {
-            const tip = IMPROVEMENT_TIPS[area] || `Focus on improving ${area}`;
-            coachingBody += `${index + 1}. ${tip}\n`;
-        });
-
-        if (kbContent.trim()) {
-            coachingBody += `\n---\n\nHere are some relevant resources that might help:\n\n${kbContent}\n\n---\n`;
-        }
-
-        coachingBody += `\nI see real potential in you, and these improvements will make a meaningful difference in your development.`;
-        
-        // Add resource links if available
-        if (resourceLinks && resourceLinks.length > 0) {
-            coachingBody += `\n\nI've found some resources that might help:\n`;
-            resourceLinks.forEach(resource => {
-                coachingBody += `• ${resource.query}: ${resource.searchUrl}\n`;
-            });
-        }
-    }
-
-    coachingBody += `\n\n${closing}`;
-
-    // Save to history
-    saveToHistory(employeeName, coachingBody, openingIndex, closingIndex, strugglingAreas);
-
-    return coachingBody;
 }
 
 // History tracking functions
@@ -503,8 +322,6 @@ async function displayResults(emailContent, employeeName, strugglingAreas, resou
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    initializeKBFields();
-
     // View history button
     document.getElementById('viewHistory')?.addEventListener('click', () => {
         showHistory();
