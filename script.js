@@ -637,8 +637,8 @@ function showEmployeeDashboard() {
         });
         html += '</select></div>';
         
-        // Date filter
-        html += '<div>';
+        // Date filter (initially hidden)
+        html += '<div id="dateFilterContainer" style="display: none;">';
         html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Filter by Date:</label>';
         html += '<select id="dateFilter" onchange="filterDashboard()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">';
         html += '<option value="">All Dates</option>';
@@ -941,6 +941,20 @@ function showEmployeeTrendData() {
 function filterDashboard() {
     const selectedEmployee = document.getElementById('employeeFilter')?.value || '';
     const selectedDateRange = document.getElementById('dateFilter')?.value || '';
+    const dateFilterContainer = document.getElementById('dateFilterContainer');
+    
+    // Show/hide date filter based on employee selection
+    if (dateFilterContainer) {
+        if (selectedEmployee) {
+            dateFilterContainer.style.display = 'block';
+        } else {
+            dateFilterContainer.style.display = 'none';
+            // Reset date filter when hiding
+            const dateFilter = document.getElementById('dateFilter');
+            if (dateFilter) dateFilter.value = '';
+        }
+    }
+    
     const history = getAllHistory();
     
     Object.keys(history).forEach(name => {
