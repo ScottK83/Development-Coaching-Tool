@@ -149,13 +149,23 @@ async function loadServerTips() {
 
 // Load user's custom tips from localStorage
 function loadUserTips() {
-    const saved = localStorage.getItem('userCustomTips');
-    return saved ? JSON.parse(saved) : {};
+    try {
+        const saved = localStorage.getItem('userCustomTips');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading user tips:', error);
+        return {};
+    }
 }
 
 // Save user's custom tips to localStorage
 function saveUserTips(tips) {
-    localStorage.setItem('userCustomTips', JSON.stringify(tips));
+    try {
+        localStorage.setItem('userCustomTips', JSON.stringify(tips));
+    } catch (error) {
+        console.error('Error saving user tips:', error);
+        alert('Warning: Could not save custom tips. Storage may be full.');
+    }
 }
 
 // Merge server and user tips
@@ -384,35 +394,54 @@ function identifyStrugglingAreas(metrics) {
 
 // History tracking functions
 function getEmployeeHistory(employeeName) {
-    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
-    return history[employeeName] || [];
+    try {
+        const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+        return history[employeeName] || [];
+    } catch (error) {
+        console.error('Error reading history:', error);
+        return [];
+    }
 }
 
 function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange = null) {
-    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    try {
+        const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
 
-    if (!history[employeeName]) {
-        history[employeeName] = [];
+        if (!history[employeeName]) {
+            history[employeeName] = [];
+        }
+
+        history[employeeName].push({
+            date: new Date().toISOString(),
+            dateRange: dateRange || '',
+            strugglingAreas,
+            metrics
+        });
+        
+        localStorage.setItem('coachingHistory', JSON.stringify(history));
+    } catch (error) {
+        console.error('Error saving history:', error);
+        alert('Warning: Could not save coaching history. Storage may be full.');
     }
-
-    history[employeeName].push({
-        date: new Date().toISOString(),
-        dateRange: dateRange || '',
-        strugglingAreas,
-        metrics
-    });
-    
-    localStorage.setItem('coachingHistory', JSON.stringify(history));
 }
 
 function clearEmployeeHistory(employeeName) {
-    const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
-    delete history[employeeName];
-    localStorage.setItem('coachingHistory', JSON.stringify(history));
+    try {
+        const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+        delete history[employeeName];
+        localStorage.setItem('coachingHistory', JSON.stringify(history));
+    } catch (error) {
+        console.error('Error clearing history:', error);
+    }
 }
 
 function getAllHistory() {
-    return JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    try {
+        return JSON.parse(localStorage.getItem('coachingHistory') || '{}');
+    } catch (error) {
+        console.error('Error reading all history:', error);
+        return {};
+    }
 }
 
 function clearAllHistory() {
@@ -966,8 +995,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const importedData = JSON.parse(event.target.result);
                 
-                if (!importedData.customTips) {
-                    alert('❌ Invalid tips file format.');
+                if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
+                    alert('❌ Invalid tips file format. Expected JSON with customTips property.');
                     return;
                 }
                 
@@ -980,15 +1009,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!userTips[metricKey]) {
                             userTips[metricKey] = [];
                         }
-                        importedData.customTips[metricKey].forEach(tip => {
-                            if (!userTips[metricKey].includes(tip)) {
-                                userTips[metricKey].push(tip);
-                            }
-                        });
+                        const tipsToAdd = importedData.customTips[metricKey];
+                        if (Array.isArray(tipsToAdd)) {
+                            tipsToAdd.forEach(tip => {
+                                if (tip && !userTips[metricKey].includes(tip)) {
+                                    userTips[metricKey].push(tip);
+                                }
+                            });
+                        }
                     });
                 } else {
                     // Replace: overwrite completely
-                    Object.assign(userTips, importedData.customTips);
+                    userTips = {};
+                    Object.keys(importedData.customTips).forEach(metricKey => {
+                        const tips = importedData.customTips[metricKey];
+                        if (Array.isArray(tips)) {
+                            userTips[metricKey] = tips.filter(tip => tip && typeof tip === 'string');
+                        }
+                    });
                 }
                 
                 saveUserTips(userTips);
@@ -1145,11 +1183,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
         const selectedIndex = e.target.value;
         
-        if (selectedIndex === '') {
-            return; // No selection
+        if (selectedIndex === '' || !uploadedEmployeeData || uploadedEmployeeData.length === 0) {
+            return; // No selection or no data
         }
         
         const employee = uploadedEmployeeData[selectedIndex];
+        if (!employee) {
+            alert('Error: Employee data not found.');
+            return;
+        }
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
