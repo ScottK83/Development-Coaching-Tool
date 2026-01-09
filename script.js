@@ -917,8 +917,10 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         }
         
         // Save to history with date range
-        const userDateRange = document.getElementById('dateRangeInput')?.value || '';
-        saveToHistory(employeeName, strugglingAreas, metrics, userDateRange);
+        const startDate = document.getElementById('startDate')?.value || '';
+        const endDate = document.getElementById('endDate')?.value || '';
+        const dateRangeLabel = startDate && endDate ? `${startDate} to ${endDate}` : '';
+        saveToHistory(employeeName, strugglingAreas, metrics, dateRangeLabel);
         
         // Display the prompt
         document.getElementById('resultName').textContent = employeeName;
