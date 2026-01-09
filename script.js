@@ -519,7 +519,7 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         initializeKBFields();
     });
 
-    // Form submission
+    // Form submission - Open Copilot with full email generation prompt
     document.getElementById('coachingForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -552,21 +552,67 @@ Be supportive, concrete, and practical. Format your response as a bulleted list.
         };
 
         const strugglingAreas = identifyStrugglingAreas(metrics);
-
-        let kbContent = '';
-        const generalKBUrl = document.getElementById('generalKB')?.value;
         
-        if (generalKBUrl) {
-            kbContent = await fetchKBContent(generalKBUrl);
-            if (kbContent) {
-                kbContent = `**Related Knowledge Base Content:**\n\n${kbContent}`;
-            }
+        // Convert struggling areas to readable names
+        const areaNames = {
+            scheduleAdherence: 'Schedule Adherence',
+            cxRepOverall: 'Customer Experience',
+            fcr: 'First Call Resolution',
+            transfers: 'Transfers',
+            overallSentiment: 'Overall Sentiment',
+            positiveWord: 'Positive Word Choice',
+            negativeWord: 'Negative Word Choice',
+            managingEmotions: 'Managing Emotions',
+            aht: 'Average Handle Time',
+            acw: 'After Call Work',
+            holdTime: 'Hold Time',
+            reliability: 'Reliability',
+            safetyHazards: 'Safety Hazards',
+            accComplaints: 'ACC Complaints',
+            phishingClicks: 'Phishing Clicks',
+            redFlags: 'Red Flag Events',
+            depositWaiver: 'Deposit Waiver'
+        };
+        
+        // Build comprehensive Copilot prompt
+        let prompt = `You are a supportive supervisor writing a conversational one-on-one coaching email to ${employeeName} (pronouns: ${pronouns}).
+
+Write a warm, encouraging coaching email (200-300 words) that:
+
+1. Opens with genuine appreciation and acknowledgment of their efforts
+2. Addresses their specific performance areas with empathy and understanding
+3. Provides 2-3 concrete, actionable improvement tips
+4. Ends with confidence in their potential and offers ongoing support
+5. Uses "you/your" (second person) throughout - never use he/she/him/her/they/them
+6. Maintains a conversational, authentic tone - avoid corporate jargon
+
+`;
+
+        if (strugglingAreas.length === 0) {
+            prompt += `PERFORMANCE STATUS: ${employeeName} is meeting or exceeding ALL targets! Write a congratulatory email recognizing their excellent performance and encouraging them to maintain this momentum.`;
+        } else {
+            const readableAreas = strugglingAreas
+                .map(area => areaNames[area] || area)
+                .join(', ');
+            
+            prompt += `AREAS NEEDING IMPROVEMENT: ${readableAreas}
+
+For each struggling area, provide specific, practical coaching advice that ${employeeName} can implement immediately. Be supportive and focus on growth mindset.`;
         }
-
-        // Generate resources for email
-        const resources = await searchForResources(strugglingAreas);
         
-        const coachingEmail = await generateCoachingScript(employeeName, pronouns, metrics, kbContent, resources);
-        displayResults(coachingEmail, employeeName, strugglingAreas, resources);
+        // Add KB content if available
+        const generalKBUrl = document.getElementById('generalKB')?.value;
+        if (generalKBUrl) {
+            prompt += `\n\nKNOWLEDGE BASE REFERENCE: ${generalKBUrl}\n(Consider mentioning relevant resources or guidance from this knowledge base if applicable)`;
+        }
+        
+        prompt += `\n\nGenerate only the email body. Start directly with the message content - no subject line or formal greeting needed.`;
+        
+        // Open Microsoft Copilot with the prompt
+        const copilotUrl = `https://copilot.microsoft.com/?prompt=${encodeURIComponent(prompt)}`;
+        window.open(copilotUrl, '_blank');
+        
+        // Show helpful message
+        alert(`Opening Microsoft Copilot to generate your coaching email for ${employeeName}.\n\nCopilot will write a personalized email based on their performance metrics.\n\nCopy the email from Copilot and send it via Outlook!`);
     });
 });
