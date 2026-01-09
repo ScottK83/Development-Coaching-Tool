@@ -389,10 +389,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const metricsCount = Object.keys(customTips).length;
             document.getElementById('tipsStatus').textContent = `✅ Loaded ${totalTips} tips for ${metricsCount} metrics`;
             document.getElementById('tipsStatus').style.color = '#28a745';
+            document.getElementById('viewTips').style.display = 'inline-block';
         } catch (error) {
             document.getElementById('tipsStatus').textContent = `❌ Error loading file: ${error.message}`;
             document.getElementById('tipsStatus').style.color = '#dc3545';
+            document.getElementById('viewTips').style.display = 'none';
         }
+    });
+
+    // View loaded tips button
+    document.getElementById('viewTips')?.addEventListener('click', () => {
+        if (Object.keys(customTips).length === 0) {
+            alert('No tips loaded yet. Please upload a CSV file first.');
+            return;
+        }
+        
+        // Create downloadable CSV content
+        let csvContent = 'Metric,Tip\n';
+        Object.entries(customTips).forEach(([metric, tips]) => {
+            tips.forEach(tip => {
+                csvContent += `${metric},"${tip.replace(/"/g, '""')}"\n`;
+            });
+        });
+        
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'my-loaded-tips.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     });
 
     // View history button
