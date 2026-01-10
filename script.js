@@ -2320,15 +2320,9 @@ function initApp() {
         }
     });
     
-    document.getElementById('clearDashboardHistoryBtn')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all email history? This cannot be undone.')) {
-            clearAllHistory();
-        }
-    });
-
-    // Clear uploaded data button
-    document.getElementById('clearUploadedDataBtn')?.addEventListener('click', () => {
-        if (confirm('⚠️ Are you sure you want to clear all uploaded data?\n\nThis will delete:\n• All weekly data\n• Upload history\n\nThis cannot be undone.')) {
+    // Clear ALL data button (on Employee History tab) - clears uploaded data AND coaching history
+    document.getElementById('clearAllDataBtn')?.addEventListener('click', () => {
+        if (confirm('⚠️ Are you sure you want to clear ALL data?\n\nThis will delete:\n• All weekly uploaded data\n• Upload history\n• Coaching email history\n• Employee session history\n\nThis cannot be undone.')) {
             // Clear weeklyData
             weeklyData = {};
             localStorage.removeItem('weeklyData');
@@ -2336,6 +2330,9 @@ function initApp() {
             // Clear upload history
             uploadHistory = [];
             saveUploadHistory(uploadHistory);
+            
+            // Clear coaching history
+            clearAllHistory();
             
             // Hide success message
             const successMsg = document.getElementById('uploadSuccessMessage');
@@ -2357,7 +2354,10 @@ function initApp() {
             document.getElementById('pasteDataContainer').style.display = 'none';
             document.getElementById('excelUploadContainer').style.display = 'none';
             
-            alert('✅ All uploaded data has been cleared!');
+            // Refresh the dashboard display
+            showEmployeeDashboard();
+            
+            alert('✅ All data and history has been cleared!');
         }
     });
 
