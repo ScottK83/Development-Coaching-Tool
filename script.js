@@ -2558,6 +2558,10 @@ function initApp() {
             
             // Parse header row
             const headers = lines[0].split(separator).map(h => h.trim());
+            console.log('==== HEADER DETECTION ====');
+            console.log('First line (should be headers):', lines[0]);
+            console.log('Detected headers:', headers);
+            console.log('Separator used:', separator === '\t' ? 'TAB' : 'COMMA');
             
             // Find column indices (case-insensitive partial matching)
             const findColumnIndex = (possibleNames) => {
@@ -2585,6 +2589,8 @@ function initApp() {
                 emotions: findColumnIndex(['ManageEmotionsScore%', 'ManageEmotions%', 'Managing Emotions', 'Emotions']),
                 surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
             };
+            
+            console.log('Column indices found:', colIndices);
             
             if (colIndices.name === -1) {
                 console.error('Available headers:', headers);
