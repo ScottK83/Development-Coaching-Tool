@@ -2032,10 +2032,21 @@ function initApp() {
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    // Home button
+    // Home button - show upload section
     document.getElementById('homeBtn')?.addEventListener('click', () => {
         showOnlySection('coachingForm');
         document.getElementById('coachingForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Generate Coaching button - show coaching section
+    document.getElementById('generateCoachingBtn')?.addEventListener('click', () => {
+        const stored = localStorage.getItem('weeklyData');
+        if (!stored || Object.keys(JSON.parse(stored)).length === 0) {
+            alert('⚠️ No data uploaded yet!\n\nPlease click "🏠 Upload Data" first to upload your weekly performance data.');
+            return;
+        }
+        showOnlySection('coachingSection');
+        document.getElementById('coachingSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     // Employee dashboard button
@@ -2428,13 +2439,13 @@ function initApp() {
                 
                 saveUploadHistory(uploadHistory);
 
-                // Show the period selection UI
-                const periodContainer = document.getElementById('periodSelectionContainer');
-                if (periodContainer) {
-                    periodContainer.style.display = 'block';
+                // Show success message
+                const successMsg = document.getElementById('uploadSuccessMessage');
+                if (successMsg) {
+                    successMsg.style.display = 'block';
                 }
 
-                // Initialize period selector with weeks
+                // Initialize period selector with weeks (but keep it hidden)
                 initializePeriodSelector();
 
                 const sheetCount = employeesBySheet.length;
@@ -2630,13 +2641,13 @@ function initApp() {
             uploadHistory.push(uploadRecord);
             saveUploadHistory(uploadHistory);
             
-            // Show the period selection UI
-            const periodContainer = document.getElementById('periodSelectionContainer');
-            if (periodContainer) {
-                periodContainer.style.display = 'block';
+            // Show success message
+            const successMsg = document.getElementById('uploadSuccessMessage');
+            if (successMsg) {
+                successMsg.style.display = 'block';
             }
             
-            // Initialize period selector
+            // Initialize period selector (but keep it hidden)
             initializePeriodSelector();
             
             // Clear the textarea

@@ -14,7 +14,8 @@
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
             <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button type="button" id="homeBtn" class="btn-secondary">🏠 Home</button>
+                <button type="button" id="homeBtn" class="btn-secondary">🏠 Upload Data</button>
+                <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
                 <button type="button" id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
                 <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
@@ -105,8 +106,26 @@
                         <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (auto-extract dates)</button>
                     </div>
                     
-                    <!-- Time Period & Employee Selection (shown after data upload) -->
-                    <div id="periodSelectionContainer" style="display: none; margin-top: 20px; padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
+                    <!-- Success message after upload -->
+                    <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
+                        <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
+                        <p style="margin: 10px 0 0 0;">Click <strong>"✉️ Generate Coaching"</strong> at the top to select a date and create coaching emails.</p>
+                    </div>
+
+                    <!-- Data Backup / Restore -->
+                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
+                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="display: none;">📊 Backup Data (Excel)</button>
+                        <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
+                        <input type="file" id="dataFileInput" accept=".json" style="display: none;">
+                    </div>
+                </section>
+
+                <!-- Generate Coaching Section (hidden initially) -->
+                <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                    <h2>✉️ Generate Coaching Email</h2>
+                    
+                    <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
                         <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
                         
                         <!-- Time Period Type Selector -->
@@ -137,15 +156,6 @@
                             </select>
                         </div>
                     </div>
-
-                    <!-- Data Backup / Restore -->
-                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
-                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="display: none;">📊 Backup Data (Excel)</button>
-                        <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
-                        <input type="file" id="dataFileInput" accept=".json" style="display: none;">
-                    </div>
-                </section>
 
                 <!-- Employee Information -->
                 <section class="form-section" id="employeeInfoSection" style="display: none;">
