@@ -2637,8 +2637,8 @@ function initApp() {
                 let cells = lines[i].split(separator).map(c => c.trim()).filter(c => c);
                 
                 // Handle rows with mismatched column counts - try to intelligently parse
-                // If row has significantly fewer columns than headers, it might have single-space separation issues
-                if (cells.length < headers.length - 3 && separator === '\t') {
+                // If row has fewer columns than headers, it might have single-space separation issues
+                if (cells.length < headers.length && separator === '\t') {
                     // Try splitting by any whitespace and reconstructing
                     const allParts = lines[i].split(/\s+/).map(p => p.trim()).filter(p => p);
                     
