@@ -2662,23 +2662,6 @@ function initApp() {
                 const fullName = cells[colIndices.name] || '';
                 if (!fullName) continue;
                 
-                console.log('Processing name:', fullName); // Debug log
-                
-                // DEBUG: Log all cell values for this employee
-                console.log(`🔍 RAW DATA for ${fullName}:`, {
-                    'Col 0': cells[0],
-                    'Col 1': cells[1],
-                    'Col 2': cells[2],
-                    'Col 10': cells[10],
-                    'Col 11': cells[11],
-                    'Col 12': cells[12],
-                    'Col 13': cells[13],
-                    'Col 14': cells[14],
-                    'Col 15': cells[15],
-                    'Col 16': cells[16],
-                    'Col 17': cells[17]
-                });
-                
                 // Extract first name (handle "Last, First" format)
                 let firstName;
                 if (fullName.includes(',')) {
@@ -2695,9 +2678,6 @@ function initApp() {
                     // Single name - use as-is
                     firstName = fullName.trim();
                 }
-                
-                console.log('Extracted first name:', firstName); // Debug log
-                console.log('Creating employee with name:', firstName); // Debug log
                 
                 const employeeData = {
                     name: firstName,
@@ -3193,8 +3173,6 @@ function initApp() {
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
-        console.log('🔍 DEBUG - Employee survey total:', employee.surveyTotal, 'Type:', typeof employee.surveyTotal);
-        console.log('🔍 DEBUG - Full employee object:', employee);
         populateMetricInputs(employee, employee.surveyTotal ?? 0);
         
         // Calculate and display YTD comparison
