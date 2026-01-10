@@ -44,6 +44,18 @@ function showOnlySection(sectionId) {
         if (el) el.style.display = (section.id === sectionId) ? 'block' : 'none';
     });
     
+    // Hide employee-specific sections when switching away from Generate Coaching
+    if (sectionId !== 'coachingSection') {
+        const metricsSection = document.getElementById('metricsSection');
+        const employeeInfoSection = document.getElementById('employeeInfoSection');
+        const customNotesSection = document.getElementById('customNotesSection');
+        const generateBtn = document.getElementById('generateEmailBtn');
+        if (metricsSection) metricsSection.style.display = 'none';
+        if (employeeInfoSection) employeeInfoSection.style.display = 'none';
+        if (customNotesSection) customNotesSection.style.display = 'none';
+        if (generateBtn) generateBtn.style.display = 'none';
+    }
+    
     // Remember active section in localStorage
     localStorage.setItem('activeSection', sectionId);
     
