@@ -2425,6 +2425,183 @@ function initApp() {
         reader.readAsArrayBuffer(file);
     });
 
+    // ========== PASTE DATA FROM POWERBI ==========
+    
+    document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
+        const pastedData = document.getElementById('pasteDataTextarea')?.value.trim();
+        const startDate = document.getElementById('pasteStartDate')?.value;
+        const endDate = document.getElementById('pasteEndDate')?.value;
+        
+        if (!pastedData) {
+            alert('❌ Please paste data first');
+            return;
+        }
+        
+        if (!startDate || !endDate) {
+            alert('❌ Please select both start and end dates');
+            return;
+        }
+        
+        try {
+            // Parse pasted data (tab-separated or comma-separated)
+            const lines = pastedData.split('\n').map(line => line.trim()).filter(line => line);
+            
+            if (lines.length < 2) {
+                alert('❌ Data appears incomplete. Please paste header row and data rows.');
+                return;
+            }
+            
+            // Detect separator (tab or comma)
+            const separator = lines[0].includes('\t') ? '\t' : ',';
+            
+            // Parse header row
+            const headers = lines[0].split(separator).map(h => h.trim());
+            
+            // Find column indices (case-insensitive partial matching)
+            const findColumnIndex = (possibleNames) => {
+                for (let name of possibleNames) {
+                    const idx = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+                    if (idx !== -1) return idx;
+                }
+                return -1;
+            };
+            
+            const colIndices = {
+                name: findColumnIndex(['Name', 'Employee', 'Agent']),
+                adherence: findColumnIndex(['Adherence']),
+                repSat: findColumnIndex(['RepSat', 'Rep Sat', 'CX Rep']),
+                fcr: findColumnIndex(['FCR']),
+                overallExp: findColumnIndex(['OverallExperience', 'Overall Experience', 'OE%']),
+                transfers: findColumnIndex(['Transfers', 'TransferS']),
+                aht: findColumnIndex(['AHT']),
+                acw: findColumnIndex(['ACW']),
+                hold: findColumnIndex(['Hold']),
+                reliability: findColumnIndex(['Reliability']),
+                sentiment: findColumnIndex(['OverallSentiment', 'Sentiment']),
+                positiveWord: findColumnIndex(['PositiveWord', 'Positive']),
+                negativeWord: findColumnIndex(['NegativeWord', 'Negative', 'AvoidNegative']),
+                emotions: findColumnIndex(['ManageEmotions', 'Emotions']),
+                surveyTotal: findColumnIndex(['Survey Total', 'OE Survey'])
+            };
+            
+            if (colIndices.name === -1) {
+                alert('❌ Could not find Name/Employee column. Please ensure your data includes employee names.');
+                return;
+            }
+            
+            // Parse data rows
+            const employees = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cells = lines[i].split(separator).map(c => c.trim());
+                
+                if (cells.length < 2) continue; // Skip empty/invalid rows
+                
+                const fullName = cells[colIndices.name] || '';
+                if (!fullName) continue;
+                
+                // Extract first name (handle "Last, First" format)
+                const firstName = fullName.includes(',') 
+                    ? fullName.split(',')[1].trim() 
+                    : fullName.split(' ')[0].trim();
+                
+                const employeeData = {
+                    name: firstName,
+                    scheduleAdherence: colIndices.adherence !== -1 ? parsePercentage(cells[colIndices.adherence]) : '',
+                    cxRepOverall: colIndices.repSat !== -1 ? parseSurveyPercentage(cells[colIndices.repSat]) : '',
+                    fcr: colIndices.fcr !== -1 ? parseSurveyPercentage(cells[colIndices.fcr]) : '',
+                    overallExperience: colIndices.overallExp !== -1 ? parseSurveyPercentage(cells[colIndices.overallExp]) : '',
+                    transfers: colIndices.transfers !== -1 ? parsePercentage(cells[colIndices.transfers]) : '',
+                    aht: colIndices.aht !== -1 ? parseSeconds(cells[colIndices.aht]) : '',
+                    acw: colIndices.acw !== -1 ? parseSeconds(cells[colIndices.acw]) : '',
+                    holdTime: colIndices.hold !== -1 ? parseSeconds(cells[colIndices.hold]) : '',
+                    reliability: colIndices.reliability !== -1 ? parseHours(cells[colIndices.reliability]) : 0,
+                    overallSentiment: colIndices.sentiment !== -1 ? parsePercentage(cells[colIndices.sentiment]) : '',
+                    positiveWord: colIndices.positiveWord !== -1 ? parsePercentage(cells[colIndices.positiveWord]) : '',
+                    negativeWord: colIndices.negativeWord !== -1 ? parsePercentage(cells[colIndices.negativeWord]) : '',
+                    managingEmotions: colIndices.emotions !== -1 ? parsePercentage(cells[colIndices.emotions]) : '',
+                    surveyTotal: colIndices.surveyTotal !== -1 ? parseInt(cells[colIndices.surveyTotal]) || 0 : 0
+                };
+                
+                // If no survey total, blank out survey-based metrics
+                if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
+                    employeeData.cxRepOverall = '';
+                    employeeData.fcr = '';
+                    employeeData.overallExperience = '';
+                }
+                
+                employees.push(employeeData);
+            }
+            
+            if (employees.length === 0) {
+                alert('❌ No valid employee data found. Please check your paste format.');
+                return;
+            }
+            
+            // Store in weekly data structure
+            const weekKey = `${startDate}|${endDate}`;
+            const startDateObj = new Date(startDate);
+            const endDateObj = new Date(endDate);
+            const label = `Week ending ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
+            weeklyData[weekKey] = {
+                employees: employees,
+                metadata: {
+                    label: label,
+                    startDate: startDate,
+                    endDate: endDate,
+                    sheetName: 'Pasted Data',
+                    timestamp: new Date().toISOString()
+                }
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
+            
+            // Save to history
+            const dateRangeLabel = `${startDate} to ${endDate}`;
+            employees.forEach(emp => {
+                const existingSessions = getEmployeeHistory(emp.name);
+                const exists = (existingSessions || []).some(s => (s.dateRange || '') === dateRangeLabel);
+                
+                if (!exists) {
+                    saveToHistory(emp.name, [], emp, dateRangeLabel, false);
+                }
+            });
+            
+            // Add to upload history
+            const uploadRecord = {
+                id: Date.now(),
+                timePeriod: label,
+                startDate: startDate,
+                endDate: endDate,
+                employeeCount: employees.length,
+                timestamp: new Date().toISOString(),
+                employeeMetrics: employees,
+                sourceSheet: 'Pasted Data'
+            };
+            uploadHistory.push(uploadRecord);
+            saveUploadHistory(uploadHistory);
+            
+            // Show the period selection UI
+            const periodContainer = document.getElementById('periodSelectionContainer');
+            if (periodContainer) {
+                periodContainer.style.display = 'block';
+            }
+            
+            // Initialize period selector
+            initializePeriodSelector();
+            
+            // Clear the textarea
+            document.getElementById('pasteDataTextarea').value = '';
+            
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\n✓ Data saved. Use the selectors below to view employee metrics.`);
+            
+        } catch (error) {
+            console.error('Error parsing pasted data:', error);
+            alert(`❌ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+        }
+    });
+
     // ========== EXCEL UPLOAD FUNCTIONALITY ==========
     
     let uploadedEmployeeData = [];
