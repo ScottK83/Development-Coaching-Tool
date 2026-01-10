@@ -157,22 +157,22 @@
                         </div>
                     </div>
 
-                <!-- Employee Information -->
-                <section class="form-section" id="employeeInfoSection" style="display: none;">
-                    <h2>Employee Information</h2>
-                    <div class="form-group">
-                        <label for="employeeName">Employee First Name:</label>
-                        <input type="text" id="employeeName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="surveyTotal">Total Surveys Received:</label>
-                        <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                        <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
-                    </div>
-                </section>
+                    <!-- Employee Information -->
+                    <section class="form-section" id="employeeInfoSection" style="display: none;">
+                        <h2>Employee Information</h2>
+                        <div class="form-group">
+                            <label for="employeeName">Employee First Name:</label>
+                            <input type="text" id="employeeName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="surveyTotal">Total Surveys Received:</label>
+                            <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
+                            <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
+                        </div>
+                        </section>
 
-                <!-- Metrics Input -->
-                <section class="form-section" id="metricsSection" style="display: none;">
+                    <!-- Metrics Input -->
+                    <section class="form-section" id="metricsSection" style="display: none;">
                     <h2>Performance Metrics</h2>
                     <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;">
                         <!-- YTD comparison will be inserted here -->
@@ -249,19 +249,20 @@
                             <span class="target">Target: ≤16hrs</span>
                         </div>
                     </div>
-                </section>
+                    </section>
 
-                <!-- Custom Notes -->
-                <section class="form-section" id="customNotesSection" style="display: none;">
+                    <!-- Custom Notes -->
+                    <section class="form-section" id="customNotesSection" style="display: none;">
                     <h2>Custom Notes (Optional)</h2>
                     <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">Add any specific feedback or context you want included. AI will reword it naturally.</p>
                     <textarea id="customNotes" placeholder="Example: They need to check their schedule more carefully before requesting time off..." style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; font-size: 0.95em;"></textarea>
-                </section>
+                    </section>
 
-                <!-- Buttons -->
-                <section class="form-section">
-                    <button type="submit" class="btn-ai" id="generateEmailBtn" style="display: none;">🤖 Generate Email with Copilot AI</button>
-                    <button type="reset" class="btn-secondary">Clear Form</button>
+                    <!-- Buttons -->
+                    <section class="form-section">
+                        <button type="submit" class="btn-ai" id="generateEmailBtn" style="display: none;">🤖 Generate Email with Copilot AI</button>
+                        <button type="reset" class="btn-secondary">Clear Form</button>
+                    </section>
                 </section>
             </form>
 

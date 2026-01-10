@@ -1942,12 +1942,8 @@ function initApp() {
             const stored = localStorage.getItem('weeklyData');
             if (stored) {
                 weeklyData = JSON.parse(stored);
-                // If we have data, show the period selector
+                // Initialize period selector but keep it hidden until user clicks Generate Coaching
                 if (Object.keys(weeklyData).length > 0) {
-                    const periodContainer = document.getElementById('periodSelectionContainer');
-                    if (periodContainer) {
-                        periodContainer.style.display = 'block';
-                    }
                     initializePeriodSelector();
                 }
             }
