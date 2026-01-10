@@ -3191,6 +3191,8 @@ function initApp() {
         
         // Populate all form fields
         document.getElementById('employeeName').value = employee.name || '';
+        console.log('🔍 DEBUG - Employee survey total:', employee.surveyTotal, 'Type:', typeof employee.surveyTotal);
+        console.log('🔍 DEBUG - Full employee object:', employee);
         populateMetricInputs(employee, employee.surveyTotal ?? 0);
         
         // Calculate and display YTD comparison
