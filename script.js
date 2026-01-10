@@ -1796,6 +1796,10 @@ function updateEmployeeDropdown() {
     const dropdown = document.getElementById('employeeSelect');
     if (!dropdown) return;
     
+    console.log('==== UPDATING EMPLOYEE DROPDOWN ====');
+    console.log('Current period type:', currentPeriodType);
+    console.log('Current period:', currentPeriod);
+    
     dropdown.innerHTML = '';
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
@@ -1842,6 +1846,7 @@ function updateEmployeeDropdown() {
     }
     
     // Add employees to dropdown sorted alphabetically
+    console.log('Employees found for dropdown:', Array.from(employees));
     Array.from(employees).sort().forEach(name => {
         const option = document.createElement('option');
         option.value = name;
@@ -2562,18 +2567,25 @@ function initApp() {
                 const fullName = cells[colIndices.name] || '';
                 if (!fullName) continue;
                 
+                console.log('Processing name:', fullName); // Debug log
+                
                 // Extract first name (handle "Last, First" format)
                 let firstName;
                 if (fullName.includes(',')) {
                     // Format: "Last, First" - take the part after comma
-                    firstName = fullName.split(',')[1].trim();
+                    const parts = fullName.split(',');
+                    firstName = parts[1].trim();
                 } else if (fullName.includes(' ')) {
-                    // Format: "First Last" - take first word
-                    firstName = fullName.split(' ')[0].trim();
+                    // Format: "First Last" or "Last First" - take LAST word assuming it's first name
+                    const parts = fullName.trim().split(/\s+/);
+                    firstName = parts[parts.length - 1]; // Take last word
                 } else {
                     // Single name - use as-is
                     firstName = fullName.trim();
                 }
+                
+                console.log('Extracted first name:', firstName); // Debug log
+                console.log('Creating employee with name:', firstName); // Debug log
                 
                 const employeeData = {
                     name: firstName,
@@ -2652,6 +2664,10 @@ function initApp() {
             };
             uploadHistory.push(uploadRecord);
             saveUploadHistory(uploadHistory);
+            
+            console.log('==== POWERBI PASTE COMPLETE ====');
+            console.log('Employee names stored:', employees.map(e => e.name));
+            console.log('First 3 employee objects:', employees.slice(0, 3));
             
             // Show success message
             const successMsg = document.getElementById('uploadSuccessMessage');
