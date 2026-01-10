@@ -5,6 +5,29 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function showToast(message, duration = 2000) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 14px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
 function showOnlySection(sectionId) {
     const sections = [
         { id: 'coachingForm', conditional: false },
@@ -54,6 +77,78 @@ let customTips = {};
 let serverTips = {}; // Tips from server
 let userTips = {};   // Custom tips added by user
 let hiddenTips = {}; // Tips hidden (e.g., server tips soft-deleted)
+let tipOrder = {};   // Preserve tip positions per metric
+let uploadHistory = []; // Store all data uploads with time labels
+
+// Smart date detection: return time period label
+function detectTimePeriod(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    
+    // Full year (365+ days)
+    if (diffDays >= 365 && start.getMonth() === 0 && end.getMonth() === 11) {
+        return `${start.getFullYear()}`;
+    }
+    
+    // Quarter (approx 90 days, aligned to Q1/Q2/Q3/Q4)
+    const quarter = Math.floor(start.getMonth() / 3) + 1;
+    if (diffDays >= 85 && diffDays <= 95) {
+        return `Q${quarter} ${start.getFullYear()}`;
+    }
+    
+    // Full month (approx 28-31 days)
+    if (diffDays >= 27 && diffDays <= 32 && start.getMonth() === end.getMonth()) {
+        const monthName = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+        return monthName;
+    }
+    
+    // Week (7 days)
+    if (diffDays === 7) {
+        const weekNum = Math.ceil((start.getDate() + new Date(start.getFullYear(), start.getMonth(), 1).getDay()) / 7);
+        const monthName = start.toLocaleString('default', { month: 'short' });
+        return `Week ${weekNum} ${monthName} ${start.getFullYear()}`;
+    }
+    
+    // Fallback: custom date range
+    return `${startDate} to ${endDate}`;
+}
+
+function loadUploadHistory() {
+    try {
+        const saved = localStorage.getItem('uploadHistory');
+        return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+        console.error('Error loading upload history:', error);
+        return [];
+    }
+}
+
+function saveUploadHistory(history) {
+    try {
+        localStorage.setItem('uploadHistory', JSON.stringify(history));
+    } catch (error) {
+        console.error('Error saving upload history:', error);
+    }
+}
+
+function loadTipOrder() {
+    try {
+        const saved = localStorage.getItem('tipOrder');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading tip order:', error);
+        return {};
+    }
+}
+
+function saveTipOrder(order) {
+    try {
+        localStorage.setItem('tipOrder', JSON.stringify(order));
+    } catch (error) {
+        console.error('Error saving tip order:', error);
+    }
+}
 
 // Shared area names mapping
 const AREA_NAMES = {
@@ -178,21 +273,37 @@ function mergeTips() {
     const merged = {};
     const hidden = hiddenTips || {};
 
-    // Start with server tips
+    // Start with server tips (minus hidden)
     Object.entries(serverTips).forEach(([metric, tips]) => {
         merged[metric] = tips.filter(tip => !(hidden[metric] || []).includes(tip));
     });
-    
-    // Add user tips
+
+    // Add user tips (minus hidden)
     Object.entries(userTips).forEach(([metric, tips]) => {
-        if (!merged[metric]) {
-            merged[metric] = [];
-        }
+        if (!merged[metric]) merged[metric] = [];
         const filtered = tips.filter(tip => !(hidden[metric] || []).includes(tip));
         merged[metric].push(...filtered);
     });
-    
+
+    // Reorder according to saved tipOrder, preserving duplicates
+    Object.keys(merged).forEach(metric => {
+        const currentList = merged[metric] || [];
+        const orderList = tipOrder[metric] || [];
+        const counts = {};
+        currentList.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+        const ordered = [];
+        orderList.forEach(t => {
+            if (counts[t] > 0) { ordered.push(t); counts[t]--; }
+        });
+        currentList.forEach(t => {
+            if (counts[t] > 0) { ordered.push(t); counts[t]--; }
+        });
+        merged[metric] = ordered;
+        tipOrder[metric] = ordered; // keep order in sync
+    });
+
     customTips = merged;
+    saveTipOrder(tipOrder);
 }
 
 // Show tips management interface
@@ -281,11 +392,17 @@ function addNewTip(metricKey) {
     userTips[metricKey].push(newTip);
     
     // Save and refresh
+    // Update tip order (append to end)
+    if (!tipOrder[metricKey]) tipOrder[metricKey] = customTips[metricKey] ? [...customTips[metricKey]] : [];
+    tipOrder[metricKey].push(newTip);
+    saveTipOrder(tipOrder);
+
     saveUserTips(userTips);
     mergeTips();
     showMetricTips(metricKey);
     
-    alert('Tip added successfully!');
+    showToast('✅ Tip added');
+    document.getElementById(`newTip-${metricKey}`).value = '';
 }
 
 // Save edited tip
@@ -299,23 +416,53 @@ function saveTipEdit(metricKey, tipIndex) {
         alert('Tip cannot be empty. Use delete if you want to remove it.');
         return;
     }
-    
-    // Update the tip in customTips
-    customTips[metricKey][tipIndex] = editedTip;
-    
-    // Rebuild userTips from scratch - only include what's in customTips that isn't from serverTips
+    const existing = customTips[metricKey] || [];
+    const originalTip = existing[tipIndex];
     const serverTipsForMetric = serverTips[metricKey] || [];
-    const allTips = customTips[metricKey] || [];
-    
-    // Only keep tips that are NOT in the original server tips OR have been modified
-    userTips[metricKey] = allTips.filter(tip => !serverTipsForMetric.includes(tip));
+
+    // If editing a server-sourced tip, hide the original server tip and store the edited version as a user tip
+    if (serverTipsForMetric.includes(originalTip)) {
+        if (!hiddenTips[metricKey]) hiddenTips[metricKey] = [];
+        if (!hiddenTips[metricKey].includes(originalTip)) {
+            hiddenTips[metricKey].push(originalTip);
+        }
+        // Ensure userTips exists
+        if (!userTips[metricKey]) userTips[metricKey] = [];
+        const idxUser = userTips[metricKey].indexOf(originalTip);
+        if (idxUser !== -1) {
+            userTips[metricKey][idxUser] = editedTip;
+        } else {
+            // Avoid duplicate entries
+            if (!userTips[metricKey].includes(editedTip)) {
+                userTips[metricKey].push(editedTip);
+            }
+        }
+    } else {
+        // Editing an existing user tip: replace in userTips
+        if (!userTips[metricKey]) userTips[metricKey] = [];
+        const idxUser = userTips[metricKey].indexOf(originalTip);
+        if (idxUser !== -1) {
+            userTips[metricKey][idxUser] = editedTip;
+        } else {
+            // Fallback: if the original isn't found (data drift), add edited tip and remove any exact duplicates
+            if (!userTips[metricKey].includes(editedTip)) {
+                userTips[metricKey].push(editedTip);
+            }
+        }
+    }
     
     // Save and refresh
+    // Update tip order to keep position the same
+    if (!tipOrder[metricKey]) tipOrder[metricKey] = customTips[metricKey] ? [...customTips[metricKey]] : [];
+    tipOrder[metricKey][tipIndex] = editedTip;
+    saveTipOrder(tipOrder);
+
+    saveHiddenTips(hiddenTips);
     saveUserTips(userTips);
     mergeTips();
     showMetricTips(metricKey);
     
-    alert('Tip updated successfully!');
+    showToast('✅ Tip updated');
 }
 
 // Delete a tip (soft-delete server tips, remove user tips)
@@ -345,12 +492,17 @@ function deleteTip(metricKey, tipIndex) {
     // Only keep user tips that remain (not hidden) and not in server tips
     userTips[metricKey] = remainingTips.filter(tip => !serverTipsForMetric.includes(tip));
 
+    // Update tip order: remove at the same index
+    if (!tipOrder[metricKey]) tipOrder[metricKey] = customTips[metricKey] ? [...customTips[metricKey]] : [];
+    tipOrder[metricKey].splice(tipIndex, 1);
+    saveTipOrder(tipOrder);
+
     saveHiddenTips(hiddenTips);
     saveUserTips(userTips);
     mergeTips();
     showMetricTips(metricKey);
 
-    alert('Tip deleted successfully!');
+    showToast('✅ Tip deleted');
 }
 
 // Get random tip for a metric
@@ -1104,6 +1256,8 @@ function initApp() {
             serverTips = await loadServerTips();
             userTips = loadUserTips();
             hiddenTips = loadHiddenTips();
+            tipOrder = loadTipOrder();
+            uploadHistory = loadUploadHistory();
             mergeTips();
             console.log('✅ Tips loaded successfully');
         } catch (error) {
@@ -1243,6 +1397,49 @@ function initApp() {
 
     // Close Tips Management button
     document.getElementById('closeTipsManagement')?.addEventListener('click', () => {
+        showOnlySection('coachingForm');
+    });
+
+    // Executive Summary button
+    document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
+        const prompt = generateExecutiveSummaryPrompt();
+        document.getElementById('execSummaryPrompt').value = prompt;
+        showOnlySection('executiveSummarySection');
+    });
+
+    // Copy Executive Summary prompt
+    document.getElementById('copyExecSummary')?.addEventListener('click', () => {
+        const prompt = document.getElementById('execSummaryPrompt').value;
+        navigator.clipboard.writeText(prompt).then(() => {
+            if (navigator.onLine) {
+                showToast('✅ Summary copied! Opening Copilot...');
+                window.open('https://copilot.microsoft.com/', '_blank');
+            } else {
+                showToast('✅ Summary copied! Paste in Copilot.');
+            }
+        }).catch(() => {
+            alert('Failed to copy. Please select the text and copy manually.');
+        });
+    });
+
+    // Email Executive Summary
+    document.getElementById('outlookExecSummary')?.addEventListener('click', () => {
+        const content = document.getElementById('generatedExecSummary')?.value.trim();
+        
+        if (!content) {
+            alert('Please paste the generated summary from Copilot first!');
+            return;
+        }
+        
+        const subject = encodeURIComponent('Team Performance Summary - Development Coaching Tool');
+        const body = encodeURIComponent(content);
+        const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+        
+        window.location.href = mailtoLink;
+    });
+
+    // Close Executive Summary button
+    document.getElementById('closeExecSummary')?.addEventListener('click', () => {
         showOnlySection('coachingForm');
     });
 
@@ -1574,6 +1771,15 @@ function initApp() {
 
         const surveyTotalInput = parseInt(document.getElementById('surveyTotal').value, 10) || 0;
         const hasSurveys = surveyTotalInput > 0;
+        // Update UI to reflect survey availability
+        const surveyInputEl = document.getElementById('surveyTotal');
+        if (surveyInputEl) {
+            surveyInputEl.value = hasSurveys ? surveyTotalInput : 0;
+        }
+        const surveyStatusEl = document.getElementById('surveyStatusMsg');
+        if (surveyStatusEl) {
+            surveyStatusEl.textContent = hasSurveys ? '' : 'No surveys in this date range; survey-based metrics are omitted.';
+        }
 
         const metrics = {
             scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
@@ -1602,44 +1808,7 @@ function initApp() {
         statusEl.textContent = 'Showing current metrics vs targets (with previous/YTD deltas when available).';
     });
 
-    document.getElementById('compositeScoreBtn')?.addEventListener('click', () => {
-        const surveyTotalInput = parseInt(document.getElementById('surveyTotal').value, 10) || 0;
-        const hasSurveys = surveyTotalInput > 0;
-
-        const metrics = {
-            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: hasSurveys && document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
-            fcr: hasSurveys && document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
-            overallExperience: hasSurveys && document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
-            transfers: parseFloat(document.getElementById('transfers').value) || 0,
-            overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
-            positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
-            negativeWord: parseFloat(document.getElementById('negativeWord').value) || 0,
-            managingEmotions: parseFloat(document.getElementById('managingEmotions').value) || 0,
-            aht: parseFloat(document.getElementById('aht').value) || 0,
-            acw: parseFloat(document.getElementById('acw').value) || 0,
-            holdTime: parseFloat(document.getElementById('holdTime').value) || 0,
-            reliability: parseFloat(document.getElementById('reliability').value) || 0
-        };
-
-        const compositeEl = document.getElementById('compositeScore');
-        const compositeStatus = document.getElementById('compositeScoreStatus');
-        if (!compositeEl || !compositeStatus) return;
-
-        const { score, detail } = computeCompositeScore(metrics);
-        if (score === null) {
-            compositeEl.style.display = 'block';
-            compositeEl.innerHTML = '<p style="color: #666;">No metrics available to compute score.</p>';
-            compositeStatus.textContent = detail;
-            return;
-        }
-
-        const rounded = score.toFixed(1);
-        const color = score >= 100 ? '#28a745' : score >= 90 ? '#ffc107' : '#dc3545';
-        compositeEl.style.display = 'block';
-        compositeEl.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;"><div style="font-size: 2em; font-weight: 700; color: ${color};">${rounded}</div><div style="color: #555;">Composite score (>=100 means at/above targets after normalization).</div></div>`;
-        compositeStatus.textContent = detail;
-    });
+    // Composite score UI removed per request
 
     // Initialize button state on page load with error handling
     setTimeout(() => {
@@ -1744,7 +1913,25 @@ function initApp() {
                 // Immediately save all employees to history
                 bulkSaveUploadedEmployees();
                 
-                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data saved to Employee History.\n\nYou can now select an employee from the dropdown to coach them, or view trends in Employee History.`);
+                // Record this upload with smart time period detection
+                const startDate = document.getElementById('startDate')?.value || '';
+                const endDate = document.getElementById('endDate')?.value || '';
+                const timePeriod = startDate && endDate ? detectTimePeriod(startDate, endDate) : 'Custom Upload';
+                
+                const uploadRecord = {
+                    id: Date.now(),
+                    timePeriod: timePeriod,
+                    startDate: startDate,
+                    endDate: endDate,
+                    employeeCount: uploadedEmployeeData.length,
+                    timestamp: new Date().toISOString(),
+                    employeeMetrics: uploadedEmployeeData
+                };
+                
+                uploadHistory.push(uploadRecord);
+                saveUploadHistory(uploadHistory);
+                
+                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data saved to Employee History.\n\n⏰ Recorded as: ${timePeriod}\n\nYou can now select an employee from the dropdown to coach them, or view trends in Employee History.`);
                 
             } catch (error) {
                 console.error('Error parsing Excel:', error);
@@ -2180,9 +2367,12 @@ function initApp() {
     document.getElementById('copyPrompt')?.addEventListener('click', () => {
         const prompt = document.getElementById('aiPrompt').value;
         navigator.clipboard.writeText(prompt).then(() => {
-            alert('✅ Prompt copied!\n\nOpening Copilot - paste it there.');
-            // Auto-open Copilot after copying
-            window.open('https://copilot.microsoft.com/', '_blank');
+            if (navigator.onLine) {
+                alert('✅ Prompt copied!\n\nOpening Copilot - paste it there.');
+                window.open('https://copilot.microsoft.com/', '_blank');
+            } else {
+                alert('✅ Prompt copied!\n\nOffline mode: Copilot won\'t open. Paste the prompt wherever you prefer.');
+            }
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
         });
@@ -2275,7 +2465,43 @@ function initApp() {
         }
         
         // Build comprehensive Copilot prompt
-        let prompt = `Write friendly coaching email to ${employeeName}, CSR. Up to 250 words. Sound like a real person - not AI. Vary your word choices, use different sentence structures. These casual phrases are examples - base your response on variations of them: "I noticed", "By the way", "Quick thing", "Real talk". Use contractions naturally. Sometimes start sentences with "And" or "But". Mix long and short sentences. Be specific but not robotic. NO EM DASHES (—) - use commas, periods, or regular hyphens (-) instead. Start "Hey ${employeeName}!"\n\n`;
+        const openerOptions = [
+            `Hey ${employeeName}! Quick snapshot on how things are trending so we can celebrate wins and line up next steps.`,
+            `Hey ${employeeName}! Here's a quick look at your recent performance so we can keep what works and tune the rest.`,
+            `Hey ${employeeName}! Fast pulse check on your latest metrics so we can celebrate and sharpen where needed.`,
+            `Hey ${employeeName}! Quick rundown of what's landing well and what we should focus on next.`,
+            `Hey ${employeeName}! Short update on your recent results to highlight wins and pick a couple priorities.`,
+            `Hey ${employeeName}! Quick vibe check on your recent results so we can keep momentum and tighten a couple areas.`,
+            `Hey ${employeeName}! Quick look at what is working and what to fine-tune this week.`,
+            `Hey ${employeeName}! Quick pulse on your week so we can high-five the wins and pick two focus points.`
+        ];
+        const casualPhraseSets = [
+            ['I noticed', 'By the way', 'Quick thing', 'Real talk'],
+            ['Heads up', 'Quick heads up', 'I spotted', 'Worth noting'],
+            ['I saw', 'Side note', 'One callout', 'Real quick'],
+            ['Noticed this', 'Flagging this', 'Quick flag', 'One thing I liked']
+        ];
+        const transitionSets = [
+            ['Here is the thing', 'Also', 'One more thing', 'Meanwhile'],
+            ['So', 'Plus', 'And hey', 'Another quick one'],
+            ['Also worth noting', 'On that note', 'Real quick', 'Next up'],
+            ['Here is what I saw', 'Also saw', 'And', 'Last quick note']
+        ];
+        const styleGuidanceOptions = [
+            'Sound like a human coworker. Use contractions, vary sentence length, mix short and medium lines. No em dashes; use commas, periods, or regular hyphens instead.',
+            'Keep it breezy and specific. Contractions are good, sentences can start with And/But. Avoid em dashes; stick to commas, periods, or regular hyphens.',
+            'Use casual, direct language with contractions. Vary rhythm with short and medium sentences. Skip em dashes; use commas, periods, or regular hyphens.',
+            'Friendly, clear, and concise. Contractions welcome. Mix sentence lengths. Avoid em dashes; choose commas, periods, or regular hyphens.'
+        ];
+        const opener = openerOptions[Math.floor(Math.random() * openerOptions.length)];
+        const casualPhrases = casualPhraseSets[Math.floor(Math.random() * casualPhraseSets.length)];
+        const transitions = transitionSets[Math.floor(Math.random() * transitionSets.length)];
+        const styleGuidance = styleGuidanceOptions[Math.floor(Math.random() * styleGuidanceOptions.length)];
+        
+        let prompt = `Write a friendly coaching email to ${employeeName} (CSR), 180–220 words. ${styleGuidance} Include a couple casual phrases (e.g., ${casualPhrases.join(', ')}), and vary transitions (e.g., ${transitions.join(', ')}). Be specific without sounding robotic. Start with this opener: "${opener}". Briefly set context, then list wins and improvements.\n\n`;
+        if (!hasSurveys) {
+            prompt += `Note: No customer surveys in the selected date range, so survey-based metrics (CX Rep Overall, FCR, Overall Experience) are omitted.\n\n`;
+        }
 
         // Add wins if any
         if (wins.length > 0) {
@@ -2329,7 +2555,7 @@ function initApp() {
                 prompt += `\n(PTOST procedures required - code time in Verint)`;
             }
             
-            prompt += `\n\nFORMATTING: Only bold the metric name at the start of each tip (e.g., **Schedule Adherence:** then regular text). Do NOT bold anything else in the email body.\n\nFor each tip: Mix up how you phrase things. These are example phrasings - vary based on them: "You're at X, need Y", "Currently at X, let's get to Y", or "Target is Y, you're at X". Give casual, real-world advice with specific examples. For word choice tips, these are example variations - create similar ones: "Instead of [X], try [Y]", "Swap [X] for [Y]", or "When you say [X], consider [Y]". Sound like a coworker giving friendly advice, not a textbook. These are example transitions - use variations: "Here's the thing", "So", "Also", "One more thing", "Real quick". Never repeat the same phrasing structure twice in a row.`;
+            prompt += `\n\nFORMATTING: Bold only the metric name at the start of each tip (e.g., **Schedule Adherence:** then normal text). Vary phrasing and avoid repeating the same structure. Give concrete, real-world examples. For word choice tips, suggest concise swaps (e.g., "Instead of [X], try [Y]"). No em dashes.`;
         }
         
         // Add custom notes if provided
@@ -2460,43 +2686,125 @@ function buildConsolidatedMetrics(employeeName, currentMetrics) {
     return html;
 }
 
-// Compute a simple composite score (average of normalized ratios to target)
-function computeCompositeScore(currentMetrics) {
-    const targetMap = {
-        scheduleAdherence: { target: TARGETS.driver.scheduleAdherence.min, type: 'min' },
-        cxRepOverall: { target: TARGETS.driver.cxRepOverall.min, type: 'min' },
-        fcr: { target: TARGETS.driver.fcr.min, type: 'min' },
-        overallExperience: { target: TARGETS.driver.overallExperience.min, type: 'min' },
-        transfers: { target: TARGETS.driver.transfers.max, type: 'max' },
-        overallSentiment: { target: TARGETS.driver.overallSentiment.min, type: 'min' },
-        positiveWord: { target: TARGETS.driver.positiveWord.min, type: 'min' },
-        negativeWord: { target: TARGETS.driver.negativeWord.min, type: 'min' },
-        managingEmotions: { target: TARGETS.driver.managingEmotions.min, type: 'min' },
-        aht: { target: TARGETS.driver.aht.max, type: 'max' },
-        acw: { target: TARGETS.driver.acw.max, type: 'max' },
-        holdTime: { target: TARGETS.driver.holdTime.max, type: 'max' },
-        reliability: { target: TARGETS.driver.reliability.max, type: 'max' }
-    };
+// Composite score feature removed per request
 
-    const contributions = [];
-
-    Object.entries(targetMap).forEach(([key, meta]) => {
-        const raw = currentMetrics[key];
-        if (raw === '' || raw === null || raw === undefined || isNaN(parseFloat(raw))) return;
-        const val = parseFloat(raw);
-        if (val === 0 && meta.type === 'max') {
-            return; // avoid divide by zero
-        }
-        const ratio = meta.type === 'min' ? val / meta.target : meta.target / val;
-        // Cap ratio to avoid extreme influence, map to 0-150%
-        const normalized = Math.max(0, Math.min(1.5, ratio));
-        contributions.push(normalized * 100);
-    });
-
-    if (contributions.length === 0) {
-        return { score: null, detail: 'No metrics available to compute score.' };
+// Aggregate data across all uploads for executive summary
+function aggregateUploadData() {
+    if (!uploadHistory || uploadHistory.length === 0) {
+        return null;
     }
 
-    const avg = contributions.reduce((a, b) => a + b, 0) / contributions.length;
-    return { score: avg, detail: `Averaged ${contributions.length} metrics; capped ratios at 150%.` };
+    const aggregated = {
+        totalUploads: uploadHistory.length,
+        timePeriods: [],
+        totalEmployees: 0,
+        employeeCount: {},
+        metricAverages: {},
+        metricsAboveTarget: {},
+        metricsAbovePercent: {}
+    };
+
+    const metricConfigs = [
+        { id: 'scheduleAdherence', target: TARGETS.driver.scheduleAdherence.min, type: 'min' },
+        { id: 'cxRepOverall', target: TARGETS.driver.cxRepOverall.min, type: 'min' },
+        { id: 'fcr', target: TARGETS.driver.fcr.min, type: 'min' },
+        { id: 'overallExperience', target: TARGETS.driver.overallExperience.min, type: 'min' },
+        { id: 'transfers', target: TARGETS.driver.transfers.max, type: 'max' },
+        { id: 'overallSentiment', target: TARGETS.driver.overallSentiment.min, type: 'min' },
+        { id: 'positiveWord', target: TARGETS.driver.positiveWord.min, type: 'min' },
+        { id: 'negativeWord', target: TARGETS.driver.negativeWord.min, type: 'min' },
+        { id: 'managingEmotions', target: TARGETS.driver.managingEmotions.min, type: 'min' },
+        { id: 'aht', target: TARGETS.driver.aht.max, type: 'max' },
+        { id: 'acw', target: TARGETS.driver.acw.max, type: 'max' },
+        { id: 'holdTime', target: TARGETS.driver.holdTime.max, type: 'max' },
+        { id: 'reliability', target: TARGETS.driver.reliability.max, type: 'max' }
+    ];
+
+    // Initialize metric tracking
+    metricConfigs.forEach(cfg => {
+        aggregated.metricAverages[cfg.id] = { sum: 0, count: 0, values: [] };
+        aggregated.metricsAboveTarget[cfg.id] = 0;
+    });
+
+    // Aggregate all upload data
+    uploadHistory.forEach(upload => {
+        aggregated.timePeriods.push(upload.timePeriod);
+        aggregated.totalEmployees += upload.employeeCount;
+
+        (upload.employeeMetrics || []).forEach(emp => {
+            aggregated.employeeCount[emp.name] = (aggregated.employeeCount[emp.name] || 0) + 1;
+
+            metricConfigs.forEach(cfg => {
+                const val = emp[cfg.id];
+                if (val !== undefined && val !== '' && !isNaN(parseFloat(val))) {
+                    const numVal = parseFloat(val);
+                    aggregated.metricAverages[cfg.id].sum += numVal;
+                    aggregated.metricAverages[cfg.id].count++;
+                    aggregated.metricAverages[cfg.id].values.push(numVal);
+
+                    const meets = cfg.type === 'min' ? numVal >= cfg.target : numVal <= cfg.target;
+                    if (meets) aggregated.metricsAboveTarget[cfg.id]++;
+                }
+            });
+        });
+    });
+
+    // Calculate final averages and percentages
+    metricConfigs.forEach(cfg => {
+        const data = aggregated.metricAverages[cfg.id];
+        if (data.count > 0) {
+            const avg = data.sum / data.count;
+            aggregated.metricAverages[cfg.id].average = avg.toFixed(2);
+            aggregated.metricsAbovePercent[cfg.id] = ((aggregated.metricsAboveTarget[cfg.id] / data.count) * 100).toFixed(0);
+        }
+    });
+
+    return aggregated;
+}
+
+// Generate executive summary AI prompt
+function generateExecutiveSummaryPrompt() {
+    const aggregated = aggregateUploadData();
+    
+    if (!aggregated) {
+        return `No data available yet. Please upload employee data first.`;
+    }
+
+    const summaryLines = [];
+    const metricNames = {
+        scheduleAdherence: 'Schedule Adherence',
+        cxRepOverall: 'Customer Experience',
+        fcr: 'First Call Resolution',
+        overallExperience: 'Overall Experience',
+        transfers: 'Transfers',
+        overallSentiment: 'Overall Sentiment',
+        positiveWord: 'Positive Word Choice',
+        negativeWord: 'Negative Word Choice',
+        managingEmotions: 'Managing Emotions',
+        aht: 'Average Handle Time',
+        acw: 'After Call Work',
+        holdTime: 'Hold Time',
+        reliability: 'Reliability'
+    };
+
+    summaryLines.push(`Team Performance Summary`);
+    summaryLines.push(`Time Periods Analyzed: ${aggregated.timePeriods.join(', ')}`);
+    summaryLines.push(`Total Data Points: ${aggregated.totalUploads} uploads`);
+    summaryLines.push(`Unique Employees Coached: ${Object.keys(aggregated.employeeCount).length}`);
+    summaryLines.push(`Total Observations: ${aggregated.totalEmployees} employee-period records`);
+    summaryLines.push(``);
+    summaryLines.push(`Key Performance Metrics:`);
+
+    Object.keys(aggregated.metricAverages).forEach(metricId => {
+        const data = aggregated.metricAverages[metricId];
+        if (data.count > 0) {
+            const pct = aggregated.metricsAbovePercent[metricId];
+            const name = metricNames[metricId];
+            summaryLines.push(`• ${name}: Average ${data.average}, ${pct}% of team meeting target`);
+        }
+    });
+
+    const prompt = `Write a professional 150-200 word executive summary for my manager based on this team performance data:\n\n${summaryLines.join('\n')}\n\nInclude: overall team health, top 3 strengths, top 3 areas for improvement, and one recommended focus for next period. Keep tone professional and data-driven.`;
+
+    return prompt;
 }

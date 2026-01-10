@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- Prefer local SheetJS for offline; fallback to CDN when online -->
+    <script src="vendor/xlsx.full.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';document.head.appendChild(s);})();"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
-            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button type="button" id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
                 <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
+                <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
             </div>
         </header>
 
@@ -101,6 +103,7 @@
                     <div class="form-group">
                         <label for="surveyTotal">Total Surveys Received:</label>
                         <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
+                        <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
                     </div>
                 </section>
 
@@ -114,12 +117,7 @@
                         <button type="button" id="consolidatedMetricsBtn" class="btn-secondary">📊 View Consolidated Metrics</button>
                         <div id="consolidatedMetricsStatus" style="color: #666; font-size: 0.9em;"></div>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                        <button type="button" id="compositeScoreBtn" class="btn-secondary">🧮 Compute Composite Score</button>
-                        <div id="compositeScoreStatus" style="color: #666; font-size: 0.9em;"></div>
-                    </div>
                     <div id="consolidatedMetrics" style="display: none; margin-bottom: 15px; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 5px;"></div>
-                    <div id="compositeScore" style="display: none; margin-bottom: 15px; padding: 12px; background: #eef7ff; border: 1px solid #cce0ff; border-radius: 5px;"></div>
                     <div class="metrics-grid">
                         <div class="form-group">
                             <label for="scheduleAdherence">Schedule Adherence (%):</label>
@@ -285,9 +283,49 @@
                 <div id="tipsManagementContent" style="margin-top: 20px;"></div>
                 <input type="file" id="tipsFileInput" accept=".json" style="display: none;">
             </section>
+
+            <!-- Executive Summary Section -->
+            <section id="executiveSummarySection" style="display: none;">
+                <div class="results-header">
+                    <h2>📊 Executive Summary</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="copyExecSummary" class="btn-primary">📋 Copy & Open Copilot</button>
+                        <button id="closeExecSummary" class="btn-secondary">Close</button>
+                    </div>
+                </div>
+
+                <div class="coaching-content">
+                    <section class="coaching-section">
+                        <h3>Ready to Generate Summary</h3>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            <strong>Click the button above to:</strong><br>
+                            1. Copy the data summary prompt to your clipboard<br>
+                            2. Automatically open Microsoft Copilot<br>
+                            3. Paste the prompt in Copilot and get your executive summary<br>
+                            4. Copy Copilot's response and send to your manager
+                        </p>
+                    </section>
+
+                    <section class="coaching-section">
+                        <h3>📧 Team Performance Summary</h3>
+                        <p style="color: #666; margin-bottom: 10px;">Paste Copilot's generated summary here:</p>
+                        <textarea id="generatedExecSummary" placeholder="Paste the executive summary from Copilot here..." spellcheck="true" style="width: 100%; height: 250px; padding: 15px; border: 2px solid #003DA5; border-radius: 5px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                        <button type="button" id="outlookExecSummary" class="btn-primary" style="margin-top: 15px;">📧 Email to Manager</button>
+                    </section>
+
+                    <section class="coaching-section" style="display: none;">
+                        <h3>AI Prompt (for reference)</h3>
+                        <details>
+                            <summary style="cursor: pointer; color: #003DA5; font-weight: bold; margin-bottom: 10px;">Click to view full prompt</summary>
+                            <textarea id="execSummaryPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
+                        </details>
+                    </section>
+                </div>
+            </section>
         </main>
     </div>
 
-    <script src="script.js?v=2" defer></script>
+    <script src="script.min.js?v=4" defer></script>
 </body>
 </html>
+
