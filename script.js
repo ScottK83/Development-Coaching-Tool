@@ -2071,22 +2071,35 @@ function initApp() {
 
     // Generate Coaching button - show coaching section
     document.getElementById('generateCoachingBtn')?.addEventListener('click', () => {
+        console.log('Generate Coaching clicked');
         const stored = localStorage.getItem('weeklyData');
+        console.log('weeklyData from localStorage:', stored);
+        
         if (!stored || Object.keys(JSON.parse(stored)).length === 0) {
             alert('⚠️ No data uploaded yet!\n\nPlease click "🏠 Upload Data" first to upload your weekly performance data.');
             return;
         }
+        
+        console.log('Showing coaching section...');
         showOnlySection('coachingSection');
         
         // Make sure period selector is visible
         const periodContainer = document.getElementById('periodSelectionContainer');
+        console.log('periodSelectionContainer element:', periodContainer);
         if (periodContainer) {
             periodContainer.style.display = 'block';
+            console.log('Period container display set to block');
+        } else {
+            console.error('periodSelectionContainer not found!');
         }
         
         // Reinitialize if needed
+        console.log('weeklyData object:', weeklyData);
         if (Object.keys(weeklyData).length > 0) {
+            console.log('Calling updatePeriodDropdown...');
             updatePeriodDropdown();
+        } else {
+            console.error('weeklyData is empty!');
         }
         
         document.getElementById('coachingSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
