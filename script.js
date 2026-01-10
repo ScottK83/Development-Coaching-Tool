@@ -3120,9 +3120,11 @@ function initApp() {
             // Hide sections if no employee selected
             const metricsSection = document.getElementById('metricsSection');
             const employeeInfoSection = document.getElementById('employeeInfoSection');
+            const customNotesSection = document.getElementById('customNotesSection');
             const generateBtn = document.getElementById('generateEmailBtn');
             if (metricsSection) metricsSection.style.display = 'none';
             if (employeeInfoSection) employeeInfoSection.style.display = 'none';
+            if (customNotesSection) customNotesSection.style.display = 'none';
             if (generateBtn) generateBtn.style.display = 'none';
             return;
         }
@@ -3137,9 +3139,11 @@ function initApp() {
         // Show employee info and metrics sections
         const employeeInfoSection = document.getElementById('employeeInfoSection');
         const metricsSection = document.getElementById('metricsSection');
+        const customNotesSection = document.getElementById('customNotesSection');
         const generateBtn = document.getElementById('generateEmailBtn');
         if (employeeInfoSection) employeeInfoSection.style.display = 'block';
         if (metricsSection) metricsSection.style.display = 'block';
+        if (customNotesSection) customNotesSection.style.display = 'block';
         if (generateBtn) generateBtn.style.display = 'inline-block';
         
         // Populate all form fields
