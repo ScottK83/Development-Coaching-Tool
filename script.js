@@ -3485,8 +3485,10 @@ function initApp() {
     // Form submission - Open Copilot with full email generation prompt
     document.getElementById('coachingFormInternal')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log('🤖 Generate Email button clicked - form submitted');
 
         const employeeName = document.getElementById('employeeName').value;
+        console.log('Employee name:', employeeName);
 
         if (!employeeName) {
             alert('Please fill in employee name');
