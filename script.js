@@ -2643,6 +2643,8 @@ function initApp() {
                     surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
                 };
                 
+                console.log('📊 Column indices found:', colIndices);
+                
                 if (colIndices.name === -1) {
                     console.error('Available headers:', headers);
                     alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
