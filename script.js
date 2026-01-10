@@ -992,7 +992,6 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
                         metrics
                     });
                     localStorage.setItem('coachingHistory', JSON.stringify(history));
-                    console.log('✅ Storage cleaned up and data saved successfully');
                 } catch (retryError) {
                     console.error('Cleanup failed:', retryError);
                     alert('❌ Could not save coaching history even after cleanup. Please export your data and clear history.');
@@ -1973,7 +1972,6 @@ function initApp() {
             }
             
             mergeTips();
-            console.log('✅ Tips loaded successfully');
         } catch (error) {
             console.warn('⚠️ Using fallback tips:', error);
         }
@@ -3725,108 +3723,6 @@ if (document.readyState === 'loading') {
 } else {
     initApp();
 }
-
-// Build consolidated metrics summary
-function buildConsolidatedMetrics(employeeName, currentMetrics) {
-    const targetMap = {
-        scheduleAdherence: { target: TARGETS.driver.scheduleAdherence.min, type: 'min', label: 'Schedule Adherence', unit: '%' },
-        cxRepOverall: { target: TARGETS.driver.cxRepOverall.min, type: 'min', label: 'CX Rep Overall', unit: '%' },
-        fcr: { target: TARGETS.driver.fcr.min, type: 'min', label: 'First Call Resolution', unit: '%' },
-        overallExperience: { target: TARGETS.driver.overallExperience.min, type: 'min', label: 'Overall Experience', unit: '%' },
-        transfers: { target: TARGETS.driver.transfers.max, type: 'max', label: 'Transfers', unit: '%' },
-        overallSentiment: { target: TARGETS.driver.overallSentiment.min, type: 'min', label: 'Overall Sentiment', unit: '%' },
-        positiveWord: { target: TARGETS.driver.positiveWord.min, type: 'min', label: 'Positive Word Choice', unit: '%' },
-        negativeWord: { target: TARGETS.driver.negativeWord.min, type: 'min', label: 'Negative Word', unit: '%' },
-        managingEmotions: { target: TARGETS.driver.managingEmotions.min, type: 'min', label: 'Managing Emotions', unit: '%' },
-        aht: { target: TARGETS.driver.aht.max, type: 'max', label: 'AHT', unit: 's' },
-        acw: { target: TARGETS.driver.acw.max, type: 'max', label: 'ACW', unit: 's' },
-        holdTime: { target: TARGETS.driver.holdTime.max, type: 'max', label: 'Hold Time', unit: 's' },
-        reliability: { target: TARGETS.driver.reliability.max, type: 'max', label: 'Reliability', unit: ' hrs' }
-    };
-
-    // Gather history for deltas
-    const history = getAllHistory();
-    const sessions = history[employeeName] || [];
-    const sorted = [...sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const previous = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-
-    // YTD averages
-    const sums = {};
-    const counts = {};
-    sorted.forEach(s => {
-        if (!s.metrics) return;
-        Object.entries(s.metrics).forEach(([k, v]) => {
-            if (v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v))) {
-                sums[k] = (sums[k] || 0) + parseFloat(v);
-                counts[k] = (counts[k] || 0) + 1;
-            }
-        });
-    });
-    const ytd = {};
-    Object.keys(sums).forEach(k => {
-        ytd[k] = sums[k] / counts[k];
-    });
-
-    const rows = [];
-    Object.entries(targetMap).forEach(([key, meta]) => {
-        const val = currentMetrics[key];
-        if (val === '' || val === null || val === undefined || isNaN(parseFloat(val))) {
-            return;
-        }
-        const numeric = parseFloat(val);
-        const meets = meta.type === 'min' ? numeric >= meta.target : numeric <= meta.target;
-        const prevVal = previous && previous.metrics ? previous.metrics[key] : undefined;
-        const prevNum = prevVal === '' || prevVal === null || prevVal === undefined ? undefined : parseFloat(prevVal);
-        const ytdVal = ytd[key];
-        const deltaPrev = prevNum !== undefined && !isNaN(prevNum) ? (numeric - prevNum) : null;
-        const deltaYtd = ytdVal !== undefined && !isNaN(ytdVal) ? (numeric - ytdVal) : null;
-        rows.push({
-            key,
-            label: meta.label,
-            value: numeric,
-            target: meta.target,
-            unit: meta.unit,
-            meets,
-            deltaPrev,
-            deltaYtd,
-            type: meta.type
-        });
-    });
-
-    if (rows.length === 0) return '<p style="color: #666;">No metrics available to consolidate.</p>';
-
-    const cell = (text) => `<td style="padding: 6px 8px; border-bottom: 1px solid #eee;">${text}</td>`;
-    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">';
-    html += '<thead><tr style="background: #f1f3f5; text-align: left;"><th style="padding: 8px;">Metric</th><th style="padding: 8px;">Current</th><th style="padding: 8px;">Target</th><th style="padding: 8px;">Δ Prev</th><th style="padding: 8px;">Δ YTD</th><th style="padding: 8px;">Status</th></tr></thead>';
-    html += '<tbody>';
-
-    rows.forEach(r => {
-        const statusColor = r.meets ? '#28a745' : '#dc3545';
-        const statusText = r.meets ? '✅ On target' : '⚠️ Needs improvement';
-        const formatDelta = (d, type) => {
-            if (d === null || d === undefined || isNaN(d)) return '';
-            const better = type === 'min' ? d > 0 : d < 0;
-            const icon = better ? '📈' : d === 0 ? '→' : '📉';
-            const color = better ? '#28a745' : d === 0 ? '#666' : '#dc3545';
-            const sign = d > 0 ? '+' : '';
-            return `<span style="color: ${color};">${icon} ${sign}${d.toFixed(2)}${r.unit}</span>`;
-        };
-
-        html += '<tr>';
-        html += cell(`<strong>${r.label}</strong>`);
-        html += cell(`${r.value}${r.unit}`);
-        html += cell(`${r.type === 'min' ? '≥' : '≤'}${r.target}${r.unit}`);
-        html += cell(formatDelta(r.deltaPrev, r.type));
-        html += cell(formatDelta(r.deltaYtd, r.type));
-        html += cell(`<span style="color: ${statusColor}; font-weight: 600;">${statusText}</span>`);
-        html += '</tr>';
-    });
-
-    html += '</tbody></table>';
-    return html;
-}
-
-// Composite score feature removed per request
 
 // Aggregate data across all uploads for executive summary
 function aggregateUploadData() {
