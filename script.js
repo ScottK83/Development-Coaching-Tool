@@ -165,6 +165,54 @@ function parseWeekFromSheetName(sheetName) {
     }
 }
 
+// Helper functions to parse Excel data
+function parsePercentage(value) {
+    if (!value && value !== 0) return 0;
+    if (value === 'N/A' || value === 'n/a') return 0;
+    // If already a decimal (0.83), convert to percentage (83)
+    if (typeof value === 'number' && value <= 1) {
+        return parseFloat((value * 100).toFixed(2));
+    }
+    // If string with %, remove it
+    if (typeof value === 'string' && value.includes('%')) {
+        const parsed = parseFloat(value.replace('%', ''));
+        return isNaN(parsed) ? 0 : parsed;
+    }
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+}
+
+// For survey-based metrics - return empty string for N/A instead of 0
+function parseSurveyPercentage(value) {
+    if (!value && value !== 0) return '';
+    if (value === 'N/A' || value === 'n/a') return '';
+    // If already a decimal (0.83), convert to percentage (83)
+    if (typeof value === 'number' && value <= 1) {
+        return parseFloat((value * 100).toFixed(2));
+    }
+    // If string with %, remove it
+    if (typeof value === 'string' && value.includes('%')) {
+        const parsed = parseFloat(value.replace('%', ''));
+        return isNaN(parsed) ? '' : parsed;
+    }
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? '' : parsed;
+}
+
+function parseSeconds(value) {
+    if (!value && value !== 0) return '';
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return '';
+    return Math.round(parsed);
+}
+
+function parseHours(value) {
+    if (!value && value !== 0) return 0;  // Default to 0 for blank reliability
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return 0;
+    return parseFloat(parsed.toFixed(2));
+}
+
 function loadUploadHistory() {
     try {
         const saved = localStorage.getItem('uploadHistory');
@@ -2370,7 +2418,8 @@ function initApp() {
                 alert(message);
             } catch (error) {
                 console.error('Error parsing Excel:', error);
-                alert('Error reading Excel file. Please make sure it is formatted correctly.');
+                console.error('Error stack:', error.stack);
+                alert(`Error reading Excel file: ${error.message}\n\nCheck browser console (F12) for details.`);
             }
         };
         reader.readAsArrayBuffer(file);
@@ -2871,54 +2920,6 @@ function initApp() {
             }
         }
     });
-
-    // Helper functions to parse Excel data
-    function parsePercentage(value) {
-        if (!value && value !== 0) return 0;
-        if (value === 'N/A' || value === 'n/a') return 0;
-        // If already a decimal (0.83), convert to percentage (83)
-        if (typeof value === 'number' && value <= 1) {
-            return parseFloat((value * 100).toFixed(2));
-        }
-        // If string with %, remove it
-        if (typeof value === 'string' && value.includes('%')) {
-            const parsed = parseFloat(value.replace('%', ''));
-            return isNaN(parsed) ? 0 : parsed;
-        }
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? 0 : parsed;
-    }
-
-    // For survey-based metrics - return empty string for N/A instead of 0
-    function parseSurveyPercentage(value) {
-        if (!value && value !== 0) return '';
-        if (value === 'N/A' || value === 'n/a') return '';
-        // If already a decimal (0.83), convert to percentage (83)
-        if (typeof value === 'number' && value <= 1) {
-            return parseFloat((value * 100).toFixed(2));
-        }
-        // If string with %, remove it
-        if (typeof value === 'string' && value.includes('%')) {
-            const parsed = parseFloat(value.replace('%', ''));
-            return isNaN(parsed) ? '' : parsed;
-        }
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? '' : parsed;
-    }
-
-    function parseSeconds(value) {
-        if (!value && value !== 0) return '';
-        const parsed = parseFloat(value);
-        if (isNaN(parsed)) return '';
-        return Math.round(parsed);
-    }
-
-    function parseHours(value) {
-        if (!value && value !== 0) return 0;  // Default to 0 for blank reliability
-        const parsed = parseFloat(value);
-        if (isNaN(parsed)) return 0;
-        return parseFloat(parsed.toFixed(2));
-    }
 
     // Highlight metric inputs based on targets
     function applyMetricHighlights() {
