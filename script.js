@@ -2562,7 +2562,7 @@ function initApp() {
             
             // Detect separator (tab, multiple spaces, or comma)
             let separator;
-            if (lines[0].includes('\t')) {
+            if (lines[0].includes('\t') || lines[1].includes('\t')) {
                 separator = '\t';
             } else if (/\s{2,}/.test(lines[0])) {
                 // Multiple spaces (2 or more) - use regex split
