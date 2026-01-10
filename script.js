@@ -2229,40 +2229,18 @@ function initApp() {
 
     // ========== UPLOAD METHOD SELECTION ==========
     
-    console.log('🔧 Setting up upload button listeners...');
-    console.log('showPasteBtn element:', document.getElementById('showPasteBtn'));
-    console.log('showExcelBtn element:', document.getElementById('showExcelBtn'));
-    
     // Show paste data container
     document.getElementById('showPasteBtn')?.addEventListener('click', () => {
-        debugger; // PAUSE HERE TO INSPECT
-        console.log('Show paste button clicked');
-        const uploadChoice = document.getElementById('uploadChoiceButtons');
-        const pasteContainer = document.getElementById('pasteDataContainer');
-        const excelContainer = document.getElementById('excelUploadContainer');
-        
-        console.log('uploadChoiceButtons:', uploadChoice);
-        console.log('pasteDataContainer:', pasteContainer);
-        
-        if (uploadChoice) uploadChoice.style.display = 'none';
-        if (pasteContainer) pasteContainer.style.display = 'block';
-        if (excelContainer) excelContainer.style.display = 'none';
+        document.getElementById('uploadChoiceButtons').style.display = 'none';
+        document.getElementById('pasteDataContainer').style.display = 'block';
+        document.getElementById('excelUploadContainer').style.display = 'none';
     });
     
     // Show excel upload container
     document.getElementById('showExcelBtn')?.addEventListener('click', () => {
-        debugger; // PAUSE HERE TO INSPECT
-        console.log('Show excel button clicked');
-        const uploadChoice = document.getElementById('uploadChoiceButtons');
-        const pasteContainer = document.getElementById('pasteDataContainer');
-        const excelContainer = document.getElementById('excelUploadContainer');
-        
-        console.log('uploadChoiceButtons:', uploadChoice);
-        console.log('excelUploadContainer:', excelContainer);
-        
-        if (uploadChoice) uploadChoice.style.display = 'none';
-        if (pasteContainer) pasteContainer.style.display = 'none';
-        if (excelContainer) excelContainer.style.display = 'block';
+        document.getElementById('uploadChoiceButtons').style.display = 'none';
+        document.getElementById('pasteDataContainer').style.display = 'none';
+        document.getElementById('excelUploadContainer').style.display = 'block';
     });
     
     // Cancel paste and go back to choice
