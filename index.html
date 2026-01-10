@@ -100,10 +100,11 @@
                         <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                     </div>
                 </section>
+            </form>
 
-                <!-- Generate Coaching Section (hidden initially) -->
-                <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                    <h2>✉️ Generate Coaching Email</h2>
+            <!-- Generate Coaching Section (hidden initially) -->
+            <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                <h2>✉️ Generate Coaching Email</h2>
                     
                     <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
                         <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
@@ -238,13 +239,12 @@
                     <textarea id="customNotes" placeholder="Example: They need to check their schedule more carefully before requesting time off..." style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; font-size: 0.95em;"></textarea>
                     </section>
 
-                    <!-- Buttons -->
-                    <section class="form-section">
-                        <button type="submit" class="btn-ai" id="generateEmailBtn" style="display: none;">🤖 Generate Email with Copilot AI</button>
-                        <button type="reset" class="btn-secondary">Clear Form</button>
-                    </section>
+                <!-- Buttons -->
+                <section class="form-section">
+                    <button type="submit" class="btn-ai" id="generateEmailBtn" style="display: none;">🤖 Generate Email with Copilot AI</button>
+                    <button type="reset" class="btn-secondary">Clear Form</button>
                 </section>
-            </form>
+            </section>
 
             <!-- Results Section -->
             <section id="resultsSection" style="display: none;">
