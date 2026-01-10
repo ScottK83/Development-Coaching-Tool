@@ -150,6 +150,56 @@ function saveTipOrder(order) {
     }
 }
 
+// Auto-export tips to Excel
+function autoExportTipsToExcel() {
+    try {
+        if (typeof XLSX === 'undefined') {
+            console.warn('SheetJS not available, skipping auto-export');
+            return;
+        }
+
+        // Prepare data for Excel
+        const excelData = [];
+        
+        // Add header row
+        excelData.push(['Metric', 'Tip']);
+        
+        // Add all tips organized by metric
+        Object.keys(AREA_NAMES).forEach(metricKey => {
+            const metricName = AREA_NAMES[metricKey];
+            const tips = customTips[metricKey] || [];
+            
+            if (tips.length > 0) {
+                tips.forEach((tip, index) => {
+                    excelData.push([metricName, tip]);
+                });
+            } else {
+                excelData.push([metricName, '(No tips available)']);
+            }
+        });
+
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 30 },  // Metric column
+            { wch: 100 }  // Tip column
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Coaching Tips');
+        
+        // Generate Excel file and download
+        const timestamp = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `coaching-tips-${timestamp}.xlsx`);
+        
+        showToast('📊 Tips exported to Excel');
+    } catch (error) {
+        console.error('Error auto-exporting tips:', error);
+    }
+}
+
 // Shared area names mapping
 const AREA_NAMES = {
     scheduleAdherence: 'Schedule Adherence',
@@ -402,6 +452,7 @@ function addNewTip(metricKey) {
     showMetricTips(metricKey);
     
     showToast('✅ Tip added');
+    autoExportTipsToExcel();
     document.getElementById(`newTip-${metricKey}`).value = '';
 }
 
@@ -463,6 +514,7 @@ function saveTipEdit(metricKey, tipIndex) {
     showMetricTips(metricKey);
     
     showToast('✅ Tip updated');
+    autoExportTipsToExcel();
 }
 
 // Delete a tip (soft-delete server tips, remove user tips)
@@ -503,6 +555,7 @@ function deleteTip(metricKey, tipIndex) {
     showMetricTips(metricKey);
 
     showToast('✅ Tip deleted');
+    autoExportTipsToExcel();
 }
 
 // Get random tip for a metric
@@ -1462,23 +1515,7 @@ function initApp() {
 
     // Export Tips button
     document.getElementById('exportTips')?.addEventListener('click', () => {
-        const tipsData = {
-            exportDate: new Date().toISOString(),
-            version: '1.0',
-            customTips: userTips
-        };
-        
-        const dataStr = JSON.stringify(tipsData, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `coaching-tips-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        
-        URL.revokeObjectURL(url);
-        alert('✅ Tips exported successfully!');
+        autoExportTipsToExcel();
     });
 
     // Import Tips button
