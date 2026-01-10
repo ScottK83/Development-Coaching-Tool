@@ -2237,6 +2237,37 @@ function initApp() {
         showOnlySection('coachingForm');
     });
 
+    // ========== UPLOAD METHOD SELECTION ==========
+    
+    // Show paste data container
+    document.getElementById('showPasteBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadChoiceButtons').style.display = 'none';
+        document.getElementById('pasteDataContainer').style.display = 'block';
+        document.getElementById('excelUploadContainer').style.display = 'none';
+    });
+    
+    // Show excel upload container
+    document.getElementById('showExcelBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadChoiceButtons').style.display = 'none';
+        document.getElementById('pasteDataContainer').style.display = 'none';
+        document.getElementById('excelUploadContainer').style.display = 'block';
+    });
+    
+    // Cancel paste and go back to choice
+    document.getElementById('cancelPasteBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadChoiceButtons').style.display = 'block';
+        document.getElementById('pasteDataContainer').style.display = 'none';
+        document.getElementById('pasteDataTextarea').value = '';
+    });
+    
+    // Cancel excel and go back to choice
+    document.getElementById('cancelExcelBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadChoiceButtons').style.display = 'block';
+        document.getElementById('excelUploadContainer').style.display = 'none';
+        const fileInput = document.getElementById('excelFile');
+        if (fileInput) fileInput.value = '';
+    });
+
     // Export employee history to Excel
     document.getElementById('exportEmployeeHistoryBtn')?.addEventListener('click', () => {
         exportComprehensiveExcel();

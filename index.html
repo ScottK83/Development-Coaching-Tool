@@ -47,73 +47,62 @@
                         <button type="button" id="quickAccessLoadBtn" class="btn-secondary" style="background: #28a745;">✅ Load Employee</button>
                     </div>
 
-                    <!-- Divider -->
-                    <div id="dividerContainer" style="display: none; margin: 20px 0; text-align: center; color: #999;">
-                        <span style="background: #e3f2fd; padding: 0 10px;">OR</span>
+                    <!-- Main Upload Choice Buttons -->
+                    <div id="uploadChoiceButtons" style="margin-bottom: 20px;">
+                        <h3>📤 Upload New Data</h3>
+                        <p style="color: #666; font-size: 0.95em; margin-bottom: 15px;">Choose your preferred method to upload weekly performance data:</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <button type="button" id="showPasteBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 20px; font-size: 1.1em; display: flex; flex-direction: column; align-items: center; gap: 8px; border: 3px solid #28a745;">
+                                <span style="font-size: 2em;">⚡</span>
+                                <span style="font-weight: bold;">Quick Paste from PowerBI</span>
+                                <span style="font-size: 0.85em; opacity: 0.9;">(Recommended - Fastest)</span>
+                            </button>
+                            <button type="button" id="showExcelBtn" class="btn-secondary" style="background: #1976D2; color: white; padding: 20px; font-size: 1.1em; display: flex; flex-direction: column; align-items: center; gap: 8px; border: 3px solid #1976D2;">
+                                <span style="font-size: 2em;">📂</span>
+                                <span style="font-weight: bold;">Upload Excel File</span>
+                                <span style="font-size: 0.85em; opacity: 0.9;">(For backups or multi-week files)</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- File Upload -->
-                    <h3>📤 Upload Excel File</h3>
-                    <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Upload an Excel file with multiple sheets (will auto-extract dates from sheet names).</p>
-                    <div class="form-group">
-                        <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
+                    <!-- Quick Paste from PowerBI (hidden initially) -->
+                    <div id="pasteDataContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
+                        <h3 style="color: #28a745; margin-top: 0;">⚡ Quick Paste from PowerBI</h3>
+                        <button type="button" id="cancelPasteBtn" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">✕ Cancel</button>
+                        
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 10px; clear: both;"><strong>Steps:</strong> Copy data from PowerBI → Paste below → Enter date range → Click Load</p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Paste PowerBI Data:</label>
+                            <textarea id="pasteDataTextarea" placeholder="Copy from PowerBI (Ctrl+C) and paste here (Ctrl+V)...&#10;&#10;Should include headers like: Name, Adherence%, RepSat%, FCR%, etc." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Start Date (Monday):</label>
+                                <input type="date" id="pasteStartDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label for="pasteEndDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">End Date (Saturday):</label>
+                                <input type="date" id="pasteEndDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
+                            </div>
+                            <div style="flex: 0 0 auto;">
+                                <button type="button" id="loadPastedDataBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 8px 20px; white-space: nowrap; font-weight: bold;">📊 Load Data</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+
+                    <!-- Excel File Upload (hidden initially) -->
+                    <div id="excelUploadContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #1976D2;">
+                        <h3 style="color: #1976D2; margin-top: 0;">📂 Upload Excel File</h3>
+                        <button type="button" id="cancelExcelBtn" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">✕ Cancel</button>
+                        
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 10px; clear: both;">Upload an Excel file with multiple sheets. Dates will be auto-extracted from sheet names (e.g., "12.27" → Week ending Dec 27).</p>
+                        
+                        <div class="form-group">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
+                        </div>
                         <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (auto-extract dates)</button>
-                    </div>
-                    
-                    <!-- OR Divider -->
-                    <div style="margin: 25px 0; text-align: center;">
-                        <div style="display: inline-block; background: #e3f2fd; padding: 8px 20px; border-radius: 20px; border: 2px solid #2196F3;">
-                            <span style="color: #1976D2; font-weight: bold; font-size: 1.1em;">OR (Recommended)</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Paste from PowerBI -->
-                    <h3>⚡ Quick Paste from PowerBI</h3>
-                    <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;"><strong>Faster method:</strong> Copy data directly from PowerBI, paste below, select date range, and click Load.</p>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Paste PowerBI Data:</label>
-                        <textarea id="pasteDataTextarea" placeholder="Copy from PowerBI (Ctrl+C) and paste here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Start Date (Monday):</label>
-                            <input type="date" id="pasteStartDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="pasteEndDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">End Date (Saturday):</label>
-                            <input type="date" id="pasteEndDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                        </div>
-                        <div style="flex: 0 0 auto;">
-                            <button type="button" id="loadPastedDataBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 8px 20px; white-space: nowrap;">📊 Load Data</button>
-                        </div>
-                    </div>
-                    <div id="genericSheetWarning" style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                        <p style="margin: 0; color: #856404;"><strong>⚠️ Note:</strong> Some sheets have generic names (like "Sheet1"). Please enter date ranges below for data tracking.</p>
-                    </div>
-                    <div id="dateRangeInputContainer" style="display: none; margin-top: 10px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">📅 Date Range for this Data:</label>
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                            <div style="flex: 1;">
-                                <label for="startDate" style="font-size: 0.9em; color: #666;">Start Date:</label>
-                                <input type="date" id="startDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;" required>
-                            </div>
-                            <div style="flex: 1;">
-                                <label for="endDate" style="font-size: 0.9em; color: #666;">End Date:</label>
-                                <input type="date" id="endDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;" required>
-                            </div>
-                        </div>
-                        <div id="pastDateRangesContainer" style="display: none; margin: 8px 0 12px;">
-                            <label for="pastDateRanges" style="font-size: 0.9em; color: #666; display: block; margin-bottom: 6px;">📁 Past Date Ranges for Selected Employee:</label>
-                            <select id="pastDateRanges" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Select a past date range --</option>
-                            </select>
-                        </div>
-                        <button type="button" id="loadDataBtn" class="btn-secondary" style="background: #ccc; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load Data</button>
-                        <p id="dateValidationMsg" style="color: #dc3545; font-size: 0.9em; margin-top: 8px;">⚠️ Please select a file and enter both Start and End dates</p>
                     </div>
                     
                     <!-- Time Period & Employee Selection (shown after data upload) -->
