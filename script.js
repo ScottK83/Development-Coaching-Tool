@@ -2621,13 +2621,15 @@ function initApp() {
                 // Extract first name (handle "Last, First" format)
                 let firstName;
                 if (fullName.includes(',')) {
-                    // Format: "Last, First" - take the part after comma
+                    // Format: "Last, First" - take the part after comma, then get FIRST WORD only
                     const parts = fullName.split(',');
-                    firstName = parts[1].trim();
+                    const afterComma = parts[1].trim();
+                    // Extract just the first word (in case there's extra text like "(Blank)" or numbers)
+                    firstName = afterComma.split(/\s+/)[0];
                 } else if (fullName.includes(' ')) {
-                    // Format: "First Last" or "Last First" - take LAST word assuming it's first name
+                    // Format: "First Last" or "Last First" - take FIRST word
                     const parts = fullName.trim().split(/\s+/);
-                    firstName = parts[parts.length - 1]; // Take last word
+                    firstName = parts[0]; // Take first word
                 } else {
                     // Single name - use as-is
                     firstName = fullName.trim();
