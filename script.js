@@ -300,6 +300,29 @@ function exportEmployeeHistoryToExcel() {
         ];
         XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed History');
 
+        // Tab 4: Upload History (auditing)
+        try {
+            const uploads = loadUploadHistory();
+            const uploadRows = [['Time Period', 'Start Date', 'End Date', 'Employee Count', 'Timestamp', 'Source Sheet']];
+            (uploads || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(u => {
+                uploadRows.push([
+                    u.timePeriod || '',
+                    u.startDate || '',
+                    u.endDate || '',
+                    String(u.employeeCount ?? ''),
+                    u.timestamp ? new Date(u.timestamp).toLocaleString() : '',
+                    u.sourceSheet || ''
+                ]);
+            });
+            const uploadsWs = XLSX.utils.aoa_to_sheet(uploadRows);
+            uploadsWs['!cols'] = [
+                { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 22 }, { wch: 20 }
+            ];
+            XLSX.utils.book_append_sheet(wb, uploadsWs, 'Upload History');
+        } catch (auditErr) {
+            console.warn('Could not build Upload History tab:', auditErr);
+        }
+
         // Generate and download
         const timestamp = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `employee-history-${timestamp}.xlsx`);
@@ -1938,7 +1961,8 @@ function initApp() {
                         endDate: entry.end || '',
                         employeeCount: entry.employees.length,
                         timestamp: new Date().toISOString(),
-                        employeeMetrics: entry.employees
+                        employeeMetrics: entry.employees,
+                        sourceSheet: entry.name || ''
                     };
                     uploadHistory.push(uploadRecord);
                 });
@@ -2309,7 +2333,8 @@ function initApp() {
                         endDate: entry.end || '',
                         employeeCount: entry.employees.length,
                         timestamp: new Date().toISOString(),
-                        employeeMetrics: entry.employees
+                        employeeMetrics: entry.employees,
+                        sourceSheet: entry.name || ''
                     };
                     uploadHistory.push(uploadRecord);
                 });
