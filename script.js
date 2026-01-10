@@ -3504,7 +3504,7 @@ function initApp() {
     });
 
     // Form submission - Open Copilot with full email generation prompt
-    document.getElementById('coachingForm')?.addEventListener('submit', async (e) => {
+    document.getElementById('coachingFormInternal')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const employeeName = document.getElementById('employeeName').value;
