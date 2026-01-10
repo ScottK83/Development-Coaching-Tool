@@ -1,0 +1,13 @@
+{
+  "name": "development-coaching-tool",
+  "version": "1.0.0",
+  "description": "Personalized coaching with knowledge base guidance",
+  "main": "script.js",
+  "scripts": {
+    "build": "terser script.js -o script.min.js --compress --mangle"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "terser": "^5.19.2"
+  }
+}

@@ -1443,6 +1443,12 @@ function initApp() {
         showOnlySection('coachingForm');
     });
 
+    // Back to Form button
+    document.getElementById('backToFormBtn')?.addEventListener('click', () => {
+        showOnlySection('coachingForm');
+        document.getElementById('coachingForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
     // Metric dropdown change
     document.getElementById('metricSelect')?.addEventListener('change', (e) => {
         showMetricTips(e.target.value);
