@@ -2573,10 +2573,6 @@ function initApp() {
             
             // Parse header row
             const headers = lines[0].split(separator).map(h => h.trim());
-            console.log('==== HEADER DETECTION ====');
-            console.log('First line (should be headers):', lines[0]);
-            console.log('Detected headers:', headers);
-            console.log('Separator used:', separator === '\t' ? 'TAB' : (separator instanceof RegExp ? 'MULTIPLE SPACES' : 'COMMA'));
             
             // Check if first line is actually data (no header row)
             const firstLineCells = lines[0].split(separator).map(c => c.trim());
@@ -2590,8 +2586,6 @@ function initApp() {
             
             if (looksLikeData || headers.length < 3 || headers.join('').length < 20) {
                 // No header row detected - use default PowerBI column order
-                console.log('⚠️ No headers detected - using default column positions');
-                console.log('Sample first row:', firstLineCells.slice(0, 10));
                 
                 // Default PowerBI export order (based on actual headers)
                 // Headers: Name, TotalCallsAnswered, Transfers%, AHT, Talk, Hold, ACW, Adherence%, 
