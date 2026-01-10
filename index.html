@@ -91,8 +91,8 @@
 
                     <!-- Data Backup / Restore -->
                     <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" id="exportDataBtn" class="btn-secondary">💾 Backup Data (JSON)</button>
-                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
+                        <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
+                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="display: none;">📊 Backup Data (Excel)</button>
                         <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
                         <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                     </div>
@@ -193,7 +193,7 @@
                 </section>
 
                 <!-- Custom Notes -->
-                <section class="form-section" id="customNotesSection">
+                <section class="form-section" id="customNotesSection" style="display: none;">
                     <h2>Custom Notes (Optional)</h2>
                     <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">Add any specific feedback or context you want included. AI will reword it naturally.</p>
                     <textarea id="customNotes" placeholder="Example: They need to check their schedule more carefully before requesting time off..." style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; font-size: 0.95em;"></textarea>
@@ -201,7 +201,7 @@
 
                 <!-- Buttons -->
                 <section class="form-section">
-                    <button type="submit" class="btn-ai">🤖 Generate Email with Copilot AI</button>
+                    <button type="submit" class="btn-ai" style="display: none;">🤖 Generate Email with Copilot AI</button>
                     <button type="reset" class="btn-secondary">Clear Form</button>
                 </section>
             </form>

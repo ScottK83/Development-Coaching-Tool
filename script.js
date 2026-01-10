@@ -41,12 +41,6 @@ function showOnlySection(sectionId) {
         const el = document.getElementById(section.id);
         if (el) el.style.display = (section.id === sectionId) ? 'block' : 'none';
     });
-    
-    // Handle conditional sections
-    const customNotesSection = document.getElementById('customNotesSection');
-    if (customNotesSection) {
-        customNotesSection.style.display = (sectionId === 'coachingForm') ? 'block' : 'none';
-    }
 }
 
 function exportToPDF() {
@@ -1773,7 +1767,9 @@ function initApp() {
     });
 
     // Backup/restore all app data
-    document.getElementById('exportDataBtn')?.addEventListener('click', exportAppData);
+    document.getElementById('exportDataBtn')?.addEventListener('click', () => {
+        exportComprehensiveExcel();
+    });
     document.getElementById('exportDataExcelBtn')?.addEventListener('click', () => {
         exportComprehensiveExcel();
     });
@@ -1947,13 +1943,41 @@ function initApp() {
                 // Set the latest sheet dataset in UI
                 const last = employeesBySheet[employeesBySheet.length - 1];
                 uploadedEmployeeData = last?.employees || [];
+                
+                // Auto-populate start/end dates from the last sheet loaded
+                if (last?.start && last?.end) {
+                    const startDateInput = document.getElementById('startDate');
+                    const endDateInput = document.getElementById('endDate');
+                    if (startDateInput) startDateInput.value = last.start;
+                    if (endDateInput) endDateInput.value = last.end;
+                }
+                
                 const searchValue = document.getElementById('employeeSearch')?.value || '';
                 renderEmployeeDropdown(searchValue);
                 document.getElementById('employeeSelectContainer').style.display = 'block';
 
-                bulkSaveUploadedEmployees();
-
+                // Bulk save all employees from all sheets with their respective date ranges
                 employeesBySheet.forEach(entry => {
+                    if (!entry.start || !entry.end) {
+                        console.warn(`Skipping sheet "${entry.name}" - no valid date range extracted`);
+                        return;
+                    }
+                    
+                    const dateRangeLabel = `${entry.start} to ${entry.end}`;
+                    
+                    entry.employees.forEach(emp => {
+                        const name = emp.name || '';
+                        if (!name) return;
+
+                        // Check for duplicate sessions with same date range
+                        const existingSessions = getEmployeeHistory(name);
+                        const exists = (existingSessions || []).some(s => (s.dateRange || '') === dateRangeLabel);
+                        
+                        if (!exists) {
+                            saveToHistory(name, [], emp, dateRangeLabel, false);
+                        }
+                    });
+                    
                     const uploadRecord = {
                         id: Date.now() + Math.floor(Math.random() * 1000),
                         timePeriod: entry.label || 'Custom Upload',
@@ -1966,11 +1990,13 @@ function initApp() {
                     };
                     uploadHistory.push(uploadRecord);
                 });
+                
                 saveUploadHistory(uploadHistory);
 
                 const sheetCount = employeesBySheet.length;
                 const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
-                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📊 Data saved to Employee History.\n\nWeeks recorded using tab names (Mon–Sat).`);
+                const dateRanges = employeesBySheet.map(s => s.label).join(', ');
+                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📆 Date ranges: ${dateRanges}\n\n📊 Data saved to Employee History.\n\nDates automatically extracted from sheet names.`);
             } catch (error) {
                 console.error('Error parsing Excel:', error);
                 alert('Error reading Excel file. Please make sure it is formatted correctly.');
