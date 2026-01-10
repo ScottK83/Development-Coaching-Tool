@@ -2959,53 +2959,6 @@ function initApp() {
     
     // ========== END NEW PERIOD SELECTION EVENT LISTENERS ==========
 
-    // Consolidated metrics button
-    document.getElementById('consolidatedMetricsBtn')?.addEventListener('click', () => {
-        const employeeName = document.getElementById('employeeName')?.value || '';
-        if (!employeeName) {
-            alert('Please select or enter an employee first.');
-            return;
-        }
-
-        const surveyTotalInput = parseInt(document.getElementById('surveyTotal').value, 10) || 0;
-        const hasSurveys = surveyTotalInput > 0;
-        // Update UI to reflect survey availability
-        const surveyInputEl = document.getElementById('surveyTotal');
-        if (surveyInputEl) {
-            surveyInputEl.value = hasSurveys ? surveyTotalInput : 0;
-        }
-        const surveyStatusEl = document.getElementById('surveyStatusMsg');
-        if (surveyStatusEl) {
-            surveyStatusEl.textContent = hasSurveys ? '' : 'No surveys in this date range; survey-based metrics are omitted.';
-        }
-
-        const metrics = {
-            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: hasSurveys && document.getElementById('cxRepOverall').value.trim() ? parseFloat(document.getElementById('cxRepOverall').value) : '',
-            fcr: hasSurveys && document.getElementById('fcr').value.trim() ? parseFloat(document.getElementById('fcr').value) : '',
-            overallExperience: hasSurveys && document.getElementById('overallExperience').value.trim() ? parseFloat(document.getElementById('overallExperience').value) : '',
-            transfers: parseFloat(document.getElementById('transfers').value) || 0,
-            overallSentiment: parseFloat(document.getElementById('overallSentiment').value) || 0,
-            positiveWord: parseFloat(document.getElementById('positiveWord').value) || 0,
-            negativeWord: parseFloat(document.getElementById('negativeWord').value) || 0,
-            managingEmotions: parseFloat(document.getElementById('managingEmotions').value) || 0,
-            aht: parseFloat(document.getElementById('aht').value) || 0,
-            acw: parseFloat(document.getElementById('acw').value) || 0,
-            holdTime: parseFloat(document.getElementById('holdTime').value) || 0,
-            reliability: parseFloat(document.getElementById('reliability').value) || 0
-        };
-
-        const consolidatedEl = document.getElementById('consolidatedMetrics');
-        const statusEl = document.getElementById('consolidatedMetricsStatus');
-        if (!consolidatedEl || !statusEl) return;
-
-        statusEl.textContent = 'Calculating...';
-        const html = buildConsolidatedMetrics(employeeName, metrics);
-        consolidatedEl.innerHTML = html;
-        consolidatedEl.style.display = 'block';
-        statusEl.textContent = 'Showing current metrics vs targets (with previous/YTD deltas when available).';
-    });
-
     // Composite score UI removed per request
 
     // Initialize button state on page load with error handling
