@@ -2634,7 +2634,8 @@ function initApp() {
             // Parse data rows
             const employees = [];
             for (let i = dataStartLine; i < lines.length; i++) {
-                let cells = lines[i].split(separator).map(c => c.trim()).filter(c => c);
+                let cells = lines[i].split(separator).map(c => c.trim());
+                // DON'T filter out empty cells - they represent missing columns!
                 
                 // Handle rows with mismatched column counts - try to intelligently parse
                 // If row has fewer columns than headers, it might have single-space separation issues
