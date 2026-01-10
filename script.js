@@ -2572,7 +2572,7 @@ function initApp() {
             }
             
             // Parse header row first to establish column structure
-            let headers = lines[0].split(separator).map(h => h.trim()).filter(h => h);
+            let headers = lines[0].split(separator).map(h => h.trim()); // FIXED: preserve empty columns
             
             // Fix merged headers (e.g., "AvoidNegativeWordScore% PositiveWordScore%" split into separate cells)
             const expandedHeaders = [];
