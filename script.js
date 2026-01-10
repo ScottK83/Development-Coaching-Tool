@@ -1700,61 +1700,172 @@ function initApp() {
         const file = e.target.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const importedData = JSON.parse(event.target.result);
-                
-                if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
-                    alert('❌ Invalid tips file format. Expected JSON with customTips property.');
-                    return;
-                }
-                
-                // Merge imported tips with existing
-                const confirmMerge = confirm('Do you want to MERGE these tips with your existing tips?\n\nClick OK to merge (keeps your current tips + adds new ones)\nClick Cancel to REPLACE all your tips with imported ones');
-                
-                if (confirmMerge) {
-                    // Merge: combine both
-                    Object.keys(importedData.customTips).forEach(metricKey => {
-                        if (!userTips[metricKey]) {
-                            userTips[metricKey] = [];
+        const fileName = file.name.toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        
+        if (isExcel) {
+            // Handle Excel file
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    if (typeof XLSX === 'undefined') {
+                        alert('❌ SheetJS library not available. Cannot import Excel files.');
+                        return;
+                    }
+                    
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Look for "Coaching Tips" sheet
+                    const sheetName = workbook.SheetNames.find(name => 
+                        name.toLowerCase().includes('tip') || name.toLowerCase().includes('coaching')
+                    ) || workbook.SheetNames[0];
+                    
+                    if (!sheetName) {
+                        alert('❌ No worksheet found in Excel file.');
+                        return;
+                    }
+                    
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    // Parse tips from Excel (expects columns: Metric, Tip)
+                    const importedTips = {};
+                    let headerRow = 0;
+                    
+                    // Find header row
+                    for (let i = 0; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (row && row[0] && typeof row[0] === 'string' && 
+                            (row[0].toLowerCase().includes('metric') || row[0].toLowerCase() === 'metric')) {
+                            headerRow = i;
+                            break;
                         }
-                        const tipsToAdd = importedData.customTips[metricKey];
-                        if (Array.isArray(tipsToAdd)) {
-                            tipsToAdd.forEach(tip => {
-                                if (tip && !userTips[metricKey].includes(tip)) {
+                    }
+                    
+                    // Parse data rows
+                    for (let i = headerRow + 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row[0] || !row[1]) continue;
+                        
+                        const metricName = String(row[0]).trim();
+                        const tip = String(row[1]).trim();
+                        
+                        if (tip === '(No tips available)') continue;
+                        
+                        // Find matching metric key
+                        const metricKey = Object.keys(AREA_NAMES).find(key => 
+                            AREA_NAMES[key].toLowerCase() === metricName.toLowerCase()
+                        );
+                        
+                        if (metricKey) {
+                            if (!importedTips[metricKey]) {
+                                importedTips[metricKey] = [];
+                            }
+                            if (!importedTips[metricKey].includes(tip)) {
+                                importedTips[metricKey].push(tip);
+                            }
+                        }
+                    }
+                    
+                    if (Object.keys(importedTips).length === 0) {
+                        alert('❌ No valid tips found in Excel file. Make sure the sheet has "Metric" and "Tip" columns.');
+                        return;
+                    }
+                    
+                    // Merge or replace
+                    const confirmMerge = confirm(`Found ${Object.keys(importedTips).length} metrics with tips.\n\nDo you want to MERGE with your existing tips?\n\nClick OK to merge (keeps current + adds new)\nClick Cancel to REPLACE all your tips`);
+                    
+                    if (confirmMerge) {
+                        // Merge
+                        Object.keys(importedTips).forEach(metricKey => {
+                            if (!userTips[metricKey]) {
+                                userTips[metricKey] = [];
+                            }
+                            importedTips[metricKey].forEach(tip => {
+                                if (!userTips[metricKey].includes(tip)) {
                                     userTips[metricKey].push(tip);
                                 }
                             });
-                        }
-                    });
-                } else {
-                    // Replace: overwrite completely
-                    userTips = {};
-                    Object.keys(importedData.customTips).forEach(metricKey => {
-                        const tips = importedData.customTips[metricKey];
-                        if (Array.isArray(tips)) {
-                            userTips[metricKey] = tips.filter(tip => tip && typeof tip === 'string');
-                        }
-                    });
+                        });
+                    } else {
+                        // Replace
+                        userTips = importedTips;
+                    }
+                    
+                    saveUserTips(userTips);
+                    mergeTips();
+                    
+                    const currentMetric = document.getElementById('metricSelect').value;
+                    if (currentMetric) {
+                        showMetricTips(currentMetric);
+                    }
+                    
+                    alert('✅ Tips imported successfully from Excel!');
+                } catch (error) {
+                    alert('❌ Error reading Excel file: ' + error.message);
+                    console.error(error);
                 }
-                
-                saveUserTips(userTips);
-                mergeTips();
-                
-                // Refresh current view if a metric is selected
-                const currentMetric = document.getElementById('metricSelect').value;
-                if (currentMetric) {
-                    showMetricTips(currentMetric);
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            // Handle JSON file
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    
+                    if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
+                        alert('❌ Invalid tips file format. Expected JSON with customTips property.');
+                        return;
+                    }
+                    
+                    // Merge imported tips with existing
+                    const confirmMerge = confirm('Do you want to MERGE these tips with your existing tips?\n\nClick OK to merge (keeps your current tips + adds new ones)\nClick Cancel to REPLACE all your tips with imported ones');
+                    
+                    if (confirmMerge) {
+                        // Merge: combine both
+                        Object.keys(importedData.customTips).forEach(metricKey => {
+                            if (!userTips[metricKey]) {
+                                userTips[metricKey] = [];
+                            }
+                            const tipsToAdd = importedData.customTips[metricKey];
+                            if (Array.isArray(tipsToAdd)) {
+                                tipsToAdd.forEach(tip => {
+                                    if (tip && !userTips[metricKey].includes(tip)) {
+                                        userTips[metricKey].push(tip);
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        // Replace: overwrite completely
+                        userTips = {};
+                        Object.keys(importedData.customTips).forEach(metricKey => {
+                            const tips = importedData.customTips[metricKey];
+                            if (Array.isArray(tips)) {
+                                userTips[metricKey] = tips.filter(tip => tip && typeof tip === 'string');
+                            }
+                        });
+                    }
+                    
+                    saveUserTips(userTips);
+                    mergeTips();
+                    
+                    // Refresh current view if a metric is selected
+                    const currentMetric = document.getElementById('metricSelect').value;
+                    if (currentMetric) {
+                        showMetricTips(currentMetric);
+                    }
+                    
+                    alert('✅ Tips imported successfully!');
+                } catch (error) {
+                    alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
+                    console.error(error);
                 }
-                
-                alert('✅ Tips imported successfully!');
-            } catch (error) {
-                alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
-                console.error(error);
-            }
-        };
-        reader.readAsText(file);
+            };
+            reader.readAsText(file);
+        }
         
         // Reset input so same file can be selected again
         e.target.value = '';
