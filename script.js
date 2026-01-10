@@ -2588,74 +2588,46 @@ function initApp() {
             }
             headers = expandedHeaders;
             
-            // Check if first line is actually data (no header row)
-            const firstLineCells = lines[0].split(separator).map(c => c.trim());
-            const looksLikeData = firstLineCells.some(cell => {
-                // Check if any cell looks like numeric data or name format
-                return /^\d+\.?\d*%?$/.test(cell) || /^[A-Z][a-z]+,\s*[A-Z]/.test(cell);
-            });
-            
+            // Always use header-based parsing (PowerBI exports always include headers)
             let colIndices;
             let dataStartLine = 1;
             
-            if (looksLikeData || headers.length < 3 || headers.join('').length < 20) {
-                // No header row detected - use default PowerBI column order
-                
-                // Default PowerBI export order (based on actual headers)
-                // Headers: Name, TotalCallsAnswered, Transfers%, AHT, Talk, Hold, ACW, Adherence%, 
-                //          ManageEmotions%, AvoidNegative%, PositiveWord%, OverallSentiment%,
-                //          FCR%, OverallFCRTotal, RepSat%, OverallRepTotal, OverallExperience%, OE Survey Total
-                colIndices = {
-                    name: 0,          // Name (Last, First)
-                    adherence: 7,     // Adherence%
-                    transfers: 2,     // Transfers%
-                    aht: 3,           // AHT
-                    hold: 5,          // Hold
-                    acw: 6,           // ACW
-                    emotions: 8,      // ManageEmotionsScore%
-                    negativeWord: 9,  // AvoidNegativeWordScore%
-                    positiveWord: 10, // PositiveWordScore%
-                    sentiment: 11,    // OverallSentimentScore%
-                    fcr: 12,          // FCR%
-                    repSat: 14,       // RepSat%
-                    overallExp: 16,   // OverallExperience%
-                    surveyTotal: 17,  // OE Survey Total
-                    reliability: -1   // Not in this export
-                };
-                dataStartLine = 0; // Start parsing from line 0 (no header)
-            } else {
-                // Find column indices (case-insensitive partial matching)
-                const findColumnIndex = (possibleNames) => {
-                    for (let name of possibleNames) {
-                        const idx = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-                        if (idx !== -1) return idx;
-                    }
-                    return -1;
-                };
-                
-                colIndices = {
-                    name: findColumnIndex(['Name (Last, First)', 'Name', 'Employee', 'Agent']),
-                    adherence: findColumnIndex(['Adherence%', 'Adherence', 'Schedule Adherence']),
-                    repSat: findColumnIndex(['RepSat%', 'RepSat', 'Rep Sat', 'CX Rep Overall', 'CX Rep']),
-                    fcr: findColumnIndex(['FCR%', 'FCR', 'First Call Resolution']),
-                    overallExp: findColumnIndex(['OverallExperience%', 'Overall Experience%', 'OverallExperience', 'Overall Experience', 'OE%', 'OE']),
-                    transfers: findColumnIndex(['TransferS%', 'Transfers%', 'Transfers', 'TransferS']),
-                    aht: findColumnIndex(['AHT', 'Average Handle Time']),
-                    acw: findColumnIndex(['ACW', 'After Call Work']),
-                    hold: findColumnIndex(['Hold', 'Hold Time']),
-                    reliability: findColumnIndex(['Reliability Hrs', 'Reliability Hours', 'Reliability']),
-                    sentiment: findColumnIndex(['OverallSentimentScore%', 'OverallSentiment%', 'Overall Sentiment', 'Sentiment']),
-                    positiveWord: findColumnIndex(['PositiveWordScore%', 'PositiveWord%', 'Positive Word', 'Positive']),
-                    negativeWord: findColumnIndex(['AvoidNegativeWordScore%', 'NegativeWord%', 'Avoid Negative', 'Negative']),
-                    emotions: findColumnIndex(['ManageEmotionsScore%', 'ManageEmotions%', 'Managing Emotions', 'Emotions']),
-                    surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
-                };
-                
-                if (colIndices.name === -1) {
-                    console.error('Available headers:', headers);
-                    alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
-                    return;
+            // Find column indices (case-insensitive partial matching)
+            const findColumnIndex = (possibleNames) => {
+                for (let name of possibleNames) {
+                    const idx = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+                    if (idx !== -1) return idx;
                 }
+                return -1;
+            };
+            
+            colIndices = {
+                name: findColumnIndex(['Name (Last, First)', 'Name', 'Employee', 'Agent']),
+                adherence: findColumnIndex(['Adherence%', 'Adherence', 'Schedule Adherence']),
+                repSat: findColumnIndex(['RepSat%', 'RepSat', 'Rep Sat', 'CX Rep Overall', 'CX Rep']),
+                fcr: findColumnIndex(['FCR%', 'FCR', 'First Call Resolution']),
+                overallExp: findColumnIndex(['OverallExperience%', 'Overall Experience%', 'OverallExperience', 'Overall Experience', 'OE%', 'OE']),
+                transfers: findColumnIndex(['TransferS%', 'Transfers%', 'Transfers', 'TransferS']),
+                aht: findColumnIndex(['AHT', 'Average Handle Time']),
+                acw: findColumnIndex(['ACW', 'After Call Work']),
+                hold: findColumnIndex(['Hold', 'Hold Time']),
+                reliability: findColumnIndex(['Reliability Hrs', 'Reliability Hours', 'Reliability']),
+                sentiment: findColumnIndex(['OverallSentimentScore%', 'OverallSentiment%', 'Overall Sentiment', 'Sentiment']),
+                positiveWord: findColumnIndex(['PositiveWordScore%', 'PositiveWord%', 'Positive Word', 'Positive']),
+                negativeWord: findColumnIndex(['AvoidNegativeWordScore%', 'NegativeWord%', 'Avoid Negative', 'Negative']),
+                emotions: findColumnIndex(['ManageEmotionsScore%', 'ManageEmotions%', 'Managing Emotions', 'Emotions']),
+                surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
+            };
+            
+            // Debug: Log header info
+            console.log('=== PASTE DATA DEBUG ===');
+            console.log('Headers detected:', headers);
+            console.log('Column indices:', colIndices);
+            
+            if (colIndices.name === -1) {
+                console.error('Available headers:', headers);
+                alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
+                return;
             }
             
             // Parse data rows
@@ -2683,6 +2655,16 @@ function initApp() {
                 } else {
                     // Single name - use as-is
                     firstName = fullName.trim();
+                }
+                
+                // Debug logging for specific employees
+                if (['Precious', 'Scoticia', 'Trevor', 'Trisha'].includes(firstName)) {
+                    console.log(`=== DEBUG ${firstName} ===`);
+                    console.log('Full row:', cells);
+                    console.log('Transfers column index:', colIndices.transfers);
+                    console.log('Transfers raw value:', cells[colIndices.transfers]);
+                    console.log('AHT column index:', colIndices.aht);
+                    console.log('AHT raw value:', cells[colIndices.aht]);
                 }
                 
                 const employeeData = {
