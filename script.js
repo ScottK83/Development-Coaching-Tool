@@ -1979,19 +1979,7 @@ function initApp() {
         }
     })();
 
-    // Initialize Quick Access if history exists
-    function initializeQuickAccess() {
-        // Quick Access removed - no longer needed with new tab structure
-        return;
-    }
-    
-    // Update employees for selected quick access date range
-    window.updateQuickAccessEmployees = function() {
-        // Quick Access removed - no longer needed
-        return;
-    };
-    
-    // Load selected employee from quick access
+    // Load selected employee from quick access (OBSOLETE - keeping handler for backwards compatibility)
     document.getElementById('quickAccessLoadBtn')?.addEventListener('click', () => {
         const selectedRange = document.getElementById('quickDateRange')?.value || '';
         const selectedEmployee = document.getElementById('quickEmployee')?.value || '';
@@ -2988,15 +2976,6 @@ function initApp() {
             console.warn('Error validating date range during init:', e);
         }
     }, 150);
-
-    // Initialize quick access on page load (staggered to ensure DOM stability)
-    setTimeout(() => {
-        try {
-            initializeQuickAccess();
-        } catch (e) {
-            console.warn('Error initializing quick access:', e);
-        }
-    }, 200);
 
     // Load and parse Excel file (supports auto-detecting week ranges from sheet tabs)
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
