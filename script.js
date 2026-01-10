@@ -2553,15 +2553,23 @@ function initApp() {
                 return;
             }
             
-            // Detect separator (tab or comma)
-            const separator = lines[0].includes('\t') ? '\t' : ',';
+            // Detect separator (tab, multiple spaces, or comma)
+            let separator;
+            if (lines[0].includes('\t')) {
+                separator = '\t';
+            } else if (/\s{2,}/.test(lines[0])) {
+                // Multiple spaces (2 or more) - use regex split
+                separator = /\s{2,}/;
+            } else {
+                separator = ',';
+            }
             
             // Parse header row
             const headers = lines[0].split(separator).map(h => h.trim());
             console.log('==== HEADER DETECTION ====');
             console.log('First line (should be headers):', lines[0]);
             console.log('Detected headers:', headers);
-            console.log('Separator used:', separator === '\t' ? 'TAB' : 'COMMA');
+            console.log('Separator used:', separator === '\t' ? 'TAB' : (separator instanceof RegExp ? 'MULTIPLE SPACES' : 'COMMA'));
             
             // Find column indices (case-insensitive partial matching)
             const findColumnIndex = (possibleNames) => {
