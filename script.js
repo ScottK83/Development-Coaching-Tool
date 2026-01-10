@@ -44,6 +44,9 @@ function showOnlySection(sectionId) {
         if (el) el.style.display = (section.id === sectionId) ? 'block' : 'none';
     });
     
+    // Remember active section in localStorage
+    localStorage.setItem('activeSection', sectionId);
+    
     // Update tab button highlighting
     updateTabHighlight(sectionId);
 }
@@ -1933,6 +1936,10 @@ function getEmployeeDataForPeriod(employeeName) {
 // Initialize app robustly whether DOMContentLoaded has fired or not
 function initApp() {
     console.log('🚀 Coaching Tool Initialized');
+    
+    // Restore last active section (or default to upload page)
+    const lastActiveSection = localStorage.getItem('activeSection') || 'coachingForm';
+    showOnlySection(lastActiveSection);
     
     // Auto-load tips from server and user storage
     (async () => {
