@@ -3483,7 +3483,10 @@ function initApp() {
     });
 
     // Form submission - Open Copilot with full email generation prompt
-    document.getElementById('coachingFormInternal')?.addEventListener('submit', async (e) => {
+    const coachingForm = document.getElementById('coachingFormInternal');
+    console.log('Coaching form found:', coachingForm);
+    
+    coachingForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         console.log('🤖 Generate Email button clicked - form submitted');
 
