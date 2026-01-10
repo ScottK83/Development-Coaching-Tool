@@ -2560,15 +2560,16 @@ function initApp() {
                 return;
             }
             
-            // Detect separator (tab, multiple spaces, or comma)
-            let separator;
-            if (lines[0].includes('\t') || lines[1].includes('\t')) {
-                separator = '\t';
-            } else if (/\s{2,}/.test(lines[0])) {
-                // Multiple spaces (2 or more) - use regex split
-                separator = /\s{2,}/;
-            } else {
-                separator = ',';
+            // Detect separator (prefer TAB for PowerBI exports)
+            let separator = '\t'; // Force TAB as default for PowerBI
+            
+            // Only fall back to other separators if NO tabs found anywhere
+            if (!lines[0].includes('\t') && !lines[1]?.includes('\t')) {
+                if (/\s{2,}/.test(lines[0])) {
+                    separator = /\s{2,}/;
+                } else {
+                    separator = ',';
+                }
             }
             
             // Parse header row
