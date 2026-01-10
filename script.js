@@ -2593,26 +2593,26 @@ function initApp() {
                 console.log('⚠️ No headers detected - using default column positions');
                 console.log('Sample first row:', firstLineCells.slice(0, 10));
                 
-                // Default PowerBI export order (based on your screenshot)
-                // Columns: Adherence%, Name, Reliability, Transfers%, Calls, Talk Time, etc., RepSat%, OE%, Sentiment%, etc.
+                // Default PowerBI export order (based on actual headers)
+                // Headers: Name, TotalCallsAnswered, Transfers%, AHT, Talk, Hold, ACW, Adherence%, 
+                //          ManageEmotions%, AvoidNegative%, PositiveWord%, OverallSentiment%,
+                //          FCR%, OverallFCRTotal, RepSat%, OverallRepTotal, OverallExperience%, OE Survey Total
                 colIndices = {
-                    adherence: 0,     // First column: Adherence%
-                    name: 1,          // Second column: Name (Last, First)
-                    reliability: 2,   // Third column: Reliability Hours
-                    transfers: 3,     // Fourth column: Transfers%
-                    // Skip some call-related columns...
-                    repSat: 10,       // CX Rep Overall %
-                    overallExp: 11,   // Overall Experience %
-                    sentiment: 12,    // Overall Sentiment %
-                    positiveWord: 13, // Positive Word %
-                    negativeWord: 14, // Avoid Negative Word %
-                    emotions: 15,     // Managing Emotions %
-                    surveyTotal: 16,  // OE Survey Total
-                    fcr: 17,          // FCR %
-                    // AHT, ACW, Hold not in this export
-                    aht: -1,
-                    acw: -1,
-                    hold: -1
+                    name: 0,          // Name (Last, First)
+                    adherence: 7,     // Adherence%
+                    transfers: 2,     // Transfers%
+                    aht: 3,           // AHT
+                    hold: 5,          // Hold
+                    acw: 6,           // ACW
+                    emotions: 8,      // ManageEmotionsScore%
+                    negativeWord: 9,  // AvoidNegativeWordScore%
+                    positiveWord: 10, // PositiveWordScore%
+                    sentiment: 11,    // OverallSentimentScore%
+                    fcr: 12,          // FCR%
+                    repSat: 14,       // RepSat%
+                    overallExp: 16,   // OverallExperience%
+                    surveyTotal: 17,  // OE Survey Total
+                    reliability: -1   // Not in this export
                 };
                 dataStartLine = 0; // Start parsing from line 0 (no header)
             } else {
