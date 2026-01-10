@@ -2575,6 +2575,10 @@ function initApp() {
             // Parse header row
             const headers = lines[0].split(separator).map(h => h.trim());
             
+            // Debug: Show all headers with their indices
+            console.log('📋 ALL HEADERS WITH INDICES:');
+            headers.forEach((h, i) => console.log(`  [${i}]: "${h}"`));
+            
             // Check if first line is actually data (no header row)
             const firstLineCells = lines[0].split(separator).map(c => c.trim());
             const looksLikeData = firstLineCells.some(cell => {
