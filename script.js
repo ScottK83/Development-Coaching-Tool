@@ -2663,8 +2663,9 @@ function initApp() {
                         const fullName = nameParts.join(' ');
                         const remainingParts = allParts.slice(nameEndIndex);
                         
-                        // Now remainingParts should be in header order (starting from column 1)
-                        cells = [fullName, ...remainingParts];
+                        // Insert empty placeholder for TotalCallsAnswered column (index 1) which is missing
+                        // PowerBI format: Name, [TotalCallsAnswered - MISSING for these employees], TransfersS%, AHT...
+                        cells = [fullName, '', ...remainingParts];
                         
                         console.log(`Reconstructed row for ${fullName}:`, cells);
                     }
