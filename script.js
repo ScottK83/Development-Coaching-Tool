@@ -158,45 +158,204 @@ function autoExportTipsToExcel() {
             return;
         }
 
-        // Prepare data for Excel
-        const excelData = [];
+        // Export comprehensive workbook whenever tips are updated
+        exportComprehensiveExcel();
+    } catch (error) {
+        console.error('Error auto-exporting tips:', error);
+    }
+}
+
+// Export employee history to Excel with multiple sheets
+function exportEmployeeHistoryToExcel() {
+    try {
+        if (typeof XLSX === 'undefined') {
+            alert('SheetJS library not available. Cannot export to Excel.');
+            return;
+        }
+
+        const history = getAllHistory();
         
-        // Add header row
-        excelData.push(['Metric', 'Tip']);
+        if (Object.keys(history).length === 0) {
+            alert('No employee history to export.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: All Employees Summary
+        const summaryData = [['Employee Name', 'Total Sessions', 'Date Ranges Covered']];
         
-        // Add all tips organized by metric
+        Object.keys(history).sort().forEach(empName => {
+            const sessions = history[empName];
+            const dateRanges = [...new Set(sessions.map(s => s.dateRange).filter(d => d))].join(', ');
+            summaryData.push([empName, sessions.length, dateRanges || 'N/A']);
+        });
+
+        const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+        summaryWs['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+        // Sheet 2: Detailed History for Each Employee
+        const detailData = [['Employee', 'Date', 'Date Range', 'Metric', 'Value', 'Target', 'Status', 'Was Coached']];
+        
+        Object.keys(history).sort().forEach(empName => {
+            history[empName].forEach(session => {
+                const metrics = session.metrics || {};
+                
+                // Add each metric as a row
+                Object.keys(metrics).forEach(metricKey => {
+                    if (metricKey === 'reliability') return; // Skip reliability for now
+                    
+                    const value = metrics[metricKey];
+                    const target = TARGETS.driver[metricKey];
+                    let targetStr = '';
+                    let status = '';
+                    
+                    if (target) {
+                        if (target.min !== undefined) {
+                            targetStr = `≥ ${target.min}`;
+                            status = value >= target.min ? '✅ Met' : '❌ Missed';
+                        } else if (target.max !== undefined) {
+                            targetStr = `≤ ${target.max}`;
+                            status = value <= target.max ? '✅ Met' : '❌ Missed';
+                        }
+                    }
+                    
+                    detailData.push([
+                        empName,
+                        session.date || '',
+                        session.dateRange || '',
+                        AREA_NAMES[metricKey] || metricKey,
+                        value,
+                        targetStr,
+                        status,
+                        session.wasCoached ? 'Yes' : 'No'
+                    ]);
+                });
+            });
+        });
+
+        const detailWs = XLSX.utils.aoa_to_sheet(detailData);
+        detailWs['!cols'] = [
+            { wch: 25 },  // Employee
+            { wch: 12 },  // Date
+            { wch: 20 },  // Date Range
+            { wch: 30 },  // Metric
+            { wch: 10 },  // Value
+            { wch: 10 },  // Target
+            { wch: 12 },  // Status
+            { wch: 12 }   // Was Coached
+        ];
+        XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed History');
+
+        // Generate and download
+        const timestamp = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `employee-history-${timestamp}.xlsx`);
+        
+        showToast('📊 Employee history exported to Excel');
+    } catch (error) {
+        console.error('Error exporting employee history:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+// Export comprehensive workbook with all data in multiple tabs
+function exportComprehensiveExcel() {
+    try {
+        if (typeof XLSX === 'undefined') {
+            alert('SheetJS library not available. Cannot export to Excel.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        // Tab 1: Coaching Tips
+        const tipsData = [['Metric', 'Tip']];
         Object.keys(AREA_NAMES).forEach(metricKey => {
             const metricName = AREA_NAMES[metricKey];
             const tips = customTips[metricKey] || [];
             
             if (tips.length > 0) {
-                tips.forEach((tip, index) => {
-                    excelData.push([metricName, tip]);
+                tips.forEach(tip => {
+                    tipsData.push([metricName, tip]);
                 });
             } else {
-                excelData.push([metricName, '(No tips available)']);
+                tipsData.push([metricName, '(No tips available)']);
             }
         });
 
-        // Create workbook and worksheet
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        const tipsWs = XLSX.utils.aoa_to_sheet(tipsData);
+        tipsWs['!cols'] = [{ wch: 30 }, { wch: 100 }];
+        XLSX.utils.book_append_sheet(wb, tipsWs, 'Coaching Tips');
+
+        // Tab 2: Employee Summary
+        const history = getAllHistory();
+        const summaryData = [['Employee Name', 'Total Sessions', 'Date Ranges Covered']];
         
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 30 },  // Metric column
-            { wch: 100 }  // Tip column
+        Object.keys(history).sort().forEach(empName => {
+            const sessions = history[empName];
+            const dateRanges = [...new Set(sessions.map(s => s.dateRange).filter(d => d))].join(', ');
+            summaryData.push([empName, sessions.length, dateRanges || 'N/A']);
+        });
+
+        const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+        summaryWs['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, summaryWs, 'Employee Summary');
+
+        // Tab 3: Detailed History
+        const detailData = [['Employee', 'Date', 'Date Range', 'Metric', 'Value', 'Target', 'Status', 'Was Coached']];
+        
+        Object.keys(history).sort().forEach(empName => {
+            history[empName].forEach(session => {
+                const metrics = session.metrics || {};
+                
+                Object.keys(metrics).forEach(metricKey => {
+                    if (metricKey === 'reliability') return;
+                    
+                    const value = metrics[metricKey];
+                    const target = TARGETS.driver[metricKey];
+                    let targetStr = '';
+                    let status = '';
+                    
+                    if (target) {
+                        if (target.min !== undefined) {
+                            targetStr = `≥ ${target.min}`;
+                            status = value >= target.min ? '✅ Met' : '❌ Missed';
+                        } else if (target.max !== undefined) {
+                            targetStr = `≤ ${target.max}`;
+                            status = value <= target.max ? '✅ Met' : '❌ Missed';
+                        }
+                    }
+                    
+                    detailData.push([
+                        empName,
+                        session.date || '',
+                        session.dateRange || '',
+                        AREA_NAMES[metricKey] || metricKey,
+                        value,
+                        targetStr,
+                        status,
+                        session.wasCoached ? 'Yes' : 'No'
+                    ]);
+                });
+            });
+        });
+
+        const detailWs = XLSX.utils.aoa_to_sheet(detailData);
+        detailWs['!cols'] = [
+            { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 30 },
+            { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }
         ];
-        
-        XLSX.utils.book_append_sheet(wb, ws, 'Coaching Tips');
-        
-        // Generate Excel file and download
+        XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed History');
+
+        // Generate and download
         const timestamp = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `coaching-tips-${timestamp}.xlsx`);
+        XLSX.writeFile(wb, `coaching-tool-complete-${timestamp}.xlsx`);
         
-        showToast('📊 Tips exported to Excel');
+        showToast('📊 Complete data exported to Excel with multiple tabs!');
     } catch (error) {
-        console.error('Error auto-exporting tips:', error);
+        console.error('Error exporting comprehensive Excel:', error);
+        alert('Error exporting to Excel: ' + error.message);
     }
 }
 
@@ -1609,6 +1768,11 @@ function initApp() {
     // Close dashboard button
     document.getElementById('closeDashboard')?.addEventListener('click', () => {
         showOnlySection('coachingForm');
+    });
+
+    // Export employee history to Excel
+    document.getElementById('exportEmployeeHistoryBtn')?.addEventListener('click', () => {
+        exportComprehensiveExcel();
     });
 
     // Back to form button
