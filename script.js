@@ -2506,25 +2506,26 @@ function initApp() {
             };
             
             const colIndices = {
-                name: findColumnIndex(['Name', 'Employee', 'Agent']),
-                adherence: findColumnIndex(['Adherence']),
-                repSat: findColumnIndex(['RepSat', 'Rep Sat', 'CX Rep']),
-                fcr: findColumnIndex(['FCR']),
-                overallExp: findColumnIndex(['OverallExperience', 'Overall Experience', 'OE%']),
-                transfers: findColumnIndex(['Transfers', 'TransferS']),
-                aht: findColumnIndex(['AHT']),
-                acw: findColumnIndex(['ACW']),
-                hold: findColumnIndex(['Hold']),
-                reliability: findColumnIndex(['Reliability']),
-                sentiment: findColumnIndex(['OverallSentiment', 'Sentiment']),
-                positiveWord: findColumnIndex(['PositiveWord', 'Positive']),
-                negativeWord: findColumnIndex(['NegativeWord', 'Negative', 'AvoidNegative']),
-                emotions: findColumnIndex(['ManageEmotions', 'Emotions']),
-                surveyTotal: findColumnIndex(['Survey Total', 'OE Survey'])
+                name: findColumnIndex(['Name (Last, First)', 'Name', 'Employee', 'Agent']),
+                adherence: findColumnIndex(['Adherence%', 'Adherence', 'Schedule Adherence']),
+                repSat: findColumnIndex(['RepSat%', 'RepSat', 'Rep Sat', 'CX Rep Overall', 'CX Rep']),
+                fcr: findColumnIndex(['FCR%', 'FCR', 'First Call Resolution']),
+                overallExp: findColumnIndex(['OverallExperience%', 'Overall Experience%', 'OverallExperience', 'Overall Experience', 'OE%', 'OE']),
+                transfers: findColumnIndex(['TransferS%', 'Transfers%', 'Transfers', 'TransferS']),
+                aht: findColumnIndex(['AHT', 'Average Handle Time']),
+                acw: findColumnIndex(['ACW', 'After Call Work']),
+                hold: findColumnIndex(['Hold', 'Hold Time']),
+                reliability: findColumnIndex(['Reliability Hrs', 'Reliability Hours', 'Reliability']),
+                sentiment: findColumnIndex(['OverallSentimentScore%', 'OverallSentiment%', 'Overall Sentiment', 'Sentiment']),
+                positiveWord: findColumnIndex(['PositiveWordScore%', 'PositiveWord%', 'Positive Word', 'Positive']),
+                negativeWord: findColumnIndex(['AvoidNegativeWordScore%', 'NegativeWord%', 'Avoid Negative', 'Negative']),
+                emotions: findColumnIndex(['ManageEmotionsScore%', 'ManageEmotions%', 'Managing Emotions', 'Emotions']),
+                surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
             };
             
             if (colIndices.name === -1) {
-                alert('❌ Could not find Name/Employee column. Please ensure your data includes employee names.');
+                console.error('Available headers:', headers);
+                alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
                 return;
             }
             
@@ -2539,9 +2540,17 @@ function initApp() {
                 if (!fullName) continue;
                 
                 // Extract first name (handle "Last, First" format)
-                const firstName = fullName.includes(',') 
-                    ? fullName.split(',')[1].trim() 
-                    : fullName.split(' ')[0].trim();
+                let firstName;
+                if (fullName.includes(',')) {
+                    // Format: "Last, First" - take the part after comma
+                    firstName = fullName.split(',')[1].trim();
+                } else if (fullName.includes(' ')) {
+                    // Format: "First Last" - take first word
+                    firstName = fullName.split(' ')[0].trim();
+                } else {
+                    // Single name - use as-is
+                    firstName = fullName.trim();
+                }
                 
                 const employeeData = {
                     name: firstName,
