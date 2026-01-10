@@ -57,6 +57,9 @@
                     <div class="form-group">
                         <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
                     </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (use tab dates)</button>
+                    </div>
                     <div id="dateRangeInputContainer" style="display: none; margin-top: 10px;">
                         <label style="font-weight: bold; display: block; margin-bottom: 5px;">📅 Date Range for this Data:</label>
                         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
@@ -89,6 +92,7 @@
                     <!-- Data Backup / Restore -->
                     <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="button" id="exportDataBtn" class="btn-secondary">💾 Backup Data (JSON)</button>
+                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
                         <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
                         <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                     </div>

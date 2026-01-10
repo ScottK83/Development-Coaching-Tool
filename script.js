@@ -1734,8 +1734,26 @@ function initApp() {
         document.getElementById('tipsFileInput').click();
     });
 
+    // Enable/disable Load All Sheets button based on file selection
+    document.getElementById('excelFile')?.addEventListener('change', (e) => {
+        const btn = document.getElementById('loadSheetsByTabsBtn');
+        if (!btn) return;
+        if (e.target.files && e.target.files.length > 0) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    });
+
     // Backup/restore all app data
     document.getElementById('exportDataBtn')?.addEventListener('click', exportAppData);
+    document.getElementById('exportDataExcelBtn')?.addEventListener('click', () => {
+        exportComprehensiveExcel();
+    });
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         document.getElementById('dataFileInput')?.click();
     });
@@ -1843,6 +1861,98 @@ function initApp() {
         if (confirm('Are you sure you want to clear all email history? This cannot be undone.')) {
             clearAllHistory();
         }
+    });
+
+    // Load all sheets using tab dates (Mon–Sat)
+    document.getElementById('loadSheetsByTabsBtn')?.addEventListener('click', () => {
+        const fileInput = document.getElementById('excelFile');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('❌ Please select an Excel file first');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const processSheet = (sheetName) => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 0, defval: '' });
+                    const employees = jsonData.map(row => {
+                        const fullName = row['Name (Last, First)'] || '';
+                        const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
+                        const employeeData = {
+                            name: firstName,
+                            scheduleAdherence: parsePercentage(row['Adherence%']),
+                            cxRepOverall: parseSurveyPercentage(row['RepSat%']),
+                            fcr: parseSurveyPercentage(row['FCR%']),
+                            overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
+                            transfers: parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']),
+                            aht: parseSeconds(row['AHT']),
+                            acw: parseSeconds(row['ACW']),
+                            holdTime: parseSeconds(row['Hold']),
+                            reliability: parseHours(row['Reliability Hrs']),
+                            overallSentiment: parsePercentage(row['OverallSentimentScore%']),
+                            positiveWord: parsePercentage(row['PositiveWordScore%']),
+                            negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
+                            managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
+                            surveyTotal: parseInt(row['OE Survey Total']) || 0
+                        };
+                        if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
+                            employeeData.cxRepOverall = '';
+                            employeeData.fcr = '';
+                            employeeData.overallExperience = '';
+                        }
+                        return employeeData;
+                    }).filter(emp => emp.name);
+                    return employees;
+                };
+
+                const employeesBySheet = [];
+                workbook.SheetNames.forEach(sn => {
+                    const parsed = parseWeekFromSheetName(sn);
+                    const employees = processSheet(sn);
+                    const start = parsed?.startDate || '';
+                    const end = parsed?.endDate || '';
+                    const label = parsed?.timePeriod || sn;
+                    employeesBySheet.push({ name: sn, employees, start, end, label });
+                });
+
+                // Set the latest sheet dataset in UI
+                const last = employeesBySheet[employeesBySheet.length - 1];
+                uploadedEmployeeData = last?.employees || [];
+                const searchValue = document.getElementById('employeeSearch')?.value || '';
+                renderEmployeeDropdown(searchValue);
+                document.getElementById('employeeSelectContainer').style.display = 'block';
+
+                bulkSaveUploadedEmployees();
+
+                employeesBySheet.forEach(entry => {
+                    const uploadRecord = {
+                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        timePeriod: entry.label || 'Custom Upload',
+                        startDate: entry.start || '',
+                        endDate: entry.end || '',
+                        employeeCount: entry.employees.length,
+                        timestamp: new Date().toISOString(),
+                        employeeMetrics: entry.employees
+                    };
+                    uploadHistory.push(uploadRecord);
+                });
+                saveUploadHistory(uploadHistory);
+
+                const sheetCount = employeesBySheet.length;
+                const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
+                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📊 Data saved to Employee History.\n\nWeeks recorded using tab names (Mon–Sat).`);
+            } catch (error) {
+                console.error('Error parsing Excel:', error);
+                alert('Error reading Excel file. Please make sure it is formatted correctly.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
     });
 
     // ========== EXCEL UPLOAD FUNCTIONALITY ==========
