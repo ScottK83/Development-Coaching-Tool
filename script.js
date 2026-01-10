@@ -31,16 +31,51 @@ function showToast(message, duration = 2000) {
 function showOnlySection(sectionId) {
     const sections = [
         { id: 'coachingForm', conditional: false },
+        { id: 'coachingSection', conditional: false },
         { id: 'resultsSection', conditional: false },
         { id: 'dashboardSection', conditional: false },
         { id: 'historySection', conditional: false },
-        { id: 'tipsManagementSection', conditional: false }
+        { id: 'tipsManagementSection', conditional: false },
+        { id: 'executiveSummarySection', conditional: false }
     ];
     
     sections.forEach(section => {
         const el = document.getElementById(section.id);
         if (el) el.style.display = (section.id === sectionId) ? 'block' : 'none';
     });
+    
+    // Update tab button highlighting
+    updateTabHighlight(sectionId);
+}
+
+function updateTabHighlight(activeSectionId) {
+    // Map section IDs to button IDs
+    const tabMapping = {
+        'coachingForm': 'homeBtn',
+        'coachingSection': 'generateCoachingBtn',
+        'dashboardSection': 'employeeDashboard',
+        'tipsManagementSection': 'manageTips',
+        'executiveSummarySection': 'executiveSummaryBtn'
+    };
+    
+    // Reset all buttons to default style
+    ['homeBtn', 'generateCoachingBtn', 'employeeDashboard', 'manageTips'].forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.style.background = '#e9ecef';
+            btn.style.color = '#333';
+        }
+    });
+    
+    // Highlight active button (except executive summary which stays orange)
+    const activeButtonId = tabMapping[activeSectionId];
+    if (activeButtonId && activeButtonId !== 'executiveSummaryBtn') {
+        const activeBtn = document.getElementById(activeButtonId);
+        if (activeBtn) {
+            activeBtn.style.background = '#2196F3';
+            activeBtn.style.color = 'white';
+        }
+    }
 }
 
 function exportToPDF() {
@@ -2046,6 +2081,18 @@ function initApp() {
             return;
         }
         showOnlySection('coachingSection');
+        
+        // Make sure period selector is visible
+        const periodContainer = document.getElementById('periodSelectionContainer');
+        if (periodContainer) {
+            periodContainer.style.display = 'block';
+        }
+        
+        // Reinitialize if needed
+        if (Object.keys(weeklyData).length > 0) {
+            updatePeriodDropdown();
+        }
+        
         document.getElementById('coachingSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
