@@ -2319,6 +2319,41 @@ function initApp() {
         }
     });
 
+    // Clear uploaded data button
+    document.getElementById('clearUploadedDataBtn')?.addEventListener('click', () => {
+        if (confirm('⚠️ Are you sure you want to clear all uploaded data?\n\nThis will delete:\n• All weekly data\n• Upload history\n\nThis cannot be undone.')) {
+            // Clear weeklyData
+            weeklyData = {};
+            localStorage.removeItem('weeklyData');
+            
+            // Clear upload history
+            uploadHistory = [];
+            saveUploadHistory(uploadHistory);
+            
+            // Hide success message
+            const successMsg = document.getElementById('uploadSuccessMessage');
+            if (successMsg) successMsg.style.display = 'none';
+            
+            // Hide Generate Coaching section
+            const coachingSection = document.getElementById('coachingSection');
+            if (coachingSection) coachingSection.style.display = 'none';
+            
+            // Reset form fields
+            document.getElementById('pasteDataTextarea').value = '';
+            document.getElementById('pasteStartDate').value = '';
+            document.getElementById('pasteEndDate').value = '';
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput) fileInput.value = '';
+            
+            // Reset upload choice UI
+            document.getElementById('uploadChoiceButtons').style.display = 'block';
+            document.getElementById('pasteDataContainer').style.display = 'none';
+            document.getElementById('excelUploadContainer').style.display = 'none';
+            
+            alert('✅ All uploaded data has been cleared!');
+        }
+    });
+
     // Load all sheets using tab dates (Mon–Sat)
     document.getElementById('loadSheetsByTabsBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
