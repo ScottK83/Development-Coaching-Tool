@@ -114,6 +114,58 @@ function detectTimePeriod(startDate, endDate) {
     return `${startDate} to ${endDate}`;
 }
 
+// Parse a sheet name like "12.27" or "1.10" into a week range (Mon–Sat)
+function parseWeekFromSheetName(sheetName) {
+    try {
+        const match = /([0-9]{1,2})[\.\/_-]([0-9]{1,2})(?:[\.\/_-]([0-9]{2,4}))?/i.exec(String(sheetName).trim());
+        if (!match) return null;
+
+        const month = parseInt(match[1], 10);
+        const day = parseInt(match[2], 10);
+        let year = match[3] ? parseInt(match[3], 10) : new Date().getFullYear();
+
+        // Normalize two-digit years
+        if (year < 100) {
+            year += year >= 70 ? 1900 : 2000;
+        }
+
+        // Heuristic: if month is December and today is January, assume previous year
+        const today = new Date();
+        const todayMonth = today.getMonth() + 1;
+        if (!match[3] && month === 12 && todayMonth === 1) {
+            year -= 1;
+        }
+        if (!match[3] && month === 1 && todayMonth === 12) {
+            year += 1;
+        }
+
+        let endDate = new Date(year, month - 1, day);
+
+        // Align end date to Saturday of that week if needed
+        // JS: 0=Sun,1=Mon,...,6=Sat
+        const endDow = endDate.getDay();
+        if (endDow !== 6) {
+            const deltaToSat = (6 - endDow + 7) % 7; // forward to Saturday
+            endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + deltaToSat);
+        }
+
+        // Compute start date as Monday of the same week
+        let startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        const startDow = startDate.getDay();
+        const deltaToMon = (startDow >= 1 ? startDow - 1 : 6); // back to Monday
+        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() - deltaToMon);
+
+        const startISO = startDate.toISOString().split('T')[0];
+        const endISO = endDate.toISOString().split('T')[0];
+        const label = `Week ending ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+        return { startDate: startISO, endDate: endISO, timePeriod: label };
+    } catch (err) {
+        console.warn('Failed to parse sheet name for week range:', sheetName, err);
+        return null;
+    }
+}
+
 function loadUploadHistory() {
     try {
         const saved = localStorage.getItem('uploadHistory');
@@ -1700,172 +1752,61 @@ function initApp() {
         const file = e.target.files[0];
         if (!file) return;
         
-        const fileName = file.name.toLowerCase();
-        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-        
-        if (isExcel) {
-            // Handle Excel file
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    if (typeof XLSX === 'undefined') {
-                        alert('❌ SheetJS library not available. Cannot import Excel files.');
-                        return;
-                    }
-                    
-                    const data = new Uint8Array(event.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // Look for "Coaching Tips" sheet
-                    const sheetName = workbook.SheetNames.find(name => 
-                        name.toLowerCase().includes('tip') || name.toLowerCase().includes('coaching')
-                    ) || workbook.SheetNames[0];
-                    
-                    if (!sheetName) {
-                        alert('❌ No worksheet found in Excel file.');
-                        return;
-                    }
-                    
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    // Parse tips from Excel (expects columns: Metric, Tip)
-                    const importedTips = {};
-                    let headerRow = 0;
-                    
-                    // Find header row
-                    for (let i = 0; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (row && row[0] && typeof row[0] === 'string' && 
-                            (row[0].toLowerCase().includes('metric') || row[0].toLowerCase() === 'metric')) {
-                            headerRow = i;
-                            break;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                
+                if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
+                    alert('❌ Invalid tips file format. Expected JSON with customTips property.');
+                    return;
+                }
+                
+                // Merge imported tips with existing
+                const confirmMerge = confirm('Do you want to MERGE these tips with your existing tips?\n\nClick OK to merge (keeps your current tips + adds new ones)\nClick Cancel to REPLACE all your tips with imported ones');
+                
+                if (confirmMerge) {
+                    // Merge: combine both
+                    Object.keys(importedData.customTips).forEach(metricKey => {
+                        if (!userTips[metricKey]) {
+                            userTips[metricKey] = [];
                         }
-                    }
-                    
-                    // Parse data rows
-                    for (let i = headerRow + 1; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (!row || !row[0] || !row[1]) continue;
-                        
-                        const metricName = String(row[0]).trim();
-                        const tip = String(row[1]).trim();
-                        
-                        if (tip === '(No tips available)') continue;
-                        
-                        // Find matching metric key
-                        const metricKey = Object.keys(AREA_NAMES).find(key => 
-                            AREA_NAMES[key].toLowerCase() === metricName.toLowerCase()
-                        );
-                        
-                        if (metricKey) {
-                            if (!importedTips[metricKey]) {
-                                importedTips[metricKey] = [];
-                            }
-                            if (!importedTips[metricKey].includes(tip)) {
-                                importedTips[metricKey].push(tip);
-                            }
-                        }
-                    }
-                    
-                    if (Object.keys(importedTips).length === 0) {
-                        alert('❌ No valid tips found in Excel file. Make sure the sheet has "Metric" and "Tip" columns.');
-                        return;
-                    }
-                    
-                    // Merge or replace
-                    const confirmMerge = confirm(`Found ${Object.keys(importedTips).length} metrics with tips.\n\nDo you want to MERGE with your existing tips?\n\nClick OK to merge (keeps current + adds new)\nClick Cancel to REPLACE all your tips`);
-                    
-                    if (confirmMerge) {
-                        // Merge
-                        Object.keys(importedTips).forEach(metricKey => {
-                            if (!userTips[metricKey]) {
-                                userTips[metricKey] = [];
-                            }
-                            importedTips[metricKey].forEach(tip => {
-                                if (!userTips[metricKey].includes(tip)) {
+                        const tipsToAdd = importedData.customTips[metricKey];
+                        if (Array.isArray(tipsToAdd)) {
+                            tipsToAdd.forEach(tip => {
+                                if (tip && !userTips[metricKey].includes(tip)) {
                                     userTips[metricKey].push(tip);
                                 }
                             });
-                        });
-                    } else {
-                        // Replace
-                        userTips = importedTips;
-                    }
-                    
-                    saveUserTips(userTips);
-                    mergeTips();
-                    
-                    const currentMetric = document.getElementById('metricSelect').value;
-                    if (currentMetric) {
-                        showMetricTips(currentMetric);
-                    }
-                    
-                    alert('✅ Tips imported successfully from Excel!');
-                } catch (error) {
-                    alert('❌ Error reading Excel file: ' + error.message);
-                    console.error(error);
+                        }
+                    });
+                } else {
+                    // Replace: overwrite completely
+                    userTips = {};
+                    Object.keys(importedData.customTips).forEach(metricKey => {
+                        const tips = importedData.customTips[metricKey];
+                        if (Array.isArray(tips)) {
+                            userTips[metricKey] = tips.filter(tip => tip && typeof tip === 'string');
+                        }
+                    });
                 }
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            // Handle JSON file
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const importedData = JSON.parse(event.target.result);
-                    
-                    if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
-                        alert('❌ Invalid tips file format. Expected JSON with customTips property.');
-                        return;
-                    }
-                    
-                    // Merge imported tips with existing
-                    const confirmMerge = confirm('Do you want to MERGE these tips with your existing tips?\n\nClick OK to merge (keeps your current tips + adds new ones)\nClick Cancel to REPLACE all your tips with imported ones');
-                    
-                    if (confirmMerge) {
-                        // Merge: combine both
-                        Object.keys(importedData.customTips).forEach(metricKey => {
-                            if (!userTips[metricKey]) {
-                                userTips[metricKey] = [];
-                            }
-                            const tipsToAdd = importedData.customTips[metricKey];
-                            if (Array.isArray(tipsToAdd)) {
-                                tipsToAdd.forEach(tip => {
-                                    if (tip && !userTips[metricKey].includes(tip)) {
-                                        userTips[metricKey].push(tip);
-                                    }
-                                });
-                            }
-                        });
-                    } else {
-                        // Replace: overwrite completely
-                        userTips = {};
-                        Object.keys(importedData.customTips).forEach(metricKey => {
-                            const tips = importedData.customTips[metricKey];
-                            if (Array.isArray(tips)) {
-                                userTips[metricKey] = tips.filter(tip => tip && typeof tip === 'string');
-                            }
-                        });
-                    }
-                    
-                    saveUserTips(userTips);
-                    mergeTips();
-                    
-                    // Refresh current view if a metric is selected
-                    const currentMetric = document.getElementById('metricSelect').value;
-                    if (currentMetric) {
-                        showMetricTips(currentMetric);
-                    }
-                    
-                    alert('✅ Tips imported successfully!');
-                } catch (error) {
-                    alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
-                    console.error(error);
+                
+                saveUserTips(userTips);
+                mergeTips();
+                
+                // Refresh current view if a metric is selected
+                const currentMetric = document.getElementById('metricSelect').value;
+                if (currentMetric) {
+                    showMetricTips(currentMetric);
                 }
-            };
-            reader.readAsText(file);
-        }
+                
+                alert('✅ Tips imported successfully!');
+            } catch (error) {
+                alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
         
         // Reset input so same file can be selected again
         e.target.value = '';
@@ -2152,117 +2093,128 @@ function initApp() {
         }
     }, 200);
 
-    // Load and parse Excel file
+    // Load and parse Excel file (supports auto-detecting week ranges from sheet tabs)
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
         const file = fileInput.files[0];
-        const startDate = document.getElementById('startDate')?.value || '';
-        const endDate = document.getElementById('endDate')?.value || '';
-        
-        // CRITICAL: Validate everything before proceeding
+        const startDateInput = document.getElementById('startDate')?.value || '';
+        const endDateInput = document.getElementById('endDate')?.value || '';
+
         if (!file) {
             alert('❌ Please select an Excel file first');
             return;
         }
 
-        if (!startDate || !endDate) {
-            alert('❌ Both Start and End dates are REQUIRED.\n\nPlease select the date range for this data before loading.');
-            document.getElementById('startDate')?.focus();
-            return;
-        }
-        
-        // Validate date order
-        if (new Date(endDate) < new Date(startDate)) {
-            alert('❌ End date must be after or equal to start date.');
-            document.getElementById('endDate')?.focus();
-            return;
-        }
-
         const reader = new FileReader();
-        
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Get first sheet
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                
-                // Convert to JSON - For raw data sheet, row 1 has headers, row 2+ is data
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-                    range: 0,
-                    defval: ''
-                });
-                
-                // Parse and store employee data
-                uploadedEmployeeData = jsonData.map(row => {
-                    // Name column format is "LastName, FirstName"
-                    const fullName = row['Name (Last, First)'] || '';
-                    const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
-                    
-                    const employeeData = {
-                        name: firstName,
-                        scheduleAdherence: parsePercentage(row['Adherence%']),
-                        cxRepOverall: parseSurveyPercentage(row['RepSat%']),
-                        fcr: parseSurveyPercentage(row['FCR%']),
-                        overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
-                        transfers: parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']),
-                        aht: parseSeconds(row['AHT']),
-                        acw: parseSeconds(row['ACW']),
-                        holdTime: parseSeconds(row['Hold']),
-                        reliability: parseHours(row['Reliability Hrs']),
-                        overallSentiment: parsePercentage(row['OverallSentimentScore%']),
-                        positiveWord: parsePercentage(row['PositiveWordScore%']),
-                        negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
-                        managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
-                        surveyTotal: parseInt(row['OE Survey Total']) || 0
-                    };
 
-                    if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
-                        employeeData.cxRepOverall = '';
-                        employeeData.fcr = '';
-                        employeeData.overallExperience = '';
+                const processSheet = (sheetName) => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 0, defval: '' });
+
+                    const employees = jsonData.map(row => {
+                        const fullName = row['Name (Last, First)'] || '';
+                        const firstName = fullName.includes(',') ? fullName.split(',')[1].trim() : fullName;
+                        const employeeData = {
+                            name: firstName,
+                            scheduleAdherence: parsePercentage(row['Adherence%']),
+                            cxRepOverall: parseSurveyPercentage(row['RepSat%']),
+                            fcr: parseSurveyPercentage(row['FCR%']),
+                            overallExperience: parseSurveyPercentage(row['OverallExperience%'] || row['Overall Experience%'] || row['OE%']),
+                            transfers: parsePercentage(row['TransfersS%'] || row['TransferS%'] || row['Transfers%']),
+                            aht: parseSeconds(row['AHT']),
+                            acw: parseSeconds(row['ACW']),
+                            holdTime: parseSeconds(row['Hold']),
+                            reliability: parseHours(row['Reliability Hrs']),
+                            overallSentiment: parsePercentage(row['OverallSentimentScore%']),
+                            positiveWord: parsePercentage(row['PositiveWordScore%']),
+                            negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
+                            managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
+                            surveyTotal: parseInt(row['OE Survey Total']) || 0
+                        };
+
+                        if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
+                            employeeData.cxRepOverall = '';
+                            employeeData.fcr = '';
+                            employeeData.overallExperience = '';
+                        }
+                        return employeeData;
+                    }).filter(emp => emp.name);
+
+                    return employees;
+                };
+
+                let usedStart = startDateInput;
+                let usedEnd = endDateInput;
+                let timeLabel = null;
+
+                // If dates were provided by the user, process only the first sheet with those dates
+                // Otherwise, auto-detect week ranges from sheet names and record each sheet separately
+                const employeesBySheet = [];
+
+                if (usedStart && usedEnd) {
+                    if (new Date(usedEnd) < new Date(usedStart)) {
+                        alert('❌ End date must be after or equal to start date.');
+                        document.getElementById('endDate')?.focus();
+                        return;
                     }
-                    
-                    return employeeData;
-                }).filter(emp => emp.name);
-                
-                // Populate dropdown
+                    const firstName = workbook.SheetNames[0];
+                    const employees = processSheet(firstName);
+                    employeesBySheet.push({ name: firstName, employees, start: usedStart, end: usedEnd, label: detectTimePeriod(usedStart, usedEnd) });
+                } else {
+                    // Auto-detect per sheet via tab name
+                    workbook.SheetNames.forEach(sn => {
+                        const parsed = parseWeekFromSheetName(sn);
+                        const employees = processSheet(sn);
+                        const start = parsed?.startDate || '';
+                        const end = parsed?.endDate || '';
+                        const label = parsed?.timePeriod || sn;
+                        employeesBySheet.push({ name: sn, employees, start, end, label });
+                    });
+                }
+
+                // Use the last sheet as the current in-page dataset
+                const last = employeesBySheet[employeesBySheet.length - 1];
+                uploadedEmployeeData = last?.employees || [];
+
+                // Populate dropdown/UI
                 const searchValue = document.getElementById('employeeSearch')?.value || '';
                 renderEmployeeDropdown(searchValue);
-                
                 document.getElementById('employeeSelectContainer').style.display = 'block';
                 document.getElementById('dateRangeInputContainer').style.display = 'block';
-                
-                // Immediately save all employees to history
+
+                // Immediately save all employees to history (merge into local storage per sheet)
                 bulkSaveUploadedEmployees();
-                
-                // Record this upload with smart time period detection
-                const startDate = document.getElementById('startDate')?.value || '';
-                const endDate = document.getElementById('endDate')?.value || '';
-                const timePeriod = startDate && endDate ? detectTimePeriod(startDate, endDate) : 'Custom Upload';
-                
-                const uploadRecord = {
-                    id: Date.now(),
-                    timePeriod: timePeriod,
-                    startDate: startDate,
-                    endDate: endDate,
-                    employeeCount: uploadedEmployeeData.length,
-                    timestamp: new Date().toISOString(),
-                    employeeMetrics: uploadedEmployeeData
-                };
-                
-                uploadHistory.push(uploadRecord);
+
+                // Record each sheet as its own upload entry
+                employeesBySheet.forEach(entry => {
+                    const timePeriod = entry.label || 'Custom Upload';
+                    const uploadRecord = {
+                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        timePeriod,
+                        startDate: entry.start || '',
+                        endDate: entry.end || '',
+                        employeeCount: entry.employees.length,
+                        timestamp: new Date().toISOString(),
+                        employeeMetrics: entry.employees
+                    };
+                    uploadHistory.push(uploadRecord);
+                });
                 saveUploadHistory(uploadHistory);
-                
-                alert(`✅ Successfully loaded ${uploadedEmployeeData.length} employees!\n\n📊 Data saved to Employee History.\n\n⏰ Recorded as: ${timePeriod}\n\nYou can now select an employee from the dropdown to coach them, or view trends in Employee History.`);
-                
+
+                const sheetCount = employeesBySheet.length;
+                const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
+                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📊 Data saved to Employee History.\n\nWeeks recorded using tab names (Mon–Sat).`);
+
             } catch (error) {
                 console.error('Error parsing Excel:', error);
                 alert('Error reading Excel file. Please make sure it is formatted correctly.');
             }
         };
-        
+
         reader.readAsArrayBuffer(file);
     });
 
