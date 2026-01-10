@@ -2573,7 +2573,22 @@ function initApp() {
             }
             
             // Parse header row
-            const headers = lines[0].split(separator).map(h => h.trim());
+            let headers = lines[0].split(separator).map(h => h.trim());
+            
+            // Fix merged headers (e.g., "AvoidNegativeWordScore% PositiveWordScore%" split into separate cells)
+            const expandedHeaders = [];
+            for (let header of headers) {
+                // Check if header contains multiple percentage signs (likely merged)
+                const percentCount = (header.match(/%/g) || []).length;
+                if (percentCount > 1) {
+                    // Split on space followed by capital letter and "Score" pattern
+                    const split = header.split(/\s+(?=[A-Z].*Score%)/);
+                    expandedHeaders.push(...split);
+                } else {
+                    expandedHeaders.push(header);
+                }
+            }
+            headers = expandedHeaders;
             
             // Debug: Show all headers with their indices
             console.log('📋 ALL HEADERS WITH INDICES:');
