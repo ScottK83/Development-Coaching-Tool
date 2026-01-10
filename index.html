@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Prefer local SheetJS for offline; fallback to CDN when online -->
-    <script src="vendor/xlsx.full.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';document.head.appendChild(s);})();"></script>
+    <!-- SheetJS library for Excel file handling -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -53,7 +53,8 @@
                     </div>
 
                     <!-- File Upload -->
-                    <h3>📤 Upload New Data</h3>
+                    <h3>📤 Upload Excel File</h3>
+                    <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Upload an Excel file with multiple sheets (will auto-extract dates from sheet names).</p>
                     <div class="form-group">
                         <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
                     </div>
@@ -62,13 +63,15 @@
                     </div>
                     
                     <!-- OR Divider -->
-                    <div style="margin: 20px 0; text-align: center; color: #999;">
-                        <span style="background: #e3f2fd; padding: 0 10px; font-weight: bold;">OR</span>
+                    <div style="margin: 25px 0; text-align: center;">
+                        <div style="display: inline-block; background: #e3f2fd; padding: 8px 20px; border-radius: 20px; border: 2px solid #2196F3;">
+                            <span style="color: #1976D2; font-weight: bold; font-size: 1.1em;">OR (Recommended)</span>
+                        </div>
                     </div>
                     
                     <!-- Quick Paste from PowerBI -->
                     <h3>⚡ Quick Paste from PowerBI</h3>
-                    <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy data from PowerBI, paste below, select date range, and click Load.</p>
+                    <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;"><strong>Faster method:</strong> Copy data directly from PowerBI, paste below, select date range, and click Load.</p>
                     
                     <div style="margin-bottom: 15px;">
                         <label style="font-weight: bold; display: block; margin-bottom: 5px;">Paste PowerBI Data:</label>

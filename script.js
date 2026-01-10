@@ -2268,12 +2268,20 @@ function initApp() {
             alert('❌ Please select an Excel file first');
             return;
         }
+        
+        // Check if XLSX library is loaded
+        if (typeof XLSX === 'undefined') {
+            alert('❌ Excel library not loaded. Please refresh the page and try again.\n\nAlternatively, use the "Quick Paste from PowerBI" option below.');
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
+                
+                console.log('Excel file loaded, sheet names:', workbook.SheetNames);
 
                 const processSheet = (sheetName) => {
                     const sheet = workbook.Sheets[sheetName];
