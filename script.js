@@ -2662,6 +2662,21 @@ function initApp() {
                 
                 console.log('Processing name:', fullName); // Debug log
                 
+                // DEBUG: Log all cell values for this employee
+                console.log(`🔍 RAW DATA for ${fullName}:`, {
+                    'Col 0': cells[0],
+                    'Col 1': cells[1],
+                    'Col 2': cells[2],
+                    'Col 10': cells[10],
+                    'Col 11': cells[11],
+                    'Col 12': cells[12],
+                    'Col 13': cells[13],
+                    'Col 14': cells[14],
+                    'Col 15': cells[15],
+                    'Col 16': cells[16],
+                    'Col 17': cells[17]
+                });
+                
                 // Extract first name (handle "Last, First" format)
                 let firstName;
                 if (fullName.includes(',')) {
