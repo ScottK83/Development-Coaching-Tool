@@ -1373,6 +1373,12 @@ function initApp() {
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
+    // Home button
+    document.getElementById('homeBtn')?.addEventListener('click', () => {
+        showOnlySection('coachingForm');
+        document.getElementById('coachingForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
     // Employee dashboard button
     const dashboardBtn = document.getElementById('employeeDashboard');
     console.log('Dashboard button found:', dashboardBtn);
