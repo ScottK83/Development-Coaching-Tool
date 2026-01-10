@@ -1957,58 +1957,14 @@ function initApp() {
 
     // Initialize Quick Access if history exists
     function initializeQuickAccess() {
-        const history = getAllHistory();
-        const allDateRanges = new Set();
-        
-        Object.values(history).forEach(sessions => {
-            sessions.forEach(s => {
-                if (s.dateRange) allDateRanges.add(s.dateRange);
-            });
-        });
-        
-        const quickContainer = document.getElementById('quickAccessContainer');
-        const divider = document.getElementById('dividerContainer');
-        const quickDateRange = document.getElementById('quickDateRange');
-        
-        if (allDateRanges.size > 0) {
-            quickContainer.style.display = 'block';
-            divider.style.display = 'block';
-            
-            // Populate date ranges (most recent first)
-            Array.from(allDateRanges).sort().reverse().forEach(range => {
-                const opt = document.createElement('option');
-                opt.value = range;
-                opt.textContent = range;
-                quickDateRange.appendChild(opt);
-            });
-        }
+        // Quick Access removed - no longer needed with new tab structure
+        return;
     }
     
     // Update employees for selected quick access date range
     window.updateQuickAccessEmployees = function() {
-        const selectedRange = document.getElementById('quickDateRange')?.value || '';
-        const employeeSelect = document.getElementById('quickEmployee');
-        if (!employeeSelect) return;
-        
-        employeeSelect.innerHTML = '<option value="">-- Choose employee --</option>';
-        
-        if (!selectedRange) return;
-        
-        const history = getAllHistory();
-        const employeesInRange = new Set();
-        
-        Object.entries(history).forEach(([empName, sessions]) => {
-            if (Array.isArray(sessions) && sessions.some(s => s.dateRange === selectedRange)) {
-                employeesInRange.add(empName);
-            }
-        });
-        
-        Array.from(employeesInRange).sort().forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            employeeSelect.appendChild(opt);
-        });
+        // Quick Access removed - no longer needed
+        return;
     };
     
     // Load selected employee from quick access
