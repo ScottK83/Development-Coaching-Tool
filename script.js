@@ -1,4 +1,4 @@
-// Utility functions
+﻿// Utility functions
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -163,7 +163,7 @@ function detectTimePeriod(startDate, endDate) {
     return `${startDate} to ${endDate}`;
 }
 
-// Parse a sheet name like "12.27" or "1.10" into a week range (Mon–Sat)
+// Parse a sheet name like "12.27" or "1.10" into a week range (Monâ€“Sat)
 function parseWeekFromSheetName(sheetName) {
     try {
         const match = /([0-9]{1,2})[\.\/_-]([0-9]{1,2})(?:[\.\/_-]([0-9]{2,4}))?/i.exec(String(sheetName).trim());
@@ -362,11 +362,11 @@ function exportEmployeeHistoryToExcel() {
                     
                     if (target) {
                         if (target.min !== undefined) {
-                            targetStr = `≥ ${target.min}`;
-                            status = value >= target.min ? '✅ Met' : '❌ Missed';
+                            targetStr = `â‰¥ ${target.min}`;
+                            status = value >= target.min ? 'âœ… Met' : 'âŒ Missed';
                         } else if (target.max !== undefined) {
-                            targetStr = `≤ ${target.max}`;
-                            status = value <= target.max ? '✅ Met' : '❌ Missed';
+                            targetStr = `â‰¤ ${target.max}`;
+                            status = value <= target.max ? 'âœ… Met' : 'âŒ Missed';
                         }
                     }
                     
@@ -424,7 +424,7 @@ function exportEmployeeHistoryToExcel() {
         const timestamp = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `employee-history-${timestamp}.xlsx`);
         
-        showToast('📊 Employee history exported to Excel');
+        showToast('ðŸ“Š Employee history exported to Excel');
     } catch (error) {
         console.error('Error exporting employee history:', error);
         alert('Error exporting to Excel: ' + error.message);
@@ -491,11 +491,11 @@ function exportComprehensiveExcel() {
                     
                     if (target) {
                         if (target.min !== undefined) {
-                            targetStr = `≥ ${target.min}`;
-                            status = value >= target.min ? '✅ Met' : '❌ Missed';
+                            targetStr = `â‰¥ ${target.min}`;
+                            status = value >= target.min ? 'âœ… Met' : 'âŒ Missed';
                         } else if (target.max !== undefined) {
-                            targetStr = `≤ ${target.max}`;
-                            status = value <= target.max ? '✅ Met' : '❌ Missed';
+                            targetStr = `â‰¤ ${target.max}`;
+                            status = value <= target.max ? 'âœ… Met' : 'âŒ Missed';
                         }
                     }
                     
@@ -524,7 +524,7 @@ function exportComprehensiveExcel() {
         const timestamp = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `coaching-tool-complete-${timestamp}.xlsx`);
         
-        showToast('📊 Complete data exported to Excel with multiple tabs!');
+        showToast('ðŸ“Š Complete data exported to Excel with multiple tabs!');
     } catch (error) {
         console.error('Error exporting comprehensive Excel:', error);
         alert('Error exporting to Excel: ' + error.message);
@@ -734,8 +734,8 @@ function showMetricTips(metricKey) {
                     <div style="flex: 1;">
                         <textarea id="tip-${metricKey}-${index}" style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;">${tip}</textarea>
                     </div>
-                    <button onclick="saveTipEdit('${metricKey}', ${index})" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">💾 Save</button>
-                    <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">🗑️ Delete</button>
+                    <button onclick="saveTipEdit('${metricKey}', ${index})" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">ðŸ’¾ Save</button>
+                    <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer;">ðŸ—‘ï¸ Delete</button>
                 </div>
             `;
         });
@@ -746,7 +746,7 @@ function showMetricTips(metricKey) {
             
             <div style="margin-top: 15px;">
                 <textarea id="newTip-${metricKey}" placeholder="Add a new tip for ${metricName}..." style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
-                <button onclick="addNewTip('${metricKey}')" style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 5px;">➕ Add Tip</button>
+                <button onclick="addNewTip('${metricKey}')" style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 5px;">âž• Add Tip</button>
             </div>
         </div>
     `;
@@ -782,7 +782,7 @@ function addNewTip(metricKey) {
     mergeTips();
     showMetricTips(metricKey);
     
-    showToast('✅ Tip added');
+    showToast('âœ… Tip added');
     autoExportTipsToExcel();
     document.getElementById(`newTip-${metricKey}`).value = '';
 }
@@ -844,7 +844,7 @@ function saveTipEdit(metricKey, tipIndex) {
     mergeTips();
     showMetricTips(metricKey);
     
-    showToast('✅ Tip updated');
+    showToast('âœ… Tip updated');
     autoExportTipsToExcel();
 }
 
@@ -885,7 +885,7 @@ function deleteTip(metricKey, tipIndex) {
     mergeTips();
     showMetricTips(metricKey);
 
-    showToast('✅ Tip deleted');
+    showToast('âœ… Tip deleted');
     autoExportTipsToExcel();
 }
 
@@ -972,7 +972,7 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
     } catch (error) {
         if (error.name === 'QuotaExceededError') {
             console.warn('Storage quota exceeded, attempting cleanup...');
-            if (confirm('⚠️ Storage is full! Would you like to keep only the last 15 sessions per employee and try again?')) {
+            if (confirm('âš ï¸ Storage is full! Would you like to keep only the last 15 sessions per employee and try again?')) {
                 try {
                     const history = JSON.parse(localStorage.getItem('coachingHistory') || '{}');
                     // Keep only last 15 sessions per employee
@@ -994,10 +994,10 @@ function saveToHistory(employeeName, strugglingAreas, metrics = null, dateRange 
                     localStorage.setItem('coachingHistory', JSON.stringify(history));
                 } catch (retryError) {
                     console.error('Cleanup failed:', retryError);
-                    alert('❌ Could not save coaching history even after cleanup. Please export your data and clear history.');
+                    alert('âŒ Could not save coaching history even after cleanup. Please export your data and clear history.');
                 }
             } else {
-                alert('❌ Data not saved. Please clear some history to continue.');
+                alert('âŒ Data not saved. Please clear some history to continue.');
             }
         } else {
             console.error('Error saving history:', error);
@@ -1053,7 +1053,7 @@ function diagnoseTrends(employeeName) {
     
     let html = `
         <div style="max-width: 1000px; margin: 20px auto;">
-            <h2 style="color: #003DA5; margin-bottom: 20px;">📊 Trend Analysis: ${safeEmployeeName}</h2>
+            <h2 style="color: #003DA5; margin-bottom: 20px;">ðŸ“Š Trend Analysis: ${safeEmployeeName}</h2>
             <p style="color: #666; margin-bottom: 30px;">Tracking ${sortedHistory.length} coaching session${sortedHistory.length > 1 ? 's' : ''}</p>
     `;
     
@@ -1090,7 +1090,7 @@ function diagnoseTrends(employeeName) {
         const firstValue = values[0].value;
         const lastValue = values[values.length - 1].value;
         
-        let trend = '→';
+        let trend = 'â†’';
         let trendColor = '#666';
         let trendText = 'No change';
         
@@ -1099,22 +1099,22 @@ function diagnoseTrends(employeeName) {
             if (metric.isMin) {
                 // Higher is better
                 if (change > 0) {
-                    trend = '📈';
+                    trend = 'ðŸ“ˆ';
                     trendColor = '#28a745';
                     trendText = `Improving (+${change.toFixed(2)}${metric.unit})`;
                 } else if (change < 0) {
-                    trend = '📉';
+                    trend = 'ðŸ“‰';
                     trendColor = '#dc3545';
                     trendText = `Declining (${change.toFixed(2)}${metric.unit})`;
                 }
             } else {
                 // Lower is better
                 if (change < 0) {
-                    trend = '📈';
+                    trend = 'ðŸ“ˆ';
                     trendColor = '#28a745';
                     trendText = `Improving (${change.toFixed(2)}${metric.unit})`;
                 } else if (change > 0) {
-                    trend = '📉';
+                    trend = 'ðŸ“‰';
                     trendColor = '#dc3545';
                     trendText = `Declining (+${change.toFixed(2)}${metric.unit})`;
                 }
@@ -1122,7 +1122,7 @@ function diagnoseTrends(employeeName) {
         }
         
         const meetingTarget = metric.isMin ? lastValue >= targetValue : lastValue <= targetValue;
-        const targetStatus = meetingTarget ? '✅ Meeting target' : '⚠️ Below target';
+        const targetStatus = meetingTarget ? 'âœ… Meeting target' : 'âš ï¸ Below target';
         
         // Create visual bar chart
         const minValue = Math.min(...values.map(v => v.value));
@@ -1140,7 +1140,7 @@ function diagnoseTrends(employeeName) {
                     </div>
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <strong>Target:</strong> ${metric.isMin ? '≥' : '≤'}${targetValue}${metric.unit} | 
+                    <strong>Target:</strong> ${metric.isMin ? 'â‰¥' : 'â‰¤'}${targetValue}${metric.unit} | 
                     <strong>Current:</strong> ${lastValue}${metric.unit}
                 </div>
                 
@@ -1181,14 +1181,14 @@ function diagnoseTrends(employeeName) {
         values.forEach((v, i) => {
             const isImproving = i > 0 && (metric.isMin ? v.value > values[i-1].value : v.value < values[i-1].value);
             const isDeclining = i > 0 && (metric.isMin ? v.value < values[i-1].value : v.value > values[i-1].value);
-            const arrow = isImproving ? '⬆️' : isDeclining ? '⬇️' : '';
+            const arrow = isImproving ? 'â¬†ï¸' : isDeclining ? 'â¬‡ï¸' : '';
             const bgColor = v.wasCoached ? '#fff3cd' : '#f8f9fa';
             
             html += `
                 <div style="background: ${bgColor}; padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">
                     <div style="font-size: 0.85em; color: #666;">${v.date}${v.dateRange ? '<br>Week: ' + v.dateRange : ''}</div>
                     <div style="font-size: 1.1em; font-weight: bold;">${arrow} ${v.value}${metric.unit}</div>
-                    ${v.wasCoached ? '<div style="font-size: 0.75em; color: #856404;">⚠️ Coached</div>' : ''}
+                    ${v.wasCoached ? '<div style="font-size: 0.75em; color: #856404;">âš ï¸ Coached</div>' : ''}
                 </div>
             `;
         });
@@ -1200,7 +1200,7 @@ function diagnoseTrends(employeeName) {
     });
     
     html += `
-            <button onclick="showEmployeeDashboard()" style="background: #003DA5; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; margin-top: 20px;">← Back to Dashboard</button>
+            <button onclick="showEmployeeDashboard()" style="background: #003DA5; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; margin-top: 20px;">â† Back to Dashboard</button>
         </div>
     `;
     
@@ -1230,11 +1230,11 @@ function showEmployeeDashboard() {
         let html = `
         <!-- Employee and Date Range Selector -->
         <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
-            <h3 style="color: #003DA5; margin-bottom: 15px;">📊 Track Coaching Effectiveness</h3>
+            <h3 style="color: #003DA5; margin-bottom: 15px;">ðŸ“Š Track Coaching Effectiveness</h3>
             <p style="color: #666; margin-bottom: 15px; font-size: 0.95em;">Select an employee to view their performance across different reporting periods and see if coaching helped improve their metrics.</p>
             
             <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 8px;">1️⃣ Select Employee:</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">1ï¸âƒ£ Select Employee:</label>
                 <select id="trendEmployeeSelect" onchange="updateDateRangeOptions()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
                     <option value="">-- Choose an employee --</option>
                     ${allEmployees.map(emp => `<option value="${emp}">${emp}</option>`).join('')}
@@ -1242,7 +1242,7 @@ function showEmployeeDashboard() {
             </div>
             
             <div id="dateRangeContainer" style="display: none; margin-bottom: 15px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 8px;">2️⃣ Select Reporting Period:</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">2ï¸âƒ£ Select Reporting Period:</label>
                 <select id="trendDateRangeSelect" onchange="showEmployeeTrendData()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
                     <option value="">-- Choose a date range --</option>
                 </select>
@@ -1300,8 +1300,8 @@ function showEmployeeDashboard() {
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <button onclick="event.stopPropagation(); diagnoseTrends('${safeNameForJs}')" 
-                                    style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; font-size: 0.9em;">📊 Diagnose Trends</button>
-                            <span style="font-size: 1.2em;">▼</span>
+                                    style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; font-size: 0.9em;">ðŸ“Š Diagnose Trends</button>
+                            <span style="font-size: 1.2em;">â–¼</span>
                         </div>
                     </div>
                     <div id="employee-${uniqueId}" style="display: none; padding: 15px; background: white;">
@@ -1322,9 +1322,9 @@ function showEmployeeDashboard() {
                 html += `
                     <div data-employee="${escapeHtml(name)}" data-date="${safeDateLabel}" data-week="${escapeHtml(session.dateRange || '')}" style="margin-bottom: 20px; padding: 10px; border-left: 3px solid #007bff; background: #f8f9fa; position: relative;">
                         <button onclick="if(confirm('Delete this session?')) deleteSession('${safeNameForDelete}', ${index})" 
-                                style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
+                                style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.85em;">ðŸ—‘ï¸ Delete</button>
                         <div style="font-weight: bold; margin-bottom: 5px;">Session ${index + 1} - ${safeDateLabel}</div>
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📅 Week: ${safeWeekLabel}</div>
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">ðŸ“… Week: ${safeWeekLabel}</div>
                         <div style="color: #666; margin-bottom: 8px;"><strong>Areas:</strong> ${safeAreas}</div>
                 `;
 
@@ -1443,8 +1443,8 @@ function showEmployeeTrendData() {
         <div style="border-bottom: 2px solid #003DA5; padding-bottom: 10px; margin-bottom: 15px;">
             <h4 style="color: #003DA5; margin: 0;">${safeEmployee} - ${safeDateRange}</h4>
             <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Uploaded: ${sessionDate}</div>
-            ${wasCoached ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;"><strong>⚠️ Coached on:</strong> ${strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')}</div>` : '<div style="margin-top: 8px; color: #28a745; font-weight: bold;">✅ Meeting all targets - No coaching needed</div>'}
-            ${previousSession ? `<div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 3px; font-size: 0.9em;">📈 Comparing to previous period: ${previousSession.dateRange}</div>` : ''}
+            ${wasCoached ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;"><strong>âš ï¸ Coached on:</strong> ${strugglingAreas.map(a => AREA_NAMES[a] || a).join(', ')}</div>` : '<div style="margin-top: 8px; color: #28a745; font-weight: bold;">âœ… Meeting all targets - No coaching needed</div>'}
+            ${previousSession ? `<div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 3px; font-size: 0.9em;">ðŸ“ˆ Comparing to previous period: ${previousSession.dateRange}</div>` : ''}
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
@@ -1478,7 +1478,7 @@ function showEmployeeTrendData() {
         
         if (value !== undefined && value !== '' && value !== null) {
             const meetingTarget = metric.isMin ? value >= metric.target : value <= metric.target;
-            const statusIcon = meetingTarget ? '✅' : '⚠️';
+            const statusIcon = meetingTarget ? 'âœ…' : 'âš ï¸';
             const statusColor = meetingTarget ? '#28a745' : '#dc3545';
             const wasCoached = strugglingAreas.includes(metric.key);
             
@@ -1491,7 +1491,7 @@ function showEmployeeTrendData() {
                 
                 if (change !== 0) {
                     const isImprovement = metric.isMin ? change > 0 : change < 0;
-                    const changeIcon = isImprovement ? '📈' : '📉';
+                    const changeIcon = isImprovement ? 'ðŸ“ˆ' : 'ðŸ“‰';
                     const changeColor = isImprovement ? '#28a745' : '#dc3545';
                     const changeText = Math.abs(change).toFixed(2);
                     
@@ -1499,7 +1499,7 @@ function showEmployeeTrendData() {
                     
                     // Special highlight if this was coached and improved
                     if (wasCoachedinPrevious && isImprovement) {
-                        comparisonHTML = `<div style="font-size: 0.75em; margin-top: 5px; padding: 4px; background: #d4edda; border-radius: 3px; color: #155724; font-weight: bold;">🎯 Coaching worked! +${changeText}${metric.unit}</div>`;
+                        comparisonHTML = `<div style="font-size: 0.75em; margin-top: 5px; padding: 4px; background: #d4edda; border-radius: 3px; color: #155724; font-weight: bold;">ðŸŽ¯ Coaching worked! +${changeText}${metric.unit}</div>`;
                     }
                 }
             }
@@ -1510,8 +1510,8 @@ function showEmployeeTrendData() {
                 <div style="padding: 12px; background: ${bgColor}; border-radius: 5px; border: 1px solid #ddd;">
                     <div style="font-size: 0.85em; color: #666; margin-bottom: 5px;">${metric.label}</div>
                     <div style="font-size: 1.4em; font-weight: bold; color: ${statusColor};">${statusIcon} ${value}${metric.unit}</div>
-                    <div style="font-size: 0.8em; color: #666; margin-top: 3px;">Target: ${metric.isMin ? '≥' : '≤'}${metric.target}${metric.unit}</div>
-                    ${wasCoached ? '<div style="font-size: 0.75em; color: #856404; margin-top: 3px; font-weight: bold;">📋 Coached this period</div>' : ''}
+                    <div style="font-size: 0.8em; color: #666; margin-top: 3px;">Target: ${metric.isMin ? 'â‰¥' : 'â‰¤'}${metric.target}${metric.unit}</div>
+                    ${wasCoached ? '<div style="font-size: 0.75em; color: #856404; margin-top: 3px; font-weight: bold;">ðŸ“‹ Coached this period</div>' : ''}
                     ${comparisonHTML}
                 </div>
             `;
@@ -1548,18 +1548,18 @@ function showEmployeeTrendData() {
         if (improved.length > 0 || declined.length > 0) {
             html += `
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #ddd;">
-                    <h4 style="color: #003DA5; margin: 0 0 10px 0;">📊 Coaching Impact Summary</h4>
+                    <h4 style="color: #003DA5; margin: 0 0 10px 0;">ðŸ“Š Coaching Impact Summary</h4>
             `;
             
             if (improved.length > 0) {
                 html += `<div style="margin-bottom: 8px; padding: 8px; background: #d4edda; border-left: 3px solid #28a745; border-radius: 3px;">
-                    <strong style="color: #155724;">✅ Improved After Coaching (${improved.length}):</strong> ${improved.join(', ')}
+                    <strong style="color: #155724;">âœ… Improved After Coaching (${improved.length}):</strong> ${improved.join(', ')}
                 </div>`;
             }
             
             if (declined.length > 0) {
                 html += `<div style="padding: 8px; background: #f8d7da; border-left: 3px solid #dc3545; border-radius: 3px;">
-                    <strong style="color: #721c24;">⚠️ Still Needs Work (${declined.length}):</strong> ${declined.join(', ')}
+                    <strong style="color: #721c24;">âš ï¸ Still Needs Work (${declined.length}):</strong> ${declined.join(', ')}
                 </div>`;
             }
             
@@ -1946,7 +1946,7 @@ function getEmployeeDataForPeriod(employeeName) {
 
 // Initialize app robustly whether DOMContentLoaded has fired or not
 function initApp() {
-    console.log('🚀 Coaching Tool Initialized');
+    console.log('ðŸš€ Coaching Tool Initialized');
     
     // Restore last active section (or default to upload page)
     const lastActiveSection = localStorage.getItem('activeSection') || 'coachingForm';
@@ -1973,7 +1973,7 @@ function initApp() {
             
             mergeTips();
         } catch (error) {
-            console.warn('⚠️ Using fallback tips:', error);
+            console.warn('âš ï¸ Using fallback tips:', error);
         }
     })();
 
@@ -2042,7 +2042,7 @@ function initApp() {
         console.log('weeklyData from localStorage:', stored);
         
         if (!stored || Object.keys(JSON.parse(stored)).length === 0) {
-            alert('⚠️ No data uploaded yet!\n\nPlease click "🏠 Upload Data" first to upload your weekly performance data.');
+            alert('âš ï¸ No data uploaded yet!\n\nPlease click "ðŸ  Upload Data" first to upload your weekly performance data.');
             return;
         }
         
@@ -2110,10 +2110,10 @@ function initApp() {
         const prompt = document.getElementById('execSummaryPrompt').value;
         navigator.clipboard.writeText(prompt).then(() => {
             if (navigator.onLine) {
-                showToast('✅ Summary copied! Opening Copilot...');
+                showToast('âœ… Summary copied! Opening Copilot...');
                 window.open('https://copilot.microsoft.com/', '_blank');
             } else {
-                showToast('✅ Summary copied! Paste in Copilot.');
+                showToast('âœ… Summary copied! Paste in Copilot.');
             }
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
@@ -2206,7 +2206,7 @@ function initApp() {
                 const importedData = JSON.parse(event.target.result);
                 
                 if (!importedData || typeof importedData !== 'object' || !importedData.customTips) {
-                    alert('❌ Invalid tips file format. Expected JSON with customTips property.');
+                    alert('âŒ Invalid tips file format. Expected JSON with customTips property.');
                     return;
                 }
                 
@@ -2248,9 +2248,9 @@ function initApp() {
                     showMetricTips(currentMetric);
                 }
                 
-                alert('✅ Tips imported successfully!');
+                alert('âœ… Tips imported successfully!');
             } catch (error) {
-                alert('❌ Error reading tips file. Please make sure it\'s a valid JSON file.');
+                alert('âŒ Error reading tips file. Please make sure it\'s a valid JSON file.');
                 console.error(error);
             }
         };
@@ -2320,7 +2320,7 @@ function initApp() {
     
     // Clear ALL data button (on Employee History tab) - clears uploaded data AND coaching history
     document.getElementById('clearAllDataBtn')?.addEventListener('click', () => {
-        if (confirm('⚠️ Are you sure you want to clear ALL data?\n\nThis will delete:\n• All weekly uploaded data\n• Upload history\n• Coaching email history\n• Employee session history\n\nThis cannot be undone.')) {
+        if (confirm('âš ï¸ Are you sure you want to clear ALL data?\n\nThis will delete:\nâ€¢ All weekly uploaded data\nâ€¢ Upload history\nâ€¢ Coaching email history\nâ€¢ Employee session history\n\nThis cannot be undone.')) {
             // Clear weeklyData
             weeklyData = {};
             localStorage.removeItem('weeklyData');
@@ -2355,22 +2355,22 @@ function initApp() {
             // Refresh the dashboard display
             showEmployeeDashboard();
             
-            alert('✅ All data and history has been cleared!');
+            alert('âœ… All data and history has been cleared!');
         }
     });
 
-    // Load all sheets using tab dates (Mon–Sat)
+    // Load all sheets using tab dates (Monâ€“Sat)
     document.getElementById('loadSheetsByTabsBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('excelFile');
         const file = fileInput.files[0];
         if (!file) {
-            alert('❌ Please select an Excel file first');
+            alert('âŒ Please select an Excel file first');
             return;
         }
         
         // Check if XLSX library is loaded
         if (typeof XLSX === 'undefined') {
-            alert('❌ Excel library not loaded. Please refresh the page and try again.\n\nAlternatively, use the "Quick Paste from PowerBI" option below.');
+            alert('âŒ Excel library not loaded. Please refresh the page and try again.\n\nAlternatively, use the "Quick Paste from PowerBI" option below.');
             return;
         }
 
@@ -2510,17 +2510,17 @@ function initApp() {
                 const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
                 const dateRanges = employeesBySheet.filter(s => s.hasValidDates).map(s => s.label).join(', ');
                 
-                let message = `✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n`;
+                let message = `âœ… Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n`;
                 
                 if (validWeeks > 0) {
-                    message += `📆 Weeks loaded: ${dateRanges}\n\n`;
+                    message += `ðŸ“† Weeks loaded: ${dateRanges}\n\n`;
                 }
                 
                 if (hasGenericSheets) {
-                    message += `⚠️ Some sheets had generic names and were skipped.\n\n`;
+                    message += `âš ï¸ Some sheets had generic names and were skipped.\n\n`;
                 }
                 
-                message += `✓ Data saved. Use the selectors below to view employee metrics.`;
+                message += `âœ“ Data saved. Use the selectors below to view employee metrics.`;
                 
                 alert(message);
             } catch (error) {
@@ -2540,12 +2540,12 @@ function initApp() {
         const endDate = document.getElementById('pasteEndDate')?.value;
         
         if (!pastedData) {
-            alert('❌ Please paste data first');
+            alert('âŒ Please paste data first');
             return;
         }
         
         if (!startDate || !endDate) {
-            alert('❌ Please select both start and end dates');
+            alert('âŒ Please select both start and end dates');
             return;
         }
         
@@ -2554,7 +2554,7 @@ function initApp() {
             const lines = pastedData.split('\n').map(line => line.trim()).filter(line => line);
             
             if (lines.length < 2) {
-                alert('❌ Data appears incomplete. Please paste header row and data rows.');
+                alert('âŒ Data appears incomplete. Please paste header row and data rows.');
                 return;
             }
             
@@ -2624,10 +2624,13 @@ function initApp() {
             console.log('=== PASTE DATA DEBUG ===');
             console.log('Headers detected:', headers);
             console.log('Column indices:', colIndices);
+            console.log('Header count:', headers.length);
+            console.log('Headers with indices:');
+            headers.forEach((h, idx) => console.log(`  [${idx}]: "${h}"`));
             
             if (colIndices.name === -1) {
                 console.error('Available headers:', headers);
-                alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
+                alert('âŒ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
                 return;
             }
             
@@ -2639,7 +2642,14 @@ function initApp() {
                 
                 // Handle rows with mismatched column counts - try to intelligently parse
                 // If row has fewer columns than headers, it might have single-space separation issues
+
+                // Debug first 3 data rows for alignment verification
+                if (i < dataStartLine + 3) {
+                    console.log(`Row ${i}: ${cells.length} cells vs ${headers.length} headers`);
+                    console.log('  First 5 cells:', cells.slice(0, 5));
+                }
                 if (cells.length < headers.length && separator === '\t') {
+                    console.warn(` Column count mismatch for row ${i}: ${cells.length} cells vs ${headers.length} headers`);
                     // Try splitting by any whitespace and reconstructing
                     const allParts = lines[i].split(/\s+/).map(p => p.trim()).filter(p => p);
                     
@@ -2732,8 +2742,13 @@ function initApp() {
                 employees.push(employeeData);
             }
             
+
+            console.log(` Successfully parsed ${employees.length} employees`);
+            if (employees.length > 0) {
+                console.log('Sample employee data:', employees[0]);
+            }
             if (employees.length === 0) {
-                alert('❌ No valid employee data found. Please check your paste format.');
+                alert('âŒ No valid employee data found. Please check your paste format.');
                 return;
             }
             
@@ -2798,11 +2813,11 @@ function initApp() {
             // Clear the textarea
             document.getElementById('pasteDataTextarea').value = '';
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\n✓ Data saved. Use the selectors below to view employee metrics.`);
+            alert(`âœ… Loaded ${employees.length} employees for ${label}!\n\nâœ“ Data saved. Use the selectors below to view employee metrics.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
-            alert(`❌ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+            alert(`âŒ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
         }
     });
 
@@ -2842,10 +2857,10 @@ function initApp() {
             link.download = `coaching-backup-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             URL.revokeObjectURL(url);
-            alert('✅ Backup created. Save the JSON file safely.');
+            alert('âœ… Backup created. Save the JSON file safely.');
         } catch (e) {
             console.error('Backup failed', e);
-            alert('❌ Backup failed. See console for details.');
+            alert('âŒ Backup failed. See console for details.');
         }
     }
 
@@ -2855,7 +2870,7 @@ function initApp() {
             try {
                 const data = JSON.parse(event.target.result);
                 if (!data || typeof data !== 'object') {
-                    alert('❌ Invalid backup file.');
+                    alert('âŒ Invalid backup file.');
                     return;
                 }
 
@@ -2889,10 +2904,10 @@ function initApp() {
                 if (typeof initializeQuickAccess === 'function') {
                     initializeQuickAccess();
                 }
-                alert('✅ Data restored successfully.');
+                alert('âœ… Data restored successfully.');
             } catch (e) {
                 console.error('Import failed', e);
-                alert('❌ Could not import backup. Make sure it is a valid JSON export.');
+                alert('âŒ Could not import backup. Make sure it is a valid JSON export.');
             }
         };
         reader.readAsText(file);
@@ -2927,7 +2942,7 @@ function initApp() {
         
         if (!hasFile) {
             if (validationMsg) {
-                validationMsg.textContent = '⚠️ Please select a file first';
+                validationMsg.textContent = 'âš ï¸ Please select a file first';
                 validationMsg.style.display = 'block';
             }
             return;
@@ -2935,7 +2950,7 @@ function initApp() {
         
         if (!startDate || !endDate) {
             if (validationMsg) {
-                validationMsg.textContent = '⚠️ Please enter both Start and End dates to load data';
+                validationMsg.textContent = 'âš ï¸ Please enter both Start and End dates to load data';
                 validationMsg.style.display = 'block';
             }
             return;
@@ -2944,7 +2959,7 @@ function initApp() {
         // Check if end date is after start date
         if (new Date(endDate) < new Date(startDate)) {
             if (validationMsg) {
-                validationMsg.textContent = '⚠️ End date must be after or equal to start date';
+                validationMsg.textContent = 'âš ï¸ End date must be after or equal to start date';
                 validationMsg.style.display = 'block';
             }
             return;
@@ -2956,7 +2971,7 @@ function initApp() {
         loadBtn.style.opacity = '1';
         loadBtn.style.cursor = 'pointer';
         if (validationMsg) {
-            validationMsg.textContent = '✅ Ready to load data';
+            validationMsg.textContent = 'âœ… Ready to load data';
             validationMsg.style.color = '#28a745';
             validationMsg.style.display = 'block';
         }
@@ -3044,7 +3059,7 @@ function initApp() {
         const endDateInput = document.getElementById('endDate')?.value || '';
 
         if (!file) {
-            alert('❌ Please select an Excel file first');
+            alert('âŒ Please select an Excel file first');
             return;
         }
 
@@ -3100,7 +3115,7 @@ function initApp() {
 
                 if (usedStart && usedEnd) {
                     if (new Date(usedEnd) < new Date(usedStart)) {
-                        alert('❌ End date must be after or equal to start date.');
+                        alert('âŒ End date must be after or equal to start date.');
                         document.getElementById('endDate')?.focus();
                         return;
                     }
@@ -3151,7 +3166,7 @@ function initApp() {
 
                 const sheetCount = employeesBySheet.length;
                 const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
-                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📊 Data saved to Employee History.\n\nWeeks recorded using tab names (Mon–Sat).`);
+                alert(`âœ… Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\nðŸ“Š Data saved to Employee History.\n\nWeeks recorded using tab names (Monâ€“Sat).`);
 
             } catch (error) {
                 console.error('Error parsing Excel:', error);
@@ -3384,12 +3399,12 @@ function initApp() {
         
         // Display comparison
         let html = `
-            <strong style="color: #003DA5;">📊 YTD Performance vs This Report (${employeeSessions.length} period${employeeSessions.length > 1 ? 's' : ''} tracked):</strong>
+            <strong style="color: #003DA5;">ðŸ“Š YTD Performance vs This Report (${employeeSessions.length} period${employeeSessions.length > 1 ? 's' : ''} tracked):</strong>
             <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
         `;
         
         comparisons.forEach(comp => {
-            const icon = comp.isBetter ? '⬆️' : '⬇️';
+            const icon = comp.isBetter ? 'â¬†ï¸' : 'â¬‡ï¸';
             const color = comp.isBetter ? '#28a745' : '#dc3545';
             const sign = comp.diff > 0 ? '+' : '';
             
@@ -3520,10 +3535,10 @@ function initApp() {
         const prompt = document.getElementById('aiPrompt').value;
         navigator.clipboard.writeText(prompt).then(() => {
             if (navigator.onLine) {
-                alert('✅ Prompt copied!\n\nOpening Copilot - paste it there.');
+                alert('âœ… Prompt copied!\n\nOpening Copilot - paste it there.');
                 window.open('https://copilot.microsoft.com/', '_blank');
             } else {
-                alert('✅ Prompt copied!\n\nOffline mode: Copilot won\'t open. Paste the prompt wherever you prefer.');
+                alert('âœ… Prompt copied!\n\nOffline mode: Copilot won\'t open. Paste the prompt wherever you prefer.');
             }
         }).catch(() => {
             alert('Failed to copy. Please select the text and copy manually.');
@@ -3547,7 +3562,7 @@ function initApp() {
     
     coachingForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        console.log('🤖 Generate Email button clicked - form submitted');
+        console.log('ðŸ¤– Generate Email button clicked - form submitted');
 
         const employeeName = document.getElementById('employeeName').value;
         console.log('Employee name:', employeeName);
@@ -3655,7 +3670,7 @@ function initApp() {
         const transitions = transitionSets[Math.floor(Math.random() * transitionSets.length)];
         const styleGuidance = styleGuidanceOptions[Math.floor(Math.random() * styleGuidanceOptions.length)];
         
-        let prompt = `Write a friendly coaching email to ${employeeName} (CSR), 180–220 words. ${styleGuidance} Include a couple casual phrases (e.g., ${casualPhrases.join(', ')}), and vary transitions (e.g., ${transitions.join(', ')}). Be specific without sounding robotic. Start with this opener: "${opener}". Briefly set context, then list wins and improvements.\n\n`;
+        let prompt = `Write a friendly coaching email to ${employeeName} (CSR), 180â€“220 words. ${styleGuidance} Include a couple casual phrases (e.g., ${casualPhrases.join(', ')}), and vary transitions (e.g., ${transitions.join(', ')}). Be specific without sounding robotic. Start with this opener: "${opener}". Briefly set context, then list wins and improvements.\n\n`;
         if (!hasSurveys) {
             prompt += `Note: No customer surveys in the selected date range, so survey-based metrics (CX Rep Overall, FCR, Overall Experience) are omitted.\n\n`;
         }
@@ -3701,11 +3716,11 @@ function initApp() {
                 prompt += `IMPROVE:\n`;
             }
             
-            detailedStruggles.forEach(s => prompt += `• ${s}\n`);
+            detailedStruggles.forEach(s => prompt += `â€¢ ${s}\n`);
             
             prompt += `\nTIPS (bullet format):\n`;
             strugglingAreas.forEach(area => {
-                prompt += `• ${AREA_NAMES[area]}: ${getRandomTip(area)}\n`;
+                prompt += `â€¢ ${AREA_NAMES[area]}: ${getRandomTip(area)}\n`;
             });
             
             if (hasReliabilityIssue && metrics.reliability >= 16) {
@@ -3855,7 +3870,7 @@ function generateExecutiveSummaryPrompt() {
         if (data.count > 0) {
             const pct = aggregated.metricsAbovePercent[metricId];
             const name = metricNames[metricId];
-            summaryLines.push(`• ${name}: Average ${data.average}, ${pct}% of team meeting target`);
+            summaryLines.push(`â€¢ ${name}: Average ${data.average}, ${pct}% of team meeting target`);
         }
     });
 
