@@ -2692,6 +2692,15 @@ function initApp() {
                     surveyTotal: colIndices.surveyTotal !== -1 ? parseInt(cells[colIndices.surveyTotal]) || 0 : 0
                 };
                 
+                // Debug for Angelina
+                if (firstName.toLowerCase().includes('angel')) {
+                    console.log('🔍 ANGELINA DEBUG:');
+                    console.log('  surveyTotal column index:', colIndices.surveyTotal);
+                    console.log('  Raw value at that index:', cells[colIndices.surveyTotal]);
+                    console.log('  Parsed surveyTotal:', employeeData.surveyTotal);
+                    console.log('  Total cells in row:', cells.length);
+                }
+                
                 // If no survey total, blank out survey-based metrics
                 if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
                     employeeData.cxRepOverall = '';
