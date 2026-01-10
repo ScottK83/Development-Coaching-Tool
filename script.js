@@ -2590,10 +2590,6 @@ function initApp() {
             }
             headers = expandedHeaders;
             
-            // Debug: Show all headers with their indices
-            console.log('📋 ALL HEADERS WITH INDICES:');
-            headers.forEach((h, i) => console.log(`  [${i}]: "${h}"`));
-            
             // Check if first line is actually data (no header row)
             const firstLineCells = lines[0].split(separator).map(c => c.trim());
             const looksLikeData = firstLineCells.some(cell => {
@@ -2657,8 +2653,6 @@ function initApp() {
                     surveyTotal: findColumnIndex(['OE Survey Total', 'Survey Total', 'Total Surveys'])
                 };
                 
-                console.log('📊 Column indices found:', colIndices);
-                
                 if (colIndices.name === -1) {
                     console.error('Available headers:', headers);
                     alert('❌ Could not find Name column.\n\nHeaders found: ' + headers.join(', ') + '\n\nPlease ensure your data includes a Name column.');
@@ -2710,15 +2704,6 @@ function initApp() {
                     managingEmotions: colIndices.emotions !== -1 ? parsePercentage(cells[colIndices.emotions]) : '',
                     surveyTotal: colIndices.surveyTotal !== -1 ? parseInt(cells[colIndices.surveyTotal]) || 0 : 0
                 };
-                
-                // Debug for Angelina
-                if (firstName.toLowerCase().includes('angel')) {
-                    console.log('🔍 ANGELINA DEBUG:');
-                    console.log('  surveyTotal column index:', colIndices.surveyTotal);
-                    console.log('  Raw value at that index:', cells[colIndices.surveyTotal]);
-                    console.log('  Parsed surveyTotal:', employeeData.surveyTotal);
-                    console.log('  Total cells in row:', cells.length);
-                }
                 
                 // If no survey total, blank out survey-based metrics
                 if (!employeeData.surveyTotal || employeeData.surveyTotal === 0) {
