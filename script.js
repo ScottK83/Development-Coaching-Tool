@@ -2560,6 +2560,7 @@ function initApp() {
             
             // Detect separator (prefer TAB for PowerBI exports)
             let separator = '\t'; // Force TAB as default for PowerBI
+            let isSingleSpaceSeparated = false;
             
             // Only fall back to other separators if NO tabs found anywhere
             if (!lines[0].includes('\t') && !lines[1]?.includes('\t')) {
@@ -2570,8 +2571,8 @@ function initApp() {
                 }
             }
             
-            // Parse header row
-            let headers = lines[0].split(separator).map(h => h.trim());
+            // Parse header row first to establish column structure
+            let headers = lines[0].split(separator).map(h => h.trim()).filter(h => h);
             
             // Fix merged headers (e.g., "AvoidNegativeWordScore% PositiveWordScore%" split into separate cells)
             const expandedHeaders = [];
@@ -2633,7 +2634,41 @@ function initApp() {
             // Parse data rows
             const employees = [];
             for (let i = dataStartLine; i < lines.length; i++) {
-                const cells = lines[i].split(separator).map(c => c.trim());
+                let cells = lines[i].split(separator).map(c => c.trim()).filter(c => c);
+                
+                // Handle rows with mismatched column counts - try to intelligently parse
+                // If row has significantly fewer columns than headers, it might have single-space separation issues
+                if (cells.length < headers.length - 3 && separator === '\t') {
+                    // Try splitting by any whitespace and reconstructing
+                    const allParts = lines[i].split(/\s+/).map(p => p.trim()).filter(p => p);
+                    
+                    // Name should be in format "Last, First XXX" where XXX might be a number
+                    // Find the comma to identify name boundaries
+                    let nameEndIndex = -1;
+                    for (let j = 0; j < allParts.length; j++) {
+                        if (allParts[j].includes(',')) {
+                            // Found comma in name - name extends through next 1-2 tokens
+                            nameEndIndex = j + 2; // "Last," "First" and possibly a number
+                            // Check if next token is numeric (part of name like "Trisha 135")
+                            if (j + 2 < allParts.length && /^\d+$/.test(allParts[j + 2])) {
+                                nameEndIndex = j + 3;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (nameEndIndex > 0) {
+                        // Reconstruct name and remaining cells
+                        const nameParts = allParts.slice(0, nameEndIndex);
+                        const fullName = nameParts.join(' ');
+                        const remainingParts = allParts.slice(nameEndIndex);
+                        
+                        // Now remainingParts should be in header order (starting from column 1)
+                        cells = [fullName, ...remainingParts];
+                        
+                        console.log(`Reconstructed row for ${fullName}:`, cells);
+                    }
+                }
                 
                 if (cells.length < 2) continue; // Skip empty/invalid rows
                 
