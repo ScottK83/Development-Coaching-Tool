@@ -58,7 +58,10 @@
                         <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm" style="margin-bottom: 10px;">
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                        <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (use tab dates)</button>
+                        <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (auto-extract dates)</button>
+                    </div>
+                    <div id="genericSheetWarning" style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404;"><strong>⚠️ Note:</strong> Some sheets have generic names (like "Sheet1"). Please enter date ranges below for data tracking.</p>
                     </div>
                     <div id="dateRangeInputContainer" style="display: none; margin-top: 10px;">
                         <label style="font-weight: bold; display: block; margin-bottom: 5px;">📅 Date Range for this Data:</label>
@@ -81,12 +84,38 @@
                         <button type="button" id="loadDataBtn" class="btn-secondary" style="background: #ccc; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load Data</button>
                         <p id="dateValidationMsg" style="color: #dc3545; font-size: 0.9em; margin-top: 8px;">⚠️ Please select a file and enter both Start and End dates</p>
                     </div>
-                    <div id="employeeSelectContainer" style="display: none; margin-top: 15px;">
-                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
-                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
-                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose an employee --</option>
-                        </select>
+                    
+                    <!-- Time Period & Employee Selection (shown after data upload) -->
+                    <div id="periodSelectionContainer" style="display: none; margin-top: 20px; padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
+                        <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
+                        
+                        <!-- Time Period Type Selector -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">View By:</label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" class="period-type-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #2196F3; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
+                                <button type="button" class="period-type-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
+                                <button type="button" class="period-type-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
+                                <button type="button" class="period-type-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Specific Period Selector (changes based on type) -->
+                        <div id="specificPeriodContainer" style="margin-bottom: 15px;">
+                            <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Week:</label>
+                            <select id="specificPeriod" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose a week --</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Employee Selector -->
+                        <div>
+                            <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
+                            <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
+                            <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose an employee --</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Data Backup / Restore -->

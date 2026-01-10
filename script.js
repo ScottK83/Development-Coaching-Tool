@@ -74,6 +74,11 @@ let hiddenTips = {}; // Tips hidden (e.g., server tips soft-deleted)
 let tipOrder = {};   // Preserve tip positions per metric
 let uploadHistory = []; // Store all data uploads with time labels
 
+// New centralized data structure for uploaded weeks
+let weeklyData = {}; // { "2025-12-21|2025-12-27": { employees: [...], metadata: {...} } }
+let currentPeriodType = 'week'; // week, month, quarter, ytd
+let currentPeriod = null; // Selected specific period
+
 // Smart date detection: return time period label
 function detectTimePeriod(startDate, endDate) {
     const start = new Date(startDate);
@@ -1527,6 +1532,316 @@ function filterDashboard() {
     });
 }
 
+// ========== NEW PERIOD SELECTION SYSTEM ==========
+
+// Initialize period selector after data upload
+function initializePeriodSelector() {
+    // Load weekly data from localStorage
+    const stored = localStorage.getItem('weeklyData');
+    if (stored) {
+        weeklyData = JSON.parse(stored);
+    }
+    
+    // Set default to week view
+    currentPeriodType = 'week';
+    updatePeriodDropdown();
+}
+
+// Update the specific period dropdown based on selected period type
+function updatePeriodDropdown() {
+    const dropdown = document.getElementById('specificPeriod');
+    const label = document.getElementById('specificPeriodContainer')?.querySelector('label');
+    
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '';
+    
+    if (currentPeriodType === 'week') {
+        if (label) label.textContent = 'Select Week:';
+        
+        // Get all weeks sorted by date
+        const weeks = Object.keys(weeklyData).sort((a, b) => {
+            const dateA = new Date(a.split('|')[0]);
+            const dateB = new Date(b.split('|')[0]);
+            return dateB - dateA; // Most recent first
+        });
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Choose a week --';
+        dropdown.appendChild(defaultOption);
+        
+        weeks.forEach(weekKey => {
+            const week = weeklyData[weekKey];
+            const option = document.createElement('option');
+            option.value = weekKey;
+            option.textContent = week.metadata.label;
+            dropdown.appendChild(option);
+        });
+        
+        // Auto-select most recent week
+        if (weeks.length > 0) {
+            dropdown.value = weeks[0];
+            currentPeriod = weeks[0];
+            updateEmployeeDropdown();
+        }
+        
+    } else if (currentPeriodType === 'month') {
+        if (label) label.textContent = 'Select Month:';
+        
+        // Group weeks by month
+        const months = {};
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const monthLabel = startDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+            
+            if (!months[monthKey]) {
+                months[monthKey] = {
+                    label: monthLabel,
+                    weeks: []
+                };
+            }
+            months[monthKey].weeks.push(weekKey);
+        });
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Choose a month --';
+        dropdown.appendChild(defaultOption);
+        
+        Object.keys(months).sort().reverse().forEach(monthKey => {
+            const month = months[monthKey];
+            const option = document.createElement('option');
+            option.value = monthKey;
+            option.textContent = month.label;
+            dropdown.appendChild(option);
+        });
+        
+        // Auto-select most recent month
+        const monthKeys = Object.keys(months).sort().reverse();
+        if (monthKeys.length > 0) {
+            dropdown.value = monthKeys[0];
+            currentPeriod = monthKeys[0];
+            updateEmployeeDropdown();
+        }
+        
+    } else if (currentPeriodType === 'quarter') {
+        if (label) label.textContent = 'Select Quarter:';
+        
+        // Group weeks by quarter
+        const quarters = {};
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            const quarter = Math.floor(startDate.getMonth() / 3) + 1;
+            const quarterKey = `${startDate.getFullYear()}-Q${quarter}`;
+            const quarterLabel = `Q${quarter} ${startDate.getFullYear()}`;
+            
+            if (!quarters[quarterKey]) {
+                quarters[quarterKey] = {
+                    label: quarterLabel,
+                    weeks: []
+                };
+            }
+            quarters[quarterKey].weeks.push(weekKey);
+        });
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Choose a quarter --';
+        dropdown.appendChild(defaultOption);
+        
+        Object.keys(quarters).sort().reverse().forEach(quarterKey => {
+            const quarter = quarters[quarterKey];
+            const option = document.createElement('option');
+            option.value = quarterKey;
+            option.textContent = quarter.label;
+            dropdown.appendChild(option);
+        });
+        
+        // Auto-select most recent quarter
+        const quarterKeys = Object.keys(quarters).sort().reverse();
+        if (quarterKeys.length > 0) {
+            dropdown.value = quarterKeys[0];
+            currentPeriod = quarterKeys[0];
+            updateEmployeeDropdown();
+        }
+        
+    } else if (currentPeriodType === 'ytd') {
+        if (label) label.textContent = 'Year to Date:';
+        dropdown.innerHTML = '';
+        
+        // Get all unique years
+        const years = {};
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            const year = startDate.getFullYear();
+            if (!years[year]) {
+                years[year] = {
+                    label: `${year} Year to Date`,
+                    weeks: []
+                };
+            }
+            years[year].weeks.push(weekKey);
+        });
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Choose a year --';
+        dropdown.appendChild(defaultOption);
+        
+        Object.keys(years).sort().reverse().forEach(year => {
+            const ytd = years[year];
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = ytd.label;
+            dropdown.appendChild(option);
+        });
+        
+        // Auto-select current year
+        const currentYear = new Date().getFullYear();
+        if (years[currentYear]) {
+            dropdown.value = currentYear;
+            currentPeriod = currentYear;
+            updateEmployeeDropdown();
+        }
+    }
+}
+
+// Update employee dropdown based on selected period
+function updateEmployeeDropdown() {
+    const dropdown = document.getElementById('employeeSelect');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- Choose an employee --';
+    dropdown.appendChild(defaultOption);
+    
+    // Get all unique employees from selected period
+    const employees = new Set();
+    
+    if (currentPeriodType === 'week' && currentPeriod) {
+        // Single week
+        const week = weeklyData[currentPeriod];
+        if (week && week.employees) {
+            week.employees.forEach(emp => employees.add(emp.name));
+        }
+    } else if (currentPeriodType === 'month' && currentPeriod) {
+        // All weeks in month
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            if (monthKey === currentPeriod) {
+                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
+            }
+        });
+    } else if (currentPeriodType === 'quarter' && currentPeriod) {
+        // All weeks in quarter
+        const [year, q] = currentPeriod.split('-Q');
+        const quarterNum = parseInt(q);
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            const weekQuarter = Math.floor(startDate.getMonth() / 3) + 1;
+            if (startDate.getFullYear() === parseInt(year) && weekQuarter === quarterNum) {
+                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
+            }
+        });
+    } else if (currentPeriodType === 'ytd' && currentPeriod) {
+        // All weeks in year
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            if (startDate.getFullYear() === parseInt(currentPeriod)) {
+                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
+            }
+        });
+    }
+    
+    // Add employees to dropdown sorted alphabetically
+    Array.from(employees).sort().forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        dropdown.appendChild(option);
+    });
+}
+
+// Get employee data for selected period
+function getEmployeeDataForPeriod(employeeName) {
+    if (currentPeriodType === 'week' && currentPeriod) {
+        // Return data from single week
+        const week = weeklyData[currentPeriod];
+        if (week && week.employees) {
+            return week.employees.find(emp => emp.name === employeeName);
+        }
+    } else if (['month', 'quarter', 'ytd'].includes(currentPeriodType) && currentPeriod) {
+        // Aggregate data across multiple weeks
+        const metricsToAggregate = [];
+        
+        Object.keys(weeklyData).forEach(weekKey => {
+            const startDate = new Date(weekKey.split('|')[0]);
+            let includeWeek = false;
+            
+            if (currentPeriodType === 'month') {
+                const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                includeWeek = (monthKey === currentPeriod);
+            } else if (currentPeriodType === 'quarter') {
+                const [year, q] = currentPeriod.split('-Q');
+                const quarterNum = parseInt(q);
+                const weekQuarter = Math.floor(startDate.getMonth() / 3) + 1;
+                includeWeek = (startDate.getFullYear() === parseInt(year) && weekQuarter === quarterNum);
+            } else if (currentPeriodType === 'ytd') {
+                includeWeek = (startDate.getFullYear() === parseInt(currentPeriod));
+            }
+            
+            if (includeWeek) {
+                const emp = weeklyData[weekKey].employees.find(e => e.name === employeeName);
+                if (emp) {
+                    metricsToAggregate.push(emp);
+                }
+            }
+        });
+        
+        // Calculate averages
+        if (metricsToAggregate.length === 0) return null;
+        
+        const aggregated = {
+            name: employeeName,
+            surveyTotal: 0
+        };
+        
+        const metricKeys = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 
+                          'transfers', 'aht', 'acw', 'holdTime', 'reliability',
+                          'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions'];
+        
+        metricKeys.forEach(key => {
+            const values = metricsToAggregate
+                .map(m => m[key])
+                .filter(v => v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v)))
+                .map(v => parseFloat(v));
+            
+            if (values.length > 0) {
+                const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+                aggregated[key] = Math.round(avg * 100) / 100; // Round to 2 decimals
+            } else {
+                aggregated[key] = '';
+            }
+        });
+        
+        // Sum survey totals
+        aggregated.surveyTotal = metricsToAggregate
+            .map(m => m.surveyTotal || 0)
+            .reduce((sum, val) => sum + val, 0);
+        
+        return aggregated;
+    }
+    
+    return null;
+}
+
+// ========== END NEW PERIOD SELECTION SYSTEM ==========
+
 // Initialize app robustly whether DOMContentLoaded has fired or not
 function initApp() {
     console.log('🚀 Coaching Tool Initialized');
@@ -1539,6 +1854,21 @@ function initApp() {
             hiddenTips = loadHiddenTips();
             tipOrder = loadTipOrder();
             uploadHistory = loadUploadHistory();
+            
+            // Load weekly data from localStorage
+            const stored = localStorage.getItem('weeklyData');
+            if (stored) {
+                weeklyData = JSON.parse(stored);
+                // If we have data, show the period selector
+                if (Object.keys(weeklyData).length > 0) {
+                    const periodContainer = document.getElementById('periodSelectionContainer');
+                    if (periodContainer) {
+                        periodContainer.style.display = 'block';
+                    }
+                    initializePeriodSelector();
+                }
+            }
+            
             mergeTips();
             console.log('✅ Tips loaded successfully');
         } catch (error) {
@@ -1931,35 +2261,53 @@ function initApp() {
                 };
 
                 const employeesBySheet = [];
+                let hasGenericSheets = false;
+                
                 workbook.SheetNames.forEach(sn => {
                     const parsed = parseWeekFromSheetName(sn);
                     const employees = processSheet(sn);
+                    
+                    if (!parsed) {
+                        hasGenericSheets = true;
+                    }
+                    
                     const start = parsed?.startDate || '';
                     const end = parsed?.endDate || '';
                     const label = parsed?.timePeriod || sn;
-                    employeesBySheet.push({ name: sn, employees, start, end, label });
+                    employeesBySheet.push({ 
+                        name: sn, 
+                        employees, 
+                        start, 
+                        end, 
+                        label,
+                        hasValidDates: !!parsed 
+                    });
                 });
 
-                // Set the latest sheet dataset in UI
-                const last = employeesBySheet[employeesBySheet.length - 1];
-                uploadedEmployeeData = last?.employees || [];
-                
-                // Auto-populate start/end dates from the last sheet loaded
-                if (last?.start && last?.end) {
-                    const startDateInput = document.getElementById('startDate');
-                    const endDateInput = document.getElementById('endDate');
-                    if (startDateInput) startDateInput.value = last.start;
-                    if (endDateInput) endDateInput.value = last.end;
-                }
-                
-                const searchValue = document.getElementById('employeeSearch')?.value || '';
-                renderEmployeeDropdown(searchValue);
-                document.getElementById('employeeSelectContainer').style.display = 'block';
+                // Store all weeks in the new centralized structure
+                weeklyData = {}; // Clear existing
+                employeesBySheet.forEach(entry => {
+                    if (entry.start && entry.end) {
+                        const weekKey = `${entry.start}|${entry.end}`;
+                        weeklyData[weekKey] = {
+                            employees: entry.employees,
+                            metadata: {
+                                label: entry.label,
+                                startDate: entry.start,
+                                endDate: entry.end,
+                                sheetName: entry.name,
+                                timestamp: new Date().toISOString()
+                            }
+                        };
+                    }
+                });
 
-                // Bulk save all employees from all sheets with their respective date ranges
+                // Save to localStorage
+                localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
+
+                // Bulk save all employees from all sheets with their respective date ranges to history
                 employeesBySheet.forEach(entry => {
                     if (!entry.start || !entry.end) {
-                        console.warn(`Skipping sheet "${entry.name}" - no valid date range extracted`);
                         return;
                     }
                     
@@ -1993,10 +2341,33 @@ function initApp() {
                 
                 saveUploadHistory(uploadHistory);
 
+                // Show the period selection UI
+                const periodContainer = document.getElementById('periodSelectionContainer');
+                if (periodContainer) {
+                    periodContainer.style.display = 'block';
+                }
+
+                // Initialize period selector with weeks
+                initializePeriodSelector();
+
                 const sheetCount = employeesBySheet.length;
+                const validWeeks = employeesBySheet.filter(s => s.hasValidDates).length;
                 const totalEmployees = employeesBySheet.reduce((sum, s) => sum + s.employees.length, 0);
-                const dateRanges = employeesBySheet.map(s => s.label).join(', ');
-                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📆 Date ranges: ${dateRanges}\n\n📊 Data saved to Employee History.\n\nDates automatically extracted from sheet names.`);
+                const dateRanges = employeesBySheet.filter(s => s.hasValidDates).map(s => s.label).join(', ');
+                
+                let message = `✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n`;
+                
+                if (validWeeks > 0) {
+                    message += `📆 Weeks loaded: ${dateRanges}\n\n`;
+                }
+                
+                if (hasGenericSheets) {
+                    message += `⚠️ Some sheets had generic names and were skipped.\n\n`;
+                }
+                
+                message += `✓ Data saved. Use the selectors below to view employee metrics.`;
+                
+                alert(message);
             } catch (error) {
                 console.error('Error parsing Excel:', error);
                 alert('Error reading Excel file. Please make sure it is formatted correctly.');
@@ -2183,8 +2554,61 @@ function initApp() {
     });
 
     document.getElementById('employeeSearch')?.addEventListener('input', (e) => {
-        renderEmployeeDropdown(e.target.value || '');
+        // Filter the employee dropdown based on search text
+        const search = e.target.value.trim().toLowerCase();
+        const dropdown = document.getElementById('employeeSelect');
+        if (!dropdown) return;
+        
+        // Get all options except the default one
+        const options = Array.from(dropdown.querySelectorAll('option'));
+        options.forEach(option => {
+            if (option.value === '') return; // Keep the default option
+            const name = option.textContent.toLowerCase();
+            option.style.display = (!search || name.includes(search)) ? '' : 'none';
+        });
     });
+
+    // ========== NEW PERIOD SELECTION EVENT LISTENERS ==========
+    
+    // Period type buttons (Week / Month / Quarter / YTD)
+    document.querySelectorAll('.period-type-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const selectedType = e.target.getAttribute('data-period');
+            if (!selectedType) return;
+            
+            // Update active button styling
+            document.querySelectorAll('.period-type-btn').forEach(b => {
+                b.style.background = 'white';
+                b.style.color = '#666';
+                b.style.borderColor = '#ddd';
+            });
+            e.target.style.background = '#2196F3';
+            e.target.style.color = 'white';
+            e.target.style.borderColor = '#2196F3';
+            
+            // Update period type and refresh dropdown
+            currentPeriodType = selectedType;
+            updatePeriodDropdown();
+        });
+    });
+    
+    // Specific period dropdown (week/month/quarter/year selection)
+    document.getElementById('specificPeriod')?.addEventListener('change', (e) => {
+        currentPeriod = e.target.value;
+        updateEmployeeDropdown();
+        
+        // Clear employee selection
+        const empSelect = document.getElementById('employeeSelect');
+        if (empSelect) empSelect.value = '';
+        
+        // Hide employee info sections
+        const employeeInfoSection = document.getElementById('employeeInfoSection');
+        const metricsSection = document.getElementById('metricsSection');
+        if (employeeInfoSection) employeeInfoSection.style.display = 'none';
+        if (metricsSection) metricsSection.style.display = 'none';
+    });
+    
+    // ========== END NEW PERIOD SELECTION EVENT LISTENERS ==========
 
     // Consolidated metrics button
     document.getElementById('consolidatedMetricsBtn')?.addEventListener('click', () => {
@@ -2381,14 +2805,9 @@ function initApp() {
 
     // Auto-populate form when employee selected
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
-        const selectedIndex = e.target.value;
+        const selectedName = e.target.value;
         
-        const pastContainer = document.getElementById('pastDateRangesContainer');
-        const pastSelect = document.getElementById('pastDateRanges');
-        if (pastSelect) pastSelect.innerHTML = '<option value="">-- Select a past date range --</option>';
-        if (pastContainer) pastContainer.style.display = 'none';
-        
-        if (selectedIndex === '' || !uploadedEmployeeData || uploadedEmployeeData.length === 0) {
+        if (!selectedName) {
             // Hide sections if no employee selected
             const metricsSection = document.getElementById('metricsSection');
             const employeeInfoSection = document.getElementById('employeeInfoSection');
@@ -2397,9 +2816,10 @@ function initApp() {
             return;
         }
         
-        const employee = uploadedEmployeeData[selectedIndex];
+        // Get employee data for the selected period
+        const employee = getEmployeeDataForPeriod(selectedName);
         if (!employee) {
-            alert('Error: Employee data not found.');
+            alert('Error: Could not load employee data for selected period.');
             return;
         }
         
@@ -2416,40 +2836,16 @@ function initApp() {
         // Calculate and display YTD comparison
         displayYTDComparison(employee.name, employee);
         
-        // Populate past date ranges for selected employee
-        try {
-            const sessions = getEmployeeHistory(employee.name) || [];
-            const uniqueRanges = Array.from(new Set(sessions
-                .map(s => s.dateRange)
-                .filter(r => r && typeof r === 'string' && r.includes(' to '))));
-            if (uniqueRanges.length > 0) {
-                uniqueRanges.forEach(range => {
-                    const opt = document.createElement('option');
-                    opt.value = range;
-                    opt.textContent = range;
-                    pastSelect.appendChild(opt);
-                });
-                pastContainer.style.display = 'block';
-                
-                // Auto-select most recent range (last one in sessions)
-                const mostRecent = sessions[sessions.length - 1]?.dateRange;
-                if (mostRecent && mostRecent.includes(' to ')) {
-                    pastSelect.value = mostRecent;
-                    // Auto-populate the date fields
-                    const parts = mostRecent.split(' to ');
-                    if (parts.length === 2) {
-                        document.getElementById('startDate').value = parts[0];
-                        document.getElementById('endDate').value = parts[1];
-                        try { validateDateRange(); } catch {}
-                    }
-                }
+        // Update survey status message
+        const surveyStatusEl = document.getElementById('surveyStatusMsg');
+        if (surveyStatusEl) {
+            const hasSurveys = (employee.surveyTotal || 0) > 0;
+            if (!hasSurveys) {
+                surveyStatusEl.textContent = 'No surveys in this period; survey-based metrics are omitted.';
+            } else {
+                surveyStatusEl.textContent = '';
             }
-        } catch (err) {
-            console.warn('Could not populate past ranges:', err);
         }
-        
-        // Clear generated email textarea
-        document.getElementById('generatedEmail').value = '';
         
         // Scroll to form
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
