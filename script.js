@@ -374,30 +374,17 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    // Detect separator (PowerBI uses TAB)
-    let separator = '\t';
-    if (!lines[0].includes('\t')) {
-        separator = lines[0].includes(',') ? ',' : /\s{2,}/;
-    }
+    // PowerBI uses multiple spaces (not tabs) as column separator
+    const separator = /\s{2,}/;
     
-    // CRITICAL: Protect composite headers containing commas BEFORE splitting
-    // Example: "Name (Last, First)" must remain as one column
-    const COMMA_PLACEHOLDER = '__COMMA__';
+    console.log('📋 First line (raw):', lines[0]);
+    console.log('📋 Separator: 2+ spaces');
     
-    // Protect commas within parentheses in header row
-    let headerRow = lines[0];
-    headerRow = headerRow.replace(/\(([^)]*),([^)]*)\)/g, (match, before, after) => {
-        return `(${before}${COMMA_PLACEHOLDER}${after})`;
-    });
-    
-    // Parse headers with protected commas
-    let headers = headerRow.split(separator).map(h => {
-        // Restore commas in composite headers
-        return h.trim().replace(new RegExp(COMMA_PLACEHOLDER, 'g'), ',');
-    });
+    // Parse headers - split by 2+ spaces
+    let headers = lines[0].split(separator).map(h => h.trim());
     
     console.log('📋 Parsed headers:', headers);
-    console.log('🔍 Name column header:', headers.find(h => h.toLowerCase().includes('name')));
+    console.log('📋 Total header columns:', headers.length);
     
     // Validate that first row looks like headers (should contain "Name" or "Adherence")
     const hasNameHeader = headers.some(h => h.toLowerCase().includes('name'));
@@ -414,34 +401,24 @@ function parsePastedData(pastedText, startDate, endDate) {
     const employees = [];
     
     for (let i = 1; i < lines.length; i++) {
-        let rawRow = lines[i];
+        const rawRow = lines[i];
         
-        console.log('🔍 Raw row:', rawRow);
-        
-        // CRITICAL: Protect composite name field commas BEFORE splitting
-        // Must match header protection logic
-        rawRow = rawRow.replace(/\(([^)]*),([^)]*)\)/g, (match, before, after) => {
-            return `(${before}${COMMA_PLACEHOLDER}${after})`;
-        });
-        
-        // Split the row by separator to match header structure
-        const cells = rawRow.split(separator).map(c => {
-            // Restore commas in protected fields
-            return c.trim().replace(new RegExp(COMMA_PLACEHOLDER, 'g'), ',');
-        });
+        // Split by 2+ spaces to match header structure
+        const cells = rawRow.split(separator).map(c => c.trim());
         
         // Debug first row
         if (i === 1) {
             console.log('🔍 DEBUG First data row:');
+            console.log('  Raw:', rawRow);
             console.log('  Total cells:', cells.length);
-            console.log('  First 5 cells:', cells.slice(0, 5));
+            console.log('  First 3 cells:', cells.slice(0, 3));
             console.log('  Name column index:', colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]);
         }
         
         // Extract name from the mapped name column
         const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
         
-        console.log(`🔍 DEBUG rawName extracted from column ${colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]}:`, rawName);
+        console.log(`🔍 Row ${i} - rawName from column ${colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]}:`, rawName);
         
         // Parse the name using regex (handles "LastName, FirstName" format)
         const nameMatch = rawName.match(/^([^,]+),\s*(\S+)/);
