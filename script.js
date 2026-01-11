@@ -394,8 +394,24 @@ function parsePastedData(pastedText, startDate, endDate) {
         separator = lines[0].includes(',') ? ',' : /\s{2,}/;
     }
     
-    // Parse headers
-    let headers = lines[0].split(separator).map(h => h.trim());
+    // CRITICAL: Protect composite headers containing commas BEFORE splitting
+    // Example: "Name (Last, First)" must remain as one column
+    const COMMA_PLACEHOLDER = '__COMMA__';
+    
+    // Protect commas within parentheses in header row
+    let headerRow = lines[0];
+    headerRow = headerRow.replace(/\(([^)]*),([^)]*)\)/g, (match, before, after) => {
+        return `(${before}${COMMA_PLACEHOLDER}${after})`;
+    });
+    
+    // Parse headers with protected commas
+    let headers = headerRow.split(separator).map(h => {
+        // Restore commas in composite headers
+        return h.trim().replace(new RegExp(COMMA_PLACEHOLDER, 'g'), ',');
+    });
+    
+    console.log('📋 Parsed headers:', headers);
+    console.log('🔍 Name column header:', headers.find(h => h.toLowerCase().includes('name')));
     
     // Map headers to canonical schema
     const colMapping = mapHeadersToSchema(headers);
@@ -404,17 +420,26 @@ function parsePastedData(pastedText, startDate, endDate) {
     const employees = [];
     
     for (let i = 1; i < lines.length; i++) {
-        const rawRow = lines[i];
+        let rawRow = lines[i];
         
         console.log('🔍 Raw row:', rawRow);
         
-        // Split the row by separator first to match header structure
-        const cells = rawRow.split(separator).map(c => c.trim());
+        // CRITICAL: Protect composite name field commas BEFORE splitting
+        // Must match header protection logic
+        rawRow = rawRow.replace(/\(([^)]*),([^)]*)\)/g, (match, before, after) => {
+            return `(${before}${COMMA_PLACEHOLDER}${after})`;
+        });
         
-        // Extract name from the first cell (which should be "LastName, FirstName")
+        // Split the row by separator to match header structure
+        const cells = rawRow.split(separator).map(c => {
+            // Restore commas in protected fields
+            return c.trim().replace(new RegExp(COMMA_PLACEHOLDER, 'g'), ',');
+        });
+        
+        // Extract name from the mapped name column
         const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
         
-        // Parse the name using regex
+        // Parse the name using regex (handles "LastName, FirstName" format)
         const nameMatch = rawName.match(/^([^,]+),\s*(\S+)/);
         
         if (!nameMatch) {
