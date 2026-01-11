@@ -444,12 +444,17 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         console.log('🔍 Raw row:', rawRow);
         
-        // CRITICAL: Extract name from raw row BEFORE any splitting
-        // Regex captures: "LastName, FirstName" at start of row
-        const nameMatch = rawRow.match(/^([^,]+),\s*(\S+)/);
+        // Split the row by separator first to match header structure
+        const cells = rawRow.split(separator).map(c => c.trim());
+        
+        // Extract name from the first cell (which should be "LastName, FirstName")
+        const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
+        
+        // Parse the name using regex
+        const nameMatch = rawName.match(/^([^,]+),\s*(\S+)/);
         
         if (!nameMatch) {
-            console.warn('⚠️ Skipping row - no name pattern found');
+            console.warn('⚠️ Skipping row - no valid name found:', rawName);
             continue;
         }
         
@@ -467,24 +472,13 @@ function parsePastedData(pastedText, startDate, endDate) {
             continue;
         }
         
-        // Remove the name portion from the row and split the remaining metrics
-        const nameLength = nameMatch[0].length;
-        const remainingRow = rawRow.substring(nameLength);
-        const metricCells = remainingRow.split(separator).map(c => c.trim()).filter(c => c);
-        
-        console.log('📊 Metric cells count:', metricCells.length);
-        
-        // Build full cells array: [name, ...metrics]
-        // The name goes in position 0, metrics follow
-        const cells = [displayName, ...metricCells];
+        console.log('📊 Total cells:', cells.length);
         
         // Helper to safely get cell value by canonical field
         const getCell = (canonicalField) => {
             const idx = colMapping[canonicalField];
-            // Since we removed the name and it's now at index 0, 
-            // metric indices need adjustment: they start at index 1
-            if (idx === 0) return displayName; // Name is always at 0
-            return (idx !== undefined && cells[idx]) ? cells[idx] : '';
+            if (idx === undefined) return '';
+            return cells[idx] || '';
         };
         
         // Get survey total first to determine if survey metrics should be included
