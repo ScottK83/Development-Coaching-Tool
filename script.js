@@ -249,38 +249,6 @@ function parseHours(value) {
     return parseFloat(parsed.toFixed(2));
 }
 
-/**
- * Parse employee name from "Last, First" format
- * Returns: { displayName: "First Last", firstName: "First" }
- */
-function parseName(fullName) {
-    if (!fullName) return { displayName: '', firstName: '' };
-    
-    if (fullName.includes(',')) {
-        // Format: "Last, First" → "First Last"
-        const parts = fullName.split(',');
-        const last = parts[0].trim();
-        const first = parts[1].trim().split(/\s+/)[0]; // Get just first word
-        return {
-            displayName: `${first} ${last}`,
-            firstName: first
-        };
-    } else if (fullName.includes(' ')) {
-        // Format: "First Last" → take first word
-        const first = fullName.trim().split(/\s+/)[0];
-        return {
-            displayName: fullName.trim(),
-            firstName: first
-        };
-    } else {
-        // Single name
-        return {
-            displayName: fullName.trim(),
-            firstName: fullName.trim()
-        };
-    }
-}
-
 // ============================================
 // CANONICAL SCHEMA & HEADER MAPPING
 // ============================================
@@ -308,6 +276,7 @@ const CANONICAL_SCHEMA = {
 
 // Header patterns - MUST be in order: most specific patterns first!
 // Order matters because we stop at first match
+// Uses array to guarantee deterministic iteration (object key order not guaranteed)
 const HEADER_PATTERNS = [
     { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name (last'] },
     { canonical: CANONICAL_SCHEMA.TOTAL_CALLS, patterns: ['totalcallsanswered'] },
@@ -321,6 +290,7 @@ const HEADER_PATTERNS = [
     { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oe survey total'] },
     { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
     { canonical: CANONICAL_SCHEMA.FCR_PERCENT, patterns: ['fcr%'] },
+    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexpitotal'] },
     { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['sentimentscore'] },
     { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore'] },
     { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['negativewordscore'] },
@@ -471,10 +441,9 @@ function parsePastedData(pastedText, startDate, endDate) {
         console.log('✅ Parsed lastName:', lastName);
         console.log('✅ Display name:', displayName);
         
-        // Validation: firstName should not equal lastName
+        // Warn about potential parsing issues but don't reject
         if (firstName === lastName) {
-            console.error('❌ PARSING FAILED: firstName equals lastName');
-            continue;
+            console.warn('⚠️ firstName equals lastName - possible data issue:', displayName);
         }
         
         console.log('📊 Total cells:', cells.length);
