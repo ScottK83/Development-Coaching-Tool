@@ -1025,17 +1025,7 @@ function initializeEventHandlers() {
         renderExecutiveSummary();
     });
     
-    // Upload buttons
-    document.getElementById('showPasteBtn')?.addEventListener('click', () => {
-        document.getElementById('pasteDataContainer').style.display = 'block';
-        document.getElementById('excelUploadContainer').style.display = 'none';
-        document.getElementById('uploadChoiceButtons').style.display = 'none';
-    });
-    
-    document.getElementById('cancelPasteBtn')?.addEventListener('click', () => {
-        document.getElementById('pasteDataContainer').style.display = 'none';
-        document.getElementById('uploadChoiceButtons').style.display = 'block';
-    });
+
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
@@ -1081,7 +1071,6 @@ function initializeEventHandlers() {
             
             // Show success
             document.getElementById('uploadSuccessMessage').style.display = 'block';
-            document.getElementById('pasteDataContainer').style.display = 'none';
             document.getElementById('pasteDataTextarea').value = '';
             
             // Auto-switch to Coaching tab
@@ -1317,9 +1306,11 @@ ${escapeHtml(email.body)}
     
     // Upload more data button
     document.getElementById('uploadMoreDataBtn')?.addEventListener('click', () => {
-        // Hide success message and show upload section
+        // Hide success message and clear form
         document.getElementById('uploadSuccessMessage').style.display = 'none';
-        document.getElementById('uploadChoiceButtons').style.display = 'block';
+        document.getElementById('pasteDataTextarea').value = '';
+        document.getElementById('pasteStartDate').value = '';
+        document.getElementById('pasteEndDate').value = '';
         
         // Switch back to upload tab
         showOnlySection('uploadSection');
