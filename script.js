@@ -281,7 +281,7 @@ const HEADER_PATTERNS = [
     { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name (last'] },
     { canonical: CANONICAL_SCHEMA.TOTAL_CALLS, patterns: ['totalcallsanswered'] },
     { canonical: CANONICAL_SCHEMA.ADHERENCE_PERCENT, patterns: ['adherence%'] },
-    { canonical: CANONICAL_SCHEMA.TRANSFERS_PERCENT, patterns: ['transfer%'] },
+    { canonical: CANONICAL_SCHEMA.TRANSFERS_PERCENT, patterns: ['transfers%'] },
     { canonical: CANONICAL_SCHEMA.AHT_SECONDS, patterns: ['aht'] },
     { canonical: CANONICAL_SCHEMA.TALK_SECONDS, patterns: ['talk'] },
     { canonical: CANONICAL_SCHEMA.ACW_SECONDS, patterns: ['acw'] },
