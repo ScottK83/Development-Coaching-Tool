@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    DEVELOPMENT COACHING TOOL
    Complete rewrite with proper encoding and parsing
    ======================================== */
@@ -1317,12 +1317,11 @@ function initializeKeyboardShortcuts() {
 // TIPS MANAGEMENT UI
 // ============================================
 
-async function renderTipsManagement() {
+function renderTipsManagement() {
     const container = document.getElementById('tipsContainer');
     if (!container) return;
     
     const userTips = loadUserTips();
-    const serverTips = await loadServerTips();
     
     const metricNames = {
         scheduleAdherence: 'Schedule Adherence',
@@ -1341,34 +1340,21 @@ async function renderTipsManagement() {
     };
     
     let html = '<div style="margin-bottom: 20px;">';
-    html += '<p>Manage coaching tips for each metric. Server tips (from tips.csv) are shown in blue. Your custom tips can be added, edited, or deleted.</p>';
+    html += '<p>Manage custom coaching tips for each metric. These tips will be used when generating coaching emails.</p>';
     html += '</div>';
     
     Object.keys(metricNames).forEach(metricKey => {
-        const serverTipsForMetric = serverTips[metricKey] || [];
-        const userTipsForMetric = userTips[metricKey] || [];
+        const tips = userTips[metricKey] || [];
         
         html += `<div style="margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">`;
         html += `<h3 style="color: #2196F3; margin-top: 0;">${metricNames[metricKey]}</h3>`;
         
-        // Show server tips (read-only)
-        if (serverTipsForMetric.length > 0) {
-            html += '<div style="margin-bottom: 15px;"><strong style="color: #666;">📚 Server Tips (from tips.csv):</strong></div>';
-            serverTipsForMetric.forEach((tip) => {
+        if (tips.length === 0) {
+            html += '<p style="color: #666; font-style: italic;">No custom tips yet. Add one below!</p>';
+        } else {
+            tips.forEach((tip, index) => {
                 html += `
-                    <div style="margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 4px;">
-                        ${escapeHtml(tip)}
-                    </div>
-                `;
-            });
-        }
-        
-        // Show custom tips (editable)
-        if (userTipsForMetric.length > 0) {
-            html += '<div style="margin: 15px 0;"><strong style="color: #666;">✏️ Your Custom Tips:</strong></div>';
-            userTipsForMetric.forEach((tip, index) => {
-                html += `
-                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-left: 3px solid #28a745; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                         <div style="flex: 1;">${escapeHtml(tip)}</div>
                         <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; margin-left: 10px;">🗑️ Delete</button>
                     </div>
@@ -1376,14 +1362,10 @@ async function renderTipsManagement() {
             });
         }
         
-        if (serverTipsForMetric.length === 0 && userTipsForMetric.length === 0) {
-            html += '<p style="color: #666; font-style: italic;">No tips yet. Add a custom tip below!</p>';
-        }
-        
         html += `
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; margin-top: 8px;">➕ Add Custom Tip</button>
+            <div style="margin-top: 15px;">
+                <textarea id="newTip_${metricKey}" placeholder="Enter a new coaching tip..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical;" rows="3"></textarea>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; margin-top: 8px;">➕ Add Tip</button>
             </div>
         `;
         
