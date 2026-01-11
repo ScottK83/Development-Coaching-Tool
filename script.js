@@ -291,11 +291,11 @@ const HEADER_PATTERNS = [
     { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oe survey total'] },
     { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
     { canonical: CANONICAL_SCHEMA.FCR_PERCENT, patterns: ['fcr%'] },
-    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexpitotal'] },
-    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['sentimentscore'] },
+    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexpitotal', 'overallexperience%'] },
+    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['overallsentimentscore'] },
     { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore'] },
-    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['negativewordscore'] },
-    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['emotionscore'] }
+    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['avoidnegativewordscore'] },
+    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['manageemotionsscore'] }
 ];
 
 // Only employee name is strictly required for ingestion
