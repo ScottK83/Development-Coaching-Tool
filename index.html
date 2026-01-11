@@ -107,20 +107,11 @@
                 <h2>✉️ Generate Coaching Email</h2>
                     
                 <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
-                    <h3 style="color: #2196F3; margin-top: 0;">📅 Select Employee & Time Period</h3>
-                    
-                    <!-- Employee Selector -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Employee:</label>
-                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
-                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose an employee --</option>
-                        </select>
-                    </div>
+                    <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
                     
                     <!-- Time Period Type -->
                     <div style="margin-bottom: 15px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">2. View By:</label>
+                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">1. View By:</label>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button type="button" class="period-type-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #2196F3; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
                             <button type="button" class="period-type-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
@@ -131,9 +122,18 @@
                     
                     <!-- Specific Period Selector -->
                     <div id="specificPeriodContainer" style="margin-bottom: 15px;">
-                        <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Select Date Range:</label>
+                        <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Date Range:</label>
                         <select id="specificPeriod" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                             <option value="">-- Choose a date range --</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Employee Selector -->
+                    <div style="margin-bottom: 15px;">
+                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Select Employee:</label>
+                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
+                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                            <option value="">-- Choose an employee --</option>
                         </select>
                     </div>
                 </div>

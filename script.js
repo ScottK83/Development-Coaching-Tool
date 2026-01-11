@@ -1079,6 +1079,14 @@ function initializeEventHandlers() {
             
             currentPeriodType = btn.dataset.period;
             updatePeriodDropdown();
+            
+            // Auto-select the first (most recent) period
+            const periodDropdown = document.getElementById('specificPeriod');
+            if (periodDropdown && periodDropdown.options.length > 1) {
+                periodDropdown.selectedIndex = 1; // Select first real option (skip "-- Choose --")
+                currentPeriod = periodDropdown.value;
+                updateEmployeeDropdown();
+            }
         });
     });
     
