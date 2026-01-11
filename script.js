@@ -631,6 +631,31 @@ function normalizeMetricKey(name) {
     return name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 }
 
+function hasDataForTimeframe(employeeData, timeframe) {
+    if (!employeeData || employeeData.length === 0) return false;
+    
+    if (timeframe === 'week') {
+        return employeeData.length >= 1;
+    } else if (timeframe === 'month') {
+        return employeeData.length >= 4;
+    } else if (timeframe === 'quarter') {
+        return employeeData.length >= 13;
+    }
+    return false;
+}
+
+function getFilteredDataByTimeframe(employeeData, timeframe) {
+    if (!employeeData || employeeData.length === 0) return [];
+    
+    if (timeframe === 'month') {
+        return employeeData.slice(-4);
+    } else if (timeframe === 'quarter') {
+        return employeeData.slice(-13);
+    } else {
+        return employeeData.slice(-1);
+    }
+}
+
 // ============================================
 // STORAGE FUNCTIONS
 // ============================================
@@ -1888,19 +1913,48 @@ function renderEmployeeHistory() {
         const btn = document.getElementById(btnId);
         if (btn) {
             btn.addEventListener('click', () => {
-                // Update button styles
-                document.querySelectorAll('.timeframe-btn').forEach(b => {
-                    b.style.background = 'white';
-                    b.style.color = '#666';
-                    b.style.borderColor = '#ddd';
-                });
-                btn.style.background = '#FF9800';
-                btn.style.color = 'white';
-                btn.style.borderColor = '#FF9800';
-                
-                // Re-render with new timeframe
+                // Check if this button's timeframe has data
                 const employeeSelect = document.getElementById('historyEmployeeSelect');
                 if (employeeSelect && employeeSelect.value) {
+                    const employeeName = employeeSelect.value;
+                    
+                    // Collect all data for this employee
+                    const employeeData = [];
+                    Object.keys(weeklyData).sort().forEach(weekKey => {
+                        const week = weeklyData[weekKey];
+                        if (week.employees) {
+                            const empData = week.employees.find(e => e.name === employeeName);
+                            if (empData) {
+                                employeeData.push({
+                                    weekKey: weekKey,
+                                    startDate: week.metadata.startDate,
+                                    endDate: week.metadata.endDate,
+                                    label: week.metadata.label,
+                                    ...empData
+                                });
+                            }
+                        }
+                    });
+                    
+                    const timeframe = btnId.replace('timeframe', '').toLowerCase();
+                    
+                    // Only allow selection if data exists for this timeframe
+                    if (!hasDataForTimeframe(employeeData, timeframe)) {
+                        showToast(`❌ No data available for ${timeframe} view. Need ${timeframe === 'month' ? '4 weeks' : timeframe === 'quarter' ? '13 weeks' : '1 week'}.`);
+                        return;
+                    }
+                    
+                    // Update button styles
+                    document.querySelectorAll('.timeframe-btn').forEach(b => {
+                        b.style.background = 'white';
+                        b.style.color = '#666';
+                        b.style.borderColor = '#ddd';
+                    });
+                    btn.style.background = '#FF9800';
+                    btn.style.color = 'white';
+                    btn.style.borderColor = '#FF9800';
+                    
+                    // Re-render with new timeframe
                     handleEmployeeHistorySelection({ target: employeeSelect });
                 }
             });
@@ -2054,16 +2108,30 @@ function handleEmployeeHistorySelection(e) {
     
     // Trend charts - ALWAYS RENDER even with 1 data point
     html += '<div style="margin: 30px 0;">';
-    html += '<h4 style="color: #2196F3; margin-bottom: 20px;">📈 Performance Trends</h4>';
+    html += '<h4 style="color: #2196F3; margin-bottom: 20px;">📈 Performance Trends (All Historical Data)</h4>';
     
-    // Key metrics charts
-    const chartIds = ['scheduleChart', 'cxChart', 'transfersChart', 'ahtChart'];
-    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">';
+    // All trackable metrics for trends
+    const chartMetrics = [
+        { id: 'scheduleChart', icon: '⏰', title: 'Schedule Adherence', key: 'scheduleAdherence', type: 'line' },
+        { id: 'cxChart', icon: '⭐', title: 'CX Rep Overall', key: 'cxRepOverall', type: 'line' },
+        { id: 'fcrChart', icon: '✓', title: 'First Call Resolution', key: 'fcr', type: 'line' },
+        { id: 'transfersChart', icon: '📞', title: 'Transfers', key: 'transfers', type: 'bar' },
+        { id: 'ahtChart', icon: '⏱️', title: 'Average Handle Time', key: 'aht', type: 'line' },
+        { id: 'acwChart', icon: '📝', title: 'After Call Work', key: 'acw', type: 'bar' },
+        { id: 'holdChart', icon: '⏸️', title: 'Hold Time', key: 'holdTime', type: 'bar' },
+        { id: 'sentimentChart', icon: '😊', title: 'Overall Sentiment', key: 'overallSentiment', type: 'line' },
+        { id: 'positiveChart', icon: '👍', title: 'Positive Word Usage', key: 'positiveWord', type: 'line' },
+        { id: 'negativeChart', icon: '👎', title: 'Avoid Negative Words', key: 'negativeWord', type: 'line' },
+        { id: 'emotionsChart', icon: '😌', title: 'Managing Emotions', key: 'managingEmotions', type: 'line' },
+        { id: 'reliabilityChart', icon: '✅', title: 'Reliability', key: 'reliability', type: 'bar' }
+    ];
     
-    chartIds.forEach(chartId => {
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
+    
+    chartMetrics.forEach(metric => {
         html += `
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <canvas id="${chartId}"></canvas>
+                <canvas id="${metric.id}"></canvas>
             </div>
         `;
     });
@@ -2079,6 +2147,8 @@ function handleEmployeeHistorySelection(e) {
 }
 
 function renderEmployeeCharts(employeeData, employeeName) {
+    if (!employeeData || employeeData.length === 0) return;
+    
     const labels = employeeData.map(d => {
         const endDate = new Date(d.endDate);
         return endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -2096,111 +2166,54 @@ function renderEmployeeCharts(employeeData, employeeName) {
         }
     };
     
-    // Schedule Adherence Chart
-    const scheduleCtx = document.getElementById('scheduleChart');
-    if (scheduleCtx) {
-        new Chart(scheduleCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Schedule Adherence %',
-                    data: employeeData.map(d => parseFloat(d.scheduleAdherence) || null),
-                    borderColor: '#2196F3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                ...chartOptions,
-                plugins: {
-                    ...chartOptions.plugins,
-                    title: { ...chartOptions.plugins.title, text: '⏰ Schedule Adherence Trend' }
-                }
-            }
-        });
-    }
+    // Define all metrics to render
+    const metricsConfig = [
+        { id: 'scheduleChart', key: 'scheduleAdherence', title: '⏰ Schedule Adherence %', color: '#2196F3', type: 'line' },
+        { id: 'cxChart', key: 'cxRepOverall', title: '⭐ CX Rep Overall %', color: '#4CAF50', type: 'line' },
+        { id: 'fcrChart', key: 'fcr', title: '✓ First Call Resolution %', color: '#FF5722', type: 'line' },
+        { id: 'transfersChart', key: 'transfers', title: '📞 Transfers %', color: '#FF9800', type: 'bar' },
+        { id: 'ahtChart', key: 'aht', title: '⏱️ Avg Handle Time (sec)', color: '#9C27B0', type: 'line' },
+        { id: 'acwChart', key: 'acw', title: '📝 After Call Work (sec)', color: '#3F51B5', type: 'bar' },
+        { id: 'holdChart', key: 'holdTime', title: '⏸️ Hold Time (sec)', color: '#009688', type: 'bar' },
+        { id: 'sentimentChart', key: 'overallSentiment', title: '😊 Overall Sentiment %', color: '#E91E63', type: 'line' },
+        { id: 'positiveChart', key: 'positiveWord', title: '👍 Positive Word Usage %', color: '#4CAF50', type: 'line' },
+        { id: 'negativeChart', key: 'negativeWord', title: '👎 Avoid Negative Words %', color: '#F44336', type: 'line' },
+        { id: 'emotionsChart', key: 'managingEmotions', title: '😌 Managing Emotions %', color: '#00BCD4', type: 'line' },
+        { id: 'reliabilityChart', key: 'reliability', title: '✅ Reliability %', color: '#795548', type: 'bar' }
+    ];
     
-    // CX Rep Chart
-    const cxCtx = document.getElementById('cxChart');
-    if (cxCtx) {
-        new Chart(cxCtx, {
-            type: 'line',
+    // Render each metric chart
+    metricsConfig.forEach(metric => {
+        const ctx = document.getElementById(metric.id);
+        if (!ctx) return;
+        
+        const data = employeeData.map(d => parseFloat(d[metric.key]) || null);
+        
+        new Chart(ctx, {
+            type: metric.type,
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'CX Rep Overall %',
-                    data: employeeData.map(d => parseFloat(d.cxRepOverall) || null),
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
+                    label: metric.title,
+                    data: data,
+                    borderColor: metric.color,
+                    backgroundColor: metric.type === 'line' 
+                        ? metric.color.replace(')', ', 0.1)').replace('rgb', 'rgba')
+                        : metric.color,
+                    borderWidth: metric.type === 'line' ? 3 : 1,
+                    fill: metric.type === 'line',
+                    tension: metric.type === 'line' ? 0.4 : 0
                 }]
             },
             options: {
                 ...chartOptions,
                 plugins: {
                     ...chartOptions.plugins,
-                    title: { ...chartOptions.plugins.title, text: '⭐ CX Rep Overall Trend' }
+                    title: { ...chartOptions.plugins.title, text: metric.title }
                 }
             }
         });
-    }
-    
-    // Transfers Chart
-    const transfersCtx = document.getElementById('transfersChart');
-    if (transfersCtx) {
-        new Chart(transfersCtx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Transfers %',
-                    data: employeeData.map(d => parseFloat(d.transfers) || null),
-                    backgroundColor: '#FF9800',
-                    borderColor: '#F57C00',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                ...chartOptions,
-                plugins: {
-                    ...chartOptions.plugins,
-                    title: { ...chartOptions.plugins.title, text: '📞 Transfers Trend' }
-                }
-            }
-        });
-    }
-    
-    // AHT Chart
-    const ahtCtx = document.getElementById('ahtChart');
-    if (ahtCtx) {
-        new Chart(ahtCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'AHT (seconds)',
-                    data: employeeData.map(d => parseFloat(d.aht) || null),
-                    borderColor: '#9C27B0',
-                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                ...chartOptions,
-                plugins: {
-                    ...chartOptions.plugins,
-                    title: { ...chartOptions.plugins.title, text: '⏱️ Average Handle Time Trend' }
-                }
-            }
-        });
-    }
+    });
 }
 
 // ============================================
