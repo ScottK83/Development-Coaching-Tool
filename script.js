@@ -1233,6 +1233,16 @@ ${escapeHtml(email.body)}
         exportToExcel();
     });
     
+    // Upload more data button
+    document.getElementById('uploadMoreDataBtn')?.addEventListener('click', () => {
+        // Hide success message and show upload section
+        document.getElementById('uploadSuccessMessage').style.display = 'none';
+        document.getElementById('uploadChoiceButtons').style.display = 'block';
+        
+        // Switch back to upload tab
+        showOnlySection('uploadSection');
+    });
+    
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         document.getElementById('dataFileInput').click();
