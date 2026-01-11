@@ -339,6 +339,9 @@ function mapHeadersToSchema(headers) {
     const sourceMapping = {}; // For logging: canonical -> source header
     const usedIndices = new Set(); // Track which header indices we've already mapped
     
+    console.log('🔍 DEBUG: Starting header mapping...');
+    console.log('🔍 DEBUG: Available headers:', headers);
+    
     // Try to match each canonical field
     for (const [canonical, patterns] of Object.entries(HEADER_PATTERNS)) {
         for (let i = 0; i < headers.length; i++) {
@@ -352,7 +355,7 @@ function mapHeadersToSchema(headers) {
                 mapping[canonical] = i;
                 sourceMapping[canonical] = headers[i];
                 usedIndices.add(i);
-                console.log(`🎯 Matched "${headers[i]}" -> ${canonical} (pattern: "${matchedPattern}")`);
+                console.log(`🎯 Matched header[${i}]="${headers[i]}" -> canonical="${canonical}" (pattern: "${matchedPattern}")`);
                 break; // Found match, move to next canonical field
             }
         }
