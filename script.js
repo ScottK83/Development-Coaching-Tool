@@ -956,6 +956,7 @@ function initializeEventHandlers() {
             };
             
             saveWeeklyData();
+            populateDeleteWeekDropdown();
             
             // Show success
             document.getElementById('uploadSuccessMessage').style.display = 'block';
@@ -1048,6 +1049,7 @@ function initializeEventHandlers() {
                 }
                 
                 saveWeeklyData();
+                populateDeleteWeekDropdown();
                 
                 document.getElementById('uploadSuccessMessage').style.display = 'block';
                 document.getElementById('excelUploadContainer').style.display = 'none';
@@ -1279,12 +1281,110 @@ ${escapeHtml(email.body)}
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
+                populateDeleteWeekDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
                 alert('❌ Error importing data: ' + error.message);
             }
         };
         reader.readAsText(file);
+    });
+    
+    // Delete selected week
+    document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
+        const weekSelect = document.getElementById('deleteWeekSelect');
+        const selectedWeek = weekSelect.value;
+        
+        if (!selectedWeek) {
+            alert('⚠️ Please select a week to delete');
+            return;
+        }
+        
+        const weekLabel = weekSelect.options[weekSelect.selectedIndex].text;
+        
+        if (!confirm(`Are you sure you want to delete data for:\n\n${weekLabel}\n\nThis action cannot be undone.`)) {
+            return;
+        }
+        
+        delete weeklyData[selectedWeek];
+        saveWeeklyData();
+        
+        populateDeleteWeekDropdown();
+        showToast('✅ Week deleted successfully');
+        
+        // Clear coaching form if needed
+        document.getElementById('employeeSelect').value = '';
+        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    });
+    
+    // Delete all data
+    document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
+        const weekCount = Object.keys(weeklyData).length;
+        const coachingCount = Object.keys(coachingHistory).length;
+        
+        if (weekCount === 0 && coachingCount === 0) {
+            alert('ℹ️ No data to delete');
+            return;
+        }
+        
+        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
+            `• ${weekCount} week(s) of employee data\n` +
+            `• ${coachingCount} employee(s) coaching history\n\n` +
+            `This action CANNOT be undone!\n\n` +
+            `Type "DELETE" to confirm:`;
+        
+        const confirmation = prompt(message);
+        
+        if (confirmation !== 'DELETE') {
+            alert('❌ Deletion cancelled');
+            return;
+        }
+        
+        // Clear all data
+        weeklyData = {};
+        coachingHistory = {};
+        
+        saveWeeklyData();
+        saveCoachingHistory();
+        
+        populateDeleteWeekDropdown();
+        
+        // Hide all sections
+        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        alert('✅ All data has been deleted');
+    });
+    
+    // Populate delete week dropdown on load
+    populateDeleteWeekDropdown();
+}
+
+function populateDeleteWeekDropdown() {
+    const dropdown = document.getElementById('deleteWeekSelect');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '<option value="">-- Choose a week --</option>';
+    
+    const weeks = Object.keys(weeklyData).map(weekKey => {
+        const endDate = new Date(weekKey.split('|')[1]);
+        const label = `Week ending ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        return { weekKey, label, endDate };
+    });
+    
+    // Sort by date descending
+    weeks.sort((a, b) => b.endDate - a.endDate);
+    
+    weeks.forEach(week => {
+        const option = document.createElement('option');
+        option.value = week.weekKey;
+        option.textContent = week.label;
+        dropdown.appendChild(option);
     });
 }
 
