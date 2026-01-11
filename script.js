@@ -308,21 +308,21 @@ const CANONICAL_SCHEMA = {
 // Simple header matching - maps exact PowerBI headers to canonical fields
 // Based on actual PowerBI output: Name, Transfers%, AHT, Talk, Hold, ACW, Adherence%, etc.
 const HEADER_PATTERNS = {
-    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: ['name'],
-    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: ['adherence'],
-    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: ['transfer'],
+    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: ['name (last'],
+    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: ['adherence%'],
+    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: ['transfer%'],
     [CANONICAL_SCHEMA.AHT_SECONDS]: ['aht'],
     [CANONICAL_SCHEMA.TALK_SECONDS]: ['talk'],
     [CANONICAL_SCHEMA.ACW_SECONDS]: ['acw'],
     [CANONICAL_SCHEMA.HOLD_SECONDS]: ['hold'],
     [CANONICAL_SCHEMA.RELIABILITY_HOURS]: ['reliability'],
-    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: ['sentiment'],
-    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: ['positiveword'],
-    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: ['negativeword'],
-    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: ['emotion'],
-    [CANONICAL_SCHEMA.CX_REP_OVERALL]: ['repsat'],
-    [CANONICAL_SCHEMA.FCR_PERCENT]: ['fcr'],
-    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['survey']
+    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: ['sentimentscore'],
+    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: ['positivewordscore'],
+    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: ['negativewordscore'],
+    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: ['emotionscore'],
+    [CANONICAL_SCHEMA.CX_REP_OVERALL]: ['repsat%'],
+    [CANONICAL_SCHEMA.FCR_PERCENT]: ['fcr%'],
+    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['oe survey total']
 };
 
 // Only name and adherence are truly required
