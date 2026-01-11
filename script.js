@@ -1005,6 +1005,28 @@ function copyToClipboard() {
 // ============================================
 
 function initializeEventHandlers() {
+    // Upload period type buttons
+    let selectedUploadPeriod = 'week'; // default
+    document.querySelectorAll('.upload-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update selection
+            selectedUploadPeriod = btn.dataset.period;
+            
+            // Update button styles
+            document.querySelectorAll('.upload-period-btn').forEach(b => {
+                if (b === btn) {
+                    b.style.background = '#28a745';
+                    b.style.borderColor = '#28a745';
+                    b.style.color = 'white';
+                } else {
+                    b.style.background = 'white';
+                    b.style.borderColor = '#ddd';
+                    b.style.color = '#666';
+                }
+            });
+        });
+    });
+    
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
     document.getElementById('generateCoachingBtn')?.addEventListener('click', () => showOnlySection('coachingSection'));
@@ -1033,6 +1055,12 @@ function initializeEventHandlers() {
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
         
+        // Get selected period type
+        const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
+                           document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
+                           document.querySelector('.upload-period-btn[data-period="week"]');
+        const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
+        
         if (!startDate || !endDate) {
             alert('❌ Please select both start and end dates');
             return;
@@ -1051,10 +1079,21 @@ function initializeEventHandlers() {
                 return;
             }
             
-            // Store data
+            // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
             const endDateObj = new Date(endDate);
-            const label = `Week ending ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            const startDateObj = new Date(startDate);
+            
+            // Create label based on period type
+            let label;
+            if (periodType === 'week') {
+                label = `Week ending ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            } else if (periodType === 'month') {
+                label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
+            } else if (periodType === 'quarter') {
+                const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
+                label = `Q${quarter} ${startDateObj.getFullYear()}`;
+            }
             
             weeklyData[weekKey] = {
                 employees: employees,
@@ -1062,6 +1101,7 @@ function initializeEventHandlers() {
                     startDate: startDate,
                     endDate: endDate,
                     label: label,
+                    periodType: periodType,
                     uploadedAt: new Date().toISOString()
                 }
             };

@@ -38,13 +38,22 @@
                             <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
                         </div>
                         
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period Type:</label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" class="upload-period-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
+                                <button type="button" class="upload-period-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
+                                <button type="button" class="upload-period-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
+                            </div>
+                        </div>
+                        
                         <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 150px;">
-                                <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Start Date (Monday):</label>
+                                <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Start Date:</label>
                                 <input type="date" id="pasteStartDate" onclick="this.showPicker()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
                             </div>
                             <div style="flex: 1; min-width: 150px;">
-                                <label for="pasteEndDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">End Date (Saturday):</label>
+                                <label for="pasteEndDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">End Date:</label>
                                 <input type="date" id="pasteEndDate" onclick="this.showPicker()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
                             </div>
                             <div style="flex: 0 0 auto;">
@@ -128,51 +137,51 @@
                         <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;"></div>
                         <div class="metrics-grid">
                             <div class="form-group">
-                                <label for="scheduleAdherence">Schedule Adherence (%)</label>
+                                <label for="scheduleAdherence">Schedule Adherence (93%)</label>
                                 <input type="number" id="scheduleAdherence" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="cxRepOverall">CX Rep Overall (%)</label>
+                                <label for="cxRepOverall">CX Rep Overall (80%)</label>
                                 <input type="number" id="cxRepOverall" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="fcr">First Call Resolution (%)</label>
+                                <label for="fcr">First Call Resolution (70%)</label>
                                 <input type="number" id="fcr" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="overallExperience">Overall Experience (%)</label>
+                                <label for="overallExperience">Overall Experience (81%)</label>
                                 <input type="number" id="overallExperience" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="transfers">Transfers (%)</label>
+                                <label for="transfers">Transfers (<12%)</label>
                                 <input type="number" id="transfers" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="overallSentiment">Overall Sentiment (%)</label>
+                                <label for="overallSentiment">Overall Sentiment (88%+)</label>
                                 <input type="number" id="overallSentiment" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="positiveWord">Positive Word (%)</label>
+                                <label for="positiveWord">Positive Word (86%+)</label>
                                 <input type="number" id="positiveWord" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="negativeWord">Avoid Negative Word (%)</label>
+                                <label for="negativeWord">Avoid Negative Word (83%+)</label>
                                 <input type="number" id="negativeWord" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="managingEmotions">Managing Emotions (%)</label>
+                                <label for="managingEmotions">Managing Emotions (95%+)</label>
                                 <input type="number" id="managingEmotions" step="0.01" min="0" max="100">
                             </div>
                             <div class="form-group">
-                                <label for="aht">Avg Handle Time (seconds)</label>
+                                <label for="aht">Avg Handle Time (≤440s)</label>
                                 <input type="number" id="aht" step="1" min="0">
                             </div>
                             <div class="form-group">
-                                <label for="acw">After Call Work (seconds)</label>
+                                <label for="acw">After Call Work (≤60s)</label>
                                 <input type="number" id="acw" step="1" min="0">
                             </div>
                             <div class="form-group">
-                                <label for="holdTime">Hold Time (seconds)</label>
+                                <label for="holdTime">Hold Time (≤30s)</label>
                                 <input type="number" id="holdTime" step="1" min="0">
                             </div>
                             <div class="form-group">
