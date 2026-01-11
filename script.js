@@ -327,10 +327,10 @@ const HEADER_PATTERNS = {
     [CANONICAL_SCHEMA.TOTAL_CALLS]: ['totalcallsanswered']
 };
 
-// Only name and adherence are truly required
+// Only employee name is strictly required for ingestion
+// Other fields are optional - system will work with partial data
 const REQUIRED_FIELDS = [
-    CANONICAL_SCHEMA.EMPLOYEE_NAME,
-    CANONICAL_SCHEMA.ADHERENCE_PERCENT
+    CANONICAL_SCHEMA.EMPLOYEE_NAME
 ];
 
 // Map headers to canonical schema using simple substring matching
@@ -347,10 +347,12 @@ function mapHeadersToSchema(headers) {
             const header = headers[i].toLowerCase();
             
             // Check if any pattern matches (simple substring search)
-            if (patterns.some(pattern => header.includes(pattern))) {
+            const matchedPattern = patterns.find(pattern => header.includes(pattern));
+            if (matchedPattern) {
                 mapping[canonical] = i;
                 sourceMapping[canonical] = headers[i];
                 usedIndices.add(i);
+                console.log(`🎯 Matched "${headers[i]}" -> ${canonical} (pattern: "${matchedPattern}")`);
                 break; // Found match, move to next canonical field
             }
         }
@@ -372,6 +374,17 @@ function mapHeadersToSchema(headers) {
         console.error('❌ Missing required fields:', missing);
         console.error('📝 Available headers:', headers.join(', '));
         throw new Error(`Missing required columns: ${missing.join(', ')}. Check the headers in your PowerBI data.`);
+    }
+    
+    // Warn about optional unmapped fields that we recognize
+    const optionalFields = [
+        CANONICAL_SCHEMA.ADHERENCE_PERCENT,
+        CANONICAL_SCHEMA.TRANSFERS_PERCENT,
+        CANONICAL_SCHEMA.AHT_SECONDS
+    ];
+    const missingOptional = optionalFields.filter(field => !(field in mapping));
+    if (missingOptional.length > 0) {
+        console.warn('⚠️  Optional fields not found (data will be incomplete):', missingOptional);
     }
     
     return mapping;
