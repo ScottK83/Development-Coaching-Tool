@@ -322,7 +322,7 @@ const HEADER_SYNONYMS = {
         'overallexperience', 'overallexperiencepercent', 'oe', 'oepercent', 'oe%', 'overallexp'
     ],
     [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: [
-        'transfers', 'transferspercent', 'transfers%', 'transferpercent', 'transfer%'
+        'transfers', 'transferspercent', 'transfers%', 'transferpercent', 'transfer%', 'transferss', 'transferss%'
     ],
     [CANONICAL_SCHEMA.AHT_SECONDS]: [
         'aht', 'averagehandletime', 'handletime', 'avghandletime'

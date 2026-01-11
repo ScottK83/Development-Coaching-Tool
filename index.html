@@ -61,13 +61,6 @@
                             <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
                         </div>
                     </div>
-
-                    <!-- Data Backup / Restore -->
-                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
-                        <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
-                        <input type="file" id="dataFileInput" accept=".json" style="display: none;">
-                    </div>
                 </section>
             </form>
 
@@ -238,7 +231,18 @@
             <section id="manageDataSection" style="display: none;">
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
                     <h2>🗄️ Manage Data</h2>
-                    <p style="color: #856404; margin-bottom: 20px;">Delete individual weeks or clear all data to start fresh.</p>
+                    <p style="color: #856404; margin-bottom: 20px;">Backup, restore, or delete your data.</p>
+                    
+                    <!-- Backup / Restore -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
+                        <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
+                        <p style="color: #666; margin-bottom: 15px;">Export your data to Excel or restore from a previous backup.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
+                            <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
+                            <input type="file" id="dataFileInput" accept=".json" style="display: none;">
+                        </div>
+                    </div>
                     
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
                         <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
