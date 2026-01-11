@@ -430,8 +430,18 @@ function parsePastedData(pastedText, startDate, endDate) {
             return c.trim().replace(new RegExp(COMMA_PLACEHOLDER, 'g'), ',');
         });
         
+        // Debug first row
+        if (i === 1) {
+            console.log('🔍 DEBUG First data row:');
+            console.log('  Total cells:', cells.length);
+            console.log('  First 5 cells:', cells.slice(0, 5));
+            console.log('  Name column index:', colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]);
+        }
+        
         // Extract name from the mapped name column
         const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
+        
+        console.log(`🔍 DEBUG rawName extracted from column ${colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]}:`, rawName);
         
         // Parse the name using regex (handles "LastName, FirstName" format)
         const nameMatch = rawName.match(/^([^,]+),\s*(\S+)/);
