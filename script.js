@@ -474,13 +474,16 @@ function parsePastedData(pastedText, startDate, endDate) {
             totalCalls: parseInt(getCell(CANONICAL_SCHEMA.TOTAL_CALLS)) || 0
         };
         
-        // Debug log for first 3 employees
+        // Debug log for first 3 employees - show RAW cell values
         if (i <= 3) {
-            console.log(`\n✅ ${displayName}:`);
-            console.log('  Survey Total:', surveyTotal);
-            console.log('  Adherence:', employeeData.scheduleAdherence + '%');
+            console.log(`\n✅ ${displayName} - RAW CELL VALUES:`);
+            console.log('  Transfers column:', colMapping[CANONICAL_SCHEMA.TRANSFERS_PERCENT], '= RAW:', getCell(CANONICAL_SCHEMA.TRANSFERS_PERCENT));
+            console.log('  Adherence column:', colMapping[CANONICAL_SCHEMA.ADHERENCE_PERCENT], '= RAW:', getCell(CANONICAL_SCHEMA.ADHERENCE_PERCENT));
+            console.log('  AHT column:', colMapping[CANONICAL_SCHEMA.AHT_SECONDS], '= RAW:', getCell(CANONICAL_SCHEMA.AHT_SECONDS));
+            console.log('  PARSED VALUES:');
             console.log('  Transfers:', employeeData.transfers + '%');
-            console.log('  RepSat:', employeeData.cxRepOverall || 'N/A');
+            console.log('  Adherence:', employeeData.scheduleAdherence + '%');
+            console.log('  Survey Total:', surveyTotal);
         }
         
         employees.push(employeeData);
