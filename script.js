@@ -3,6 +3,35 @@
    Complete rewrite with proper encoding and parsing
    ======================================== */
 
+/* ========================================
+   🧭 DESIGN INTENT & DEVELOPMENT GUIDELINES
+   ========================================
+   
+   This application prioritizes deterministic behavior over heuristics.
+   - Avoid "smart guessing" unless explicitly requested
+   - Prefer explicit mappings and clear failure modes
+   - Maintain predictable, testable code paths
+   
+   CRITICAL RULES FOR MODIFICATIONS:
+   
+   ❌ Do not add new metric definitions, targets, labels, or tips 
+      unless modifying the centralized metric configuration
+   
+   ❌ Do not duplicate logic that already exists
+      Always search for an existing helper before creating a new one
+   
+   ❌ Do not add new parsing logic
+      Use existing: parsePercentage, parseSurveyPercentage, 
+      parseSeconds, and parseHours functions
+   
+   ❌ Do not modify header mapping behavior without explicit instruction
+   
+   ✅ If code can be reused, refactor instead of copy/paste
+   ✅ Keep data transformations explicit and traceable
+   ✅ Document any deviation from these guidelines with reasoning
+   
+   ======================================== */
+
 // ============================================
 // GLOBAL STATE
 // ============================================
@@ -17,19 +46,19 @@ let currentPeriod = null;
 // ============================================
 const TARGETS = {
     driver: {
-        scheduleAdherence: { min: 95 },
-        cxRepOverall: { min: 85 },
+        scheduleAdherence: { min: 93 },
+        cxRepOverall: { min: 80 },
         fcr: { min: 70 },
-        overallExperience: { min: 80 },
-        transfers: { max: 9 },
-        overallSentiment: { min: 75 },
-        positiveWord: { min: 80 },
-        negativeWord: { min: 80 },
-        managingEmotions: { min: 80 },
-        aht: { max: 480 },
-        acw: { max: 120 },
-        holdTime: { max: 60 },
-        reliability: { max: 0 }
+        overallExperience: { min: 81 },
+        transfers: { max: 12 },
+        overallSentiment: { min: 88 },
+        positiveWord: { min: 86 },
+        negativeWord: { min: 83 },
+        managingEmotions: { min: 95 },
+        aht: { max: 440 },
+        acw: { max: 60 },
+        holdTime: { max: 30 },
+        reliability: { max: 16 }
     }
 };
 
@@ -154,6 +183,41 @@ function updateTabHighlight(activeSectionId) {
 // ============================================
 
 /**
+ * Parse a PowerBI data row
+ * Finds where the name ends (first digit/N/A/(Blank)) then extracts remaining metrics
+ */
+function parsePowerBIRow(row) {
+    // Normalize weird PowerBI spaces (including non-breaking spaces)
+    row = row.replace(/\u00A0/g, ' ').trim();
+    // Collapse cases like "95.2 %" -> "95.2%" so splitting stays aligned
+    row = row.replace(/(\d+(?:\.\d+)?)\s+%/g, '$1%');
+    
+    // Match: name (stops at first digit, N/A, or (Blank)) + start of first metric
+    const match = row.match(/^(.+?)\s+(?=(\(?\d|N\/A|\(Blank\)))/);
+    
+    if (!match) {
+        throw new Error(`Row does not match expected format: "${row.substring(0, 50)}..."`);
+    }
+    
+    const name = match[1].trim();
+    const rest = row.slice(match[0].length).trim();
+    
+    // Split the metrics by any whitespace (1+ spaces or tabs)
+    let metrics = rest.split(/\s+/);
+    
+    // Normalize values: handle (Blank), N/A, percentages, numbers
+    metrics = metrics.map(val => {
+        if (val === '(Blank)' || val === 'N/A') return null;
+        val = val.replace(/,/g, '');
+        if (val.endsWith('%')) return parseFloat(val);
+        if (!isNaN(val) && val !== '') return Number(val);
+        return val;
+    });
+    
+    return [name, ...metrics];
+}
+
+/**
  * Parse percentage values properly
  * Handles: "83%", "0.83", 83, null, "N/A"
  * Returns: 83 (as number) or 0
@@ -228,11 +292,11 @@ function parseSurveyPercentage(value) {
 
 /**
  * Parse time in seconds
- * Handles: "480", 480, null
- * Returns: integer seconds or empty string
+ * Handles: "480", 480, "0", 0, null
+ * Returns: integer seconds or empty string (keeps 0 as 0)
  */
 function parseSeconds(value) {
-    if (!value && value !== 0) return '';
+    if (value === '' || value === null || value === undefined) return '';
     const parsed = parseFloat(value);
     if (isNaN(parsed)) return '';
     return Math.round(parsed);
@@ -254,7 +318,34 @@ function parseHours(value) {
 // CANONICAL SCHEMA & HEADER MAPPING
 // ============================================
 
-// Canonical schema - authoritative field names
+// POWERBI SCHEMA - EXACTLY 22 COLUMNS IN THIS ORDER
+// This is the ground truth for all data parsing
+const POWERBI_COLUMNS = [
+    'Name (Last, First)',
+    'TotalCallsAnswered',
+    'Transfers%',
+    'AHT',
+    'Talk',
+    'Hold',
+    'ACW',
+    'Adherence%',
+    'ManageEmotionsScore%',
+    'AvoidNegativeWordScore%',
+    'PositiveWordScore%',
+    'OverallSentimentScore%',
+    'FCR%',
+    'OverallFCRTotal',
+    'RepSat%',
+    'OverallRepTotal',
+    'OverallExperience%',
+    'OE Survey Total',
+    'TotalIn-OfficeShrink%',
+    'TotalOOOShrink%',
+    'TotalShrinkage%',
+    'ReliabilityHours'
+];
+
+// Map PowerBI columns to canonical schema
 const CANONICAL_SCHEMA = {
     EMPLOYEE_NAME: 'employee_name',
     ADHERENCE_PERCENT: 'adherence_percent',
@@ -275,118 +366,53 @@ const CANONICAL_SCHEMA = {
     TOTAL_CALLS: 'total_calls_answered'
 };
 
-// Header patterns - MUST be in order: most specific patterns first!
-// Order matters because we stop at first match
-// Uses array to guarantee deterministic iteration (object key order not guaranteed)
-// Based on actual PowerBI output (lowercase, no spaces)
-const HEADER_PATTERNS = [
-    { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name(last,first)'] },
-    { canonical: CANONICAL_SCHEMA.TOTAL_CALLS, patterns: ['totalcallsanswered'] },
-    { canonical: CANONICAL_SCHEMA.TRANSFERS_PERCENT, patterns: ['transfers%'] },
-    { canonical: CANONICAL_SCHEMA.AHT_SECONDS, patterns: ['aht'] },
-    { canonical: CANONICAL_SCHEMA.TALK_SECONDS, patterns: ['talk'] },
-    { canonical: CANONICAL_SCHEMA.HOLD_SECONDS, patterns: ['hold'] },
-    { canonical: CANONICAL_SCHEMA.ACW_SECONDS, patterns: ['acw'] },
-    { canonical: CANONICAL_SCHEMA.ADHERENCE_PERCENT, patterns: ['adherence%'] },
-    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['manageemotionsscore%'] },
-    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['avoidnegativewordscore%'] },
-    { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore%'] },
-    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['overallsentimentscore%'] },
-    { canonical: CANONICAL_SCHEMA.FCR_PERCENT, patterns: ['fcr%'] },
-    { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
-    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexperience%'] },
-    { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oesurveytotal'] },
-    { canonical: CANONICAL_SCHEMA.RELIABILITY_HOURS, patterns: ['reliabilityhrs'] }
-];
+// Column mapping: PowerBI column position → canonical schema
+// Using positional indexing (column 0 = Name, column 1 = TotalCalls, etc.)
+const COLUMN_MAPPING = {
+    0: CANONICAL_SCHEMA.EMPLOYEE_NAME,
+    1: CANONICAL_SCHEMA.TOTAL_CALLS,
+    2: CANONICAL_SCHEMA.TRANSFERS_PERCENT,
+    3: CANONICAL_SCHEMA.AHT_SECONDS,
+    4: CANONICAL_SCHEMA.TALK_SECONDS,
+    5: CANONICAL_SCHEMA.HOLD_SECONDS,
+    6: CANONICAL_SCHEMA.ACW_SECONDS,
+    7: CANONICAL_SCHEMA.ADHERENCE_PERCENT,
+    8: CANONICAL_SCHEMA.EMOTIONS_PERCENT,
+    9: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT,
+    10: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT,
+    11: CANONICAL_SCHEMA.SENTIMENT_PERCENT,
+    12: CANONICAL_SCHEMA.FCR_PERCENT,
+    13: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallFCRTotal
+    14: CANONICAL_SCHEMA.CX_REP_OVERALL, // RepSat%
+    15: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallRepTotal
+    16: CANONICAL_SCHEMA.OVERALL_EXPERIENCE,
+    17: CANONICAL_SCHEMA.SURVEY_TOTAL,   // OE Survey Total
+    18: 'TotalIn-OfficeShrink%',
+    19: 'TotalOOOShrink%',
+    20: 'TotalShrinkage%',
+    21: CANONICAL_SCHEMA.RELIABILITY_HOURS
+};
 
-// Only employee name is strictly required for ingestion
-// Other fields are optional - system will work with partial data
-const REQUIRED_FIELDS = [
-    CANONICAL_SCHEMA.EMPLOYEE_NAME
-];
-
-// Map headers to canonical schema using simple substring matching
+// Map headers to canonical schema - validates we have exactly 22 columns
 function mapHeadersToSchema(headers) {
+    // Validate we have exactly 22 columns
+    if (headers.length !== 22) {
+        throw new Error(`Expected exactly 22 columns, found ${headers.length}. PowerBI data must have all 22 columns in order.`);
+    }
+    
     const mapping = {};
-    const sourceMapping = {}; // For logging: canonical -> source header
-    const usedIndices = new Set(); // Track which header indices we've already mapped
+    console.log('✅ Detected 22 columns - using positional mapping');
     
-    console.log('🔍 DEBUG: Starting header mapping...');
-    console.log('🔍 DEBUG: Available headers:', headers);
-    
-    // Try to match each canonical field - using array to guarantee order
-    for (const { canonical, patterns } of HEADER_PATTERNS) {
-        for (let i = 0; i < headers.length; i++) {
-            if (usedIndices.has(i)) continue; // Skip already-mapped headers
-            
-            // Normalize: lowercase AND remove all spaces for matching
-            const header = headers[i].toLowerCase().replace(/\s+/g, '');
-            
-            // Check if any pattern matches (simple substring search)
-            const matchedPattern = patterns.find(pattern => header.includes(pattern));
-            if (matchedPattern) {
-                mapping[canonical] = i;
-                sourceMapping[canonical] = headers[i];
-                usedIndices.add(i);
-                console.log(`🎯 Matched header[${i}]="${headers[i]}" -> canonical="${canonical}" (pattern: "${matchedPattern}")`);
-                break; // Found match, move to next canonical field
-            }
+    // Map by position
+    for (let i = 0; i < 22; i++) {
+        if (COLUMN_MAPPING[i]) {
+            mapping[COLUMN_MAPPING[i]] = i;
         }
     }
     
-    // Find unmapped headers
-    const unmapped = headers.filter((h, i) => !usedIndices.has(i));
-    
-    // CRITICAL FIX: PowerBI sometimes merges AvoidNegativeWordScore% and PositiveWordScore% 
-    // in the header but keeps them separate in the data, causing column shift
-    const negativeWordIndex = mapping[CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT];
-    if (negativeWordIndex !== undefined) {
-        const negativeWordHeader = headers[negativeWordIndex].toLowerCase().replace(/\s+/g, '');
-        
-        // Check if this header contains BOTH avoid and positive patterns
-        if (negativeWordHeader.includes('avoidnegativewordscore') && 
-            negativeWordHeader.includes('positivewordscore')) {
-            console.warn('⚠️ Detected merged AvoidNegative/PositiveWord header - adjusting column indices');
-            
-            // Shift all mappings after this column by +1
-            for (const [canonical, idx] of Object.entries(mapping)) {
-                if (idx > negativeWordIndex) {
-                    mapping[canonical] = idx + 1;
-                    console.log(`  Shifted ${canonical} from col ${idx} to col ${idx + 1}`);
-                }
-            }
-            
-            // Add PositiveWord mapping at the next column
-            mapping[CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT] = negativeWordIndex + 1;
-            sourceMapping[CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT] = 'PositiveWordScore% (detected)';
-            console.log(`  Added POSITIVE_WORD_PERCENT at col ${negativeWordIndex + 1}`);
-        }
-    }
-    
-    // Validate required fields
-    const missing = REQUIRED_FIELDS.filter(field => !(field in mapping));
-    
-    // Log mapping results
-    console.log('📋 Column Mapping Results:');
-    console.log('✅ Mapped:', sourceMapping);
-    if (unmapped.length > 0) {
-        console.log('⚠️  Unmapped columns:', unmapped);
-    }
-    if (missing.length > 0) {
-        console.error('❌ Missing required fields:', missing);
-        console.error('📝 Available headers:', headers.join(', '));
-        throw new Error(`Missing required columns: ${missing.join(', ')}. Check the headers in your PowerBI data.`);
-    }
-    
-    // Warn about optional unmapped fields that we recognize
-    const optionalFields = [
-        CANONICAL_SCHEMA.ADHERENCE_PERCENT,
-        CANONICAL_SCHEMA.TRANSFERS_PERCENT,
-        CANONICAL_SCHEMA.AHT_SECONDS
-    ];
-    const missingOptional = optionalFields.filter(field => !(field in mapping));
-    if (missingOptional.length > 0) {
-        console.warn('⚠️  Optional fields not found (data will be incomplete):', missingOptional);
+    console.log('📋 Column Mapping:');
+    for (let i = 0; i < 22; i++) {
+        console.log(`  [${i}] ${headers[i]}`);
     }
     
     return mapping;
@@ -403,28 +429,18 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    // PowerBI uses multiple spaces (not tabs) as column separator
-    const separator = /\s{2,}/;
+    console.log('📋 Using Smart PowerBI Parser');
     
-    console.log('📋 First line (raw):', lines[0]);
-    console.log('📋 Separator: 2+ spaces');
+    // Skip the header line - we don't need to parse it since we use positional logic
+    // We just validate that the first row looks like a header
+    const headerLine = lines[0];
+    const hasNameHeader = headerLine.toLowerCase().includes('name');
     
-    // Parse headers - split by 2+ spaces
-    let headers = lines[0].split(separator).map(h => h.trim());
-    
-    console.log('📋 Parsed headers:', headers);
-    console.log('📋 Total header columns:', headers.length);
-    
-    // Validate that first row looks like headers (should contain "Name" or "Adherence")
-    const hasNameHeader = headers.some(h => h.toLowerCase().includes('name'));
-    const hasAdherenceHeader = headers.some(h => h.toLowerCase().includes('adherence'));
-    
-    if (!hasNameHeader && !hasAdherenceHeader) {
-        throw new Error('❌ Header row not found! Make sure to include the header row (Name, TotalCallsAnswered, Transfers%, etc.) at the top of your pasted data.');
+    if (!hasNameHeader) {
+        throw new Error('❌ Header row not found! Make sure to include the header row at the top of your pasted data.');
     }
     
-    // Map headers to canonical schema
-    const colMapping = mapHeadersToSchema(headers);
+    console.log('✅ Header detected, parsing data rows...');
     
     // Parse employee data
     const employees = [];
@@ -432,85 +448,88 @@ function parsePastedData(pastedText, startDate, endDate) {
     for (let i = 1; i < lines.length; i++) {
         const rawRow = lines[i];
         
-        // Split by 2+ spaces to match header structure
-        const cells = rawRow.split(separator).map(c => c.trim());
+        if (!rawRow.trim()) continue; // Skip empty lines
         
-        // Extract name from the mapped name column
-        const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
-        
-        console.log(`🔍 Row ${i} - rawName from column ${colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]}:`, rawName);
-        
-        // Parse the name using regex (handles "LastName, FirstName" format)
-        const nameMatch = rawName.match(/^([^,]+),\s*(\S+)/);
-        
-        if (!nameMatch) {
-            console.warn('⚠️ Skipping row - no valid name found:', rawName);
+        let cells;
+        try {
+            // Use the smart PowerBI row parser
+            const parsed = parsePowerBIRow(rawRow);
+            cells = parsed;
+        } catch (error) {
+            console.warn(`⚠️ Skipping row ${i}: ${error.message}`);
             continue;
         }
         
-        const lastName = nameMatch[1].trim();
-        const firstName = nameMatch[2].trim();
+        // Validate we have 22 cells
+        if (cells.length !== 22) {
+            if (cells.length < 22) {
+                while (cells.length < 22) {
+                    cells.push(null);
+                }
+            } else {
+                cells = cells.slice(0, 22);
+            }
+        }
+        
+        // Extract name parts for display
+        const nameField = cells[0];
+        const nameParts = nameField.match(/^([^,]+),\s*(.+)$/);
+        const lastName = nameParts ? nameParts[1].trim() : '';
+        const firstName = nameParts ? nameParts[2].trim() : '';
         const displayName = `${firstName} ${lastName}`;
         
-        // Debug rows with issues - show ALL cells
-        if (displayName.includes('Pamela') || displayName.includes('Precious') || i === 1) {
-            console.log(`\n🔍 DEBUG ${displayName}:`);
-            console.log('  Total cells:', cells.length);
-            console.log('  ALL CELLS:', cells);
-        }
+        console.log(`✅ ${displayName} - ${cells.length}/22 cells`);
         
-        console.log('✅ Parsed firstName:', firstName);
-        console.log('✅ Parsed lastName:', lastName);
-        console.log('✅ Display name:', displayName);
-        
-        // Warn about potential parsing issues but don't reject
-        if (firstName === lastName) {
-            console.warn('⚠️ firstName equals lastName - possible data issue:', displayName);
-        }
-        
-        console.log('📊 Total cells:', cells.length);
-        
-        // Helper to safely get cell value by canonical field
-        const getCell = (canonicalField) => {
-            const idx = colMapping[canonicalField];
-            if (idx === undefined) return '';
-            return cells[idx] || '';
+        // Direct positional access using COLUMN_MAPPING
+        const getCell = (colIndex) => {
+            const value = cells[colIndex];
+            return (value === null || value === undefined) ? '' : value;
         };
         
-        // Get survey total first to determine if survey metrics should be included
-        const surveyTotal = parseInt(getCell(CANONICAL_SCHEMA.SURVEY_TOTAL)) || 0;
+        // Parse critical numeric fields with validation (using column positions)
+        const surveyTotalRaw = getCell(17); // OE Survey Total at position 17
+        const totalCallsRaw = getCell(1);   // TotalCallsAnswered at position 1
+        
+        const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
+        const parsedTotalCalls = parseInt(totalCallsRaw, 10);
+        if (!Number.isInteger(parsedTotalCalls)) {
+            continue; // skip rows without numeric total calls (absent employees)
+        }
+        let totalCalls = parsedTotalCalls;
         
         const employeeData = {
             name: displayName,
             firstName: firstName,
-            scheduleAdherence: parsePercentage(getCell(CANONICAL_SCHEMA.ADHERENCE_PERCENT)) || 0,
-            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.CX_REP_OVERALL)) : '',
-            fcr: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.FCR_PERCENT)) : '',
-            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.OVERALL_EXPERIENCE)) : '',
-            transfers: parsePercentage(getCell(CANONICAL_SCHEMA.TRANSFERS_PERCENT)) || 0,
-            aht: parseSeconds(getCell(CANONICAL_SCHEMA.AHT_SECONDS)) || '',
-            talkTime: parseSeconds(getCell(CANONICAL_SCHEMA.TALK_SECONDS)) || '',
-            acw: parseSeconds(getCell(CANONICAL_SCHEMA.ACW_SECONDS)) || '',
-            holdTime: parseSeconds(getCell(CANONICAL_SCHEMA.HOLD_SECONDS)) || '',
-            reliability: parseHours(getCell(CANONICAL_SCHEMA.RELIABILITY_HOURS)) || 0,
-            overallSentiment: parsePercentage(getCell(CANONICAL_SCHEMA.SENTIMENT_PERCENT)) || '',
-            positiveWord: parsePercentage(getCell(CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT)) || '',
-            negativeWord: parsePercentage(getCell(CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT)) || '',
-            managingEmotions: parsePercentage(getCell(CANONICAL_SCHEMA.EMOTIONS_PERCENT)) || '',
+            scheduleAdherence: parsePercentage(getCell(7)) || 0,      // Adherence%
+            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(getCell(14)) : '',  // RepSat%
+            fcr: surveyTotal > 0 ? parseSurveyPercentage(getCell(12)) : '',           // FCR%
+            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(16)) : '', // OverallExperience%
+            transfers: parsePercentage(getCell(2)) || 0,              // Transfers%
+            aht: parseSeconds(getCell(3)) || '',                      // AHT (blank if 0)
+            talkTime: parseSeconds(getCell(4)) || '',                 // Talk (blank if 0)
+            acw: parseSeconds(getCell(6)),                            // ACW (keep 0 - realistic)
+            holdTime: parseSeconds(getCell(5)),                       // Hold (keep 0 - realistic)
+            reliability: parseHours(getCell(21)) || 0,                // ReliabilityHours (keep 0 - realistic)
+            overallSentiment: parsePercentage(getCell(11)) || '',     // OverallSentimentScore%
+            positiveWord: parsePercentage(getCell(10)) || '',         // PositiveWordScore%
+            negativeWord: parsePercentage(getCell(9)) || '',          // AvoidNegativeWordScore%
+            managingEmotions: parsePercentage(getCell(8)) || '',      // ManageEmotionsScore%
             surveyTotal: surveyTotal,
-            totalCalls: parseInt(getCell(CANONICAL_SCHEMA.TOTAL_CALLS)) || 0
+            totalCalls: totalCalls
         };
         
-        // Debug log for first 3 employees - show RAW cell values
+        // Data integrity check: surveyTotal cannot exceed totalCalls
+        if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
+            console.warn(`⚠️ DATA INTEGRITY: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Invalidating totalCalls.`);
+            employeeData.totalCalls = 0;
+        }
+        
         if (i <= 3) {
-            console.log(`\n✅ ${displayName} - RAW CELL VALUES:`);
-            console.log('  Transfers column:', colMapping[CANONICAL_SCHEMA.TRANSFERS_PERCENT], '= RAW:', getCell(CANONICAL_SCHEMA.TRANSFERS_PERCENT));
-            console.log('  Adherence column:', colMapping[CANONICAL_SCHEMA.ADHERENCE_PERCENT], '= RAW:', getCell(CANONICAL_SCHEMA.ADHERENCE_PERCENT));
-            console.log('  AHT column:', colMapping[CANONICAL_SCHEMA.AHT_SECONDS], '= RAW:', getCell(CANONICAL_SCHEMA.AHT_SECONDS));
-            console.log('  PARSED VALUES:');
+            console.log(`\n✅ ${displayName}:`);
             console.log('  Transfers:', employeeData.transfers + '%');
             console.log('  Adherence:', employeeData.scheduleAdherence + '%');
-            console.log('  Survey Total:', surveyTotal);
+            console.log('  TotalCalls:', totalCalls);
+            console.log('  SurveyTotal:', surveyTotal);
         }
         
         employees.push(employeeData);
@@ -588,6 +607,28 @@ function saveUserTips(tips) {
     } catch (error) {
         console.error('Error saving user tips:', error);
     }
+}
+
+function loadCustomMetrics() {
+    try {
+        const saved = localStorage.getItem('customMetrics');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading custom metrics:', error);
+        return {};
+    }
+}
+
+function saveCustomMetrics(metrics) {
+    try {
+        localStorage.setItem('customMetrics', JSON.stringify(metrics));
+    } catch (error) {
+        console.error('Error saving custom metrics:', error);
+    }
+}
+
+function normalizeMetricKey(name) {
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 }
 
 // ============================================
@@ -751,33 +792,14 @@ function updateEmployeeDropdown() {
     
     const employees = new Set();
     
-    if (currentPeriodType === 'week' && currentPeriod) {
-        const week = weeklyData[currentPeriod];
-        if (week && week.employees) {
-            week.employees.forEach(emp => employees.add(emp.name));
-        }
-    } else if (currentPeriodType === 'month' && currentPeriod) {
-        Object.keys(weeklyData).forEach(weekKey => {
-            const startDate = new Date(weekKey.split('|')[0]);
-            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-            if (monthKey === currentPeriod) {
-                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
-            }
-        });
-    } else if (currentPeriodType === 'quarter' && currentPeriod) {
-        const [year, q] = currentPeriod.split('-Q');
-        const quarterNum = parseInt(q);
-        Object.keys(weeklyData).forEach(weekKey => {
-            const startDate = new Date(weekKey.split('|')[0]);
-            const weekQuarter = Math.floor(startDate.getMonth() / 3) + 1;
-            if (startDate.getFullYear() === parseInt(year) && weekQuarter === quarterNum) {
-                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
-            }
-        });
+    // For week/month/quarter: currentPeriod is the weekKey
+    if (currentPeriod && weeklyData[currentPeriod]) {
+        weeklyData[currentPeriod].employees.forEach(emp => employees.add(emp.name));
     } else if (currentPeriodType === 'ytd' && currentPeriod) {
+        // For YTD: aggregate all weeks in the year
         Object.keys(weeklyData).forEach(weekKey => {
-            const startDate = new Date(weekKey.split('|')[0]);
-            if (startDate.getFullYear() === parseInt(currentPeriod)) {
+            const [year] = weekKey.split('|')[0].split('-');
+            if (year === currentPeriod) {
                 weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
             }
         });
@@ -792,28 +814,17 @@ function updateEmployeeDropdown() {
 }
 
 function getEmployeeDataForPeriod(employeeName) {
-    if (currentPeriodType === 'week' && currentPeriod) {
+    // For week/month/quarter: currentPeriod is the weekKey - look it up directly
+    if (currentPeriod && weeklyData[currentPeriod]) {
         const week = weeklyData[currentPeriod];
         if (week && week.employees) {
             return week.employees.find(emp => emp.name === employeeName);
         }
-    } else if (['month', 'quarter', 'ytd'].includes(currentPeriodType) && currentPeriod) {
-        // Aggregate data across multiple weeks
+    } else if (currentPeriodType === 'ytd' && currentPeriod) {
+        // For YTD: aggregate all weeks in the year
         const weekKeys = Object.keys(weeklyData).filter(weekKey => {
-            const startDate = new Date(weekKey.split('|')[0]);
-            
-            if (currentPeriodType === 'month') {
-                const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-                return monthKey === currentPeriod;
-            } else if (currentPeriodType === 'quarter') {
-                const [year, q] = currentPeriod.split('-Q');
-                const quarterNum = parseInt(q);
-                const weekQuarter = Math.floor(startDate.getMonth() / 3) + 1;
-                return startDate.getFullYear() === parseInt(year) && weekQuarter === quarterNum;
-            } else if (currentPeriodType === 'ytd') {
-                return startDate.getFullYear() === parseInt(currentPeriod);
-            }
-            return false;
+            const [year] = weekKey.split('|')[0].split('-');
+            return year === currentPeriod;
         });
         
         // Calculate averages
@@ -878,37 +889,32 @@ function updatePeriodDropdown() {
     
     dropdown.innerHTML = '<option value="">-- Choose a date range --</option>';
     
-    const periods = new Set();
+    const periods = [];
     
     Object.keys(weeklyData).forEach(weekKey => {
-        const startDate = new Date(weekKey.split('|')[0]);
+        const metadata = weeklyData[weekKey].metadata;
+        const storedPeriodType = metadata.periodType || 'week';
         
-        if (currentPeriodType === 'week') {
-            const endDate = new Date(weekKey.split('|')[1]);
-            const label = `Week ending ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-            periods.add(JSON.stringify({ value: weekKey, label: label, date: endDate }));
-        } else if (currentPeriodType === 'month') {
-            const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-            const label = startDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-            periods.add(JSON.stringify({ value: monthKey, label: label, date: startDate }));
-        } else if (currentPeriodType === 'quarter') {
-            const quarter = Math.floor(startDate.getMonth() / 3) + 1;
-            const quarterKey = `${startDate.getFullYear()}-Q${quarter}`;
-            const label = `Q${quarter} ${startDate.getFullYear()}`;
-            periods.add(JSON.stringify({ value: quarterKey, label: label, date: startDate }));
-        } else if (currentPeriodType === 'ytd') {
-            const yearKey = startDate.getFullYear().toString();
-            const label = `Year ${yearKey}`;
-            periods.add(JSON.stringify({ value: yearKey, label: label, date: startDate }));
+        // Only show periods that match the current view type
+        if (currentPeriodType !== storedPeriodType) {
+            return; // Skip this period if it doesn't match the current view
         }
+        
+        // Use the stored label from upload
+        const label = metadata.label;
+        const startDate = new Date(metadata.startDate);
+        
+        periods.push({ 
+            value: weekKey, 
+            label: label, 
+            date: startDate 
+        });
     });
     
     // Sort by date descending
-    const sortedPeriods = Array.from(periods)
-        .map(p => JSON.parse(p))
-        .sort((a, b) => b.date - a.date);
+    periods.sort((a, b) => b.date - a.date);
     
-    sortedPeriods.forEach(period => {
+    periods.forEach(period => {
         const option = document.createElement('option');
         option.value = period.value;
         option.textContent = period.label;
@@ -920,6 +926,39 @@ function updatePeriodDropdown() {
 // UI HELPER FUNCTIONS
 // ============================================
 
+function resetEmployeeSelection() {
+    const employeeSelect = document.getElementById('employeeSelect');
+    if (employeeSelect) {
+        employeeSelect.selectedIndex = 0; // Reset to "-- Choose an employee --"
+    }
+    
+    // Clear metrics
+    const fields = [
+        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
+        'transfers', 'overallSentiment', 'positiveWord', 'negativeWord',
+        'managingEmotions', 'aht', 'acw', 'holdTime', 'reliability'
+    ];
+    
+    fields.forEach(field => {
+        const input = document.getElementById(field);
+        if (input) {
+            input.value = '';
+            input.style.background = '';
+            input.style.borderColor = '';
+        }
+    });
+    
+    // Clear employee name
+    const employeeNameInput = document.getElementById('employeeName');
+    if (employeeNameInput) employeeNameInput.value = '';
+    
+    // Hide sections
+    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
+
 function populateMetricInputs(employee) {
     const fields = [
         'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
@@ -930,13 +969,26 @@ function populateMetricInputs(employee) {
     fields.forEach(field => {
         const input = document.getElementById(field);
         if (input) {
-            input.value = employee[field] !== '' && employee[field] !== null ? employee[field] : '';
+            const value = employee[field];
+            // Explicitly handle 0 as a valid value (for ACW, holdTime, reliability)
+            input.value = (value === 0 || (value !== '' && value !== null && value !== undefined)) ? value : '';
         }
     });
     
     const totalCallsInput = document.getElementById('totalCalls');
     if (totalCallsInput) {
-        totalCallsInput.value = employee.totalCalls || 0;
+        // FIX #4: UI safeguard - hide totalCalls if surveyTotal > totalCalls (data integrity issue)
+        if (employee.surveyTotal > employee.totalCalls && employee.totalCalls > 0) {
+            totalCallsInput.value = '';
+            totalCallsInput.style.display = 'none';
+            const label = document.querySelector('label[for="totalCalls"]');
+            if (label) label.style.display = 'none';
+        } else {
+            totalCallsInput.value = employee.totalCalls || 0;
+            totalCallsInput.style.display = '';
+            const label = document.querySelector('label[for="totalCalls"]');
+            if (label) label.style.display = '';
+        }
     }
     
     const surveyInput = document.getElementById('surveyTotal');
@@ -967,7 +1019,7 @@ function applyMetricHighlights() {
 
     configs.forEach(cfg => {
         const el = document.getElementById(cfg.id);
-        if (!el || !el.value) {
+        if (!el || el.value === '' || el.value === null || el.value === undefined) {
             if (el) {
                 el.style.background = '';
                 el.style.borderColor = '';
@@ -1029,7 +1081,10 @@ function initializeEventHandlers() {
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
-    document.getElementById('generateCoachingBtn')?.addEventListener('click', () => showOnlySection('coachingSection'));
+    document.getElementById('generateCoachingBtn')?.addEventListener('click', () => {
+        showOnlySection('coachingSection');
+        resetEmployeeSelection();
+    });
     document.getElementById('employeeDashboard')?.addEventListener('click', () => {
         showOnlySection('dashboardSection');
         renderEmployeeHistory();
@@ -1081,8 +1136,12 @@ function initializeEventHandlers() {
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
-            const endDateObj = new Date(endDate);
-            const startDateObj = new Date(startDate);
+            
+            // Parse dates safely (avoid timezone issues)
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const endDateObj = new Date(endYear, endMonth - 1, endDay);
+            const startDateObj = new Date(startYear, startMonth - 1, startDay);
             
             // Create label based on period type
             let label;
@@ -1220,12 +1279,14 @@ function initializeEventHandlers() {
         }
         
         // Show sections
-        ['employeeInfoSection', 'metricsSection', 'customNotesSection'].forEach(id => {
+        ['employeeInfoSection', 'metricsSection', 'aiAssistSection', 'customNotesSection'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'block';
         });
-        const generateBtn = document.getElementById('generateEmailBtn');
-        if (generateBtn) generateBtn.style.display = 'inline-block';
+        
+        // Hide old generate button if it exists
+        const oldGenerateBtn = document.getElementById('generateEmailBtn');
+        if (oldGenerateBtn) oldGenerateBtn.style.display = 'none';
         
         // Populate fields
         const savedNickname = getSavedNickname(selectedName);
@@ -1268,64 +1329,26 @@ function initializeEventHandlers() {
     });
     
     // Generate email button
-    document.getElementById('generateEmailBtn')?.addEventListener('click', async () => {
-        const employeeName = document.getElementById('employeeName').value;
-        const customNotes = document.getElementById('customNotes').value;
+    // Generate Copilot Prompt Button
+    document.getElementById('generateCopilotPromptBtn')?.addEventListener('click', () => {
+        generateCopilotPrompt();
+    });
+    
+    // Enable Generate Email button when Copilot output is pasted
+    document.getElementById('copilotOutputText')?.addEventListener('input', (e) => {
+        const btn = document.getElementById('generateOutlookEmailBtn');
+        const hasContent = e.target.value.trim().length > 0;
         
-        if (!employeeName) {
-            alert('❌ Please enter employee name');
-            return;
+        if (btn) {
+            btn.disabled = !hasContent;
+            btn.style.opacity = hasContent ? '1' : '0.5';
+            btn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
         }
-        
-        // Get current metric values
-        const employeeData = {
-            name: document.getElementById('employeeSelect').value,
-            scheduleAdherence: parseFloat(document.getElementById('scheduleAdherence').value) || 0,
-            cxRepOverall: document.getElementById('cxRepOverall').value ? parseFloat(document.getElementById('cxRepOverall').value) : '',
-            fcr: document.getElementById('fcr').value ? parseFloat(document.getElementById('fcr').value) : '',
-            overallExperience: document.getElementById('overallExperience').value ? parseFloat(document.getElementById('overallExperience').value) : '',
-            transfers: parseFloat(document.getElementById('transfers').value) || 0,
-            overallSentiment: document.getElementById('overallSentiment').value ? parseFloat(document.getElementById('overallSentiment').value) : '',
-            positiveWord: document.getElementById('positiveWord').value ? parseFloat(document.getElementById('positiveWord').value) : '',
-            negativeWord: document.getElementById('negativeWord').value ? parseFloat(document.getElementById('negativeWord').value) : '',
-            managingEmotions: document.getElementById('managingEmotions').value ? parseFloat(document.getElementById('managingEmotions').value) : '',
-            aht: document.getElementById('aht').value ? parseFloat(document.getElementById('aht').value) : '',
-            acw: document.getElementById('acw').value ? parseFloat(document.getElementById('acw').value) : '',
-            holdTime: document.getElementById('holdTime').value ? parseFloat(document.getElementById('holdTime').value) : '',
-            reliability: parseFloat(document.getElementById('reliability').value) || 0,
-            surveyTotal: parseInt(document.getElementById('surveyTotal').value) || 0
-        };
-        
-        const email = await generateCoachingEmail(employeeName, employeeData, customNotes);
-        
-        // Display email
-        const emailOutput = document.getElementById('emailOutput');
-        emailOutput.innerHTML = `
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <p><strong>To:</strong> ${escapeHtml(email.to)}</p>
-                <p><strong>Subject:</strong> ${escapeHtml(email.subject)}</p>
-            </div>
-            <div style="white-space: pre-wrap; background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-${escapeHtml(email.body)}
-            </div>
-        `;
-        
-        showOnlySection('resultsSection');
-        
-        // Save to history
-        if (!coachingHistory[employeeData.name]) {
-            coachingHistory[employeeData.name] = [];
-        }
-        coachingHistory[employeeData.name].push({
-            date: new Date().toISOString(),
-            period: currentPeriod,
-            periodType: currentPeriodType,
-            email: email,
-            metrics: employeeData
-        });
-        saveCoachingHistory();
-        
-        showToast('✅ Email generated successfully!');
+    });
+    
+    // Generate Outlook Email Button
+    document.getElementById('generateOutlookEmailBtn')?.addEventListener('click', () => {
+        generateOutlookEmail();
     });
     
     // Metric input highlighting
@@ -1547,6 +1570,7 @@ async function renderTipsManagement() {
     
     const userTips = loadUserTips();
     const serverTips = await loadServerTips();
+    const customMetrics = loadCustomMetrics();
     
     const metricNames = {
         scheduleAdherence: 'Schedule Adherence',
@@ -1561,7 +1585,8 @@ async function renderTipsManagement() {
         aht: 'Average Handle Time',
         acw: 'After Call Work',
         holdTime: 'Hold Time',
-        reliability: 'Reliability'
+        reliability: 'Reliability',
+        ...customMetrics
     };
     
     let html = '<div style="margin-bottom: 20px;">';
@@ -1579,13 +1604,75 @@ async function renderTipsManagement() {
     html += '</select>';
     html += '</div>';
     
+    // Add metric section
+    html += '<div style="margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
+    html += '<h3 style="color: #2196F3; margin-top: 0; margin-bottom: 15px;">➕ Create New Metric</h3>';
+    html += '<div style="margin-bottom: 12px;">';
+    html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">Metric Name:</label>';
+    html += '<input type="text" id="newMetricName" placeholder="e.g., Accuracy, Compliance, Efficiency" style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; box-sizing: border-box;">';
+    html += '</div>';
+    html += '<div style="margin-bottom: 12px;">';
+    html += '<label for="newMetricTip" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">First Tip:</label>';
+    html += '<textarea id="newMetricTip" placeholder="Enter a coaching tip for this new metric..." style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; resize: vertical; box-sizing: border-box;" rows="2"></textarea>';
+    html += '</div>';
+    html += '<button id="createMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">Create Metric</button>';
+    html += '</div>';
+    
     // Tips display area
     html += '<div id="tipsDisplayArea" style="display: none;"></div>';
     
     container.innerHTML = html;
     
+    // Create metric button handler
+    document.getElementById('createMetricBtn').addEventListener('click', () => {
+        const nameInput = document.getElementById('newMetricName');
+        const tipInput = document.getElementById('newMetricTip');
+        const metricName = nameInput.value.trim();
+        const initialTip = tipInput.value.trim();
+        
+        if (!metricName) {
+            alert('❌ Please enter a metric name');
+            return;
+        }
+        
+        if (!initialTip) {
+            alert('❌ Please enter at least one tip');
+            return;
+        }
+        
+        const metricKey = normalizeMetricKey(metricName);
+        
+        // Check for duplicates
+        if (metricNames[metricKey]) {
+            alert('❌ A metric with this name already exists');
+            return;
+        }
+        
+        // Save custom metric
+        const updated = loadCustomMetrics();
+        updated[metricKey] = metricName;
+        saveCustomMetrics(updated);
+        
+        // Save initial tip as user tip
+        const tips = loadUserTips();
+        if (!tips[metricKey]) {
+            tips[metricKey] = [];
+        }
+        tips[metricKey].push(initialTip);
+        saveUserTips(tips);
+        
+        // Clear inputs
+        nameInput.value = '';
+        tipInput.value = '';
+        
+        showToast('✅ Metric created successfully!');
+        
+        // Re-render to show new metric
+        renderTipsManagement();
+    });
+    
     // Add change listener
-    document.getElementById('metricSelector').addEventListener('change', (e) => {
+    document.getElementById('metricSelector').addEventListener('change', async (e) => {
         const metricKey = e.target.value;
         const displayArea = document.getElementById('tipsDisplayArea');
         
@@ -1595,8 +1682,10 @@ async function renderTipsManagement() {
         }
         
         displayArea.style.display = 'block';
-        const serverTipsForMetric = serverTips[metricKey] || [];
-        const userTipsForMetric = userTips[metricKey] || [];
+        const currentServerTips = await loadServerTips();
+        const currentUserTips = loadUserTips();
+        const serverTipsForMetric = currentServerTips[metricKey] || [];
+        const userTipsForMetric = currentUserTips[metricKey] || [];
         const metricName = metricNames[metricKey];
         
         let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
@@ -1785,17 +1874,59 @@ function renderEmployeeHistory() {
     selector.addEventListener('change', handleEmployeeHistorySelection);
     
     // Initial state
-    container.innerHTML = '<p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Select an employee above to view their performance trends and coaching history.</p>';
+    const historyContainer = document.getElementById('historyContainer');
+    if (historyContainer) {
+        historyContainer.innerHTML = '<p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Select an employee above to view their performance trends.</p>';
+    }
+    
+    // Reset timeframe to week and hide until employee selected
+    document.getElementById('timeframeSelectorContainer').style.display = 'none';
+    document.getElementById('underperformingSnapshot').style.display = 'none';
+    
+    // Add timeframe button listeners
+    ['timeframeWeek', 'timeframeMonth', 'timeframeQuarter'].forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                // Update button styles
+                document.querySelectorAll('.timeframe-btn').forEach(b => {
+                    b.style.background = 'white';
+                    b.style.color = '#666';
+                    b.style.borderColor = '#ddd';
+                });
+                btn.style.background = '#FF9800';
+                btn.style.color = 'white';
+                btn.style.borderColor = '#FF9800';
+                
+                // Re-render with new timeframe
+                const employeeSelect = document.getElementById('historyEmployeeSelect');
+                if (employeeSelect && employeeSelect.value) {
+                    handleEmployeeHistorySelection({ target: employeeSelect });
+                }
+            });
+        }
+    });
 }
 
 function handleEmployeeHistorySelection(e) {
     const employeeName = e.target.value;
     const container = document.getElementById('historyContainer');
+    const timeframeContainer = document.getElementById('timeframeSelectorContainer');
+    const snapshotContainer = document.getElementById('underperformingSnapshot');
     
     if (!employeeName || !container) {
-        container.innerHTML = '<p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Select an employee above to view their performance trends and coaching history.</p>';
+        container.innerHTML = '<p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Select an employee above to view their performance trends.</p>';
+        timeframeContainer.style.display = 'none';
+        snapshotContainer.style.display = 'none';
         return;
     }
+    
+    // Show timeframe selector
+    timeframeContainer.style.display = 'block';
+    
+    // Get selected timeframe
+    const activeBtn = document.querySelector('.timeframe-btn[style*="background: rgb(255, 152, 0)"], .timeframe-btn[style*="background:#FF9800"]') || document.getElementById('timeframeWeek');
+    const timeframe = activeBtn.id.replace('timeframe', '').toLowerCase();
     
     // Collect all data for this employee
     const employeeData = [];
@@ -1817,16 +1948,96 @@ function handleEmployeeHistorySelection(e) {
     
     if (employeeData.length === 0) {
         container.innerHTML = '<p style="color: #666; font-style: italic;">No data found for this employee.</p>';
+        timeframeContainer.style.display = 'none';
+        snapshotContainer.style.display = 'none';
         return;
     }
     
     // Sort by date
     employeeData.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
     
-    // Get coaching sessions
-    const coachingSessions = coachingHistory[employeeName] || [];
+    // Filter data by timeframe
+    let filteredData = employeeData;
+    if (timeframe === 'month') {
+        // Last 4 weeks
+        filteredData = employeeData.slice(-4);
+    } else if (timeframe === 'quarter') {
+        // Last 13 weeks
+        filteredData = employeeData.slice(-13);
+    } else {
+        // Week - show latest
+        filteredData = employeeData.slice(-1);
+    }
     
-    // Build HTML
+    // Calculate underperforming metrics
+    const latestData = filteredData[filteredData.length - 1];
+    const underperforming = [];
+    
+    const metricsToCheck = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', target: TARGETS.driver.scheduleAdherence.min, type: 'min', unit: '%' },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', target: TARGETS.driver.cxRepOverall.min, type: 'min', unit: '%' },
+        { key: 'fcr', label: 'First Call Resolution', target: TARGETS.driver.fcr.min, type: 'min', unit: '%' },
+        { key: 'overallExperience', label: 'Overall Experience', target: TARGETS.driver.overallExperience.min, type: 'min', unit: '%' },
+        { key: 'transfers', label: 'Transfers', target: TARGETS.driver.transfers.max, type: 'max', unit: '%' },
+        { key: 'overallSentiment', label: 'Overall Sentiment', target: TARGETS.driver.overallSentiment.min, type: 'min', unit: '%' },
+        { key: 'positiveWord', label: 'Positive Word', target: TARGETS.driver.positiveWord.min, type: 'min', unit: '%' },
+        { key: 'negativeWord', label: 'Avoid Negative Word', target: TARGETS.driver.negativeWord.min, type: 'min', unit: '%' },
+        { key: 'managingEmotions', label: 'Managing Emotions', target: TARGETS.driver.managingEmotions.min, type: 'min', unit: '%' },
+        { key: 'aht', label: 'Avg Handle Time', target: TARGETS.driver.aht.max, type: 'max', unit: 's' },
+        { key: 'acw', label: 'After Call Work', target: TARGETS.driver.acw.max, type: 'max', unit: 's' },
+        { key: 'holdTime', label: 'Hold Time', target: TARGETS.driver.holdTime.max, type: 'max', unit: 's' },
+        { key: 'reliability', label: 'Reliability', target: TARGETS.driver.reliability.max, type: 'max', unit: 'hrs' }
+    ];
+    
+    metricsToCheck.forEach(metric => {
+        const value = latestData[metric.key];
+        if (value !== '' && value !== null && value !== undefined) {
+            const numVal = parseFloat(value);
+            if (!isNaN(numVal)) {
+                const meets = metric.type === 'min' ? numVal >= metric.target : numVal <= metric.target;
+                if (!meets) {
+                    underperforming.push({
+                        label: metric.label,
+                        value: numVal,
+                        target: metric.target,
+                        unit: metric.unit,
+                        type: metric.type
+                    });
+                }
+            }
+        }
+    });
+    
+    // Render underperforming snapshot
+    if (underperforming.length > 0) {
+        let snapshotHtml = '<div style="margin-bottom: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 8px;">';
+        snapshotHtml += '<h4 style="color: #856404; margin-top: 0;">⚠️ Metrics Below Target</h4>';
+        snapshotHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">';
+        
+        underperforming.forEach(item => {
+            const gap = item.type === 'min' 
+                ? (item.target - item.value).toFixed(1)
+                : (item.value - item.target).toFixed(1);
+            
+            snapshotHtml += `
+                <div style="padding: 15px; background: white; border-radius: 4px;">
+                    <div style="font-weight: bold; color: #856404; margin-bottom: 5px;">${escapeHtml(item.label)}</div>
+                    <div style="font-size: 1.4em; font-weight: bold; color: #d9534f; margin-bottom: 3px;">${item.value}${item.unit}</div>
+                    <div style="font-size: 0.9em; color: #666;">Target: ${item.target}${item.unit}</div>
+                    <div style="font-size: 0.85em; color: #856404; margin-top: 3px;">Gap: ${gap}${item.unit}</div>
+                </div>
+            `;
+        });
+        
+        snapshotHtml += '</div></div>';
+        snapshotContainer.innerHTML = snapshotHtml;
+        snapshotContainer.style.display = 'block';
+    } else {
+        snapshotContainer.innerHTML = '<div style="margin-bottom: 30px; padding: 20px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 8px;"><h4 style="color: #155724; margin-top: 0;">✅ All Metrics Meeting Target</h4></div>';
+        snapshotContainer.style.display = 'block';
+    }
+    
+    // Build HTML for trends (always show charts even with one data point)
     let html = `<div style="margin-bottom: 30px;">`;
     html += `<h3 style="color: #2196F3; border-bottom: 3px solid #2196F3; padding-bottom: 10px;">${escapeHtml(employeeName)}</h3>`;
     
@@ -1836,17 +2047,12 @@ function handleEmployeeHistorySelection(e) {
         <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
             <div style="font-size: 2em;">📊</div>
             <div style="font-size: 1.6em; font-weight: bold; margin: 8px 0;">${employeeData.length}</div>
-            <div style="font-size: 0.9em; opacity: 0.9;">Weeks of Data</div>
-        </div>
-        <div style="padding: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 8px; text-align: center;">
-            <div style="font-size: 2em;">✉️</div>
-            <div style="font-size: 1.6em; font-weight: bold; margin: 8px 0;">${coachingSessions.length}</div>
-            <div style="font-size: 0.9em; opacity: 0.9;">Coaching Sessions</div>
+            <div style="font-size: 0.9em; opacity: 0.9;">Periods of Data</div>
         </div>
     `;
     html += '</div>';
     
-    // Trend charts
+    // Trend charts - ALWAYS RENDER even with 1 data point
     html += '<div style="margin: 30px 0;">';
     html += '<h4 style="color: #2196F3; margin-bottom: 20px;">📈 Performance Trends</h4>';
     
@@ -1863,107 +2069,16 @@ function handleEmployeeHistorySelection(e) {
     });
     html += '</div></div>';
     
-    // Week over week comparison
-    html += '<div style="margin: 30px 0; background: #f8f9fa; padding: 20px; border-radius: 8px;">';
-    html += '<h4 style="color: #2196F3; margin-top: 0;">📅 Week-by-Week Performance</h4>';
-    html += '<div style="overflow-x: auto;">';
-    html += '<table style="width: 100%; border-collapse: collapse; background: white;">';
-    html += '<thead><tr style="background: #2196F3; color: white;">';
-    html += '<th style="padding: 12px; text-align: left;">Week Ending</th>';
-    html += '<th style="padding: 12px; text-align: center;">Adherence</th>';
-    html += '<th style="padding: 12px; text-align: center;">CX Rep</th>';
-    html += '<th style="padding: 12px; text-align: center;">Transfers</th>';
-    html += '<th style="padding: 12px; text-align: center;">AHT</th>';
-    html += '<th style="padding: 12px; text-align: center;">Surveys</th>';
-    html += '</tr></thead><tbody>';
-    
-    employeeData.slice().reverse().forEach((week, idx) => {
-        const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
-        html += `<tr style="background: ${bgColor};">`;
-        html += `<td style="padding: 12px; border-bottom: 1px solid #ddd;">${week.label}</td>`;
-        html += `<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${week.scheduleAdherence || 'N/A'}</td>`;
-        html += `<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${week.cxRepOverall || 'N/A'}</td>`;
-        html += `<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${week.transfers || 'N/A'}</td>`;
-        html += `<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${week.aht || 'N/A'}</td>`;
-        html += `<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${week.surveyTotal || 0}</td>`;
-        html += '</tr>';
-    });
-    html += '</tbody></table></div></div>';
-    
-    // Coaching metrics analysis
-    if (coachingSessions.length > 0) {
-        html += '<div style="margin: 30px 0;">';
-        html += '<h4 style="color: #2196F3;">💡 Coaching Focus Areas</h4>';
-        
-        // Count which metrics were coached on
-        const metricCoaching = {};
-        const metricNames = {
-            scheduleAdherence: 'Schedule Adherence',
-            cxRepOverall: 'CX Rep Overall',
-            fcr: 'First Call Resolution',
-            overallExperience: 'Overall Experience',
-            transfers: 'Transfers',
-            overallSentiment: 'Overall Sentiment',
-            positiveWord: 'Positive Word',
-            negativeWord: 'Negative Word',
-            managingEmotions: 'Managing Emotions',
-            aht: 'Average Handle Time',
-            acw: 'After Call Work',
-            holdTime: 'Hold Time',
-            reliability: 'Reliability'
-        };
-        
-        coachingSessions.forEach(session => {
-            const emailBody = session.email.body.toLowerCase();
-            Object.keys(metricNames).forEach(metric => {
-                const metricLower = metricNames[metric].toLowerCase();
-                if (emailBody.includes(metricLower) || emailBody.includes(metric.toLowerCase())) {
-                    metricCoaching[metric] = (metricCoaching[metric] || 0) + 1;
-                }
-            });
-        });
-        
-        const sortedMetrics = Object.entries(metricCoaching).sort((a, b) => b[1] - a[1]);
-        
-        if (sortedMetrics.length > 0) {
-            html += '<div style="background: white; padding: 20px; border-radius: 8px;">';
-            html += '<canvas id="coachingFocusChart" style="max-height: 300px;"></canvas>';
-            html += '</div>';
-        }
-        html += '</div>';
-        
-        // Coaching history
-        html += '<div style="margin: 30px 0;">';
-        html += '<h4 style="color: #2196F3;">📧 Coaching History</h4>';
-        
-        coachingSessions.slice().reverse().forEach(session => {
-            const date = new Date(session.date);
-            html += `
-                <div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #28a745;">
-                    <p style="margin: 0 0 8px 0;"><strong>📅 ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</strong></p>
-                    <p style="margin: 0 0 8px 0; color: #666;">Period: ${session.periodType} - ${session.period}</p>
-                    <details style="margin-top: 10px;">
-                        <summary style="cursor: pointer; color: #2196F3; font-weight: bold;">📄 View Email Content</summary>
-                        <div style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9em;">
-${escapeHtml(session.email.body)}
-                        </div>
-                    </details>
-                </div>
-            `;
-        });
-        html += '</div>';
-    }
-    
     html += '</div>';
     container.innerHTML = html;
     
-    // Render charts after DOM update
+    // Render charts after DOM update - use employeeData (all data) for trends
     setTimeout(() => {
-        renderEmployeeCharts(employeeData, employeeName, metricCoaching);
+        renderEmployeeCharts(employeeData, employeeName);
     }, 100);
 }
 
-function renderEmployeeCharts(employeeData, employeeName, metricCoaching) {
+function renderEmployeeCharts(employeeData, employeeName) {
     const labels = employeeData.map(d => {
         const endDate = new Date(d.endDate);
         return endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -2085,65 +2200,6 @@ function renderEmployeeCharts(employeeData, employeeName, metricCoaching) {
                 }
             }
         });
-    }
-    
-    // Coaching Focus Chart
-    if (metricCoaching && Object.keys(metricCoaching).length > 0) {
-        const coachingCtx = document.getElementById('coachingFocusChart');
-        if (coachingCtx) {
-            const metricNames = {
-                scheduleAdherence: 'Schedule Adherence',
-                cxRepOverall: 'CX Rep Overall',
-                fcr: 'First Call Resolution',
-                overallExperience: 'Overall Experience',
-                transfers: 'Transfers',
-                overallSentiment: 'Overall Sentiment',
-                positiveWord: 'Positive Word',
-                negativeWord: 'Negative Word',
-                managingEmotions: 'Managing Emotions',
-                aht: 'Average Handle Time',
-                acw: 'After Call Work',
-                holdTime: 'Hold Time',
-                reliability: 'Reliability'
-            };
-            
-            const sortedMetrics = Object.entries(metricCoaching).sort((a, b) => b[1] - a[1]);
-            
-            new Chart(coachingCtx, {
-                type: 'bar',
-                data: {
-                    labels: sortedMetrics.map(m => metricNames[m[0]] || m[0]),
-                    datasets: [{
-                        label: 'Times Coached',
-                        data: sortedMetrics.map(m => m[1]),
-                        backgroundColor: [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-                            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
-                            '#36A2EB', '#FFCE56', '#9966FF'
-                        ]
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: { 
-                            display: true, 
-                            text: 'Metrics Coached Most Frequently',
-                            font: { size: 14, weight: 'bold' }
-                        }
-                    },
-                    scales: {
-                        x: { 
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 }
-                        }
-                    }
-                }
-            });
-        }
     }
 }
 
@@ -2314,6 +2370,259 @@ function exportToExcel() {
         console.error('Error exporting to Excel:', error);
         alert('❌ Error exporting data: ' + error.message);
     }
+}
+
+// ============================================
+// COPILOT PROMPT GENERATION (HUMAN-IN-LOOP)
+// ============================================
+
+async function generateCopilotPrompt() {
+    const employeeName = document.getElementById('employeeName').value;
+    const employeeSelect = document.getElementById('employeeSelect');
+    const fullName = employeeSelect?.value || employeeName;
+    const firstName = employeeName.split(' ')[0] || employeeName;
+    
+    if (!firstName) {
+        alert('❌ Please select an employee first');
+        return;
+    }
+    
+    // Load tips from CSV
+    const allTips = await loadServerTips();
+    
+    // Metric key mapping to match tips.csv keys
+    const metricKeyMap = {
+        'Schedule Adherence': 'scheduleAdherence',
+        'CX Rep Overall': 'cxRepOverall',
+        'First Call Resolution': 'fcr',
+        'Overall Experience': 'overallExperience',
+        'Transfers': 'transfers',
+        'Overall Sentiment': 'overallSentiment',
+        'Positive Word': 'positiveWord',
+        'Avoid Negative Word': 'negativeWord',
+        'Managing Emotions': 'managingEmotions',
+        'Avg Handle Time': 'aht',
+        'After Call Work': 'acw',
+        'Hold Time': 'holdTime',
+        'Reliability': 'reliability'
+    };
+    
+    // Get all current metric values with proper target evaluation
+    const metrics = {
+        scheduleAdherence: { value: document.getElementById('scheduleAdherence').value, label: 'Schedule Adherence', target: 93, type: 'min', unit: '%' },
+        cxRepOverall: { value: document.getElementById('cxRepOverall').value, label: 'CX Rep Overall', target: 80, type: 'min', unit: '%' },
+        fcr: { value: document.getElementById('fcr').value, label: 'First Call Resolution', target: 70, type: 'min', unit: '%' },
+        overallExperience: { value: document.getElementById('overallExperience').value, label: 'Overall Experience', target: 81, type: 'min', unit: '%' },
+        transfers: { value: document.getElementById('transfers').value, label: 'Transfers', target: 12, type: 'max', unit: '%' },
+        overallSentiment: { value: document.getElementById('overallSentiment').value, label: 'Overall Sentiment', target: 88, type: 'min', unit: '%' },
+        positiveWord: { value: document.getElementById('positiveWord').value, label: 'Positive Word', target: 86, type: 'min', unit: '%' },
+        negativeWord: { value: document.getElementById('negativeWord').value, label: 'Avoid Negative Word', target: 83, type: 'min', unit: '%' },
+        managingEmotions: { value: document.getElementById('managingEmotions').value, label: 'Managing Emotions', target: 95, type: 'min', unit: '%' },
+        aht: { value: document.getElementById('aht').value, label: 'Avg Handle Time', target: 440, type: 'max', unit: ' seconds' },
+        acw: { value: document.getElementById('acw').value, label: 'After Call Work', target: 60, type: 'max', unit: ' seconds' },
+        holdTime: { value: document.getElementById('holdTime').value, label: 'Hold Time', target: 30, type: 'max', unit: ' seconds' },
+        reliability: { value: document.getElementById('reliability').value, label: 'Reliability', target: 16, type: 'max', unit: ' hours missed' }
+    };
+    
+    // Evaluate metrics: celebrate (green) vs coach (yellow/red)
+    const celebrate = [];
+    const needsCoaching = [];
+    
+    Object.keys(metrics).forEach(key => {
+        const metric = metrics[key];
+        if (metric.value !== '' && metric.value !== null) {
+            const val = parseFloat(metric.value);
+            
+            // CRITICAL: Use >= and <= (not strict < or >) so equal to target = meets target
+            const meetsTarget = metric.type === 'min' ? val >= metric.target : val <= metric.target;
+            
+            const displayValue = `${val}${metric.unit}`;
+            const targetDisplay = `${metric.target}${metric.unit}`;
+            
+            if (meetsTarget) {
+                celebrate.push(`- ${metric.label}: ${displayValue} (Target: ${targetDisplay})`);
+            } else {
+                const gap = metric.type === 'min' 
+                    ? `${(metric.target - val).toFixed(1)}${metric.unit} below target`
+                    : `${(val - metric.target).toFixed(1)}${metric.unit} above target`;
+                needsCoaching.push(`- ${metric.label}: ${displayValue} (Target: ${targetDisplay}, ${gap})`);
+            }
+        }
+    });
+    
+    // Build the Copilot prompt using the new template
+    const periodLabel = currentPeriod && weeklyData[currentPeriod]?.metadata?.label 
+        ? weeklyData[currentPeriod].metadata.label 
+        : 'this period';
+    const periodType = currentPeriod && weeklyData[currentPeriod]?.metadata?.periodType 
+        ? weeklyData[currentPeriod].metadata.periodType 
+        : 'week';
+    
+    // Build tips section with actual tips from CSV
+    const customNotes = document.getElementById('customNotes')?.value.trim();
+    let tipsSection = '';
+    if (needsCoaching.length > 0) {
+        tipsSection = '\n\nTips by metric:\n';
+        needsCoaching.forEach(item => {
+            const metricMatch = item.match(/^- (.+?):/);
+            if (metricMatch) {
+                const metricLabel = metricMatch[1];
+                const metricKey = metricKeyMap[metricLabel];
+                
+                // Get tips for this metric
+                const metricTips = allTips[metricKey] || [];
+                if (metricTips.length > 0) {
+                    // Use first tip (or could randomize)
+                    tipsSection += `- ${metricLabel}: ${metricTips[0]}\n`;
+                } else {
+                    tipsSection += `- ${metricLabel}: Focus on improving this metric consistently.\n`;
+                }
+            }
+        });
+    }
+    
+    let prompt = `You are a frontline supervisor writing a casual, supportive coaching email to an employee.
+
+Supervisor voice:
+- Friendly, conversational, encouraging
+- Clear but not formal
+- Sounds human, not HR
+- No em dashes
+- No jargon
+- Vary sentence structure and phrasing naturally
+- Do not repeat phrasing from other sections
+
+Employee details:
+- First name: ${firstName}
+- Timeframe: ${periodLabel} (${periodType})
+
+Context:
+This email is meant to recognize wins, highlight a few focused opportunities, and provide practical tips for improvement. Keep it light, constructive, and forward-looking.
+`;
+
+    if (customNotes) {
+        prompt += `\nAdditional supervisor context:\n${customNotes}\n`;
+    }
+
+    prompt += `\nPerformance summary:
+Use the following data exactly as written.
+`;
+
+    if (celebrate.length > 0) {
+        prompt += `\nMetrics performing well:\n${celebrate.join('\n')}`;
+    }
+    
+    if (needsCoaching.length > 0) {
+        prompt += `\n\nMetrics to focus on:\n${needsCoaching.join('\n')}`;
+        prompt += tipsSection;
+    }
+    
+    prompt += `\n\nInstructions for the email:
+1. Start with a brief, friendly greeting using the employee's first name.
+2. Acknowledge the timeframe being reviewed.
+3. Include a section titled "What's Going Well" with bullet points:
+   - Celebrate wins
+   - Include both actual and target values
+   - Keep tone positive and specific
+4. Include a section titled "Opportunities to Focus On" with bullet points:
+   - Mention the gap without sounding critical
+   - Keep it to key focus areas only
+5. Include a section titled "Tips to Help You Improve":
+   - One bullet per opportunity
+   - Tie each tip clearly to its metric
+6. End with an encouraging closing that shows confidence in progress.
+
+Hard rules:
+- Use bullet points (no paragraphs longer than 3 lines)
+- Do not sound urgent or corrective
+- Do not mention policies, warnings, or discipline
+- Do not mention AI, prompts, or data sources
+- Email must be under 1000 words
+
+Final instruction:
+Write the final output as a polished email that is ready to send.`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(prompt).then(() => {
+        // Show instruction popup
+        alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
+        
+        // Open Copilot
+        window.open('https://copilot.microsoft.com', '_blank');
+        
+        // Show the paste section
+        document.getElementById('copilotOutputSection').style.display = 'block';
+        
+        // Scroll to paste section
+        document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy prompt to clipboard. Please try again.');
+    });
+}
+
+function generateOutlookEmail() {
+    const employeeSelect = document.getElementById('employeeSelect');
+    const fullName = employeeSelect?.value;
+    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+    
+    if (!copilotEmail) {
+        alert('❌ Please paste the Copilot-generated email first');
+        return;
+    }
+    
+    if (!fullName) {
+        alert('❌ Employee name not found');
+        return;
+    }
+    
+    // Parse name to create email address: "John Doe" → "john.doe@aps.com"
+    const emailName = fullName.toLowerCase()
+        .replace(/[^a-z\s]/g, '') // Remove special chars
+        .trim()
+        .replace(/\s+/g, '.'); // Replace spaces with dots
+    const toEmail = `${emailName}@aps.com`;
+    
+    // Create friendly subject
+    const firstName = fullName.split(' ')[0];
+    const subject = `Quick Check-In - ${firstName}`;
+    
+    // Encode for mailto
+    const mailtoLink = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(copilotEmail)}`;
+    
+    // Open Outlook
+    window.location.href = mailtoLink;
+    
+    // Save to coaching history
+    saveCoachingSession(fullName, {
+        date: new Date().toISOString(),
+        period: currentPeriod ? (weeklyData[currentPeriod]?.metadata?.label || 'Unknown') : 'Unknown',
+        email: {
+            subject: subject,
+            body: copilotEmail
+        },
+        metrics: {} // Could enhance to capture which metrics were addressed
+    });
+    
+    showToast('📧 Opening Outlook draft...');
+    
+    // Clear the form after a delay
+    setTimeout(() => {
+        document.getElementById('copilotOutputText').value = '';
+        document.getElementById('copilotOutputSection').style.display = 'none';
+        showToast('✅ Coaching session saved to history!');
+    }, 2000);
+}
+
+function saveCoachingSession(employeeName, sessionData) {
+    if (!coachingHistory[employeeName]) {
+        coachingHistory[employeeName] = [];
+    }
+    
+    coachingHistory[employeeName].push(sessionData);
+    saveCoachingHistory();
 }
 
 // ============================================

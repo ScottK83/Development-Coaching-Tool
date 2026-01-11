@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Angelina Parse</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Angelina Parse Test</h2>
+    <pre id="output"></pre>
+    
+    <script>
+        function parsePowerBIRow(row) {
+            let normalized = row.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+            const match = normalized.match(/^(.+?)\s+(?=(\(?\d|N\/A|\(Blank\)))/);
+            if (!match) return null;
+            
+            const name = match[1].trim();
+            const metricsStr = normalized.substring(match[0].length).trim();
+            const cells = metricsStr.split(/\s+/);
+            
+            return [name, ...cells];
+        }
+        
+        const angelinaRow = "Fierro, Angelina  126   18.25%      709   536   2     171   87.91%      95.2 %      86.4 %      98.4 %      93.3 %      100.00%     1     100.00%     1     100.00%     1     11.06%      (Blank)     11.06%      (Blank)";
+        
+        const parsed = parsePowerBIRow(angelinaRow);
+        
+        let output = "Parsed Cells:\n\n";
+        parsed.forEach((cell, idx) => {
+            output += `[${idx}] ${cell}\n`;
+        });
+        
+        output += "\n\nMapped Values:\n";
+        output += `fcr (cell 12): ${parsed[12]}\n`;
+        output += `positiveWord (cell 10): ${parsed[10]}\n`;
+        output += `negativeWord (cell 9): ${parsed[9]}\n`;
+        output += `overallSentiment (cell 11): ${parsed[11]}\n`;
+        
+        document.getElementById('output').textContent = output;
+    </script>
+</body>
+</html>

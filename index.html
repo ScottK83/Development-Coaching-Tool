@@ -185,7 +185,7 @@
                                 <input type="number" id="holdTime" step="1" min="0">
                             </div>
                             <div class="form-group">
-                                <label for="reliability">Reliability (hours missed)</label>
+                                <label for="reliability">Reliability (≤16 hrs)</label>
                                 <input type="number" id="reliability" step="0.01" min="0">
                             </div>
                         </div>
@@ -193,14 +193,33 @@
 
                     <!-- Custom Notes -->
                     <section class="form-section" id="customNotesSection" style="display: none;">
-                        <h2>Custom Notes (Optional)</h2>
+                        <h2>Additional Coaching to Include in Copilot (Optional)</h2>
                         <div class="form-group">
-                            <label for="customNotes">Additional Feedback:</label>
-                            <textarea id="customNotes" rows="4" placeholder="Add any specific feedback or notes for this employee..."></textarea>
+                            <label for="customNotes">Supervisor Context:</label>
+                            <textarea id="customNotes" rows="4" placeholder="Enter any situational notes (e.g., holiday reminders, follow-ups from recent conversations, one-off coaching points)..."></textarea>
+                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 8px;">
+                                This will be included in the Copilot prompt as supervisor context.
+                            </small>
                         </div>
                     </section>
 
-                    <button type="button" id="generateEmailBtn" class="btn-primary" style="display: none;">✉️ Generate Coaching Email</button>
+                    <!-- AI Assistance Section -->
+                    <section class="form-section" id="aiAssistSection" style="display: none; background: #f3e8ff; border-left: 4px solid #6f42c1;">
+                        <h2>🤖 Step 1: Generate Copilot Prompt</h2>
+                        <p style="color: #666; margin-bottom: 15px;">This will create a structured prompt, copy it to your clipboard, and open GitHub Copilot.</p>
+                        <button type="button" id="generateCopilotPromptBtn" class="btn-secondary" style="background: #6f42c1; color: white; font-weight: bold; font-size: 1.1em; padding: 12px 24px;">🤖 Generate with Copilot</button>
+                        
+                        <!-- Copilot Output Section -->
+                        <div id="copilotOutputSection" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #6f42c1;">
+                            <h3 style="color: #6f42c1; margin-top: 0;">Step 2: Paste Copilot's Response Here</h3>
+                            <p style="color: #666; margin-bottom: 10px;">After Copilot generates the email, paste it below:</p>
+                            <textarea id="copilotOutputText" rows="15" style="width: 100%; padding: 15px; border: 2px solid #6f42c1; border-radius: 4px; font-family: Arial, sans-serif; font-size: 1em; resize: vertical;" placeholder="Paste the email from Copilot here..."></textarea>
+                            <div style="margin-top: 15px;">
+                                <button type="button" id="generateOutlookEmailBtn" class="btn-primary" disabled style="background: #0078d4; opacity: 0.5; cursor: not-allowed; font-size: 1.1em; padding: 12px 24px;">📧 Generate Email (Outlook)</button>
+                                <p style="color: #999; font-size: 0.9em; margin-top: 8px;">Button will enable after you paste content above</p>
+                            </div>
+                        </div>
+                    </section>
                 </form>
             </section>
 
@@ -220,15 +239,28 @@
             <section id="dashboardSection" style="display: none;">
                 <div class="form-section">
                     <h2>👥 Employee History & Trends</h2>
-                    <p style="color: #666; margin-bottom: 20px;">Track individual employee performance over time with detailed trends and coaching history.</p>
+                    <p style="color: #666; margin-bottom: 20px;">Track individual employee performance over time with detailed trends.</p>
                     
                     <!-- Employee Selector -->
                     <div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">
                         <label for="historyEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 10px; color: #2196F3; font-size: 1.1em;">Select Employee:</label>
                         <select id="historyEmployeeSelect" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">
-                            <option value="">-- Choose an employee --</option>
+                            <option value="">-- Select employee --</option>
                         </select>
                     </div>
+                    
+                    <!-- Timeframe Selector -->
+                    <div id="timeframeSelectorContainer" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #FF9800; display: none;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 10px; color: #FF9800; font-size: 1.1em;">View Timeframe:</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="timeframeWeek" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #FF9800; background: #FF9800; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
+                            <button type="button" id="timeframeMonth" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
+                            <button type="button" id="timeframeQuarter" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Underperforming Metrics Snapshot -->
+                    <div id="underperformingSnapshot" style="display: none;"></div>
                     
                     <div id="historyContainer"></div>
                 </div>
