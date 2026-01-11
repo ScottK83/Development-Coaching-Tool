@@ -17,6 +17,7 @@
                 <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
                 <button type="button" id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
                 <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
+                <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
             </div>
         </header>
@@ -98,24 +99,6 @@
                         <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
                         <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
                         <input type="file" id="dataFileInput" accept=".json" style="display: none;">
-                    </div>
-                    
-                    <!-- Data Management -->
-                    <div style="margin-top: 25px; padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 5px;">
-                        <h3 style="color: #856404; margin-top: 0;">🗑️ Manage Uploaded Data</h3>
-                        <p style="color: #856404; margin-bottom: 15px;">Delete individual weeks or clear all data to start fresh.</p>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Week to Delete:</label>
-                            <select id="deleteWeekSelect" style="width: 100%; padding: 8px; border: 1px solid #ffc107; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose a week --</option>
-                            </select>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗑️ Delete Selected Week</button>
-                            <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white;">⚠️ Delete All Data</button>
-                        </div>
                     </div>
                 </section>
             </form>
@@ -280,6 +263,31 @@
                 <div class="form-section">
                     <h2>💡 Manage Coaching Tips</h2>
                     <div id="tipsContainer"></div>
+                </div>
+            </section>
+
+            <!-- Manage Data Section -->
+            <section id="manageDataSection" style="display: none;">
+                <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
+                    <h2>🗄️ Manage Data</h2>
+                    <p style="color: #856404; margin-bottom: 20px;">Delete individual weeks or clear all data to start fresh.</p>
+                    
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
+                        <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Week to Delete:</label>
+                            <select id="deleteWeekSelect" style="width: 100%; padding: 12px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                <option value="">-- Choose a week --</option>
+                            </select>
+                        </div>
+                        <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Week</button>
+                    </div>
+                    
+                    <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
+                        <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
+                        <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data and coaching history. This action cannot be undone!</p>
+                        <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white; font-size: 1.1em; padding: 12px 24px;">⚠️ Delete All Data</button>
+                    </div>
                 </div>
             </section>
 

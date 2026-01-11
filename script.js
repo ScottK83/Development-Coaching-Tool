@@ -101,6 +101,7 @@ function showOnlySection(sectionId) {
         'resultsSection',
         'dashboardSection',
         'tipsManagementSection',
+        'manageDataSection',
         'executiveSummarySection'
     ];
     
@@ -900,6 +901,10 @@ function initializeEventHandlers() {
     document.getElementById('manageTips')?.addEventListener('click', () => {
         showOnlySection('tipsManagementSection');
         renderTipsManagement();
+    });
+    document.getElementById('manageDataBtn')?.addEventListener('click', () => {
+        showOnlySection('manageDataSection');
+        populateDeleteWeekDropdown();
     });
     document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
         showOnlySection('executiveSummarySection');
