@@ -832,80 +832,6 @@ function saveWeeklyData() {
 // EMAIL GENERATION
 // ============================================
 
-async function generateCoachingEmail(employeeName, employeeData, customNotes = '') {
-    // Determine struggling areas using METRICS_REGISTRY
-    const strugglingAreas = [];
-    
-    // Check each metric against targets from registry
-    Object.values(METRICS_REGISTRY).forEach(metric => {
-        const value = employeeData[metric.key];
-        
-        // Skip metrics with no value or null targets
-        if ((value === undefined || value === null || value === '') && metric.key !== 'scheduleAdherence') {
-            return;
-        }
-        
-        // For scheduleAdherence, treat empty/null as 0 (required metric)
-        const metricValue = metric.key === 'scheduleAdherence' ? (value || 0) : value;
-        
-        // Skip if still no value
-        if (metricValue === undefined || metricValue === null || metricValue === '') {
-            return;
-        }
-        
-        // Check against target
-        const isMetMin = metric.target.type === 'min';
-        const meetsTarget = isMetMin ? metricValue >= metric.target.value : metricValue <= metric.target.value;
-        
-        if (!meetsTarget) {
-            strugglingAreas.push(metric.key);
-        }
-    });
-    
-    // Load tips
-    const serverTips = await loadServerTips();
-    const userTips = loadUserTips();
-    const allTips = { ...serverTips, ...userTips };
-    
-    // Build email body
-    let emailBody = `Hi ${employeeName},\n\n`;
-    emailBody += `I wanted to take a moment to check in with you about your recent performance metrics.\n\n`;
-    
-    if (strugglingAreas.length === 0) {
-        emailBody += `Great job! You're meeting all your targets. Keep up the excellent work! 🌟\n\n`;
-    } else {
-        emailBody += `I noticed a few areas where we can focus on improvement:\n\n`;
-        
-        strugglingAreas.forEach(area => {
-            const tips = allTips[area] || [];
-            const tip = tips.length > 0 
-                ? tips[Math.floor(Math.random() * tips.length)]
-                : METRICS_REGISTRY[area]?.defaultTip || 'Keep improving in this area!';
-            
-            emailBody += `• ${tip}\n\n`;
-        });
-    }
-    
-    if (customNotes) {
-        emailBody += `Additional Notes:\n${customNotes}\n\n`;
-    }
-    
-    emailBody += `Let me know if you'd like to discuss any of these areas in more detail. I'm here to support you!\n\n`;
-    emailBody += `Best regards`;
-    
-    // Generate email address (firstName.lastName@aps.com)
-    const nameParts = employeeData.name.split(' ');
-    const firstName = nameParts[0].toLowerCase();
-    const lastName = nameParts[nameParts.length - 1].toLowerCase();
-    const emailAddress = `${firstName}.${lastName}@aps.com`;
-    
-    return {
-        to: emailAddress,
-        subject: `Quick Check-In: Let's Chat About Your Metrics!`,
-        body: emailBody
-    };
-}
-
 // ============================================
 // PERIOD MANAGEMENT
 // ============================================
@@ -2564,66 +2490,100 @@ async function generateCopilotPrompt() {
         });
     }
     
-    let prompt = `You are a frontline supervisor writing a casual, supportive coaching email to an employee.
+    // Build canonical Copilot prompt
+    const prompt = `You are helping polish a draft coaching email written by a supervisor.
+Your role is to improve clarity, tone, and flow only.
 
-Supervisor voice:
-- Friendly, conversational, encouraging
-- Clear but not formal
-- Sounds human, not HR
-- No em dashes
-- No jargon
-- Vary sentence structure and phrasing naturally
-- Do not repeat phrasing from other sections
+Do NOT add new information.
+Do NOT change facts or metrics.
+Do NOT provide HR guidance.
+Do NOT make judgments.
+Do NOT mention AI, prompts, tools, or data sources.
 
-Employee details:
-- First name: ${firstName}
-- Timeframe: ${periodLabel} (${periodType})
+Your task is to rewrite the content below into a natural, supportive coaching email.
 
-Context:
-This email is meant to recognize wins, highlight a few focused opportunities, and provide practical tips for improvement. Keep it light, constructive, and forward-looking.
-`;
+==================================================
+EMPLOYEE CONTEXT
+==================================================
 
-    if (customNotes) {
-        prompt += `\nAdditional supervisor context:\n${customNotes}\n`;
-    }
+Employee first name: ${firstName}
+Review timeframe: ${periodLabel}
 
-    prompt += `\nPerformance summary:
-Use the following data exactly as written.
-`;
+==================================================
+METRICS PERFORMING WELL
+==================================================
 
-    if (celebrate.length > 0) {
-        prompt += `\nMetrics performing well:\n${celebrate.join('\n')}`;
-    }
-    
-    if (needsCoaching.length > 0) {
-        prompt += `\n\nMetrics to focus on:\n${needsCoaching.join('\n')}`;
-        prompt += tipsSection;
-    }
-    
-    prompt += `\n\nInstructions for the email:
-1. Start with a brief, friendly greeting using the employee's first name.
-2. Acknowledge the timeframe being reviewed.
-3. Include a section titled "What's Going Well" with bullet points:
-   - Celebrate wins
-   - Include both actual and target values
-   - Keep tone positive and specific
-4. Include a section titled "Opportunities to Focus On" with bullet points:
-   - Mention the gap without sounding critical
-   - Keep it to key focus areas only
-5. Include a section titled "Tips to Help You Improve":
+Celebrate ALL metrics that meet or exceed target.
+Include both actual and target values.
+
+${celebrate.length > 0 ? celebrate.join('\n') : 'None'}
+
+==================================================
+METRICS TO FOCUS ON
+==================================================
+
+Highlight ALL metrics below target.
+Include:
+- Actual value
+- Target value
+- Gap from target
+
+${needsCoaching.length > 0 ? needsCoaching.join('\n') : 'None'}
+
+==================================================
+COACHING TIPS
+==================================================
+
+For EACH metric below target:
+- One tip is provided
+- Use ONLY the tip paired with that metric
+- Do NOT reuse tips across metrics
+- Paraphrase naturally
+- Vary sentence structure and phrasing
+- Keep advice practical and achievable
+
+${tipsSection || 'No tips needed - all metrics meeting target'}
+
+==================================================
+WRITING INSTRUCTIONS
+==================================================
+
+Structure the email as follows:
+
+1. Friendly greeting using the employee's first name
+2. Brief acknowledgment of the review timeframe
+3. Section header: "What's Going Well"
+   - Bullet points
+   - Positive, specific, encouraging
+4. Section header: "Opportunities to Focus On"
+   - Bullet points
+   - Fact-based and supportive
+5. Section header: "Tips to Help You Improve"
    - One bullet per opportunity
    - Tie each tip clearly to its metric
-6. End with an encouraging closing that shows confidence in progress.
+6. Encouraging closing that shows confidence in progress
 
-Hard rules:
-- Use bullet points (no paragraphs longer than 3 lines)
-- Do not sound urgent or corrective
-- Do not mention policies, warnings, or discipline
-- Do not mention AI, prompts, or data sources
-- Email must be under 1000 words
+==================================================
+STYLE RULES (STRICT)
+==================================================
 
-Final instruction:
-Write the final output as a polished email that is ready to send.`;
+- Casual, supportive supervisor tone
+- Sounds human, not HR
+- No urgency
+- No discipline language
+- No em dashes
+- No jargon
+- Vary sentence structure and phrasing
+- Emails should not sound the same even if metrics are identical
+- Bullet points preferred
+- No paragraph longer than 3 lines
+- Under 1000 words
+
+==================================================
+FINAL INSTRUCTION
+==================================================
+
+Rewrite the content above as a polished coaching email that is ready to send.`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
