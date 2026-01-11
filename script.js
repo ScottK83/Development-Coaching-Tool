@@ -306,26 +306,26 @@ const CANONICAL_SCHEMA = {
     TOTAL_CALLS: 'total_calls_answered'
 };
 
-// Simple header matching - maps exact PowerBI headers to canonical fields
-// Based on actual PowerBI output: Name, Transfers%, AHT, Talk, Hold, ACW, Adherence%, etc.
-const HEADER_PATTERNS = {
-    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: ['name (last'],
-    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: ['adherence%'],
-    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: ['transfer%'],
-    [CANONICAL_SCHEMA.AHT_SECONDS]: ['aht'],
-    [CANONICAL_SCHEMA.TALK_SECONDS]: ['talk'],
-    [CANONICAL_SCHEMA.ACW_SECONDS]: ['acw'],
-    [CANONICAL_SCHEMA.HOLD_SECONDS]: ['hold'],
-    [CANONICAL_SCHEMA.RELIABILITY_HOURS]: ['reliability'],
-    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: ['sentimentscore'],
-    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: ['positivewordscore'],
-    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: ['negativewordscore'],
-    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: ['emotionscore'],
-    [CANONICAL_SCHEMA.CX_REP_OVERALL]: ['repsat%'],
-    [CANONICAL_SCHEMA.FCR_PERCENT]: ['fcr%'],
-    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['oe survey total'],
-    [CANONICAL_SCHEMA.TOTAL_CALLS]: ['totalcallsanswered']
-};
+// Header patterns - MUST be in order: most specific patterns first!
+// Order matters because we stop at first match
+const HEADER_PATTERNS = [
+    { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name (last'] },
+    { canonical: CANONICAL_SCHEMA.TOTAL_CALLS, patterns: ['totalcallsanswered'] },
+    { canonical: CANONICAL_SCHEMA.ADHERENCE_PERCENT, patterns: ['adherence%'] },
+    { canonical: CANONICAL_SCHEMA.TRANSFERS_PERCENT, patterns: ['transfer%'] },
+    { canonical: CANONICAL_SCHEMA.AHT_SECONDS, patterns: ['aht'] },
+    { canonical: CANONICAL_SCHEMA.TALK_SECONDS, patterns: ['talk'] },
+    { canonical: CANONICAL_SCHEMA.ACW_SECONDS, patterns: ['acw'] },
+    { canonical: CANONICAL_SCHEMA.HOLD_SECONDS, patterns: ['hold'] },
+    { canonical: CANONICAL_SCHEMA.RELIABILITY_HOURS, patterns: ['reliability'] },
+    { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oe survey total'] },
+    { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
+    { canonical: CANONICAL_SCHEMA.FCR_PERCENT, patterns: ['fcr%'] },
+    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['sentimentscore'] },
+    { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore'] },
+    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['negativewordscore'] },
+    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['emotionscore'] }
+];
 
 // Only employee name is strictly required for ingestion
 // Other fields are optional - system will work with partial data
@@ -342,8 +342,8 @@ function mapHeadersToSchema(headers) {
     console.log('🔍 DEBUG: Starting header mapping...');
     console.log('🔍 DEBUG: Available headers:', headers);
     
-    // Try to match each canonical field
-    for (const [canonical, patterns] of Object.entries(HEADER_PATTERNS)) {
+    // Try to match each canonical field - using array to guarantee order
+    for (const { canonical, patterns } of HEADER_PATTERNS) {
         for (let i = 0; i < headers.length; i++) {
             if (usedIndices.has(i)) continue; // Skip already-mapped headers
             
