@@ -382,7 +382,11 @@ function mapHeadersToSchema(headers) {
         for (const [canonical, synonyms] of Object.entries(HEADER_SYNONYMS)) {
             if (usedCanonical.has(canonical)) continue; // Already mapped
             
-            if (synonyms.some(syn => normalized.includes(syn) || syn.includes(normalized))) {
+            // Check if normalized header contains any synonym OR synonym contains normalized header
+            if (synonyms.some(syn => {
+                const normalizedSyn = normalizeHeader(syn);
+                return normalized.includes(normalizedSyn) || normalizedSyn.includes(normalized);
+            })) {
                 mapping[canonical] = index;
                 sourceMapping[canonical] = header;
                 usedCanonical.add(canonical);
