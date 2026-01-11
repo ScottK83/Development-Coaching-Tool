@@ -963,7 +963,7 @@ function initializeEventHandlers() {
             document.getElementById('pasteDataTextarea').value = '';
             
             // Auto-switch to Coaching tab
-            switchTab('coaching');
+            showOnlySection('coachingSection');
             
             alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nClick "3. Select Date Range" below to view employee metrics.`);
             
