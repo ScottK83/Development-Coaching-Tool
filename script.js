@@ -40,21 +40,154 @@ let weeklyData = {};
 // ============================================
 // TARGET METRICS
 // ============================================
-const TARGETS = {
-    driver: {
-        scheduleAdherence: { min: 93 },
-        cxRepOverall: { min: 80 },
-        fcr: { min: 70 },
-        overallExperience: { min: 81 },
-        transfers: { max: 12 },
-        overallSentiment: { min: 88 },
-        positiveWord: { min: 86 },
-        negativeWord: { min: 83 },
-        managingEmotions: { min: 95 },
-        aht: { max: 440 },
-        acw: { max: 60 },
-        holdTime: { max: 30 },
-        reliability: { max: 16 }
+
+// ============================================
+// METRICS REGISTRY - SINGLE SOURCE OF TRUTH
+// ============================================
+
+const METRICS_REGISTRY = {
+    scheduleAdherence: {
+        key: 'scheduleAdherence',
+        label: 'Schedule Adherence',
+        icon: '⏰',
+        target: { type: 'min', value: 93 },
+        unit: '%',
+        columnIndex: 7,
+        chartType: 'line',
+        chartColor: '#2196F3',
+        defaultTip: "Schedule Adherence: Being present and available is essential. Work on meeting your scheduled hours consistently."
+    },
+    cxRepOverall: {
+        key: 'cxRepOverall',
+        label: 'CX Rep Overall',
+        icon: '⭐',
+        target: { type: 'min', value: 80 },
+        unit: '%',
+        columnIndex: 14,
+        chartType: 'line',
+        chartColor: '#4CAF50',
+        defaultTip: "CX Rep Overall: Customers appreciate your service! Keep building those strong relationships through empathy and professionalism."
+    },
+    fcr: {
+        key: 'fcr',
+        label: 'First Call Resolution',
+        icon: '✓',
+        target: { type: 'min', value: 70 },
+        unit: '%',
+        columnIndex: 12,
+        chartType: 'line',
+        chartColor: '#FF5722',
+        defaultTip: "First Call Resolution: You're doing well! Continue focusing on resolving issues on the first contact whenever possible."
+    },
+    overallExperience: {
+        key: 'overallExperience',
+        label: 'Overall Experience',
+        icon: '🎯',
+        target: { type: 'min', value: 81 },
+        unit: '%',
+        columnIndex: 16,
+        chartType: null,
+        chartColor: null,
+        defaultTip: "Overall Experience: Great job creating positive experiences! Continue to personalize your interactions."
+    },
+    transfers: {
+        key: 'transfers',
+        label: 'Transfers',
+        icon: '📞',
+        target: { type: 'max', value: 12 },
+        unit: '%',
+        columnIndex: 2,
+        chartType: 'bar',
+        chartColor: '#FF9800',
+        defaultTip: "Transfers: You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience."
+    },
+    overallSentiment: {
+        key: 'overallSentiment',
+        label: 'Overall Sentiment',
+        icon: '😊',
+        target: { type: 'min', value: 88 },
+        unit: '%',
+        columnIndex: 11,
+        chartType: 'line',
+        chartColor: '#E91E63',
+        defaultTip: "Overall Sentiment: Keep up the positive tone in your interactions. It makes a big difference!"
+    },
+    positiveWord: {
+        key: 'positiveWord',
+        label: 'Positive Word',
+        icon: '👍',
+        target: { type: 'min', value: 86 },
+        unit: '%',
+        columnIndex: 10,
+        chartType: 'line',
+        chartColor: '#4CAF50',
+        defaultTip: "Positive Word Usage: Your positive language is appreciated! Continue using encouraging and supportive words."
+    },
+    negativeWord: {
+        key: 'negativeWord',
+        label: 'Avoid Negative Word',
+        icon: '👎',
+        target: { type: 'min', value: 83 },
+        unit: '%',
+        columnIndex: 9,
+        chartType: 'line',
+        chartColor: '#F44336',
+        defaultTip: "Avoiding Negative Words: You're doing great at keeping conversations positive. Keep it up!"
+    },
+    managingEmotions: {
+        key: 'managingEmotions',
+        label: 'Managing Emotions',
+        icon: '😌',
+        target: { type: 'min', value: 95 },
+        unit: '%',
+        columnIndex: 8,
+        chartType: 'line',
+        chartColor: '#00BCD4',
+        defaultTip: "Managing Emotions: You're doing great here! Keep maintaining composure even during challenging interactions."
+    },
+    aht: {
+        key: 'aht',
+        label: 'Average Handle Time',
+        icon: '⏱️',
+        target: { type: 'max', value: 440 },
+        unit: 'sec',
+        columnIndex: 3,
+        chartType: 'line',
+        chartColor: '#9C27B0',
+        defaultTip: "Average Handle Time: Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps."
+    },
+    acw: {
+        key: 'acw',
+        label: 'After Call Work',
+        icon: '📝',
+        target: { type: 'max', value: 60 },
+        unit: 'sec',
+        columnIndex: 6,
+        chartType: 'bar',
+        chartColor: '#3F51B5',
+        defaultTip: "After Call Work: Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy."
+    },
+    holdTime: {
+        key: 'holdTime',
+        label: 'Hold Time',
+        icon: '⏸️',
+        target: { type: 'max', value: 30 },
+        unit: 'sec',
+        columnIndex: 5,
+        chartType: 'bar',
+        chartColor: '#009688',
+        defaultTip: "Hold Time: Minimize hold time by gathering information upfront. It improves customer experience and efficiency."
+    },
+    reliability: {
+        key: 'reliability',
+        label: 'Reliability',
+        icon: '✅',
+        target: { type: 'max', value: 16 },
+        unit: '%',
+        columnIndex: 21,
+        chartType: 'bar',
+        chartColor: '#795548',
+        defaultTip: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
     }
 };
 
@@ -496,20 +629,20 @@ function parsePastedData(pastedText, startDate, endDate) {
         const employeeData = {
             name: displayName,
             firstName: firstName,
-            scheduleAdherence: parsePercentage(getCell(7)) || 0,      // Adherence%
-            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(getCell(14)) : '',  // RepSat%
-            fcr: surveyTotal > 0 ? parseSurveyPercentage(getCell(12)) : '',           // FCR%
-            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(16)) : '', // OverallExperience%
-            transfers: parsePercentage(getCell(2)) || 0,              // Transfers%
-            aht: parseSeconds(getCell(3)) || '',                      // AHT (blank if 0)
-            talkTime: parseSeconds(getCell(4)) || '',                 // Talk (blank if 0)
-            acw: parseSeconds(getCell(6)),                            // ACW (keep 0 - realistic)
-            holdTime: parseSeconds(getCell(5)),                       // Hold (keep 0 - realistic)
-            reliability: parseHours(getCell(21)) || 0,                // ReliabilityHours (keep 0 - realistic)
-            overallSentiment: parsePercentage(getCell(11)) || '',     // OverallSentimentScore%
-            positiveWord: parsePercentage(getCell(10)) || '',         // PositiveWordScore%
-            negativeWord: parsePercentage(getCell(9)) || '',          // AvoidNegativeWordScore%
-            managingEmotions: parsePercentage(getCell(8)) || '',      // ManageEmotionsScore%
+            scheduleAdherence: parsePercentage(getCell(METRICS_REGISTRY.scheduleAdherence.columnIndex)) || 0,
+            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(getCell(METRICS_REGISTRY.cxRepOverall.columnIndex)) : '',
+            fcr: surveyTotal > 0 ? parseSurveyPercentage(getCell(METRICS_REGISTRY.fcr.columnIndex)) : '',
+            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(METRICS_REGISTRY.overallExperience.columnIndex)) : '',
+            transfers: parsePercentage(getCell(METRICS_REGISTRY.transfers.columnIndex)) || 0,
+            aht: parseSeconds(getCell(METRICS_REGISTRY.aht.columnIndex)) || '',
+            talkTime: parseSeconds(getCell(4)) || '',
+            acw: parseSeconds(getCell(METRICS_REGISTRY.acw.columnIndex)),
+            holdTime: parseSeconds(getCell(METRICS_REGISTRY.holdTime.columnIndex)),
+            reliability: parseHours(getCell(METRICS_REGISTRY.reliability.columnIndex)) || 0,
+            overallSentiment: parsePercentage(getCell(METRICS_REGISTRY.overallSentiment.columnIndex)) || '',
+            positiveWord: parsePercentage(getCell(METRICS_REGISTRY.positiveWord.columnIndex)) || '',
+            negativeWord: parsePercentage(getCell(METRICS_REGISTRY.negativeWord.columnIndex)) || '',
+            managingEmotions: parsePercentage(getCell(METRICS_REGISTRY.managingEmotions.columnIndex)) || '',
             surveyTotal: surveyTotal,
             totalCalls: totalCalls
         };
@@ -667,66 +800,35 @@ function saveWeeklyData() {
 // EMAIL GENERATION
 // ============================================
 
-const DEFAULT_TIPS = {
-    scheduleAdherence: "Schedule Adherence: Being present and available is essential. Work on meeting your scheduled hours consistently.",
-    cxRepOverall: "CX Rep Overall: Customers appreciate your service! Keep building those strong relationships through empathy and professionalism.",
-    fcr: "First Call Resolution: You're doing well! Continue focusing on resolving issues on the first contact whenever possible.",
-    overallExperience: "Overall Experience: Great job creating positive experiences! Continue to personalize your interactions.",
-    transfers: "Transfers: You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience.",
-    overallSentiment: "Overall Sentiment: Keep up the positive tone in your interactions. It makes a big difference!",
-    positiveWord: "Positive Word Usage: Your positive language is appreciated! Continue using encouraging and supportive words.",
-    negativeWord: "Avoiding Negative Words: You're doing great at keeping conversations positive. Keep it up!",
-    managingEmotions: "Managing Emotions: You're doing great here! Keep maintaining composure even during challenging interactions.",
-    aht: "Average Handle Time: Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps.",
-    acw: "After Call Work: Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy.",
-    holdTime: "Hold Time: Minimize hold time by gathering information upfront. It improves customer experience and efficiency.",
-    reliability: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
-};
-
 async function generateCoachingEmail(employeeName, employeeData, customNotes = '') {
-    // Determine struggling areas
+    // Determine struggling areas using METRICS_REGISTRY
     const strugglingAreas = [];
     
-    // Check each metric against targets
-    if (employeeData.scheduleAdherence < TARGETS.driver.scheduleAdherence.min) {
-        strugglingAreas.push('scheduleAdherence');
-    }
-    if (employeeData.cxRepOverall && employeeData.cxRepOverall < TARGETS.driver.cxRepOverall.min) {
-        strugglingAreas.push('cxRepOverall');
-    }
-    if (employeeData.fcr && employeeData.fcr < TARGETS.driver.fcr.min) {
-        strugglingAreas.push('fcr');
-    }
-    if (employeeData.overallExperience && employeeData.overallExperience < TARGETS.driver.overallExperience.min) {
-        strugglingAreas.push('overallExperience');
-    }
-    if (employeeData.transfers > TARGETS.driver.transfers.max) {
-        strugglingAreas.push('transfers');
-    }
-    if (employeeData.overallSentiment && employeeData.overallSentiment < TARGETS.driver.overallSentiment.min) {
-        strugglingAreas.push('overallSentiment');
-    }
-    if (employeeData.positiveWord && employeeData.positiveWord < TARGETS.driver.positiveWord.min) {
-        strugglingAreas.push('positiveWord');
-    }
-    if (employeeData.negativeWord && employeeData.negativeWord < TARGETS.driver.negativeWord.min) {
-        strugglingAreas.push('negativeWord');
-    }
-    if (employeeData.managingEmotions && employeeData.managingEmotions < TARGETS.driver.managingEmotions.min) {
-        strugglingAreas.push('managingEmotions');
-    }
-    if (employeeData.aht && employeeData.aht > TARGETS.driver.aht.max) {
-        strugglingAreas.push('aht');
-    }
-    if (employeeData.acw && employeeData.acw > TARGETS.driver.acw.max) {
-        strugglingAreas.push('acw');
-    }
-    if (employeeData.holdTime && employeeData.holdTime > TARGETS.driver.holdTime.max) {
-        strugglingAreas.push('holdTime');
-    }
-    if (employeeData.reliability > TARGETS.driver.reliability.max) {
-        strugglingAreas.push('reliability');
-    }
+    // Check each metric against targets from registry
+    Object.values(METRICS_REGISTRY).forEach(metric => {
+        const value = employeeData[metric.key];
+        
+        // Skip metrics with no value or null targets
+        if ((value === undefined || value === null || value === '') && metric.key !== 'scheduleAdherence') {
+            return;
+        }
+        
+        // For scheduleAdherence, treat empty/null as 0 (required metric)
+        const metricValue = metric.key === 'scheduleAdherence' ? (value || 0) : value;
+        
+        // Skip if still no value
+        if (metricValue === undefined || metricValue === null || metricValue === '') {
+            return;
+        }
+        
+        // Check against target
+        const isMetMin = metric.target.type === 'min';
+        const meetsTarget = isMetMin ? metricValue >= metric.target.value : metricValue <= metric.target.value;
+        
+        if (!meetsTarget) {
+            strugglingAreas.push(metric.key);
+        }
+    });
     
     // Load tips
     const serverTips = await loadServerTips();
@@ -746,7 +848,7 @@ async function generateCoachingEmail(employeeName, employeeData, customNotes = '
             const tips = allTips[area] || [];
             const tip = tips.length > 0 
                 ? tips[Math.floor(Math.random() * tips.length)]
-                : DEFAULT_TIPS[area];
+                : METRICS_REGISTRY[area]?.defaultTip || 'Keep improving in this area!';
             
             emailBody += `• ${tip}\n\n`;
         });
@@ -924,15 +1026,9 @@ function resetEmployeeSelection() {
         employeeSelect.selectedIndex = 0; // Reset to "-- Choose an employee --"
     }
     
-    // Clear metrics
-    const fields = [
-        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
-        'transfers', 'overallSentiment', 'positiveWord', 'negativeWord',
-        'managingEmotions', 'aht', 'acw', 'holdTime', 'reliability'
-    ];
-    
-    fields.forEach(field => {
-        const input = document.getElementById(field);
+    // Clear metrics from registry
+    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+        const input = document.getElementById(metricKey);
         if (input) {
             input.value = '';
             input.style.background = '';
@@ -952,16 +1048,11 @@ function resetEmployeeSelection() {
 }
 
 function populateMetricInputs(employee) {
-    const fields = [
-        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
-        'transfers', 'overallSentiment', 'positiveWord', 'negativeWord',
-        'managingEmotions', 'aht', 'acw', 'holdTime', 'reliability'
-    ];
-    
-    fields.forEach(field => {
-        const input = document.getElementById(field);
+    // Populate metrics from registry
+    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+        const input = document.getElementById(metricKey);
         if (input) {
-            const value = employee[field];
+            const value = employee[metricKey];
             // Explicitly handle 0 as a valid value (for ACW, holdTime, reliability)
             input.value = (value === 0 || (value !== '' && value !== null && value !== undefined)) ? value : '';
         }
@@ -993,21 +1084,11 @@ function populateMetricInputs(employee) {
 }
 
 function applyMetricHighlights() {
-    const configs = [
-        { id: 'scheduleAdherence', target: TARGETS.driver.scheduleAdherence.min, type: 'min' },
-        { id: 'cxRepOverall', target: TARGETS.driver.cxRepOverall.min, type: 'min' },
-        { id: 'fcr', target: TARGETS.driver.fcr.min, type: 'min' },
-        { id: 'overallExperience', target: TARGETS.driver.overallExperience.min, type: 'min' },
-        { id: 'transfers', target: TARGETS.driver.transfers.max, type: 'max' },
-        { id: 'overallSentiment', target: TARGETS.driver.overallSentiment.min, type: 'min' },
-        { id: 'positiveWord', target: TARGETS.driver.positiveWord.min, type: 'min' },
-        { id: 'negativeWord', target: TARGETS.driver.negativeWord.min, type: 'min' },
-        { id: 'managingEmotions', target: TARGETS.driver.managingEmotions.min, type: 'min' },
-        { id: 'aht', target: TARGETS.driver.aht.max, type: 'max' },
-        { id: 'acw', target: TARGETS.driver.acw.max, type: 'max' },
-        { id: 'holdTime', target: TARGETS.driver.holdTime.max, type: 'max' },
-        { id: 'reliability', target: TARGETS.driver.reliability.max, type: 'max' }
-    ];
+    const configs = Object.values(METRICS_REGISTRY).map(metric => ({
+        id: metric.key,
+        target: metric.target.value,
+        type: metric.target.type
+    }));
 
     configs.forEach(cfg => {
         const el = document.getElementById(cfg.id);
@@ -1338,15 +1419,9 @@ function initializeEventHandlers() {
         generateOutlookEmail();
     });
     
-    // Metric input highlighting
-    const metricInputs = [
-        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
-        'transfers', 'overallSentiment', 'positiveWord', 'negativeWord',
-        'managingEmotions', 'aht', 'acw', 'holdTime', 'reliability'
-    ];
-    
-    metricInputs.forEach(id => {
-        document.getElementById(id)?.addEventListener('input', applyMetricHighlights);
+    // Metric input highlighting - attach to all metrics in registry
+    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+        document.getElementById(metricKey)?.addEventListener('input', applyMetricHighlights);
     });
     
     // Export data
@@ -1553,30 +1628,24 @@ async function renderTipsManagement() {
     const serverTips = await loadServerTips();
     const customMetrics = loadCustomMetrics();
     
-    const metricNames = {
-        scheduleAdherence: 'Schedule Adherence',
-        cxRepOverall: 'CX Rep Overall',
-        fcr: 'First Call Resolution',
-        overallExperience: 'Overall Experience',
-        transfers: 'Transfers',
-        overallSentiment: 'Overall Sentiment',
-        positiveWord: 'Positive Word',
-        negativeWord: 'Avoid Negative Word',
-        managingEmotions: 'Managing Emotions',
-        aht: 'Average Handle Time',
-        acw: 'After Call Work',
-        holdTime: 'Hold Time',
-        reliability: 'Reliability',
-        ...customMetrics
-    };
+    // Build metricNames from METRICS_REGISTRY + customMetrics
+    const metricNames = {};
+    Object.entries(METRICS_REGISTRY).forEach(([key, metric]) => {
+        metricNames[key] = metric.label;
+    });
+    // Add custom metrics
+    Object.assign(metricNames, customMetrics);
     
     let html = '<div style="margin-bottom: 20px;">';
     html += '<p>Select a metric to view and manage its coaching tips. Server tips (from tips.csv) are shown in blue and are read-only. Your custom tips can be edited or deleted.</p>';
     html += '</div>';
     
-    // Dropdown selector
-    html += '<div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">';
-    html += '<label for="metricSelector" style="font-weight: bold; display: block; margin-bottom: 10px; color: #2196F3; font-size: 1.1em;">Select Metric:</label>';
+    // Manage Existing Metric section (default visible)
+    html += '<div id="manageMetricSection" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">';
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
+    html += '<label for="metricSelector" style="font-weight: bold; color: #2196F3; font-size: 1.1em; margin: 0;">Select Metric:</label>';
+    html += '<button id="newMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">+ New Metric</button>';
+    html += '</div>';
     html += '<select id="metricSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
     html += '<option value="">-- Choose a metric --</option>';
     Object.keys(metricNames).forEach(metricKey => {
@@ -1585,9 +1654,12 @@ async function renderTipsManagement() {
     html += '</select>';
     html += '</div>';
     
-    // Add metric section
-    html += '<div style="margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
-    html += '<h3 style="color: #2196F3; margin-top: 0; margin-bottom: 15px;">➕ Create New Metric</h3>';
+    // Create New Metric section (hidden by default)
+    html += '<div id="createMetricSection" style="display: none; margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
+    html += '<h3 style="color: #2196F3; margin: 0;">➕ Create New Metric</h3>';
+    html += '<button id="backToManageBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Back</button>';
+    html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
     html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">Metric Name:</label>';
     html += '<input type="text" id="newMetricName" placeholder="e.g., Accuracy, Compliance, Efficiency" style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; box-sizing: border-box;">';
@@ -1603,6 +1675,31 @@ async function renderTipsManagement() {
     html += '<div id="tipsDisplayArea" style="display: none;"></div>';
     
     container.innerHTML = html;
+    
+    // Helper function to switch to create mode
+    function switchToCreateMode() {
+        document.getElementById('manageMetricSection').style.display = 'none';
+        document.getElementById('createMetricSection').style.display = 'block';
+        document.getElementById('tipsDisplayArea').style.display = 'none';
+        document.getElementById('metricSelector').value = '';
+        document.getElementById('newMetricName').value = '';
+        document.getElementById('newMetricTip').value = '';
+        document.getElementById('newMetricName').focus();
+    }
+    
+    // Helper function to switch back to manage mode
+    function switchToManageMode() {
+        document.getElementById('manageMetricSection').style.display = 'block';
+        document.getElementById('createMetricSection').style.display = 'none';
+        document.getElementById('tipsDisplayArea').style.display = 'none';
+        document.getElementById('metricSelector').value = '';
+    }
+    
+    // + New Metric button handler
+    document.getElementById('newMetricBtn').addEventListener('click', switchToCreateMode);
+    
+    // Back button handler
+    document.getElementById('backToManageBtn').addEventListener('click', switchToManageMode);
     
     // Create metric button handler
     document.getElementById('createMetricBtn').addEventListener('click', () => {
@@ -1642,17 +1739,14 @@ async function renderTipsManagement() {
         tips[metricKey].push(initialTip);
         saveUserTips(tips);
         
-        // Clear inputs
-        nameInput.value = '';
-        tipInput.value = '';
-        
         showToast('✅ Metric created successfully!');
         
-        // Re-render to show new metric
+        // Switch back to manage mode and re-render
+        switchToManageMode();
         renderTipsManagement();
     });
     
-    // Add change listener
+    // Add change listener for metric selection
     document.getElementById('metricSelector').addEventListener('change', async (e) => {
         const metricKey = e.target.value;
         const displayArea = document.getElementById('tipsDisplayArea');
@@ -1661,6 +1755,10 @@ async function renderTipsManagement() {
             displayArea.style.display = 'none';
             return;
         }
+        
+        // Exit create mode if we were in it
+        document.getElementById('manageMetricSection').style.display = 'block';
+        document.getElementById('createMetricSection').style.display = 'none';
         
         displayArea.style.display = 'block';
         const currentServerTips = await loadServerTips();
@@ -1979,39 +2077,23 @@ function handleEmployeeHistorySelection(e) {
         filteredData = employeeData.slice(-1);
     }
     
-    // Calculate underperforming metrics
+    // Calculate underperforming metrics using METRICS_REGISTRY
     const latestData = filteredData[filteredData.length - 1];
     const underperforming = [];
     
-    const metricsToCheck = [
-        { key: 'scheduleAdherence', label: 'Schedule Adherence', target: TARGETS.driver.scheduleAdherence.min, type: 'min', unit: '%' },
-        { key: 'cxRepOverall', label: 'CX Rep Overall', target: TARGETS.driver.cxRepOverall.min, type: 'min', unit: '%' },
-        { key: 'fcr', label: 'First Call Resolution', target: TARGETS.driver.fcr.min, type: 'min', unit: '%' },
-        { key: 'overallExperience', label: 'Overall Experience', target: TARGETS.driver.overallExperience.min, type: 'min', unit: '%' },
-        { key: 'transfers', label: 'Transfers', target: TARGETS.driver.transfers.max, type: 'max', unit: '%' },
-        { key: 'overallSentiment', label: 'Overall Sentiment', target: TARGETS.driver.overallSentiment.min, type: 'min', unit: '%' },
-        { key: 'positiveWord', label: 'Positive Word', target: TARGETS.driver.positiveWord.min, type: 'min', unit: '%' },
-        { key: 'negativeWord', label: 'Avoid Negative Word', target: TARGETS.driver.negativeWord.min, type: 'min', unit: '%' },
-        { key: 'managingEmotions', label: 'Managing Emotions', target: TARGETS.driver.managingEmotions.min, type: 'min', unit: '%' },
-        { key: 'aht', label: 'Avg Handle Time', target: TARGETS.driver.aht.max, type: 'max', unit: 's' },
-        { key: 'acw', label: 'After Call Work', target: TARGETS.driver.acw.max, type: 'max', unit: 's' },
-        { key: 'holdTime', label: 'Hold Time', target: TARGETS.driver.holdTime.max, type: 'max', unit: 's' },
-        { key: 'reliability', label: 'Reliability', target: TARGETS.driver.reliability.max, type: 'max', unit: 'hrs' }
-    ];
-    
-    metricsToCheck.forEach(metric => {
+    Object.values(METRICS_REGISTRY).forEach(metric => {
         const value = latestData[metric.key];
         if (value !== '' && value !== null && value !== undefined) {
             const numVal = parseFloat(value);
             if (!isNaN(numVal)) {
-                const meets = metric.type === 'min' ? numVal >= metric.target : numVal <= metric.target;
-                if (!meets) {
+                const meetsTarget = metric.target.type === 'min' ? numVal >= metric.target.value : numVal <= metric.target.value;
+                if (!meetsTarget) {
                     underperforming.push({
                         label: metric.label,
                         value: numVal,
-                        target: metric.target,
+                        target: metric.target.value,
                         unit: metric.unit,
-                        type: metric.type
+                        type: metric.target.type
                     });
                 }
             }
@@ -2122,21 +2204,16 @@ function renderEmployeeCharts(employeeData, employeeName) {
         }
     };
     
-    // Define all metrics to render
-    const metricsConfig = [
-        { id: 'scheduleChart', key: 'scheduleAdherence', title: '⏰ Schedule Adherence %', color: '#2196F3', type: 'line' },
-        { id: 'cxChart', key: 'cxRepOverall', title: '⭐ CX Rep Overall %', color: '#4CAF50', type: 'line' },
-        { id: 'fcrChart', key: 'fcr', title: '✓ First Call Resolution %', color: '#FF5722', type: 'line' },
-        { id: 'transfersChart', key: 'transfers', title: '📞 Transfers %', color: '#FF9800', type: 'bar' },
-        { id: 'ahtChart', key: 'aht', title: '⏱️ Avg Handle Time (sec)', color: '#9C27B0', type: 'line' },
-        { id: 'acwChart', key: 'acw', title: '📝 After Call Work (sec)', color: '#3F51B5', type: 'bar' },
-        { id: 'holdChart', key: 'holdTime', title: '⏸️ Hold Time (sec)', color: '#009688', type: 'bar' },
-        { id: 'sentimentChart', key: 'overallSentiment', title: '😊 Overall Sentiment %', color: '#E91E63', type: 'line' },
-        { id: 'positiveChart', key: 'positiveWord', title: '👍 Positive Word Usage %', color: '#4CAF50', type: 'line' },
-        { id: 'negativeChart', key: 'negativeWord', title: '👎 Avoid Negative Words %', color: '#F44336', type: 'line' },
-        { id: 'emotionsChart', key: 'managingEmotions', title: '😌 Managing Emotions %', color: '#00BCD4', type: 'line' },
-        { id: 'reliabilityChart', key: 'reliability', title: '✅ Reliability %', color: '#795548', type: 'bar' }
-    ];
+    // Build metricsConfig from METRICS_REGISTRY (only metrics with chart types)
+    const metricsConfig = Object.values(METRICS_REGISTRY)
+        .filter(metric => metric.chartType !== null)
+        .map(metric => ({
+            id: metric.key + 'Chart',
+            key: metric.key,
+            title: `${metric.icon} ${metric.label}${metric.unit ? (' ' + metric.unit) : ''}`,
+            color: metric.chartColor,
+            type: metric.chartType
+        }));
     
     // Render each metric chart
     metricsConfig.forEach(metric => {
