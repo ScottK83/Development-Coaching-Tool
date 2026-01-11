@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- SheetJS library for Excel file handling -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -23,12 +22,11 @@
         </header>
 
         <main>
+            <!-- Upload Section -->
             <form id="coachingForm">
-                <!-- Excel Upload Section -->
                 <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
                     <h2>📊 Get Started</h2>
                     
-                    <!-- Main Upload Choice Buttons -->
                     <div id="uploadChoiceButtons" style="margin-bottom: 20px;">
                         <h3>📤 Upload New Data</h3>
                         <p style="color: #666; font-size: 0.95em; margin-bottom: 15px;">Choose your preferred method to upload weekly performance data:</p>
@@ -46,7 +44,7 @@
                         </div>
                     </div>
 
-                    <!-- Quick Paste from PowerBI (hidden initially) -->
+                    <!-- Quick Paste from PowerBI -->
                     <div id="pasteDataContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
                         <h3 style="color: #28a745; margin-top: 0;">⚡ Quick Paste from PowerBI</h3>
                         <button type="button" id="cancelPasteBtn" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">✕ Cancel</button>
@@ -73,7 +71,7 @@
                         </div>
                     </div>
 
-                    <!-- Excel File Upload (hidden initially) -->
+                    <!-- Excel File Upload -->
                     <div id="excelUploadContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #1976D2;">
                         <h3 style="color: #1976D2; margin-top: 0;">📂 Upload Excel File</h3>
                         <button type="button" id="cancelExcelBtn" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">✕ Cancel</button>
@@ -86,7 +84,7 @@
                         <button type="button" id="loadSheetsByTabsBtn" class="btn-secondary" style="background: #1976D2; color: white; opacity: 0.5; cursor: not-allowed;" disabled>📂 Load All Sheets (auto-extract dates)</button>
                     </div>
                     
-                    <!-- Success message after upload -->
+                    <!-- Success message -->
                     <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
                         <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
                         <p style="margin: 10px 0 0 0;">Click <strong>"✉️ Generate Coaching"</strong> at the top to select a date and create coaching emails.</p>
@@ -95,21 +93,20 @@
                     <!-- Data Backup / Restore -->
                     <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
-                        <button type="button" id="exportDataExcelBtn" class="btn-secondary" style="display: none;">📊 Backup Data (Excel)</button>
                         <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
                         <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                     </div>
                 </section>
             </form>
 
-            <!-- Generate Coaching Section (hidden initially) -->
+            <!-- Generate Coaching Section -->
             <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
                 <h2>✉️ Generate Coaching Email</h2>
                     
-                    <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
+                <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
                     <h3 style="color: #2196F3; margin-top: 0;">📅 Select Employee & Time Period</h3>
                     
-                    <!-- Employee Selector FIRST -->
+                    <!-- Employee Selector -->
                     <div style="margin-bottom: 15px;">
                         <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Employee:</label>
                         <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
@@ -118,7 +115,7 @@
                         </select>
                     </div>
                     
-                    <!-- Time Period Type Selector -->
+                    <!-- Time Period Type -->
                     <div style="margin-bottom: 15px;">
                         <label style="font-weight: bold; display: block; margin-bottom: 8px;">2. View By:</label>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -129,250 +126,142 @@
                         </div>
                     </div>
                     
-                    <!-- Specific Period Selector (changes based on type) -->
+                    <!-- Specific Period Selector -->
                     <div id="specificPeriodContainer" style="margin-bottom: 15px;">
                         <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Select Date Range:</label>
                         <select id="specificPeriod" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                             <option value="">-- Choose a date range --</option>
                         </select>
                     </div>
-                    </div>
-                    <!-- End of period selection container -->
+                </div>
 
-                    <!-- Coaching Form starts here -->
-                    <form id="coachingFormInternal">
-                    <!-- Employee Information -->
+                <!-- Employee Information -->
+                <form id="coachingFormInternal">
                     <section class="form-section" id="employeeInfoSection" style="display: none;">
                         <h2>Employee Information</h2>
                         <div class="form-group">
-                            <label for="employeeName">Employee First Name:</label>
-                            <input type="text" id="employeeName" required>
+                            <label for="employeeName">Preferred Name/Nickname for Email:</label>
+                            <input type="text" id="employeeName" required placeholder="Enter first name or nickname">
+                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 4px;">This name will appear in the coaching email. Auto-fills with first name, but you can use a nickname.</small>
                         </div>
                         <div class="form-group">
                             <label for="surveyTotal">Total Surveys Received:</label>
                             <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
                             <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
                         </div>
-                        </section>
+                    </section>
 
                     <!-- Metrics Input -->
                     <section class="form-section" id="metricsSection" style="display: none;">
-                    <h2>Performance Metrics</h2>
-                    <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;">
-                        <!-- YTD comparison will be inserted here -->
-                    </div>
-                    <div class="metrics-grid">
-                        <div class="form-group">
-                            <label for="scheduleAdherence">Schedule Adherence (%):</label>
-                            <input type="number" id="scheduleAdherence" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: 93%</span>
+                        <h2>Performance Metrics</h2>
+                        <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;"></div>
+                        <div class="metrics-grid">
+                            <div class="form-group">
+                                <label for="scheduleAdherence">Schedule Adherence (%)</label>
+                                <input type="number" id="scheduleAdherence" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="cxRepOverall">CX Rep Overall (%)</label>
+                                <input type="number" id="cxRepOverall" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="fcr">First Call Resolution (%)</label>
+                                <input type="number" id="fcr" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="overallExperience">Overall Experience (%)</label>
+                                <input type="number" id="overallExperience" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="transfers">Transfers (%)</label>
+                                <input type="number" id="transfers" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="overallSentiment">Overall Sentiment (%)</label>
+                                <input type="number" id="overallSentiment" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="positiveWord">Positive Word (%)</label>
+                                <input type="number" id="positiveWord" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="negativeWord">Avoid Negative Word (%)</label>
+                                <input type="number" id="negativeWord" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="managingEmotions">Managing Emotions (%)</label>
+                                <input type="number" id="managingEmotions" step="0.01" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="aht">Avg Handle Time (seconds)</label>
+                                <input type="number" id="aht" step="1" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="acw">After Call Work (seconds)</label>
+                                <input type="number" id="acw" step="1" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="holdTime">Hold Time (seconds)</label>
+                                <input type="number" id="holdTime" step="1" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="reliability">Reliability (hours missed)</label>
+                                <input type="number" id="reliability" step="0.01" min="0">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="cxRepOverall">CX Rep Overall (%):</label>
-                            <input type="number" id="cxRepOverall" min="0" max="100" step="0.01">
-                            <span class="target">Target: 80%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="fcr">First Call Resolution (%):</label>
-                            <input type="number" id="fcr" min="0" max="100" step="0.01">
-                            <span class="target">Target: 70%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="overallExperience">Overall Experience (%):</label>
-                            <input type="number" id="overallExperience" min="0" max="100" step="0.01">
-                            <span class="target">Target: 80%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="transfers">Transfers (%):</label>
-                            <input type="number" id="transfers" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: <6%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="overallSentiment">Overall Sentiment (%):</label>
-                            <input type="number" id="overallSentiment" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: 88%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="positiveWord">Positive Word Choice (%):</label>
-                            <input type="number" id="positiveWord" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: 86%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="negativeWord">Negative Word (%):</label>
-                            <input type="number" id="negativeWord" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: 83%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="managingEmotions">Managing Emotions (%):</label>
-                            <input type="number" id="managingEmotions" min="0" max="100" step="0.01" required>
-                            <span class="target">Target: 95%</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="aht">AHT (seconds):</label>
-                            <input type="number" id="aht" min="0" step="1" required>
-                            <span class="target">Target: ≤440s</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="acw">ACW (seconds):</label>
-                            <input type="number" id="acw" min="0" step="1" required>
-                            <span class="target">Target: ≤60s</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="holdTime">Hold Time (seconds):</label>
-                            <input type="number" id="holdTime" min="0" step="1" required>
-                            <span class="target">Target: ≤30s</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="reliability">Reliability (hours):</label>
-                            <input type="number" id="reliability" min="0" step="0.01" required>
-                            <span class="target">Target: ≤16hrs</span>
-                        </div>
-                    </div>
                     </section>
 
                     <!-- Custom Notes -->
                     <section class="form-section" id="customNotesSection" style="display: none;">
-                    <h2>📝 Manual Coaching Focus (Optional)</h2>
-                    <p style="color: #666; font-size: 0.95em; margin-bottom: 10px;">Add specific coaching points or areas to focus on. These will be included in the AI prompt.</p>
-                    <textarea id="customNotes" placeholder="Example: Focus on checking schedule before requesting time off, need improvement on hold time management, great job on customer satisfaction this week..." style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-family: inherit; font-size: 0.95em; resize: vertical;"></textarea>
+                        <h2>Custom Notes (Optional)</h2>
+                        <div class="form-group">
+                            <label for="customNotes">Additional Feedback:</label>
+                            <textarea id="customNotes" rows="4" placeholder="Add any specific feedback or notes for this employee..."></textarea>
+                        </div>
                     </section>
 
-                <!-- Buttons -->
-                <section class="form-section">
-                    <button type="submit" class="btn-ai" id="generateEmailBtn" style="display: none;">🤖 Generate Email with Copilot AI</button>
-                    <button type="reset" class="btn-secondary">Clear Form</button>
-                </section>
+                    <button type="button" id="generateEmailBtn" class="btn-primary" style="display: none;">✉️ Generate Coaching Email</button>
                 </form>
-                <!-- End of coaching form -->
             </section>
 
             <!-- Results Section -->
             <section id="resultsSection" style="display: none;">
-                <div class="results-header">
-                    <h2>AI Prompt for <span id="resultName"></span></h2>
-                    <div class="button-group">
-                        <button type="button" id="copyPrompt" class="btn-primary">📋 Copy & Open Copilot</button>
-                        <button type="button" id="exportPdfBtn" class="btn-secondary">🖨️ Print / PDF</button>
-                        <button type="button" id="newCoaching" class="btn-secondary">🔄 New Prompt</button>
+                <div class="form-section">
+                    <h2>✉️ Generated Coaching Email</h2>
+                    <div id="emailOutput"></div>
+                    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
+                        <button type="button" onclick="showOnlySection('coachingSection')" class="btn-secondary">← Back to Form</button>
                     </div>
                 </div>
-
-                <div class="coaching-content">
-                    <section class="coaching-section">
-                        <h3>Ready to Generate Email</h3>
-                        <p style="color: #666; margin-bottom: 15px;">
-                            <strong>Click the button above to:</strong><br>
-                            1. Copy the AI prompt to your clipboard<br>
-                            2. Automatically open Microsoft Copilot<br>
-                            3. Paste the prompt in Copilot and get your email<br>
-                            4. Copy Copilot's response and paste it below
-                        </p>
-                    </section>
-
-                    <section class="coaching-section">
-                        <h3>📧 Generated Coaching Email</h3>
-                        <p style="color: #666; margin-bottom: 10px;">Paste Copilot's generated email here:</p>
-                        <textarea id="generatedEmail" placeholder="Paste the coaching email from Copilot here..." spellcheck="true" style="width: 100%; height: 250px; padding: 15px; border: 2px solid #003DA5; border-radius: 5px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
-                        <button type="button" id="outlookEmail" class="btn-primary" style="margin-top: 15px;">📧 Open in Outlook</button>
-                    </section>
-
-                    <section class="coaching-section" style="display: none;">
-                        <h3>AI Prompt (for reference)</h3>
-                        <details>
-                            <summary style="cursor: pointer; color: #003DA5; font-weight: bold; margin-bottom: 10px;">Click to view full prompt</summary>
-                            <textarea id="aiPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
-                        </details>
-                    </section>
-                </div>
             </section>
 
-            <!-- History Section -->
-            <section id="historySection" style="display: none;">
-                <div class="results-header">
-                    <h2>Email History</h2>
-                    <button id="closeHistory" class="btn-secondary">Close</button>
-                </div>
-                <div id="historyContent"></div>
-                <button id="clearHistoryBtn" class="btn-secondary" style="margin-top: 20px;">Clear All History</button>
-            </section>
-
-            <!-- Employee Dashboard Section -->
+            <!-- Employee Dashboard/History Section -->
             <section id="dashboardSection" style="display: none;">
-                <div class="results-header">
-                    <h2>👥 Employee Dashboard</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="exportEmployeeHistoryBtn" class="btn-primary" style="background: #28a745;">📊 Export to Excel</button>
-                        <button id="backToForm" class="btn-secondary">← Back to Form</button>
-                        <button id="clearAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white;">🗑️ Clear All Data & History</button>
-                        <button id="closeDashboard" class="btn-secondary">Close</button>
-                    </div>
+                <div class="form-section">
+                    <h2>👥 Employee History</h2>
+                    <div id="historyContainer"></div>
                 </div>
-                <div id="dashboardContent" style="margin-top: 20px;"></div>
             </section>
 
             <!-- Tips Management Section -->
             <section id="tipsManagementSection" style="display: none;">
-                <div class="results-header">
+                <div class="form-section">
                     <h2>💡 Manage Coaching Tips</h2>
-                    <div class="button-group">
-                        <button id="exportTips" class="btn-primary">� Export Tips to Excel</button>
-                        <button id="importTips" class="btn-primary" style="background: #28a745;">📥 Import Tips</button>
-                        <button id="closeTipsManagement" class="btn-secondary">Close</button>
-                    </div>
+                    <div id="tipsContainer"></div>
                 </div>
-                <div style="margin: 20px 0;">
-                    <label for="metricSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Metric to Manage:</label>
-                    <select id="metricSelect" style="width: 100%; max-width: 400px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;">
-                        <option value="">-- Choose a metric --</option>
-                    </select>
-                </div>
-                <div id="tipsManagementContent" style="margin-top: 20px;"></div>
-                <input type="file" id="tipsFileInput" accept=".json,.xlsx,.xls" style="display: none;">
             </section>
 
             <!-- Executive Summary Section -->
             <section id="executiveSummarySection" style="display: none;">
-                <div class="results-header">
+                <div class="form-section">
                     <h2>📊 Executive Summary</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="copyExecSummary" class="btn-primary">📋 Copy & Open Copilot</button>
-                        <button id="closeExecSummary" class="btn-secondary">Close</button>
-                        <button id="backToFormBtn" class="btn-secondary">⬆️ Back to Form</button>
-                    </div>
-                </div>
-
-                <div class="coaching-content">
-                    <section class="coaching-section">
-                        <h3>Ready to Generate Summary</h3>
-                        <p style="color: #666; margin-bottom: 15px;">
-                            <strong>Click the button above to:</strong><br>
-                            1. Copy the data summary prompt to your clipboard<br>
-                            2. Automatically open Microsoft Copilot<br>
-                            3. Paste the prompt in Copilot and get your executive summary<br>
-                            4. Copy Copilot's response and send to your manager
-                        </p>
-                    </section>
-
-                    <section class="coaching-section">
-                        <h3>📧 Team Performance Summary</h3>
-                        <p style="color: #666; margin-bottom: 10px;">Paste Copilot's generated summary here:</p>
-                        <textarea id="generatedExecSummary" placeholder="Paste the executive summary from Copilot here..." spellcheck="true" style="width: 100%; height: 250px; padding: 15px; border: 2px solid #003DA5; border-radius: 5px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
-                        <button type="button" id="outlookExecSummary" class="btn-primary" style="margin-top: 15px;">📧 Email to Manager</button>
-                    </section>
-
-                    <section class="coaching-section" style="display: none;">
-                        <h3>AI Prompt (for reference)</h3>
-                        <details>
-                            <summary style="cursor: pointer; color: #003DA5; font-weight: bold; margin-bottom: 10px;">Click to view full prompt</summary>
-                            <textarea id="execSummaryPrompt" class="coaching-script" readonly style="font-family: monospace; white-space: pre-wrap; height: 400px; width: 100%; padding: 15px; border: 2px solid #003DA5; border-radius: 5px;"></textarea>
-                        </details>
-                    </section>
+                    <div id="executiveSummaryContainer"></div>
                 </div>
             </section>
         </main>
     </div>
 
-    <script src="script.js" defer></script>
+    <script src="script-new.js"></script>
 </body>
 </html>
-
