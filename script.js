@@ -337,6 +337,32 @@ function mapHeadersToSchema(headers) {
     // Find unmapped headers
     const unmapped = headers.filter((h, i) => !usedIndices.has(i));
     
+    // CRITICAL FIX: PowerBI sometimes merges AvoidNegativeWordScore% and PositiveWordScore% 
+    // in the header but keeps them separate in the data, causing column shift
+    const negativeWordIndex = mapping[CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT];
+    if (negativeWordIndex !== undefined) {
+        const negativeWordHeader = headers[negativeWordIndex].toLowerCase().replace(/\s+/g, '');
+        
+        // Check if this header contains BOTH avoid and positive patterns
+        if (negativeWordHeader.includes('avoidnegativewordscore') && 
+            negativeWordHeader.includes('positivewordscore')) {
+            console.warn('⚠️ Detected merged AvoidNegative/PositiveWord header - adjusting column indices');
+            
+            // Shift all mappings after this column by +1
+            for (const [canonical, idx] of Object.entries(mapping)) {
+                if (idx > negativeWordIndex) {
+                    mapping[canonical] = idx + 1;
+                    console.log(`  Shifted ${canonical} from col ${idx} to col ${idx + 1}`);
+                }
+            }
+            
+            // Add PositiveWord mapping at the next column
+            mapping[CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT] = negativeWordIndex + 1;
+            sourceMapping[CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT] = 'PositiveWordScore% (detected)';
+            console.log(`  Added POSITIVE_WORD_PERCENT at col ${negativeWordIndex + 1}`);
+        }
+    }
+    
     // Validate required fields
     const missing = REQUIRED_FIELDS.filter(field => !(field in mapping));
     
