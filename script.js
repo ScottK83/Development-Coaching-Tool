@@ -319,7 +319,8 @@ function mapHeadersToSchema(headers) {
         for (let i = 0; i < headers.length; i++) {
             if (usedIndices.has(i)) continue; // Skip already-mapped headers
             
-            const header = headers[i].toLowerCase();
+            // Normalize: lowercase AND remove all spaces for matching
+            const header = headers[i].toLowerCase().replace(/\s+/g, '');
             
             // Check if any pattern matches (simple substring search)
             const matchedPattern = patterns.find(pattern => header.includes(pattern));
