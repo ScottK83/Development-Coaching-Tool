@@ -2148,25 +2148,20 @@ function handleEmployeeHistorySelection(e) {
     html += '<div style="margin: 30px 0;">';
     html += '<h4 style="color: #2196F3; margin-bottom: 20px;">📈 Performance Trends (All Historical Data)</h4>';
     
-    // All trackable metrics for trends
-    const chartMetrics = [
-        { id: 'scheduleChart', icon: '⏰', title: 'Schedule Adherence', key: 'scheduleAdherence', type: 'line' },
-        { id: 'cxChart', icon: '⭐', title: 'CX Rep Overall', key: 'cxRepOverall', type: 'line' },
-        { id: 'fcrChart', icon: '✓', title: 'First Call Resolution', key: 'fcr', type: 'line' },
-        { id: 'transfersChart', icon: '📞', title: 'Transfers', key: 'transfers', type: 'bar' },
-        { id: 'ahtChart', icon: '⏱️', title: 'Average Handle Time', key: 'aht', type: 'line' },
-        { id: 'acwChart', icon: '📝', title: 'After Call Work', key: 'acw', type: 'bar' },
-        { id: 'holdChart', icon: '⏸️', title: 'Hold Time', key: 'holdTime', type: 'bar' },
-        { id: 'sentimentChart', icon: '😊', title: 'Overall Sentiment', key: 'overallSentiment', type: 'line' },
-        { id: 'positiveChart', icon: '👍', title: 'Positive Word Usage', key: 'positiveWord', type: 'line' },
-        { id: 'negativeChart', icon: '👎', title: 'Avoid Negative Words', key: 'negativeWord', type: 'line' },
-        { id: 'emotionsChart', icon: '😌', title: 'Managing Emotions', key: 'managingEmotions', type: 'line' },
-        { id: 'reliabilityChart', icon: '✅', title: 'Reliability', key: 'reliability', type: 'bar' }
-    ];
+    // Build chart containers from METRICS_REGISTRY (only metrics with chart types)
+    const chartsFromRegistry = Object.values(METRICS_REGISTRY)
+        .filter(metric => metric.chartType !== null)
+        .map(metric => ({
+            id: metric.key + 'Chart',
+            icon: metric.icon,
+            title: metric.label,
+            key: metric.key,
+            type: metric.chartType
+        }));
     
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
     
-    chartMetrics.forEach(metric => {
+    chartsFromRegistry.forEach(metric => {
         html += `
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <canvas id="${metric.id}"></canvas>
@@ -2187,6 +2182,7 @@ function handleEmployeeHistorySelection(e) {
 function renderEmployeeCharts(employeeData, employeeName) {
     if (!employeeData || employeeData.length === 0) return;
     
+    // Generate labels from actual time data
     const labels = employeeData.map(d => {
         const endDate = new Date(d.endDate);
         return endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -2220,8 +2216,38 @@ function renderEmployeeCharts(employeeData, employeeName) {
         const ctx = document.getElementById(metric.id);
         if (!ctx) return;
         
-        const data = employeeData.map(d => parseFloat(d[metric.key]) || null);
+        // Extract data for this metric
+        const data = employeeData.map(d => {
+            const val = d[metric.key];
+            // Return null for missing values, not zero
+            if (val === null || val === undefined || val === '') {
+                return null;
+            }
+            const numVal = parseFloat(val);
+            return isNaN(numVal) ? null : numVal;
+        });
         
+        // Check if metric has any actual data
+        const hasData = data.some(val => val !== null);
+        
+        if (!hasData) {
+            // Render "No data" message for this metric
+            const container = ctx.parentElement;
+            if (container) {
+                container.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: #f5f5f5; border-radius: 8px;">
+                        <div style="text-align: center; color: #999;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">⚪</div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">${metric.title}</div>
+                            <div style="font-size: 0.9em;">No data available</div>
+                        </div>
+                    </div>
+                `;
+            }
+            return;
+        }
+        
+        // Render chart with available data (even if just one point)
         new Chart(ctx, {
             type: metric.type,
             data: {
@@ -2235,7 +2261,9 @@ function renderEmployeeCharts(employeeData, employeeName) {
                         : metric.color,
                     borderWidth: metric.type === 'line' ? 3 : 1,
                     fill: metric.type === 'line',
-                    tension: metric.type === 'line' ? 0.4 : 0
+                    tension: metric.type === 'line' ? 0.4 : 0,
+                    pointRadius: metric.type === 'line' ? 5 : 0,
+                    pointHoverRadius: metric.type === 'line' ? 7 : 0
                 }]
             },
             options: {

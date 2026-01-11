@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Trends Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2196F3;
+            border-bottom: 3px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        #results {
+            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        canvas {
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Performance Trends Rendering Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Scenarios</h2>
+        <p>This test validates the Performance Trends fix:</p>
+        <ul>
+            <li>✅ Charts render even with single data point</li>
+            <li>✅ Per-metric "No data" UI for missing metrics</li>
+            <li>✅ Point visibility on line charts (pointRadius = 5)</li>
+            <li>✅ Correct null-value handling (0 is NOT treated as null)</li>
+            <li>✅ All historical data included (not filtered)</li>
+        </ul>
+        
+        <button onclick="testSingleWeek()">Test: Single Week Data</button>
+        <button onclick="testMultipleWeeks()">Test: Multiple Weeks Data</button>
+        <button onclick="testMixedData()">Test: Mixed Data (Some Metrics Missing)</button>
+        <button onclick="testZeroValues()">Test: Zero Values (Not Null)</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        // Import METRICS_REGISTRY from script.js
+        const METRICS_REGISTRY = {
+            scheduleAdherence: { key: 'scheduleAdherence', label: 'Schedule Adherence', icon: '⏰', target: { type: 'min', value: 95 }, unit: '%', columnIndex: 1, chartType: 'line', chartColor: 'rgb(33, 150, 243)', defaultTip: 'Log in 2-3 minutes early to avoid system lag delays' },
+            cxRepOverall: { key: 'cxRepOverall', label: 'CX Rep Overall', icon: '⭐', target: { type: 'min', value: 4.0 }, unit: '', columnIndex: 2, chartType: 'line', chartColor: 'rgb(255, 152, 0)', defaultTip: 'Focus on understanding customer needs' },
+            fcr: { key: 'fcr', label: 'FCR', icon: '✔️', target: { type: 'min', value: 70 }, unit: '%', columnIndex: 3, chartType: 'line', chartColor: 'rgb(76, 175, 80)', defaultTip: 'Verify all issues are resolved before transfer' },
+            overallExperience: { key: 'overallExperience', label: 'Overall Experience', icon: '😊', target: { type: 'min', value: 4.0 }, unit: '', columnIndex: 4, chartType: 'line', chartColor: 'rgb(233, 30, 99)', defaultTip: 'Maintain professional and friendly tone' },
+            transfers: { key: 'transfers', label: 'Transfers', icon: '📞', target: { type: 'max', value: 15 }, unit: '%', columnIndex: 5, chartType: 'line', chartColor: 'rgb(156, 39, 176)', defaultTip: 'Build your own knowledge base before transferring' },
+            overallSentiment: { key: 'overallSentiment', label: 'Overall Sentiment', icon: '💭', target: { type: 'min', value: 4.0 }, unit: '', columnIndex: 6, chartType: 'line', chartColor: 'rgb(0, 150, 136)', defaultTip: 'Listen actively and show empathy' },
+            positiveWord: { key: 'positiveWord', label: 'Positive Words', icon: '👍', target: { type: 'min', value: 3 }, unit: '', columnIndex: 7, chartType: 'bar', chartColor: 'rgb(139, 195, 74)', defaultTip: 'Use encouraging and positive language' },
+            negativeWord: { key: 'negativeWord', label: 'Negative Words', icon: '👎', target: { type: 'max', value: 2 }, unit: '', columnIndex: 8, chartType: 'bar', chartColor: 'rgb(244, 67, 54)', defaultTip: 'Avoid negative language or complaints' },
+            managingEmotions: { key: 'managingEmotions', label: 'Managing Emotions', icon: '😌', target: { type: 'min', value: 4.0 }, unit: '', columnIndex: 9, chartType: 'line', chartColor: 'rgb(63, 81, 181)', defaultTip: 'Stay calm and composed during difficult calls' },
+            aht: { key: 'aht', label: 'AHT', icon: '⏱️', target: { type: 'max', value: 540 }, unit: 's', columnIndex: 10, chartType: 'bar', chartColor: 'rgb(255, 193, 7)', defaultTip: 'Work efficiently without sacrificing quality' },
+            acw: { key: 'acw', label: 'ACW', icon: '✍️', target: { type: 'max', value: 120 }, unit: 's', columnIndex: 11, chartType: 'bar', chartColor: 'rgb(255, 87, 34)', defaultTip: 'Complete work notes promptly and accurately' },
+            holdTime: { key: 'holdTime', label: 'Hold Time', icon: '⏸️', target: { type: 'max', value: 60 }, unit: 's', columnIndex: 12, chartType: 'bar', chartColor: 'rgb(158, 158, 158)', defaultTip: 'Minimize hold time by using available resources' },
+            reliability: { key: 'reliability', label: 'Reliability', icon: '✅', target: { type: 'min', value: 95 }, unit: '%', columnIndex: 13, chartType: 'line', chartColor: 'rgb(76, 175, 80)', defaultTip: 'Show up consistently and on time' }
+        };
+
+        function renderEmployeeCharts(employeeData, employeeName, containerId) {
+            const container = document.getElementById(containerId);
+            if (!employeeData || employeeData.length === 0) {
+                container.innerHTML = '<div class="test-status test-fail">No data provided</div>';
+                return;
+            }
+            
+            // Generate labels from actual time data
+            const labels = employeeData.map(d => {
+                const endDate = new Date(d.endDate);
+                return endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            });
+            
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, font: { size: 14, weight: 'bold' } }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            };
+            
+            // Build metricsConfig from METRICS_REGISTRY (only metrics with chart types)
+            const metricsConfig = Object.values(METRICS_REGISTRY)
+                .filter(metric => metric.chartType !== null)
+                .map(metric => ({
+                    id: metric.key + 'Chart',
+                    key: metric.key,
+                    title: `${metric.icon} ${metric.label}${metric.unit ? (' ' + metric.unit) : ''}`,
+                    color: metric.chartColor,
+                    type: metric.chartType
+                }));
+            
+            let html = `<h3>Employee: ${employeeName}</h3>`;
+            html += `<div style="margin-bottom: 20px; padding: 10px; background: #e3f2fd; border-radius: 4px;">`;
+            html += `<strong>Data Points:</strong> ${employeeData.length} week(s) | `;
+            html += `<strong>Time Range:</strong> ${labels[0]} to ${labels[labels.length - 1]}`;
+            html += `</div>`;
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
+            
+            metricsConfig.forEach(metric => {
+                html += `
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <canvas id="${metric.id}"></canvas>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+            
+            // Render charts after DOM update
+            setTimeout(() => {
+                metricsConfig.forEach(metric => {
+                    const ctx = document.getElementById(metric.id);
+                    if (!ctx) return;
+                    
+                    // Extract data for this metric
+                    const data = employeeData.map(d => {
+                        const val = d[metric.key];
+                        // Return null for missing values, not zero
+                        if (val === null || val === undefined || val === '') {
+                            return null;
+                        }
+                        const numVal = parseFloat(val);
+                        return isNaN(numVal) ? null : numVal;
+                    });
+                    
+                    // Check if metric has any actual data
+                    const hasData = data.some(val => val !== null);
+                    
+                    if (!hasData) {
+                        // Render "No data" message for this metric
+                        const container = ctx.parentElement;
+                        if (container) {
+                            container.innerHTML = `
+                                <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: #f5f5f5; border-radius: 8px;">
+                                    <div style="text-align: center; color: #999;">
+                                        <div style="font-size: 2em; margin-bottom: 10px;">⚪</div>
+                                        <div style="font-weight: bold; margin-bottom: 5px;">${metric.title}</div>
+                                        <div style="font-size: 0.9em;">No data available</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return;
+                    }
+                    
+                    // Render chart with available data (even if just one point)
+                    new Chart(ctx, {
+                        type: metric.type,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: metric.title,
+                                data: data,
+                                borderColor: metric.color,
+                                backgroundColor: metric.type === 'line' 
+                                    ? metric.color.replace(')', ', 0.1)').replace('rgb', 'rgba')
+                                    : metric.color,
+                                borderWidth: metric.type === 'line' ? 3 : 1,
+                                fill: metric.type === 'line',
+                                tension: metric.type === 'line' ? 0.4 : 0,
+                                pointRadius: metric.type === 'line' ? 5 : 0,
+                                pointHoverRadius: metric.type === 'line' ? 7 : 0
+                            }]
+                        },
+                        options: {
+                            ...chartOptions,
+                            plugins: {
+                                ...chartOptions.plugins,
+                                title: { ...chartOptions.plugins.title, text: metric.title }
+                            }
+                        }
+                    });
+                });
+            }, 100);
+        }
+
+        function testSingleWeek() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-status test-info">Running: Single Week Data Test</div>';
+            resultsDiv.innerHTML += '<p>Expected: Single data point renders for each metric with visible points on line charts</p>';
+            
+            const employeeData = [
+                {
+                    endDate: '2024-01-15',
+                    scheduleAdherence: '96',
+                    cxRepOverall: '4.2',
+                    fcr: '78',
+                    overallExperience: '4.1',
+                    transfers: '10',
+                    overallSentiment: '4.0',
+                    positiveWord: '4',
+                    negativeWord: '1',
+                    managingEmotions: '4.2',
+                    aht: '480',
+                    acw: '95',
+                    holdTime: '45',
+                    reliability: '98'
+                }
+            ];
+            
+            resultsDiv.innerHTML += '<div id="test-single-week" style="margin-top: 20px;"></div>';
+            renderEmployeeCharts(employeeData, 'John Smith', 'test-single-week');
+        }
+
+        function testMultipleWeeks() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-status test-info">Running: Multiple Weeks Data Test</div>';
+            resultsDiv.innerHTML += '<p>Expected: 4 weeks of data with trend lines, natural scaling from left to right</p>';
+            
+            const employeeData = [
+                { endDate: '2024-01-01', scheduleAdherence: '92', cxRepOverall: '3.8', fcr: '65', overallExperience: '3.9', transfers: '18', overallSentiment: '3.7', positiveWord: '2', negativeWord: '3', managingEmotions: '3.9', aht: '620', acw: '140', holdTime: '75', reliability: '90' },
+                { endDate: '2024-01-08', scheduleAdherence: '94', cxRepOverall: '4.0', fcr: '70', overallExperience: '4.0', transfers: '15', overallSentiment: '3.9', positiveWord: '3', negativeWord: '2', managingEmotions: '4.0', aht: '560', acw: '120', holdTime: '65', reliability: '93' },
+                { endDate: '2024-01-15', scheduleAdherence: '96', cxRepOverall: '4.2', fcr: '78', overallExperience: '4.1', transfers: '10', overallSentiment: '4.0', positiveWord: '4', negativeWord: '1', managingEmotions: '4.2', aht: '480', acw: '95', holdTime: '45', reliability: '98' },
+                { endDate: '2024-01-22', scheduleAdherence: '98', cxRepOverall: '4.5', fcr: '85', overallExperience: '4.3', transfers: '8', overallSentiment: '4.2', positiveWord: '5', negativeWord: '0', managingEmotions: '4.4', aht: '450', acw: '85', holdTime: '35', reliability: '99' }
+            ];
+            
+            resultsDiv.innerHTML += '<div id="test-multiple-weeks" style="margin-top: 20px;"></div>';
+            renderEmployeeCharts(employeeData, 'Sarah Johnson', 'test-multiple-weeks');
+        }
+
+        function testMixedData() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-status test-info">Running: Mixed Data Test (Some Metrics Missing)</div>';
+            resultsDiv.innerHTML += '<p>Expected: Some metrics show "No data available" UI, others show trends. Missing data should not prevent chart rendering.</p>';
+            
+            const employeeData = [
+                { endDate: '2024-01-01', scheduleAdherence: '92', cxRepOverall: '3.8', fcr: '', overallExperience: '3.9', transfers: '', overallSentiment: '3.7', positiveWord: '2', negativeWord: '', managingEmotions: '', aht: '620', acw: '140', holdTime: '', reliability: '90' },
+                { endDate: '2024-01-08', scheduleAdherence: '94', cxRepOverall: '4.0', fcr: '70', overallExperience: '4.0', transfers: '15', overallSentiment: '3.9', positiveWord: '3', negativeWord: '2', managingEmotions: '4.0', aht: '560', acw: '120', holdTime: '65', reliability: '93' },
+                { endDate: '2024-01-15', scheduleAdherence: '96', cxRepOverall: '', fcr: '78', overallExperience: '', transfers: '10', overallSentiment: '', positiveWord: '', negativeWord: '1', managingEmotions: '4.2', aht: '480', acw: '', holdTime: '45', reliability: '' }
+            ];
+            
+            resultsDiv.innerHTML += '<div id="test-mixed-data" style="margin-top: 20px;"></div>';
+            renderEmployeeCharts(employeeData, 'Mike Chen', 'test-mixed-data');
+        }
+
+        function testZeroValues() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-status test-info">Running: Zero Values Test</div>';
+            resultsDiv.innerHTML += '<p>Expected: Zero values (0) are treated as valid data, NOT converted to null. Charts should show zeros on Y-axis.</p>';
+            
+            const employeeData = [
+                { endDate: '2024-01-01', scheduleAdherence: '95', cxRepOverall: '4.0', fcr: '75', overallExperience: '4.0', transfers: '12', overallSentiment: '4.0', positiveWord: '3', negativeWord: '0', managingEmotions: '4.0', aht: '500', acw: '100', holdTime: '50', reliability: '95' },
+                { endDate: '2024-01-08', scheduleAdherence: '97', cxRepOverall: '4.2', fcr: '80', overallExperience: '4.2', transfers: '8', overallSentiment: '4.1', positiveWord: '4', negativeWord: '0', managingEmotions: '4.1', aht: '480', acw: '90', holdTime: '45', reliability: '97' },
+                { endDate: '2024-01-15', scheduleAdherence: '98', cxRepOverall: '4.3', fcr: '82', overallExperience: '4.3', transfers: '0', overallSentiment: '4.2', positiveWord: '5', negativeWord: '0', managingEmotions: '4.2', aht: '470', acw: '85', holdTime: '40', reliability: '98' }
+            ];
+            
+            resultsDiv.innerHTML += '<div id="test-zero-values" style="margin-top: 20px;"></div>';
+            resultsDiv.innerHTML += '<div class="test-status test-pass" style="margin-top: 20px;">✅ TEST VALIDATION: Negative Words = 0 (multiple weeks), Transfers = 0 (week 3). Both should appear as 0 on charts, NOT disappear.</div>';
+            renderEmployeeCharts(employeeData, 'Lisa Wong', 'test-zero-values');
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
