@@ -1087,7 +1087,41 @@ function initializeEventHandlers() {
             // Auto-switch to Coaching tab
             showOnlySection('coachingSection');
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nClick "3. Select Date Range" below to view employee metrics.`);
+            // Refresh Generate Coaching UI with new data
+            // Set period type to 'week' and refresh dropdown
+            currentPeriodType = 'week';
+            
+            // Update period type button styles
+            document.querySelectorAll('.period-type-btn').forEach(b => {
+                b.style.background = 'white';
+                b.style.color = '#666';
+                b.style.borderColor = '#ddd';
+            });
+            const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
+            if (weekBtn) {
+                weekBtn.style.background = '#2196F3';
+                weekBtn.style.color = 'white';
+                weekBtn.style.borderColor = '#2196F3';
+            }
+            
+            // Refresh period dropdown
+            updatePeriodDropdown();
+            
+            // Auto-select the newly uploaded week
+            const periodDropdown = document.getElementById('specificPeriod');
+            if (periodDropdown) {
+                // Find the option that matches the newly uploaded week
+                for (let i = 0; i < periodDropdown.options.length; i++) {
+                    if (periodDropdown.options[i].value === weekKey) {
+                        periodDropdown.selectedIndex = i;
+                        currentPeriod = weekKey;
+                        updateEmployeeDropdown();
+                        break;
+                    }
+                }
+            }
+            
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
