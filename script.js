@@ -282,6 +282,138 @@ function parseName(fullName) {
 }
 
 // ============================================
+// CANONICAL SCHEMA & HEADER MAPPING
+// ============================================
+
+// Canonical schema - authoritative field names
+const CANONICAL_SCHEMA = {
+    EMPLOYEE_NAME: 'employee_name',
+    ADHERENCE_PERCENT: 'adherence_percent',
+    CX_REP_OVERALL: 'cx_rep_overall_percent',
+    FCR_PERCENT: 'first_call_resolution_percent',
+    OVERALL_EXPERIENCE: 'overall_experience_percent',
+    TRANSFERS_PERCENT: 'transfer_percent',
+    AHT_SECONDS: 'average_handle_time_seconds',
+    ACW_SECONDS: 'after_call_work_seconds',
+    HOLD_SECONDS: 'hold_time_seconds',
+    RELIABILITY_HOURS: 'reliability_hours',
+    SENTIMENT_PERCENT: 'overall_sentiment_percent',
+    POSITIVE_WORD_PERCENT: 'positive_word_percent',
+    NEGATIVE_WORD_PERCENT: 'avoid_negative_word_percent',
+    EMOTIONS_PERCENT: 'manage_emotions_percent',
+    SURVEY_TOTAL: 'survey_total'
+};
+
+// Header synonym map - maps various header formats to canonical fields
+const HEADER_SYNONYMS = {
+    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: [
+        'name', 'employee', 'employeename', 'namelastfirst', 'agent', 'rep'
+    ],
+    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: [
+        'adherence', 'scheduleadherence', 'adherencepercent', 'adherence%'
+    ],
+    [CANONICAL_SCHEMA.CX_REP_OVERALL]: [
+        'repsat', 'repsatpercent', 'repsat%', 'cxrep', 'cxrepoverall', 'representativesatisfaction'
+    ],
+    [CANONICAL_SCHEMA.FCR_PERCENT]: [
+        'fcr', 'fcrpercent', 'fcr%', 'firstcallresolution', 'firstcallresolutionpercent'
+    ],
+    [CANONICAL_SCHEMA.OVERALL_EXPERIENCE]: [
+        'overallexperience', 'overallexperiencepercent', 'oe', 'oepercent', 'oe%', 'overallexp'
+    ],
+    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: [
+        'transfers', 'transferspercent', 'transfers%', 'transferpercent', 'transfer%'
+    ],
+    [CANONICAL_SCHEMA.AHT_SECONDS]: [
+        'aht', 'averagehandletime', 'handletime', 'avghandletime'
+    ],
+    [CANONICAL_SCHEMA.ACW_SECONDS]: [
+        'acw', 'aftercallwork', 'workreadyseconds', 'wrapup', 'wrapuptime'
+    ],
+    [CANONICAL_SCHEMA.HOLD_SECONDS]: [
+        'hold', 'holdtime', 'holdseconds', 'avghold', 'averageholdtime'
+    ],
+    [CANONICAL_SCHEMA.RELIABILITY_HOURS]: [
+        'reliability', 'reliabilityhrs', 'reliabilityhours', 'reliabilityh'
+    ],
+    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: [
+        'sentiment', 'overallsentiment', 'overallsentimentscore', 'sentimentscore', 'sentimentpercent'
+    ],
+    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: [
+        'positiveword', 'positivewordchoice', 'positivewordchoicescore', 'pwcs', 'positivewordscore'
+    ],
+    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: [
+        'avoidnegativeword', 'avoidnegativewordscore', 'negativeword', 'negativescore', 'anws'
+    ],
+    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: [
+        'manageemotions', 'manageemotionsscore', 'emotions', 'emotionsscore', 'mes'
+    ],
+    [CANONICAL_SCHEMA.SURVEY_TOTAL]: [
+        'surveytotal', 'oesurvey', 'oesurveytotal', 'totalsurveys', 'surveycount'
+    ]
+};
+
+// Required fields for successful ingestion
+const REQUIRED_FIELDS = [
+    CANONICAL_SCHEMA.EMPLOYEE_NAME,
+    CANONICAL_SCHEMA.ADHERENCE_PERCENT,
+    CANONICAL_SCHEMA.TRANSFERS_PERCENT
+];
+
+// Normalize header string (lowercase, remove spaces/symbols)
+function normalizeHeader(header) {
+    return header.toLowerCase().replace(/[\s\-_%()]/g, '');
+}
+
+// Map headers to canonical schema
+function mapHeadersToSchema(headers) {
+    const mapping = {};
+    const unmapped = [];
+    const sourceMapping = {}; // For logging: canonical -> source header
+    
+    // Track which canonical fields have been mapped to prevent duplicates
+    const usedCanonical = new Set();
+    
+    headers.forEach((header, index) => {
+        const normalized = normalizeHeader(header);
+        let matched = false;
+        
+        // Try to match against synonym map
+        for (const [canonical, synonyms] of Object.entries(HEADER_SYNONYMS)) {
+            if (usedCanonical.has(canonical)) continue; // Already mapped
+            
+            if (synonyms.some(syn => normalized.includes(syn) || syn.includes(normalized))) {
+                mapping[canonical] = index;
+                sourceMapping[canonical] = header;
+                usedCanonical.add(canonical);
+                matched = true;
+                break;
+            }
+        }
+        
+        if (!matched) {
+            unmapped.push(header);
+        }
+    });
+    
+    // Validate required fields
+    const missing = REQUIRED_FIELDS.filter(field => !(field in mapping));
+    
+    // Log mapping results
+    console.log('📋 Column Mapping Results:');
+    console.log('✅ Mapped:', sourceMapping);
+    if (unmapped.length > 0) {
+        console.log('⚠️  Unmapped columns (will be ignored):', unmapped);
+    }
+    if (missing.length > 0) {
+        console.error('❌ Missing required fields:', missing);
+        throw new Error(`Missing required columns: ${missing.join(', ')}`);
+    }
+    
+    return mapping;
+}
+
+// ============================================
 // DATA LOADING - PASTED DATA
 // ============================================
 
@@ -301,34 +433,8 @@ function parsePastedData(pastedText, startDate, endDate) {
     // Parse headers
     let headers = lines[0].split(separator).map(h => h.trim());
     
-    // Find column indices
-    const findColumn = (possibleNames) => {
-        for (let name of possibleNames) {
-            const idx = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-            if (idx !== -1) return idx;
-        }
-        return -1;
-    };
-    
-    const colIndices = {
-        name: findColumn(['Name (Last, First)', 'Name', 'Employee']),
-        adherence: findColumn(['Adherence%', 'Adherence']),
-        repSat: findColumn(['RepSat%', 'RepSat', 'CX Rep']),
-        fcr: findColumn(['FCR%', 'FCR']),
-        overallExp: findColumn(['OverallExperience%', 'Overall Experience', 'OE%']),
-        transfers: findColumn(['TransferS%', 'Transfers%', 'Transfers']),
-        aht: findColumn(['AHT']),
-        acw: findColumn(['ACW']),
-        hold: findColumn(['Hold']),
-        reliability: findColumn(['Reliability Hrs', 'Reliability']),
-        sentiment: findColumn(['OverallSentimentScore%', 'Sentiment']),
-        positiveWord: findColumn(['PositiveWordScore%', 'Positive']),
-        negativeWord: findColumn(['AvoidNegativeWordScore%', 'Negative']),
-        emotions: findColumn(['ManageEmotionsScore%', 'Emotions']),
-        surveyTotal: findColumn(['OE Survey Total', 'Survey Total'])
-    };
-    
-    console.log('📋 Column mapping:', colIndices);
+    // Map headers to canonical schema
+    const colMapping = mapHeadersToSchema(headers);
     
     // Parse employee data
     const employees = [];
@@ -351,7 +457,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         } else {
             // No comma pattern, split normally
             cells = line.split(separator).map(c => c.trim());
-            rawName = cells[colIndices.name] || '';
+            rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
         }
         
         if (!rawName) continue;
@@ -360,27 +466,31 @@ function parsePastedData(pastedText, startDate, endDate) {
         const { displayName, firstName } = parseName(rawName);
         console.log('✅ Parsed to displayName:', displayName, 'firstName:', firstName);
         
+        // Helper to safely get cell value by canonical field
+        const getCell = (canonicalField) => {
+            const idx = colMapping[canonicalField];
+            return (idx !== undefined && cells[idx]) ? cells[idx] : '';
+        };
+        
         // Get survey total first to determine if survey metrics should be included
-        const surveyTotal = colIndices.surveyTotal !== -1 
-            ? parseInt(cells[colIndices.surveyTotal]) || 0 
-            : 0;
+        const surveyTotal = parseInt(getCell(CANONICAL_SCHEMA.SURVEY_TOTAL)) || 0;
         
         const employeeData = {
             name: displayName,
             firstName: firstName,
-            scheduleAdherence: colIndices.adherence !== -1 ? parsePercentage(cells[colIndices.adherence]) : 0,
-            cxRepOverall: (colIndices.repSat !== -1 && surveyTotal > 0) ? parseSurveyPercentage(cells[colIndices.repSat]) : '',
-            fcr: (colIndices.fcr !== -1 && surveyTotal > 0) ? parseSurveyPercentage(cells[colIndices.fcr]) : '',
-            overallExperience: (colIndices.overallExp !== -1 && surveyTotal > 0) ? parseSurveyPercentage(cells[colIndices.overallExp]) : '',
-            transfers: colIndices.transfers !== -1 ? parsePercentage(cells[colIndices.transfers]) : 0,
-            aht: colIndices.aht !== -1 ? parseSeconds(cells[colIndices.aht]) : '',
-            acw: colIndices.acw !== -1 ? parseSeconds(cells[colIndices.acw]) : '',
-            holdTime: colIndices.hold !== -1 ? parseSeconds(cells[colIndices.hold]) : '',
-            reliability: colIndices.reliability !== -1 ? parseHours(cells[colIndices.reliability]) : 0,
-            overallSentiment: colIndices.sentiment !== -1 ? parsePercentage(cells[colIndices.sentiment]) : '',
-            positiveWord: colIndices.positiveWord !== -1 ? parsePercentage(cells[colIndices.positiveWord]) : '',
-            negativeWord: colIndices.negativeWord !== -1 ? parsePercentage(cells[colIndices.negativeWord]) : '',
-            managingEmotions: colIndices.emotions !== -1 ? parsePercentage(cells[colIndices.emotions]) : '',
+            scheduleAdherence: parsePercentage(getCell(CANONICAL_SCHEMA.ADHERENCE_PERCENT)) || 0,
+            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.CX_REP_OVERALL)) : '',
+            fcr: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.FCR_PERCENT)) : '',
+            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.OVERALL_EXPERIENCE)) : '',
+            transfers: parsePercentage(getCell(CANONICAL_SCHEMA.TRANSFERS_PERCENT)) || 0,
+            aht: parseSeconds(getCell(CANONICAL_SCHEMA.AHT_SECONDS)) || '',
+            acw: parseSeconds(getCell(CANONICAL_SCHEMA.ACW_SECONDS)) || '',
+            holdTime: parseSeconds(getCell(CANONICAL_SCHEMA.HOLD_SECONDS)) || '',
+            reliability: parseHours(getCell(CANONICAL_SCHEMA.RELIABILITY_HOURS)) || 0,
+            overallSentiment: parsePercentage(getCell(CANONICAL_SCHEMA.SENTIMENT_PERCENT)) || '',
+            positiveWord: parsePercentage(getCell(CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT)) || '',
+            negativeWord: parsePercentage(getCell(CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT)) || '',
+            managingEmotions: parsePercentage(getCell(CANONICAL_SCHEMA.EMOTIONS_PERCENT)) || '',
             surveyTotal: surveyTotal
         };
         
