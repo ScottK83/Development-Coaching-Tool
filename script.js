@@ -442,6 +442,19 @@ async function loadServerTips() {
             }
         });
         
+        // Apply modified server tips from localStorage
+        const modifiedServerTips = JSON.parse(localStorage.getItem('modifiedServerTips') || '{}');
+        Object.keys(modifiedServerTips).forEach(metricKey => {
+            if (tips[metricKey]) {
+                Object.keys(modifiedServerTips[metricKey]).forEach(index => {
+                    const idx = parseInt(index);
+                    if (tips[metricKey][idx] !== undefined) {
+                        tips[metricKey][idx] = modifiedServerTips[metricKey][index];
+                    }
+                });
+            }
+        });
+        
         return tips;
     } catch (error) {
         console.error('Error loading tips:', error);
@@ -1511,7 +1524,10 @@ async function renderTipsManagement() {
             serverTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
                     <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="color: #1565C0; font-weight: 500;">${index + 1}. ${escapeHtml(tip)}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
+                            <textarea id="editServerTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
+                            <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                        </div>
                     </div>
                 `;
             });
@@ -1527,7 +1543,7 @@ async function renderTipsManagement() {
                 tipsHtml += `
                     <div style="margin-bottom: 12px; padding: 15px; background: white; border-left: 4px solid #28a745; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
-                            <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
+                            <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
                                 <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
@@ -1536,20 +1552,15 @@ async function renderTipsManagement() {
                     </div>
                 `;
             });
-        } else {
-            tipsHtml += '<p style="color: #666; font-style: italic; padding: 15px; background: white; border-radius: 4px;">No custom tips yet. Add one below!</p>';
         }
-        tipsHtml += '</div>';
         
-        // Add new tip
+        // Add new tip (single section)
         tipsHtml += `
-            <div style="margin-top: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
-                <h4 style="color: #28a745; margin-top: 0; margin-bottom: 12px;">➕ Add New Custom Tip</h4>
-                <textarea id="newTip_${metricKey}" placeholder="Enter your custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
+            <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
+                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
                 <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
             </div>
         `;
-        
         tipsHtml += '</div>';
         displayArea.innerHTML = tipsHtml;
     });
@@ -1604,6 +1615,34 @@ window.updateTip = function(metricKey, index) {
         if (selector && selector.value) {
             selector.dispatchEvent(new Event('change'));
         }
+    }
+};
+
+window.updateServerTip = function(metricKey, index) {
+    const textarea = document.getElementById(`editServerTip_${metricKey}_${index}`);
+    const updatedTip = textarea.value.trim();
+    
+    if (!updatedTip) {
+        alert('❌ Tip cannot be empty');
+        return;
+    }
+    
+    // Load modified server tips (stored separately)
+    let modifiedServerTips = JSON.parse(localStorage.getItem('modifiedServerTips') || '{}');
+    
+    if (!modifiedServerTips[metricKey]) {
+        modifiedServerTips[metricKey] = {};
+    }
+    
+    modifiedServerTips[metricKey][index] = updatedTip;
+    localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
+    
+    showToast('✅ Server tip updated!');
+    
+    // Re-trigger the dropdown to refresh the display
+    const selector = document.getElementById('metricSelector');
+    if (selector && selector.value) {
+        selector.dispatchEvent(new Event('change'));
     }
 };
 
