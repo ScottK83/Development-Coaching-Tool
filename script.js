@@ -294,6 +294,7 @@ const CANONICAL_SCHEMA = {
     OVERALL_EXPERIENCE: 'overall_experience_percent',
     TRANSFERS_PERCENT: 'transfer_percent',
     AHT_SECONDS: 'average_handle_time_seconds',
+    TALK_SECONDS: 'talk_time_seconds',
     ACW_SECONDS: 'after_call_work_seconds',
     HOLD_SECONDS: 'hold_time_seconds',
     RELIABILITY_HOURS: 'reliability_hours',
@@ -304,101 +305,57 @@ const CANONICAL_SCHEMA = {
     SURVEY_TOTAL: 'survey_total'
 };
 
-// Header synonym map - maps various header formats to canonical fields
-const HEADER_SYNONYMS = {
-    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: [
-        'name', 'employee', 'employeename', 'namelastfirst', 'agent', 'rep'
-    ],
-    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: [
-        'adherence', 'scheduleadherence', 'adherencepercent', 'adherence%'
-    ],
-    [CANONICAL_SCHEMA.CX_REP_OVERALL]: [
-        'repsat', 'repsatpercent', 'repsat%', 'cxrep', 'cxrepoverall', 'representativesatisfaction'
-    ],
-    [CANONICAL_SCHEMA.FCR_PERCENT]: [
-        'fcr', 'fcrpercent', 'fcr%', 'firstcallresolution', 'firstcallresolutionpercent'
-    ],
-    [CANONICAL_SCHEMA.OVERALL_EXPERIENCE]: [
-        'overallexperience', 'overallexperiencepercent', 'oe', 'oepercent', 'oe%', 'overallexp'
-    ],
-    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: [
-        'transfers', 'transferspercent', 'transfers%', 'transferpercent', 'transfer%', 'transferss', 'transferss%'
-    ],
-    [CANONICAL_SCHEMA.AHT_SECONDS]: [
-        'aht', 'averagehandletime', 'handletime', 'avghandletime'
-    ],
-    [CANONICAL_SCHEMA.ACW_SECONDS]: [
-        'acw', 'aftercallwork', 'workreadyseconds', 'wrapup', 'wrapuptime'
-    ],
-    [CANONICAL_SCHEMA.HOLD_SECONDS]: [
-        'hold', 'holdtime', 'holdseconds', 'avghold', 'averageholdtime'
-    ],
-    [CANONICAL_SCHEMA.RELIABILITY_HOURS]: [
-        'reliability', 'reliabilityhrs', 'reliabilityhours', 'reliabilityh'
-    ],
-    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: [
-        'sentiment', 'overallsentiment', 'overallsentimentscore', 'sentimentscore', 'sentimentpercent'
-    ],
-    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: [
-        'positiveword', 'positivewordchoice', 'positivewordchoicescore', 'pwcs', 'positivewordscore'
-    ],
-    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: [
-        'avoidnegativeword', 'avoidnegativewordscore', 'negativeword', 'negativescore', 'anws'
-    ],
-    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: [
-        'manageemotions', 'manageemotionsscore', 'emotions', 'emotionsscore', 'mes'
-    ],
-    [CANONICAL_SCHEMA.SURVEY_TOTAL]: [
-        'surveytotal', 'oesurvey', 'oesurveytotal', 'totalsurveys', 'surveycount'
-    ]
+// Simple header matching - maps exact PowerBI headers to canonical fields
+// Based on actual PowerBI output: Name, Transfers%, AHT, Talk, Hold, ACW, Adherence%, etc.
+const HEADER_PATTERNS = {
+    [CANONICAL_SCHEMA.EMPLOYEE_NAME]: ['name'],
+    [CANONICAL_SCHEMA.ADHERENCE_PERCENT]: ['adherence'],
+    [CANONICAL_SCHEMA.TRANSFERS_PERCENT]: ['transfer'],
+    [CANONICAL_SCHEMA.AHT_SECONDS]: ['aht'],
+    [CANONICAL_SCHEMA.TALK_SECONDS]: ['talk'],
+    [CANONICAL_SCHEMA.ACW_SECONDS]: ['acw'],
+    [CANONICAL_SCHEMA.HOLD_SECONDS]: ['hold'],
+    [CANONICAL_SCHEMA.RELIABILITY_HOURS]: ['reliability'],
+    [CANONICAL_SCHEMA.SENTIMENT_PERCENT]: ['sentiment'],
+    [CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT]: ['positiveword'],
+    [CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT]: ['negativeword'],
+    [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: ['emotion'],
+    [CANONICAL_SCHEMA.CX_REP_OVERALL]: ['repsat'],
+    [CANONICAL_SCHEMA.FCR_PERCENT]: ['fcr'],
+    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['survey']
 };
 
-// Required fields for successful ingestion
+// Only name and adherence are truly required
 const REQUIRED_FIELDS = [
     CANONICAL_SCHEMA.EMPLOYEE_NAME,
-    CANONICAL_SCHEMA.ADHERENCE_PERCENT,
-    CANONICAL_SCHEMA.TRANSFERS_PERCENT
+    CANONICAL_SCHEMA.ADHERENCE_PERCENT
 ];
 
-// Normalize header string (lowercase, remove spaces/symbols)
-function normalizeHeader(header) {
-    return header.toLowerCase().replace(/[\s\-_%()]/g, '');
-}
-
-// Map headers to canonical schema
+// Map headers to canonical schema using simple substring matching
 function mapHeadersToSchema(headers) {
     const mapping = {};
-    const unmapped = [];
     const sourceMapping = {}; // For logging: canonical -> source header
+    const usedIndices = new Set(); // Track which header indices we've already mapped
     
-    // Track which canonical fields have been mapped to prevent duplicates
-    const usedCanonical = new Set();
-    
-    headers.forEach((header, index) => {
-        const normalized = normalizeHeader(header);
-        let matched = false;
-        
-        // Try to match against synonym map
-        for (const [canonical, synonyms] of Object.entries(HEADER_SYNONYMS)) {
-            if (usedCanonical.has(canonical)) continue; // Already mapped
+    // Try to match each canonical field
+    for (const [canonical, patterns] of Object.entries(HEADER_PATTERNS)) {
+        for (let i = 0; i < headers.length; i++) {
+            if (usedIndices.has(i)) continue; // Skip already-mapped headers
             
-            // Check if normalized header contains any synonym OR synonym contains normalized header
-            if (synonyms.some(syn => {
-                const normalizedSyn = normalizeHeader(syn);
-                return normalized.includes(normalizedSyn) || normalizedSyn.includes(normalized);
-            })) {
-                mapping[canonical] = index;
-                sourceMapping[canonical] = header;
-                usedCanonical.add(canonical);
-                matched = true;
-                break;
+            const header = headers[i].toLowerCase();
+            
+            // Check if any pattern matches (simple substring search)
+            if (patterns.some(pattern => header.includes(pattern))) {
+                mapping[canonical] = i;
+                sourceMapping[canonical] = headers[i];
+                usedIndices.add(i);
+                break; // Found match, move to next canonical field
             }
         }
-        
-        if (!matched) {
-            unmapped.push(header);
-        }
-    });
+    }
+    
+    // Find unmapped headers
+    const unmapped = headers.filter((h, i) => !usedIndices.has(i));
     
     // Validate required fields
     const missing = REQUIRED_FIELDS.filter(field => !(field in mapping));
@@ -407,11 +364,12 @@ function mapHeadersToSchema(headers) {
     console.log('📋 Column Mapping Results:');
     console.log('✅ Mapped:', sourceMapping);
     if (unmapped.length > 0) {
-        console.log('⚠️  Unmapped columns (will be ignored):', unmapped);
+        console.log('⚠️  Unmapped columns:', unmapped);
     }
     if (missing.length > 0) {
         console.error('❌ Missing required fields:', missing);
-        throw new Error(`Missing required columns: ${missing.join(', ')}`);
+        console.error('📝 Available headers:', headers.join(', '));
+        throw new Error(`Missing required columns: ${missing.join(', ')}. Check the headers in your PowerBI data.`);
     }
     
     return mapping;
@@ -497,6 +455,7 @@ function parsePastedData(pastedText, startDate, endDate) {
             overallExperience: surveyTotal > 0 ? parseSurveyPercentage(getCell(CANONICAL_SCHEMA.OVERALL_EXPERIENCE)) : '',
             transfers: parsePercentage(getCell(CANONICAL_SCHEMA.TRANSFERS_PERCENT)) || 0,
             aht: parseSeconds(getCell(CANONICAL_SCHEMA.AHT_SECONDS)) || '',
+            talkTime: parseSeconds(getCell(CANONICAL_SCHEMA.TALK_SECONDS)) || '',
             acw: parseSeconds(getCell(CANONICAL_SCHEMA.ACW_SECONDS)) || '',
             holdTime: parseSeconds(getCell(CANONICAL_SCHEMA.HOLD_SECONDS)) || '',
             reliability: parseHours(getCell(CANONICAL_SCHEMA.RELIABILITY_HOURS)) || 0,
