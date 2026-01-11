@@ -36,10 +36,6 @@
 // GLOBAL STATE
 // ============================================
 let weeklyData = {};
-let uploadHistory = [];
-let coachingHistory = {};
-let currentPeriodType = 'week';
-let currentPeriod = null;
 
 // ============================================
 // TARGET METRICS
@@ -644,17 +640,6 @@ function hasDataForTimeframe(employeeData, timeframe) {
     return false;
 }
 
-function getFilteredDataByTimeframe(employeeData, timeframe) {
-    if (!employeeData || employeeData.length === 0) return [];
-    
-    if (timeframe === 'month') {
-        return employeeData.slice(-4);
-    } else if (timeframe === 'quarter') {
-        return employeeData.slice(-13);
-    } else {
-        return employeeData.slice(-1);
-    }
-}
 
 // ============================================
 // STORAGE FUNCTIONS
@@ -675,24 +660,6 @@ function saveWeeklyData() {
         localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
     } catch (error) {
         console.error('Error saving weekly data:', error);
-    }
-}
-
-function loadCoachingHistory() {
-    try {
-        const saved = localStorage.getItem('coachingHistory');
-        return saved ? JSON.parse(saved) : {};
-    } catch (error) {
-        console.error('Error loading coaching history:', error);
-        return {};
-    }
-}
-
-function saveCoachingHistory() {
-    try {
-        localStorage.setItem('coachingHistory', JSON.stringify(coachingHistory));
-    } catch (error) {
-        console.error('Error saving coaching history:', error);
     }
 }
 
@@ -1283,10 +1250,6 @@ function initializeEventHandlers() {
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
         const selectedName = e.target.value;
         
-        console.log('🔍 Employee selected:', selectedName);
-        console.log('📅 Current period type:', currentPeriodType);
-        console.log('📅 Current period:', currentPeriod);
-        
         if (!selectedName) {
             ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
                 const el = document.getElementById(id);
@@ -1296,7 +1259,6 @@ function initializeEventHandlers() {
         }
         
         const employee = getEmployeeDataForPeriod(selectedName);
-        console.log('👤 Employee data:', employee);
         
         if (!employee) {
             alert('❌ Error loading employee data');
@@ -1419,10 +1381,8 @@ function initializeEventHandlers() {
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
-                if (data.coachingHistory) coachingHistory = data.coachingHistory;
                 
                 saveWeeklyData();
-                saveCoachingHistory();
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
@@ -1468,16 +1428,14 @@ function initializeEventHandlers() {
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
         const weekCount = Object.keys(weeklyData).length;
-        const coachingCount = Object.keys(coachingHistory).length;
         
-        if (weekCount === 0 && coachingCount === 0) {
+        if (weekCount === 0) {
             alert('ℹ️ No data to delete');
             return;
         }
         
         const message = `⚠️ WARNING: This will permanently delete:\n\n` +
-            `• ${weekCount} week(s) of employee data\n` +
-            `• ${coachingCount} employee(s) coaching history\n\n` +
+            `• ${weekCount} week(s) of employee data\n\n` +
             `This action CANNOT be undone!\n\n` +
             `Type "DELETE" to confirm:`;
         
@@ -1490,10 +1448,8 @@ function initializeEventHandlers() {
         
         // Clear all data
         weeklyData = {};
-        coachingHistory = {};
         
         saveWeeklyData();
-        saveCoachingHistory();
         
         populateDeleteWeekDropdown();
         
@@ -2237,9 +2193,7 @@ function renderExecutiveSummary() {
         totalEmployees: new Set(),
         avgScheduleAdherence: [],
         avgTransfers: [],
-        avgAHT: [],
-        employeesCoached: Object.keys(coachingHistory).length,
-        totalCoachingSessions: Object.values(coachingHistory).reduce((sum, sessions) => sum + sessions.length, 0)
+        avgAHT: []
     };
     
     allWeeks.forEach(weekKey => {
@@ -2275,9 +2229,7 @@ function renderExecutiveSummary() {
         { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
         { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '⏰' },
         { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📞' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' },
-        { label: 'Employees Coached', value: metrics.employeesCoached, icon: '✉️' },
-        { label: 'Total Coaching Sessions', value: metrics.totalCoachingSessions, icon: '📊' }
+        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
     ];
     
     cards.forEach(card => {
@@ -2355,25 +2307,6 @@ function exportToExcel() {
             }
         });
         
-        // Export coaching history
-        const historyData = [];
-        Object.keys(coachingHistory).forEach(employeeName => {
-            coachingHistory[employeeName].forEach(session => {
-                historyData.push({
-                    'Employee': employeeName,
-                    'Date': new Date(session.date).toLocaleDateString(),
-                    'Period Type': session.periodType,
-                    'Period': session.period,
-                    'Email To': session.email.to,
-                    'Email Subject': session.email.subject
-                });
-            });
-        });
-        
-        if (historyData.length > 0) {
-            const historyWs = XLSX.utils.json_to_sheet(historyData);
-            XLSX.utils.book_append_sheet(wb, historyWs, 'Coaching History');
-        }
         
         // Save file
         XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -2608,17 +2541,6 @@ function generateOutlookEmail() {
     // Open Outlook
     window.location.href = mailtoLink;
     
-    // Save to coaching history
-    saveCoachingSession(fullName, {
-        date: new Date().toISOString(),
-        period: currentPeriod ? (weeklyData[currentPeriod]?.metadata?.label || 'Unknown') : 'Unknown',
-        email: {
-            subject: subject,
-            body: copilotEmail
-        },
-        metrics: {} // Could enhance to capture which metrics were addressed
-    });
-    
     showToast('📧 Opening Outlook draft...');
     
     // Clear the form after a delay
@@ -2629,14 +2551,6 @@ function generateOutlookEmail() {
     }, 2000);
 }
 
-function saveCoachingSession(employeeName, sessionData) {
-    if (!coachingHistory[employeeName]) {
-        coachingHistory[employeeName] = [];
-    }
-    
-    coachingHistory[employeeName].push(sessionData);
-    saveCoachingHistory();
-}
 
 // ============================================
 // INITIALIZATION
@@ -2647,10 +2561,8 @@ function initApp() {
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
-    coachingHistory = loadCoachingHistory();
     
     console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
-    console.log(`✉️ Loaded ${Object.keys(coachingHistory).length} employee coaching histories`);
     
     // Initialize event handlers
     initializeEventHandlers();
