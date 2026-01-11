@@ -334,9 +334,26 @@ function parsePastedData(pastedText, startDate, endDate) {
     const employees = [];
     
     for (let i = 1; i < lines.length; i++) {
-        const cells = lines[i].split(separator).map(c => c.trim());
+        let line = lines[i];
+        let cells;
         
-        const rawName = cells[colIndices.name] || '';
+        // Special handling for "LastName, FirstName" format in first column
+        // Extract name first before splitting on separator
+        const nameMatch = line.match(/^([A-Za-z\-']+),\s+([A-Za-z\-'\s]+?)(?:\t|$)/);
+        let rawName = '';
+        
+        if (nameMatch) {
+            // Found "LastName, FirstName" pattern at start
+            rawName = `${nameMatch[1]}, ${nameMatch[2].trim()}`;
+            // Remove the name from the line and split the rest
+            const remainingLine = line.substring(nameMatch[0].length);
+            cells = [rawName, ...remainingLine.split(separator).map(c => c.trim())];
+        } else {
+            // No comma pattern, split normally
+            cells = line.split(separator).map(c => c.trim());
+            rawName = cells[colIndices.name] || '';
+        }
+        
         if (!rawName) continue;
         
         console.log('📝 Raw name from data:', rawName);
