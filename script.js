@@ -399,6 +399,14 @@ function parsePastedData(pastedText, startDate, endDate) {
     console.log('📋 Parsed headers:', headers);
     console.log('🔍 Name column header:', headers.find(h => h.toLowerCase().includes('name')));
     
+    // Validate that first row looks like headers (should contain "Name" or "Adherence")
+    const hasNameHeader = headers.some(h => h.toLowerCase().includes('name'));
+    const hasAdherenceHeader = headers.some(h => h.toLowerCase().includes('adherence'));
+    
+    if (!hasNameHeader && !hasAdherenceHeader) {
+        throw new Error('❌ Header row not found! Make sure to include the header row (Name, TotalCallsAnswered, Transfers%, etc.) at the top of your pasted data.');
+    }
+    
     // Map headers to canonical schema
     const colMapping = mapHeadersToSchema(headers);
     
