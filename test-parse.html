@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PowerBI Data Parser Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; }
+        button { padding: 10px 20px; font-size: 16px; }
+        .output { white-space: pre-wrap; background: #f0f0f0; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>PowerBI Data Format Test</h1>
+    <p>Paste your PowerBI data below and click Parse to see exactly how it's structured:</p>
+    
+    <textarea id="input" placeholder="Paste PowerBI data here..."></textarea>
+    <button onclick="parseData()">Parse</button>
+    
+    <div id="output" class="output"></div>
+    
+    <script>
+        function parseData() {
+            const text = document.getElementById('input').value;
+            const lines = text.split('\n');
+            
+            let output = `Total lines: ${lines.length}\n\n`;
+            
+            // Show first line (headers)
+            output += `=== LINE 0 (Headers) ===\n`;
+            output += `Raw: ${JSON.stringify(lines[0])}\n`;
+            output += `Length: ${lines[0].length} chars\n`;
+            
+            // Try tab split
+            const tabSplit = lines[0].split('\t');
+            output += `\nSplit by TAB (\\t): ${tabSplit.length} columns\n`;
+            
+            // Try space split (this is what PowerBI uses)
+            const spaceSplit = lines[0].split(/\s{2,}/);
+            output += `\nSplit by 2+ spaces: ${spaceSplit.length} columns\n`;
+            output += `\n=== HEADER PATTERNS (lowercase, no spaces) ===\n`;
+            spaceSplit.forEach((col, i) => {
+                const pattern = col.toLowerCase().replace(/\s+/g, '');
+                output += `[${i}]: "${col}" -> pattern: "${pattern}"\n`;
+            });
+            
+            // Show data rows
+            if (lines.length > 1) {
+                output += `\n=== DATA ROWS ===\n`;
+                for (let i = 1; i < Math.min(lines.length, 6); i++) {
+                    const dataSpaceSplit = lines[i].split(/\s{2,}/);
+                    output += `\nRow ${i}: ${dataSpaceSplit.length} columns\n`;
+                    output += `Name: ${dataSpaceSplit[0]}\n`;
+                    output += `All cells: ${JSON.stringify(dataSpaceSplit)}\n`;
+                }
+            }
+            
+            document.getElementById('output').textContent = output;
+        }
+    </script>
+</body>
+</html>

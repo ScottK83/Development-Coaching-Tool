@@ -278,24 +278,25 @@ const CANONICAL_SCHEMA = {
 // Header patterns - MUST be in order: most specific patterns first!
 // Order matters because we stop at first match
 // Uses array to guarantee deterministic iteration (object key order not guaranteed)
+// Based on actual PowerBI output (lowercase, no spaces)
 const HEADER_PATTERNS = [
-    { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name (last'] },
+    { canonical: CANONICAL_SCHEMA.EMPLOYEE_NAME, patterns: ['name(last,first)'] },
     { canonical: CANONICAL_SCHEMA.TOTAL_CALLS, patterns: ['totalcallsanswered'] },
-    { canonical: CANONICAL_SCHEMA.ADHERENCE_PERCENT, patterns: ['adherence%'] },
     { canonical: CANONICAL_SCHEMA.TRANSFERS_PERCENT, patterns: ['transfers%'] },
     { canonical: CANONICAL_SCHEMA.AHT_SECONDS, patterns: ['aht'] },
     { canonical: CANONICAL_SCHEMA.TALK_SECONDS, patterns: ['talk'] },
-    { canonical: CANONICAL_SCHEMA.ACW_SECONDS, patterns: ['acw'] },
     { canonical: CANONICAL_SCHEMA.HOLD_SECONDS, patterns: ['hold'] },
-    { canonical: CANONICAL_SCHEMA.RELIABILITY_HOURS, patterns: ['reliability'] },
-    { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oe survey total'] },
-    { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
+    { canonical: CANONICAL_SCHEMA.ACW_SECONDS, patterns: ['acw'] },
+    { canonical: CANONICAL_SCHEMA.ADHERENCE_PERCENT, patterns: ['adherence%'] },
+    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['manageemotionsscore%'] },
+    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['avoidnegativewordscore%'] },
+    { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore%'] },
+    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['overallsentimentscore%'] },
     { canonical: CANONICAL_SCHEMA.FCR_PERCENT, patterns: ['fcr%'] },
-    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexpitotal', 'overallexperience%'] },
-    { canonical: CANONICAL_SCHEMA.SENTIMENT_PERCENT, patterns: ['overallsentimentscore'] },
-    { canonical: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT, patterns: ['positivewordscore'] },
-    { canonical: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT, patterns: ['avoidnegativewordscore'] },
-    { canonical: CANONICAL_SCHEMA.EMOTIONS_PERCENT, patterns: ['manageemotionsscore'] }
+    { canonical: CANONICAL_SCHEMA.CX_REP_OVERALL, patterns: ['repsat%'] },
+    { canonical: CANONICAL_SCHEMA.OVERALL_EXPERIENCE, patterns: ['overallexperience%'] },
+    { canonical: CANONICAL_SCHEMA.SURVEY_TOTAL, patterns: ['oesurveytotal'] },
+    { canonical: CANONICAL_SCHEMA.RELIABILITY_HOURS, patterns: ['reliabilityhrs'] }
 ];
 
 // Only employee name is strictly required for ingestion
