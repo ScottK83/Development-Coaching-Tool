@@ -962,7 +962,10 @@ function initializeEventHandlers() {
             document.getElementById('pasteDataContainer').style.display = 'none';
             document.getElementById('pasteDataTextarea').value = '';
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nData saved. Use the selectors below to view employee metrics.`);
+            // Auto-switch to Coaching tab
+            switchTab('coaching');
+            
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nClick "3. Select Date Range" below to view employee metrics.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
@@ -1341,56 +1344,91 @@ async function renderTipsManagement() {
     };
     
     let html = '<div style="margin-bottom: 20px;">';
-    html += '<p>Manage coaching tips for each metric. Server tips (from tips.csv) are shown in blue. Your custom tips can be added, edited, or deleted.</p>';
+    html += '<p>Select a metric to view and manage its coaching tips. Server tips (from tips.csv) are shown in blue and are read-only. Your custom tips can be edited or deleted.</p>';
     html += '</div>';
     
+    // Dropdown selector
+    html += '<div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">';
+    html += '<label for="metricSelector" style="font-weight: bold; display: block; margin-bottom: 10px; color: #2196F3; font-size: 1.1em;">Select Metric:</label>';
+    html += '<select id="metricSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
+    html += '<option value="">-- Choose a metric --</option>';
     Object.keys(metricNames).forEach(metricKey => {
+        html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
+    });
+    html += '</select>';
+    html += '</div>';
+    
+    // Tips display area
+    html += '<div id="tipsDisplayArea" style="display: none;"></div>';
+    
+    container.innerHTML = html;
+    
+    // Add change listener
+    document.getElementById('metricSelector').addEventListener('change', (e) => {
+        const metricKey = e.target.value;
+        const displayArea = document.getElementById('tipsDisplayArea');
+        
+        if (!metricKey) {
+            displayArea.style.display = 'none';
+            return;
+        }
+        
+        displayArea.style.display = 'block';
         const serverTipsForMetric = serverTips[metricKey] || [];
         const userTipsForMetric = userTips[metricKey] || [];
+        const metricName = metricNames[metricKey];
         
-        html += `<div style="margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">`;
-        html += `<h3 style="color: #2196F3; margin-top: 0;">${metricNames[metricKey]}</h3>`;
+        let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
+        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">${metricName}</h3>`;
         
-        // Show server tips (read-only)
+        // Server tips
         if (serverTipsForMetric.length > 0) {
-            html += '<div style="margin-bottom: 15px;"><strong style="color: #666;">📚 Server Tips (from tips.csv):</strong></div>';
-            serverTipsForMetric.forEach((tip) => {
-                html += `
-                    <div style="margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-left: 3px solid #2196F3; border-radius: 4px;">
-                        ${escapeHtml(tip)}
+            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📚 Server Tips (from tips.csv)</h4>';
+            serverTipsForMetric.forEach((tip, index) => {
+                tipsHtml += `
+                    <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="color: #1565C0; font-weight: 500;">${index + 1}. ${escapeHtml(tip)}</div>
                     </div>
                 `;
             });
+            tipsHtml += '</div>';
+        } else {
+            tipsHtml += '<div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"><em>No server tips found for this metric in tips.csv</em></div>';
         }
         
-        // Show custom tips (editable)
+        // Custom tips
+        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">✏️ Your Custom Tips</h4>';
         if (userTipsForMetric.length > 0) {
-            html += '<div style="margin: 15px 0;"><strong style="color: #666;">✏️ Your Custom Tips:</strong></div>';
             userTipsForMetric.forEach((tip, index) => {
-                html += `
-                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-left: 3px solid #28a745; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <div style="flex: 1;">${escapeHtml(tip)}</div>
-                        <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; margin-left: 10px;">🗑️ Delete</button>
+                tipsHtml += `
+                    <div style="margin-bottom: 12px; padding: 15px; background: white; border-left: 4px solid #28a745; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
+                            <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
+        } else {
+            tipsHtml += '<p style="color: #666; font-style: italic; padding: 15px; background: white; border-radius: 4px;">No custom tips yet. Add one below!</p>';
         }
+        tipsHtml += '</div>';
         
-        if (serverTipsForMetric.length === 0 && userTipsForMetric.length === 0) {
-            html += '<p style="color: #666; font-style: italic;">No tips yet. Add a custom tip below!</p>';
-        }
-        
-        html += `
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; margin-top: 8px;">➕ Add Custom Tip</button>
+        // Add new tip
+        tipsHtml += `
+            <div style="margin-top: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
+                <h4 style="color: #28a745; margin-top: 0; margin-bottom: 12px;">➕ Add New Custom Tip</h4>
+                <textarea id="newTip_${metricKey}" placeholder="Enter your custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
             </div>
         `;
         
-        html += '</div>';
+        tipsHtml += '</div>';
+        displayArea.innerHTML = tipsHtml;
     });
-    
-    container.innerHTML = html;
 }
 
 window.addTip = function(metricKey) {
@@ -1409,8 +1447,40 @@ window.addTip = function(metricKey) {
     userTips[metricKey].push(tip);
     saveUserTips(userTips);
     
+    textarea.value = '';
     showToast('✅ Tip added successfully!');
-    renderTipsManagement();
+    
+    // Re-trigger the dropdown to refresh the display
+    const selector = document.getElementById('metricSelector');
+    if (selector && selector.value) {
+        selector.dispatchEvent(new Event('change'));
+    } else {
+        renderTipsManagement();
+    }
+};
+
+window.updateTip = function(metricKey, index) {
+    const textarea = document.getElementById(`editTip_${metricKey}_${index}`);
+    const updatedTip = textarea.value.trim();
+    
+    if (!updatedTip) {
+        alert('❌ Tip cannot be empty');
+        return;
+    }
+    
+    const userTips = loadUserTips();
+    if (userTips[metricKey] && userTips[metricKey][index] !== undefined) {
+        userTips[metricKey][index] = updatedTip;
+        saveUserTips(userTips);
+        
+        showToast('✅ Tip updated successfully!');
+        
+        // Re-trigger the dropdown to refresh the display
+        const selector = document.getElementById('metricSelector');
+        if (selector && selector.value) {
+            selector.dispatchEvent(new Event('change'));
+        }
+    }
 };
 
 window.deleteTip = function(metricKey, index) {
@@ -1428,7 +1498,14 @@ window.deleteTip = function(metricKey, index) {
     }
     
     showToast('✅ Tip deleted');
-    renderTipsManagement();
+    
+    // Re-trigger the dropdown to refresh the display
+    const selector = document.getElementById('metricSelector');
+    if (selector && selector.value) {
+        selector.dispatchEvent(new Event('change'));
+    } else {
+        renderTipsManagement();
+    }
 };
 
 // ============================================
