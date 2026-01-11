@@ -339,7 +339,9 @@ function parsePastedData(pastedText, startDate, endDate) {
         const rawName = cells[colIndices.name] || '';
         if (!rawName) continue;
         
+        console.log('📝 Raw name from data:', rawName);
         const { displayName, firstName } = parseName(rawName);
+        console.log('✅ Parsed to displayName:', displayName, 'firstName:', firstName);
         
         // Get survey total first to determine if survey metrics should be included
         const surveyTotal = colIndices.surveyTotal !== -1 
