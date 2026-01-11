@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Refresh Behavior Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2196F3;
+            border-bottom: 3px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .test-steps {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .test-steps li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .test-steps li:last-child {
+            border-bottom: none;
+        }
+        .expected {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #28a745;
+        }
+        .expected strong {
+            color: #155724;
+        }
+        .bug {
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #dc3545;
+        }
+        .bug strong {
+            color: #721c24;
+        }
+        .fix {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #17a2b8;
+        }
+        .fix strong {
+            color: #0c5460;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 Tab Refresh Behavior - Testing Documentation</h1>
+    
+    <div class="test-section">
+        <h2>Problem Statement</h2>
+        <p>When refreshing the browser on certain tabs (e.g., Manage Tips), data appears empty until the user navigates away and back. This creates a confusing and broken user experience.</p>
+        
+        <div class="bug">
+            <strong>🐛 Root Cause:</strong> The <code>showOnlySection()</code> function only shows/hides sections but does not initialize their data. Data initialization (like <code>renderTipsManagement()</code>) only happened in click handlers, not on page load.
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Solution Implemented</h2>
+        <div class="fix">
+            <strong>🔧 Fix:</strong> Added <code>initializeSection(sectionId)</code> function that calls the appropriate initialization function for each tab. This function is now called in <code>initApp()</code> after restoring the active section from localStorage.
+        </div>
+        
+        <h3>Code Changes</h3>
+        <ol>
+            <li><strong>Added new function:</strong> <code>initializeSection(sectionId)</code> - Maps each section ID to its initialization function</li>
+            <li><strong>Updated:</strong> <code>initApp()</code> - Now calls <code>initializeSection(activeSection)</code> after <code>showOnlySection(activeSection)</code></li>
+        </ol>
+        
+        <h3>Tab Initialization Mapping</h3>
+        <ul>
+            <li><code>coachingForm</code> → No initialization (static form)</li>
+            <li><code>coachingSection</code> → <code>resetEmployeeSelection()</code></li>
+            <li><code>dashboardSection</code> → <code>renderEmployeeHistory()</code></li>
+            <li><code>tipsManagementSection</code> → <code>renderTipsManagement()</code></li>
+            <li><code>manageDataSection</code> → <code>populateDeleteWeekDropdown()</code></li>
+            <li><code>executiveSummarySection</code> → <code>renderExecutiveSummary()</code></li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Cases</h2>
+        
+        <div class="test-case">
+            <h3>Test 1: Manage Tips Tab Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Open the application and navigate to "Manage Tips" tab</li>
+                <li><strong>Step 2:</strong> Verify the metric dropdown is populated</li>
+                <li><strong>Step 3:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 4:</strong> Observe the Manage Tips tab after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Manage Tips tab remains visible AND the metric dropdown is fully populated with all metrics from METRICS_REGISTRY + custom metrics. No navigation required.
+            </div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 2: Employee Dashboard Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Open the application and navigate to "Employee Dashboard" tab</li>
+                <li><strong>Step 2:</strong> Verify employee history is displayed</li>
+                <li><strong>Step 3:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 4:</strong> Observe the Employee Dashboard after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Employee Dashboard remains visible AND the employee selector and history interface are rendered. No blank screen.
+            </div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 3: Executive Summary Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Load some employee data (at least 1 week)</li>
+                <li><strong>Step 2:</strong> Navigate to "Executive Summary" tab</li>
+                <li><strong>Step 3:</strong> Verify summary displays</li>
+                <li><strong>Step 4:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 5:</strong> Observe the Executive Summary after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Executive Summary remains visible AND displays the summary data. Charts and metrics render correctly.
+            </div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 4: Manage Data Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Load some employee data (at least 1 week)</li>
+                <li><strong>Step 2:</strong> Navigate to "Manage Data" tab</li>
+                <li><strong>Step 3:</strong> Verify the delete week dropdown is populated</li>
+                <li><strong>Step 4:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 5:</strong> Observe the Manage Data section after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Manage Data section remains visible AND the delete week dropdown is populated with available weeks.
+            </div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 5: Home Tab Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Navigate to "Home" tab (or start fresh)</li>
+                <li><strong>Step 2:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 3:</strong> Observe the Home tab after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Home tab displays correctly with the upload form. No issues (this tab has no dynamic data).
+            </div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 6: Generate Coaching Tab Refresh</h3>
+            <ul class="test-steps">
+                <li><strong>Step 1:</strong> Load some employee data</li>
+                <li><strong>Step 2:</strong> Navigate to "Generate Coaching" tab</li>
+                <li><strong>Step 3:</strong> Select an employee and period (don't generate email yet)</li>
+                <li><strong>Step 4:</strong> Press F5 or click browser refresh</li>
+                <li><strong>Step 5:</strong> Observe the Generate Coaching tab after refresh</li>
+            </ul>
+            <div class="expected">
+                <strong>✅ Expected Result:</strong> After refresh, the Generate Coaching tab displays with employee selection reset (no employee selected). This is correct behavior - we don't persist partial form state.
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Verification Checklist</h2>
+        <ul class="test-steps">
+            <li>✅ <strong>Code Review:</strong> <code>initializeSection()</code> function added with complete switch statement</li>
+            <li>✅ <strong>Code Review:</strong> <code>initApp()</code> calls <code>initializeSection(activeSection)</code> after <code>showOnlySection()</code></li>
+            <li>✅ <strong>Syntax Check:</strong> No errors reported by get_errors tool</li>
+            <li>⏳ <strong>Runtime Test 1:</strong> Refresh on Manage Tips tab - dropdown populated</li>
+            <li>⏳ <strong>Runtime Test 2:</strong> Refresh on Employee Dashboard - history visible</li>
+            <li>⏳ <strong>Runtime Test 3:</strong> Refresh on Executive Summary - data displayed</li>
+            <li>⏳ <strong>Runtime Test 4:</strong> Refresh on Manage Data - dropdown populated</li>
+            <li>⏳ <strong>Runtime Test 5:</strong> Tab switching still works (no regression)</li>
+            <li>⏳ <strong>Runtime Test 6:</strong> localStorage state preservation works</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Technical Details</h2>
+        
+        <h3>Before Fix (Problematic Flow)</h3>
+        <pre style="background: #f8d7da; padding: 15px; border-radius: 4px; border-left: 4px solid #dc3545; overflow-x: auto;">
+1. User navigates to Manage Tips → Click handler fires
+   ├─ showOnlySection('tipsManagementSection') → Section visible ✅
+   └─ renderTipsManagement() → Data populated ✅
+
+2. User refreshes page → initApp() runs
+   ├─ showOnlySection('tipsManagementSection') → Section visible ✅
+   └─ ❌ NO DATA INITIALIZATION → Dropdown empty ❌
+        </pre>
+        
+        <h3>After Fix (Correct Flow)</h3>
+        <pre style="background: #d4edda; padding: 15px; border-radius: 4px; border-left: 4px solid #28a745; overflow-x: auto;">
+1. User navigates to Manage Tips → Click handler fires
+   ├─ showOnlySection('tipsManagementSection') → Section visible ✅
+   └─ renderTipsManagement() → Data populated ✅
+
+2. User refreshes page → initApp() runs
+   ├─ showOnlySection('tipsManagementSection') → Section visible ✅
+   └─ initializeSection('tipsManagementSection') ✅
+       └─ renderTipsManagement() → Data populated ✅
+        </pre>
+        
+        <h3>Key Principles Applied</h3>
+        <ul>
+            <li><strong>Idempotency:</strong> Each init function can be called multiple times safely</li>
+            <li><strong>No State Assumptions:</strong> Init functions re-derive data from sources (localStorage, METRICS_REGISTRY)</li>
+            <li><strong>Explicit Initialization:</strong> Every tab has a clear, documented init path</li>
+            <li><strong>Separation of Concerns:</strong> <code>showOnlySection()</code> handles visibility, <code>initializeSection()</code> handles data</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Manual Testing Instructions</h2>
+        <ol>
+            <li>Open <code>index.html</code> in your browser</li>
+            <li>Navigate to the <strong>Manage Tips</strong> tab</li>
+            <li>Verify the metric dropdown shows all metrics</li>
+            <li>Press <code>F5</code> to refresh the page</li>
+            <li><strong>Expected:</strong> Manage Tips tab is still visible AND dropdown is still populated</li>
+            <li>Repeat for other tabs (Employee Dashboard, Executive Summary, Manage Data)</li>
+            <li>Verify tab switching still works correctly (no regressions)</li>
+        </ol>
+        
+        <div class="expected">
+            <strong>✅ Success Criteria:</strong> All tabs display correctly after refresh with no empty/blank states. Users never need to navigate away and back to see data.
+        </div>
+    </div>
+</body>
+</html>

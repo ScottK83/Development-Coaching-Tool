@@ -280,6 +280,38 @@ function showOnlySection(sectionId) {
     updateTabHighlight(sectionId);
 }
 
+// Initialize data for the active section
+function initializeSection(sectionId) {
+    switch (sectionId) {
+        case 'coachingForm':
+            // Home tab - no initialization needed (form is static)
+            break;
+        case 'coachingSection':
+            // Generate Coaching tab - reset employee selection
+            resetEmployeeSelection();
+            break;
+        case 'dashboardSection':
+            // Employee Dashboard - render employee history
+            renderEmployeeHistory();
+            break;
+        case 'tipsManagementSection':
+            // Manage Tips - render tips management interface
+            renderTipsManagement();
+            break;
+        case 'manageDataSection':
+            // Manage Data - populate delete week dropdown
+            populateDeleteWeekDropdown();
+            break;
+        case 'executiveSummarySection':
+            // Executive Summary - render summary
+            renderExecutiveSummary();
+            break;
+        default:
+            // No initialization needed
+            break;
+    }
+}
+
 function updateTabHighlight(activeSectionId) {
     const tabMapping = {
         'coachingForm': 'homeBtn',
@@ -2676,6 +2708,9 @@ function initApp() {
     // Restore active section
     const activeSection = localStorage.getItem('activeSection') || 'coachingForm';
     showOnlySection(activeSection);
+    
+    // Initialize data for the active section (fixes refresh behavior)
+    initializeSection(activeSection);
     
     // If we have data, update the period dropdown
     if (Object.keys(weeklyData).length > 0) {
