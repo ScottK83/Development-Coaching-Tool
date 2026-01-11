@@ -184,6 +184,7 @@ function parsePercentage(value) {
     // This catches the 424% transfers bug
     if (parsed > 100) {
         console.warn(`⚠️ Unexpected percentage value: ${parsed}. Treating as 0.`);
+        console.trace('Called from:');
         return 0;
     }
     
@@ -406,15 +407,6 @@ function parsePastedData(pastedText, startDate, endDate) {
         // Split by 2+ spaces to match header structure
         const cells = rawRow.split(separator).map(c => c.trim());
         
-        // Debug first row
-        if (i === 1) {
-            console.log('🔍 DEBUG First data row:');
-            console.log('  Raw:', rawRow);
-            console.log('  Total cells:', cells.length);
-            console.log('  First 3 cells:', cells.slice(0, 3));
-            console.log('  Name column index:', colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]);
-        }
-        
         // Extract name from the mapped name column
         const rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
         
@@ -431,6 +423,13 @@ function parsePastedData(pastedText, startDate, endDate) {
         const lastName = nameMatch[1].trim();
         const firstName = nameMatch[2].trim();
         const displayName = `${firstName} ${lastName}`;
+        
+        // Debug rows with issues - show ALL cells
+        if (displayName.includes('Pamela') || displayName.includes('Precious') || i === 1) {
+            console.log(`\n🔍 DEBUG ${displayName}:`);
+            console.log('  Total cells:', cells.length);
+            console.log('  ALL CELLS:', cells);
+        }
         
         console.log('✅ Parsed firstName:', firstName);
         console.log('✅ Parsed lastName:', lastName);
