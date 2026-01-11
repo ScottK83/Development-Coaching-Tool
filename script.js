@@ -1102,6 +1102,10 @@ function initializeEventHandlers() {
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
         const selectedName = e.target.value;
         
+        console.log('🔍 Employee selected:', selectedName);
+        console.log('📅 Current period type:', currentPeriodType);
+        console.log('📅 Current period:', currentPeriod);
+        
         if (!selectedName) {
             ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
                 const el = document.getElementById(id);
@@ -1111,6 +1115,8 @@ function initializeEventHandlers() {
         }
         
         const employee = getEmployeeDataForPeriod(selectedName);
+        console.log('👤 Employee data:', employee);
+        
         if (!employee) {
             alert('❌ Error loading employee data');
             return;
