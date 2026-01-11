@@ -109,11 +109,17 @@
                             <input type="text" id="employeeName" required placeholder="Enter first name or nickname">
                             <small style="color: #666; font-size: 0.85em; display: block; margin-top: 4px;">This name will appear in the coaching email. Auto-fills with first name, but you can use a nickname.</small>
                         </div>
-                        <div class="form-group">
-                            <label for="surveyTotal">Total Surveys Received:</label>
-                            <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                            <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label for="totalCalls">Total Calls Answered:</label>
+                                <input type="number" id="totalCalls" readonly style="background: #f0f0f0; cursor: not-allowed;">
+                            </div>
+                            <div class="form-group">
+                                <label for="surveyTotal">Total Surveys Received:</label>
+                                <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
+                            </div>
                         </div>
+                        <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
                     </section>
 
                     <!-- Metrics Input -->

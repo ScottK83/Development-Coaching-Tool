@@ -302,7 +302,8 @@ const CANONICAL_SCHEMA = {
     POSITIVE_WORD_PERCENT: 'positive_word_percent',
     NEGATIVE_WORD_PERCENT: 'avoid_negative_word_percent',
     EMOTIONS_PERCENT: 'manage_emotions_percent',
-    SURVEY_TOTAL: 'survey_total'
+    SURVEY_TOTAL: 'survey_total',
+    TOTAL_CALLS: 'total_calls_answered'
 };
 
 // Simple header matching - maps exact PowerBI headers to canonical fields
@@ -322,7 +323,8 @@ const HEADER_PATTERNS = {
     [CANONICAL_SCHEMA.EMOTIONS_PERCENT]: ['emotionscore'],
     [CANONICAL_SCHEMA.CX_REP_OVERALL]: ['repsat%'],
     [CANONICAL_SCHEMA.FCR_PERCENT]: ['fcr%'],
-    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['oe survey total']
+    [CANONICAL_SCHEMA.SURVEY_TOTAL]: ['oe survey total'],
+    [CANONICAL_SCHEMA.TOTAL_CALLS]: ['totalcallsanswered']
 };
 
 // Only name and adherence are truly required
@@ -463,7 +465,8 @@ function parsePastedData(pastedText, startDate, endDate) {
             positiveWord: parsePercentage(getCell(CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT)) || '',
             negativeWord: parsePercentage(getCell(CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT)) || '',
             managingEmotions: parsePercentage(getCell(CANONICAL_SCHEMA.EMOTIONS_PERCENT)) || '',
-            surveyTotal: surveyTotal
+            surveyTotal: surveyTotal,
+            totalCalls: parseInt(getCell(CANONICAL_SCHEMA.TOTAL_CALLS)) || 0
         };
         
         // Debug log for first 3 employees
@@ -895,6 +898,11 @@ function populateMetricInputs(employee) {
             input.value = employee[field] !== '' && employee[field] !== null ? employee[field] : '';
         }
     });
+    
+    const totalCallsInput = document.getElementById('totalCalls');
+    if (totalCallsInput) {
+        totalCallsInput.value = employee.totalCalls || 0;
+    }
     
     const surveyInput = document.getElementById('surveyTotal');
     if (surveyInput) {
