@@ -530,37 +530,7 @@ function parsePastedData(pastedText, startDate, endDate) {
 // DATA LOADING - EXCEL FILES
 // ============================================
 
-function parseExcelData(sheet) {
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { range: 0, defval: '' });
-    
-    const employees = jsonData.map(row => {
-        const rawName = row['Name (Last, First)'] || '';
-        const { displayName, firstName } = parseName(rawName);
-        
-        const surveyTotal = parseInt(row['OE Survey Total']) || 0;
-        
-        return {
-            name: displayName,
-            firstName: firstName,
-            scheduleAdherence: parsePercentage(row['Adherence%']),
-            cxRepOverall: surveyTotal > 0 ? parseSurveyPercentage(row['RepSat%']) : '',
-            fcr: surveyTotal > 0 ? parseSurveyPercentage(row['FCR%']) : '',
-            overallExperience: surveyTotal > 0 ? parseSurveyPercentage(row['OverallExperience%'] || row['OE%']) : '',
-            transfers: parsePercentage(row['TransfersS%'] || row['Transfers%']),
-            aht: parseSeconds(row['AHT']),
-            acw: parseSeconds(row['ACW']),
-            holdTime: parseSeconds(row['Hold']),
-            reliability: parseHours(row['Reliability Hrs']),
-            overallSentiment: parsePercentage(row['OverallSentimentScore%']),
-            positiveWord: parsePercentage(row['PositiveWordScore%']),
-            negativeWord: parsePercentage(row['AvoidNegativeWordScore%']),
-            managingEmotions: parsePercentage(row['ManageEmotionsScore%']),
-            surveyTotal: surveyTotal
-        };
-    });
-    
-    return employees;
-}
+
 
 // ============================================
 // TIPS MANAGEMENT
@@ -1062,19 +1032,8 @@ function initializeEventHandlers() {
         document.getElementById('uploadChoiceButtons').style.display = 'none';
     });
     
-    document.getElementById('showExcelBtn')?.addEventListener('click', () => {
-        document.getElementById('excelUploadContainer').style.display = 'block';
-        document.getElementById('pasteDataContainer').style.display = 'none';
-        document.getElementById('uploadChoiceButtons').style.display = 'none';
-    });
-    
     document.getElementById('cancelPasteBtn')?.addEventListener('click', () => {
         document.getElementById('pasteDataContainer').style.display = 'none';
-        document.getElementById('uploadChoiceButtons').style.display = 'block';
-    });
-    
-    document.getElementById('cancelExcelBtn')?.addEventListener('click', () => {
-        document.getElementById('excelUploadContainer').style.display = 'none';
         document.getElementById('uploadChoiceButtons').style.display = 'block';
     });
     
@@ -1137,96 +1096,7 @@ function initializeEventHandlers() {
     });
     
     // Excel file selection
-    document.getElementById('excelFile')?.addEventListener('change', (e) => {
-        const btn = document.getElementById('loadSheetsByTabsBtn');
-        if (e.target.files && e.target.files.length > 0) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-        } else {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.style.cursor = 'not-allowed';
-        }
-    });
-    
-    // Load Excel sheets
-    document.getElementById('loadSheetsByTabsBtn')?.addEventListener('click', () => {
-        const fileInput = document.getElementById('excelFile');
-        const file = fileInput.files[0];
-        
-        if (!file) {
-            alert('❌ Please select a file first');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                let totalEmployees = 0;
-                let sheetCount = 0;
-                
-                workbook.SheetNames.forEach(sheetName => {
-                    const sheet = workbook.Sheets[sheetName];
-                    const employees = parseExcelData(sheet);
-                    
-                    if (employees.length > 0) {
-                        // Extract date from sheet name (e.g., "12.27" → December 27)
-                        const dateMatch = sheetName.match(/(\d{1,2})\.(\d{1,2})/);
-                        if (dateMatch) {
-                            const month = parseInt(dateMatch[1]) - 1;
-                            const day = parseInt(dateMatch[2]);
-                            const year = new Date().getFullYear();
-                            
-                            const endDateObj = new Date(year, month, day);
-                            const startDateObj = new Date(endDateObj);
-                            startDateObj.setDate(startDateObj.getDate() - 5); // Monday-Saturday
-                            
-                            const weekKey = `${startDateObj.toISOString().split('T')[0]}|${endDateObj.toISOString().split('T')[0]}`;
-                            const label = `Week ending ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-                            
-                            weeklyData[weekKey] = {
-                                employees: employees,
-                                metadata: {
-                                    startDate: startDateObj.toISOString().split('T')[0],
-                                    endDate: endDateObj.toISOString().split('T')[0],
-                                    label: label,
-                                    uploadedAt: new Date().toISOString(),
-                                    sheetName: sheetName
-                                }
-                            };
-                            
-                            totalEmployees += employees.length;
-                            sheetCount++;
-                        }
-                    }
-                });
-                
-                if (sheetCount === 0) {
-                    alert('❌ No valid data found in Excel file');
-                    return;
-                }
-                
-                saveWeeklyData();
-                populateDeleteWeekDropdown();
-                
-                document.getElementById('uploadSuccessMessage').style.display = 'block';
-                document.getElementById('excelUploadContainer').style.display = 'none';
-                fileInput.value = '';
-                
-                alert(`✅ Loaded ${totalEmployees} employees across ${sheetCount} sheet${sheetCount>1?'s':''}!\n\n📊 Data saved to Employee History.\n\nWeeks recorded using tab names (Mon-Sat).`);
-                
-            } catch (error) {
-                console.error('Error reading Excel:', error);
-                alert(`❌ Error reading Excel file: ${error.message}`);
-            }
-        };
-        
-        reader.readAsArrayBuffer(file);
-    });
+
     
     // Period type buttons
     document.querySelectorAll('.period-type-btn').forEach(btn => {
