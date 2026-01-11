@@ -440,35 +440,50 @@ function parsePastedData(pastedText, startDate, endDate) {
     const employees = [];
     
     for (let i = 1; i < lines.length; i++) {
-        let line = lines[i];
-        let cells;
+        const rawRow = lines[i];
         
-        // Special handling for "LastName, FirstName" format in first column
-        // Extract name first before splitting on separator
-        const nameMatch = line.match(/^([A-Za-z\-']+),\s+([A-Za-z\-'\s]+?)(?:\t|$)/);
-        let rawName = '';
+        console.log('🔍 Raw row:', rawRow);
         
-        if (nameMatch) {
-            // Found "LastName, FirstName" pattern at start
-            rawName = `${nameMatch[1]}, ${nameMatch[2].trim()}`;
-            // Remove the name from the line and split the rest
-            const remainingLine = line.substring(nameMatch[0].length);
-            cells = [rawName, ...remainingLine.split(separator).map(c => c.trim())];
-        } else {
-            // No comma pattern, split normally
-            cells = line.split(separator).map(c => c.trim());
-            rawName = cells[colMapping[CANONICAL_SCHEMA.EMPLOYEE_NAME]] || '';
+        // CRITICAL: Extract name from raw row BEFORE any splitting
+        // Regex captures: "LastName, FirstName" at start of row
+        const nameMatch = rawRow.match(/^([^,]+),\s*(\S+)/);
+        
+        if (!nameMatch) {
+            console.warn('⚠️ Skipping row - no name pattern found');
+            continue;
         }
         
-        if (!rawName) continue;
+        const lastName = nameMatch[1].trim();
+        const firstName = nameMatch[2].trim();
+        const displayName = `${firstName} ${lastName}`;
         
-        console.log('📝 Raw name from data:', rawName);
-        const { displayName, firstName } = parseName(rawName);
-        console.log('✅ Parsed to displayName:', displayName, 'firstName:', firstName);
+        console.log('✅ Parsed firstName:', firstName);
+        console.log('✅ Parsed lastName:', lastName);
+        console.log('✅ Display name:', displayName);
+        
+        // Validation: firstName should not equal lastName
+        if (firstName === lastName) {
+            console.error('❌ PARSING FAILED: firstName equals lastName');
+            continue;
+        }
+        
+        // Remove the name portion from the row and split the remaining metrics
+        const nameLength = nameMatch[0].length;
+        const remainingRow = rawRow.substring(nameLength);
+        const metricCells = remainingRow.split(separator).map(c => c.trim()).filter(c => c);
+        
+        console.log('📊 Metric cells count:', metricCells.length);
+        
+        // Build full cells array: [name, ...metrics]
+        // The name goes in position 0, metrics follow
+        const cells = [displayName, ...metricCells];
         
         // Helper to safely get cell value by canonical field
         const getCell = (canonicalField) => {
             const idx = colMapping[canonicalField];
+            // Since we removed the name and it's now at index 0, 
+            // metric indices need adjustment: they start at index 1
+            if (idx === 0) return displayName; // Name is always at 0
             return (idx !== undefined && cells[idx]) ? cells[idx] : '';
         };
         
