@@ -1336,7 +1336,7 @@ function initializeEventHandlers() {
                 }
             }
             
-            alert(`? Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
@@ -2623,78 +2623,88 @@ async function generateCopilotPrompt() {
         'Reliability': 'reliability'
     };
     
-    // Build coaching message - casual, supportive supervisor tone
+    // Build coaching email with new unified prompt format
     const customNotes = document.getElementById('customNotes')?.value.trim();
     
-    // Varied opening lines for natural variation
-    const openingVariations = [
-        `Hey, wanted to touch base about ${firstName}'s ${periodLabel} numbers.`,
-        `Quick check-in on ${firstName}'s performance for ${periodLabel}.`,
-        `Reviewing ${firstName}'s metrics from ${periodLabel} - wanted to share some thoughts.`,
-        `Taking a look at ${firstName}'s ${periodLabel} data. Here's what I'm seeing.`,
-        `Caught up with ${firstName}'s numbers for ${periodLabel}. Few things to highlight.`
-    ];
+    // Build the metrics input
+    let metricsInput = `EMPLOYEE: ${firstName}\nPERIOD: ${periodLabel}\n\n`;
     
-    const closingVariations = [
-        `Let me know if anything needs adjusting on my end.`,
-        `Happy to chat if you want to discuss any of this.`,
-        `Ping me if you need anything or want to talk through strategies.`,
-        `Let me know your thoughts or if there's anything I should know.`,
-        `Feel free to reach out if you want to brainstorm together.`
-    ];
-    
-    const randomOpening = openingVariations[Math.floor(Math.random() * openingVariations.length)];
-    const randomClosing = closingVariations[Math.floor(Math.random() * closingVariations.length)];
-    
-    let prompt = `${randomOpening}\n\n`;
-    
-    // What's working well
+    metricsInput += `METRICS WHERE EXCEEDED TARGET:\n`;
     if (celebrate.length > 0) {
-        prompt += `**What's going well:**\n${celebrate.join('\n')}\n\n`;
+        celebrate.forEach(item => metricsInput += `${item}\n`);
+    } else {
+        metricsInput += `(none)\n`;
     }
     
-    // Areas to focus on
+    metricsInput += `\nMETRICS BELOW TARGET:\n`;
     if (needsCoaching.length > 0) {
-        prompt += `**Could use some attention:**\n${needsCoaching.join('\n')}\n\n`;
-        
-        // Add tips with randomization
-        prompt += `**Quick tips:**\n`;
         needsCoaching.forEach(item => {
+            metricsInput += `${item}\n`;
+            // Add corresponding tip
             const metricMatch = item.match(/^- (.+?):/);
             if (metricMatch) {
                 const metricLabel = metricMatch[1];
                 const metricKey = metricKeyMap[metricLabel];
                 const metricTips = allTips[metricKey] || [];
-                
                 if (metricTips.length > 0) {
-                    // Randomly select a tip
                     const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
-                    prompt += `- ${metricLabel}: ${randomTip}\n`;
+                    metricsInput += `  TIP: ${randomTip}\n`;
                 }
             }
         });
-        prompt += `\n`;
+    } else {
+        metricsInput += `(none)\n`;
     }
     
-    // Special note for reliability issues (unplanned absences)
+    // Add reliability note if applicable
     const reliabilityMetric = needsCoaching.find(item => item.includes('Reliability'));
     if (reliabilityMetric) {
-        // Extract the hours value from the reliability metric string
         const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
         const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
-        
-        prompt += `*Note: You have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned against your reliability. These weren't marked as sick time. If you feel this is an error, please let me know so I can look into it.*\n\n`;
+        metricsInput += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned (not marked as sick time). If this is an error, please let me know.\n`;
     }
     
-    // Add custom notes if provided
     if (customNotes) {
-        prompt += `**Additional notes:**\n${customNotes}\n\n`;
+        metricsInput += `\nADDITIONAL CONTEXT:\n${customNotes}\n`;
     }
     
-    prompt += randomClosing;
-    
-    // Add Copilot instruction to paraphrase tips and enhance celebration
-    prompt += `\n\n---\n\n*Copilot: Please reword the tips above naturally so they sound fresh and conversational, not repetitive or scripted. Keep the same meaning but vary the phrasing. Make sure to highly celebrate the wins and maintain an encouraging, casual supervisor tone. Keep the structure similar with bullet points showing actual metrics and goals.*`;
+    // Build the unified Copilot prompt
+    const prompt = `ROLE:
+You are a supportive, engaged supervisor writing directly to an employee you know well.
+Your tone is human, warm, encouraging, and authentic — never robotic or corporate.
+
+INPUT:
+${metricsInput}
+
+STRICT RULES:
+• Write in second person ("you") throughout
+• Celebrate wins enthusiastically and specifically
+• Coach opportunities constructively, never critically
+• Use exactly ONE coaching tip per opportunity metric
+• Reword each coaching tip creatively — do NOT repeat phrasing from any prior email
+• Avoid clichés, templates, or stock phrases
+• Vary sentence structure and paragraph flow every time
+• Never mention AI, prompts, analysis, or instructions
+• Do not reuse wording from the input verbatim unless it is a metric or number
+• This email must not resemble any prior performance email in wording, structure, or tone
+
+STYLE REQUIREMENTS:
+• Sound like a real supervisor who genuinely wants the employee to succeed
+• Friendly, upbeat, and motivating
+• Natural conversational rhythm
+• Confident but approachable
+• No corporate buzzwords
+• No emojis
+
+FORMAT:
+• Short intro paragraph
+• Section celebrating strengths (bulleted with metrics)
+• Section coaching opportunities (bulleted with metrics + rewritten tip)
+• Optional reliability note if provided
+• Encouraging close with invitation to respond
+
+OUTPUT:
+Return ONLY the completed email — ready to send.`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
