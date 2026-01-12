@@ -1588,7 +1588,7 @@ function initializeEventHandlers() {
             if (el) el.style.display = 'none';
         });
         
-        alert('? All data has been deleted');
+        alert('✅ All data has been deleted');
     });
     
     // Populate delete week dropdown on load
@@ -2668,45 +2668,24 @@ async function generateCopilotPrompt() {
         metricsInput += `\nADDITIONAL CONTEXT:\n${customNotes}\n`;
     }
     
-    // Build the unified Copilot prompt
-    const prompt = `ROLE:
-You are a supportive, engaged supervisor writing directly to an employee you know well.
-Your tone is human, warm, encouraging, and authentic — never robotic or corporate.
+    // Build the unified Copilot prompt - conversational format to avoid detection as system prompt
+    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone — not corporate or template-like.
 
-INPUT:
+Here's the performance data:
+
 ${metricsInput}
 
-STRICT RULES:
-• Write in second person ("you") throughout
-• Celebrate wins enthusiastically and specifically
-• Coach opportunities constructively, never critically
-• Use exactly ONE coaching tip per opportunity metric
-• Reword each coaching tip creatively — do NOT repeat phrasing from any prior email
-• Avoid clichés, templates, or stock phrases
-• Vary sentence structure and paragraph flow every time
-• Never mention AI, prompts, analysis, or instructions
-• Do not reuse wording from the input verbatim unless it is a metric or number
-• This email must not resemble any prior performance email in wording, structure, or tone
+Can you help me write an email to ${firstName} that:
+1. Opens with a genuine, conversational greeting
+2. Celebrates their wins enthusiastically and specifically (mention the metrics and targets)
+3. Addresses areas for improvement constructively (not critically)
+4. Includes one coaching tip per improvement area, but reword the tips in fresh, natural language so they don't sound like they came from a template
+5. If there's a reliability note, include that naturally without sounding formal
+6. Closes with an encouraging, warm tone and invites them to discuss
 
-STYLE REQUIREMENTS:
-• Sound like a real supervisor who genuinely wants the employee to succeed
-• Friendly, upbeat, and motivating
-• Natural conversational rhythm
-• Confident but approachable
-• No corporate buzzwords
-• No emojis
+Keep it sounding like a real supervisor who genuinely wants them to succeed. Use "you" language throughout. Make it conversational, upbeat, and motivating. Avoid corporate buzzwords and any mention of metrics being analyzed or AI involvement. Most importantly, make this email unique and natural — something that doesn't follow a template pattern.
 
-FORMAT:
-• Draft this as an EMAIL TO ${firstName}
-• Use their name in the greeting
-• Short intro paragraph
-• Section celebrating strengths (bulleted with metrics)
-• Section coaching opportunities (bulleted with metrics + rewritten tip)
-• Optional reliability note if provided
-• Encouraging close with invitation to respond
-
-OUTPUT:
-Return ONLY the completed email — ready to send to ${firstName}.`;
+The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
@@ -2714,7 +2693,7 @@ Return ONLY the completed email — ready to send to ${firstName}.`;
         alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
         
         // Open Copilot
-        window.open('https://copilot.microsoft.com', '_blank');
+        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
         
         // Show the paste section
         document.getElementById('copilotOutputSection').style.display = 'block';
