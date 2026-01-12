@@ -52,7 +52,7 @@ const METRICS_REGISTRY = {
     scheduleAdherence: {
         key: 'scheduleAdherence',
         label: 'Schedule Adherence',
-        icon: '?',
+        icon: '⏰',
         target: { type: 'min', value: 93 },
         unit: '%',
         columnIndex: 7,
@@ -63,7 +63,7 @@ const METRICS_REGISTRY = {
     cxRepOverall: {
         key: 'cxRepOverall',
         label: 'CX Rep Overall',
-        icon: '?',
+        icon: '⭐',
         target: { type: 'min', value: 80 },
         unit: '%',
         columnIndex: 14,
@@ -74,7 +74,7 @@ const METRICS_REGISTRY = {
     fcr: {
         key: 'fcr',
         label: 'First Call Resolution',
-        icon: '?',
+        icon: '✓',
         target: { type: 'min', value: 70 },
         unit: '%',
         columnIndex: 12,
@@ -85,7 +85,7 @@ const METRICS_REGISTRY = {
     overallExperience: {
         key: 'overallExperience',
         label: 'Overall Experience',
-        icon: '??',
+        icon: '🎯',
         target: { type: 'min', value: 81 },
         unit: '%',
         columnIndex: 16,
@@ -96,7 +96,7 @@ const METRICS_REGISTRY = {
     transfers: {
         key: 'transfers',
         label: 'Transfers',
-        icon: '??',
+        icon: '📞',
         target: { type: 'max', value: 12 },
         unit: '%',
         columnIndex: 2,
@@ -107,7 +107,7 @@ const METRICS_REGISTRY = {
     overallSentiment: {
         key: 'overallSentiment',
         label: 'Overall Sentiment',
-        icon: '??',
+        icon: '😊',
         target: { type: 'min', value: 88 },
         unit: '%',
         columnIndex: 11,
@@ -118,7 +118,7 @@ const METRICS_REGISTRY = {
     positiveWord: {
         key: 'positiveWord',
         label: 'Positive Word',
-        icon: '??',
+        icon: '👍',
         target: { type: 'min', value: 86 },
         unit: '%',
         columnIndex: 10,
@@ -129,7 +129,7 @@ const METRICS_REGISTRY = {
     negativeWord: {
         key: 'negativeWord',
         label: 'Avoid Negative Word',
-        icon: '??',
+        icon: '🚫',
         target: { type: 'min', value: 83 },
         unit: '%',
         columnIndex: 9,
@@ -140,7 +140,7 @@ const METRICS_REGISTRY = {
     managingEmotions: {
         key: 'managingEmotions',
         label: 'Managing Emotions',
-        icon: '??',
+        icon: '❤️',
         target: { type: 'min', value: 95 },
         unit: '%',
         columnIndex: 8,
@@ -151,7 +151,7 @@ const METRICS_REGISTRY = {
     aht: {
         key: 'aht',
         label: 'Average Handle Time',
-        icon: '??',
+        icon: '⏱️',
         target: { type: 'max', value: 440 },
         unit: 'sec',
         columnIndex: 3,
@@ -162,7 +162,7 @@ const METRICS_REGISTRY = {
     acw: {
         key: 'acw',
         label: 'After Call Work',
-        icon: '??',
+        icon: '📋',
         target: { type: 'max', value: 60 },
         unit: 'sec',
         columnIndex: 6,
@@ -173,7 +173,7 @@ const METRICS_REGISTRY = {
     holdTime: {
         key: 'holdTime',
         label: 'Hold Time',
-        icon: '??',
+        icon: '☎️',
         target: { type: 'max', value: 30 },
         unit: 'sec',
         columnIndex: 5,
@@ -184,7 +184,7 @@ const METRICS_REGISTRY = {
     reliability: {
         key: 'reliability',
         label: 'Reliability',
-        icon: '?',
+        icon: '🛡️',
         target: { type: 'max', value: 16 },
         unit: '%',
         columnIndex: 21,
@@ -1172,10 +1172,10 @@ function copyToClipboard() {
     const text = emailOutput.innerText;
     
     navigator.clipboard.writeText(text).then(() => {
-        showToast('? Email copied to clipboard!');
+        showToast('✅ Email copied to clipboard!');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        showToast('? Failed to copy to clipboard');
+        showToast('❌ Failed to copy to clipboard');
     });
 }
 
@@ -1513,7 +1513,7 @@ function initializeEventHandlers() {
                 
                 saveWeeklyData();
                 
-                showToast('? Data imported successfully!');
+                showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
             } catch (error) {
@@ -1544,7 +1544,7 @@ function initializeEventHandlers() {
         saveWeeklyData();
         
         populateDeleteWeekDropdown();
-        showToast('? Week deleted successfully');
+        showToast('✅ Week deleted successfully');
         
         // Clear coaching form if needed
         document.getElementById('employeeSelect').value = '';
@@ -1662,7 +1662,7 @@ function initializeKeyboardShortcuts() {
             if (employeeSelect && employeeSelect.value) {
                 employeeSelect.value = '';
                 employeeSelect.dispatchEvent(new Event('change'));
-                showToast('?? Form cleared');
+                showToast('🧹 Form cleared');
             }
         }
     });
@@ -1793,7 +1793,7 @@ async function renderTipsManagement() {
         tips[metricKey].push(initialTip);
         saveUserTips(tips);
         
-        showToast('? Metric created successfully!');
+        showToast('✅ Metric created successfully!');
         
         // Switch back to manage mode and re-render
         switchToManageMode();
@@ -1889,7 +1889,7 @@ window.addTip = function(metricKey) {
     saveUserTips(userTips);
     
     textarea.value = '';
-    showToast('? Tip added successfully!');
+    showToast('✅ Tip added successfully!');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -1914,7 +1914,7 @@ window.updateTip = function(metricKey, index) {
         userTips[metricKey][index] = updatedTip;
         saveUserTips(userTips);
         
-        showToast('? Tip updated successfully!');
+        showToast('✅ Tip updated successfully!');
         
         // Re-trigger the dropdown to refresh the display
         const selector = document.getElementById('metricSelector');
@@ -1943,7 +1943,7 @@ window.updateServerTip = function(metricKey, index) {
     modifiedServerTips[metricKey][index] = updatedTip;
     localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
     
-    showToast('? Server tip updated!');
+    showToast('✅ Server tip updated!');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -1966,7 +1966,7 @@ window.deleteTip = function(metricKey, index) {
         saveUserTips(userTips);
     }
     
-    showToast('? Tip deleted');
+    showToast('🗑️ Tip deleted');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -2086,7 +2086,7 @@ function renderEmployeeHistory() {
                     
                     // Only allow selection if data exists for this timeframe
                     if (!hasDataForTimeframe(employeeData, timeframe)) {
-                        showToast(`? No data available for ${timeframe} view. Need ${timeframe === 'month' ? '4 weeks' : timeframe === 'quarter' ? '13 weeks' : '1 week'}.`);
+                        showToast(`\u26a0\ufe0f No data available for ${timeframe} view. Need ${timeframe === 'month' ? '4 weeks' : timeframe === 'quarter' ? '13 weeks' : '1 week'}.`);
                         return;
                     }
                     
@@ -2568,7 +2568,7 @@ function exportToExcel() {
         
         // Save file
         XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-        showToast('? Data exported to Excel!');
+showToast('✅ Data exported to Excel!');
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
@@ -2720,7 +2720,7 @@ Return ONLY the completed email — ready to send.`;
         // Scroll to paste section
         document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
-        showToast('? Prompt copied! Paste into Copilot, then paste the result back here.');
+        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
         alert('? Failed to copy prompt to clipboard. Please try again.');
@@ -2770,13 +2770,13 @@ function generateOutlookEmail() {
     // Open Outlook
     window.location.href = mailtoLink;
     
-    showToast('?? Opening Outlook draft...');
+    showToast('📄 Opening Outlook draft...');
     
     // Clear the form after a delay
     setTimeout(() => {
         document.getElementById('copilotOutputText').value = '';
         document.getElementById('copilotOutputSection').style.display = 'none';
-        showToast('? Coaching session saved to history!');
+        showToast('✅ Coaching session saved to history!');
     }, 2000);
 }
 
