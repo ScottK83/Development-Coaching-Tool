@@ -2679,7 +2679,11 @@ async function generateCopilotPrompt() {
     // Special note for reliability issues (unplanned absences)
     const reliabilityMetric = needsCoaching.find(item => item.includes('Reliability'));
     if (reliabilityMetric) {
-        prompt += `*Note: Looks like there are some unplanned hours that weren't marked as sick time. Let me know if we need to adjust anything or if there's context I'm missing.*\n\n`;
+        // Extract the hours value from the reliability metric string
+        const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
+        const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
+        
+        prompt += `*Note: You have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned against your reliability. These weren't marked as sick time. If you feel this is an error, please let me know so I can look into it.*\n\n`;
     }
     
     // Add custom notes if provided
@@ -2688,6 +2692,9 @@ async function generateCopilotPrompt() {
     }
     
     prompt += randomClosing;
+    
+    // Add Copilot instruction to paraphrase tips and enhance celebration
+    prompt += `\n\n---\n\n*Copilot: Please reword the tips above naturally so they sound fresh and conversational, not repetitive or scripted. Keep the same meaning but vary the phrasing. Make sure to highly celebrate the wins and maintain an encouraging, casual supervisor tone. Keep the structure similar with bullet points showing actual metrics and goals.*`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
