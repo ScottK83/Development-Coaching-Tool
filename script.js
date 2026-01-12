@@ -36,6 +36,7 @@
 // GLOBAL STATE
 // ============================================
 let weeklyData = {};
+let coachingLogYTD = [];
 
 // ============================================
 // TARGET METRICS
@@ -826,6 +827,29 @@ function saveWeeklyData() {
     } catch (error) {
         console.error('Error saving weekly data:', error);
     }
+}
+
+function loadCoachingLog() {
+    try {
+        const saved = localStorage.getItem('coachingLogYTD');
+        return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+        console.error('Error loading coaching log:', error);
+        return [];
+    }
+}
+
+function saveCoachingLog() {
+    try {
+        localStorage.setItem('coachingLogYTD', JSON.stringify(coachingLogYTD));
+    } catch (error) {
+        console.error('Error saving coaching log:', error);
+    }
+}
+
+function appendCoachingLogEntry(entry) {
+    coachingLogYTD.push({ ...entry, timestamp: Date.now() });
+    saveCoachingLog();
 }
 
 // ============================================
@@ -2150,7 +2174,13 @@ function renderEmployeeCharts(employeeData, employeeName) {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-            legend: { display: false },
+            legend: {
+                display: true,
+                labels: {
+                    // Only show goal labels to avoid duplicating the main dataset title
+                    filter: (item) => item.text && item.text.startsWith('Goal: ')
+                }
+            },
             title: { display: true, font: { size: 14, weight: 'bold' } }
         },
         scales: {
@@ -2166,7 +2196,10 @@ function renderEmployeeCharts(employeeData, employeeName) {
             key: metric.key,
             title: `${metric.icon} ${metric.label}${metric.unit ? (' ' + metric.unit) : ''}`,
             color: metric.chartColor,
-            type: metric.chartType
+            type: metric.chartType,
+            target: metric.target?.value,
+            targetType: metric.target?.type,
+            unit: metric.unit || ''
         }));
     
     // Render each metric chart
@@ -2205,24 +2238,43 @@ function renderEmployeeCharts(employeeData, employeeName) {
             return;
         }
         
+        // Build goal line dataset from registry target
+        const goalValue = metric.target;
+        const goalLabelPrefix = metric.targetType === 'min' ? 'Goal: ≥ ' : 'Goal: ≤ ';
+        const goalLabel = `${goalLabelPrefix}${goalValue}${metric.unit}`;
+
         // Render chart with available data (even if just one point)
         new Chart(ctx, {
             type: metric.type,
             data: {
                 labels: labels,
-                datasets: [{
-                    label: metric.title,
-                    data: data,
-                    borderColor: metric.color,
-                    backgroundColor: metric.type === 'line' 
-                        ? metric.color.replace(')', ', 0.1)').replace('rgb', 'rgba')
-                        : metric.color,
-                    borderWidth: metric.type === 'line' ? 3 : 1,
-                    fill: metric.type === 'line',
-                    tension: metric.type === 'line' ? 0.4 : 0,
-                    pointRadius: metric.type === 'line' ? 5 : 0,
-                    pointHoverRadius: metric.type === 'line' ? 7 : 0
-                }]
+                datasets: [
+                    {
+                        label: metric.title,
+                        data: data,
+                        borderColor: metric.color,
+                        backgroundColor: metric.type === 'line' 
+                            ? metric.color.replace(')', ', 0.1)').replace('rgb', 'rgba')
+                            : metric.color,
+                        borderWidth: metric.type === 'line' ? 3 : 1,
+                        fill: metric.type === 'line',
+                        tension: metric.type === 'line' ? 0.4 : 0,
+                        pointRadius: metric.type === 'line' ? 5 : 0,
+                        pointHoverRadius: metric.type === 'line' ? 7 : 0
+                    },
+                    {
+                        type: 'line',
+                        label: goalLabel,
+                        data: labels.map(() => goalValue),
+                        borderColor: 'rgba(120, 120, 120, 0.7)',
+                        borderWidth: 1.5,
+                        borderDash: [6, 6],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                ]
             },
             options: {
                 ...chartOptions,
@@ -2587,6 +2639,19 @@ Rewrite the content above as a polished coaching email that is ready to send.`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
+        // Append coaching log entry (append-only)
+        const coachedMetrics = needsCoaching.map(item => {
+            const metricMatch = item.match(/^- (.+?):/);
+            const label = metricMatch ? metricMatch[1] : item;
+            return metricKeyMap[label] || label;
+        });
+        appendCoachingLogEntry({
+            employee: fullName || employeeName || firstName,
+            period: periodLabel,
+            metrics: coachedMetrics,
+            source: 'copilot_prompt'
+        });
+
         // Show instruction popup
         alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
         
@@ -2658,6 +2723,7 @@ function initApp() {
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
+    coachingLogYTD = loadCoachingLog();
     
     console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
     
