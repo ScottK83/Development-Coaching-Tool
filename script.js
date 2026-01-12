@@ -2697,6 +2697,8 @@ STYLE REQUIREMENTS:
 • No emojis
 
 FORMAT:
+• Draft this as an EMAIL TO ${firstName}
+• Use their name in the greeting
 • Short intro paragraph
 • Section celebrating strengths (bulleted with metrics)
 • Section coaching opportunities (bulleted with metrics + rewritten tip)
@@ -2704,7 +2706,7 @@ FORMAT:
 • Encouraging close with invitation to respond
 
 OUTPUT:
-Return ONLY the completed email — ready to send.`;
+Return ONLY the completed email — ready to send to ${firstName}.`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
