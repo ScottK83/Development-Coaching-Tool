@@ -1,10 +1,10 @@
-﻿/* ========================================
+/* ========================================
    DEVELOPMENT COACHING TOOL
    Complete rewrite with proper encoding and parsing
    ======================================== */
 
 /* ========================================
-   🧭 DESIGN INTENT & DEVELOPMENT GUIDELINES
+   ?? DESIGN INTENT & DEVELOPMENT GUIDELINES
    ========================================
    
    This application prioritizes deterministic behavior over heuristics.
@@ -14,21 +14,21 @@
    
    CRITICAL RULES FOR MODIFICATIONS:
    
-   ❌ Do not add new metric definitions, targets, labels, or tips 
+   ? Do not add new metric definitions, targets, labels, or tips 
       unless modifying the centralized metric configuration
    
-   ❌ Do not duplicate logic that already exists
+   ? Do not duplicate logic that already exists
       Always search for an existing helper before creating a new one
    
-   ❌ Do not add new parsing logic
+   ? Do not add new parsing logic
       Use existing: parsePercentage, parseSurveyPercentage, 
       parseSeconds, and parseHours functions
    
-   ❌ Do not modify header mapping behavior without explicit instruction
+   ? Do not modify header mapping behavior without explicit instruction
    
-   ✅ If code can be reused, refactor instead of copy/paste
-   ✅ Keep data transformations explicit and traceable
-   ✅ Document any deviation from these guidelines with reasoning
+   ? If code can be reused, refactor instead of copy/paste
+   ? Keep data transformations explicit and traceable
+   ? Document any deviation from these guidelines with reasoning
    
    ======================================== */
 
@@ -37,6 +37,8 @@
 // ============================================
 let weeklyData = {};
 let coachingLogYTD = [];
+let currentPeriodType = 'week';
+let currentPeriod = null;
 
 // ============================================
 // TARGET METRICS
@@ -50,7 +52,7 @@ const METRICS_REGISTRY = {
     scheduleAdherence: {
         key: 'scheduleAdherence',
         label: 'Schedule Adherence',
-        icon: '⏰',
+        icon: '?',
         target: { type: 'min', value: 93 },
         unit: '%',
         columnIndex: 7,
@@ -61,7 +63,7 @@ const METRICS_REGISTRY = {
     cxRepOverall: {
         key: 'cxRepOverall',
         label: 'CX Rep Overall',
-        icon: '⭐',
+        icon: '?',
         target: { type: 'min', value: 80 },
         unit: '%',
         columnIndex: 14,
@@ -72,7 +74,7 @@ const METRICS_REGISTRY = {
     fcr: {
         key: 'fcr',
         label: 'First Call Resolution',
-        icon: '✓',
+        icon: '?',
         target: { type: 'min', value: 70 },
         unit: '%',
         columnIndex: 12,
@@ -83,7 +85,7 @@ const METRICS_REGISTRY = {
     overallExperience: {
         key: 'overallExperience',
         label: 'Overall Experience',
-        icon: '🎯',
+        icon: '??',
         target: { type: 'min', value: 81 },
         unit: '%',
         columnIndex: 16,
@@ -94,7 +96,7 @@ const METRICS_REGISTRY = {
     transfers: {
         key: 'transfers',
         label: 'Transfers',
-        icon: '📞',
+        icon: '??',
         target: { type: 'max', value: 12 },
         unit: '%',
         columnIndex: 2,
@@ -105,7 +107,7 @@ const METRICS_REGISTRY = {
     overallSentiment: {
         key: 'overallSentiment',
         label: 'Overall Sentiment',
-        icon: '😊',
+        icon: '??',
         target: { type: 'min', value: 88 },
         unit: '%',
         columnIndex: 11,
@@ -116,7 +118,7 @@ const METRICS_REGISTRY = {
     positiveWord: {
         key: 'positiveWord',
         label: 'Positive Word',
-        icon: '👍',
+        icon: '??',
         target: { type: 'min', value: 86 },
         unit: '%',
         columnIndex: 10,
@@ -127,7 +129,7 @@ const METRICS_REGISTRY = {
     negativeWord: {
         key: 'negativeWord',
         label: 'Avoid Negative Word',
-        icon: '👎',
+        icon: '??',
         target: { type: 'min', value: 83 },
         unit: '%',
         columnIndex: 9,
@@ -138,7 +140,7 @@ const METRICS_REGISTRY = {
     managingEmotions: {
         key: 'managingEmotions',
         label: 'Managing Emotions',
-        icon: '😌',
+        icon: '??',
         target: { type: 'min', value: 95 },
         unit: '%',
         columnIndex: 8,
@@ -149,7 +151,7 @@ const METRICS_REGISTRY = {
     aht: {
         key: 'aht',
         label: 'Average Handle Time',
-        icon: '⏱️',
+        icon: '??',
         target: { type: 'max', value: 440 },
         unit: 'sec',
         columnIndex: 3,
@@ -160,7 +162,7 @@ const METRICS_REGISTRY = {
     acw: {
         key: 'acw',
         label: 'After Call Work',
-        icon: '📝',
+        icon: '??',
         target: { type: 'max', value: 60 },
         unit: 'sec',
         columnIndex: 6,
@@ -171,7 +173,7 @@ const METRICS_REGISTRY = {
     holdTime: {
         key: 'holdTime',
         label: 'Hold Time',
-        icon: '⏸️',
+        icon: '??',
         target: { type: 'max', value: 30 },
         unit: 'sec',
         columnIndex: 5,
@@ -182,7 +184,7 @@ const METRICS_REGISTRY = {
     reliability: {
         key: 'reliability',
         label: 'Reliability',
-        icon: '✅',
+        icon: '?',
         target: { type: 'max', value: 16 },
         unit: '%',
         columnIndex: 21,
@@ -409,7 +411,7 @@ function parsePercentage(value) {
     // If value > 100, something is wrong - likely wrong column
     // This catches the 424% transfers bug
     if (parsed > 100) {
-        console.warn(`⚠️ Unexpected percentage value: ${parsed}. Treating as 0.`);
+        console.warn(`?? Unexpected percentage value: ${parsed}. Treating as 0.`);
         console.trace('Called from:');
         return 0;
     }
@@ -445,7 +447,7 @@ function parseSurveyPercentage(value) {
     
     // If value > 100, something is wrong
     if (parsed > 100) {
-        console.warn(`⚠️ Unexpected survey percentage: ${parsed}. Treating as empty.`);
+        console.warn(`?? Unexpected survey percentage: ${parsed}. Treating as empty.`);
         return '';
     }
     
@@ -528,7 +530,7 @@ const CANONICAL_SCHEMA = {
     TOTAL_CALLS: 'total_calls_answered'
 };
 
-// Column mapping: PowerBI column position → canonical schema
+// Column mapping: PowerBI column position ? canonical schema
 // Using positional indexing (column 0 = Name, column 1 = TotalCalls, etc.)
 const COLUMN_MAPPING = {
     0: CANONICAL_SCHEMA.EMPLOYEE_NAME,
@@ -563,7 +565,7 @@ function mapHeadersToSchema(headers) {
     }
     
     const mapping = {};
-    console.log('✅ Detected 22 columns - using positional mapping');
+    console.log('? Detected 22 columns - using positional mapping');
     
     // Map by position
     for (let i = 0; i < 22; i++) {
@@ -572,7 +574,7 @@ function mapHeadersToSchema(headers) {
         }
     }
     
-    console.log('📋 Column Mapping:');
+    console.log('?? Column Mapping:');
     for (let i = 0; i < 22; i++) {
         console.log(`  [${i}] ${headers[i]}`);
     }
@@ -591,7 +593,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    console.log('📋 Using Smart PowerBI Parser');
+    console.log('?? Using Smart PowerBI Parser');
     
     // Skip the header line - we don't need to parse it since we use positional logic
     // We just validate that the first row looks like a header
@@ -599,10 +601,10 @@ function parsePastedData(pastedText, startDate, endDate) {
     const hasNameHeader = headerLine.toLowerCase().includes('name');
     
     if (!hasNameHeader) {
-        throw new Error('❌ Header row not found! Make sure to include the header row at the top of your pasted data.');
+        throw new Error('? Header row not found! Make sure to include the header row at the top of your pasted data.');
     }
     
-    console.log('✅ Header detected, parsing data rows...');
+    console.log('? Header detected, parsing data rows...');
     
     // Parse employee data
     const employees = [];
@@ -618,7 +620,7 @@ function parsePastedData(pastedText, startDate, endDate) {
             const parsed = parsePowerBIRow(rawRow);
             cells = parsed;
         } catch (error) {
-            console.warn(`⚠️ Skipping row ${i}: ${error.message}`);
+            console.warn(`?? Skipping row ${i}: ${error.message}`);
             continue;
         }
         
@@ -640,7 +642,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         const firstName = nameParts ? nameParts[2].trim() : '';
         const displayName = `${firstName} ${lastName}`;
         
-        console.log(`✅ ${displayName} - ${cells.length}/22 cells`);
+        console.log(`? ${displayName} - ${cells.length}/22 cells`);
         
         // Direct positional access using COLUMN_MAPPING
         const getCell = (colIndex) => {
@@ -682,12 +684,12 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         // Data integrity check: surveyTotal cannot exceed totalCalls
         if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
-            console.warn(`⚠️ DATA INTEGRITY: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Invalidating totalCalls.`);
+            console.warn(`?? DATA INTEGRITY: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Invalidating totalCalls.`);
             employeeData.totalCalls = 0;
         }
         
         if (i <= 3) {
-            console.log(`\n✅ ${displayName}:`);
+            console.log(`\n? ${displayName}:`);
             console.log('  Transfers:', employeeData.transfers + '%');
             console.log('  Adherence:', employeeData.scheduleAdherence + '%');
             console.log('  TotalCalls:', totalCalls);
@@ -697,7 +699,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         employees.push(employeeData);
     }
     
-    console.log(`✅ Parsed ${employees.length} employees`);
+    console.log(`? Parsed ${employees.length} employees`);
     
     return employees;
 }
@@ -848,8 +850,78 @@ function saveCoachingLog() {
 }
 
 function appendCoachingLogEntry(entry) {
-    coachingLogYTD.push({ ...entry, timestamp: Date.now() });
+    const generatedAt = entry.generatedAt || new Date().toISOString();
+    coachingLogYTD.push({ ...entry, generatedAt, timestamp: Date.now() });
     saveCoachingLog();
+}
+
+function getActivePeriodContext() {
+    const metadata = currentPeriod && weeklyData[currentPeriod]?.metadata ? weeklyData[currentPeriod].metadata : null;
+    return {
+        periodLabel: metadata?.label || 'this period',
+        weekEnding: metadata?.endDate || metadata?.label || 'unspecified'
+    };
+}
+
+function evaluateMetricsForCoaching(employeeData) {
+    if (!employeeData) {
+        return { celebrate: [], needsCoaching: [], coachedMetricKeys: [] };
+    }
+    const promptUnit = {
+        scheduleAdherence: '%',
+        cxRepOverall: '%',
+        fcr: '%',
+        overallExperience: '%',
+        transfers: '%',
+        overallSentiment: '%',
+        positiveWord: '%',
+        negativeWord: '%',
+        managingEmotions: '%',
+        aht: ' seconds',
+        acw: ' seconds',
+        holdTime: ' seconds',
+        reliability: ' hours missed'
+    };
+    const celebrate = [];
+    const needsCoaching = [];
+    const coachedMetricKeys = [];
+
+    Object.keys(promptUnit).forEach(key => {
+        const metricDef = METRICS_REGISTRY[key];
+        if (!metricDef) return;
+        const rawValue = employeeData[key];
+        if (rawValue === '' || rawValue === null || rawValue === undefined) return;
+        const val = parseFloat(rawValue);
+        if (isNaN(val)) return;
+
+        const meetsTarget = metricDef.target.type === 'min' ? val >= metricDef.target.value : val <= metricDef.target.value;
+        const unit = promptUnit[key] || '';
+        const displayValue = `${val}${unit}`;
+        const targetDisplay = `${metricDef.target.value}${unit}`;
+
+        if (meetsTarget) {
+            celebrate.push(`- ${metricDef.label}: ${displayValue} (Target: ${targetDisplay})`);
+        } else {
+            const gap = metricDef.target.type === 'min'
+                ? `${(metricDef.target.value - val).toFixed(1)}${unit} below target`
+                : `${(val - metricDef.target.value).toFixed(1)}${unit} above target`;
+            needsCoaching.push(`- ${metricDef.label}: ${displayValue} (Target: ${targetDisplay}, ${gap})`);
+            coachedMetricKeys.push(key);
+        }
+    });
+
+    return { celebrate, needsCoaching, coachedMetricKeys };
+}
+
+function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted }) {
+    if (!employeeId) return;
+    appendCoachingLogEntry({
+        employeeId,
+        weekEnding,
+        metricsCoached: metricsCoached || [],
+        aiAssisted: !!aiAssisted,
+        generatedAt: new Date().toISOString()
+    });
 }
 
 // ============================================
@@ -1100,10 +1172,10 @@ function copyToClipboard() {
     const text = emailOutput.innerText;
     
     navigator.clipboard.writeText(text).then(() => {
-        showToast('✅ Email copied to clipboard!');
+        showToast('? Email copied to clipboard!');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        showToast('❌ Failed to copy to clipboard');
+        showToast('? Failed to copy to clipboard');
     });
 }
 
@@ -1172,12 +1244,12 @@ function initializeEventHandlers() {
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
         
         if (!startDate || !endDate) {
-            alert('❌ Please select both start and end dates');
+            alert('? Please select both start and end dates');
             return;
         }
         
         if (!pastedData) {
-            alert('❌ Please paste data first');
+            alert('? Please paste data first');
             return;
         }
         
@@ -1185,7 +1257,7 @@ function initializeEventHandlers() {
             const employees = parsePastedData(pastedData, startDate, endDate);
             
             if (employees.length === 0) {
-                alert('❌ No valid employee data found');
+                alert('? No valid employee data found');
                 return;
             }
             
@@ -1264,11 +1336,11 @@ function initializeEventHandlers() {
                 }
             }
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
+            alert(`? Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
-            alert(`❌ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+            alert(`? Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
         }
     });
     
@@ -1324,7 +1396,7 @@ function initializeEventHandlers() {
         const employee = getEmployeeDataForPeriod(selectedName);
         
         if (!employee) {
-            alert('❌ Error loading employee data');
+            alert('? Error loading employee data');
             return;
         }
         
@@ -1441,12 +1513,12 @@ function initializeEventHandlers() {
                 
                 saveWeeklyData();
                 
-                showToast('✅ Data imported successfully!');
+                showToast('? Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
-                alert('❌ Error importing data: ' + error.message);
+                alert('? Error importing data: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -1458,7 +1530,7 @@ function initializeEventHandlers() {
         const selectedWeek = weekSelect.value;
         
         if (!selectedWeek) {
-            alert('⚠️ Please select a week to delete');
+            alert('?? Please select a week to delete');
             return;
         }
         
@@ -1472,7 +1544,7 @@ function initializeEventHandlers() {
         saveWeeklyData();
         
         populateDeleteWeekDropdown();
-        showToast('✅ Week deleted successfully');
+        showToast('? Week deleted successfully');
         
         // Clear coaching form if needed
         document.getElementById('employeeSelect').value = '';
@@ -1487,19 +1559,19 @@ function initializeEventHandlers() {
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
-            alert('ℹ️ No data to delete');
+            alert('?? No data to delete');
             return;
         }
         
-        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
-            `• ${weekCount} week(s) of employee data\n\n` +
+        const message = `?? WARNING: This will permanently delete:\n\n` +
+            `� ${weekCount} week(s) of employee data\n\n` +
             `This action CANNOT be undone!\n\n` +
             `Type "DELETE" to confirm:`;
         
         const confirmation = prompt(message);
         
         if (confirmation !== 'DELETE') {
-            alert('❌ Deletion cancelled');
+            alert('? Deletion cancelled');
             return;
         }
         
@@ -1516,7 +1588,7 @@ function initializeEventHandlers() {
             if (el) el.style.display = 'none';
         });
         
-        alert('✅ All data has been deleted');
+        alert('? All data has been deleted');
     });
     
     // Populate delete week dropdown on load
@@ -1590,7 +1662,7 @@ function initializeKeyboardShortcuts() {
             if (employeeSelect && employeeSelect.value) {
                 employeeSelect.value = '';
                 employeeSelect.dispatchEvent(new Event('change'));
-                showToast('🔄 Form cleared');
+                showToast('?? Form cleared');
             }
         }
     });
@@ -1639,7 +1711,7 @@ async function renderTipsManagement() {
     // Create New Metric section (hidden by default)
     html += '<div id="createMetricSection" style="display: none; margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<h3 style="color: #2196F3; margin: 0;">➕ Create New Metric</h3>';
+    html += '<h3 style="color: #2196F3; margin: 0;">? Create New Metric</h3>';
     html += '<button id="backToManageBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Back</button>';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
@@ -1691,12 +1763,12 @@ async function renderTipsManagement() {
         const initialTip = tipInput.value.trim();
         
         if (!metricName) {
-            alert('❌ Please enter a metric name');
+            alert('? Please enter a metric name');
             return;
         }
         
         if (!initialTip) {
-            alert('❌ Please enter at least one tip');
+            alert('? Please enter at least one tip');
             return;
         }
         
@@ -1704,7 +1776,7 @@ async function renderTipsManagement() {
         
         // Check for duplicates
         if (metricNames[metricKey]) {
-            alert('❌ A metric with this name already exists');
+            alert('? A metric with this name already exists');
             return;
         }
         
@@ -1721,7 +1793,7 @@ async function renderTipsManagement() {
         tips[metricKey].push(initialTip);
         saveUserTips(tips);
         
-        showToast('✅ Metric created successfully!');
+        showToast('? Metric created successfully!');
         
         // Switch back to manage mode and re-render
         switchToManageMode();
@@ -1754,13 +1826,13 @@ async function renderTipsManagement() {
         
         // Server tips
         if (serverTipsForMetric.length > 0) {
-            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📚 Server Tips (from tips.csv)</h4>';
+            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">?? Server Tips (from tips.csv)</h4>';
             serverTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
                     <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editServerTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
-                            <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                            <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
                         </div>
                     </div>
                 `;
@@ -1771,7 +1843,7 @@ async function renderTipsManagement() {
         }
         
         // Custom tips
-        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">✏️ Your Custom Tips</h4>';
+        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">?? Your Custom Tips</h4>';
         if (userTipsForMetric.length > 0) {
             userTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
@@ -1779,8 +1851,8 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
+                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">??? Delete</button>
                             </div>
                         </div>
                     </div>
@@ -1792,7 +1864,7 @@ async function renderTipsManagement() {
         tipsHtml += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
                 <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">? Add Custom Tip</button>
             </div>
         `;
         tipsHtml += '</div>';
@@ -1805,7 +1877,7 @@ window.addTip = function(metricKey) {
     const tip = textarea.value.trim();
     
     if (!tip) {
-        alert('❌ Please enter a tip first');
+        alert('? Please enter a tip first');
         return;
     }
     
@@ -1817,7 +1889,7 @@ window.addTip = function(metricKey) {
     saveUserTips(userTips);
     
     textarea.value = '';
-    showToast('✅ Tip added successfully!');
+    showToast('? Tip added successfully!');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -1833,7 +1905,7 @@ window.updateTip = function(metricKey, index) {
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('❌ Tip cannot be empty');
+        alert('? Tip cannot be empty');
         return;
     }
     
@@ -1842,7 +1914,7 @@ window.updateTip = function(metricKey, index) {
         userTips[metricKey][index] = updatedTip;
         saveUserTips(userTips);
         
-        showToast('✅ Tip updated successfully!');
+        showToast('? Tip updated successfully!');
         
         // Re-trigger the dropdown to refresh the display
         const selector = document.getElementById('metricSelector');
@@ -1857,7 +1929,7 @@ window.updateServerTip = function(metricKey, index) {
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('❌ Tip cannot be empty');
+        alert('? Tip cannot be empty');
         return;
     }
     
@@ -1871,7 +1943,7 @@ window.updateServerTip = function(metricKey, index) {
     modifiedServerTips[metricKey][index] = updatedTip;
     localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
     
-    showToast('✅ Server tip updated!');
+    showToast('? Server tip updated!');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -1894,7 +1966,7 @@ window.deleteTip = function(metricKey, index) {
         saveUserTips(userTips);
     }
     
-    showToast('✅ Tip deleted');
+    showToast('? Tip deleted');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -1908,6 +1980,44 @@ window.deleteTip = function(metricKey, index) {
 // ============================================
 // EMPLOYEE HISTORY UI
 // ============================================
+
+// Chart.js value label plugin (inline, no external deps)
+const valueLabelPlugin = {
+    id: 'valueLabelPlugin',
+    afterDatasetsDraw(chart) {
+        const { ctx, scales } = chart;
+        const fontSize = 10;
+        ctx.save();
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.fillStyle = '#444';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+            if (dataset.skipValueLabel) return;
+            const meta = chart.getDatasetMeta(datasetIndex);
+            meta.data.forEach((element, index) => {
+                const value = dataset.data[index];
+                if (value === null || value === undefined || isNaN(value)) return;
+
+                const unit = dataset.valueUnit || '';
+                const formatted = `${value}${unit}`;
+                const position = element.tooltipPosition();
+                // Nudge labels slightly above the element for readability
+                const offsetY = dataset.type === 'bar' ? 6 : 8;
+                const y = position.y - offsetY;
+                // Keep labels inside chart area when near top
+                const minY = scales.y?.top || 0;
+                const finalY = Math.max(y, minY + fontSize + 2);
+                ctx.fillText(formatted, position.x, finalY);
+            });
+        });
+        ctx.restore();
+    }
+};
+if (typeof Chart !== 'undefined' && Chart.register) {
+    Chart.register(valueLabelPlugin);
+}
 
 function renderEmployeeHistory() {
     const container = document.getElementById('historyContainer');
@@ -1976,7 +2086,7 @@ function renderEmployeeHistory() {
                     
                     // Only allow selection if data exists for this timeframe
                     if (!hasDataForTimeframe(employeeData, timeframe)) {
-                        showToast(`❌ No data available for ${timeframe} view. Need ${timeframe === 'month' ? '4 weeks' : timeframe === 'quarter' ? '13 weeks' : '1 week'}.`);
+                        showToast(`? No data available for ${timeframe} view. Need ${timeframe === 'month' ? '4 weeks' : timeframe === 'quarter' ? '13 weeks' : '1 week'}.`);
                         return;
                     }
                     
@@ -2085,7 +2195,7 @@ function handleEmployeeHistorySelection(e) {
     // Render underperforming snapshot
     if (underperforming.length > 0) {
         let snapshotHtml = '<div style="margin-bottom: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 8px;">';
-        snapshotHtml += '<h4 style="color: #856404; margin-top: 0;">⚠️ Metrics Below Target</h4>';
+        snapshotHtml += '<h4 style="color: #856404; margin-top: 0;">?? Metrics Below Target</h4>';
         snapshotHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">';
         
         underperforming.forEach(item => {
@@ -2107,19 +2217,49 @@ function handleEmployeeHistorySelection(e) {
         snapshotContainer.innerHTML = snapshotHtml;
         snapshotContainer.style.display = 'block';
     } else {
-        snapshotContainer.innerHTML = '<div style="margin-bottom: 30px; padding: 20px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 8px;"><h4 style="color: #155724; margin-top: 0;">✅ All Metrics Meeting Target</h4></div>';
+        snapshotContainer.innerHTML = '<div style="margin-bottom: 30px; padding: 20px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 8px;"><h4 style="color: #155724; margin-top: 0;">? All Metrics Meeting Target</h4></div>';
         snapshotContainer.style.display = 'block';
     }
+
+    // Coaching history (persistent; context only)
+    const coachingEvents = (coachingLogYTD || []).filter(evt => evt.employeeId === employeeName);
+    coachingEvents.sort((a, b) => {
+        const dateA = new Date(a.generatedAt || a.timestamp || 0).getTime();
+        const dateB = new Date(b.generatedAt || b.timestamp || 0).getTime();
+        return dateB - dateA;
+    });
+    let coachingHistoryHtml = '<div style="margin-bottom: 25px; padding: 20px; background: #f5f7fb; border-radius: 8px; border: 1px solid #e0e7ff;">';
+    coachingHistoryHtml += '<h4 style="margin-top: 0; color: #3f51b5;">?? Coaching History</h4>';
+    if (coachingEvents.length === 0) {
+        coachingHistoryHtml += '<div style="color: #666; font-style: italic;">No coaching sessions logged yet.</div>';
+    } else {
+        coachingEvents.forEach(evt => {
+            const eventDate = evt.generatedAt ? new Date(evt.generatedAt).toLocaleString() : 'Unknown date';
+            const metrics = (evt.metricsCoached || []).map(key => METRICS_REGISTRY[key]?.label || key).join(', ') || 'None recorded';
+            const weekEnding = evt.weekEnding || 'unspecified period';
+            const aiFlag = evt.aiAssisted ? 'AI-assisted' : 'Manual';
+            coachingHistoryHtml += `
+                <div style="padding: 12px 0; border-bottom: 1px solid #e0e7ff;">
+                    <div style="font-weight: bold; color: #3f51b5;">${eventDate}</div>
+                    <div style="font-size: 0.95em; color: #333;">Week ending: ${escapeHtml(weekEnding)}</div>
+                    <div style="font-size: 0.95em; color: #333;">Metrics coached: ${escapeHtml(metrics)}</div>
+                    <div style="font-size: 0.9em; color: #666;">${aiFlag}</div>
+                </div>
+            `;
+        });
+    }
+    coachingHistoryHtml += '</div>';
     
     // Build HTML for trends (always show charts even with one data point)
     let html = `<div style="margin-bottom: 30px;">`;
     html += `<h3 style="color: #2196F3; border-bottom: 3px solid #2196F3; padding-bottom: 10px;">${escapeHtml(employeeName)}</h3>`;
+    html += coachingHistoryHtml;
     
     // Summary cards
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin: 20px 0;">';
     html += `
         <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
-            <div style="font-size: 2em;">📊</div>
+            <div style="font-size: 2em;">??</div>
             <div style="font-size: 1.6em; font-weight: bold; margin: 8px 0;">${employeeData.length}</div>
             <div style="font-size: 0.9em; opacity: 0.9;">Periods of Data</div>
         </div>
@@ -2128,7 +2268,7 @@ function handleEmployeeHistorySelection(e) {
     
     // Trend charts - ALWAYS RENDER even with 1 data point
     html += '<div style="margin: 30px 0;">';
-    html += '<h4 style="color: #2196F3; margin-bottom: 20px;">📈 Performance Trends (All Historical Data)</h4>';
+    html += '<h4 style="color: #2196F3; margin-bottom: 20px;">?? Performance Trends (All Historical Data)</h4>';
     
     // Build chart containers from METRICS_REGISTRY (only metrics with chart types)
     const chartsFromRegistry = Object.values(METRICS_REGISTRY)
@@ -2228,7 +2368,7 @@ function renderEmployeeCharts(employeeData, employeeName) {
                 container.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: #f5f5f5; border-radius: 8px;">
                         <div style="text-align: center; color: #999;">
-                            <div style="font-size: 2em; margin-bottom: 10px;">⚪</div>
+                            <div style="font-size: 2em; margin-bottom: 10px;">?</div>
                             <div style="font-weight: bold; margin-bottom: 5px;">${metric.title}</div>
                             <div style="font-size: 0.9em;">No data available</div>
                         </div>
@@ -2240,7 +2380,7 @@ function renderEmployeeCharts(employeeData, employeeName) {
         
         // Build goal line dataset from registry target
         const goalValue = metric.target;
-        const goalLabelPrefix = metric.targetType === 'min' ? 'Goal: ≥ ' : 'Goal: ≤ ';
+        const goalLabelPrefix = metric.targetType === 'min' ? 'Goal: = ' : 'Goal: = ';
         const goalLabel = `${goalLabelPrefix}${goalValue}${metric.unit}`;
 
         // Render chart with available data (even if just one point)
@@ -2260,7 +2400,9 @@ function renderEmployeeCharts(employeeData, employeeName) {
                         fill: metric.type === 'line',
                         tension: metric.type === 'line' ? 0.4 : 0,
                         pointRadius: metric.type === 'line' ? 5 : 0,
-                        pointHoverRadius: metric.type === 'line' ? 7 : 0
+                        pointHoverRadius: metric.type === 'line' ? 7 : 0,
+                        valueUnit: metric.unit,
+                        skipValueLabel: false
                     },
                     {
                         type: 'line',
@@ -2272,7 +2414,8 @@ function renderEmployeeCharts(employeeData, employeeName) {
                         pointRadius: 0,
                         pointHoverRadius: 0,
                         fill: false,
-                        tension: 0
+                        tension: 0,
+                        skipValueLabel: true
                     }
                 ]
             },
@@ -2340,11 +2483,11 @@ function renderExecutiveSummary() {
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
     
     const cards = [
-        { label: 'Total Weeks', value: metrics.totalWeeks, icon: '📅' },
-        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
-        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '⏰' },
-        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📞' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
+        { label: 'Total Weeks', value: metrics.totalWeeks, icon: '??' },
+        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '??' },
+        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '?' },
+        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '??' },
+        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '??' }
     ];
     
     cards.forEach(card => {
@@ -2425,11 +2568,11 @@ function exportToExcel() {
         
         // Save file
         XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-        showToast('✅ Data exported to Excel!');
+        showToast('? Data exported to Excel!');
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
-        alert('❌ Error exporting data: ' + error.message);
+        alert('? Error exporting data: ' + error.message);
     }
 }
 
@@ -2440,13 +2583,25 @@ function exportToExcel() {
 async function generateCopilotPrompt() {
     const employeeName = document.getElementById('employeeName').value;
     const employeeSelect = document.getElementById('employeeSelect');
-    const fullName = employeeSelect?.value || employeeName;
-    const firstName = employeeName.split(' ')[0] || employeeName;
+    const selectedEmployeeId = employeeSelect?.value;
+    const firstName = (employeeName || '').split(' ')[0] || employeeName || (selectedEmployeeId ? selectedEmployeeId.split(' ')[0] : '');
     
     if (!firstName) {
-        alert('❌ Please select an employee first');
+        alert('? Please select an employee first');
         return;
     }
+
+    if (!selectedEmployeeId) {
+        alert('? Please select an employee first');
+        return;
+    }
+    const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
+    if (!employeeData) {
+        alert('? Unable to load metrics for this employee. Please reload data.');
+        return;
+    }
+    const { periodLabel } = getActivePeriodContext();
+    const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
     
     // Load tips from CSV
     const allTips = await loadServerTips();
@@ -2468,190 +2623,74 @@ async function generateCopilotPrompt() {
         'Reliability': 'reliability'
     };
     
-    // Get all current metric values with proper target evaluation
-    const metrics = {
-        scheduleAdherence: { value: document.getElementById('scheduleAdherence').value, label: 'Schedule Adherence', target: 93, type: 'min', unit: '%' },
-        cxRepOverall: { value: document.getElementById('cxRepOverall').value, label: 'CX Rep Overall', target: 80, type: 'min', unit: '%' },
-        fcr: { value: document.getElementById('fcr').value, label: 'First Call Resolution', target: 70, type: 'min', unit: '%' },
-        overallExperience: { value: document.getElementById('overallExperience').value, label: 'Overall Experience', target: 81, type: 'min', unit: '%' },
-        transfers: { value: document.getElementById('transfers').value, label: 'Transfers', target: 12, type: 'max', unit: '%' },
-        overallSentiment: { value: document.getElementById('overallSentiment').value, label: 'Overall Sentiment', target: 88, type: 'min', unit: '%' },
-        positiveWord: { value: document.getElementById('positiveWord').value, label: 'Positive Word', target: 86, type: 'min', unit: '%' },
-        negativeWord: { value: document.getElementById('negativeWord').value, label: 'Avoid Negative Word', target: 83, type: 'min', unit: '%' },
-        managingEmotions: { value: document.getElementById('managingEmotions').value, label: 'Managing Emotions', target: 95, type: 'min', unit: '%' },
-        aht: { value: document.getElementById('aht').value, label: 'Avg Handle Time', target: 440, type: 'max', unit: ' seconds' },
-        acw: { value: document.getElementById('acw').value, label: 'After Call Work', target: 60, type: 'max', unit: ' seconds' },
-        holdTime: { value: document.getElementById('holdTime').value, label: 'Hold Time', target: 30, type: 'max', unit: ' seconds' },
-        reliability: { value: document.getElementById('reliability').value, label: 'Reliability', target: 16, type: 'max', unit: ' hours missed' }
-    };
-    
-    // Evaluate metrics: celebrate (green) vs coach (yellow/red)
-    const celebrate = [];
-    const needsCoaching = [];
-    
-    Object.keys(metrics).forEach(key => {
-        const metric = metrics[key];
-        if (metric.value !== '' && metric.value !== null) {
-            const val = parseFloat(metric.value);
-            
-            // CRITICAL: Use >= and <= (not strict < or >) so equal to target = meets target
-            const meetsTarget = metric.type === 'min' ? val >= metric.target : val <= metric.target;
-            
-            const displayValue = `${val}${metric.unit}`;
-            const targetDisplay = `${metric.target}${metric.unit}`;
-            
-            if (meetsTarget) {
-                celebrate.push(`- ${metric.label}: ${displayValue} (Target: ${targetDisplay})`);
-            } else {
-                const gap = metric.type === 'min' 
-                    ? `${(metric.target - val).toFixed(1)}${metric.unit} below target`
-                    : `${(val - metric.target).toFixed(1)}${metric.unit} above target`;
-                needsCoaching.push(`- ${metric.label}: ${displayValue} (Target: ${targetDisplay}, ${gap})`);
-            }
-        }
-    });
-    
-    // Build the Copilot prompt using the new template
-    const periodLabel = currentPeriod && weeklyData[currentPeriod]?.metadata?.label 
-        ? weeklyData[currentPeriod].metadata.label 
-        : 'this period';
-    const periodType = currentPeriod && weeklyData[currentPeriod]?.metadata?.periodType 
-        ? weeklyData[currentPeriod].metadata.periodType 
-        : 'week';
-    
-    // Build tips section with actual tips from CSV
+    // Build coaching message - casual, supportive supervisor tone
     const customNotes = document.getElementById('customNotes')?.value.trim();
-    let tipsSection = '';
+    
+    // Varied opening lines for natural variation
+    const openingVariations = [
+        `Hey, wanted to touch base about ${firstName}'s ${periodLabel} numbers.`,
+        `Quick check-in on ${firstName}'s performance for ${periodLabel}.`,
+        `Reviewing ${firstName}'s metrics from ${periodLabel} - wanted to share some thoughts.`,
+        `Taking a look at ${firstName}'s ${periodLabel} data. Here's what I'm seeing.`,
+        `Caught up with ${firstName}'s numbers for ${periodLabel}. Few things to highlight.`
+    ];
+    
+    const closingVariations = [
+        `Let me know if anything needs adjusting on my end.`,
+        `Happy to chat if you want to discuss any of this.`,
+        `Ping me if you need anything or want to talk through strategies.`,
+        `Let me know your thoughts or if there's anything I should know.`,
+        `Feel free to reach out if you want to brainstorm together.`
+    ];
+    
+    const randomOpening = openingVariations[Math.floor(Math.random() * openingVariations.length)];
+    const randomClosing = closingVariations[Math.floor(Math.random() * closingVariations.length)];
+    
+    let prompt = `${randomOpening}\n\n`;
+    
+    // What's working well
+    if (celebrate.length > 0) {
+        prompt += `**What's going well:**\n${celebrate.join('\n')}\n\n`;
+    }
+    
+    // Areas to focus on
     if (needsCoaching.length > 0) {
-        tipsSection = '\n\nTips by metric:\n';
+        prompt += `**Could use some attention:**\n${needsCoaching.join('\n')}\n\n`;
+        
+        // Add tips with randomization
+        prompt += `**Quick tips:**\n`;
         needsCoaching.forEach(item => {
             const metricMatch = item.match(/^- (.+?):/);
             if (metricMatch) {
                 const metricLabel = metricMatch[1];
                 const metricKey = metricKeyMap[metricLabel];
-                
-                // Get tips for this metric
                 const metricTips = allTips[metricKey] || [];
+                
                 if (metricTips.length > 0) {
-                    // Use first tip (or could randomize)
-                    tipsSection += `- ${metricLabel}: ${metricTips[0]}\n`;
-                } else {
-                    tipsSection += `- ${metricLabel}: Focus on improving this metric consistently.\n`;
+                    // Randomly select a tip
+                    const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
+                    prompt += `- ${metricLabel}: ${randomTip}\n`;
                 }
             }
         });
+        prompt += `\n`;
     }
     
-    // Build canonical Copilot prompt
-    const prompt = `You are helping polish a draft coaching email written by a supervisor.
-Your role is to improve clarity, tone, and flow only.
-
-Do NOT add new information.
-Do NOT change facts or metrics.
-Do NOT provide HR guidance.
-Do NOT make judgments.
-Do NOT mention AI, prompts, tools, or data sources.
-
-Your task is to rewrite the content below into a natural, supportive coaching email.
-
-==================================================
-EMPLOYEE CONTEXT
-==================================================
-
-Employee first name: ${firstName}
-Review timeframe: ${periodLabel}
-
-==================================================
-METRICS PERFORMING WELL
-==================================================
-
-Celebrate ALL metrics that meet or exceed target.
-Include both actual and target values.
-
-${celebrate.length > 0 ? celebrate.join('\n') : 'None'}
-
-==================================================
-METRICS TO FOCUS ON
-==================================================
-
-Highlight ALL metrics below target.
-Include:
-- Actual value
-- Target value
-- Gap from target
-
-${needsCoaching.length > 0 ? needsCoaching.join('\n') : 'None'}
-
-==================================================
-COACHING TIPS
-==================================================
-
-For EACH metric below target:
-- One tip is provided
-- Use ONLY the tip paired with that metric
-- Do NOT reuse tips across metrics
-- Paraphrase naturally
-- Vary sentence structure and phrasing
-- Keep advice practical and achievable
-
-${tipsSection || 'No tips needed - all metrics meeting target'}
-
-==================================================
-WRITING INSTRUCTIONS
-==================================================
-
-Structure the email as follows:
-
-1. Friendly greeting using the employee's first name
-2. Brief acknowledgment of the review timeframe
-3. Section header: "What's Going Well"
-   - Bullet points
-   - Positive, specific, encouraging
-4. Section header: "Opportunities to Focus On"
-   - Bullet points
-   - Fact-based and supportive
-5. Section header: "Tips to Help You Improve"
-   - One bullet per opportunity
-   - Tie each tip clearly to its metric
-6. Encouraging closing that shows confidence in progress
-
-==================================================
-STYLE RULES (STRICT)
-==================================================
-
-- Casual, supportive supervisor tone
-- Sounds human, not HR
-- No urgency
-- No discipline language
-- No em dashes
-- No jargon
-- Vary sentence structure and phrasing
-- Emails should not sound the same even if metrics are identical
-- Bullet points preferred
-- No paragraph longer than 3 lines
-- Under 1000 words
-
-==================================================
-FINAL INSTRUCTION
-==================================================
-
-Rewrite the content above as a polished coaching email that is ready to send.`;
+    // Special note for reliability issues (unplanned absences)
+    const reliabilityMetric = needsCoaching.find(item => item.includes('Reliability'));
+    if (reliabilityMetric) {
+        prompt += `*Note: Looks like there are some unplanned hours that weren't marked as sick time. Let me know if we need to adjust anything or if there's context I'm missing.*\n\n`;
+    }
+    
+    // Add custom notes if provided
+    if (customNotes) {
+        prompt += `**Additional notes:**\n${customNotes}\n\n`;
+    }
+    
+    prompt += randomClosing;
     
     // Copy to clipboard
     navigator.clipboard.writeText(prompt).then(() => {
-        // Append coaching log entry (append-only)
-        const coachedMetrics = needsCoaching.map(item => {
-            const metricMatch = item.match(/^- (.+?):/);
-            const label = metricMatch ? metricMatch[1] : item;
-            return metricKeyMap[label] || label;
-        });
-        appendCoachingLogEntry({
-            employee: fullName || employeeName || firstName,
-            period: periodLabel,
-            metrics: coachedMetrics,
-            source: 'copilot_prompt'
-        });
-
         // Show instruction popup
         alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
         
@@ -2664,10 +2703,10 @@ Rewrite the content above as a polished coaching email that is ready to send.`;
         // Scroll to paste section
         document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
-        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
+        showToast('? Prompt copied! Paste into Copilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('❌ Failed to copy prompt to clipboard. Please try again.');
+        alert('? Failed to copy prompt to clipboard. Please try again.');
     });
 }
 
@@ -2677,16 +2716,16 @@ function generateOutlookEmail() {
     const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
     
     if (!copilotEmail) {
-        alert('❌ Please paste the Copilot-generated email first');
+        alert('? Please paste the Copilot-generated email first');
         return;
     }
     
     if (!fullName) {
-        alert('❌ Employee name not found');
+        alert('? Employee name not found');
         return;
     }
     
-    // Parse name to create email address: "John Doe" → "john.doe@aps.com"
+    // Parse name to create email address: "John Doe" ? "john.doe@aps.com"
     const emailName = fullName.toLowerCase()
         .replace(/[^a-z\s]/g, '') // Remove special chars
         .trim()
@@ -2696,6 +2735,17 @@ function generateOutlookEmail() {
     // Create friendly subject
     const firstName = fullName.split(' ')[0];
     const subject = `Quick Check-In - ${firstName}`;
+
+    // Record coaching event (persistent history; stateless generation)
+    const employeeData = getEmployeeDataForPeriod(fullName);
+    const { coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
+    const { weekEnding } = getActivePeriodContext();
+    recordCoachingEvent({
+        employeeId: fullName,
+        weekEnding,
+        metricsCoached: coachedMetricKeys,
+        aiAssisted: true
+    });
     
     // Encode for mailto
     const mailtoLink = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(copilotEmail)}`;
@@ -2703,13 +2753,13 @@ function generateOutlookEmail() {
     // Open Outlook
     window.location.href = mailtoLink;
     
-    showToast('📧 Opening Outlook draft...');
+    showToast('?? Opening Outlook draft...');
     
     // Clear the form after a delay
     setTimeout(() => {
         document.getElementById('copilotOutputText').value = '';
         document.getElementById('copilotOutputSection').style.display = 'none';
-        showToast('✅ Coaching session saved to history!');
+        showToast('? Coaching session saved to history!');
     }, 2000);
 }
 
@@ -2719,13 +2769,13 @@ function generateOutlookEmail() {
 // ============================================
 
 function initApp() {
-    console.log('🚀 Initializing Development Coaching Tool...');
+    console.log('?? Initializing Development Coaching Tool...');
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     coachingLogYTD = loadCoachingLog();
     
-    console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
+    console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
     
     // Initialize event handlers
     initializeEventHandlers();
@@ -2743,7 +2793,7 @@ function initApp() {
         updatePeriodDropdown();
     }
     
-    console.log('✅ Application initialized successfully!');
+    console.log('? Application initialized successfully!');
 }
 
 // Start the app when DOM is ready
