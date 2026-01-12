@@ -1244,12 +1244,12 @@ function initializeEventHandlers() {
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
         
         if (!startDate || !endDate) {
-            alert('? Please select both start and end dates');
+            alert('⚠️ Please select both start and end dates');
             return;
         }
         
         if (!pastedData) {
-            alert('? Please paste data first');
+            alert('⚠️ Please paste data first');
             return;
         }
         
@@ -1257,7 +1257,7 @@ function initializeEventHandlers() {
             const employees = parsePastedData(pastedData, startDate, endDate);
             
             if (employees.length === 0) {
-                alert('? No valid employee data found');
+                alert('❌ No valid employee data found');
                 return;
             }
             
@@ -1396,7 +1396,7 @@ function initializeEventHandlers() {
         const employee = getEmployeeDataForPeriod(selectedName);
         
         if (!employee) {
-            alert('? Error loading employee data');
+            alert('❌ Error loading employee data');
             return;
         }
         
@@ -1458,14 +1458,26 @@ function initializeEventHandlers() {
     
     // Enable Generate Email button when Copilot output is pasted
     document.getElementById('copilotOutputText')?.addEventListener('input', (e) => {
-        const btn = document.getElementById('generateOutlookEmailBtn');
+        const outlookBtn = document.getElementById('generateOutlookEmailBtn');
+        const verintBtn = document.getElementById('generateVerintSummaryBtn');
         const hasContent = e.target.value.trim().length > 0;
         
-        if (btn) {
-            btn.disabled = !hasContent;
-            btn.style.opacity = hasContent ? '1' : '0.5';
-            btn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+        if (outlookBtn) {
+            outlookBtn.disabled = !hasContent;
+            outlookBtn.style.opacity = hasContent ? '1' : '0.5';
+            outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
         }
+        
+        if (verintBtn) {
+            verintBtn.disabled = !hasContent;
+            verintBtn.style.opacity = hasContent ? '1' : '0.5';
+            verintBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+        }
+    });
+    
+    // Generate Verint Summary Button
+    document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', () => {
+        generateVerintSummary();
     });
     
     // Generate Outlook Email Button
@@ -1518,7 +1530,7 @@ function initializeEventHandlers() {
                 populateDeleteWeekDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
-                alert('? Error importing data: ' + error.message);
+                alert('❌ Error importing data: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -1530,7 +1542,7 @@ function initializeEventHandlers() {
         const selectedWeek = weekSelect.value;
         
         if (!selectedWeek) {
-            alert('?? Please select a week to delete');
+            alert('⚠️ Please select a week to delete');
             return;
         }
         
@@ -1559,19 +1571,19 @@ function initializeEventHandlers() {
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
-            alert('?? No data to delete');
+            alert('ℹ️ No data to delete');
             return;
         }
         
-        const message = `?? WARNING: This will permanently delete:\n\n` +
-            `� ${weekCount} week(s) of employee data\n\n` +
+        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
+            `📊 ${weekCount} week(s) of employee data\n\n` +
             `This action CANNOT be undone!\n\n` +
             `Type "DELETE" to confirm:`;
         
         const confirmation = prompt(message);
         
         if (confirmation !== 'DELETE') {
-            alert('? Deletion cancelled');
+            alert('ℹ️ Deletion cancelled');
             return;
         }
         
@@ -1763,12 +1775,12 @@ async function renderTipsManagement() {
         const initialTip = tipInput.value.trim();
         
         if (!metricName) {
-            alert('? Please enter a metric name');
+            alert('⚠️ Please enter a metric name');
             return;
         }
         
         if (!initialTip) {
-            alert('? Please enter at least one tip');
+            alert('⚠️ Please enter at least one tip');
             return;
         }
         
@@ -1776,7 +1788,7 @@ async function renderTipsManagement() {
         
         // Check for duplicates
         if (metricNames[metricKey]) {
-            alert('? A metric with this name already exists');
+            alert('⚠️ A metric with this name already exists');
             return;
         }
         
@@ -1877,7 +1889,7 @@ window.addTip = function(metricKey) {
     const tip = textarea.value.trim();
     
     if (!tip) {
-        alert('? Please enter a tip first');
+        alert('⚠️ Please enter a tip first');
         return;
     }
     
@@ -2572,7 +2584,7 @@ showToast('✅ Data exported to Excel!');
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
-        alert('? Error exporting data: ' + error.message);
+        alert('❌ Error exporting data: ' + error.message);
     }
 }
 
@@ -2597,7 +2609,7 @@ async function generateCopilotPrompt() {
     }
     const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
     if (!employeeData) {
-        alert('? Unable to load metrics for this employee. Please reload data.');
+        alert('❌ Unable to load metrics for this employee. Please reload data.');
         return;
     }
     const { periodLabel } = getActivePeriodContext();
@@ -2704,7 +2716,33 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('? Failed to copy prompt to clipboard. Please try again.');
+        alert('❌ Failed to copy prompt to clipboard. Please try again.');
+    });
+}
+
+function generateVerintSummary() {
+    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+    
+    if (!copilotEmail) {
+        alert('⚠️ Please paste the Copilot-generated email first');
+        return;
+    }
+    
+    // Create a prompt for Copilot to generate a Verint summary
+    const summaryPrompt = `Based on this coaching email, create a brief Verint coaching summary (2-3 sentences max) that captures the key coaching points. Make it concise and suitable for internal system notes.
+
+Email:
+${copilotEmail}
+
+Verint Summary:`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(summaryPrompt).then(() => {
+        alert('✅ Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
+        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy summary prompt to clipboard. Please try again.');
     });
 }
 
@@ -2714,12 +2752,12 @@ function generateOutlookEmail() {
     const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
     
     if (!copilotEmail) {
-        alert('? Please paste the Copilot-generated email first');
+        alert('⚠️ Please paste the Copilot-generated email first');
         return;
     }
     
     if (!fullName) {
-        alert('? Employee name not found');
+        alert('❌ Employee name not found');
         return;
     }
     
