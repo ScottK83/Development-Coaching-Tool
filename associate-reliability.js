@@ -158,6 +158,9 @@ function loadAllDashboardData() {
     // Update PTOST display
     updatePTOSTSummary(balance);
     
+    // Update PTO display
+    updatePTOSummary();
+    
     // Update reliability display
     updateReliabilitySummary(analysis);
     
@@ -205,6 +208,69 @@ function updatePTOSTSummary(balance) {
             <div class="flag flag-error">
                 <strong>❌ PTOST Exhausted</strong><br>
                 <small>Your PTOST balance is depleted. Additional unplanned absences will be tracked as reliability hours.</small>
+            </div>
+        ` : ''}
+    `;
+}
+
+function updatePTOSummary() {
+    // Get PTO balance from employee schedule (assuming 80 hours/year standard)
+    const schedule = ReliabilityDataService.getEmployeeSchedule(currentEmployee);
+    const initialPTO = schedule?.initialPTO || 80; // Default 80 hours PTO per year
+    
+    // Calculate PTO used from leave entries marked as planned
+    const allEntries = ReliabilityDataService.getAllLeaveEntries();
+    const employeeEntries = allEntries.filter(e => e.employeeName === currentEmployee && !e.isDeleted);
+    
+    const plannedEntries = employeeEntries.filter(e => e.leaveType === 'Planned PTO' || e.isPrePlanned);
+    const ptoUsedMinutes = plannedEntries.reduce((sum, entry) => {
+        return sum + LeaveCalculationService.calculateMinutesMissed(
+            entry.departureTime,
+            entry.scheduledEndTime,
+            entry.lunchDuration || 30
+        );
+    }, 0);
+    
+    const totalMinutes = initialPTO * 60;
+    const remainingMinutes = totalMinutes - ptoUsedMinutes;
+    const percentUsed = totalMinutes > 0 ? Math.round((ptoUsedMinutes / totalMinutes) * 100) : 0;
+    
+    const percentWidth = Math.min(100, percentUsed);
+    const barColor = remainingMinutes <= 0 ? '#f44336' : 
+                    percentUsed >= 90 ? '#ff9800' :
+                    percentUsed >= 75 ? '#ffc107' : '#4CAF50';
+    
+    document.getElementById('ptoSummaryDisplay').innerHTML = `
+        <div class="ptost-bar-container">
+            <div class="ptost-bar" style="width: ${percentWidth}%; background: ${barColor};"></div>
+        </div>
+        
+        <div class="ptost-stats">
+            <div class="ptost-stat">
+                <div class="ptost-stat-label">Annual PTO</div>
+                <div class="ptost-stat-value">${LeaveCalculationService.formatMinutesAsHours(totalMinutes)}</div>
+            </div>
+            <div class="ptost-stat">
+                <div class="ptost-stat-label">Used</div>
+                <div class="ptost-stat-value">${LeaveCalculationService.formatMinutesAsHours(ptoUsedMinutes)}</div>
+            </div>
+            <div class="ptost-stat">
+                <div class="ptost-stat-label">Remaining</div>
+                <div class="ptost-stat-value ${remainingMinutes <= 0 ? 'text-danger' : 'text-success'}">${LeaveCalculationService.formatMinutesAsHours(remainingMinutes)}</div>
+            </div>
+        </div>
+        
+        ${percentUsed >= 75 && remainingMinutes > 0 ? `
+            <div class="flag flag-warning">
+                <strong>⚠️ Low PTO Balance</strong><br>
+                <small>You have used ${percentUsed}% of your annual PTO. Plan accordingly for the rest of the year.</small>
+            </div>
+        ` : ''}
+        
+        ${remainingMinutes <= 0 ? `
+            <div class="flag flag-error">
+                <strong>❌ PTO Exhausted</strong><br>
+                <small>Your PTO balance is depleted. Additional time off may be unpaid or require approval.</small>
             </div>
         ` : ''}
     `;
