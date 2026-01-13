@@ -311,7 +311,7 @@ function updateReliabilitySummary(analysis) {
 }
 
 // ============================================
-// LEAVE HISTORY
+// ATTENDANCE HISTORY
 // ============================================
 function handleHistoryPeriodChange(e) {
     // Update active button
