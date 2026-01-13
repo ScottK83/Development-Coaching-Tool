@@ -98,6 +98,17 @@ function initializeEventListeners() {
     // Manage Data supervisor selection
     document.getElementById('manageDataSupervisor')?.addEventListener('change', handleManageDataSupervisorChange);
     
+    // Manage My Team button
+    document.getElementById('manageTeamBtn')?.addEventListener('click', () => {
+        if (currentSupervisor) {
+            document.getElementById('manageDataSupervisor').value = currentSupervisor;
+            handleManageDataSupervisorChange({ target: { value: currentSupervisor } });
+            showSection('manageDataSection');
+        } else {
+            alert('❌ Please select a supervisor first');
+        }
+    });
+    
     // Team member management
     document.getElementById('addTeamMemberBtn')?.addEventListener('click', handleAddTeamMember);
     document.getElementById('newTeamMemberName')?.addEventListener('keypress', (e) => {
