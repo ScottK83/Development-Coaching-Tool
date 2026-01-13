@@ -304,7 +304,7 @@ function updateReliabilitySummary(analysis) {
             <strong>What does this mean?</strong><br>
             <small style="color: #666; line-height: 1.6;">
                 Reliability hours are time you missed work that was not covered by PTOST and was not pre-planned. 
-                These hours are tracked to help identify attendance patterns.
+                Help you manage your time and PTO accordingly.
             </small>
         </div>
     `;
