@@ -52,6 +52,7 @@ function initializeEventListeners() {
     
     document.getElementById('manageDataBtn').addEventListener('click', () => {
         showSection('manageDataSection');
+        populateManageDataSupervisorSelect();
         renderTeamMembersManagementList();
     });
     
@@ -153,6 +154,39 @@ function handleSupervisorChange(e) {
         document.getElementById('employeeSelectContainer').style.display = 'none';
         currentEmployee = null;
     }
+}
+
+function populateManageDataSupervisorSelect() {
+    const select = document.getElementById('manageDataSupervisor');
+    const teams = ReliabilityDataService.getSupervisorTeams();
+    const supervisors = Object.keys(teams);
+    
+    // Add unique supervisors from employees table
+    const employees = ReliabilityDataService.getAllEmployees();
+    employees.forEach(emp => {
+        if (emp.supervisorName && !supervisors.includes(emp.supervisorName)) {
+            supervisors.push(emp.supervisorName);
+        }
+    });
+    
+    // Add a default supervisor for testing
+    if (supervisors.length === 0) {
+        supervisors.push('Jane Manager');
+    }
+    
+    select.innerHTML = '<option value="">-- Select your name --</option>' +
+        supervisors.sort().map(name => `<option value="${name}">${name}</option>`).join('');
+    
+    // Pre-select if already chosen
+    if (currentSupervisor) {
+        select.value = currentSupervisor;
+    }
+    
+    // Add change handler
+    select.addEventListener('change', (e) => {
+        currentSupervisor = e.target.value;
+        renderTeamMembersManagementList();
+    });
 }
 
 // ============================================
