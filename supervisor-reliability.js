@@ -95,6 +95,9 @@ function initializeEventListeners() {
     document.getElementById('dataFileInput').addEventListener('change', importData);
     document.getElementById('deleteAllDataBtn').addEventListener('click', deleteAllData);
     
+    // Manage Data supervisor selection
+    document.getElementById('manageDataSupervisor')?.addEventListener('change', handleManageDataSupervisorChange);
+    
     // Team member management
     document.getElementById('addTeamMemberBtn')?.addEventListener('click', handleAddTeamMember);
     document.getElementById('newTeamMemberName')?.addEventListener('keypress', (e) => {
@@ -190,12 +193,12 @@ function populateManageDataSupervisorSelect() {
     if (currentSupervisor) {
         select.value = currentSupervisor;
     }
-    
-    // Add change handler
-    select.addEventListener('change', (e) => {
-        currentSupervisor = e.target.value;
-        renderTeamMembersManagementList();
-    });
+}
+
+function handleManageDataSupervisorChange(e) {
+    currentSupervisor = e.target.value;
+    console.log('Supervisor changed to:', currentSupervisor);
+    renderTeamMembersManagementList();
 }
 
 // ============================================
