@@ -1061,7 +1061,7 @@ function renderTeamMembersManagementList() {
     }
     
     container.innerHTML = employees.map(empName => {
-        const employee = ReliabilityDataService.getEmployees().find(e => e.name === empName);
+        const employee = ReliabilityDataService.getAllEmployees().find(e => e.name === empName);
         if (!employee) return '';
         
         const ptostBalance = PTOSTService.getCurrentBalance(empName);
@@ -1099,7 +1099,7 @@ function renderTeamMembersManagementList() {
 }
 
 function editEmployeePTO(employeeName) {
-    const employee = ReliabilityDataService.getEmployees().find(e => e.name === employeeName);
+    const employee = ReliabilityDataService.getAllEmployees().find(e => e.name === employeeName);
     if (!employee) return;
     
     const ptostBalance = PTOSTService.getCurrentBalance(employeeName);
@@ -1142,7 +1142,7 @@ function deleteTeamMember(employeeName) {
     }
     
     // Delete employee and all related data
-    const employees = ReliabilityDataService.getEmployees();
+    const employees = ReliabilityDataService.getAllEmployees();
     const employee = employees.find(e => e.name === employeeName);
     
     if (employee) {
@@ -1197,7 +1197,7 @@ function handleAddTeamMember() {
     }
     
     // Check if employee already exists
-    const existingEmployees = ReliabilityDataService.getEmployees();
+    const existingEmployees = ReliabilityDataService.getAllEmployees();
     if (existingEmployees.find(e => e.name.toLowerCase() === name.toLowerCase())) {
         messageDiv.textContent = `❌ ${name} already exists in the system`;
         messageDiv.style.display = 'block';
