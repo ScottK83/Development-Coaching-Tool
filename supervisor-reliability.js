@@ -1061,7 +1061,7 @@ function renderTeamMembersManagementList() {
     }
     
     container.innerHTML = employees.map(empName => {
-        const employee = ReliabilityDataService.getAllEmployees().find(e => e.name === empName);
+        const employee = ReliabilityDataService.getAllEmployees().find(e => e.fullName === empName);
         if (!employee) return '';
         
         const ptostBalance = PTOSTService.getCurrentBalance(empName);
@@ -1069,14 +1069,14 @@ function renderTeamMembersManagementList() {
         return `
             <div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white;">
                 <div style="flex: 1;">
-                    <strong style="color: #2e7d32; font-size: 1.1em;">${employee.name}</strong>
+                    <strong style="color: #2e7d32; font-size: 1.1em;">${employee.fullName}</strong>
                     <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
                         <span style="margin-right: 15px;">💼 PTOST Balance: ${ptostBalance.remaining}h / ${ptostBalance.total}h</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" class="edit-employee-pto-btn btn-secondary" data-name="${employee.name}" style="background: #2196F3; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">✏️ Edit PTO</button>
-                    <button type="button" class="delete-team-member-btn btn-secondary" data-name="${employee.name}" style="background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
+                    <button type="button" class="edit-employee-pto-btn btn-secondary" data-name="${employee.fullName}" style="background: #2196F3; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">✏️ Edit PTO</button>
+                    <button type="button" class="delete-team-member-btn btn-secondary" data-name="${employee.fullName}" style="background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
                 </div>
             </div>
         `;
@@ -1143,7 +1143,7 @@ function deleteTeamMember(employeeName) {
     
     // Delete employee and all related data
     const employees = ReliabilityDataService.getAllEmployees();
-    const employee = employees.find(e => e.name === employeeName);
+    const employee = employees.find(e => e.fullName === employeeName);
     
     if (employee) {
         // Delete all leave entries
@@ -1198,7 +1198,7 @@ function handleAddTeamMember() {
     
     // Check if employee already exists
     const existingEmployees = ReliabilityDataService.getAllEmployees();
-    if (existingEmployees.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+    if (existingEmployees.find(e => e.fullName.toLowerCase() === name.toLowerCase())) {
         messageDiv.textContent = `❌ ${name} already exists in the system`;
         messageDiv.style.display = 'block';
         messageDiv.style.background = '#f8d7da';
