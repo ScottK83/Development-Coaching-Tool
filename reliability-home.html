@@ -9,14 +9,57 @@
 <body>
     <div class="container">
         <header>
-            <h1>📊 Reliability Tracker</h1>
-            <p class="subtitle">Manage attendance and PTOST usage</p>
+            <h1>🎯 Coaching Tools Suite</h1>
+            <p class="subtitle">Select a tool to get started</p>
         </header>
 
         <main>
-            <section class="intro-section">
-                <h2>Welcome to Reliability Tracker!</h2>
-                <p>Track PTOST usage and analyze attendance patterns. Choose your dashboard below:</p>
+            <section class="navigation-section">
+                <h2>All Tools</h2>
+                <div class="button-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Main Development Tool (Left) -->
+                    <a href="index.html" class="nav-button development-btn">
+                        <div class="button-icon">📈</div>
+                        <div class="button-text">
+                            <h3>Development Coaching Tool</h3>
+                            <p>Performance metrics & coaching emails</p>
+                        </div>
+                    </a>
+
+                    <!-- Reliability Tools Container (Right) -->
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <a href="supervisor-reliability.html" class="nav-button reliability-btn" style="margin: 0;">
+                            <div class="button-icon">📊</div>
+                            <div class="button-text">
+                                <h3>Supervisor Dashboard</h3>
+                                <p>Manage team attendance & PTOST</p>
+                            </div>
+                        </a>
+
+                        <a href="associate-reliability.html" class="nav-button reliability-associate-btn" style="margin: 0;">
+                            <div class="button-icon">📅</div>
+                            <div class="button-text">
+                                <h3>My Reliability & Attendance</h3>
+                                <p>Personal attendance tracking</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="homepage.html" class="nav-button" style="display: inline-block; max-width: 400px; text-decoration: none; background: #6c757d; color: white;">
+                        <div class="button-icon">🏠</div>
+                        <div class="button-text">
+                            <h3>Back to Home</h3>
+                            <p>Return to main menu</p>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <section class="intro-section" style="margin-top: 40px;">
+                <h2>📊 Reliability Tracker</h2>
+                <p>Track PTOST usage and analyze attendance patterns:</p>
                 
                 <div class="tool-info">
                     <div class="tool-card">
@@ -29,7 +72,6 @@
                             <li>Apply PTOST retroactively</li>
                             <li>Track reliability hours</li>
                             <li>Send coaching emails</li>
-                            <li>Generate reports and analytics</li>
                         </ul>
                     </div>
 
@@ -47,42 +89,11 @@
                     </div>
                 </div>
             </section>
-
-            <section class="navigation-section">
-                <h2>Choose Your Dashboard</h2>
-                <div class="button-grid">
-                    <a href="supervisor-reliability.html" class="nav-button reliability-btn">
-                        <div class="button-icon">📊</div>
-                        <div class="button-text">
-                            <h3>Supervisor Dashboard</h3>
-                            <p>Manage team attendance & PTOST</p>
-                        </div>
-                    </a>
-
-                    <a href="associate-reliability.html" class="nav-button reliability-associate-btn">
-                        <div class="button-icon">📅</div>
-                        <div class="button-text">
-                            <h3>My Reliability & Attendance</h3>
-                            <p>Personal attendance tracking</p>
-                        </div>
-                    </a>
-                </div>
-
-                <div style="margin-top: 30px; text-align: center;">
-                    <a href="homepage.html" class="nav-button" style="display: inline-block; max-width: 400px; text-decoration: none;">
-                        <div class="button-icon">🏠</div>
-                        <div class="button-text">
-                            <h3>Back to All Tools</h3>
-                            <p>Return to main homepage</p>
-                        </div>
-                    </a>
-                </div>
-            </section>
         </main>
 
         <footer style="margin-top: 40px; padding: 20px; text-align: center; color: #666; border-top: 2px solid #eee;">
             <p><strong>Key Features:</strong></p>
-            <p>✅ Smart time calculation with lunch deduction | ⏰ 40 hours PTOST per year | 📊 Reliability analysis | 📧 Email logging | 💾 Data backup/restore</p>
+            <p>✅ Smart time calculation | ⏰ 40 hours PTOST per year | 📊 Reliability analysis | 📧 Email logging | 💾 Data backup</p>
         </footer>
     </div>
 </body>
