@@ -100,19 +100,14 @@ function initializeEventListeners() {
     
     // Manage My Team button
     document.getElementById('manageTeamBtn')?.addEventListener('click', () => {
-        console.log('Manage My Team button clicked');
-        
         // Get supervisor from dropdown or use currentSupervisor
         const supervisorName = document.getElementById('supervisorSelect')?.value || currentSupervisor;
-        console.log('Supervisor name:', supervisorName);
-        console.log('currentSupervisor:', currentSupervisor);
         
         if (supervisorName) {
             currentSupervisor = supervisorName;
             document.getElementById('manageDataSupervisor').value = supervisorName;
             handleManageDataSupervisorChange({ target: { value: supervisorName } });
             showSection('manageDataSection');
-            console.log('Navigating to Manage Data section');
         } else {
             alert('❌ Please select a supervisor first');
         }
@@ -217,7 +212,6 @@ function populateManageDataSupervisorSelect() {
 
 function handleManageDataSupervisorChange(e) {
     currentSupervisor = e.target.value;
-    console.log('Supervisor changed to:', currentSupervisor);
     renderTeamMembersManagementList();
 }
 
@@ -1102,7 +1096,7 @@ function renderTeamMembersManagementList() {
 }
 
 function editEmployeePTO(employeeName) {
-    const employee = ReliabilityDataService.getAllEmployees().find(e => e.name === employeeName);
+    const employee = ReliabilityDataService.getAllEmployees().find(e => e.fullName === employeeName);
     if (!employee) return;
     
     const ptostBalance = PTOSTService.getCurrentBalance(employeeName);
@@ -1122,10 +1116,10 @@ function editEmployeePTO(employeeName) {
     const schedule = ReliabilityDataService.getEmployeeSchedule(employeeName);
     if (schedule) {
         schedule.initialPTOST = ptoNumber;
-        ReliabilityDataService.saveEmployeeSchedule(schedule);
+        ReliabilityDataService.saveSchedule(schedule);
     } else {
         // Create new schedule with default values
-        ReliabilityDataService.saveEmployeeSchedule({
+        ReliabilityDataService.saveSchedule({
             employeeName: employeeName,
             shiftStart: '08:00',
             shiftEnd: '17:00',
@@ -1168,15 +1162,9 @@ function deleteTeamMember(employeeName) {
 }
 
 function handleAddTeamMember() {
-    console.log('handleAddTeamMember called');
-    console.log('Current supervisor:', currentSupervisor);
-    
     const nameInput = document.getElementById('newTeamMemberName');
     const ptoInput = document.getElementById('initialPTO');
     const messageDiv = document.getElementById('addTeamMemberMessage');
-    
-    console.log('Name input:', nameInput?.value);
-    console.log('PTO input:', ptoInput?.value);
     
     const name = nameInput.value.trim();
     const initialPTO = parseFloat(ptoInput.value) || 40;
@@ -1225,7 +1213,7 @@ function handleAddTeamMember() {
     ReliabilityDataService.addTeamMember(currentSupervisor, name);
     
     // Create schedule with initial PTOST
-    ReliabilityDataService.saveEmployeeSchedule({
+    ReliabilityDataService.saveSchedule({
         employeeName: name,
         shiftStart: '08:00',
         shiftEnd: '17:00',
