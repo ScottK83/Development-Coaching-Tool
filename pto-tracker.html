@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTO Reliability Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pto-tracker-styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 PTO Reliability Tracker</h1>
+            <p class="subtitle">Track associate PTO and analyze reliability patterns</p>
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <a href="homepage.html" class="btn-secondary" style="text-decoration: none; display: inline-block;">🏠 Home</a>
+                <button type="button" id="addPTOBtn" class="btn-secondary" style="background: #2196F3; color: white;">➕ Add PTO Entry</button>
+                <button type="button" id="viewReportsBtn" class="btn-secondary" style="background: #4CAF50; color: white;">📊 View Reports</button>
+                <button type="button" id="exportPTOBtn" class="btn-secondary" style="background: #FF9800; color: white;">📥 Export Data</button>
+                <button type="button" id="managePTODataBtn" class="btn-secondary" style="background: #f44336; color: white;">🗄️ Manage Data</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Add PTO Entry Section -->
+            <section id="addPTOSection" class="form-section">
+                <h2>➕ Add PTO Entry</h2>
+                <form id="ptoEntryForm">
+                    <div class="form-group">
+                        <label for="employeeName">Employee Name:</label>
+                        <input type="text" id="employeeName" list="employeeList" placeholder="Enter or select employee name" required>
+                        <datalist id="employeeList"></datalist>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ptoDate">PTO Date:</label>
+                            <input type="date" id="ptoDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ptoHours">Hours:</label>
+                            <input type="number" id="ptoHours" min="0.5" max="12" step="0.5" value="8" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ptoType">PTO Type:</label>
+                        <select id="ptoType" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="Vacation">Vacation</option>
+                            <option value="Sick">Sick</option>
+                            <option value="Personal">Personal</option>
+                            <option value="FMLA">FMLA</option>
+                            <option value="Unpaid">Unpaid</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ptoNotes">Notes (optional):</label>
+                        <textarea id="ptoNotes" rows="3" placeholder="Add any relevant notes..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="btn-primary">💾 Save Entry</button>
+                        <button type="button" id="clearFormBtn" class="btn-secondary">🔄 Clear Form</button>
+                    </div>
+                </form>
+
+                <!-- Recent Entries -->
+                <div id="recentEntriesContainer" style="margin-top: 30px;">
+                    <h3>Recent PTO Entries</h3>
+                    <div id="recentEntriesList"></div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reportsSection" class="form-section" style="display: none;">
+                <h2>📊 PTO Reports & Analytics</h2>
+                
+                <!-- Employee Selector -->
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label for="reportEmployeeSelect">Select Employee:</label>
+                    <select id="reportEmployeeSelect">
+                        <option value="">-- All Employees --</option>
+                    </select>
+                </div>
+
+                <!-- Date Range Filter -->
+                <div class="form-row" style="margin-bottom: 30px;">
+                    <div class="form-group">
+                        <label for="reportStartDate">From Date:</label>
+                        <input type="date" id="reportStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportEndDate">To Date:</label>
+                        <input type="date" id="reportEndDate">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="applyFilterBtn" class="btn-primary">🔍 Apply Filter</button>
+                    </div>
+                </div>
+
+                <!-- Summary Statistics -->
+                <div id="summaryStats" class="stats-container"></div>
+
+                <!-- Detailed PTO Table -->
+                <div id="ptoTableContainer" style="margin-top: 30px;">
+                    <h3>Detailed PTO Records</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="ptoTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Date</th>
+                                    <th>Hours</th>
+                                    <th>Type</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ptoTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reliability Analysis -->
+                <div id="reliabilityAnalysis" style="margin-top: 30px;"></div>
+            </section>
+
+            <!-- Manage Data Section -->
+            <section id="managePTODataSection" class="form-section" style="display: none; background: #fff3cd; border-left: 4px solid #ff9800;">
+                <h2>🗄️ Manage PTO Data</h2>
+                
+                <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
+                    <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Export your PTO data to JSON or restore from a previous backup.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="exportPTODataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (JSON)</button>
+                        <button type="button" id="importPTODataBtn" class="btn-secondary">📥 Restore Data</button>
+                        <input type="file" id="ptoDataFileInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
+                <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
+                    <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
+                    <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL PTO data. This action cannot be undone!</p>
+                    <button type="button" id="deleteAllPTOBtn" class="btn-secondary" style="background: #dc3545; color: white;">⚠️ Delete All PTO Data</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="pto-tracker.js"></script>
+</body>
+</html>

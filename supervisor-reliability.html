@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reliability Tracker - Supervisor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="reliability-styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Reliability Tracker - Supervisor</h1>
+            <p class="subtitle">Manage team attendance and PTOST usage</p>
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <a href="homepage.html" class="btn-secondary" style="text-decoration: none; display: inline-block;">🏠 Home</a>
+                <button type="button" id="teamOverviewBtn" class="btn-secondary" style="background: #2196F3; color: white;">👥 Team Overview</button>
+                <button type="button" id="addLeaveBtn" class="btn-secondary" style="background: #4CAF50; color: white;">➕ Add Leave</button>
+                <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #FF9800; color: white;">🗄️ Manage Data</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Employee Selection Section -->
+            <section id="employeeSelectionSection" class="form-section">
+                <h2>👤 Select Employee</h2>
+                <div style="margin-bottom: 20px;">
+                    <label for="supervisorSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">I am:</label>
+                    <select id="supervisorSelect" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; margin-bottom: 15px;">
+                        <option value="">-- Select your name --</option>
+                    </select>
+                </div>
+                
+                <div id="employeeSelectContainer" style="display: none;">
+                    <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Team Member:</label>
+                    <select id="employeeSelect" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em;">
+                        <option value="">-- Choose an employee --</option>
+                    </select>
+                    
+                    <div style="margin-top: 15px;">
+                        <button type="button" id="addNewEmployeeBtn" class="btn-secondary">➕ Add New Team Member</button>
+                        <button type="button" id="manageTeamBtn" class="btn-secondary">👥 Manage My Team</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Team Overview Section -->
+            <section id="teamOverviewSection" class="form-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>👥 Team Overview</h2>
+                    <button type="button" onclick="showSection('employeeSelectionSection')" class="btn-secondary">← Back</button>
+                </div>
+                
+                <div id="teamSummaryStats"></div>
+                <div id="teamMembersList" style="margin-top: 20px;"></div>
+            </section>
+
+            <!-- Employee Detail Section -->
+            <section id="employeeDetailSection" class="form-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="employeeDetailHeader">Employee Details</h2>
+                    <div>
+                        <button type="button" id="emailEmployeeBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Email</button>
+                        <button type="button" onclick="showSection('employeeSelectionSection')" class="btn-secondary">← Back</button>
+                    </div>
+                </div>
+                
+                <!-- PTOST Balance -->
+                <div class="ptost-balance-card">
+                    <h3>⏰ PTOST Balance</h3>
+                    <div id="ptostBalanceDisplay"></div>
+                </div>
+                
+                <!-- Reliability Summary -->
+                <div class="reliability-summary-card">
+                    <h3>📊 Reliability Summary</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: bold; margin-right: 10px;">Period:</label>
+                        <button type="button" class="period-btn active" data-period="week">Week</button>
+                        <button type="button" class="period-btn" data-period="month">Month</button>
+                        <button type="button" class="period-btn" data-period="ytd">YTD</button>
+                        <button type="button" class="period-btn" data-period="custom">Custom</button>
+                    </div>
+                    
+                    <div id="customDateRange" style="display: none; margin-bottom: 15px;">
+                        <input type="date" id="customStartDate" style="margin-right: 10px;">
+                        <input type="date" id="customEndDate" style="margin-right: 10px;">
+                        <button type="button" id="applyCustomRange" class="btn-secondary">Apply</button>
+                    </div>
+                    
+                    <div id="reliabilitySummaryDisplay"></div>
+                </div>
+                
+                <!-- Add Leave Entry Form -->
+                <div class="form-section" style="background: #E8F5E9; border-left: 4px solid #4CAF50;">
+                    <h3>➕ Add Leave Entry</h3>
+                    <form id="addLeaveForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="leaveDate">Date:</label>
+                                <input type="date" id="leaveDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="leaveType">Type:</label>
+                                <select id="leaveType" required>
+                                    <option value="Unplanned">Unplanned</option>
+                                    <option value="Planned">Planned</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="departureTime">Left at:</label>
+                                <input type="time" id="departureTime" placeholder="e.g., 12:06">
+                            </div>
+                            <div class="form-group">
+                                <label for="scheduledEndTime">Scheduled end:</label>
+                                <input type="time" id="scheduledEndTime" placeholder="e.g., 17:00">
+                            </div>
+                        </div>
+                        
+                        <div id="calculatedHours" style="background: #fff; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-weight: bold; color: #2196F3; display: none;">
+                            Calculated: <span id="calculatedHoursValue">0</span> hours missed
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="applyPTOST" style="margin-right: 8px;">
+                                Apply PTOST to this absence
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="leaveReason">Reason (optional):</label>
+                            <textarea id="leaveReason" rows="2" placeholder="Brief reason for absence..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="supervisorNotes">Supervisor Notes (optional):</label>
+                            <textarea id="supervisorNotes" rows="2" placeholder="Internal notes..."></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn-primary">💾 Save Entry</button>
+                            <button type="button" id="clearLeaveForm" class="btn-secondary">🔄 Clear</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Leave History -->
+                <div class="form-section" style="background: #FFF3E0; border-left: 4px solid #FF9800;">
+                    <h3>📋 Leave History</h3>
+                    <div id="leaveHistoryDisplay"></div>
+                </div>
+                
+                <!-- Email History -->
+                <div class="form-section" style="background: #E3F2FD; border-left: 4px solid #2196F3;">
+                    <h3>✉️ Email History</h3>
+                    <div id="emailHistoryDisplay"></div>
+                </div>
+            </section>
+
+            <!-- Email Composition Section -->
+            <section id="emailCompositionSection" class="form-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>✉️ Compose Email</h2>
+                    <button type="button" id="cancelEmailBtn" class="btn-secondary">← Cancel</button>
+                </div>
+                
+                <div class="email-compose-card">
+                    <div class="form-group">
+                        <label style="font-weight: bold;">To: <span id="emailRecipientName"></span></label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: bold;">Select Template:</label>
+                        <select id="emailTemplate" style="width: 100%; padding: 10px;">
+                            <option value="ptost_offer">PTOST Offer</option>
+                            <option value="balance_warning">PTOST Balance Warning</option>
+                            <option value="reliability_concern">Reliability Concern</option>
+                            <option value="custom">Custom Message</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: bold;">Select Related Leave Entries:</label>
+                        <div id="emailLeaveSelection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="emailSubject" style="font-weight: bold;">Subject:</label>
+                        <input type="text" id="emailSubject" style="width: 100%; padding: 10px;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="emailBody" style="font-weight: bold;">Message:</label>
+                        <textarea id="emailBody" rows="12" style="width: 100%; padding: 10px; font-family: Arial, sans-serif;"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" id="sendEmailBtn" class="btn-primary" style="font-size: 1.1em;">📧 Send Email</button>
+                        <button type="button" id="previewEmailBtn" class="btn-secondary">👁️ Preview</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manage Data Section -->
+            <section id="manageDataSection" class="form-section" style="display: none; background: #fff3cd; border-left: 4px solid #ff9800;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>🗄️ Manage Data</h2>
+                    <button type="button" onclick="showSection('employeeSelectionSection')" class="btn-secondary">← Back</button>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
+                    <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Export all data to JSON or restore from a previous backup.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data</button>
+                        <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
+                        <input type="file" id="dataFileInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
+                <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
+                    <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
+                    <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL reliability tracker data. This action cannot be undone!</p>
+                    <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white;">⚠️ Delete All Data</button>
+                </div>
+            </section>
+
+            <!-- Add New Employee Modal -->
+            <div id="addEmployeeModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>➕ Add New Team Member</h3>
+                        <button type="button" class="modal-close" onclick="closeAddEmployeeModal()">×</button>
+                    </div>
+                    <form id="addEmployeeForm">
+                        <div class="form-group">
+                            <label for="newEmployeeName">Full Name:</label>
+                            <input type="text" id="newEmployeeName" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeeEmail">Email (optional):</label>
+                            <input type="email" id="newEmployeeEmail" placeholder="john.doe@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeeHireDate">Hire Date:</label>
+                            <input type="date" id="newEmployeeHireDate" required>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="submit" class="btn-primary">💾 Add Employee</button>
+                            <button type="button" class="btn-secondary" onclick="closeAddEmployeeModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Load dependencies in order -->
+    <script src="reliability-services.js"></script>
+    <script src="reliability-data.js"></script>
+    <script src="supervisor-reliability.js"></script>
+</body>
+</html>
