@@ -94,6 +94,15 @@ function initializeEventListeners() {
     });
     document.getElementById('dataFileInput').addEventListener('change', importData);
     document.getElementById('deleteAllDataBtn').addEventListener('click', deleteAllData);
+    
+    // Team member management
+    document.getElementById('addTeamMemberBtn')?.addEventListener('click', handleAddTeamMember);
+    document.getElementById('newTeamMemberName')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('addTeamMemberBtn').click();
+        }
+    });
 }
 
 // ============================================
@@ -1132,8 +1141,7 @@ function deleteTeamMember(employeeName) {
     populateEmployeeSelect();
 }
 
-// Add Team Member button handler
-document.getElementById('addTeamMemberBtn')?.addEventListener('click', () => {
+function handleAddTeamMember() {
     const nameInput = document.getElementById('newTeamMemberName');
     const ptoInput = document.getElementById('initialPTO');
     const messageDiv = document.getElementById('addTeamMemberMessage');
@@ -1211,12 +1219,4 @@ document.getElementById('addTeamMemberBtn')?.addEventListener('click', () => {
     setTimeout(() => {
         messageDiv.style.display = 'none';
     }, 3000);
-});
-
-// Allow Enter key to add team member
-document.getElementById('newTeamMemberName')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('addTeamMemberBtn').click();
-    }
-});
+}
