@@ -94,6 +94,7 @@ function initializeEventListeners() {
     });
     document.getElementById('dataFileInput').addEventListener('change', importData);
     document.getElementById('deleteAllDataBtn').addEventListener('click', deleteAllData);
+    document.getElementById('resetToSampleDataBtn').addEventListener('click', resetToSampleData);
     
     // Manage Data supervisor selection
     document.getElementById('manageDataSupervisor')?.addEventListener('change', handleManageDataSupervisorChange);
@@ -1042,19 +1043,50 @@ function deleteAllData() {
     showSection('employeeSelectionSection');
 }
 
+function resetToSampleData() {
+    if (!confirm('🔄 RESET TO SAMPLE DATA?\n\nThis will delete all current data and reload with sample employees (Jane Manager, John Doe, Jane Smith, Bob Johnson).\n\nContinue?')) {
+        return;
+    }
+    
+    // Clear all data
+    ReliabilityDataService.clearAllData();
+    
+    // Reinitialize with sample data
+    ReliabilityDataService.initializeWithSampleData();
+    
+    alert('✅ Data has been reset to sample data!\n\nSupervisor: Jane Manager\nEmployees: John Doe, Jane Smith, Bob Johnson');
+    
+    // Reset UI and refresh
+    currentSupervisor = null;
+    currentEmployee = null;
+    populateSupervisorSelect();
+    populateManageDataSupervisorSelect();
+    showSection('employeeSelectionSection');
+}
+
 // ============================================
 // TEAM MEMBER MANAGEMENT
 // ============================================
 
 function renderTeamMembersManagementList() {
+    console.log('=== renderTeamMembersManagementList called ===');
+    console.log('currentSupervisor:', currentSupervisor);
+    
     if (!currentSupervisor) {
+        console.log('No supervisor selected, returning');
         return;
     }
     
-    const employees = ReliabilityDataService.getSupervisorTeams()[currentSupervisor] || [];
+    const teams = ReliabilityDataService.getSupervisorTeams();
+    console.log('All supervisor teams:', teams);
+    
+    const employees = teams[currentSupervisor] || [];
+    console.log('Team members for', currentSupervisor, ':', employees);
+    
     const container = document.getElementById('teamMembersManagementList');
     
     if (employees.length === 0) {
+        console.log('No team members found, showing empty message');
         container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No team members yet. Add one above!</div>';
         return;
     }
@@ -1164,12 +1196,22 @@ function deleteTeamMember(employeeName) {
 }
 
 function handleAddTeamMember() {
+    console.log('=== handleAddTeamMember called ===');
+    
     const nameInput = document.getElementById('newTeamMemberName');
     const ptoInput = document.getElementById('initialPTO');
     const messageDiv = document.getElementById('addTeamMemberMessage');
     
+    console.log('Name input element:', nameInput);
+    console.log('PTO input element:', ptoInput);
+    console.log('Message div element:', messageDiv);
+    
     const name = nameInput.value.trim();
     const initialPTO = parseFloat(ptoInput.value) || 40;
+    
+    console.log('Name:', name);
+    console.log('Initial PTO:', initialPTO);
+    console.log('Current supervisor:', currentSupervisor);
     
     if (!name) {
         messageDiv.textContent = '❌ Please enter a name';

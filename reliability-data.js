@@ -431,7 +431,9 @@ const ReliabilityDataService = {
                 shiftEndTime: '17:00',
                 scheduledHoursPerDay: 8,
                 lunchDurationMinutes: 30,
-                lunchStartTime: '12:00'
+                lunchStartTime: '12:00',
+                initialPTOST: 40,
+                initialPTO: 80
             });
         });
     }
