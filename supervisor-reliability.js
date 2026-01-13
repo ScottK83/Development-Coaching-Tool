@@ -255,6 +255,8 @@ window.closeAddEmployeeModal = closeAddEmployeeModal;
 function handleAddEmployee(e) {
     e.preventDefault();
     
+    const initialPTO = parseFloat(document.getElementById('newEmployeeInitialPTO').value) || 40;
+    
     const employeeData = {
         fullName: document.getElementById('newEmployeeName').value.trim(),
         email: document.getElementById('newEmployeeEmail').value.trim(),
@@ -269,13 +271,14 @@ function handleAddEmployee(e) {
     // Add to supervisor's team
     ReliabilityDataService.addTeamMember(currentSupervisor, employeeData.fullName);
     
-    // Create default schedule
+    // Create default schedule with initial PTOST
     ReliabilityDataService.saveSchedule({
         employeeName: employeeData.fullName,
-        effectiveStartDate: employeeData.hireDate
+        effectiveStartDate: employeeData.hireDate,
+        initialPTOST: initialPTO
     });
     
-    alert(`✅ ${employeeData.fullName} added to your team!`);
+    alert(`✅ ${employeeData.fullName} added to your team with ${initialPTO} hours PTOST!`);
     
     closeAddEmployeeModal();
     populateEmployeeSelect();
@@ -1209,11 +1212,11 @@ function handleAddTeamMember() {
     
     // Create new employee
     const newEmployee = {
-        id: Date.now().toString(),
-        name: name,
+        fullName: name,
         email: '',
+        supervisorName: currentSupervisor,
         hireDate: new Date().toISOString().split('T')[0],
-        supervisor: currentSupervisor
+        isActive: true
     };
     
     ReliabilityDataService.saveEmployee(newEmployee);
