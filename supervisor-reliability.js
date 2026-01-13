@@ -1142,9 +1142,15 @@ function deleteTeamMember(employeeName) {
 }
 
 function handleAddTeamMember() {
+    console.log('handleAddTeamMember called');
+    console.log('Current supervisor:', currentSupervisor);
+    
     const nameInput = document.getElementById('newTeamMemberName');
     const ptoInput = document.getElementById('initialPTO');
     const messageDiv = document.getElementById('addTeamMemberMessage');
+    
+    console.log('Name input:', nameInput?.value);
+    console.log('PTO input:', ptoInput?.value);
     
     const name = nameInput.value.trim();
     const initialPTO = parseFloat(ptoInput.value) || 40;
