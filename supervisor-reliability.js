@@ -100,9 +100,13 @@ function initializeEventListeners() {
     
     // Manage My Team button
     document.getElementById('manageTeamBtn')?.addEventListener('click', () => {
-        if (currentSupervisor) {
-            document.getElementById('manageDataSupervisor').value = currentSupervisor;
-            handleManageDataSupervisorChange({ target: { value: currentSupervisor } });
+        // Get supervisor from dropdown or use currentSupervisor
+        const supervisorName = document.getElementById('supervisorSelect')?.value || currentSupervisor;
+        
+        if (supervisorName) {
+            currentSupervisor = supervisorName;
+            document.getElementById('manageDataSupervisor').value = supervisorName;
+            handleManageDataSupervisorChange({ target: { value: supervisorName } });
             showSection('manageDataSection');
         } else {
             alert('❌ Please select a supervisor first');
