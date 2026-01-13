@@ -52,6 +52,7 @@ function initializeEventListeners() {
     
     document.getElementById('manageDataBtn').addEventListener('click', () => {
         showSection('manageDataSection');
+        renderTeamMembersManagementList();
     });
     
     // Supervisor selection
@@ -975,3 +976,213 @@ function deleteAllData() {
     populateSupervisorSelect();
     showSection('employeeSelectionSection');
 }
+
+// ============================================
+// TEAM MEMBER MANAGEMENT
+// ============================================
+
+function renderTeamMembersManagementList() {
+    if (!currentSupervisor) {
+        return;
+    }
+    
+    const employees = ReliabilityDataService.getSupervisorTeams()[currentSupervisor] || [];
+    const container = document.getElementById('teamMembersManagementList');
+    
+    if (employees.length === 0) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No team members yet. Add one above!</div>';
+        return;
+    }
+    
+    container.innerHTML = employees.map(empName => {
+        const employee = ReliabilityDataService.getEmployees().find(e => e.name === empName);
+        if (!employee) return '';
+        
+        const ptostBalance = PTOSTService.getCurrentBalance(empName);
+        
+        return `
+            <div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white;">
+                <div style="flex: 1;">
+                    <strong style="color: #2e7d32; font-size: 1.1em;">${employee.name}</strong>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
+                        <span style="margin-right: 15px;">💼 PTOST Balance: ${ptostBalance.remaining}h / ${ptostBalance.total}h</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="edit-employee-pto-btn btn-secondary" data-name="${employee.name}" style="background: #2196F3; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">✏️ Edit PTO</button>
+                    <button type="button" class="delete-team-member-btn btn-secondary" data-name="${employee.name}" style="background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">🗑️ Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add event listeners
+    document.querySelectorAll('.edit-employee-pto-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const name = e.currentTarget.dataset.name;
+            editEmployeePTO(name);
+        });
+    });
+    
+    document.querySelectorAll('.delete-team-member-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const name = e.currentTarget.dataset.name;
+            deleteTeamMember(name);
+        });
+    });
+}
+
+function editEmployeePTO(employeeName) {
+    const employee = ReliabilityDataService.getEmployees().find(e => e.name === employeeName);
+    if (!employee) return;
+    
+    const ptostBalance = PTOSTService.getCurrentBalance(employeeName);
+    const currentPTO = ptostBalance.total;
+    
+    const newPTO = prompt(`Edit starting PTOST hours for ${employeeName}:\n\nCurrent: ${currentPTO} hours\n\nEnter new value:`, currentPTO);
+    
+    if (newPTO === null) return; // Cancelled
+    
+    const ptoNumber = parseFloat(newPTO);
+    if (isNaN(ptoNumber) || ptoNumber < 0 || ptoNumber > 120) {
+        alert('❌ Invalid PTO value. Must be between 0 and 120 hours.');
+        return;
+    }
+    
+    // Update employee schedule with new initial PTOST
+    const schedule = ReliabilityDataService.getEmployeeSchedule(employeeName);
+    if (schedule) {
+        schedule.initialPTOST = ptoNumber;
+        ReliabilityDataService.saveEmployeeSchedule(schedule);
+    } else {
+        // Create new schedule with default values
+        ReliabilityDataService.saveEmployeeSchedule({
+            employeeName: employeeName,
+            shiftStart: '08:00',
+            shiftEnd: '17:00',
+            lunchDuration: 30,
+            workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            initialPTOST: ptoNumber
+        });
+    }
+    
+    alert(`✅ Updated ${employeeName}'s starting PTOST to ${ptoNumber} hours`);
+    renderTeamMembersManagementList();
+}
+
+function deleteTeamMember(employeeName) {
+    if (!confirm(`Are you sure you want to remove ${employeeName} from your team?\n\nThis will also delete all their leave entries and data.`)) {
+        return;
+    }
+    
+    // Delete employee and all related data
+    const employees = ReliabilityDataService.getEmployees();
+    const employee = employees.find(e => e.name === employeeName);
+    
+    if (employee) {
+        // Delete all leave entries
+        const entries = ReliabilityDataService.getLeaveEntriesForEmployee(employeeName);
+        entries.forEach(entry => {
+            ReliabilityDataService.deleteLeaveEntry(entry.id);
+        });
+        
+        // Delete employee
+        ReliabilityDataService.deleteEmployee(employee.id);
+        
+        // Remove from supervisor team
+        ReliabilityDataService.removeTeamMember(currentSupervisor, employeeName);
+    }
+    
+    alert(`✅ ${employeeName} has been removed from your team.`);
+    renderTeamMembersManagementList();
+    populateEmployeeSelect();
+}
+
+// Add Team Member button handler
+document.getElementById('addTeamMemberBtn')?.addEventListener('click', () => {
+    const nameInput = document.getElementById('newTeamMemberName');
+    const ptoInput = document.getElementById('initialPTO');
+    const messageDiv = document.getElementById('addTeamMemberMessage');
+    
+    const name = nameInput.value.trim();
+    const initialPTO = parseFloat(ptoInput.value) || 40;
+    
+    if (!name) {
+        messageDiv.textContent = '❌ Please enter a name';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.borderLeft = '4px solid #dc3545';
+        return;
+    }
+    
+    if (!currentSupervisor) {
+        messageDiv.textContent = '❌ Please select yourself as supervisor first';
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.borderLeft = '4px solid #dc3545';
+        return;
+    }
+    
+    // Check if employee already exists
+    const existingEmployees = ReliabilityDataService.getEmployees();
+    if (existingEmployees.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+        messageDiv.textContent = `❌ ${name} already exists in the system`;
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.borderLeft = '4px solid #dc3545';
+        return;
+    }
+    
+    // Create new employee
+    const newEmployee = {
+        id: Date.now().toString(),
+        name: name,
+        email: '',
+        hireDate: new Date().toISOString().split('T')[0],
+        supervisor: currentSupervisor
+    };
+    
+    ReliabilityDataService.saveEmployee(newEmployee);
+    
+    // Add to supervisor's team
+    ReliabilityDataService.addTeamMember(currentSupervisor, name);
+    
+    // Create schedule with initial PTOST
+    ReliabilityDataService.saveEmployeeSchedule({
+        employeeName: name,
+        shiftStart: '08:00',
+        shiftEnd: '17:00',
+        lunchDuration: 30,
+        workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        initialPTOST: initialPTO
+    });
+    
+    messageDiv.textContent = `✅ Added ${name} with ${initialPTO} hours starting PTOST`;
+    messageDiv.style.display = 'block';
+    messageDiv.style.background = '#d4edda';
+    messageDiv.style.color = '#155724';
+    messageDiv.style.borderLeft = '4px solid #28a745';
+    
+    // Clear inputs
+    nameInput.value = '';
+    ptoInput.value = '40';
+    
+    // Refresh lists
+    renderTeamMembersManagementList();
+    populateEmployeeSelect();
+    
+    setTimeout(() => {
+        messageDiv.style.display = 'none';
+    }, 3000);
+});
+
+// Allow Enter key to add team member
+document.getElementById('newTeamMemberName')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('addTeamMemberBtn').click();
+    }
+});
