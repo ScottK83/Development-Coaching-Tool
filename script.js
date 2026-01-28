@@ -3217,7 +3217,7 @@ function generateTrendEmail() {
     // Legend section
     email += `📊 Comparison Legend:\n`;
     email += `✅ = Above call center average (exceeding expectations)\n`;
-    email += `🔻 = Below call center average (needs improvement)\n`;
+    email += `⬇️ = Below call center average (needs improvement)\n`;
     email += `� = Week-over-week improvement (trending upward)\n`;
     email += `📉 = Week-over-week decline (trending downward)\n`;
     email += `➖ = No comparison available (first week or no data)\n\n`;
@@ -3265,14 +3265,14 @@ function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
         if (employeeValue <= centerValue) {
             return { status: 'meets', icon: '✅' };
         } else {
-            return { status: 'below', icon: '🔻' };
+            return { status: 'below', icon: '⬇️' };
         }
     } else {
         // For all others: higher is better
         if (employeeValue >= centerValue) {
             return { status: 'meets', icon: '✅' };
         } else {
-            return { status: 'below', icon: '🔻' };
+            return { status: 'below', icon: '⬇️' };
         }
     }
 }
