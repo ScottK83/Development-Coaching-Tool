@@ -3081,65 +3081,70 @@ function loadUploadedDataPeriod(weekKey) {
 function setupUploadedDataListener() {
     const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
     avgUploadedDataSelect?.addEventListener('change', (e) => {
-        loadUploadedDataPeriod(e.target.value);
+        displayCallCenterAverages(e.target.value);
     });
 }
 
-function setupMetricTrendsListeners() {
-    // Save averages button
-    const saveAvgBtn = document.getElementById('saveAvgBtn');
+function displayCallCenterAverages(weekKey) {
+    const avgMetricsForm = document.getElementById('avgMetricsForm');
+    const periodTypeField = document.getElementById('avgPeriodType');
+    const mondayField = document.getElementById('avgWeekMonday');
+    const sundayField = document.getElementById('avgWeekSunday');
     
-    if (!saveAvgBtn) {
-        console.error('saveAvgBtn element not found!');
-    } else {
-        saveAvgBtn.addEventListener('click', () => {
-            const periodType = document.getElementById('avgPeriodType')?.value;
-            const mondayDate = document.getElementById('avgWeekMonday')?.value;
-            const sundayDate = document.getElementById('avgWeekSunday')?.value;
-            
-            if (!mondayDate || !sundayDate) {
-                console.warn('Missing date');
-                showToast('Please select both Monday and Sunday dates', 5000);
-                return;
-            }
-            
-            // Create storage key using the same format as weekKey: "mondayDate|sundayDate"
-            // This allows the email generator to find the data
-            const storageKey = `${mondayDate}|${sundayDate}`;
-            
-            // Read all metric values
-            const averages = {
-                adherence: parseFloat(document.getElementById('avgAdherence')?.value) || null,
-                overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || null,
-                repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || null,
-                fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
-                transfers: parseFloat(document.getElementById('avgTransfers')?.value) || null,
-                sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || null,
-                positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || null,
-                negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || null,
-                managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || null,
-                aht: parseFloat(document.getElementById('avgAHT')?.value) || null,
-                acw: parseFloat(document.getElementById('avgACW')?.value) || null,
-                holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || null,
-                reliability: parseFloat(document.getElementById('avgReliability')?.value) || null
-            };
-            
-            // Validate at least one value entered
-            const hasValue = Object.values(averages).some(v => v !== null);
-            if (!hasValue) {
-                console.warn('No values entered');
-                showToast('Please enter at least one metric value', 5000);
-                return;
-            }
-            
-            // Save to storage
-            setCallCenterAverageForPeriod(storageKey, averages);
-            
-            const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
-            showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 5000);
-        });
+    if (!weekKey || !weeklyData[weekKey]) {
+        avgMetricsForm.style.display = 'none';
+        periodTypeField.value = '';
+        mondayField.value = '';
+        sundayField.value = '';
+        return;
     }
     
+    const week = weeklyData[weekKey];
+    const metadata = week.metadata || {};
+    
+    // Display period info
+    periodTypeField.value = metadata.periodType || 'week';
+    mondayField.value = metadata.startDate || '';
+    sundayField.value = metadata.endDate || '';
+    
+    // Get saved averages for this period
+    const centerAvg = getCallCenterAverageForPeriod(weekKey);
+    
+    if (!centerAvg) {
+        avgMetricsForm.style.display = 'none';
+        return;
+    }
+    
+    // Display the saved averages
+    const fieldMap = {
+        'adherence': 'avgAdherence',
+        'overallExperience': 'avgOverallExperience',
+        'repSatisfaction': 'avgRepSatisfaction',
+        'fcr': 'avgFCR',
+        'transfers': 'avgTransfers',
+        'sentiment': 'avgSentiment',
+        'positiveWord': 'avgPositiveWord',
+        'negativeWord': 'avgNegativeWord',
+        'managingEmotions': 'avgManagingEmotions',
+        'aht': 'avgAHT',
+        'acw': 'avgACW',
+        'holdTime': 'avgHoldTime',
+        'reliability': 'avgReliability'
+    };
+    
+    Object.entries(fieldMap).forEach(([avgKey, inputId]) => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            // Check if it's in the main data object or nested in 'data' property
+            const value = centerAvg[avgKey] !== undefined ? centerAvg[avgKey] : (centerAvg.data ? centerAvg.data[avgKey] : null);
+            input.value = value !== null && value !== undefined ? value : 'N/A';
+        }
+    });
+    
+    avgMetricsForm.style.display = 'block';
+}
+
+function setupMetricTrendsListeners() {
     // Generate trend email button
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     
