@@ -3365,43 +3365,52 @@ function generateTrendEmail() {
         
         let line = `• ${metric.label}: ${employeeValue}${metric.unit}`;
         
-        // Compare vs center average (only if center averages exist)
-        if (centerAvg) {
-            const centerValue = centerAvg[metric.centerKey];
-            if (centerValue !== undefined && centerValue !== null) {
-                line += ` | Center Avg: ${centerValue}${metric.unit}`;
-                
-                const vsCenter = compareToCenter(employeeValue, centerValue, metric.lowerIsBetter);
-                line += ` ${vsCenter.icon}`;
-                
-                if (vsCenter.status === 'meets') {
-                    highlights.push(`${metric.label} ${vsCenter.icon}`);
-                } else if (vsCenter.status === 'below') {
-                    watchAreas.push(`${metric.label} ${vsCenter.icon}`);
-                }
-            }
+        // Get period type for comparison
+        const periodType = week.metadata?.periodType || 'week';
+        console.log(`📈 ${metric.label} - Period Type: ${periodType}`);
+        
+        // ============ YEARLY AVERAGE COMPARISON ============
+        const yearlyComparison = compareToYearlyAverage(employeeName, metric.key, employeeValue, metric.lowerIsBetter);
+        if (yearlyComparison.yearlyAvg !== null) {
+            line += ` | Year Avg: ${yearlyComparison.yearlyAvg}${metric.unit} ${yearlyComparison.icon}`;
+            console.log(`  Yearly Avg: ${yearlyComparison.yearlyAvg}, Status: ${yearlyComparison.status}, Icon: ${yearlyComparison.icon}`);
         }
         
-        // Compare WoW if previous data exists
-        if (previousEmployee) {
-            const previousValue = previousEmployee[metric.key];
-            if (previousValue !== undefined && previousValue !== null) {
-                const wow = compareWeekOverWeek(employeeValue, previousValue, metric.lowerIsBetter);
-                line += ` | WoW: ${wow.icon}`;
-                
-                if (wow.delta !== 0) {
-                    const sign = wow.delta > 0 ? '+' : '';
-                    line += ` (${sign}${wow.delta}${metric.unit})`;
+        // ============ TREND COMPARISON (WoW/MoM/YoY) ============
+        let trendIcon = '➖';
+        let trendDelta = 0;
+        let hasPreviousPeriod = false;
+        
+        const previousKey = getPreviousPeriodData(weekKey, periodType);
+        if (previousKey && weeklyData[previousKey]) {
+            hasPreviousPeriod = true;
+            const prevWeekData = weeklyData[previousKey];
+            const previousEmployee = prevWeekData.employees?.find(emp => emp.name === employeeName);
+            
+            if (previousEmployee) {
+                const previousValue = previousEmployee[metric.key];
+                if (previousValue !== undefined && previousValue !== null) {
+                    const wow = compareWeekOverWeek(employeeValue, previousValue, metric.lowerIsBetter);
+                    trendIcon = wow.icon;
+                    trendDelta = wow.delta;
+                    
+                    console.log(`  ${periodType === 'week' ? 'WoW' : periodType === 'month' ? 'MoM' : 'YoY'}: ${previousValue} → ${employeeValue}, Delta: ${trendDelta}, Icon: ${trendIcon}`);
+                    
+                    // Add to highlights if improved
+                    if (wow.status === 'improved') {
+                        highlights.push(`${metric.label}: ${employeeValue}${metric.unit} | Year: ${yearlyComparison.yearlyAvg}${metric.unit} ${yearlyComparison.icon} ${trendIcon}`);
+                    }
                 }
-                
-                if (wow.status === 'improved') {
-                    highlights.push(`${metric.label} improved WoW ${wow.icon}`);
-                }
-            } else {
-                line += ` | WoW: ➖ (no previous data)`;
             }
         } else {
-            line += ` | WoW: ➖ (Baseline Week)`;
+            console.log(`  No previous ${periodType} data available`);
+        }
+        
+        // Add trend icon to the main line
+        line += ` | Trend: ${trendIcon}`;
+        if (trendDelta !== 0) {
+            const sign = trendDelta > 0 ? '+' : '';
+            line += ` (${sign}${trendDelta}${metric.unit})`;
         }
         
         email += `${line}\n`;
@@ -3435,11 +3444,12 @@ function generateTrendEmail() {
     
     // Legend section
     email += `📊 Comparison Legend:\n`;
-    email += `✅ = Above call center average (exceeding expectations)\n`;
-    email += `⬇️ = Below call center average (needs improvement)\n`;
-    email += ` = Week-over-week improvement (trending upward)\n`;
-    email += ` = Week-over-week decline (trending downward)\n`;
-    email += `➖ = No comparison available (first week or no data)\n\n`;
+    email += `✅ = Above yearly average (exceeding goal)\n`;
+    email += `❌ = Below yearly average (needs improvement)\n`;
+    email += `⚠️ = First time entry (no prior data)\n`;
+    email += `⬆️ = Better than previous period (week/month/year trending up)\n`;
+    email += `⬇️ = Worse than previous period (week/month/year trending down)\n`;
+    email += `➖ = Same as previous period or no data\n\n`;
     
     // Closing
     email += `Let me know if you have any questions or want to discuss these results.\n\n`;
@@ -3493,6 +3503,110 @@ function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
         } else {
             return { status: 'below', icon: '⬇️' };
         }
+    }
+}
+
+// ============================================
+// YEARLY AVERAGE CALCULATIONS
+// ============================================
+
+function getYearlyAverageForEmployee(employeeName, metricKey) {
+    /**
+     * Calculate employee's yearly average (Jan 1 - current date) for a specific metric
+     * Returns: { value: number, count: number } or null if no data
+     */
+    const currentYear = new Date().getFullYear();
+    const yearStartStr = `${currentYear}-01-01`;
+    
+    const sums = {};
+    const counts = {};
+    
+    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
+        const [startDateStr, endDateStr] = weekKey.split('|');
+        const [endYear] = endDateStr.split('-').map(Number);
+        
+        // Only include data from current year up to today
+        if (endYear === currentYear) {
+            weekData.employees?.forEach(emp => {
+                if (emp.name === employeeName) {
+                    const value = parseFloat(emp[metricKey]);
+                    if (!isNaN(value)) {
+                        sums[metricKey] = (sums[metricKey] || 0) + value;
+                        counts[metricKey] = (counts[metricKey] || 0) + 1;
+                    }
+                }
+            });
+        }
+    });
+    
+    if (counts[metricKey] && counts[metricKey] > 0) {
+        return {
+            value: parseFloat((sums[metricKey] / counts[metricKey]).toFixed(2)),
+            count: counts[metricKey]
+        };
+    }
+    
+    return null;
+}
+
+function getPreviousPeriodData(currentWeekKey, periodType) {
+    /**
+     * Find the previous period's data based on period type
+     * Returns: weekKey of previous period or null
+     */
+    const [startStr, endStr] = currentWeekKey.split('|');
+    const [endYear, endMonth, endDay] = endStr.split('-').map(Number);
+    const endDate = new Date(endYear, endMonth - 1, endDay);
+    
+    let previousPeriodEnd = null;
+    
+    if (periodType === 'week') {
+        // Previous week = 7 days back
+        previousPeriodEnd = new Date(endDate);
+        previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 7);
+    } else if (periodType === 'month') {
+        // Previous month = 1st of previous month to 1st of current month - 1 day
+        previousPeriodEnd = new Date(endYear, endMonth - 2, endDay);
+    } else if (periodType === 'quarter') {
+        // Previous quarter = same day, 3 months back
+        previousPeriodEnd = new Date(endDate);
+        previousPeriodEnd.setMonth(previousPeriodEnd.getMonth() - 3);
+    } else if (periodType === 'ytd') {
+        // YTD doesn't have a "previous" in the same sense
+        return null;
+    }
+    
+    if (!previousPeriodEnd) return null;
+    
+    const prevEndStr = `${previousPeriodEnd.getFullYear()}-${String(previousPeriodEnd.getMonth() + 1).padStart(2, '0')}-${String(previousPeriodEnd.getDate()).padStart(2, '0')}`;
+    
+    // Find matching period in weeklyData
+    for (const key of Object.keys(weeklyData).sort().reverse()) {
+        if (key.includes(prevEndStr)) {
+            return key;
+        }
+    }
+    
+    return null;
+}
+
+function compareToYearlyAverage(employeeName, metricKey, currentValue, lowerIsBetter) {
+    /**
+     * Compare employee's current value to their yearly average
+     * Returns: { status: 'meets'|'below'|'first', icon: '✅'|'❌'|'⚠️', yearlyAvg: number }
+     */
+    const yearlyAvg = getYearlyAverageForEmployee(employeeName, metricKey);
+    
+    if (!yearlyAvg) {
+        return { status: 'first', icon: '⚠️', yearlyAvg: null };
+    }
+    
+    const isMeeting = lowerIsBetter ? currentValue <= yearlyAvg.value : currentValue >= yearlyAvg.value;
+    
+    if (isMeeting) {
+        return { status: 'meets', icon: '✅', yearlyAvg: yearlyAvg.value };
+    } else {
+        return { status: 'below', icon: '❌', yearlyAvg: yearlyAvg.value };
     }
 }
 
