@@ -2704,7 +2704,8 @@ async function generateCopilotPrompt() {
     if (reliabilityMetric) {
         const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
         const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
-        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned (not marked as sick time). If this is an error, please let me know.\n`;
+        const timePeriod = periodLabel.toLowerCase().includes('month') ? 'this month' : 'this week';
+        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timePeriod} that was unscheduled. If this is an error, please let me know.\n`;
     }
     
     let additionalContext = '';
@@ -2733,6 +2734,7 @@ Can you help me write an email to ${firstName} with this structure:
 3. OPPORTUNITIES section:
    - Brief supportive intro line
    - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
+   - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
    - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive. If there's a reliability note, weave it in naturally here.
 
 4. Warm close inviting them to discuss
