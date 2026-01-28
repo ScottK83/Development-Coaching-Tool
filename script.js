@@ -39,6 +39,7 @@ let weeklyData = {};
 let coachingLogYTD = [];
 let currentPeriodType = 'week';
 let currentPeriod = null;
+let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 
 // ============================================
 // TARGET METRICS
@@ -714,115 +715,6 @@ function parsePastedData(pastedText, startDate, endDate) {
 }
 
 // ============================================
-// BULK DATA PROCESSING - ALL ASSOCIATES
-// ============================================
-
-function calculateAveragesFromEmployees(employees) {
-    if (!employees || employees.length === 0) {
-        return null;
-    }
-    
-    const employeeMetrics = [
-        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers',
-        'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
-        'aht', 'acw', 'holdTime', 'reliability'
-    ];
-    
-    // Map from employee data keys to storage keys (what gets saved in centerAvg)
-    const keyMapping = {
-        'scheduleAdherence': 'adherence',
-        'cxRepOverall': 'repSatisfaction',
-        'fcr': 'fcr',
-        'overallExperience': 'overallExperience',
-        'transfers': 'transfers',
-        'overallSentiment': 'sentiment',
-        'positiveWord': 'positiveWord',
-        'negativeWord': 'negativeWord',
-        'managingEmotions': 'managingEmotions',
-        'aht': 'aht',
-        'acw': 'acw',
-        'holdTime': 'holdTime',
-        'reliability': 'reliability'
-    };
-    
-    const averages = {};
-    
-    // Calculate average for each metric
-    employeeMetrics.forEach(metricKey => {
-        const values = employees
-            .map(emp => emp[metricKey])
-            .filter(v => v !== '' && v !== null && v !== undefined && !isNaN(v))
-            .map(Number);
-        
-        if (values.length > 0) {
-            const sum = values.reduce((a, b) => a + b, 0);
-            const storageKey = keyMapping[metricKey];
-            averages[storageKey] = Math.round((sum / values.length) * 100) / 100;
-        }
-    });
-    
-    return averages;
-}
-
-function autoPopulateAverages(averages, startDate, endDate, periodType) {
-    if (!averages) return;
-    
-    // averages object uses storage keys: adherence, repSatisfaction, sentiment, etc.
-    // These map directly to the input IDs in the form
-    const metricMap = {
-        'adherence': 'avgAdherence',
-        'overallExperience': 'avgOverallExperience',
-        'repSatisfaction': 'avgRepSatisfaction',
-        'fcr': 'avgFCR',
-        'transfers': 'avgTransfers',
-        'sentiment': 'avgSentiment',
-        'positiveWord': 'avgPositiveWord',
-        'negativeWord': 'avgNegativeWord',
-        'managingEmotions': 'avgManagingEmotions',
-        'aht': 'avgAHT',
-        'acw': 'avgACW',
-        'holdTime': 'avgHoldTime',
-        'reliability': 'avgReliability'
-    };
-    
-    // Populate Period Type
-    const periodTypeSelect = document.getElementById('avgPeriodType');
-    if (periodTypeSelect) {
-        periodTypeSelect.value = periodType;
-    }
-    
-    // Populate dates
-    const mondayInput = document.getElementById('avgWeekMonday');
-    const sundayInput = document.getElementById('avgWeekSunday');
-    if (mondayInput) mondayInput.value = startDate;
-    if (sundayInput) sundayInput.value = endDate;
-    
-    // Show the metrics form
-    const metricsForm = document.getElementById('avgMetricsForm');
-    if (metricsForm) {
-        metricsForm.style.display = 'block';
-    }
-    
-    // Populate each metric input
-    Object.entries(metricMap).forEach(([storageKey, inputId]) => {
-        const input = document.getElementById(inputId);
-        if (input && averages[storageKey] !== null && averages[storageKey] !== undefined) {
-            input.value = averages[storageKey];
-        }
-    });
-    
-    console.log('✅ Auto-populated averages in form');
-    
-    // Scroll to the averages section
-    setTimeout(() => {
-        const avgSection = document.querySelector('[style*="border: 2px solid #9c27b0"]');
-        if (avgSection) {
-            avgSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 500);
-}
-
-// ============================================
 // DATA LOADING - EXCEL FILES
 // ============================================
 
@@ -978,6 +870,42 @@ function saveWeeklyData() {
     } catch (error) {
         console.error('Error saving weekly data:', error);
     }
+}
+
+// ============================================
+// TEAM MEMBER MANAGEMENT
+// ============================================
+
+function loadTeamMembers() {
+    try {
+        const saved = localStorage.getItem('myTeamMembers');
+        myTeamMembers = saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading team members:', error);
+        myTeamMembers = {};
+    }
+}
+
+function saveTeamMembers() {
+    try {
+        localStorage.setItem('myTeamMembers', JSON.stringify(myTeamMembers));
+    } catch (error) {
+        console.error('Error saving team members:', error);
+    }
+}
+
+function setTeamMembersForWeek(weekKey, memberNames) {
+    myTeamMembers[weekKey] = memberNames;
+    saveTeamMembers();
+}
+
+function getTeamMembersForWeek(weekKey) {
+    return myTeamMembers[weekKey] || [];
+}
+
+function isTeamMember(weekKey, employeeName) {
+    const members = getTeamMembersForWeek(weekKey);
+    return members.length === 0 || members.includes(employeeName);
 }
 
 // ============================================
@@ -1148,13 +1076,23 @@ function updateEmployeeDropdown() {
     
     // For week/month/quarter: currentPeriod is the weekKey
     if (currentPeriod && weeklyData[currentPeriod]) {
-        weeklyData[currentPeriod].employees.forEach(emp => employees.add(emp.name));
+        weeklyData[currentPeriod].employees.forEach(emp => {
+            // Only add if they're on the team (or no team selection yet)
+            if (isTeamMember(currentPeriod, emp.name)) {
+                employees.add(emp.name);
+            }
+        });
     } else if (currentPeriodType === 'ytd' && currentPeriod) {
         // For YTD: aggregate all weeks in the year
         Object.keys(weeklyData).forEach(weekKey => {
             const [year] = weekKey.split('|')[0].split('-');
             if (year === currentPeriod) {
-                weeklyData[weekKey].employees.forEach(emp => employees.add(emp.name));
+                weeklyData[weekKey].employees.forEach(emp => {
+                    // Only add if they're on the team (or no team selection yet)
+                    if (isTeamMember(weekKey, emp.name)) {
+                        employees.add(emp.name);
+                    }
+                });
             }
         });
     }
@@ -1448,11 +1386,9 @@ function initializeEventHandlers() {
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
-        const dataType = document.querySelector('input[name="uploadDataType"]:checked')?.value || 'team';
         
         console.log('📊 Paste data received - Length:', pastedData.length, 'chars');
         console.log('📅 Dates: Start=' + startDate, 'End=' + endDate);
-        console.log('👥 Data type:', dataType);
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
@@ -1509,31 +1445,11 @@ function initializeEventHandlers() {
                     endDate: endDate,
                     label: label,
                     periodType: periodType,
-                    uploadedAt: new Date().toISOString(),
-                    dataType: dataType
+                    uploadedAt: new Date().toISOString()
                 }
             };
             
             console.log('📦 Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
-            
-            // If "All Associates" selected, calculate and auto-populate averages
-            if (dataType === 'all') {
-                console.log('📊 Calculating averages from all associates...');
-                const averages = calculateAveragesFromEmployees(employees);
-                console.log('✅ Calculated averages:', averages);
-                
-                // Auto-populate the Call Center Averages section
-                autoPopulateAverages(averages, startDate, endDate, periodType);
-                
-                // Save the calculated averages
-                const savedAverages = loadCallCenterAverages();
-                savedAverages[weekKey] = {
-                    label: label,
-                    data: averages
-                };
-                saveCallCenterAverages(savedAverages);
-                console.log('💾 Saved calculated averages to callCenterAverages');
-            }
             
             saveWeeklyData();
             console.log('✅ Data saved to localStorage');
@@ -1582,11 +1498,7 @@ function initializeEventHandlers() {
                 }
             }
             
-            const successMsg = dataType === 'all' 
-                ? `✅ Loaded ${employees.length} associates for ${label}!\n\nAverages have been auto-calculated and populated.`
-                : `✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`;
-            
-            alert(successMsg);
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "🗄️ Manage Data" section.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
@@ -1803,9 +1715,12 @@ function initializeEventHandlers() {
         }
         
         delete weeklyData[selectedWeek];
+        delete myTeamMembers[selectedWeek];
         saveWeeklyData();
+        saveTeamMembers();
         
         populateDeleteWeekDropdown();
+        populateTeamMemberSelector();
         showToast('✅ Week deleted successfully');
         
         // Clear coaching form if needed
@@ -1814,6 +1729,26 @@ function initializeEventHandlers() {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
+    });
+    
+    // Select/Deselect all team members
+    document.getElementById('selectAllTeamBtn')?.addEventListener('click', () => {
+        document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateTeamSelection();
+    });
+    
+    document.getElementById('deselectAllTeamBtn')?.addEventListener('click', () => {
+        document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateTeamSelection();
+    });
+    
+    // Update team selector when week selection changes
+    document.getElementById('deleteWeekSelect')?.addEventListener('change', () => {
+        populateTeamMemberSelector();
     });
     
     
@@ -1882,6 +1817,65 @@ function populateDeleteWeekDropdown() {
         option.textContent = week.label;
         dropdown.appendChild(option);
     });
+}
+
+function populateTeamMemberSelector() {
+    const selector = document.getElementById('teamMemberSelector');
+    const deleteWeekDropdown = document.getElementById('deleteWeekSelect');
+    
+    if (!selector) return;
+    
+    // Get currently selected week (from delete dropdown or most recent)
+    let selectedWeek = deleteWeekDropdown?.value;
+    
+    if (!selectedWeek) {
+        // Use the most recent week if none selected
+        const weeks = Object.keys(weeklyData).sort().reverse();
+        selectedWeek = weeks[0];
+    }
+    
+    if (!selectedWeek || !weeklyData[selectedWeek]) {
+        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No data available</div>';
+        return;
+    }
+    
+    const employees = weeklyData[selectedWeek].employees || [];
+    const selectedMembers = getTeamMembersForWeek(selectedWeek);
+    
+    if (employees.length === 0) {
+        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees in this week</div>';
+        return;
+    }
+    
+    // Create checkboxes for each employee
+    let html = '';
+    employees.forEach(emp => {
+        const isSelected = selectedMembers.length === 0 || selectedMembers.includes(emp.name);
+        html += `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 8px; cursor: pointer; hover: background: #f5f5f5;">
+                <input type="checkbox" class="team-member-checkbox" data-week="${selectedWeek}" data-name="${emp.name}" ${isSelected ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                <span>${emp.name}</span>
+            </label>
+        `;
+    });
+    
+    selector.innerHTML = html;
+    
+    // Add event listeners to checkboxes
+    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateTeamSelection);
+    });
+}
+
+function updateTeamSelection() {
+    const weekKey = document.querySelector('.team-member-checkbox')?.dataset.week;
+    if (!weekKey) return;
+    
+    const selectedCheckboxes = document.querySelectorAll(`.team-member-checkbox[data-week="${weekKey}"]:checked`);
+    const selectedMembers = Array.from(selectedCheckboxes).map(cb => cb.dataset.name);
+    
+    setTeamMembersForWeek(weekKey, selectedMembers);
+    console.log(`✅ Updated team members for ${weekKey}:`, selectedMembers);
 }
 
 // ============================================
@@ -2934,14 +2928,17 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         return;
     }
     
-    // Get employees only for selected period
+    // Get employees only for selected period, filtered by team
     const week = weeklyData[weekKey];
     if (!week || !week.employees) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
         return;
     }
     
-    const employees = week.employees.map(emp => emp.name).sort();
+    const employees = week.employees
+        .filter(emp => isTeamMember(weekKey, emp.name))
+        .map(emp => emp.name)
+        .sort();
     
     // Build options
     let options = '<option value="">Select Employee...</option>';
@@ -3860,6 +3857,7 @@ function initApp() {
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     coachingLogYTD = loadCoachingLog();
+    loadTeamMembers();
     
     console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
     console.log('📦 weeklyData keys:', Object.keys(weeklyData));
@@ -3883,6 +3881,8 @@ function initApp() {
     // If we have data, update the period dropdown
     if (Object.keys(weeklyData).length > 0) {
         updatePeriodDropdown();
+        populateDeleteWeekDropdown();
+        populateTeamMemberSelector();
     }
     
     // Ensure data is saved before page unload (survives Ctrl+Shift+R)
