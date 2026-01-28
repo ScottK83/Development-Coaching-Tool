@@ -1761,9 +1761,12 @@ async function renderTipsManagement() {
     html += '</div>';
     html += '<select id="metricSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
     html += '<option value="">-- Choose a metric --</option>';
-    Object.keys(metricNames).forEach(metricKey => {
-        html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
-    });
+    // Sort metrics alphabetically by label
+    Object.keys(metricNames)
+        .sort((a, b) => metricNames[a].localeCompare(metricNames[b]))
+        .forEach(metricKey => {
+            html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
+        });
     html += '</select>';
     html += '</div>';
     
