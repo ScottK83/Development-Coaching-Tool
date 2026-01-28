@@ -1388,6 +1388,7 @@ function initializeEventHandlers() {
             
             saveWeeklyData();
             populateDeleteWeekDropdown();
+            populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
             
             // Show success
             document.getElementById('uploadSuccessMessage').style.display = 'block';
