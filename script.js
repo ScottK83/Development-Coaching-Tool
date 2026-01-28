@@ -2880,12 +2880,18 @@ function generateTrendEmail() {
     
     const highlights = [];
     const watchAreas = [];
+    let hasReliabilityMetric = false;
     
     metricsToAnalyze.forEach(metric => {
         const employeeValue = employee[metric.key];
         
         // Skip if employee doesn't have this metric
         if (employeeValue === undefined || employeeValue === null) return;
+        
+        // Track if reliability metric is present
+        if (metric.key === 'reliability') {
+            hasReliabilityMetric = true;
+        }
         
         let line = `• ${metric.label}: ${employeeValue}${metric.unit}`;
         
@@ -2945,6 +2951,16 @@ function generateTrendEmail() {
         email += `\n`;
     }
     
+    // Reliability explanation section (if metric exists)
+    if (hasReliabilityMetric) {
+        email += `📋 Understanding Reliability:\n`;
+        email += `Reliability measures time missed that wasn't pre-scheduled in Verint and that you opted to not use sick time to cover. If you feel something is incorrect, please double-check how many hours of sick time you have used and weigh it against Verint.\n\n`;
+        email += `Important reminders:\n`;
+        email += `• You have 40 hours of sick time to last the year\n`;
+        email += `• Once you reach 16 hours of unscheduled time, APS' attendance policy kicks in\n`;
+        email += `• Using sick time to cover absences helps maintain your reliability score\n\n`;
+    }
+    
     // Closing
     email += `Let me know if you have any questions or want to discuss these results.\n\n`;
     email += `Best,\n[Your Name]`;
@@ -2957,7 +2973,12 @@ function generateTrendEmail() {
         previewContainer.style.display = 'block';
     }
     
-    showToast('Email generated successfully!', 'success');
+    // Auto-copy to clipboard
+    navigator.clipboard.writeText(email).then(() => {
+        showToast('Email generated and copied to clipboard! Ready to paste into Outlook.', 'success');
+    }).catch(() => {
+        showToast('Email generated but failed to copy. Use the Copy button below.', 'warning');
+    });
 }
 
 function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
