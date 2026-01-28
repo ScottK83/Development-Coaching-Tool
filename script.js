@@ -3594,7 +3594,10 @@ function generateTrendEmail() {
     email += `Legend: ✅ = Above center avg | ❌ = Below center avg | ⬆️ = Improved | ⬇️ = Declined | ➖ = No change\n\n`;
     
     // Closing
-    email += `Let me know if you have any questions or want to discuss these results.`;
+    email += `Let me know if you have any questions or want to discuss these results.\n\n`;
+    
+    // Disclaimer
+    email += `---\nDisclaimer: Data accuracy may vary depending on the reporting period and data collection method. Month-over-month trends will differ from week-over-week comparisons, and year-to-date calculations may not reflect the exact same patterns as individual period analysis.`;
     
     console.log('📧 Email generated:\n', email);
     
