@@ -3048,14 +3048,15 @@ function setupMetricTrendsListeners() {
             
             console.log('📅 Period Type:', periodType, 'Monday:', mondayDate, 'Sunday:', sundayDate);
             
-            if (!mondayDate) {
-                console.warn('❌ No Monday date selected');
-                showToast('Please select the Monday date', 5000);
+            if (!mondayDate || !sundayDate) {
+                console.warn('❌ Missing date');
+                showToast('Please select both Monday and Sunday dates', 5000);
                 return;
             }
             
-            // Create storage key from period type and Monday date
-            const storageKey = `${mondayDate}_${periodType}`;
+            // Create storage key using the same format as weekKey: "mondayDate|sundayDate"
+            // This allows the email generator to find the data
+            const storageKey = `${mondayDate}|${sundayDate}`;
             console.log('🔑 Storage Key:', storageKey);
             
             // Read all metric values
@@ -3174,6 +3175,12 @@ function generateTrendEmail() {
     const centerAvg = getCallCenterAverageForPeriod(weekKey);
     console.log('📊 Center averages for', weekKey + ':', centerAvg);
     
+    // If no center averages found, warn the user
+    if (!centerAvg) {
+        console.warn('⚠️ No call center averages found for this period. Generate email without center comparison.');
+        showToast('⚠️ No call center averages saved for this period. Email will be generated without center comparison.', 5000);
+    }
+    
     // Find previous week for WoW comparison
     const allWeeks = Object.keys(weeklyData).sort();
     const currentIndex = allWeeks.indexOf(weekKey);
@@ -3234,18 +3241,20 @@ function generateTrendEmail() {
         
         let line = `• ${metric.label}: ${employeeValue}${metric.unit}`;
         
-        // Compare vs center average
-        const centerValue = centerAvg[metric.centerKey];
-        if (centerValue !== undefined && centerValue !== null) {
-            line += ` | Center Avg: ${centerValue}${metric.unit}`;
-            
-            const vsCenter = compareToCenter(employeeValue, centerValue, metric.lowerIsBetter);
-            line += ` ${vsCenter.icon}`;
-            
-            if (vsCenter.status === 'meets') {
-                highlights.push(`${metric.label} ${vsCenter.icon}`);
-            } else if (vsCenter.status === 'below') {
-                watchAreas.push(`${metric.label} ${vsCenter.icon}`);
+        // Compare vs center average (only if center averages exist)
+        if (centerAvg) {
+            const centerValue = centerAvg[metric.centerKey];
+            if (centerValue !== undefined && centerValue !== null) {
+                line += ` | Center Avg: ${centerValue}${metric.unit}`;
+                
+                const vsCenter = compareToCenter(employeeValue, centerValue, metric.lowerIsBetter);
+                line += ` ${vsCenter.icon}`;
+                
+                if (vsCenter.status === 'meets') {
+                    highlights.push(`${metric.label} ${vsCenter.icon}`);
+                } else if (vsCenter.status === 'below') {
+                    watchAreas.push(`${metric.label} ${vsCenter.icon}`);
+                }
             }
         }
         
