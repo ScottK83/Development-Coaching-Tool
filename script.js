@@ -3255,6 +3255,21 @@ function setupMetricTrendsListeners() {
         });
     });
     
+    // Add listener to employee dropdown to show metrics preview
+    const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
+    if (trendEmployeeSelect) {
+        trendEmployeeSelect.addEventListener('change', (e) => {
+            const employeeName = e.target.value;
+            const weekKey = document.getElementById('trendPeriodSelect')?.value;
+            
+            if (employeeName && weekKey) {
+                displayMetricsPreview(employeeName, weekKey);
+            } else {
+                document.getElementById('metricsPreviewSection').style.display = 'none';
+            }
+        });
+    }
+    
     // Generate trend email button
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     
@@ -3287,6 +3302,53 @@ function setupMetricTrendsListeners() {
     }
 }
 
+function displayMetricsPreview(employeeName, weekKey) {
+    const metricsPreviewSection = document.getElementById('metricsPreviewSection');
+    const metricsPreviewGrid = document.getElementById('metricsPreviewGrid');
+    
+    if (!metricsPreviewSection || !metricsPreviewGrid) return;
+    
+    const week = weeklyData[weekKey];
+    if (!week || !week.employees) return;
+    
+    const employee = week.employees.find(emp => emp.name === employeeName);
+    if (!employee) return;
+    
+    console.log(`📊 Displaying metrics preview for ${employeeName} (${weekKey})`);
+    
+    // Define metrics to show
+    const metricsToPreview = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%' },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '%' },
+        { key: 'cxRepOverall', label: 'Rep Satisfaction', unit: '%' },
+        { key: 'fcr', label: 'FCR', unit: '%' },
+        { key: 'transfers', label: 'Transfers', unit: '%' },
+        { key: 'overallSentiment', label: 'Sentiment Score', unit: '%' },
+        { key: 'positiveWord', label: 'Positive Word Usage', unit: '%' },
+        { key: 'negativeWord', label: 'Avoiding Negative Words', unit: '%' },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%' },
+        { key: 'aht', label: 'Average Handle Time', unit: 's' },
+        { key: 'acw', label: 'After Call Work', unit: 's' },
+        { key: 'holdTime', label: 'Hold Time', unit: 's' },
+        { key: 'reliability', label: 'Reliability', unit: 'hrs' }
+    ];
+    
+    // Generate HTML for each metric
+    let html = '';
+    metricsToPreview.forEach(metric => {
+        const value = employee[metric.key] !== undefined ? employee[metric.key] : '';
+        html += `
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit}):</label>
+                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="0.01" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+        `;
+    });
+    
+    metricsPreviewGrid.innerHTML = html;
+    metricsPreviewSection.style.display = 'block';
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
@@ -3313,6 +3375,28 @@ function generateTrendEmail() {
         showToast('Employee not found in this period', 5000);
         return;
     }
+    
+    // Check if user edited any metrics in preview and override with edited values
+    const metricInputs = document.querySelectorAll('.metric-preview-input');
+    const editedEmployee = { ...employee };
+    
+    metricInputs.forEach(input => {
+        const metricKey = input.dataset.metric;
+        const editedValue = input.value;
+        
+        if (editedValue !== '' && editedValue !== null) {
+            const numValue = parseFloat(editedValue);
+            if (!isNaN(numValue)) {
+                editedEmployee[metricKey] = numValue;
+                if (numValue !== employee[metricKey]) {
+                    console.log(`📝 Using edited value for ${metricKey}: ${employee[metricKey]} → ${numValue}`);
+                }
+            }
+        }
+    });
+    
+    // Use editedEmployee instead of employee for email generation
+    const employeeToUse = editedEmployee;
     
     // Get call center averages for this period
     const centerAvg = getCallCenterAverageForPeriod(weekKey);
@@ -3373,7 +3457,7 @@ function generateTrendEmail() {
     let hasReliabilityMetric = false;
     
     metricsToAnalyze.forEach(metric => {
-        const employeeValue = employee[metric.key];
+        const employeeValue = employeeToUse[metric.key];
         
         // Skip if employee doesn't have this metric
         // Allow Reliability to be 0 (that's good!), but skip empty strings, null, undefined, NaN, etc.

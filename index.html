@@ -413,6 +413,14 @@
                             </select>
                         </div>
                         
+                        <!-- Metrics Preview Section -->
+                        <div id="metricsPreviewSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9c27b0;">
+                            <h4 style="color: #9c27b0; margin-top: 0;">📊 Employee Metrics (Auto-populated - Edit if needed)</h4>
+                            <div id="metricsPreviewGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                                <!-- Metrics will be populated here -->
+                            </div>
+                        </div>
+                        
                         <button type="button" id="generateTrendBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📈 Generate Trend Email</button>
                         
                         <!-- Email Preview -->
@@ -431,20 +439,7 @@
             <section id="manageDataSection" style="display: none;">
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
                     <h2>🗄️ Manage Data</h2>
-                    <p style="color: #856404; margin-bottom: 20px;">View employees, select your team members, backup, restore, or delete your data.</p>
-                    
-                    <!-- Select Your Team Members -->
-                    <div style="margin-bottom: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #2196F3;">
-                        <h3 style="color: #1565c0; margin-top: 0;">👥 Select Your Team Members</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Check the associates who are on your team. These will appear in Generate Coaching and Metric Trends.</p>
-                        <div id="teamMemberSelector" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white; padding: 15px;">
-                            <div style="padding: 20px; text-align: center; color: #999;">Upload data first to select team members</div>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <button type="button" id="selectAllTeamBtn" class="btn-secondary" style="background: #2196F3; color: white; margin-right: 5px;">✅ Select All</button>
-                            <button type="button" id="deselectAllTeamBtn" class="btn-secondary" style="border: 2px solid #2196F3; color: #2196F3; background: white;">❌ Deselect All</button>
-                        </div>
-                    </div>
+                    <p style="color: #856404; margin-bottom: 20px;">View employees, backup, restore, or delete your data.</p>
                     
                     <!-- Existing Employees List -->
                     <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
