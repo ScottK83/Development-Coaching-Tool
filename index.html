@@ -295,11 +295,20 @@
                         <h3 style="color: #9c27b0; margin-top: 0;">📊 Manage Call Center Averages</h3>
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">Set the call center average metrics for each period to compare against.</p>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label for="avgPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Period:</label>
-                            <select id="avgPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose a period to set averages --</option>
-                            </select>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label for="avgPeriodType" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Type:</label>
+                                <select id="avgPeriodType" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                    <option value="week">Week</option>
+                                    <option value="month">Month</option>
+                                    <option value="quarter">Quarter</option>
+                                    <option value="year">Year</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="avgPeriodDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Start Date:</label>
+                                <input type="date" id="avgPeriodDate" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                            </div>
                         </div>
                         
                         <div id="avgMetricsForm" style="display: none;">

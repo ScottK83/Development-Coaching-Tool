@@ -2628,7 +2628,7 @@ function renderEmployeeCharts(employeeData, employeeName) {
 // ============================================
 
 function initializeMetricTrends() {
-    // Check if data exists
+    // Check if data exists for trend generation
     const allWeeks = Object.keys(weeklyData);
     const statusDiv = document.getElementById('metricTrendsStatus');
     
@@ -2640,43 +2640,48 @@ function initializeMetricTrends() {
         if (statusDiv) statusDiv.style.display = 'none';
     }
     
-    // Populate period dropdowns
-    populatePeriodDropdowns();
+    // Set default date to today
+    const avgPeriodDate = document.getElementById('avgPeriodDate');
+    if (avgPeriodDate && !avgPeriodDate.value) {
+        avgPeriodDate.value = new Date().toISOString().split('T')[0];
+    }
     
-    // Populate employee dropdown
+    // Show the metrics form immediately
+    const avgMetricsForm = document.getElementById('avgMetricsForm');
+    if (avgMetricsForm) avgMetricsForm.style.display = 'block';
+    
+    // Populate trend generation dropdowns
+    populateTrendPeriodDropdown();
     populateEmployeeDropdown();
     
-    // Load existing averages if any
-    loadExistingAverages();
+    // Load existing averages when date/type changes
+    setupAveragesLoader();
     
     // Set up event listeners
     setupMetricTrendsListeners();
 }
 
-function populatePeriodDropdowns() {
-    const avgPeriodSelect = document.getElementById('avgPeriodSelect');
+function populateTrendPeriodDropdown() {
     const trendPeriodSelect = document.getElementById('trendPeriodSelect');
     
-    if (!avgPeriodSelect || !trendPeriodSelect) return;
+    if (!trendPeriodSelect) return;
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort();
     
     if (allWeeks.length === 0) {
-        avgPeriodSelect.innerHTML = '<option value="">No data available</option>';
         trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
         return;
     }
     
-    // Build options for both dropdowns
+    // Build options
     let options = '<option value="">Select Period...</option>';
     allWeeks.forEach(weekKey => {
         const week = weeklyData[weekKey];
-        const displayText = `${week.week_start} (${week.period_type})`;
+        const displayText = week.week_start || weekKey;
         options += `<option value="${weekKey}">${displayText}</option>`;
     });
     
-    avgPeriodSelect.innerHTML = options;
     trendPeriodSelect.innerHTML = options;
 }
 
@@ -2709,26 +2714,21 @@ function populateEmployeeDropdown() {
     trendEmployeeSelect.innerHTML = options;
 }
 
-function loadExistingAverages() {
-    const avgPeriodSelect = document.getElementById('avgPeriodSelect');
+function setupAveragesLoader() {
+    const avgPeriodType = document.getElementById('avgPeriodType');
+    const avgPeriodDate = document.getElementById('avgPeriodDate');
     
-    if (!avgPeriodSelect) return;
+    if (!avgPeriodType || !avgPeriodDate) return;
     
-    // When user selects a period, load existing values if they exist
-    avgPeriodSelect.addEventListener('change', (e) => {
-        const weekKey = e.target.value;
-        const avgMetricsForm = document.getElementById('avgMetricsForm');
+    const loadAveragesForPeriod = () => {
+        const periodType = avgPeriodType.value;
+        const periodDate = avgPeriodDate.value;
         
-        if (!weekKey) {
-            // Hide form if no period selected
-            if (avgMetricsForm) avgMetricsForm.style.display = 'none';
-            return;
-        }
+        if (!periodDate) return;
         
-        // Show the form
-        if (avgMetricsForm) avgMetricsForm.style.display = 'block';
-        
-        const averages = getCallCenterAverageForPeriod(weekKey);
+        // Create storage key from period type and date
+        const storageKey = `${periodDate}_${periodType}`;
+        const averages = getCallCenterAverageForPeriod(storageKey);
         
         // Populate form fields
         document.getElementById('avgAdherence').value = averages.adherence || '';
@@ -2743,19 +2743,26 @@ function loadExistingAverages() {
         document.getElementById('avgACW').value = averages.acw || '';
         document.getElementById('avgHoldTime').value = averages.holdTime || '';
         document.getElementById('avgReliability').value = averages.reliability || '';
-    });
+    };
+    
+    avgPeriodType.addEventListener('change', loadAveragesForPeriod);
+    avgPeriodDate.addEventListener('change', loadAveragesForPeriod);
 }
 
 function setupMetricTrendsListeners() {
     // Save averages button
     const saveAvgBtn = document.getElementById('saveAvgBtn');
     saveAvgBtn?.addEventListener('click', () => {
-        const weekKey = document.getElementById('avgPeriodSelect')?.value;
+        const periodType = document.getElementById('avgPeriodType')?.value;
+        const periodDate = document.getElementById('avgPeriodDate')?.value;
         
-        if (!weekKey) {
-            showToast('Please select a period first', 'error');
+        if (!periodDate) {
+            showToast('Please select a period date', 'error');
             return;
         }
+        
+        // Create storage key from period type and date
+        const storageKey = `${periodDate}_${periodType}`;
         
         // Read all metric values
         const averages = {
@@ -2781,8 +2788,8 @@ function setupMetricTrendsListeners() {
         }
         
         // Save to storage
-        setCallCenterAverageForPeriod(weekKey, averages);
-        showToast('Call center averages saved successfully!', 'success');
+        setCallCenterAverageForPeriod(storageKey, averages);
+        showToast(`Call center averages saved for ${periodType} starting ${periodDate}!`, 'success');
     });
     
     // Generate trend email button
