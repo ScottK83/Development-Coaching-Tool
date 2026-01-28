@@ -3548,57 +3548,44 @@ function generateTrendEmail() {
         }
         
         // Add trend icon to the main line
-        line += ` | Trend: ${trendIcon}`;
+        line += ` | ${trendIcon}`;
         if (trendDelta !== 0) {
             const sign = trendDelta > 0 ? '+' : '';
             line += ` (${sign}${trendDelta}${metric.unit})`;
         }
         
-        // ============ WEEKLY STATISTICS (only when viewing by week) ============
-        if (periodType === 'week') {
-            const weeklyStats = getWeeklyStatisticsForEmployee(employeeName, metric.key, metric.lowerIsBetter);
-            if (weeklyStats.totalWeeks > 1) {
-                line += `\n  └─ Meeting target ${weeklyStats.meetingTarget} out of ${weeklyStats.totalWeeks} weeks. Above average ${weeklyStats.aboveAverage} out of ${weeklyStats.totalWeeks} weeks`;
-                console.log(`  Weekly Stats: ${weeklyStats.meetingTarget}/${weeklyStats.totalWeeks} meeting target, ${weeklyStats.aboveAverage}/${weeklyStats.totalWeeks} above avg`);
-            }
-        }
-        
         email += `${line}\n`;
+        
+        // Track for grouping
+        if (callCenterComparison && callCenterComparison.status === 'below') {
+            watchAreas.push(`${metric.label}: ${employeeValue}${metric.unit} (Center: ${callCenterComparison.centerAvg}${metric.unit})`);
+        }
     });
     
     email += `\n`;
     
-    // Highlights section
+    // Only show highlights if there are any
     if (highlights.length > 0) {
-        email += `✨ Highlights:\n`;
-        highlights.forEach(h => email += `• ${h}\n`);
+        email += `✨ Highlights (Improved from last period):\n`;
+        highlights.slice(0, 3).forEach(h => email += `• ${h}\n`); // Limit to top 3
         email += `\n`;
     }
     
-    // Watch areas section
+    // Only show watch areas if there are any
     if (watchAreas.length > 0) {
-        email += `⚠️ Watch Areas:\n`;
-        watchAreas.forEach(w => email += `• ${w}\n`);
+        email += `📈 Focus Areas (Below call center average):\n`;
+        watchAreas.slice(0, 3).forEach(w => email += `• ${w}\n`); // Limit to top 3
         email += `\n`;
     }
     
-    // Reliability explanation section (if metric exists)
-    if (hasReliabilityMetric) {
-        email += `📋 Understanding Reliability:\n`;
-        email += `Reliability measures time missed that wasn't pre-scheduled in Verint and that you opted to not use sick time to cover. If you feel something is incorrect, please double-check how many hours of sick time you have used and weigh it against Verint.\n\n`;
-        email += `Important reminders:\n`;
-        email += `• You have 40 hours of sick time to last the year\n`;
-        email += `• Once you reach 16 hours of unscheduled time, APS' attendance policy kicks in\n`;
-        email += `• Using sick time to cover absences helps maintain your reliability score\n\n`;
+    // Reliability explanation section (if metric exists and > 0)
+    if (hasReliabilityMetric && employeeToUse.reliability > 0) {
+        email += `📋 Reliability Note:\n`;
+        email += `You have ${employeeToUse.reliability} hours of unscheduled time. Remember you have 40 hours of sick time for the year, and using sick time to cover absences helps your reliability score.\n\n`;
     }
     
-    // Legend section
-    email += `📊 Comparison Legend:\n`;
-    email += `✅ = Above call center average (exceeding goal)\n`;
-    email += `❌ = Below call center average (needs improvement)\n`;
-    email += `⬆️ = Better than previous period (week/month/year trending up)\n`;
-    email += `⬇️ = Worse than previous period (week/month/year trending down)\n`;
-    email += `➖ = Same as previous period or no data\n\n`;
+    // Simplified legend
+    email += `Legend: ✅ = Above center avg | ❌ = Below center avg | ⬆️ = Improved | ⬇️ = Declined | ➖ = No change\n\n`;
     
     // Closing
     email += `Let me know if you have any questions or want to discuss these results.\n\n`;
