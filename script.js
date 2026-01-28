@@ -2916,6 +2916,20 @@ function loadUploadedDataPeriod(weekKey) {
         // Enable date fields for manual entry
         mondayInput.disabled = false;
         sundayInput.disabled = false;
+        // Clear all metric fields
+        document.getElementById('avgAdherence').value = '';
+        document.getElementById('avgOverallExperience').value = '';
+        document.getElementById('avgRepSatisfaction').value = '';
+        document.getElementById('avgFCR').value = '';
+        document.getElementById('avgTransfers').value = '';
+        document.getElementById('avgSentiment').value = '';
+        document.getElementById('avgPositiveWord').value = '';
+        document.getElementById('avgNegativeWord').value = '';
+        document.getElementById('avgManagingEmotions').value = '';
+        document.getElementById('avgAHT').value = '';
+        document.getElementById('avgACW').value = '';
+        document.getElementById('avgHoldTime').value = '';
+        document.getElementById('avgReliability').value = '';
         return;
     }
     
@@ -2936,6 +2950,30 @@ function loadUploadedDataPeriod(weekKey) {
     // Enable date fields so user can edit if needed
     mondayInput.disabled = false;
     sundayInput.disabled = false;
+    
+    // Load saved call center averages for this period
+    const averages = getCallCenterAverageForPeriod(weekKey);
+    console.log('📂 loadUploadedDataPeriod - Loading averages for', weekKey + ':', averages);
+    
+    if (averages) {
+        // Populate metric fields with saved values
+        document.getElementById('avgAdherence').value = averages.adherence || '';
+        document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
+        document.getElementById('avgRepSatisfaction').value = averages.repSatisfaction || '';
+        document.getElementById('avgFCR').value = averages.fcr || '';
+        document.getElementById('avgTransfers').value = averages.transfers || '';
+        document.getElementById('avgSentiment').value = averages.sentiment || '';
+        document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
+        document.getElementById('avgNegativeWord').value = averages.negativeWord || '';
+        document.getElementById('avgManagingEmotions').value = averages.managingEmotions || '';
+        document.getElementById('avgAHT').value = averages.aht || '';
+        document.getElementById('avgACW').value = averages.acw || '';
+        document.getElementById('avgHoldTime').value = averages.holdTime || '';
+        document.getElementById('avgReliability').value = averages.reliability || '';
+        console.log('✅ Loaded saved call center averages');
+    } else {
+        console.log('⚠️ No saved averages found for this period');
+    }
     
     showToast(`Selected week of ${week.metadata?.label || startDate}`, 5000);
 }
