@@ -2638,6 +2638,7 @@ function renderEmployeeCharts(employeeData, employeeName) {
 // ============================================
 
 function initializeMetricTrends() {
+    console.log('🚀 initializeMetricTrends called');
     // Check if data exists for trend generation
     const allWeeks = Object.keys(weeklyData);
     const statusDiv = document.getElementById('metricTrendsStatus');
