@@ -4619,6 +4619,23 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         const targetObj = METRICS_REGISTRY[metric.key]?.target;
         const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
         
+        // Determine if employee is meeting target
+        let isMeetingTarget = false;
+        if (typeof targetValue === 'number' && !hasNoSurveyData) {
+            if (metric.lowerIsBetter) {
+                // For lower-is-better metrics, employee meets target if they're at or below target
+                isMeetingTarget = employeeAvg <= targetValue;
+            } else {
+                // For higher-is-better metrics, employee meets target if they're at or above target
+                isMeetingTarget = employeeAvg >= targetValue;
+            }
+        }
+        
+        // Determine bar color based on target achievement
+        const barColor = isMeetingTarget ? 
+            'linear-gradient(90deg, #4caf50, #81c784)' :  // Green if meeting target
+            'linear-gradient(90deg, #ffc107, #ffb300)';    // Yellow if not meeting target
+        
         // Create visual bar
         const chartDiv = document.createElement('div');
         chartDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
@@ -4638,7 +4655,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 <div style="display: flex; align-items: center; margin-bottom: 6px;">
                     <span style="width: 100px; font-weight: bold;">You:</span>
                     <div style="flex: 1; background: #e8f5e9; height: 24px; border-radius: 3px; position: relative;">
-                        <div style="background: linear-gradient(90deg, #4caf50, #81c784); height: 100%; border-radius: 3px; width: ${maxValue > 0 ? (employeeAvg / maxValue) * 100 : 0}%;"></div>
+                        <div style="background: ${barColor}; height: 100%; border-radius: 3px; width: ${maxValue > 0 ? (employeeAvg / maxValue) * 100 : 0}%;"></div>
                     </div>
                     <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${hasNoSurveyData ? 'No survey data' : employeeAvg.toFixed(1) + metric.unit}</span>
                 </div>
