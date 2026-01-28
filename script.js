@@ -245,94 +245,26 @@ function saveNickname(employeeFullName, nickname) {
 function getSavedNickname(employeeFullName) {
     try {
         const nicknames = JSON.parse(localStorage.getItem('employeeNicknames') || '{}');
-        function htmlToPlainText(html) {
-            if (!html) return '';
-            return html
-                .replace(/<style[\s\S]*?<\/style>/gi, '')
-                .replace(/<script[\s\S]*?<\/script>/gi, '')
-                .replace(/<[^>]+>/g, '')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/\s+\n/g, '\n')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
-        }
-
-        function buildTrendEmailHtml(employeeName, weekKey, options = { useEdits: true }) {
-            if (!employeeName || !weekKey) {
-                console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
-                return null;
-            }
-    
-            const week = weeklyData[weekKey];
-            if (!week || !week.employees) {
-                console.error('No data found for week:', weekKey);
-                return null;
-            }
-    
-            const employee = week.employees.find(emp => emp.name === employeeName);
-            if (!employee) {
-                console.error('Employee not found:', employeeName);
-                return null;
-            }
-    
-            // Check if user edited any metrics in preview and override with edited values
-            let employeeToUse = employee;
-            if (options.useEdits) {
-                const metricInputs = document.querySelectorAll('.metric-preview-input');
-                const editedEmployee = { ...employee };
-        
-                metricInputs.forEach(input => {
-                    const metricKey = input.dataset.metric;
-                    const editedValue = input.value;
-            
-                    if (editedValue !== '' && editedValue !== null) {
-                        const numValue = parseFloat(editedValue);
-                        if (!isNaN(numValue)) {
-                            editedEmployee[metricKey] = numValue;
-                            if (numValue !== employee[metricKey]) {
-                                console.log(`📝 Using edited value for ${metricKey}: ${employee[metricKey]} → ${numValue}`);
-                            }
-                        }
-                    }
-                });
-                employeeToUse = editedEmployee;
-            }
-    
-            // Get call center averages for this period
-            const centerAvg = getCallCenterAverageForPeriod(weekKey);
-            console.log('📊 Center averages for', weekKey + ':', centerAvg);
-    
-            // Build HTML email content
-            const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
-            const weekStart = week.metadata?.label || week.week_start || `${week.metadata?.startDate}`;
-            const periodType = week.metadata?.periodType || 'week';
-            const periodLabel = periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : periodType === 'ytd' ? 'Year' : 'Period';
-    
-            // Initialize counters for visual cards
-            let meetsTargetCount = 0;
-            let outpacingPeersCount = 0;
-            let totalMetricsEvaluated = 0;
-            let improvedCount = 0;
-    
-            // Start building HTML email
-            let htmlEmail = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 0;
-                    background: #f5f5f5;
-                }
+        return nicknames[employeeFullName] || '';
+    } catch (error) {
+        console.error('Error getting nickname:', error);
+        return '';
     }
+}
+
+function htmlToPlainText(html) {
+    if (!html) return '';
+    return html
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 // ============================================
