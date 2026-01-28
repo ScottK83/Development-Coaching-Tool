@@ -295,15 +295,6 @@
                         <h3 style="color: #9c27b0; margin-top: 0;">📊 Manage Call Center Averages</h3>
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">Set the call center average metrics for each period to compare against.</p>
                         
-                        <!-- View Past Data Dropdown -->
-                        <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
-                            <label for="pastDataSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">📂 View Past Data:</label>
-                            <select id="pastDataSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
-                                <option value="">Select past data to view...</option>
-                            </select>
-                            <p style="color: #666; font-size: 0.85em; margin: 8px 0 0 0;">Select a previous entry to load and edit. Leave blank to enter new data.</p>
-                        </div>
-                        
                         <!-- Select from Uploaded Data -->
                         <div style="margin-bottom: 20px; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;">
                             <label for="avgUploadedDataSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">📋 Or Select from Your Uploaded Data:</label>
@@ -316,7 +307,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <div>
                                 <label for="avgPeriodType" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Type:</label>
-                                <select id="avgPeriodType" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <select id="avgPeriodType" disabled style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em; background-color: #f5f5f5; cursor: not-allowed;">
                                     <option value="week">Week</option>
                                     <option value="month">Month</option>
                                     <option value="quarter">Quarter</option>
