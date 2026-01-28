@@ -2623,6 +2623,18 @@ function renderEmployeeCharts(employeeData, employeeName) {
 // ============================================
 
 function initializeMetricTrends() {
+    // Check if data exists
+    const allWeeks = Object.keys(weeklyData);
+    const statusDiv = document.getElementById('metricTrendsStatus');
+    
+    if (allWeeks.length === 0) {
+        // Show warning message
+        if (statusDiv) statusDiv.style.display = 'block';
+    } else {
+        // Hide warning message
+        if (statusDiv) statusDiv.style.display = 'none';
+    }
+    
     // Populate period dropdowns
     populatePeriodDropdowns();
     
