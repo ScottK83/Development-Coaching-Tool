@@ -17,7 +17,6 @@
                 <button type="button" onclick="window.location.href='homepage.html';" class="btn-secondary">🏠 Home</button>
                 <button type="button" id="homeBtn" class="btn-secondary">📊 Upload Data</button>
                 <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
-                <button type="button" id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
                 <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
                 <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
@@ -240,36 +239,6 @@
             </section>
 
             <!-- Employee Dashboard/History Section -->
-            <section id="dashboardSection" style="display: none;">
-                <div class="form-section">
-                    <h2>👥 Employee History & Trends</h2>
-                    <p style="color: #666; margin-bottom: 20px;">Track individual employee performance over time with detailed trends.</p>
-                    
-                    <!-- Employee Selector -->
-                    <div style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">
-                        <label for="historyEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 10px; color: #2196F3; font-size: 1.1em;">Select Employee:</label>
-                        <select id="historyEmployeeSelect" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">
-                            <option value="">-- Select employee --</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Timeframe Selector -->
-                    <div id="timeframeSelectorContainer" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #FF9800; display: none;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 10px; color: #FF9800; font-size: 1.1em;">View Timeframe:</label>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="timeframeWeek" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #FF9800; background: #FF9800; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
-                            <button type="button" id="timeframeMonth" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
-                            <button type="button" id="timeframeQuarter" class="timeframe-btn" style="padding: 10px 20px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Underperforming Metrics Snapshot -->
-                    <div id="underperformingSnapshot" style="display: none;"></div>
-                    
-                    <div id="historyContainer"></div>
-                </div>
-            </section>
-
             <!-- Tips Management Section -->
             <section id="tipsManagementSection" style="display: none;">
                 <div class="form-section">

@@ -295,10 +295,6 @@ function initializeSection(sectionId) {
             // Generate Coaching tab - reset employee selection
             resetEmployeeSelection();
             break;
-        case 'dashboardSection':
-            // Employee Dashboard - render employee history
-            renderEmployeeHistory();
-            break;
         case 'tipsManagementSection':
             // Manage Tips - render tips management interface
             renderTipsManagement();
@@ -832,19 +828,6 @@ function saveCustomMetrics(metrics) {
 
 function normalizeMetricKey(name) {
     return name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-}
-
-function hasDataForTimeframe(employeeData, timeframe) {
-    if (!employeeData || employeeData.length === 0) return false;
-    
-    if (timeframe === 'week') {
-        return employeeData.length >= 1;
-    } else if (timeframe === 'month') {
-        return employeeData.length >= 4;
-    } else if (timeframe === 'quarter') {
-        return employeeData.length >= 13;
-    }
-    return false;
 }
 
 
