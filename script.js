@@ -4589,20 +4589,15 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     ];
     
     metrics.forEach(metric => {
-        console.log(`  Processing metric: ${metric.label}`);
-        
         // Calculate employee average
         let employeeSum = 0, employeeCount = 0;
         periods.forEach(period => {
             if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
-                const val = parseFloat(period.employee[metric.key]);
-                console.log(`    ${period.weekKey}: ${metric.key} = ${val}`);
-                employeeSum += val;
+                employeeSum += parseFloat(period.employee[metric.key]);
                 employeeCount++;
             }
         });
         const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
-        console.log(`    Metric: ${metric.label}, Sum: ${employeeSum}, Count: ${employeeCount}, Avg: ${employeeAvg}`);
         
         // Calculate center average
         let centerSum = 0, centerCount = 0;
@@ -4615,8 +4610,6 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
             }
         });
         const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
-        
-        console.log(`    Employee avg: ${employeeAvg}, Center avg: ${centerAvg}`);
         
         // Get target from METRICS_REGISTRY - extract the value from the object
         const targetObj = METRICS_REGISTRY[metric.key]?.target;
@@ -4680,7 +4673,6 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         `;
         
         container.appendChild(chartDiv);
-        console.log(`    ✅ Appended ${metric.label} to container`);
     });
     
     console.log(`✅ displayExecutiveSummaryCharts completed - rendered ${metrics.length} metrics`);
