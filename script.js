@@ -3473,6 +3473,8 @@ function generateTrendEmail() {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -3480,7 +3482,7 @@ function generateTrendEmail() {
             color: #333;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0;
             background: #f5f5f5;
         }
         .container {
