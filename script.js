@@ -2709,13 +2709,19 @@ function initializeMetricTrends() {
 function populateTrendPeriodDropdown() {
     const trendPeriodSelect = document.getElementById('trendPeriodSelect');
     
-    if (!trendPeriodSelect) return;
+    if (!trendPeriodSelect) {
+        console.warn('❌ trendPeriodSelect element not found');
+        return;
+    }
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort();
+    console.log('📊 populateTrendPeriodDropdown: Found', allWeeks.length, 'weeks');
+    console.log('Weeks:', allWeeks);
     
     if (allWeeks.length === 0) {
         trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
+        console.warn('⚠️ No weekly data available for trend periods');
         return;
     }
     
@@ -2728,12 +2734,16 @@ function populateTrendPeriodDropdown() {
     });
     
     trendPeriodSelect.innerHTML = options;
+    console.log('✅ Populated trend period dropdown with', allWeeks.length, 'periods');
 }
 
 function populateEmployeeDropdown() {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
-    if (!trendEmployeeSelect) return;
+    if (!trendEmployeeSelect) {
+        console.warn('❌ trendEmployeeSelect element not found');
+        return;
+    }
     
     // Get all unique employees
     const employeeSet = new Set();
@@ -2745,8 +2755,12 @@ function populateEmployeeDropdown() {
         }
     });
     
+    console.log('👥 populateEmployeeDropdown: Found', employeeSet.size, 'employees');
+    console.log('Employees:', Array.from(employeeSet));
+    
     if (employeeSet.size === 0) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees available</option>';
+        console.warn('⚠️ No employees found in weekly data');
         return;
     }
     
@@ -2757,6 +2771,7 @@ function populateEmployeeDropdown() {
     });
     
     trendEmployeeSelect.innerHTML = options;
+    console.log('✅ Populated employee dropdown with', employeeSet.size, 'employees');
 }
 
 function setupAveragesLoader() {
@@ -3040,9 +3055,12 @@ function generateTrendEmail() {
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
     
     console.log('Employee:', employeeName, 'Week:', weekKey);
+    console.log('weeklyData keys:', Object.keys(weeklyData));
+    console.log('weeklyData:', weeklyData);
     
     if (!employeeName || !weekKey) {
         showToast('Please select both employee and period', 5000);
+        console.warn('Missing employee or week selection');
         return;
     }
     
