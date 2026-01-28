@@ -2670,20 +2670,19 @@ async function generateCopilotPrompt() {
     // Build coaching email with new unified prompt format
     const customNotes = document.getElementById('customNotes')?.value.trim();
     
-    // Build the metrics input
-    let metricsInput = `EMPLOYEE: ${firstName}\nPERIOD: ${periodLabel}\n\n`;
-    
-    metricsInput += `METRICS WHERE EXCEEDED TARGET:\n`;
+    // Build WINS section
+    let winsSection = `WINS (What ${firstName} Achieved):\n`;
     if (celebrate.length > 0) {
-        celebrate.forEach(item => metricsInput += `${item}\n`);
+        celebrate.forEach(item => winsSection += `${item}\n`);
     } else {
-        metricsInput += `(none)\n`;
+        winsSection += `(none)\n`;
     }
     
-    metricsInput += `\nMETRICS BELOW TARGET:\n`;
+    // Build OPPORTUNITIES section with tips
+    let opportunitiesSection = `OPPORTUNITIES (Areas to Improve):\n`;
     if (needsCoaching.length > 0) {
         needsCoaching.forEach(item => {
-            metricsInput += `${item}\n`;
+            opportunitiesSection += `${item}\n`;
             // Add corresponding tip
             const metricMatch = item.match(/^- (.+?):/);
             if (metricMatch) {
@@ -2692,12 +2691,12 @@ async function generateCopilotPrompt() {
                 const metricTips = allTips[metricKey] || [];
                 if (metricTips.length > 0) {
                     const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
-                    metricsInput += `  TIP: ${randomTip}\n`;
+                    opportunitiesSection += `  TIP: ${randomTip}\n`;
                 }
             }
         });
     } else {
-        metricsInput += `(none)\n`;
+        opportunitiesSection += `(none)\n`;
     }
     
     // Add reliability note if applicable
@@ -2705,11 +2704,12 @@ async function generateCopilotPrompt() {
     if (reliabilityMetric) {
         const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
         const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
-        metricsInput += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned (not marked as sick time). If this is an error, please let me know.\n`;
+        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours from this last week currently listed as unscheduled/unplanned (not marked as sick time). If this is an error, please let me know.\n`;
     }
     
+    let additionalContext = '';
     if (customNotes) {
-        metricsInput += `\nADDITIONAL CONTEXT:\n${customNotes}\n`;
+        additionalContext = `\nADDITIONAL CONTEXT:\n${customNotes}\n`;
     }
     
     // Build the unified Copilot prompt - conversational format to avoid detection as system prompt
@@ -2717,15 +2717,21 @@ async function generateCopilotPrompt() {
 
 Here's the performance data:
 
-${metricsInput}
+${winsSection}
 
-Can you help me write an email to ${firstName} that:
-1. Opens with a genuine, conversational greeting
-2. Celebrates their wins enthusiastically and specifically (mention the metrics and targets)
-3. Addresses areas for improvement constructively (not critically)
-4. Includes one coaching tip per improvement area, but reword the tips in fresh, natural language so they don't sound like they came from a template
-5. If there's a reliability note, include that naturally without sounding formal
-6. Closes with an encouraging, warm tone and invites them to discuss
+${opportunitiesSection}${additionalContext}
+
+Can you help me write an email to ${firstName} that has these two main sections:
+
+1. WINS SECTION: A paragraph celebrating their achievements. Be specific about each metric they hit and what the target was. Be genuinely enthusiastic and encourage them to keep up the great work.
+
+2. OPPORTUNITIES SECTION: A paragraph addressing areas where they can improve. For each metric below target, mention what they scored, what the goal is, and incorporate the coaching tip provided (but reword it naturally — don't just copy it). Be constructive and supportive, not critical. If there's a reliability note, include that naturally here.
+
+Email structure:
+- Start with a warm, conversational greeting
+- Wins paragraph (celebrate achievements with specifics)
+- Opportunities paragraph (constructive guidance with tips woven in naturally)
+- Close with encouragement and an invitation to discuss
 
 Keep it sounding like a real supervisor who genuinely wants them to succeed. Use "you" language throughout. Make it conversational, upbeat, and motivating. Avoid corporate buzzwords and any mention of metrics being analyzed or AI involvement. Most importantly, make this email unique and natural — something that doesn't follow a template pattern.
 
