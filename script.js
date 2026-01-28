@@ -1656,36 +1656,6 @@ function initializeEventHandlers() {
     });
     
     
-    // Add New Employee button
-    document.getElementById('addNewEmployeeBtn')?.addEventListener('click', () => {
-        const input = document.getElementById('newEmployeeName');
-        const name = input.value;
-        const messageDiv = document.getElementById('addEmployeeMessage');
-        
-        const result = addNewEmployee(name);
-        
-        messageDiv.textContent = result.message;
-        messageDiv.style.display = 'block';
-        messageDiv.style.background = result.success ? '#d4edda' : '#f8d7da';
-        messageDiv.style.color = result.success ? '#155724' : '#721c24';
-        messageDiv.style.borderLeft = result.success ? '4px solid #28a745' : '4px solid #dc3545';
-        
-        if (result.success) {
-            input.value = '';
-            renderEmployeesList();
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 3000);
-        }
-    });
-    
-    // Allow Enter key to add employee
-    document.getElementById('newEmployeeName')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('addNewEmployeeBtn').click();
-        }
-    });
-    
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
         const weekCount = Object.keys(weeklyData).length;
@@ -3406,75 +3376,43 @@ function generateOutlookEmail() {
 }
 
 // ============================================
-// EMPLOYEE MANAGEMENT
+// EMPLOYEE LIST VIEWER
 // ============================================
 
-function loadEmployeeList() {
-    const employees = JSON.parse(localStorage.getItem('employeeList') || '[]');
-    return employees;
-}
-
-function saveEmployeeList(employees) {
-    localStorage.setItem('employeeList', JSON.stringify(employees));
-}
-
-function addNewEmployee(name) {
-    if (!name || !name.trim()) {
-        return { success: false, message: 'Employee name cannot be empty' };
-    }
-    
-    const employees = loadEmployeeList();
-    const trimmedName = name.trim();
-    
-    if (employees.find(emp => emp.name.toLowerCase() === trimmedName.toLowerCase())) {
-        return { success: false, message: 'Employee already exists' };
-    }
-    
-    employees.push({
-        id: Date.now().toString(),
-        name: trimmedName,
-        dateAdded: new Date().toISOString()
-    });
-    
-    saveEmployeeList(employees);
-    return { success: true, message: `✅ Added ${trimmedName}` };
-}
-
-function removeEmployee(id) {
-    const employees = loadEmployeeList();
-    const filtered = employees.filter(emp => emp.id !== id);
-    saveEmployeeList(filtered);
-}
-
 function renderEmployeesList() {
-    const employees = loadEmployeeList();
     const container = document.getElementById('employeesList');
     
+    // Get all unique employees from uploaded weekly data
+    const employeeSet = new Set();
+    Object.values(weeklyData).forEach(week => {
+        if (week && week.employees) {
+            week.employees.forEach(emp => {
+                employeeSet.add(emp.name);
+            });
+        }
+    });
+    
+    const employees = Array.from(employeeSet).sort();
+    
     if (employees.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Add one above!</div>';
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
         return;
     }
     
-    container.innerHTML = employees.map(emp => `
+    container.innerHTML = `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` + 
+    employees.map(name => {
+        // Get employee nickname if set
+        const nickname = getEmployeeNickname(name);
+        const nicknameDisplay = nickname ? ` (${nickname})` : '';
+        
+        return `
         <div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <div>
-                <strong style="color: #6a1b9a;">${emp.name}</strong>
-                <div style="font-size: 0.8em; color: #999;">Added: ${new Date(emp.dateAdded).toLocaleDateString()}</div>
+                <strong style="color: #6a1b9a;">${name}</strong>${nicknameDisplay}
+                <div style="font-size: 0.8em; color: #666;">Source: Weekly Data Uploads</div>
             </div>
-            <button type="button" class="delete-employee-btn" data-id="${emp.id}" class="btn-secondary" style="background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em;">🗑️ Delete</button>
         </div>
-    `).join('');
-    
-    // Add event listeners to delete buttons
-    document.querySelectorAll('.delete-employee-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.target.dataset.id;
-            if (confirm('Are you sure you want to delete this employee?')) {
-                removeEmployee(id);
-                renderEmployeesList();
-            }
-        });
-    });
+    `}).join('');
 }
 
 
