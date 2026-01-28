@@ -714,6 +714,102 @@ function parsePastedData(pastedText, startDate, endDate) {
 }
 
 // ============================================
+// BULK DATA PROCESSING - ALL ASSOCIATES
+// ============================================
+
+function calculateAveragesFromEmployees(employees) {
+    if (!employees || employees.length === 0) {
+        return null;
+    }
+    
+    const metrics = [
+        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers',
+        'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
+        'aht', 'acw', 'holdTime', 'reliability'
+    ];
+    
+    const timeBasedMetrics = ['aht', 'acw', 'holdTime'];
+    const hoursMetrics = ['reliability'];
+    const percentMetrics = metrics.filter(m => !timeBasedMetrics.includes(m) && !hoursMetrics.includes(m));
+    
+    const averages = {};
+    
+    // Calculate average for each metric
+    metrics.forEach(metric => {
+        const values = employees
+            .map(emp => emp[metric])
+            .filter(v => v !== '' && v !== null && v !== undefined && !isNaN(v))
+            .map(Number);
+        
+        if (values.length > 0) {
+            const sum = values.reduce((a, b) => a + b, 0);
+            averages[metric] = Math.round((sum / values.length) * 100) / 100;
+        } else {
+            averages[metric] = null;
+        }
+    });
+    
+    return averages;
+}
+
+function autoPopulateAverages(averages, startDate, endDate, periodType) {
+    if (!averages) return;
+    
+    // Map metric names to input IDs
+    const metricMap = {
+        'scheduleAdherence': 'avgAdherence',
+        'overallExperience': 'avgOverallExperience',
+        'cxRepOverall': 'avgRepSatisfaction',
+        'fcr': 'avgFCR',
+        'transfers': 'avgTransfers',
+        'overallSentiment': 'avgSentiment',
+        'positiveWord': 'avgPositiveWord',
+        'negativeWord': 'avgNegativeWord',
+        'managingEmotions': 'avgManagingEmotions',
+        'aht': 'avgAHT',
+        'acw': 'avgACW',
+        'holdTime': 'avgHoldTime',
+        'reliability': 'avgReliability'
+    };
+    
+    // Populate Period Type
+    const periodTypeSelect = document.getElementById('avgPeriodType');
+    if (periodTypeSelect) {
+        periodTypeSelect.value = periodType;
+    }
+    
+    // Populate dates
+    const mondayInput = document.getElementById('avgWeekMonday');
+    const sundayInput = document.getElementById('avgWeekSunday');
+    if (mondayInput) mondayInput.value = startDate;
+    if (sundayInput) sundayInput.value = endDate;
+    
+    // Show the metrics form
+    const metricsForm = document.getElementById('avgMetricsForm');
+    if (metricsForm) {
+        metricsForm.style.display = 'block';
+    }
+    
+    // Populate each metric input
+    Object.entries(metricMap).forEach(([metricName, inputId]) => {
+        const input = document.getElementById(inputId);
+        if (input && averages[metricName] !== null && averages[metricName] !== undefined) {
+            input.value = averages[metricName];
+        }
+    });
+    
+    console.log('✅ Auto-populated averages in form');
+    
+    // Scroll to the averages section
+    setTimeout(() => {
+        const avgSection = document.querySelector('[style*="border: 2px solid #9c27b0"]');
+        if (avgSection) {
+            avgSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 500);
+}
+
+// ============================================
 // DATA LOADING - EXCEL FILES
 // ============================================
 
@@ -1339,9 +1435,11 @@ function initializeEventHandlers() {
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
+        const dataType = document.querySelector('input[name="uploadDataType"]:checked')?.value || 'team';
         
         console.log('📊 Paste data received - Length:', pastedData.length, 'chars');
         console.log('📅 Dates: Start=' + startDate, 'End=' + endDate);
+        console.log('👥 Data type:', dataType);
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
@@ -1398,11 +1496,32 @@ function initializeEventHandlers() {
                     endDate: endDate,
                     label: label,
                     periodType: periodType,
-                    uploadedAt: new Date().toISOString()
+                    uploadedAt: new Date().toISOString(),
+                    dataType: dataType
                 }
             };
             
             console.log('📦 Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
+            
+            // If "All Associates" selected, calculate and auto-populate averages
+            if (dataType === 'all') {
+                console.log('📊 Calculating averages from all associates...');
+                const averages = calculateAveragesFromEmployees(employees);
+                console.log('✅ Calculated averages:', averages);
+                
+                // Auto-populate the Call Center Averages section
+                autoPopulateAverages(averages, startDate, endDate, periodType);
+                
+                // Optionally save the calculated averages
+                if (!callCenterAverages[weekKey]) {
+                    callCenterAverages[weekKey] = {
+                        label: label,
+                        data: averages
+                    };
+                    saveCallCenterAverages();
+                    console.log('💾 Saved calculated averages to callCenterAverages');
+                }
+            }
             
             saveWeeklyData();
             console.log('✅ Data saved to localStorage');
@@ -1451,7 +1570,11 @@ function initializeEventHandlers() {
                 }
             }
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`);
+            const successMsg = dataType === 'all' 
+                ? `✅ Loaded ${employees.length} associates for ${label}!\n\nAverages have been auto-calculated and populated.`
+                : `✅ Loaded ${employees.length} employees for ${label}!\n\nSelect an employee below to generate coaching email.`;
+            
+            alert(successMsg);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);

@@ -37,6 +37,20 @@
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy/Paste the data from PowerBI into the box below. Enter date range.</p>
                         
                         <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Data Type:</label>
+                            <div style="display: flex; gap: 20px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
+                                    <input type="radio" name="uploadDataType" value="team" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>My Team (Individual Associates)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
+                                    <input type="radio" name="uploadDataType" value="all" style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>All Associates (Bulk Data)</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
                             <label style="font-weight: bold; display: block; margin-bottom: 5px;">PowerBI Data:</label>
                             <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
                         </div>
