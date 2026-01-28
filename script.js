@@ -854,17 +854,27 @@ function hasDataForTimeframe(employeeData, timeframe) {
 function loadWeeklyData() {
     try {
         const saved = localStorage.getItem('weeklyData');
-        return saved ? JSON.parse(saved) : {};
+        const data = saved ? JSON.parse(saved) : {};
+        console.log('📂 loadWeeklyData() - found', Object.keys(data).length, 'weeks');
+        console.log('📂 localStorage weeklyData:', data);
+        return data;
     } catch (error) {
-        console.error('Error loading weekly data:', error);
+        console.error('❌ Error loading weekly data:', error);
         return {};
     }
 }
 
 function saveWeeklyData() {
     try {
-        localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
-        console.log('💾 Weekly data saved to localStorage. Current weeks:', Object.keys(weeklyData));
+        const dataToSave = JSON.stringify(weeklyData);
+        localStorage.setItem('weeklyData', dataToSave);
+        console.log('💾 saveWeeklyData() - Saved', Object.keys(weeklyData).length, 'weeks');
+        console.log('💾 Saved data size:', (dataToSave.length / 1024).toFixed(2), 'KB');
+        
+        // Verify it was saved
+        const verify = localStorage.getItem('weeklyData');
+        const verifyData = JSON.parse(verify);
+        console.log('✅ Verified save - localStorage now contains:', Object.keys(verifyData).length, 'weeks');
     } catch (error) {
         console.error('❌ Error saving weekly data:', error);
     }
@@ -3200,8 +3210,8 @@ function generateTrendEmail() {
     // Get the week start date from metadata
     const weekStart = week.metadata?.label || week.week_start || `${week.metadata?.startDate}`;
     
-    let email = `Subject: Metric Trend Summary – ${employeeName} – ${weekStart}\n\n`;
-    email += `Hi ${nickname},\n\n`;
+    // Build the email body (NO Subject line - that goes in the mailto)
+    let email = `Hi ${nickname},\n\n`;
     
     // Summary Section
     email += `Here's your performance summary for ${weekStart}.\n\n`;
@@ -3346,7 +3356,7 @@ function generateTrendEmail() {
         showToast('Email copied to clipboard!', 5000);
         
         // Auto-open Outlook with mailto link
-        const subject = `Metric Trend Summary – ${employeeName} – Week of ${week.week_start}`;
+        const subject = `Metric Trend Summary – ${employeeName} – ${weekStart}`;
         const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(email)}`;
         window.location.href = mailtoLink;
         
