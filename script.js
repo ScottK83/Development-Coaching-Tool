@@ -3581,15 +3581,15 @@ function generateTrendEmail() {
     // Reliability explanation section (if metric exists and has a value)
     if (hasReliabilityMetric && employeeToUse.reliability !== undefined && employeeToUse.reliability !== null && employeeToUse.reliability !== '') {
         email += `📋 Reliability Note:\n`;
-        email += `You have ${employeeToUse.reliability} hours of unscheduled time. Remember you have 40 hours of sick time for the year, and using sick time to cover absences helps your reliability score.\n\n`;
+        email += `You have ${employeeToUse.reliability} hours of unscheduled time. This represents time missed that was not pre-approved in Verint and not covered by sick time. If you would like to use sick time to cover this, please let me know.\n\n`;
+        email += `Important: You have 40 hours of sick time to cover unscheduled/unplanned time missed. After those 40 hours are used, any time missed that is not pre-scheduled will be subject to our attendance policy.\n\n`;
     }
     
     // Simplified legend
     email += `Legend: ✅ = Above center avg | ❌ = Below center avg | ⬆️ = Improved | ⬇️ = Declined | ➖ = No change\n\n`;
     
     // Closing
-    email += `Let me know if you have any questions or want to discuss these results.\n\n`;
-    email += `Best,\n[Your Name]`;
+    email += `Let me know if you have any questions or want to discuss these results.`;
     
     console.log('📧 Email generated:\n', email);
     
