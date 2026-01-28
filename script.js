@@ -748,6 +748,20 @@ async function loadServerTips() {
             }
         });
         
+        // Filter out deleted server tips
+        const deletedServerTips = JSON.parse(localStorage.getItem('deletedServerTips') || '{}');
+        Object.keys(deletedServerTips).forEach(metricKey => {
+            if (tips[metricKey]) {
+                // Sort indices in descending order to avoid index shifting issues
+                const indicesToDelete = deletedServerTips[metricKey].sort((a, b) => b - a);
+                indicesToDelete.forEach(index => {
+                    if (tips[metricKey][index] !== undefined) {
+                        tips[metricKey].splice(index, 1);
+                    }
+                });
+            }
+        });
+        
         return tips;
     } catch (error) {
         console.error('Error loading tips:', error);
@@ -1894,7 +1908,10 @@ async function renderTipsManagement() {
                     <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editServerTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
-                            <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button onclick="deleteServerTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2006,6 +2023,34 @@ window.updateServerTip = function(metricKey, index) {
     localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
     
     showToast('✅ Server tip updated!');
+    
+    // Re-trigger the dropdown to refresh the display
+    const selector = document.getElementById('metricSelector');
+    if (selector && selector.value) {
+        selector.dispatchEvent(new Event('change'));
+    }
+};
+
+window.deleteServerTip = function(metricKey, index) {
+    if (!confirm('Are you sure you want to delete this server tip? This will hide it from the list.')) {
+        return;
+    }
+    
+    // Load deleted server tips list
+    let deletedServerTips = JSON.parse(localStorage.getItem('deletedServerTips') || '{}');
+    
+    if (!deletedServerTips[metricKey]) {
+        deletedServerTips[metricKey] = [];
+    }
+    
+    // Mark this index as deleted
+    if (!deletedServerTips[metricKey].includes(index)) {
+        deletedServerTips[metricKey].push(index);
+    }
+    
+    localStorage.setItem('deletedServerTips', JSON.stringify(deletedServerTips));
+    
+    showToast('🗑️ Server tip deleted');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
