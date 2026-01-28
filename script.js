@@ -3339,6 +3339,192 @@ function displayMetricsPreview(employeeName, weekKey) {
     metricsPreviewSection.style.display = 'block';
 }
 
+/**
+ * Build the HTML email for a trend email
+ * Can be used for both single and bulk email generation
+ */
+function buildTrendEmailHtml(employeeName, weekKey, options = {}) {
+    const useEdits = options.useEdits !== false;
+    
+    if (!employeeName || !weekKey) {
+        console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
+        return null;
+    }
+    
+    // Get employee data for this week
+    const week = weeklyData[weekKey];
+    
+    if (!week || !week.employees) {
+        console.error('No data found for week:', weekKey);
+        return null;
+    }
+    
+    const employee = week.employees.find(emp => emp.name === employeeName);
+    
+    if (!employee) {
+        console.error('Employee not found:', employeeName);
+        return null;
+    }
+    
+    // Check if user edited any metrics in preview and override with edited values
+    let editedEmployee = { ...employee };
+    
+    if (useEdits) {
+        const metricInputs = document.querySelectorAll('.metric-preview-input');
+        metricInputs.forEach(input => {
+            const metricKey = input.dataset.metric;
+            const editedValue = input.value;
+            
+            if (editedValue !== '' && editedValue !== null) {
+                const numValue = parseFloat(editedValue);
+                if (!isNaN(numValue)) {
+                    editedEmployee[metricKey] = numValue;
+                    if (numValue !== employee[metricKey]) {
+                        console.log(`📝 Using edited value for ${metricKey}: ${employee[metricKey]} → ${numValue}`);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Use editedEmployee for email generation
+    const employeeToUse = editedEmployee;
+    
+    // Get call center averages for this period
+    const centerAvg = getCallCenterAverageForPeriod(weekKey);
+    console.log('📊 Center averages for', weekKey + ':', centerAvg);
+    
+    // Get the week start date from metadata
+    const weekStart = week.metadata?.label || week.week_start || `${week.metadata?.startDate}`;
+    const periodType = week.metadata?.periodType || 'week';
+    const periodLabel = periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : periodType === 'ytd' ? 'Year' : 'Period';
+    
+    // Build the email HTML - simplified version
+    let htmlEmail = `
+<html>
+<head>
+<style>
+body { font-family: Arial, sans-serif; color: #333; }
+.container { max-width: 800px; margin: 0 auto; padding: 20px; }
+.header { background: #667eea; color: white; padding: 20px; border-radius: 8px; }
+.section { margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background: #667eea; color: white; }
+.metric-good { background: #d4edda; }
+.metric-watch { background: #fff3cd; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>Performance Summary</h1>
+<p>${weekStart} Report</p>
+</div>
+`;
+    
+    const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
+    htmlEmail += `<p>Hi ${nickname},</p><p>Here's your performance summary for ${weekStart}.</p>`;
+    
+    // Build metrics table
+    let metricsHtml = '';
+    const metricsToAnalyze = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', centerKey: 'adherence', lowerIsBetter: false, unit: '%' },
+        { key: 'overallExperience', label: 'Overall Experience', centerKey: 'overallExperience', lowerIsBetter: false, unit: '%' },
+        { key: 'cxRepOverall', label: 'Rep Satisfaction', centerKey: 'repSatisfaction', lowerIsBetter: false, unit: '%' },
+        { key: 'fcr', label: 'FCR', centerKey: 'fcr', lowerIsBetter: false, unit: '%' },
+        { key: 'transfers', label: 'Transfers', centerKey: 'transfers', lowerIsBetter: true, unit: '%' },
+        { key: 'overallSentiment', label: 'Sentiment Score', centerKey: 'sentiment', lowerIsBetter: false, unit: '%' },
+        { key: 'positiveWord', label: 'Positive Word Usage', centerKey: 'positiveWord', lowerIsBetter: false, unit: '%' },
+        { key: 'negativeWord', label: 'Avoiding Negative Words', centerKey: 'negativeWord', lowerIsBetter: false, unit: '%' },
+        { key: 'managingEmotions', label: 'Managing Emotions', centerKey: 'managingEmotions', lowerIsBetter: false, unit: '%' },
+        { key: 'aht', label: 'Average Handle Time', centerKey: 'aht', lowerIsBetter: true, unit: 's' },
+        { key: 'acw', label: 'After Call Work', centerKey: 'acw', lowerIsBetter: true, unit: 's' },
+        { key: 'holdTime', label: 'Hold Time', centerKey: 'holdTime', lowerIsBetter: true, unit: 's' },
+        { key: 'reliability', label: 'Reliability', centerKey: 'reliability', lowerIsBetter: true, unit: 'hrs' }
+    ];
+    
+    metricsToAnalyze.forEach(metric => {
+        const employeeValue = employeeToUse[metric.key];
+        const isReliability = metric.key === 'reliability';
+        const isEmpty = employeeValue === undefined || employeeValue === null || employeeValue === '' || isNaN(employeeValue);
+        const isZeroButNotReliability = employeeValue === 0 && !isReliability;
+        
+        if (isEmpty || isZeroButNotReliability) return;
+        
+        // Get target
+        const metricRegistry = METRICS_REGISTRY[metric.key];
+        let meetsTarget = false;
+        let targetValue = null;
+        
+        if (metricRegistry && metricRegistry.target) {
+            targetValue = metricRegistry.target.value;
+            const targetType = metricRegistry.target.type;
+            if (targetType === 'min') {
+                meetsTarget = employeeValue >= targetValue;
+            } else if (targetType === 'max') {
+                meetsTarget = employeeValue <= targetValue;
+            }
+        }
+        
+        // Get center comparison
+        let centerValue = null;
+        let vsCenter = 'N/A';
+        if (centerAvg && centerAvg[metric.centerKey] !== undefined && centerAvg[metric.centerKey] !== null) {
+            centerValue = centerAvg[metric.centerKey];
+            const meetsCenter = metric.lowerIsBetter 
+                ? employeeValue <= centerValue 
+                : employeeValue >= centerValue;
+            vsCenter = meetsCenter ? '✅ Better' : '❌ Behind';
+        }
+        
+        const rowClass = meetsTarget ? 'metric-good' : 'metric-watch';
+        const statusIcon = meetsTarget ? '✅' : '❌';
+        
+        metricsHtml += `
+            <tr class="${rowClass}">
+                <td>${statusIcon} ${metric.label}</td>
+                <td>${employeeValue.toFixed(1)}${metric.unit}</td>
+                <td>${centerValue !== null ? centerValue.toFixed(1) + metric.unit : 'N/A'}</td>
+                <td>${targetValue !== null ? targetValue + metric.unit : 'N/A'}</td>
+                <td>${vsCenter}</td>
+            </tr>
+        `;
+    });
+    
+    htmlEmail += `
+    <div class="section">
+        <h3>Your Metrics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Your Value</th>
+                    <th>Center Avg</th>
+                    <th>Target</th>
+                    <th>vs. Center</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${metricsHtml}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section">
+        <p>Let me know if you have any questions about these results.</p>
+        <p style="color: #999; font-size: 12px;">Disclaimer: This summary is close enough to use as a guide. YTD stats will be used in future shift bids.</p>
+    </div>
+</div>
+</body>
+</html>
+    `;
+    
+    console.log('📧 HTML email generated for', employeeName);
+    
+    return { htmlEmail, weekStart, subject: `Performance Summary – ${employeeName} – ${weekStart}` };
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
