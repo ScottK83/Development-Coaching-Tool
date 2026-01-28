@@ -245,106 +245,93 @@ function saveNickname(employeeFullName, nickname) {
 function getSavedNickname(employeeFullName) {
     try {
         const nicknames = JSON.parse(localStorage.getItem('employeeNicknames') || '{}');
-        return nicknames[employeeFullName] || null;
-    } catch (error) {
-        console.error('Error loading nickname:', error);
-        return null;
-    }
-}
-
-// ============================================
-// SECTION NAVIGATION
-// ============================================
-
-function showOnlySection(sectionId) {
-    const sections = [
-        'coachingForm',
-        'coachingSection',
-        'resultsSection',
-        'dashboardSection',
-        'tipsManagementSection',
-        'metricTrendsSection',
-        'manageDataSection',
-        'executiveSummarySection'
-    ];
-    
-    sections.forEach(section => {
-        const el = document.getElementById(section);
-        if (el) el.style.display = (section === sectionId) ? 'block' : 'none';
-    });
-    
-    // Hide employee-specific sections when switching away
-    if (sectionId !== 'coachingSection') {
-        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-    }
-    
-    localStorage.setItem('activeSection', sectionId);
-    updateTabHighlight(sectionId);
-}
-
-// Initialize data for the active section
-function initializeSection(sectionId) {
-    switch (sectionId) {
-        case 'coachingForm':
-            // Home tab - no initialization needed (form is static)
-            break;
-        case 'coachingSection':
-            // Generate Coaching tab - reset employee selection
-            resetEmployeeSelection();
-            break;
-        case 'tipsManagementSection':
-            // Manage Tips - render tips management interface
-            renderTipsManagement();
-            break;
-        case 'metricTrendsSection':
-            // Metric Trends - initialize trend email generator
-            initializeMetricTrends();
-            break;
-        case 'manageDataSection':
-            // Manage Data - populate delete week dropdown
-            populateDeleteWeekDropdown();
-            break;
-        case 'executiveSummarySection':
-            // Executive Summary - render summary
-            renderExecutiveSummary();
-            break;
-        default:
-            // No initialization needed
-            break;
-    }
-}
-
-function updateTabHighlight(activeSectionId) {
-    const tabMapping = {
-        'coachingForm': 'homeBtn',
-        'coachingSection': 'generateCoachingBtn',
-        'dashboardSection': 'employeeDashboard',
-        'tipsManagementSection': 'manageTips',
-        'metricTrendsSection': 'metricTrendsBtn',
-        'manageDataSection': 'manageDataBtn',
-        'executiveSummarySection': 'executiveSummaryBtn'
-    };
-    
-    // Reset all buttons
-    ['homeBtn', 'generateCoachingBtn', 'employeeDashboard', 'manageTips', 'metricTrendsBtn', 'manageDataBtn', 'executiveSummaryBtn'].forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            btn.style.background = '#e9ecef';
-            btn.style.color = '#333';
+        function htmlToPlainText(html) {
+            if (!html) return '';
+            return html
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<[^>]+>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/\s+\n/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
         }
-    });
+
+        function buildTrendEmailHtml(employeeName, weekKey, options = { useEdits: true }) {
+            if (!employeeName || !weekKey) {
+                console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
+                return null;
+            }
     
-    // Highlight active button
-    const activeButtonId = tabMapping[activeSectionId];
-    if (activeButtonId) {
-        const activeBtn = document.getElementById(activeButtonId);
-        if (activeBtn) {
-            activeBtn.style.background = '#2196F3';
-            activeBtn.style.color = 'white';
-        }
+            const week = weeklyData[weekKey];
+            if (!week || !week.employees) {
+                console.error('No data found for week:', weekKey);
+                return null;
+            }
+    
+            const employee = week.employees.find(emp => emp.name === employeeName);
+            if (!employee) {
+                console.error('Employee not found:', employeeName);
+                return null;
+            }
+    
+            // Check if user edited any metrics in preview and override with edited values
+            let employeeToUse = employee;
+            if (options.useEdits) {
+                const metricInputs = document.querySelectorAll('.metric-preview-input');
+                const editedEmployee = { ...employee };
+        
+                metricInputs.forEach(input => {
+                    const metricKey = input.dataset.metric;
+                    const editedValue = input.value;
+            
+                    if (editedValue !== '' && editedValue !== null) {
+                        const numValue = parseFloat(editedValue);
+                        if (!isNaN(numValue)) {
+                            editedEmployee[metricKey] = numValue;
+                            if (numValue !== employee[metricKey]) {
+                                console.log(`📝 Using edited value for ${metricKey}: ${employee[metricKey]} → ${numValue}`);
+                            }
+                        }
+                    }
+                });
+                employeeToUse = editedEmployee;
+            }
+    
+            // Get call center averages for this period
+            const centerAvg = getCallCenterAverageForPeriod(weekKey);
+            console.log('📊 Center averages for', weekKey + ':', centerAvg);
+    
+            // Build HTML email content
+            const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
+            const weekStart = week.metadata?.label || week.week_start || `${week.metadata?.startDate}`;
+            const periodType = week.metadata?.periodType || 'week';
+            const periodLabel = periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : periodType === 'ytd' ? 'Year' : 'Period';
+    
+            // Initialize counters for visual cards
+            let meetsTargetCount = 0;
+            let outpacingPeersCount = 0;
+            let totalMetricsEvaluated = 0;
+            let improvedCount = 0;
+    
+            // Start building HTML email
+            let htmlEmail = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 0;
+                    background: #f5f5f5;
+                }
     }
 }
 
@@ -3304,13 +3291,20 @@ function setupMetricTrendsListeners() {
         });
     }
     
-    // Generate trend email button
+    // Generate trend email buttons
     const generateTrendBtn = document.getElementById('generateTrendBtn');
+    const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
     
     if (!generateTrendBtn) {
         console.error('generateTrendBtn element not found!');
     } else {
         generateTrendBtn.addEventListener('click', generateTrendEmail);
+    }
+
+    if (!generateAllTrendBtn) {
+        console.error('generateAllTrendBtn element not found!');
+    } else {
+        generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
     }
     
     // Copy to clipboard button
@@ -3904,7 +3898,26 @@ function generateTrendEmail() {
     
     console.log('📧 HTML email generated');
     
-    // Store for copy button
+    return { htmlEmail, weekStart, subject: `Performance Summary – ${employeeName} – ${weekStart}` };
+}
+
+function generateTrendEmail() {
+    const employeeName = document.getElementById('trendEmployeeSelect')?.value;
+    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    
+    if (!employeeName || !weekKey) {
+        console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
+        showToast('Please select both employee and period', 5000);
+        return;
+    }
+    
+    const result = buildTrendEmailHtml(employeeName, weekKey, { useEdits: true });
+    if (!result) {
+        showToast('No data found for this period', 5000);
+        return;
+    }
+    
+    const { htmlEmail, subject: subjectLine } = result;
     window.latestTrendEmailHtml = htmlEmail;
     
     // Copy HTML to clipboard with formatting
@@ -3916,16 +3929,46 @@ function generateTrendEmail() {
         showToast('✅ Email copied! Opening new email...', 3000);
         
         // Auto-open email client with subject
-        const subject = `Performance Summary – ${employeeName} – ${weekStart}`;
-        window.location.href = 'mailto:?subject=' + encodeURIComponent(subject);
+        window.location.href = 'mailto:?subject=' + encodeURIComponent(subjectLine);
     }).catch((err) => {
         console.error('❌ Failed to copy formatted email:', err);
         // Fallback to plain text if HTML clipboard fails
         navigator.clipboard.writeText(htmlEmail).then(() => {
             showToast('⚠️ Copied as plain text. Opening email...', 5000);
-            const subject = `Performance Summary – ${employeeName} – ${weekStart}`;
-            window.location.href = 'mailto:?subject=' + encodeURIComponent(subject);
+            window.location.href = 'mailto:?subject=' + encodeURIComponent(subjectLine);
         });
+    });
+}
+
+function generateAllTrendEmails() {
+    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    if (!weekKey) {
+        showToast('Please select a period first', 5000);
+        return;
+    }
+    
+    const week = weeklyData[weekKey];
+    if (!week || !week.employees || week.employees.length === 0) {
+        showToast('No data found for this period', 5000);
+        return;
+    }
+    
+    const employeeNames = week.employees.map(emp => emp.name).filter(Boolean);
+    if (employeeNames.length === 0) {
+        showToast('No employees found for this period', 5000);
+        return;
+    }
+    
+    showToast('Opening drafts for all associates... Please allow pop-ups.', 6000);
+    
+    employeeNames.forEach((name, index) => {
+        setTimeout(() => {
+            const result = buildTrendEmailHtml(name, weekKey, { useEdits: false });
+            if (!result) return;
+            const plainText = htmlToPlainText(result.htmlEmail);
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(result.subject)}&body=${encodeURIComponent(plainText)}`;
+            window.open(mailtoLink, '_blank');
+        }, index * 500);
     });
 }
 
