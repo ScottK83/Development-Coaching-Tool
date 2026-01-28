@@ -4919,16 +4919,13 @@ function generateExecutiveSummaryEmail() {
     const periods = [];
     for (const weekKey in weeklyData) {
         const weekData = weeklyData[weekKey];
-        const dataType = weekData.metadata?.periodType || 'week';
-        
-        if (dataType === periodType) {
-            const employee = weekData.employees.find(e => e.name === associate);
-            if (employee) {
-                periods.push({
-                    employee,
-                    centerAverage: getCenterAverageForWeek(weekKey)
-                });
-            }
+        // For executive summary (YTD), include all periods regardless of metadata type
+        const employee = weekData.employees.find(e => e.name === associate);
+        if (employee) {
+            periods.push({
+                employee,
+                centerAverage: getCenterAverageForWeek(weekKey)
+            });
         }
     }
     
