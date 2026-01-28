@@ -2730,7 +2730,16 @@ function loadExistingAverages() {
     // When user selects a period, load existing values if they exist
     avgPeriodSelect.addEventListener('change', (e) => {
         const weekKey = e.target.value;
-        if (!weekKey) return;
+        const avgMetricsForm = document.getElementById('avgMetricsForm');
+        
+        if (!weekKey) {
+            // Hide form if no period selected
+            if (avgMetricsForm) avgMetricsForm.style.display = 'none';
+            return;
+        }
+        
+        // Show the form
+        if (avgMetricsForm) avgMetricsForm.style.display = 'block';
         
         const averages = getCallCenterAverageForPeriod(weekKey);
         
