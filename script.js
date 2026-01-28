@@ -3041,7 +3041,11 @@ function setupAveragesLoader() {
 
 function populateUploadedDataDropdown() {
     const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
+    const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
+    
     if (!avgUploadedDataSelect) return;
+    
+    console.log(`📅 Populating Call Center Average dropdown for type: ${selectedPeriodType}`);
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
@@ -3051,15 +3055,28 @@ function populateUploadedDataDropdown() {
         return;
     }
     
+    // Filter by period type
+    const filteredPeriods = allWeeks.filter(weekKey => {
+        const week = weeklyData[weekKey];
+        const periodType = week.metadata?.periodType || 'week';
+        return periodType === selectedPeriodType;
+    });
+    
+    if (filteredPeriods.length === 0) {
+        avgUploadedDataSelect.innerHTML = `<option value="">No ${selectedPeriodType} data available</option>`;
+        return;
+    }
+    
     // Build options
     let options = '<option value="">-- Choose a period from your data --</option>';
-    allWeeks.forEach(weekKey => {
+    filteredPeriods.forEach(weekKey => {
         const week = weeklyData[weekKey];
         const displayText = week.metadata?.label || week.week_start || weekKey;
         options += `<option value="${weekKey}">${displayText}</option>`;
     });
     
     avgUploadedDataSelect.innerHTML = options;
+    console.log(`✅ ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
 }
 
 function loadUploadedDataPeriod(weekKey) {
@@ -3135,7 +3152,18 @@ function loadUploadedDataPeriod(weekKey) {
 function setupUploadedDataListener() {
     const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
     avgUploadedDataSelect?.addEventListener('change', (e) => {
-        displayCallCenterAverages(e.target.value);
+        const weekKey = e.target.value;
+        displayCallCenterAverages(weekKey);
+        
+        // Auto-sync to Metric Trends section
+        if (weekKey) {
+            const trendPeriodSelect = document.getElementById('trendPeriodSelect');
+            if (trendPeriodSelect) {
+                trendPeriodSelect.value = weekKey;
+                trendPeriodSelect.dispatchEvent(new Event('change'));
+                console.log(`📊 Auto-synced period to Metric Trends: ${weekKey}`);
+            }
+        }
     });
 }
 
@@ -3236,7 +3264,12 @@ function setupMetricTrendsListeners() {
         radio.addEventListener('change', () => {
             const selectedType = radio.value;
             console.log(`🔄 Period type changed to: ${selectedType}`);
-            populateTrendPeriodDropdown();
+            
+            // Update both dropdowns
+            populateUploadedDataDropdown(); // Call Center Average dropdown
+            populateTrendPeriodDropdown(); // Metric Trends dropdown
+            
+            // Clear employee selection
             document.getElementById('trendEmployeeSelect').innerHTML = '<option value="">-- Choose an employee --</option>';
         });
     });
