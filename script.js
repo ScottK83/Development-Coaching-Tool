@@ -3559,8 +3559,9 @@ function generateTrendEmail() {
         
         // Track for grouping
         if (callCenterComparison && callCenterComparison.status === 'below') {
-            // Calculate target hit rate for this metric
-            const targetStats = getTargetHitRate(employeeName, metric.key);
+            // Calculate target hit rate for this metric (filtered by current period type)
+            const periodType = week.metadata?.periodType || 'week';
+            const targetStats = getTargetHitRate(employeeName, metric.key, periodType);
             const statsText = targetStats.total > 0 ? ` - Met target ${targetStats.hits}/${targetStats.total} times` : '';
             watchAreas.push(`${metric.label}: ${employeeValue}${metric.unit} (Center: ${callCenterComparison.centerAvg}${metric.unit})${statsText}`);
         }
@@ -3716,9 +3717,10 @@ function getWeeklyStatisticsForEmployee(employeeName, metricKey, lowerIsBetter) 
     return { meetingTarget, aboveAverage, totalWeeks };
 }
 
-function getTargetHitRate(employeeName, metricKey) {
+function getTargetHitRate(employeeName, metricKey, periodType = 'week') {
     /**
-     * Calculate how many times employee met the target goal across all periods
+     * Calculate how many times employee met the target goal
+     * Filtered by the specified period type (week, month, quarter, ytd)
      * Returns: { hits: number, total: number }
      */
     const metricRegistry = METRICS_REGISTRY[metricKey];
@@ -3730,8 +3732,11 @@ function getTargetHitRate(employeeName, metricKey) {
     let hits = 0;
     let total = 0;
     
-    // Count across all periods (week, month, quarter, ytd)
+    // Count across periods matching the specified period type
     Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
+        // Filter by period type
+        if ((weekData.metadata?.periodType || 'week') !== periodType) return;
+        
         const employee = weekData.employees?.find(emp => emp.name === employeeName);
         if (!employee) return;
         
