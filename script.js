@@ -722,30 +722,42 @@ function calculateAveragesFromEmployees(employees) {
         return null;
     }
     
-    const metrics = [
+    const employeeMetrics = [
         'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers',
         'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
         'aht', 'acw', 'holdTime', 'reliability'
     ];
     
-    const timeBasedMetrics = ['aht', 'acw', 'holdTime'];
-    const hoursMetrics = ['reliability'];
-    const percentMetrics = metrics.filter(m => !timeBasedMetrics.includes(m) && !hoursMetrics.includes(m));
+    // Map from employee data keys to storage keys (what gets saved in centerAvg)
+    const keyMapping = {
+        'scheduleAdherence': 'adherence',
+        'cxRepOverall': 'repSatisfaction',
+        'fcr': 'fcr',
+        'overallExperience': 'overallExperience',
+        'transfers': 'transfers',
+        'overallSentiment': 'sentiment',
+        'positiveWord': 'positiveWord',
+        'negativeWord': 'negativeWord',
+        'managingEmotions': 'managingEmotions',
+        'aht': 'aht',
+        'acw': 'acw',
+        'holdTime': 'holdTime',
+        'reliability': 'reliability'
+    };
     
     const averages = {};
     
     // Calculate average for each metric
-    metrics.forEach(metric => {
+    employeeMetrics.forEach(metricKey => {
         const values = employees
-            .map(emp => emp[metric])
+            .map(emp => emp[metricKey])
             .filter(v => v !== '' && v !== null && v !== undefined && !isNaN(v))
             .map(Number);
         
         if (values.length > 0) {
             const sum = values.reduce((a, b) => a + b, 0);
-            averages[metric] = Math.round((sum / values.length) * 100) / 100;
-        } else {
-            averages[metric] = null;
+            const storageKey = keyMapping[metricKey];
+            averages[storageKey] = Math.round((sum / values.length) * 100) / 100;
         }
     });
     
@@ -755,14 +767,15 @@ function calculateAveragesFromEmployees(employees) {
 function autoPopulateAverages(averages, startDate, endDate, periodType) {
     if (!averages) return;
     
-    // Map metric names to input IDs
+    // averages object uses storage keys: adherence, repSatisfaction, sentiment, etc.
+    // These map directly to the input IDs in the form
     const metricMap = {
-        'scheduleAdherence': 'avgAdherence',
+        'adherence': 'avgAdherence',
         'overallExperience': 'avgOverallExperience',
-        'cxRepOverall': 'avgRepSatisfaction',
+        'repSatisfaction': 'avgRepSatisfaction',
         'fcr': 'avgFCR',
         'transfers': 'avgTransfers',
-        'overallSentiment': 'avgSentiment',
+        'sentiment': 'avgSentiment',
         'positiveWord': 'avgPositiveWord',
         'negativeWord': 'avgNegativeWord',
         'managingEmotions': 'avgManagingEmotions',
@@ -791,10 +804,10 @@ function autoPopulateAverages(averages, startDate, endDate, periodType) {
     }
     
     // Populate each metric input
-    Object.entries(metricMap).forEach(([metricName, inputId]) => {
+    Object.entries(metricMap).forEach(([storageKey, inputId]) => {
         const input = document.getElementById(inputId);
-        if (input && averages[metricName] !== null && averages[metricName] !== undefined) {
-            input.value = averages[metricName];
+        if (input && averages[storageKey] !== null && averages[storageKey] !== undefined) {
+            input.value = averages[storageKey];
         }
     });
     
@@ -1512,15 +1525,14 @@ function initializeEventHandlers() {
                 // Auto-populate the Call Center Averages section
                 autoPopulateAverages(averages, startDate, endDate, periodType);
                 
-                // Optionally save the calculated averages
-                if (!callCenterAverages[weekKey]) {
-                    callCenterAverages[weekKey] = {
-                        label: label,
-                        data: averages
-                    };
-                    saveCallCenterAverages();
-                    console.log('💾 Saved calculated averages to callCenterAverages');
-                }
+                // Save the calculated averages
+                const savedAverages = loadCallCenterAverages();
+                savedAverages[weekKey] = {
+                    label: label,
+                    data: averages
+                };
+                saveCallCenterAverages(savedAverages);
+                console.log('💾 Saved calculated averages to callCenterAverages');
             }
             
             saveWeeklyData();
