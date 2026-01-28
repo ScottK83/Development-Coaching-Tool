@@ -262,6 +262,7 @@ function showOnlySection(sectionId) {
         'resultsSection',
         'dashboardSection',
         'tipsManagementSection',
+        'metricTrendsSection',
         'manageDataSection',
         'executiveSummarySection'
     ];
@@ -325,10 +326,13 @@ function updateTabHighlight(activeSectionId) {
         'coachingSection': 'generateCoachingBtn',
         'dashboardSection': 'employeeDashboard',
         'tipsManagementSection': 'manageTips',
+        'metricTrendsSection': 'metricTrendsBtn',
+        'manageDataSection': 'manageDataBtn',
         'executiveSummarySection': 'executiveSummaryBtn'
     };
     
-    ['homeBtn', 'generateCoachingBtn', 'employeeDashboard', 'manageTips'].forEach(btnId => {
+    // Reset all buttons
+    ['homeBtn', 'generateCoachingBtn', 'employeeDashboard', 'manageTips', 'metricTrendsBtn', 'manageDataBtn', 'executiveSummaryBtn'].forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
             btn.style.background = '#e9ecef';
@@ -336,8 +340,9 @@ function updateTabHighlight(activeSectionId) {
         }
     });
     
+    // Highlight active button
     const activeButtonId = tabMapping[activeSectionId];
-    if (activeButtonId && activeButtonId !== 'executiveSummaryBtn') {
+    if (activeButtonId) {
         const activeBtn = document.getElementById(activeButtonId);
         if (activeBtn) {
             activeBtn.style.background = '#2196F3';
