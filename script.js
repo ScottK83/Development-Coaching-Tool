@@ -97,7 +97,7 @@ const METRICS_REGISTRY = {
         key: 'transfers',
         label: 'Transfers',
         icon: '📞',
-        target: { type: 'max', value: 12 },
+        target: { type: 'max', value: 6 },
         unit: '%',
         columnIndex: 2,
         chartType: 'bar',
