@@ -3894,7 +3894,7 @@ function generateTrendEmail() {
         <div class="footer">
             <p>Keep up the great work! 🌟</p>
             <div class="disclaimer">
-                Disclaimer: Data accuracy may vary depending on the reporting period and data collection method. Month-over-month trends will differ from week-over-week comparisons, and year-to-date calculations may not reflect the exact same patterns as individual period analysis.
+                Disclaimer: This summary is close enough to use as a guide. YTD stats will be used in future shift bids.
             </div>
         </div>
     </div>
