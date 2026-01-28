@@ -778,6 +778,8 @@ async function loadServerTips() {
         return simpleTips;
     } catch (error) {
         console.error('Error loading tips:', error);
+        // Ensure _serverTipsWithIndex is always set to prevent render errors
+        window._serverTipsWithIndex = {};
         return {};
     }
 }
@@ -1918,6 +1920,11 @@ async function renderTipsManagement() {
         if (serverTipsWithIndex.length > 0) {
             tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Server Tips (from tips.csv)</h4>';
             serverTipsWithIndex.forEach((tipObj) => {
+                // Safety check for tipObj structure
+                if (!tipObj || typeof tipObj.originalIndex === 'undefined') {
+                    console.warn('Invalid tip object:', tipObj);
+                    return;
+                }
                 const tip = tipObj.tip;
                 const originalIndex = tipObj.originalIndex;
                 tipsHtml += `
