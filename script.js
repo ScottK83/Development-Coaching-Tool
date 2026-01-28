@@ -855,11 +855,9 @@ function loadWeeklyData() {
     try {
         const saved = localStorage.getItem('weeklyData');
         const data = saved ? JSON.parse(saved) : {};
-        console.log('📂 loadWeeklyData() - found', Object.keys(data).length, 'weeks');
-        console.log('📂 localStorage weeklyData:', data);
         return data;
     } catch (error) {
-        console.error('❌ Error loading weekly data:', error);
+        console.error('Error loading weekly data:', error);
         return {};
     }
 }
@@ -868,15 +866,8 @@ function saveWeeklyData() {
     try {
         const dataToSave = JSON.stringify(weeklyData);
         localStorage.setItem('weeklyData', dataToSave);
-        console.log('💾 saveWeeklyData() - Saved', Object.keys(weeklyData).length, 'weeks');
-        console.log('💾 Saved data size:', (dataToSave.length / 1024).toFixed(2), 'KB');
-        
-        // Verify it was saved
-        const verify = localStorage.getItem('weeklyData');
-        const verifyData = JSON.parse(verify);
-        console.log('✅ Verified save - localStorage now contains:', Object.keys(verifyData).length, 'weeks');
     } catch (error) {
-        console.error('❌ Error saving weekly data:', error);
+        console.error('Error saving weekly data:', error);
     }
 }
 
@@ -2661,7 +2652,6 @@ function renderEmployeeCharts(employeeData, employeeName) {
 // ============================================
 
 function initializeMetricTrends() {
-    console.log('🚀 initializeMetricTrends called');
     // Check if data exists for trend generation
     const allWeeks = Object.keys(weeklyData);
     const statusDiv = document.getElementById('metricTrendsStatus');
@@ -2714,12 +2704,7 @@ function initializeMetricTrends() {
     const avgMetricsForm = document.getElementById('avgMetricsForm');
     if (avgMetricsForm) avgMetricsForm.style.display = 'block';
     
-    // Populate past data dropdown and set up listener
-    populatePastDataDropdown();
-    const pastDataSelect = document.getElementById('pastDataSelect');
-    pastDataSelect?.addEventListener('change', (e) => {
-        loadPastDataEntry(e.target.value);
-    });
+
     
     // Populate uploaded data dropdown and set up listener
     populateUploadedDataDropdown();
@@ -2740,18 +2725,15 @@ function populateTrendPeriodDropdown() {
     const trendPeriodSelect = document.getElementById('trendPeriodSelect');
     
     if (!trendPeriodSelect) {
-        console.warn('❌ trendPeriodSelect element not found');
+        console.warn('trendPeriodSelect element not found');
         return;
     }
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort();
-    console.log('📊 populateTrendPeriodDropdown: Found', allWeeks.length, 'weeks');
-    console.log('Weeks:', allWeeks);
     
     if (allWeeks.length === 0) {
         trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
-        console.warn('⚠️ No weekly data available for trend periods');
         return;
     }
     
@@ -2764,11 +2746,9 @@ function populateTrendPeriodDropdown() {
     });
     
     trendPeriodSelect.innerHTML = options;
-    console.log('✅ Populated trend period dropdown with', allWeeks.length, 'periods');
     
     // Add change listener to filter employees by selected period
     trendPeriodSelect.addEventListener('change', (e) => {
-        console.log('📅 Period selected:', e.target.value);
         populateEmployeeDropdownForPeriod(e.target.value);
     });
 }
@@ -2777,7 +2757,7 @@ function populateEmployeeDropdown() {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
     if (!trendEmployeeSelect) {
-        console.warn('❌ trendEmployeeSelect element not found');
+        console.warn('trendEmployeeSelect element not found');
         return;
     }
     
@@ -2791,12 +2771,8 @@ function populateEmployeeDropdown() {
         }
     });
     
-    console.log('👥 populateEmployeeDropdown: Found', employeeSet.size, 'employees');
-    console.log('Employees:', Array.from(employeeSet));
-    
     if (employeeSet.size === 0) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees available</option>';
-        console.warn('⚠️ No employees found in weekly data');
         return;
     }
     
@@ -2807,14 +2783,13 @@ function populateEmployeeDropdown() {
     });
     
     trendEmployeeSelect.innerHTML = options;
-    console.log('✅ Populated employee dropdown with', employeeSet.size, 'employees');
 }
 
 function populateEmployeeDropdownForPeriod(weekKey) {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
     if (!trendEmployeeSelect) {
-        console.warn('❌ trendEmployeeSelect element not found');
+        console.warn('trendEmployeeSelect element not found');
         return;
     }
     
@@ -2828,12 +2803,10 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     const week = weeklyData[weekKey];
     if (!week || !week.employees) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
-        console.warn('⚠️ No employees found for period:', weekKey);
         return;
     }
     
     const employees = week.employees.map(emp => emp.name).sort();
-    console.log('👥 Employees in period', weekKey + ':', employees);
     
     // Build options
     let options = '<option value="">Select Employee...</option>';
@@ -2842,7 +2815,6 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     });
     
     trendEmployeeSelect.innerHTML = options;
-    console.log('✅ Populated employee dropdown for period with', employees.length, 'employees');
 }
 
 function setupAveragesLoader() {
@@ -2953,7 +2925,6 @@ function loadUploadedDataPeriod(weekKey) {
     
     // Load saved call center averages for this period
     const averages = getCallCenterAverageForPeriod(weekKey);
-    console.log('📂 loadUploadedDataPeriod - Loading averages for', weekKey + ':', averages);
     
     if (averages) {
         // Populate metric fields with saved values
@@ -2970,9 +2941,6 @@ function loadUploadedDataPeriod(weekKey) {
         document.getElementById('avgACW').value = averages.acw || '';
         document.getElementById('avgHoldTime').value = averages.holdTime || '';
         document.getElementById('avgReliability').value = averages.reliability || '';
-        console.log('✅ Loaded saved call center averages');
-    } else {
-        console.log('⚠️ No saved averages found for this period');
     }
     
     showToast(`Selected week of ${week.metadata?.label || startDate}`, 5000);
@@ -2985,132 +2953,20 @@ function setupUploadedDataListener() {
     });
 }
 
-function populatePastDataDropdown() {
-    const pastDataSelect = document.getElementById('pastDataSelect');
-    if (!pastDataSelect) return;
-    
-    // Get all localStorage keys that are call center averages (format: YYYY-MM-DD_periodType)
-    const pastEntries = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        // Check if it matches the pattern: YYYY-MM-DD_week/month/quarter/year
-        if (key && /^\d{4}-\d{2}-\d{2}_(week|month|quarter|year)$/.test(key)) {
-            const parts = key.split('_');
-            const date = parts[0];
-            const periodType = parts[1];
-            const data = JSON.parse(localStorage.getItem(key));
-            pastEntries.push({
-                key: key,
-                date: date,
-                periodType: periodType,
-                displayText: `${date} (${periodType})`
-            });
-        }
-    }
-    
-    // Sort by date descending (newest first)
-    pastEntries.sort((a, b) => b.date.localeCompare(a.date));
-    
-    // Build dropdown options
-    let options = '<option value="">Select past data to view...</option>';
-    pastEntries.forEach(entry => {
-        options += `<option value="${entry.key}">${entry.displayText}</option>`;
-    });
-    
-    pastDataSelect.innerHTML = options;
-}
-
-function loadPastDataEntry(storageKey) {
-    const mondayInput = document.getElementById('avgWeekMonday');
-    const sundayInput = document.getElementById('avgWeekSunday');
-    
-    if (!storageKey) {
-        // Clear the form if no selection
-        document.getElementById('avgPeriodType').value = 'week';
-        mondayInput.value = '';
-        sundayInput.value = '';
-        // Enable date fields for manual entry
-        mondayInput.disabled = false;
-        sundayInput.disabled = false;
-        document.getElementById('avgAdherence').value = '';
-        document.getElementById('avgOverallExperience').value = '';
-        document.getElementById('avgRepSatisfaction').value = '';
-        document.getElementById('avgFCR').value = '';
-        document.getElementById('avgTransfers').value = '';
-        document.getElementById('avgSentiment').value = '';
-        document.getElementById('avgPositiveWord').value = '';
-        document.getElementById('avgNegativeWord').value = '';
-        document.getElementById('avgManagingEmotions').value = '';
-        document.getElementById('avgAHT').value = '';
-        document.getElementById('avgACW').value = '';
-        document.getElementById('avgHoldTime').value = '';
-        document.getElementById('avgReliability').value = '';
-        return;
-    }
-    
-    // Parse the key to get date and period type
-    const parts = storageKey.split('_');
-    const date = parts[0];
-    const periodType = parts[1];
-    
-    // Load the data
-    const averages = getCallCenterAverageForPeriod(storageKey);
-    
-    // Set form fields
-    document.getElementById('avgPeriodType').value = periodType;
-    mondayInput.value = date;
-    
-    // Auto-calculate Sunday
-    const monday = new Date(date);
-    if (!isNaN(monday)) {
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sundayInput.value = sunday.toISOString().split('T')[0];
-    }
-    
-    // Disable date fields since they're loaded from saved data
-    mondayInput.disabled = true;
-    sundayInput.disabled = true;
-    
-    // Populate metric fields
-    document.getElementById('avgAdherence').value = averages.adherence || '';
-    document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
-    document.getElementById('avgRepSatisfaction').value = averages.repSatisfaction || '';
-    document.getElementById('avgFCR').value = averages.fcr || '';
-    document.getElementById('avgTransfers').value = averages.transfers || '';
-    document.getElementById('avgSentiment').value = averages.sentiment || '';
-    document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
-    document.getElementById('avgNegativeWord').value = averages.negativeWord || '';
-    document.getElementById('avgManagingEmotions').value = averages.managingEmotions || '';
-    document.getElementById('avgAHT').value = averages.aht || '';
-    document.getElementById('avgACW').value = averages.acw || '';
-    document.getElementById('avgHoldTime').value = averages.holdTime || '';
-    document.getElementById('avgReliability').value = averages.reliability || '';
-    
-    showToast(`Loaded data for ${date} (${periodType})`, 5000);
-}
-
 function setupMetricTrendsListeners() {
-    console.log('🔌 setupMetricTrendsListeners called');
-    
     // Save averages button
     const saveAvgBtn = document.getElementById('saveAvgBtn');
-    console.log('saveAvgBtn element:', saveAvgBtn);
     
     if (!saveAvgBtn) {
-        console.error('❌ saveAvgBtn element not found!');
+        console.error('saveAvgBtn element not found!');
     } else {
-        console.log('✅ Found saveAvgBtn, attaching listener');
         saveAvgBtn.addEventListener('click', () => {
-            console.log('💾 Save Averages button clicked');
             const periodType = document.getElementById('avgPeriodType')?.value;
             const mondayDate = document.getElementById('avgWeekMonday')?.value;
             const sundayDate = document.getElementById('avgWeekSunday')?.value;
             
-            console.log('📅 Period Type:', periodType, 'Monday:', mondayDate, 'Sunday:', sundayDate);
-            
             if (!mondayDate || !sundayDate) {
-                console.warn('❌ Missing date');
+                console.warn('Missing date');
                 showToast('Please select both Monday and Sunday dates', 5000);
                 return;
             }
@@ -3118,7 +2974,6 @@ function setupMetricTrendsListeners() {
             // Create storage key using the same format as weekKey: "mondayDate|sundayDate"
             // This allows the email generator to find the data
             const storageKey = `${mondayDate}|${sundayDate}`;
-            console.log('🔑 Storage Key:', storageKey);
             
             // Read all metric values
             const averages = {
@@ -3137,23 +2992,16 @@ function setupMetricTrendsListeners() {
                 reliability: parseFloat(document.getElementById('avgReliability')?.value) || null
             };
             
-            console.log('📊 Averages to save:', averages);
-            
             // Validate at least one value entered
             const hasValue = Object.values(averages).some(v => v !== null);
             if (!hasValue) {
-                console.warn('❌ No values entered');
+                console.warn('No values entered');
                 showToast('Please enter at least one metric value', 5000);
                 return;
             }
             
             // Save to storage
-            console.log('💾 Calling setCallCenterAverageForPeriod...');
             setCallCenterAverageForPeriod(storageKey, averages);
-            
-            // Verify save
-            const saved = getCallCenterAverageForPeriod(storageKey);
-            console.log('✅ Verified save - retrieved data:', saved);
             
             const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
             showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 5000);
@@ -3162,23 +3010,19 @@ function setupMetricTrendsListeners() {
     
     // Generate trend email button
     const generateTrendBtn = document.getElementById('generateTrendBtn');
-    console.log('generateTrendBtn element:', generateTrendBtn);
     
     if (!generateTrendBtn) {
-        console.error('❌ generateTrendBtn element not found!');
+        console.error('generateTrendBtn element not found!');
     } else {
-        console.log('✅ Found generateTrendBtn, attaching listener');
         generateTrendBtn.addEventListener('click', generateTrendEmail);
     }
     
     // Copy to clipboard button
     const copyTrendEmailBtn = document.getElementById('copyTrendEmailBtn');
-    console.log('copyTrendEmailBtn element:', copyTrendEmailBtn);
     
     if (!copyTrendEmailBtn) {
-        console.error('❌ copyTrendEmailBtn element not found!');
+        console.error('copyTrendEmailBtn element not found!');
     } else {
-        console.log('✅ Found copyTrendEmailBtn, attaching listener');
         copyTrendEmailBtn.addEventListener('click', () => {
         const emailContent = document.getElementById('trendEmailContent')?.textContent;
         
@@ -3194,40 +3038,31 @@ function setupMetricTrendsListeners() {
         });
         });
     }
-    console.log('✅ setupMetricTrendsListeners completed');
 }
 
 function generateTrendEmail() {
-    console.log('🔍 generateTrendEmail called');
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
     
-    console.log('👤 Employee Name:', employeeName);
-    console.log('📅 Week Key:', weekKey);
-    console.log('📦 weeklyData keys:', Object.keys(weeklyData));
-    console.log('📦 weeklyData:', JSON.stringify(weeklyData, null, 2));
-    
     if (!employeeName || !weekKey) {
-        console.error('❌ Missing selection - Employee:', employeeName, 'Week:', weekKey);
+        console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
         return;
     }
     
     // Get employee data for this week
     const week = weeklyData[weekKey];
-    console.log('📊 Week data for', weekKey + ':', week);
     
     if (!week || !week.employees) {
-        console.error('❌ No data found for week:', weekKey);
+        console.error('No data found for week:', weekKey);
         showToast('No data found for this period', 5000);
         return;
     }
     
     const employee = week.employees.find(emp => emp.name === employeeName);
-    console.log('👥 Found employee:', employee);
     
     if (!employee) {
-        console.error('❌ Employee not found:', employeeName, 'in employees:', week.employees.map(e => e.name));
+        console.error('Employee not found:', employeeName);
         showToast('Employee not found in this period', 5000);
         return;
     }
