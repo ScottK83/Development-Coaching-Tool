@@ -3156,7 +3156,10 @@ function displayCallCenterAverages(weekKey) {
     const week = weeklyData[weekKey];
     const metadata = week.metadata || {};
     
-    // Display period info
+    // Display period info - use label for better display
+    const periodLabel = metadata.label || `${metadata.startDate} to ${metadata.endDate}`;
+    showToast(`Editing averages for: ${periodLabel}`, 5000);
+    
     periodTypeField.value = metadata.periodType || 'week';
     mondayField.value = metadata.startDate || '';
     sundayField.value = metadata.endDate || '';
@@ -3464,11 +3467,21 @@ function generateTrendEmail() {
         const periodType = week.metadata?.periodType || 'week';
         console.log(`📈 ${metric.label} - Period Type: ${periodType}`);
         
-        // ============ YEARLY AVERAGE COMPARISON ============
-        const yearlyComparison = compareToYearlyAverage(employeeName, metric.key, employeeValue, metric.lowerIsBetter);
-        if (yearlyComparison.yearlyAvg !== null) {
-            line += ` | Year Avg: ${yearlyComparison.yearlyAvg}${metric.unit} ${yearlyComparison.icon}`;
-            console.log(`  Yearly Avg: ${yearlyComparison.yearlyAvg}, Status: ${yearlyComparison.status}, Icon: ${yearlyComparison.icon}`);
+        // ============ CALL CENTER AVERAGE COMPARISON ============
+        let callCenterComparison = null;
+        if (centerAvg && centerAvg[metric.centerKey] !== undefined && centerAvg[metric.centerKey] !== null) {
+            const centerValue = centerAvg[metric.centerKey];
+            const meetsCenter = metric.lowerIsBetter 
+                ? employeeValue <= centerValue 
+                : employeeValue >= centerValue;
+            const icon = meetsCenter ? '✅' : '❌';
+            callCenterComparison = {
+                centerAvg: centerValue,
+                status: meetsCenter ? 'meets' : 'below',
+                icon: icon
+            };
+            line += ` | Call Center Avg: ${centerValue}${metric.unit} ${icon}`;
+            console.log(`  Call Center Avg: ${centerValue}, Status: ${callCenterComparison.status}, Icon: ${icon}`);
         }
         
         // ============ TREND COMPARISON (WoW/MoM/YoY) ============
@@ -3492,8 +3505,8 @@ function generateTrendEmail() {
                     console.log(`  ${periodType === 'week' ? 'WoW' : periodType === 'month' ? 'MoM' : 'YoY'}: ${previousValue} → ${employeeValue}, Delta: ${trendDelta}, Icon: ${trendIcon}`);
                     
                     // Add to highlights if improved
-                    if (wow.status === 'improved') {
-                        highlights.push(`${metric.label}: ${employeeValue}${metric.unit} | Year: ${yearlyComparison.yearlyAvg}${metric.unit} ${yearlyComparison.icon} ${trendIcon}`);
+                    if (wow.status === 'improved' && callCenterComparison) {
+                        highlights.push(`${metric.label}: ${employeeValue}${metric.unit} | Center: ${callCenterComparison.centerAvg}${metric.unit} ${callCenterComparison.icon} ${trendIcon}`);
                     }
                 }
             }
@@ -3548,9 +3561,8 @@ function generateTrendEmail() {
     
     // Legend section
     email += `📊 Comparison Legend:\n`;
-    email += `✅ = Above yearly average (exceeding goal)\n`;
-    email += `❌ = Below yearly average (needs improvement)\n`;
-    email += `⚠️ = First time entry (no prior data)\n`;
+    email += `✅ = Above call center average (exceeding goal)\n`;
+    email += `❌ = Below call center average (needs improvement)\n`;
     email += `⬆️ = Better than previous period (week/month/year trending up)\n`;
     email += `⬇️ = Worse than previous period (week/month/year trending down)\n`;
     email += `➖ = Same as previous period or no data\n\n`;
