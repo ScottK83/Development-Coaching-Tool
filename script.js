@@ -933,6 +933,8 @@ function saveCallCenterAverages(averages) {
 function calculateAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
+    console.log(`📊 Calculating averages from ${employees.length} employees`);
+
     const keyMapping = {
         scheduleAdherence: 'adherence',
         overallSentiment: 'sentiment',
@@ -944,12 +946,12 @@ function calculateAveragesFromEmployees(employees) {
 
     employees.forEach(emp => {
         Object.keys(emp).forEach(key => {
-            if (key === 'name' || key === 'id') return;
+            if (key === 'name' || key === 'id' || key === 'firstName' || key === 'surveyTotal' || key === 'totalCalls' || key === 'talkTime') return;
 
             const mappedKey = keyMapping[key] || key;
             const value = parseFloat(emp[key]);
 
-            if (!isNaN(value)) {
+            if (!isNaN(value) && value !== 0) {
                 sums[mappedKey] = (sums[mappedKey] || 0) + value;
                 counts[mappedKey] = (counts[mappedKey] || 0) + 1;
             }
@@ -960,6 +962,10 @@ function calculateAveragesFromEmployees(employees) {
     Object.keys(sums).forEach(key => {
         averages[key] = parseFloat((sums[key] / counts[key]).toFixed(2));
     });
+
+    console.log('📈 Calculated averages:', averages);
+    console.log('📊 Count per metric:', counts);
+    averages.employeeCount = employees.length;
 
     return Object.keys(averages).length > 0 ? averages : null;
 }
@@ -3146,10 +3152,15 @@ function displayCallCenterAverages(weekKey) {
     
     // Get saved averages for this period, or calculate from uploaded data
     let centerAvg = getCallCenterAverageForPeriod(weekKey);
+    let employeeCount = 0;
     
     if (!centerAvg && week.employees) {
         // Calculate averages from uploaded employee data
+        console.log(`📊 No saved averages found. Calculating from ${week.employees.length} employees...`);
         centerAvg = calculateAveragesFromEmployees(week.employees);
+        employeeCount = centerAvg?.employeeCount || week.employees.length;
+    } else if (centerAvg) {
+        employeeCount = centerAvg.employeeCount || 0;
     }
     
     if (!centerAvg) {
@@ -3203,6 +3214,15 @@ function displayCallCenterAverages(weekKey) {
             input.value = value !== null && value !== undefined ? value : 'N/A';
         }
     });
+    
+    // Display employee count if we have it
+    const employeeCountDisplay = document.getElementById('avgEmployeeCount');
+    if (employeeCountDisplay && employeeCount > 0) {
+        employeeCountDisplay.textContent = `Calculated from ${employeeCount} employees`;
+        employeeCountDisplay.style.display = 'block';
+    } else if (employeeCountDisplay) {
+        employeeCountDisplay.style.display = 'none';
+    }
     
     avgMetricsForm.style.display = 'block';
 }
