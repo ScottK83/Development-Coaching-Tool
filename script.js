@@ -930,6 +930,40 @@ function saveCallCenterAverages(averages) {
     }
 }
 
+function calculateAveragesFromEmployees(employees) {
+    if (!employees || employees.length === 0) return null;
+
+    const keyMapping = {
+        scheduleAdherence: 'adherence',
+        overallSentiment: 'sentiment',
+        cxRepOverall: 'repSatisfaction'
+    };
+
+    const sums = {};
+    const counts = {};
+
+    employees.forEach(emp => {
+        Object.keys(emp).forEach(key => {
+            if (key === 'name' || key === 'id') return;
+
+            const mappedKey = keyMapping[key] || key;
+            const value = parseFloat(emp[key]);
+
+            if (!isNaN(value)) {
+                sums[mappedKey] = (sums[mappedKey] || 0) + value;
+                counts[mappedKey] = (counts[mappedKey] || 0) + 1;
+            }
+        });
+    });
+
+    const averages = {};
+    Object.keys(sums).forEach(key => {
+        averages[key] = parseFloat((sums[key] / counts[key]).toFixed(2));
+    });
+
+    return Object.keys(averages).length > 0 ? averages : null;
+}
+
 function getCallCenterAverageForPeriod(periodKey) {
     const averages = loadCallCenterAverages();
     return averages[periodKey] || null;
@@ -3110,15 +3144,41 @@ function displayCallCenterAverages(weekKey) {
     mondayField.value = metadata.startDate || '';
     sundayField.value = metadata.endDate || '';
     
-    // Get saved averages for this period
-    const centerAvg = getCallCenterAverageForPeriod(weekKey);
+    // Get saved averages for this period, or calculate from uploaded data
+    let centerAvg = getCallCenterAverageForPeriod(weekKey);
+    
+    if (!centerAvg && week.employees) {
+        // Calculate averages from uploaded employee data
+        centerAvg = calculateAveragesFromEmployees(week.employees);
+    }
     
     if (!centerAvg) {
-        avgMetricsForm.style.display = 'none';
+        // Clear fields if no data
+        const fieldMap = {
+            'adherence': 'avgAdherence',
+            'overallExperience': 'avgOverallExperience',
+            'repSatisfaction': 'avgRepSatisfaction',
+            'fcr': 'avgFCR',
+            'transfers': 'avgTransfers',
+            'sentiment': 'avgSentiment',
+            'positiveWord': 'avgPositiveWord',
+            'negativeWord': 'avgNegativeWord',
+            'managingEmotions': 'avgManagingEmotions',
+            'aht': 'avgAHT',
+            'acw': 'avgACW',
+            'holdTime': 'avgHoldTime',
+            'reliability': 'avgReliability'
+        };
+        Object.entries(fieldMap).forEach(([avgKey, inputId]) => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = '';
+            }
+        });
         return;
     }
     
-    // Display the saved averages
+    // Display the averages
     const fieldMap = {
         'adherence': 'avgAdherence',
         'overallExperience': 'avgOverallExperience',
