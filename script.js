@@ -2802,12 +2802,12 @@ function generateOutlookEmail() {
     
     // Create friendly subject
     const firstName = fullName.split(' ')[0];
-    const subject = `Quick Check-In - ${firstName}`;
+    const { weekEnding } = getActivePeriodContext();
+    const subject = `Quick Check-In - ${firstName} - Week Ending ${weekEnding}`;
 
     // Record coaching event (persistent history; stateless generation)
     const employeeData = getEmployeeDataForPeriod(fullName);
     const { coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
-    const { weekEnding } = getActivePeriodContext();
     recordCoachingEvent({
         employeeId: fullName,
         weekEnding,
