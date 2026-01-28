@@ -4615,6 +4615,9 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         const targetObj = METRICS_REGISTRY[metric.key]?.target;
         const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
         
+        // Check if survey-based metric has no data
+        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
+        
         // Determine if employee is meeting target
         let isMeetingTarget = false;
         if (typeof targetValue === 'number' && !hasNoSurveyData) {
@@ -4641,9 +4644,6 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
             centerAvg || 0,
             typeof targetValue === 'number' ? targetValue : employeeAvg || 0
         ) * 1.15; // Add 15% padding
-        
-        // Check if survey-based metric has no data
-        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
         
         chartDiv.innerHTML = `
             <h5 style="margin: 0 0 12px 0; color: #ff9800;">${metric.label}</h5>
