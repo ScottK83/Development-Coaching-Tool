@@ -3997,6 +3997,24 @@ function renderExecutiveSummary() {
     html += '</div></div>';
     
     container.innerHTML = html;
+    
+    // Initialize the new yearly individual summary section
+    initializeYearlyIndividualSummary();
+}
+
+function initializeYearlyIndividualSummary() {
+    console.log('📊 Initializing Yearly Individual Summary...');
+    populateExecutiveSummaryAssociate();
+    
+    // Add event listeners for period type radio buttons
+    document.querySelectorAll('input[name="summaryPeriodType"]').forEach(radio => {
+        radio.addEventListener('change', loadExecutiveSummaryData);
+    });
+    
+    // Add event listener for associate dropdown
+    document.getElementById('summaryAssociateSelect')?.addEventListener('change', loadExecutiveSummaryData);
+    
+    console.log('✅ Yearly Individual Summary initialized');
 }
 
 // ============================================
@@ -4360,10 +4378,255 @@ function initApp() {
     console.log('? Application initialized successfully!');
 }
 
+// ===== EXECUTIVE SUMMARY FUNCTIONS =====
+
+function populateExecutiveSummaryAssociate() {
+    console.log('📋 Populating Executive Summary associate dropdown...');
+    const select = document.getElementById('summaryAssociateSelect');
+    const allEmployees = new Set();
+    
+    // Collect all unique employee names from weeklyData
+    for (const weekKey in weeklyData) {
+        const week = weeklyData[weekKey];
+        if (week.employees && Array.isArray(week.employees)) {
+            week.employees.forEach(emp => {
+                if (emp.name && isTeamMember(emp.name)) {
+                    allEmployees.add(emp.name);
+                }
+            });
+        }
+    }
+    
+    // Sort and populate dropdown
+    const sortedEmployees = Array.from(allEmployees).sort();
+    select.innerHTML = '<option value="">-- Choose an associate --</option>';
+    sortedEmployees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+    
+    console.log(`✅ Populated ${sortedEmployees.length} team members`);
+}
+
+function loadExecutiveSummaryData() {
+    const associate = document.getElementById('summaryAssociateSelect').value;
+    const periodType = document.querySelector('input[name="summaryPeriodType"]:checked').value;
+    
+    if (!associate) {
+        document.getElementById('summaryDataContainer').style.display = 'none';
+        document.getElementById('summaryChartsContainer').style.display = 'none';
+        return;
+    }
+    
+    console.log(`📊 Loading executive summary for ${associate} (${periodType})`);
+    
+    // Collect all periods matching the selected type
+    const matchingPeriods = [];
+    for (const weekKey in weeklyData) {
+        const weekData = weeklyData[weekKey];
+        const dataType = weekData.metadata?.periodType || 'week';
+        
+        if (dataType === periodType) {
+            matchingPeriods.push({
+                weekKey,
+                label: weekData.metadata?.label || weekKey,
+                employee: weekData.employees.find(e => e.name === associate),
+                centerAverage: getCenterAverageForWeek(weekKey),
+                startDate: weekData.metadata?.startDate,
+                endDate: weekData.metadata?.endDate
+            });
+        }
+    }
+    
+    console.log(`Found ${matchingPeriods.length} periods of type ${periodType}`);
+    
+    // Populate data table
+    populateExecutiveSummaryTable(associate, matchingPeriods, periodType);
+    
+    // Display metric comparisons
+    displayExecutiveSummaryCharts(associate, matchingPeriods, periodType);
+    
+    document.getElementById('summaryDataContainer').style.display = 'block';
+    document.getElementById('summaryChartsContainer').style.display = 'block';
+}
+
+function populateExecutiveSummaryTable(associate, periods, periodType) {
+    const tbody = document.getElementById('summaryDataTable');
+    tbody.innerHTML = '';
+    
+    periods.forEach(period => {
+        if (!period.employee) return;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="padding: 12px; border: 1px solid #ddd; background: #f9f9f9;">${period.label}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.scheduleAdherence || 0).toFixed(1)}%</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.overallExperience || 0).toFixed(1)}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.fcr || 0).toFixed(1)}%</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${period.employee.transfers || 0}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">
+                <input type="text" class="redflags-input" data-week="${period.weekKey}" placeholder="Add red flags..." 
+                    style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
+            </td>
+            <td style="padding: 12px; border: 1px solid #ddd;">
+                <input type="text" class="phishing-input" data-week="${period.weekKey}" placeholder="Phishing attempts..." 
+                    style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Load saved red flags and phishing data
+    loadExecutiveSummaryNotes(associate);
+}
+
+function loadExecutiveSummaryNotes(associate) {
+    const saved = localStorage.getItem('executiveSummaryNotes') ? JSON.parse(localStorage.getItem('executiveSummaryNotes')) : {};
+    const employeeNotes = saved[associate] || {};
+    
+    // Populate red flags
+    document.querySelectorAll('.redflags-input').forEach(input => {
+        const weekKey = input.dataset.week;
+        input.value = employeeNotes[weekKey]?.redFlags || '';
+        input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
+    });
+    
+    // Populate phishing
+    document.querySelectorAll('.phishing-input').forEach(input => {
+        const weekKey = input.dataset.week;
+        input.value = employeeNotes[weekKey]?.phishing || '';
+        input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
+    });
+}
+
+function saveExecutiveSummaryNotes(associate) {
+    const saved = localStorage.getItem('executiveSummaryNotes') ? JSON.parse(localStorage.getItem('executiveSummaryNotes')) : {};
+    
+    if (!saved[associate]) {
+        saved[associate] = {};
+    }
+    
+    document.querySelectorAll('.redflags-input').forEach(input => {
+        const weekKey = input.dataset.week;
+        if (!saved[associate][weekKey]) saved[associate][weekKey] = {};
+        saved[associate][weekKey].redFlags = input.value;
+    });
+    
+    document.querySelectorAll('.phishing-input').forEach(input => {
+        const weekKey = input.dataset.week;
+        if (!saved[associate][weekKey]) saved[associate][weekKey] = {};
+        saved[associate][weekKey].phishing = input.value;
+    });
+    
+    localStorage.setItem('executiveSummaryNotes', JSON.stringify(saved));
+    showToast(`✅ Notes saved for ${associate}`, 3000);
+}
+
+function displayExecutiveSummaryCharts(associate, periods, periodType) {
+    const container = document.getElementById('summaryMetricsVisuals');
+    container.innerHTML = '';
+    
+    // Average across all periods for this associate
+    const metrics = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', lowerIsBetter: false },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '', lowerIsBetter: false },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '', lowerIsBetter: false },
+        { key: 'fcr', label: 'First Call Resolution', unit: '%', lowerIsBetter: false },
+        { key: 'transfers', label: 'Transfers', unit: '', lowerIsBetter: true },
+        { key: 'sentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false },
+        { key: 'positiveWord', label: 'Positive Words', unit: '', lowerIsBetter: false },
+        { key: 'negativeWord', label: 'Negative Words', unit: '', lowerIsBetter: true },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', lowerIsBetter: false },
+        { key: 'aht', label: 'Average Handle Time', unit: 's', lowerIsBetter: true },
+        { key: 'acw', label: 'After Call Work', unit: 's', lowerIsBetter: true },
+        { key: 'holdTime', label: 'Hold Time', unit: 's', lowerIsBetter: true },
+        { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: false }
+    ];
+    
+    metrics.forEach(metric => {
+        // Calculate employee average
+        let employeeSum = 0, employeeCount = 0;
+        periods.forEach(period => {
+            if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
+                employeeSum += parseFloat(period.employee[metric.key]);
+                employeeCount++;
+            }
+        });
+        const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
+        
+        // Calculate center average
+        let centerSum = 0, centerCount = 0;
+        periods.forEach(period => {
+            const centerAvg = period.centerAverage;
+            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null) {
+                centerSum += parseFloat(centerAvg[metric.key]);
+                centerCount++;
+            }
+        });
+        const centerAvg = centerCount > 0 ? centerSum / centerCount : 0;
+        
+        // Get target from METRICS_REGISTRY
+        const target = METRICS_REGISTRY[metric.key]?.target || 'N/A';
+        
+        // Create visual bar
+        const chartDiv = document.createElement('div');
+        chartDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        
+        const maxValue = Math.max(
+            employeeAvg,
+            centerAvg,
+            typeof target === 'number' ? target : employeeAvg
+        ) * 1.15; // Add 15% padding
+        
+        chartDiv.innerHTML = `
+            <h5 style="margin: 0 0 12px 0; color: #ff9800;">${metric.label}</h5>
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <span style="width: 100px; font-weight: bold;">You:</span>
+                    <div style="flex: 1; background: #e8f5e9; height: 24px; border-radius: 3px; position: relative;">
+                        <div style="background: linear-gradient(90deg, #4caf50, #81c784); height: 100%; border-radius: 3px; width: ${(employeeAvg / maxValue) * 100}%;"></div>
+                    </div>
+                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${employeeAvg.toFixed(1)}${metric.unit}</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <span style="width: 100px; font-weight: bold;">Center Avg:</span>
+                    <div style="flex: 1; background: #f3e5f5; height: 24px; border-radius: 3px; position: relative;">
+                        <div style="background: linear-gradient(90deg, #9c27b0, #ba68c8); height: 100%; border-radius: 3px; width: ${(centerAvg / maxValue) * 100}%;"></div>
+                    </div>
+                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${centerAvg.toFixed(1)}${metric.unit}</span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <span style="width: 100px; font-weight: bold;">Target:</span>
+                    <span style="margin-left: 12px; font-weight: bold; color: #ff9800; font-size: 1.1em;">${typeof target === 'number' ? target.toFixed(1) + metric.unit : target}</span>
+                </div>
+            </div>
+            <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+                ${employeeAvg >= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average'}
+            </div>
+        `;
+        
+        container.appendChild(chartDiv);
+    });
+}
+
+function getCenterAverageForWeek(weekKey) {
+    const weekData = weeklyData[weekKey];
+    if (!weekData || !weekData.employees) return {};
+    
+    // Load call center averages from localStorage
+    const callCenterAverages = localStorage.getItem('callCenterAverages') ? JSON.parse(localStorage.getItem('callCenterAverages')) : {};
+    return callCenterAverages[weekKey] || {};
+}
+
+// ===== END EXECUTIVE SUMMARY FUNCTIONS =====
+
 // Start the app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
 }
+
 
