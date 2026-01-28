@@ -1976,6 +1976,11 @@ async function renderTipsManagement() {
 
 window.addTip = function(metricKey) {
     const textarea = document.getElementById(`newTip_${metricKey}`);
+    if (!textarea) {
+        console.error('Textarea not found for add operation');
+        return;
+    }
+    
     const tip = textarea.value.trim();
     
     if (!tip) {
@@ -1987,6 +1992,13 @@ window.addTip = function(metricKey) {
     if (!userTips[metricKey]) {
         userTips[metricKey] = [];
     }
+    
+    // Ensure it's an array before pushing
+    if (!Array.isArray(userTips[metricKey])) {
+        console.error('userTips[metricKey] is not an array, resetting');
+        userTips[metricKey] = [];
+    }
+    
     userTips[metricKey].push(tip);
     saveUserTips(userTips);
     
@@ -2004,10 +2016,15 @@ window.addTip = function(metricKey) {
 
 window.updateTip = function(metricKey, index) {
     const textarea = document.getElementById(`editTip_${metricKey}_${index}`);
+    if (!textarea) {
+        console.error('Textarea not found for edit operation');
+        return;
+    }
+    
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('? Tip cannot be empty');
+        alert('⚠️ Tip cannot be empty');
         return;
     }
     
@@ -2023,15 +2040,31 @@ window.updateTip = function(metricKey, index) {
         if (selector && selector.value) {
             selector.dispatchEvent(new Event('change'));
         }
+    } else {
+        console.warn(`Invalid index ${index} for metric ${metricKey}`);
+        showToast('⚠️ Could not update tip - please refresh the page');
     }
 };
 
 window.updateServerTip = function(metricKey, index) {
     const textarea = document.getElementById(`editServerTip_${metricKey}_${index}`);
+    if (!textarea) {
+        console.error('Textarea not found for server tip edit operation');
+        showToast('⚠️ Could not update tip - please refresh the page');
+        return;
+    }
+    
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('? Tip cannot be empty');
+        alert('⚠️ Tip cannot be empty');
+        return;
+    }
+    
+    // Validate index is a valid number
+    if (typeof index !== 'number' && isNaN(parseInt(index))) {
+        console.error('Invalid index for server tip update:', index);
+        showToast('⚠️ Could not update tip - invalid index');
         return;
     }
     
@@ -2088,15 +2121,26 @@ window.deleteTip = function(metricKey, index) {
     }
     
     const userTips = loadUserTips();
-    if (userTips[metricKey]) {
+    if (userTips[metricKey] && Array.isArray(userTips[metricKey])) {
+        // Validate index is within bounds
+        if (index < 0 || index >= userTips[metricKey].length) {
+            console.warn(`Invalid index ${index} for deletion. Array length: ${userTips[metricKey].length}`);
+            showToast('⚠️ Could not delete tip - please refresh the page');
+            return;
+        }
+        
         userTips[metricKey].splice(index, 1);
         if (userTips[metricKey].length === 0) {
             delete userTips[metricKey];
         }
         saveUserTips(userTips);
+        
+        showToast('🗑️ Tip deleted');
+    } else {
+        console.warn(`No tips found for metric ${metricKey}`);
+        showToast('⚠️ Could not delete tip - please refresh the page');
+        return;
     }
-    
-    showToast('🗑️ Tip deleted');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
