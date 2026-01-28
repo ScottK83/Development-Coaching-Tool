@@ -3233,10 +3233,18 @@ function generateTrendEmail() {
         const employeeValue = employee[metric.key];
         
         // Skip if employee doesn't have this metric
-        if (employeeValue === undefined || employeeValue === null) return;
+        // Allow Reliability to be 0 (that's good!), but skip empty strings, null, undefined, NaN, etc.
+        const isReliability = metric.key === 'reliability';
+        const isEmpty = employeeValue === undefined || employeeValue === null || employeeValue === '' || isNaN(employeeValue);
+        const isZeroButNotReliability = employeeValue === 0 && !isReliability;
+        
+        if (isEmpty || isZeroButNotReliability) {
+            console.log(`⏭️  Skipping ${metric.label}: value=${employeeValue}`);
+            return;
+        }
         
         // Track if reliability metric is present
-        if (metric.key === 'reliability') {
+        if (isReliability) {
             hasReliabilityMetric = true;
         }
         
