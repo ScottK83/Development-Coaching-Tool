@@ -4708,6 +4708,7 @@ function getCenterAverageForWeek(weekKey) {
         overallExperience: avg.overallExperience,
         cxRepOverall: avg.repSatisfaction,
         fcr: avg.fcr,
+        transfers: avg.transfers,
         overallSentiment: avg.sentiment,
         positiveWord: avg.positiveWord,
         negativeWord: avg.negativeWord,
