@@ -857,9 +857,24 @@ function appendCoachingLogEntry(entry) {
 
 function getActivePeriodContext() {
     const metadata = currentPeriod && weeklyData[currentPeriod]?.metadata ? weeklyData[currentPeriod].metadata : null;
+    
+    // Determine friendly time reference based on period type
+    let timeReference = 'this period';
+    if (currentPeriodType === 'week') {
+        timeReference = 'this week';
+    } else if (currentPeriodType === 'month') {
+        timeReference = 'this month';
+    } else if (currentPeriodType === 'quarter') {
+        timeReference = 'this quarter';
+    } else if (currentPeriodType === 'ytd') {
+        timeReference = 'this year';
+    }
+    
     return {
         periodLabel: metadata?.label || 'this period',
-        weekEnding: metadata?.endDate || metadata?.label || 'unspecified'
+        weekEnding: metadata?.endDate || metadata?.label || 'unspecified',
+        timeReference: timeReference,
+        periodType: currentPeriodType
     };
 }
 
@@ -2644,7 +2659,7 @@ async function generateCopilotPrompt() {
         alert('❌ Unable to load metrics for this employee. Please reload data.');
         return;
     }
-    const { periodLabel } = getActivePeriodContext();
+    const { periodLabel, timeReference } = getActivePeriodContext();
     const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
     
     // Load tips from CSV
@@ -2704,8 +2719,7 @@ async function generateCopilotPrompt() {
     if (reliabilityMetric) {
         const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
         const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
-        const timePeriod = periodLabel.toLowerCase().includes('month') ? 'this month' : 'this week';
-        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timePeriod} that was unscheduled. If this is an error, please let me know.\n`;
+        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timeReference} that was unscheduled. If this is an error, please let me know.\n`;
     }
     
     let additionalContext = '';
