@@ -216,6 +216,33 @@ function showOnlySection(sectionId) {
     }
 }
 
+/**
+ * Initialize the content of a section when it's shown
+ */
+function initializeSection(sectionId) {
+    switch(sectionId) {
+        case 'coachingSection':
+            resetEmployeeSelection();
+            break;
+        case 'dashboardSection':
+            renderEmployeeHistory();
+            break;
+        case 'tipsManagementSection':
+            renderTipsManagement();
+            break;
+        case 'metricTrendsSection':
+            initializeMetricTrends();
+            break;
+        case 'manageDataSection':
+            populateDeleteWeekDropdown();
+            renderEmployeesList();
+            break;
+        case 'executiveSummarySection':
+            renderExecutiveSummary();
+            break;
+    }
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
