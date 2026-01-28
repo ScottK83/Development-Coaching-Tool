@@ -3982,13 +3982,7 @@ function initializeYearlyIndividualSummary() {
     console.log('📊 Initializing Yearly Individual Summary...');
     populateExecutiveSummaryAssociate();
     
-    // Add event listeners for period type radio buttons
-    document.querySelectorAll('input[name="summaryPeriodType"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            loadExecutiveSummaryData();
-            showEmailSection();
-        });
-    });
+    // Period type is always YTD for executive summary
     
     // Add event listener for associate dropdown
     document.getElementById('summaryAssociateSelect')?.addEventListener('change', () => {
@@ -4413,7 +4407,7 @@ function populateExecutiveSummaryAssociate() {
 
 function loadExecutiveSummaryData() {
     const associate = document.getElementById('summaryAssociateSelect').value;
-    const periodType = document.querySelector('input[name="summaryPeriodType"]:checked').value;
+    const periodType = 'ytd'; // Always use Year-to-Date
     
     if (!associate) {
         document.getElementById('summaryDataContainer').style.display = 'none';
@@ -4421,7 +4415,7 @@ function loadExecutiveSummaryData() {
         return;
     }
     
-    console.log(`📊 Loading executive summary for ${associate} (${periodType})`);
+    console.log(`📊 Loading executive summary for ${associate} (YTD)`);
     
     // Collect all periods matching the selected type
     const matchingPeriods = [];
@@ -4566,7 +4560,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '', lowerIsBetter: false, isSurveyBased: true },
         { key: 'fcr', label: 'First Call Resolution', unit: '%', lowerIsBetter: false, isSurveyBased: true },
         { key: 'transfers', label: 'Transfers', unit: '', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'sentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false, isSurveyBased: false },
+        { key: 'overallSentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false, isSurveyBased: false },
         { key: 'positiveWord', label: 'Positive Words', unit: '', lowerIsBetter: false, isSurveyBased: false },
         { key: 'negativeWord', label: 'Negative Words', unit: '', lowerIsBetter: true, isSurveyBased: false },
         { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', lowerIsBetter: false, isSurveyBased: false },
@@ -4665,8 +4659,7 @@ function getCenterAverageForWeek(weekKey) {
         overallExperience: avg.overallExperience,
         cxRepOverall: avg.repSatisfaction,
         fcr: avg.fcr,
-        transfers: avg.transfers,
-        sentiment: avg.sentiment,
+        overallSentiment: avg.sentiment,
         positiveWord: avg.positiveWord,
         negativeWord: avg.negativeWord,
         managingEmotions: avg.managingEmotions,
@@ -4784,7 +4777,7 @@ function generateComparisonChart(metricsData) {
 function generateExecutiveSummaryEmail() {
     console.log('📧 Generating Executive Summary email...');
     const associate = document.getElementById('summaryAssociateSelect').value;
-    const periodType = document.querySelector('input[name="summaryPeriodType"]:checked').value;
+    const periodType = 'ytd'; // Always use Year-to-Date
     
     if (!associate) {
         showToast('Please select an associate first', 5000);
@@ -4825,7 +4818,7 @@ function generateExecutiveSummaryEmail() {
         { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '' },
         { key: 'fcr', label: 'First Call Resolution', unit: '%' },
         { key: 'transfers', label: 'Transfers', unit: '' },
-        { key: 'sentiment', label: 'Sentiment', unit: '%' },
+        { key: 'overallSentiment', label: 'Sentiment', unit: '%' },
         { key: 'positiveWord', label: 'Positive Words', unit: '' },
         { key: 'negativeWord', label: 'Negative Words', unit: '' },
         { key: 'managingEmotions', label: 'Managing Emotions', unit: '%' },
