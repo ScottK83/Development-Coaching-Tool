@@ -3197,13 +3197,14 @@ function generateTrendEmail() {
     
     // Build email content
     const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
-    const weekStart = week.week_start;
+    // Get the week start date from metadata
+    const weekStart = week.metadata?.label || week.week_start || `${week.metadata?.startDate}`;
     
-    let email = `Subject: Metric Trend Summary – ${employeeName} – Week of ${weekStart}\n\n`;
+    let email = `Subject: Metric Trend Summary – ${employeeName} – ${weekStart}\n\n`;
     email += `Hi ${nickname},\n\n`;
     
     // Summary Section
-    email += `Here's your performance summary for the week of ${weekStart}.\n\n`;
+    email += `Here's your performance summary for ${weekStart}.\n\n`;
     
     // Metrics breakdown
     email += `📊 Your Metrics:\n\n`;
@@ -3845,6 +3846,12 @@ function initApp() {
     if (Object.keys(weeklyData).length > 0) {
         updatePeriodDropdown();
     }
+    
+    // Ensure data is saved before page unload (survives Ctrl+Shift+R)
+    window.addEventListener('beforeunload', () => {
+        saveWeeklyData();
+        console.log('💾 Auto-saving weekly data on page unload');
+    });
     
     console.log('? Application initialized successfully!');
 }
