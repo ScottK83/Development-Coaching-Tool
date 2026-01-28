@@ -3307,34 +3307,6 @@ function setupMetricTrendsListeners() {
         generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
     }
     
-    // Copy to clipboard button
-    const copyTrendEmailBtn = document.getElementById('copyTrendEmailBtn');
-    
-    if (!copyTrendEmailBtn) {
-        console.error('copyTrendEmailBtn element not found!');
-    } else {
-        copyTrendEmailBtn.addEventListener('click', () => {
-            const htmlEmail = window.latestTrendEmailHtml;
-            
-            if (!htmlEmail || htmlEmail.trim() === '') {
-                showToast('Generate an email first', 5000);
-                return;
-            }
-            
-            const blob = new Blob([htmlEmail], { type: 'text/html' });
-            const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
-            
-            navigator.clipboard.write([htmlClipboardItem]).then(() => {
-                showToast('Email copied to clipboard!', 5000);
-            }).catch(() => {
-                navigator.clipboard.writeText(htmlEmail).then(() => {
-                    showToast('Copied as plain text', 5000);
-                }).catch(() => {
-                    showToast('Failed to copy email', 5000);
-                });
-            });
-        });
-    }
 }
 
 function displayMetricsPreview(employeeName, weekKey) {
