@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    DEVELOPMENT COACHING TOOL
    Complete rewrite with proper encoding and parsing
    ======================================== */
@@ -974,7 +974,7 @@ function calculateAveragesFromEmployees(employees) {
         averages[key] = parseFloat((sums[key] / counts[key]).toFixed(2));
     });
 
-    console.log('📈 Calculated averages:', averages);
+    console.log(' Calculated averages:', averages);
     console.log('📊 Count per metric:', counts);
     averages.employeeCount = activeEmployees.length;
 
@@ -3437,8 +3437,8 @@ function generateTrendEmail() {
     email += `📊 Comparison Legend:\n`;
     email += `✅ = Above call center average (exceeding expectations)\n`;
     email += `⬇️ = Below call center average (needs improvement)\n`;
-    email += `� = Week-over-week improvement (trending upward)\n`;
-    email += `📉 = Week-over-week decline (trending downward)\n`;
+    email += ` = Week-over-week improvement (trending upward)\n`;
+    email += ` = Week-over-week decline (trending downward)\n`;
     email += `➖ = No comparison available (first week or no data)\n\n`;
     
     // Closing
@@ -3506,16 +3506,16 @@ function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
     if (lowerIsBetter) {
         // For AHT, ACW: decrease is improvement
         if (delta < 0) {
-            return { status: 'improved', icon: '�', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '', delta: Math.round(delta * 100) / 100 };
         }
     } else {
         // For others: increase is improvement
         if (delta > 0) {
-            return { status: 'improved', icon: '📈', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '⬆️', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '⬇️', delta: Math.round(delta * 100) / 100 };
         }
     }
 }
