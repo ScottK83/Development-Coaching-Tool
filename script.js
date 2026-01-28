@@ -3290,6 +3290,30 @@ function setupMetricTrendsListeners() {
         generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
     }
     
+    // Show/hide buttons based on employee selection
+    const employeeDropdown = document.getElementById('trendEmployeeSelect');
+    if (employeeDropdown) {
+        employeeDropdown.addEventListener('change', (e) => {
+            const selectedValue = e.target.value;
+            const generateTrendBtn = document.getElementById('generateTrendBtn');
+            const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+            
+            if (selectedValue === '') {
+                // No selection - hide both buttons
+                if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+            } else if (selectedValue === 'ALL') {
+                // All associates selected - show only "Generate All"
+                if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
+            } else {
+                // Specific associate selected - show only "Generate Trend Email"
+                if (generateTrendBtn) generateTrendBtn.style.display = 'block';
+                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+            }
+        });
+    }
+    
 }
 
 function displayMetricsPreview(employeeName, weekKey) {
