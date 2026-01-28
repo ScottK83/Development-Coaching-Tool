@@ -4409,13 +4409,17 @@ function loadExecutiveSummaryData() {
     const associate = document.getElementById('summaryAssociateSelect').value;
     const periodType = 'ytd'; // Always use Year-to-Date
     
+    console.log(`\n📊 loadExecutiveSummaryData started - associate: ${associate}`);
+    
     if (!associate) {
+        console.log('⚠️ No associate selected');
         document.getElementById('summaryDataContainer').style.display = 'none';
         document.getElementById('summaryChartsContainer').style.display = 'none';
         return;
     }
     
     console.log(`📊 Loading executive summary for ${associate} (YTD)`);
+    console.log(`Available weeks in weeklyData: ${Object.keys(weeklyData).length}`);
     
     // Collect ALL periods (regardless of upload type) for YTD view
     const matchingPeriods = [];
@@ -4425,6 +4429,7 @@ function loadExecutiveSummaryData() {
         // For executive summary (YTD), include all periods regardless of metadata type
         const employee = weekData.employees.find(e => e.name === associate);
         if (employee) {
+            console.log(`  ✅ Found ${associate} in period ${weekKey}`);
             matchingPeriods.push({
                 weekKey,
                 label: weekData.metadata?.label || weekKey,
@@ -4550,8 +4555,20 @@ function saveExecutiveSummaryNotes(associate) {
 }
 
 function displayExecutiveSummaryCharts(associate, periods, periodType) {
+    console.log(`📊 displayExecutiveSummaryCharts called for ${associate} with ${periods.length} periods`);
+    
     const container = document.getElementById('summaryMetricsVisuals');
+    if (!container) {
+        console.error('ERROR: summaryMetricsVisuals container not found!');
+        return;
+    }
     container.innerHTML = '';
+    
+    if (!periods || periods.length === 0) {
+        console.warn('⚠️ No periods provided to displayExecutiveSummaryCharts');
+        container.innerHTML = '<p style="color: #999; padding: 20px;">No data available for this associate.</p>';
+        return;
+    }
     
     // Average across all periods for this associate
     const surveyBasedMetrics = ['overallExperience', 'cxRepOverall', 'fcr'];
@@ -4572,6 +4589,8 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     ];
     
     metrics.forEach(metric => {
+        console.log(`  Processing metric: ${metric.label}`);
+        
         // Calculate employee average
         let employeeSum = 0, employeeCount = 0;
         periods.forEach(period => {
@@ -4593,6 +4612,8 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
             }
         });
         const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
+        
+        console.log(`    Employee avg: ${employeeAvg}, Center avg: ${centerAvg}`);
         
         // Get target from METRICS_REGISTRY - extract the value from the object
         const targetObj = METRICS_REGISTRY[metric.key]?.target;
@@ -4639,7 +4660,10 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         `;
         
         container.appendChild(chartDiv);
+        console.log(`    ✅ Appended ${metric.label} to container`);
     });
+    
+    console.log(`✅ displayExecutiveSummaryCharts completed - rendered ${metrics.length} metrics`);
 }
 
 function getCenterAverageForWeek(weekKey) {
