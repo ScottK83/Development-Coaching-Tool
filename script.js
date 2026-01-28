@@ -3558,7 +3558,10 @@ function generateTrendEmail() {
         
         // Track for grouping
         if (callCenterComparison && callCenterComparison.status === 'below') {
-            watchAreas.push(`${metric.label}: ${employeeValue}${metric.unit} (Center: ${callCenterComparison.centerAvg}${metric.unit})`);
+            // Calculate target hit rate for this metric
+            const targetStats = getTargetHitRate(employeeName, metric.key);
+            const statsText = targetStats.total > 0 ? ` - Met target ${targetStats.hits}/${targetStats.total} times` : '';
+            watchAreas.push(`${metric.label}: ${employeeValue}${metric.unit} (Center: ${callCenterComparison.centerAvg}${metric.unit})${statsText}`);
         }
     });
     
@@ -3710,6 +3713,41 @@ function getWeeklyStatisticsForEmployee(employeeName, metricKey, lowerIsBetter) 
     });
     
     return { meetingTarget, aboveAverage, totalWeeks };
+}
+
+function getTargetHitRate(employeeName, metricKey) {
+    /**
+     * Calculate how many times employee met the target goal across all periods
+     * Returns: { hits: number, total: number }
+     */
+    const metricRegistry = METRICS_REGISTRY[metricKey];
+    if (!metricRegistry) return { hits: 0, total: 0 };
+    
+    const targetValue = metricRegistry.target.value;
+    const targetType = metricRegistry.target.type; // 'min' or 'max'
+    
+    let hits = 0;
+    let total = 0;
+    
+    // Count across all periods (week, month, quarter, ytd)
+    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
+        const employee = weekData.employees?.find(emp => emp.name === employeeName);
+        if (!employee) return;
+        
+        const employeeValue = parseFloat(employee[metricKey]);
+        if (isNaN(employeeValue)) return;
+        
+        total++;
+        
+        // Check if meeting target
+        if (targetType === 'min') {
+            if (employeeValue >= targetValue) hits++;
+        } else if (targetType === 'max') {
+            if (employeeValue <= targetValue) hits++;
+        }
+    });
+    
+    return { hits, total };
 }
 
 // ============================================
