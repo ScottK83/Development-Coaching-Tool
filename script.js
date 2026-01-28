@@ -3214,6 +3214,14 @@ function generateTrendEmail() {
         email += `• Using sick time to cover absences helps maintain your reliability score\n\n`;
     }
     
+    // Legend section
+    email += `📊 Comparison Legend:\n`;
+    email += `✅ = Above call center average (exceeding expectations)\n`;
+    email += `🔻 = Below call center average (needs improvement)\n`;
+    email += `🔺 = Week-over-week improvement (trending upward)\n`;
+    email += `❌ = Week-over-week decline (trending downward)\n`;
+    email += `➖ = No comparison available (first week or no data)\n\n`;
+    
     // Closing
     email += `Let me know if you have any questions or want to discuss these results.\n\n`;
     email += `Best,\n[Your Name]`;
