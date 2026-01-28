@@ -3539,7 +3539,8 @@ function generateTrendEmail() {
                     
                     // Add to highlights if improved
                     if (wow.status === 'improved' && callCenterComparison) {
-                        highlights.push(`${metric.label}: ${employeeValue}${metric.unit} | Center: ${callCenterComparison.centerAvg}${metric.unit} ${callCenterComparison.icon} ${trendIcon}`);
+                        const sign = trendDelta > 0 ? '+' : '';
+                        highlights.push(`${metric.label}: ${employeeValue}${metric.unit} | Center: ${callCenterComparison.centerAvg}${metric.unit} ${callCenterComparison.icon} ${trendIcon} (${sign}${trendDelta}${metric.unit})`);
                     }
                 }
             }
