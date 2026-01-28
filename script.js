@@ -2721,26 +2721,23 @@ ${winsSection}
 
 ${opportunitiesSection}${additionalContext}
 
-Can you help me write an email to ${firstName} that has these two main sections:
+Can you help me write an email to ${firstName} with this structure:
 
-1. WINS SECTION: 
-   - Start with a warm intro sentence celebrating their achievements
-   - Follow with bullets for each win, showing: the metric name, where they landed, and what the goal was
-   - End with an encouraging sentence about keeping up the great work
+1. Warm, conversational greeting
 
-2. OPPORTUNITIES SECTION:
-   - Start with a supportive intro sentence about areas to improve
-   - Follow with bullets for each opportunity, showing: the metric name, where they landed, what the goal is, and how they can improve (reword the coaching tip naturally)
-   - If there's a reliability note, include it naturally
-   - End with constructive encouragement
+2. WINS section:
+   - Brief intro line
+   - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
+   - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
 
-Email structure:
-- Warm, conversational greeting
-- WINS section (intro + bullets with specifics + encouragement)
-- OPPORTUNITIES section (intro + bullets with specifics and tips + encouragement)
-- Close with an invitation to discuss
+3. OPPORTUNITIES section:
+   - Brief supportive intro line
+   - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
+   - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive. If there's a reliability note, weave it in naturally here.
 
-Keep it sounding like a real supervisor who genuinely wants them to succeed. Use "you" language throughout. Make it conversational, upbeat, and motivating. Avoid corporate buzzwords and any mention of metrics being analyzed or AI involvement. Most importantly, make this email unique and natural — something that doesn't follow a template pattern.
+4. Warm close inviting them to discuss
+
+Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
 
 The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
