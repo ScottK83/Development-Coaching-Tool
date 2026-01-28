@@ -3034,47 +3034,61 @@ function setupMetricTrendsListeners() {
     } else {
         console.log('✅ Found saveAvgBtn, attaching listener');
         saveAvgBtn.addEventListener('click', () => {
-        const periodType = document.getElementById('avgPeriodType')?.value;
-        const mondayDate = document.getElementById('avgWeekMonday')?.value;
-        const sundayDate = document.getElementById('avgWeekSunday')?.value;
-        
-        if (!mondayDate) {
-            showToast('Please select the Monday date', 5000);
-            return;
-        }
-        
-        // Create storage key from period type and Monday date
-        const storageKey = `${mondayDate}_${periodType}`;
-        
-        // Read all metric values
-        const averages = {
-            adherence: parseFloat(document.getElementById('avgAdherence')?.value) || null,
-            overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || null,
-            repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || null,
-            fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
-            transfers: parseFloat(document.getElementById('avgTransfers')?.value) || null,
-            sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || null,
-            positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || null,
-            negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || null,
-            managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || null,
-            aht: parseFloat(document.getElementById('avgAHT')?.value) || null,
-            acw: parseFloat(document.getElementById('avgACW')?.value) || null,
-            holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || null,
-            reliability: parseFloat(document.getElementById('avgReliability')?.value) || null
-        };
-        
-        // Validate at least one value entered
-        const hasValue = Object.values(averages).some(v => v !== null);
-        if (!hasValue) {
-            showToast('Please enter at least one metric value', 5000);
-            return;
-        }
-        
-        // Save to storage
-        setCallCenterAverageForPeriod(storageKey, averages);
-        const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
-        showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 5000);
-    });
+            console.log('💾 Save Averages button clicked');
+            const periodType = document.getElementById('avgPeriodType')?.value;
+            const mondayDate = document.getElementById('avgWeekMonday')?.value;
+            const sundayDate = document.getElementById('avgWeekSunday')?.value;
+            
+            console.log('📅 Period Type:', periodType, 'Monday:', mondayDate, 'Sunday:', sundayDate);
+            
+            if (!mondayDate) {
+                console.warn('❌ No Monday date selected');
+                showToast('Please select the Monday date', 5000);
+                return;
+            }
+            
+            // Create storage key from period type and Monday date
+            const storageKey = `${mondayDate}_${periodType}`;
+            console.log('🔑 Storage Key:', storageKey);
+            
+            // Read all metric values
+            const averages = {
+                adherence: parseFloat(document.getElementById('avgAdherence')?.value) || null,
+                overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || null,
+                repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || null,
+                fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
+                transfers: parseFloat(document.getElementById('avgTransfers')?.value) || null,
+                sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || null,
+                positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || null,
+                negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || null,
+                managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || null,
+                aht: parseFloat(document.getElementById('avgAHT')?.value) || null,
+                acw: parseFloat(document.getElementById('avgACW')?.value) || null,
+                holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || null,
+                reliability: parseFloat(document.getElementById('avgReliability')?.value) || null
+            };
+            
+            console.log('📊 Averages to save:', averages);
+            
+            // Validate at least one value entered
+            const hasValue = Object.values(averages).some(v => v !== null);
+            if (!hasValue) {
+                console.warn('❌ No values entered');
+                showToast('Please enter at least one metric value', 5000);
+                return;
+            }
+            
+            // Save to storage
+            console.log('💾 Calling setCallCenterAverageForPeriod...');
+            setCallCenterAverageForPeriod(storageKey, averages);
+            
+            // Verify save
+            const saved = getCallCenterAverageForPeriod(storageKey);
+            console.log('✅ Verified save - retrieved data:', saved);
+            
+            const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
+            showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 5000);
+        });
     }
     
     // Generate trend email button
@@ -3119,31 +3133,39 @@ function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
     
-    console.log('Employee:', employeeName, 'Week:', weekKey);
-    console.log('weeklyData keys:', Object.keys(weeklyData));
-    console.log('weeklyData:', weeklyData);
+    console.log('👤 Employee Name:', employeeName);
+    console.log('📅 Week Key:', weekKey);
+    console.log('📦 weeklyData keys:', Object.keys(weeklyData));
+    console.log('📦 weeklyData:', JSON.stringify(weeklyData, null, 2));
     
     if (!employeeName || !weekKey) {
+        console.error('❌ Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
-        console.warn('Missing employee or week selection');
         return;
     }
     
     // Get employee data for this week
     const week = weeklyData[weekKey];
+    console.log('📊 Week data for', weekKey + ':', week);
+    
     if (!week || !week.employees) {
+        console.error('❌ No data found for week:', weekKey);
         showToast('No data found for this period', 5000);
         return;
     }
     
     const employee = week.employees.find(emp => emp.name === employeeName);
+    console.log('👥 Found employee:', employee);
+    
     if (!employee) {
+        console.error('❌ Employee not found:', employeeName, 'in employees:', week.employees.map(e => e.name));
         showToast('Employee not found in this period', 5000);
         return;
     }
     
     // Get call center averages for this period
     const centerAvg = getCallCenterAverageForPeriod(weekKey);
+    console.log('📊 Center averages for', weekKey + ':', centerAvg);
     
     // Find previous week for WoW comparison
     const allWeeks = Object.keys(weeklyData).sort();
@@ -3275,18 +3297,29 @@ function generateTrendEmail() {
     email += `Let me know if you have any questions or want to discuss these results.\n\n`;
     email += `Best,\n[Your Name]`;
     
+    console.log('📧 Email generated:\n', email);
+    
     // Display in preview panel
     const previewContainer = document.getElementById('trendEmailPreview');
     const previewContent = document.getElementById('trendEmailContent');
+    console.log('🎯 Preview container:', previewContainer);
+    console.log('🎯 Preview content:', previewContent);
+    
     if (previewContainer && previewContent) {
         previewContent.textContent = email;
         previewContainer.style.display = 'block';
+        console.log('✅ Email displayed in preview panel');
+    } else {
+        console.error('❌ Preview elements not found!');
     }
     
     // Auto-copy to clipboard
+    console.log('📋 Attempting to copy to clipboard...');
     navigator.clipboard.writeText(email).then(() => {
+        console.log('✅ Email copied to clipboard!');
         showToast('Email generated and copied to clipboard! Ready to paste into Outlook.', 5000);
-    }).catch(() => {
+    }).catch((error) => {
+        console.error('❌ Failed to copy to clipboard:', error);
         showToast('Email generated but failed to copy. Use the Copy button below.', 5000);
     });
 }
