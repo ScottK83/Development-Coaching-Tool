@@ -4559,20 +4559,21 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     container.innerHTML = '';
     
     // Average across all periods for this associate
+    const surveyBasedMetrics = ['overallExperience', 'cxRepOverall', 'fcr'];
     const metrics = [
-        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', lowerIsBetter: false },
-        { key: 'overallExperience', label: 'Overall Experience', unit: '', lowerIsBetter: false },
-        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '', lowerIsBetter: false },
-        { key: 'fcr', label: 'First Call Resolution', unit: '%', lowerIsBetter: false },
-        { key: 'transfers', label: 'Transfers', unit: '', lowerIsBetter: true },
-        { key: 'sentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false },
-        { key: 'positiveWord', label: 'Positive Words', unit: '', lowerIsBetter: false },
-        { key: 'negativeWord', label: 'Negative Words', unit: '', lowerIsBetter: true },
-        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', lowerIsBetter: false },
-        { key: 'aht', label: 'Average Handle Time', unit: 's', lowerIsBetter: true },
-        { key: 'acw', label: 'After Call Work', unit: 's', lowerIsBetter: true },
-        { key: 'holdTime', label: 'Hold Time', unit: 's', lowerIsBetter: true },
-        { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: false }
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', lowerIsBetter: false, isSurveyBased: false },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '', lowerIsBetter: false, isSurveyBased: true },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '', lowerIsBetter: false, isSurveyBased: true },
+        { key: 'fcr', label: 'First Call Resolution', unit: '%', lowerIsBetter: false, isSurveyBased: true },
+        { key: 'transfers', label: 'Transfers', unit: '', lowerIsBetter: true, isSurveyBased: false },
+        { key: 'sentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false, isSurveyBased: false },
+        { key: 'positiveWord', label: 'Positive Words', unit: '', lowerIsBetter: false, isSurveyBased: false },
+        { key: 'negativeWord', label: 'Negative Words', unit: '', lowerIsBetter: true, isSurveyBased: false },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', lowerIsBetter: false, isSurveyBased: false },
+        { key: 'aht', label: 'Average Handle Time', unit: 's', lowerIsBetter: true, isSurveyBased: false },
+        { key: 'acw', label: 'After Call Work', unit: 's', lowerIsBetter: true, isSurveyBased: false },
+        { key: 'holdTime', label: 'Hold Time', unit: 's', lowerIsBetter: true, isSurveyBased: false },
+        { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: true, isSurveyBased: false }
     ];
     
     metrics.forEach(metric => {
@@ -4590,12 +4591,13 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         let centerSum = 0, centerCount = 0;
         periods.forEach(period => {
             const centerAvg = period.centerAverage;
-            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null) {
+            // Check if the value exists (0 is valid, only skip if undefined, null, or empty string)
+            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null && centerAvg[metric.key] !== '') {
                 centerSum += parseFloat(centerAvg[metric.key]);
                 centerCount++;
             }
         });
-        const centerAvg = centerCount > 0 ? centerSum / centerCount : 0;
+        const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
         
         // Get target from METRICS_REGISTRY - extract the value from the object
         const targetObj = METRICS_REGISTRY[metric.key]?.target;
@@ -4606,10 +4608,13 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         chartDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
         
         const maxValue = Math.max(
-            employeeAvg,
-            centerAvg,
-            typeof targetValue === 'number' ? targetValue : employeeAvg
+            employeeAvg || 0,
+            centerAvg || 0,
+            typeof targetValue === 'number' ? targetValue : employeeAvg || 0
         ) * 1.15; // Add 15% padding
+        
+        // Check if survey-based metric has no data
+        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
         
         chartDiv.innerHTML = `
             <h5 style="margin: 0 0 12px 0; color: #ff9800;">${metric.label}</h5>
@@ -4617,16 +4622,16 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 <div style="display: flex; align-items: center; margin-bottom: 6px;">
                     <span style="width: 100px; font-weight: bold;">You:</span>
                     <div style="flex: 1; background: #e8f5e9; height: 24px; border-radius: 3px; position: relative;">
-                        <div style="background: linear-gradient(90deg, #4caf50, #81c784); height: 100%; border-radius: 3px; width: ${(employeeAvg / maxValue) * 100}%;"></div>
+                        <div style="background: linear-gradient(90deg, #4caf50, #81c784); height: 100%; border-radius: 3px; width: ${maxValue > 0 ? (employeeAvg / maxValue) * 100 : 0}%;"></div>
                     </div>
-                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${employeeAvg.toFixed(1)}${metric.unit}</span>
+                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${hasNoSurveyData ? 'No survey data' : employeeAvg.toFixed(1) + metric.unit}</span>
                 </div>
                 <div style="display: flex; align-items: center; margin-bottom: 6px;">
                     <span style="width: 100px; font-weight: bold;">Center Avg:</span>
                     <div style="flex: 1; background: #f3e5f5; height: 24px; border-radius: 3px; position: relative;">
-                        <div style="background: linear-gradient(90deg, #9c27b0, #ba68c8); height: 100%; border-radius: 3px; width: ${(centerAvg / maxValue) * 100}%;"></div>
+                        <div style="background: linear-gradient(90deg, #9c27b0, #ba68c8); height: 100%; border-radius: 3px; width: ${centerAvg !== null && maxValue > 0 ? (centerAvg / maxValue) * 100 : 0}%;"></div>
                     </div>
-                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${centerAvg.toFixed(1)}${metric.unit}</span>
+                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${centerAvg !== null ? centerAvg.toFixed(1) + metric.unit : 'No data'}</span>
                 </div>
                 <div style="display: flex; align-items: center;">
                     <span style="width: 100px; font-weight: bold;">Target:</span>
@@ -4634,7 +4639,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 </div>
             </div>
             <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                ${employeeAvg >= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average'}
+                ${hasNoSurveyData ? '💬 Awaiting customer survey data' : (centerAvg === null ? '⚠️ No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average') : (employeeAvg >= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average')))}
             </div>
         `;
         
@@ -4652,7 +4657,128 @@ function getCenterAverageForWeek(weekKey) {
         return {};
     }
     
-    return avg;
+    // Map center average keys to employee data keys for consistency
+    // Center averages use: adherence, repSatisfaction
+    // Email metrics use: scheduleAdherence, cxRepOverall
+    return {
+        scheduleAdherence: avg.adherence,
+        overallExperience: avg.overallExperience,
+        cxRepOverall: avg.repSatisfaction,
+        fcr: avg.fcr,
+        transfers: avg.transfers,
+        sentiment: avg.sentiment,
+        positiveWord: avg.positiveWord,
+        negativeWord: avg.negativeWord,
+        managingEmotions: avg.managingEmotions,
+        aht: avg.aht,
+        acw: avg.acw,
+        holdTime: avg.holdTime,
+        reliability: avg.reliability
+    };
+}
+
+function generateComparisonChart(metricsData) {
+    return new Promise((resolve) => {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1000;
+            canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            
+            const padding = 60;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            const barGroupWidth = chartWidth / metricsData.length;
+            const barWidth = barGroupWidth / 3 * 0.8;
+            const spacing = (barGroupWidth - barWidth * 3) / 2;
+            
+            const allValues = metricsData.flatMap(m => [m.employee, m.center, m.target || 0]);
+            const maxValue = Math.max(...allValues, 100);
+            const scale = chartHeight / maxValue;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+            
+            metricsData.forEach((metric, i) => {
+                const baseX = padding + (i * barGroupWidth) + spacing;
+                
+                ctx.fillStyle = '#2196F3';
+                const empHeight = metric.employee * scale;
+                ctx.fillRect(baseX, canvas.height - padding - empHeight, barWidth, empHeight);
+                
+                ctx.fillStyle = '#4CAF50';
+                const centerHeight = metric.center * scale;
+                ctx.fillRect(baseX + barWidth, canvas.height - padding - centerHeight, barWidth, centerHeight);
+                
+                if (metric.target) {
+                    ctx.fillStyle = '#FF9800';
+                    const targetHeight = metric.target * scale;
+                    ctx.fillRect(baseX + barWidth * 2, canvas.height - padding - targetHeight, barWidth, targetHeight);
+                }
+                
+                ctx.save();
+                ctx.fillStyle = '#333';
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'center';
+                ctx.translate(baseX + barWidth * 1.5, canvas.height - padding + 40);
+                ctx.rotate(-Math.PI / 8);
+                ctx.fillText(metric.name, 0, 0);
+                ctx.restore();
+            });
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const value = (maxValue / 5) * i;
+                const y = canvas.height - padding - (chartHeight / 5) * i;
+                ctx.fillText(Math.round(value * 10) / 10, padding - 10, y + 4);
+            }
+            
+            const legendY = 20;
+            const legendX = canvas.width - 200;
+            ctx.font = 'bold 12px Arial';
+            
+            ctx.fillStyle = '#2196F3';
+            ctx.fillRect(legendX, legendY, 15, 15);
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'left';
+            ctx.fillText('Employee', legendX + 20, legendY + 12);
+            
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(legendX, legendY + 20, 15, 15);
+            ctx.fillStyle = '#333';
+            ctx.fillText('Center Avg', legendX + 20, legendY + 32);
+            
+            ctx.fillStyle = '#FF9800';
+            ctx.fillRect(legendX, legendY + 40, 15, 15);
+            ctx.fillStyle = '#333';
+            ctx.fillText('Target', legendX + 20, legendY + 52);
+            
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Performance Comparison: Employee vs Center Average vs Target', canvas.width / 2, 35);
+            
+            const base64 = canvas.toDataURL('image/png');
+            resolve(base64);
+        } catch (error) {
+            console.error('Error generating chart:', error);
+            resolve('');
+        }
+    });
 }
 
 function generateExecutiveSummaryEmail() {
