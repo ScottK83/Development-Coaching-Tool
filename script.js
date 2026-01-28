@@ -4499,6 +4499,8 @@ Can you help me write an email to ${firstName} with this structure:
 
 Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
 
+Vary your wording and sentence structure so it doesn’t sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
+
 Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
 
 Do NOT use em dashes (—) anywhere in the email.
