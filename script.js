@@ -2963,6 +2963,7 @@ function populateEmployeeDropdown() {
     
     // Build options
     let options = '<option value="">Select Employee...</option>';
+    options += '<option value="ALL">All Associates</option>';
     Array.from(employeeSet).sort().forEach(name => {
         options += `<option value="${name}">${name}</option>`;
     });
@@ -2998,6 +2999,7 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     
     // Build options
     let options = '<option value="">Select Employee...</option>';
+    options += '<option value="ALL">All Associates</option>';
     employees.forEach(name => {
         options += `<option value="${name}">${name}</option>`;
     });
@@ -3283,6 +3285,11 @@ function setupMetricTrendsListeners() {
             const employeeName = e.target.value;
             const weekKey = document.getElementById('trendPeriodSelect')?.value;
             
+            if (employeeName === 'ALL') {
+                document.getElementById('metricsPreviewSection').style.display = 'none';
+                return;
+            }
+            
             if (employeeName && weekKey) {
                 displayMetricsPreview(employeeName, weekKey);
             } else {
@@ -3363,6 +3370,11 @@ function generateTrendEmail() {
     if (!employeeName || !weekKey) {
         console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
+        return;
+    }
+
+    if (employeeName === 'ALL') {
+        generateAllTrendEmails();
         return;
     }
     
