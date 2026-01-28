@@ -3578,8 +3578,8 @@ function generateTrendEmail() {
         email += `\n`;
     }
     
-    // Reliability explanation section (if metric exists and > 0)
-    if (hasReliabilityMetric && employeeToUse.reliability > 0) {
+    // Reliability explanation section (if metric exists and has a value)
+    if (hasReliabilityMetric && employeeToUse.reliability !== undefined && employeeToUse.reliability !== null && employeeToUse.reliability !== '') {
         email += `📋 Reliability Note:\n`;
         email += `You have ${employeeToUse.reliability} hours of unscheduled time. Remember you have 40 hours of sick time for the year, and using sick time to cover absences helps your reliability score.\n\n`;
     }
