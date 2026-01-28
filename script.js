@@ -905,6 +905,12 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
     saveCallCenterAverages(averages);
 }
 
+function getEmployeeNickname(fullName) {
+    // Extract first name from full name
+    if (!fullName) return '';
+    return fullName.split(' ')[0];
+}
+
 function loadCoachingLog() {
     try {
         const saved = localStorage.getItem('coachingLogYTD');
