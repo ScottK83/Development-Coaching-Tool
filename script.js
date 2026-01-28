@@ -3904,20 +3904,8 @@ function generateTrendEmail() {
     
     console.log('📧 HTML email generated');
     
-    // Display in preview panel
-    const previewContainer = document.getElementById('trendEmailPreview');
-    const previewContent = document.getElementById('trendEmailContent');
-    console.log('🎯 Preview container:', previewContainer);
-    console.log('🎯 Preview content:', previewContent);
-    
-    if (previewContainer && previewContent) {
-        window.latestTrendEmailHtml = htmlEmail;
-        previewContent.srcdoc = htmlEmail;
-        previewContainer.style.display = 'block';
-        console.log('✅ Email displayed in preview panel');
-    } else {
-        console.error('❌ Preview elements not found!');
-    }
+    // Store for copy button
+    window.latestTrendEmailHtml = htmlEmail;
     
     // Copy HTML to clipboard with formatting
     const blob = new Blob([htmlEmail], { type: 'text/html' });
