@@ -4588,6 +4588,82 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: true, isSurveyBased: false }
     ];
     
+    // First pass: Calculate summary statistics
+    let metricsMetTarget = 0;
+    let metricsOutpacingPeers = 0;
+    
+    metrics.forEach(metric => {
+        // Calculate employee average
+        let employeeSum = 0, employeeCount = 0;
+        periods.forEach(period => {
+            if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
+                employeeSum += parseFloat(period.employee[metric.key]);
+                employeeCount++;
+            }
+        });
+        const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
+        
+        // Calculate center average
+        let centerSum = 0, centerCount = 0;
+        periods.forEach(period => {
+            const centerAvg = period.centerAverage;
+            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null && centerAvg[metric.key] !== '') {
+                centerSum += parseFloat(centerAvg[metric.key]);
+                centerCount++;
+            }
+        });
+        const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
+        
+        // Get target from METRICS_REGISTRY
+        const targetObj = METRICS_REGISTRY[metric.key]?.target;
+        const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
+        
+        // Check if survey-based metric has no data
+        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
+        
+        // Check if meeting target
+        if (typeof targetValue === 'number' && !hasNoSurveyData) {
+            if (metric.lowerIsBetter) {
+                if (employeeAvg <= targetValue) metricsMetTarget++;
+            } else {
+                if (employeeAvg >= targetValue) metricsMetTarget++;
+            }
+        }
+        
+        // Check if outpacing peers (center average)
+        if (centerAvg !== null && !hasNoSurveyData && typeof targetValue === 'number') {
+            if (metric.lowerIsBetter) {
+                if (employeeAvg <= centerAvg) metricsOutpacingPeers++;
+            } else {
+                if (employeeAvg >= centerAvg) metricsOutpacingPeers++;
+            }
+        }
+    });
+    
+    // Display summary cards at top
+    const summaryDiv = document.createElement('div');
+    summaryDiv.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;';
+    
+    const meetingTargetCard = document.createElement('div');
+    meetingTargetCard.style.cssText = 'background: linear-gradient(135deg, #4caf50 0%, #81c784 100%); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);';
+    meetingTargetCard.innerHTML = `
+        <div style="font-size: 0.9em; opacity: 0.95; margin-bottom: 8px;">Meeting Target Goals</div>
+        <div style="font-size: 2.2em; font-weight: bold;">${metricsMetTarget} <span style="font-size: 1.1em;">/ 13</span></div>
+        <div style="font-size: 0.85em; opacity: 0.9; margin-top: 8px;">metrics at or above goals</div>
+    `;
+    summaryDiv.appendChild(meetingTargetCard);
+    
+    const outpacingCard = document.createElement('div');
+    outpacingCard.style.cssText = 'background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);';
+    outpacingCard.innerHTML = `
+        <div style="font-size: 0.9em; opacity: 0.95; margin-bottom: 8px;">Outpacing Your Peers</div>
+        <div style="font-size: 2.2em; font-weight: bold;">${metricsOutpacingPeers} <span style="font-size: 1.1em;">/ 13</span></div>
+        <div style="font-size: 0.85em; opacity: 0.9; margin-top: 8px;">categories better than center avg</div>
+    `;
+    summaryDiv.appendChild(outpacingCard);
+    
+    container.appendChild(summaryDiv);
+    
     metrics.forEach(metric => {
         // Calculate employee average
         let employeeSum = 0, employeeCount = 0;
