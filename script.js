@@ -2664,10 +2664,16 @@ function initializeMetricTrends() {
         }
     }
     
-    // Auto-calculate Sunday when Monday changes
+    // Auto-calculate Sunday when Monday changes (safe date parsing)
     avgWeekMonday?.addEventListener('change', (e) => {
-        const monday = new Date(e.target.value);
-        if (avgWeekSunday && !isNaN(monday)) {
+        const dateStr = e.target.value;
+        if (!dateStr || !avgWeekSunday) return;
+        
+        // Parse date safely to avoid timezone issues
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const monday = new Date(year, month - 1, day);
+        
+        if (!isNaN(monday)) {
             const sunday = new Date(monday);
             sunday.setDate(monday.getDate() + 6);
             avgWeekSunday.value = sunday.toISOString().split('T')[0];
@@ -2831,26 +2837,21 @@ function loadUploadedDataPeriod(weekKey) {
     const week = weeklyData[weekKey];
     if (!week) return;
     
+    // Parse the weekKey format: "startDate|endDate"
+    const [startDate, endDate] = weekKey.split('|');
+    
     // Set period type to "week" since we're selecting from weekly data
     document.getElementById('avgPeriodType').value = 'week';
     
-    // Set the Monday date
-    const mondayDate = weekKey; // weekKey is in format YYYY-MM-DD for the Monday
-    mondayInput.value = mondayDate;
+    // Set the dates from the metadata
+    mondayInput.value = startDate;
+    sundayInput.value = endDate;
     
-    // Auto-calculate Sunday (6 days after Monday)
-    const monday = new Date(mondayDate);
-    if (!isNaN(monday)) {
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sundayInput.value = sunday.toISOString().split('T')[0];
-    }
+    // Enable date fields so user can edit if needed
+    mondayInput.disabled = false;
+    sundayInput.disabled = false;
     
-    // Disable date fields since they're determined by the dropdown selection
-    mondayInput.disabled = true;
-    sundayInput.disabled = true;
-    
-    showToast(`Selected week of ${week.week_start || mondayDate}`, 5000);
+    showToast(`Selected week of ${week.metadata?.label || startDate}`, 5000);
 }
 
 function setupUploadedDataListener() {
