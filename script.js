@@ -5103,12 +5103,17 @@ function generateExecutiveSummaryEmail() {
     
     navigator.clipboard.write([htmlClipboardItem]).then(() => {
         console.log('✅ HTML email copied to clipboard with formatting');
-        showToast('✅ Email copied! Paste into Outlook to see formatted version.', 5000);
+        showToast('✅ Email copied! Opening new email...', 3000);
+        
+        // Open blank email in default email client
+        window.location.href = 'mailto:?subject=Yearly Performance Review - ' + encodeURIComponent(associate.toUpperCase());
     }).catch((err) => {
         console.error('❌ Failed to copy formatted email:', err);
         // Fallback to plain text if HTML clipboard fails
         navigator.clipboard.writeText(htmlEmail).then(() => {
             showToast('⚠️ Copied as plain text. You may need to paste into Outlook\'s HTML editor.', 5000);
+            // Still try to open email
+            window.location.href = 'mailto:?subject=Yearly Performance Review - ' + encodeURIComponent(associate.toUpperCase());
         });
     });
 }
