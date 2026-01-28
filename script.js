@@ -4595,11 +4595,14 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         let employeeSum = 0, employeeCount = 0;
         periods.forEach(period => {
             if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
-                employeeSum += parseFloat(period.employee[metric.key]);
+                const val = parseFloat(period.employee[metric.key]);
+                console.log(`    ${period.weekKey}: ${metric.key} = ${val}`);
+                employeeSum += val;
                 employeeCount++;
             }
         });
         const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
+        console.log(`    Metric: ${metric.label}, Sum: ${employeeSum}, Count: ${employeeCount}, Avg: ${employeeAvg}`);
         
         // Calculate center average
         let centerSum = 0, centerCount = 0;
