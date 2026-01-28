@@ -4417,17 +4417,18 @@ function loadExecutiveSummaryData() {
     
     console.log(`📊 Loading executive summary for ${associate} (YTD)`);
     
-    // Collect all periods matching the selected type
+    // Collect ALL periods (regardless of upload type) for YTD view
     const matchingPeriods = [];
     for (const weekKey in weeklyData) {
         const weekData = weeklyData[weekKey];
-        const dataType = weekData.metadata?.periodType || 'week';
         
-        if (dataType === periodType) {
+        // For executive summary (YTD), include all periods regardless of metadata type
+        const employee = weekData.employees.find(e => e.name === associate);
+        if (employee) {
             matchingPeriods.push({
                 weekKey,
                 label: weekData.metadata?.label || weekKey,
-                employee: weekData.employees.find(e => e.name === associate),
+                employee: employee,
                 centerAverage: getCenterAverageForWeek(weekKey),
                 startDate: weekData.metadata?.startDate,
                 endDate: weekData.metadata?.endDate
@@ -4435,7 +4436,7 @@ function loadExecutiveSummaryData() {
         }
     }
     
-    console.log(`Found ${matchingPeriods.length} periods of type ${periodType}`);
+    console.log(`Found ${matchingPeriods.length} periods for YTD summary`);
     
     // Populate data table
     populateExecutiveSummaryTable(associate, matchingPeriods, periodType);
