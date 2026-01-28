@@ -2681,6 +2681,10 @@ function initializeMetricTrends() {
         loadPastDataEntry(e.target.value);
     });
     
+    // Populate uploaded data dropdown and set up listener
+    populateUploadedDataDropdown();
+    setupUploadedDataListener();
+    
     // Populate trend generation dropdowns
     populateTrendPeriodDropdown();
     populateEmployeeDropdown();
@@ -2779,6 +2783,67 @@ function setupAveragesLoader() {
     
     avgPeriodType.addEventListener('change', loadAveragesForPeriod);
     avgWeekMonday.addEventListener('change', loadAveragesForPeriod);
+}
+
+function populateUploadedDataDropdown() {
+    const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
+    if (!avgUploadedDataSelect) return;
+    
+    // Get all weeks from weeklyData
+    const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
+    
+    if (allWeeks.length === 0) {
+        avgUploadedDataSelect.innerHTML = '<option value="">-- No uploaded data available --</option>';
+        return;
+    }
+    
+    // Build options
+    let options = '<option value="">-- Choose a period from your data --</option>';
+    allWeeks.forEach(weekKey => {
+        const week = weeklyData[weekKey];
+        const displayText = week.week_start || weekKey;
+        options += `<option value="${weekKey}">Week of ${displayText}</option>`;
+    });
+    
+    avgUploadedDataSelect.innerHTML = options;
+}
+
+function loadUploadedDataPeriod(weekKey) {
+    if (!weekKey) {
+        // Clear if no selection
+        document.getElementById('avgPeriodType').value = 'week';
+        document.getElementById('avgWeekMonday').value = '';
+        document.getElementById('avgWeekSunday').value = '';
+        return;
+    }
+    
+    // Get the week data
+    const week = weeklyData[weekKey];
+    if (!week) return;
+    
+    // Set period type to "week" since we're selecting from weekly data
+    document.getElementById('avgPeriodType').value = 'week';
+    
+    // Set the Monday date
+    const mondayDate = weekKey; // weekKey is in format YYYY-MM-DD for the Monday
+    document.getElementById('avgWeekMonday').value = mondayDate;
+    
+    // Auto-calculate Sunday (6 days after Monday)
+    const monday = new Date(mondayDate);
+    if (!isNaN(monday)) {
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        document.getElementById('avgWeekSunday').value = sunday.toISOString().split('T')[0];
+    }
+    
+    showToast(`Selected week of ${week.week_start || mondayDate}`, 5000);
+}
+
+function setupUploadedDataListener() {
+    const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
+    avgUploadedDataSelect?.addEventListener('change', (e) => {
+        loadUploadedDataPeriod(e.target.value);
+    });
 }
 
 function populatePastDataDropdown() {
