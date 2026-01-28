@@ -4885,11 +4885,6 @@ function generateExecutiveSummaryEmail() {
         return;
     }
     
-    // Get the summary data
-    const tbody = document.getElementById('summaryDataTable');
-    const redFlags = tbody.querySelector('.redflags-input')?.value || '';
-    const phishing = tbody.querySelector('.phishing-input')?.value || '';
-    
     // Get YTD metrics for the associate
     const periods = [];
     for (const weekKey in weeklyData) {
@@ -4909,30 +4904,47 @@ function generateExecutiveSummaryEmail() {
         return;
     }
     
+    // Check if associate has any surveys
+    let totalSurveys = 0;
+    periods.forEach(period => {
+        if (period.employee && period.employee.surveyTotal) {
+            totalSurveys += parseInt(period.employee.surveyTotal) || 0;
+        }
+    });
+    const hasSurveys = totalSurveys > 0;
+    
     // Calculate YTD averages
     const metrics = [
-        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%' },
-        { key: 'overallExperience', label: 'Overall Experience', unit: '' },
-        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '' },
-        { key: 'fcr', label: 'First Call Resolution', unit: '%' },
-        { key: 'transfers', label: 'Transfers', unit: '%' },
-        { key: 'overallSentiment', label: 'Sentiment', unit: '%' },
-        { key: 'positiveWord', label: 'Positive Words', unit: '' },
-        { key: 'negativeWord', label: 'Negative Words', unit: '' },
-        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%' },
-        { key: 'aht', label: 'Average Handle Time', unit: 's' },
-        { key: 'acw', label: 'After Call Work', unit: 's' },
-        { key: 'holdTime', label: 'Hold Time', unit: 's' },
-        { key: 'reliability', label: 'Reliability', unit: 'hrs' }
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', surveyBased: false },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '%', surveyBased: true },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '%', surveyBased: true },
+        { key: 'fcr', label: 'First Call Resolution', unit: '%', surveyBased: true },
+        { key: 'transfers', label: 'Transfers', unit: '%', surveyBased: false },
+        { key: 'overallSentiment', label: 'Sentiment', unit: '%', surveyBased: true },
+        { key: 'positiveWord', label: 'Positive Words', unit: '%', surveyBased: true },
+        { key: 'negativeWord', label: 'Negative Words', unit: '%', surveyBased: true },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', surveyBased: true },
+        { key: 'aht', label: 'Average Handle Time', unit: 's', surveyBased: false },
+        { key: 'acw', label: 'After Call Work', unit: 's', surveyBased: false },
+        { key: 'holdTime', label: 'Hold Time', unit: 's', surveyBased: false },
+        { key: 'reliability', label: 'Reliability', unit: 'hrs', surveyBased: false }
     ];
     
-    let email = `YEARLY PERFORMANCE REVIEW - ${associate.toUpperCase()}\n`;
-    email += `Report Date: ${new Date().toLocaleDateString()}\n`;
-    email += `Period: Year-to-Date (Jan 1 - Today)\n\n`;
+    let meetsTargetCount = 0;
+    let outpacingPeersCount = 0;
+    let totalMetricsEvaluated = 0;
     
-    email += `========== PERFORMANCE METRICS ==========\n\n`;
+    let metricsHtml = '';
     
     metrics.forEach(metric => {
+        // If no surveys and metric is survey-based, give them the point (don't count against them)
+        if (!hasSurveys && metric.surveyBased) {
+            meetsTargetCount++;
+            outpacingPeersCount++;
+            totalMetricsEvaluated++;
+            return; // Skip to next metric
+        }
+        
         // Calculate averages
         let empSum = 0, empCount = 0;
         let centerSum = 0, centerCount = 0;
@@ -4948,55 +4960,147 @@ function generateExecutiveSummaryEmail() {
             }
         });
         
-        const empAvg = empCount > 0 ? empSum / empCount : 0;
-        const centerAvg = centerCount > 0 ? centerSum / centerCount : 0;
-        const targetObj = METRICS_REGISTRY[metric.key]?.target;
-        const targetValue = targetObj && typeof targetObj === 'object' ? targetObj.value : 'N/A';
+        if (empCount === 0) return; // Skip if no data for this metric
         
-        // Status icon
+        totalMetricsEvaluated++;
+        
+        const empAvg = empSum / empCount;
+        const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
+        const targetObj = METRICS_REGISTRY[metric.key]?.target;
+        const targetValue = targetObj && typeof targetObj === 'object' ? targetObj.value : null;
+        const targetType = targetObj?.type || 'min';
+        
+        // Determine if meeting target
+        let meetsTarget = false;
         let status = '❓';
         if (typeof targetValue === 'number') {
-            if (metric.key === 'transfers' || metric.key === 'aht' || metric.key === 'acw' || metric.key === 'holdTime' || metric.key === 'negativeWord') {
+            if (targetType === 'max') {
                 // Lower is better
-                status = empAvg <= targetValue ? '✅' : '❌';
+                meetsTarget = empAvg <= targetValue;
+                status = meetsTarget ? '✅' : '❌';
             } else {
                 // Higher is better
-                status = empAvg >= targetValue ? '✅' : '❌';
+                meetsTarget = empAvg >= targetValue;
+                status = meetsTarget ? '✅' : '❌';
             }
         }
         
-        email += `${metric.label}: ${empAvg.toFixed(1)}${metric.unit} | Center: ${centerAvg.toFixed(1)}${metric.unit} | Target: ${typeof targetValue === 'number' ? targetValue + metric.unit : targetValue} ${status}\n`;
+        if (meetsTarget) meetsTargetCount++;
+        
+        // Determine if outpacing peers
+        let outpacingPeers = false;
+        let comparison = '';
+        if (centerAvg !== null) {
+            if (targetType === 'max') {
+                // Lower is better
+                outpacingPeers = empAvg < centerAvg;
+                const diff = centerAvg - empAvg;
+                comparison = outpacingPeers ? `📈 ${diff.toFixed(1)}${metric.unit} better` : `📉 ${Math.abs(diff).toFixed(1)}${metric.unit} behind`;
+            } else {
+                // Higher is better
+                outpacingPeers = empAvg > centerAvg;
+                const diff = empAvg - centerAvg;
+                comparison = outpacingPeers ? `📈 ${diff.toFixed(1)}${metric.unit} better` : `📉 ${Math.abs(diff).toFixed(1)}${metric.unit} behind`;
+            }
+        }
+        
+        if (outpacingPeers) outpacingPeersCount++;
+        
+        // Build metric row HTML
+        const bgColor = meetsTarget ? '#d4edda' : '#fff3cd';
+        metricsHtml += `
+            <tr style="background: ${bgColor};">
+                <td style="padding: 10px; border: 1px solid #ddd;">${status} ${metric.label}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${empAvg.toFixed(1)}${metric.unit}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${centerAvg !== null ? centerAvg.toFixed(1) + metric.unit : 'N/A'}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${typeof targetValue === 'number' ? targetValue + metric.unit : 'N/A'}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${comparison || 'N/A'}</td>
+            </tr>
+        `;
     });
     
-    email += `\n========== OBSERVATIONS ==========\n\n`;
+    // Build HTML email
+    const firstName = associate.split(' ')[0];
+    let htmlEmail = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; }
+        .cards { display: flex; gap: 20px; margin: 20px 0; }
+        .card { flex: 1; background: white; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card.success { border-left: 4px solid #28a745; }
+        .card.info { border-left: 4px solid #2196F3; }
+        .card-value { font-size: 48px; font-weight: bold; margin: 10px 0; }
+        .card-label { font-size: 14px; color: #666; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+        td { padding: 10px; border: 1px solid #ddd; }
+        .footer { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Year-to-Date Performance Review</h1>
+        <p><strong>${associate}</strong></p>
+        <p>Report Date: ${new Date().toLocaleDateString()} | Period: Year-to-Date</p>
+    </div>
     
-    if (redFlags) {
-        email += `Red Flags:\n${redFlags}\n\n`;
-    }
+    <div class="cards">
+        <div class="card success">
+            <div class="card-label">✅ Meeting Target Goals</div>
+            <div class="card-value">${meetsTargetCount}/${totalMetricsEvaluated}</div>
+            <div class="card-label">${Math.round((meetsTargetCount/totalMetricsEvaluated)*100)}% Success Rate</div>
+        </div>
+        <div class="card info">
+            <div class="card-label">📈 Outpacing Your Peers</div>
+            <div class="card-value">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
+            <div class="card-label">${Math.round((outpacingPeersCount/totalMetricsEvaluated)*100)}% Above Center</div>
+        </div>
+    </div>
     
-    if (phishing) {
-        email += `Phishing/Security Concerns:\n${phishing}\n\n`;
-    }
+    ${!hasSurveys ? '<p style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px;">ℹ️ <strong>Note:</strong> No survey data available for this period. Survey-based metrics are marked as meeting goals by default.</p>' : ''}
     
-    if (!redFlags && !phishing) {
-        email += `No red flags or concerns noted.\n\n`;
-    }
+    <h2 style="margin-top: 30px;">📊 Detailed Performance Metrics</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th style="text-align: center;">Your YTD Avg</th>
+                <th style="text-align: center;">Center Avg</th>
+                <th style="text-align: center;">Target</th>
+                <th style="text-align: center;">vs. Center</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${metricsHtml}
+        </tbody>
+    </table>
     
-    email += `========== NEXT STEPS ==========\n`;
-    email += `Continue developing areas marked with ❌. Excellent performance in areas marked with ✅.\n`;
+    <div class="footer">
+        <p><strong>Great work, ${firstName}! 🌟</strong></p>
+        <p>Continue focusing on areas marked with ❌ and maintain excellence in areas marked with ✅</p>
+    </div>
+</body>
+</html>
+    `;
     
     // Display and copy
     const previewContainer = document.getElementById('executiveSummaryEmailPreview');
     if (previewContainer) {
-        previewContainer.textContent = email;
+        previewContainer.innerHTML = htmlEmail;
         previewContainer.style.display = 'block';
-        console.log('✅ Email generated and displayed');
+        console.log('✅ HTML email generated and displayed');
     }
     
-    // Copy to clipboard
-    navigator.clipboard.writeText(email).then(() => {
-        console.log('✅ Email copied to clipboard');
-        showToast('Email copied to clipboard!', 5000);
+    // Copy HTML to clipboard
+    navigator.clipboard.writeText(htmlEmail).then(() => {
+        console.log('✅ HTML email copied to clipboard');
+        showToast('✅ HTML email copied to clipboard! Paste into Outlook as HTML.', 5000);
     }).catch(() => {
         console.error('❌ Failed to copy email');
     });
