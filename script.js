@@ -4599,6 +4599,18 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         });
         const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
         
+        // Debug: Log transfers specifically
+        if (metric.key === 'transfers') {
+            console.log(`\n🔍 DEBUG TRANSFERS:`);
+            console.log(`  Metric key: '${metric.key}'`);
+            console.log(`  Periods count: ${periods.length}`);
+            periods.forEach((period, idx) => {
+                const val = period.employee?.[metric.key];
+                console.log(`  [${idx}] ${period.weekKey}: value=${val}, type=${typeof val}, passes check=${val !== undefined && val !== null && val !== ''}`);
+            });
+            console.log(`  Final: employeeAvg=${employeeAvg}, count=${employeeCount}, sum=${employeeSum}`);
+        }
+        
         // Calculate center average
         let centerSum = 0, centerCount = 0;
         periods.forEach(period => {
