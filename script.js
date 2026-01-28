@@ -2739,6 +2739,8 @@ Can you help me write an email to ${firstName} with this structure:
 
 Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
 
+Do NOT use em dashes (—) anywhere in the email.
+
 The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
     // Copy to clipboard
