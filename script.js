@@ -3506,9 +3506,9 @@ function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
     if (lowerIsBetter) {
         // For AHT, ACW: decrease is improvement
         if (delta < 0) {
-            return { status: 'improved', icon: '', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '⬆️', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '⬇️', delta: Math.round(delta * 100) / 100 };
         }
     } else {
         // For others: increase is improvement
