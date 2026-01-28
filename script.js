@@ -3161,46 +3161,10 @@ function displayCallCenterAverages(weekKey) {
     mondayField.value = metadata.startDate || '';
     sundayField.value = metadata.endDate || '';
     
-    // Get saved averages for this period, or calculate from uploaded data
-    let centerAvg = getCallCenterAverageForPeriod(weekKey);
-    let employeeCount = 0;
+    // Get saved averages for this period
+    const centerAvg = getCallCenterAverageForPeriod(weekKey);
     
-    if (!centerAvg && week.employees) {
-        // Calculate averages from uploaded employee data
-        console.log(`📊 No saved averages found. Calculating from ${week.employees.length} employees...`);
-        centerAvg = calculateAveragesFromEmployees(week.employees);
-        employeeCount = centerAvg?.employeeCount || week.employees.length;
-    } else if (centerAvg) {
-        employeeCount = centerAvg.employeeCount || 0;
-    }
-    
-    if (!centerAvg) {
-        // Clear fields if no data
-        const fieldMap = {
-            'adherence': 'avgAdherence',
-            'overallExperience': 'avgOverallExperience',
-            'repSatisfaction': 'avgRepSatisfaction',
-            'fcr': 'avgFCR',
-            'transfers': 'avgTransfers',
-            'sentiment': 'avgSentiment',
-            'positiveWord': 'avgPositiveWord',
-            'negativeWord': 'avgNegativeWord',
-            'managingEmotions': 'avgManagingEmotions',
-            'aht': 'avgAHT',
-            'acw': 'avgACW',
-            'holdTime': 'avgHoldTime',
-            'reliability': 'avgReliability'
-        };
-        Object.entries(fieldMap).forEach(([avgKey, inputId]) => {
-            const input = document.getElementById(inputId);
-            if (input) {
-                input.value = '';
-            }
-        });
-        return;
-    }
-    
-    // Display the averages
+    // Load the averages into the form (or clear if none)
     const fieldMap = {
         'adherence': 'avgAdherence',
         'overallExperience': 'avgOverallExperience',
@@ -3220,23 +3184,47 @@ function displayCallCenterAverages(weekKey) {
     Object.entries(fieldMap).forEach(([avgKey, inputId]) => {
         const input = document.getElementById(inputId);
         if (input) {
-            // Check if it's in the main data object or nested in 'data' property
-            const value = centerAvg[avgKey] !== undefined ? centerAvg[avgKey] : (centerAvg.data ? centerAvg.data[avgKey] : null);
-            input.value = value !== null && value !== undefined ? value : 'N/A';
+            if (centerAvg) {
+                // Check if it's in the main data object or nested in 'data' property
+                const value = centerAvg[avgKey] !== undefined ? centerAvg[avgKey] : (centerAvg.data ? centerAvg.data[avgKey] : '');
+                input.value = value !== null && value !== undefined ? value : '';
+            } else {
+                input.value = '';
+            }
         }
     });
     
-    // Display employee count if we have it
-    const employeeCountDisplay = document.getElementById('avgEmployeeCount');
-    if (employeeCountDisplay && employeeCount > 0) {
-        employeeCountDisplay.textContent = `Calculated from ${employeeCount} employees`;
-        employeeCountDisplay.style.display = 'block';
-    } else if (employeeCountDisplay) {
-        employeeCountDisplay.style.display = 'none';
-    }
-    
     avgMetricsForm.style.display = 'block';
 }
+
+    // Save Call Center Averages button
+    document.getElementById('saveAvgBtn')?.addEventListener('click', () => {
+        const weekKey = document.getElementById('avgUploadedDataSelect')?.value;
+        
+        if (!weekKey) {
+            alert('⚠️ Please select a period first');
+            return;
+        }
+        
+        const averageData = {
+            adherence: parseFloat(document.getElementById('avgAdherence')?.value) || 0,
+            overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || 0,
+            repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || 0,
+            fcr: parseFloat(document.getElementById('avgFCR')?.value) || 0,
+            transfers: parseFloat(document.getElementById('avgTransfers')?.value) || 0,
+            sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || 0,
+            positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || 0,
+            negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || 0,
+            managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || 0,
+            aht: parseFloat(document.getElementById('avgAHT')?.value) || 0,
+            acw: parseFloat(document.getElementById('avgACW')?.value) || 0,
+            holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || 0,
+            reliability: parseFloat(document.getElementById('avgReliability')?.value) || 0
+        };
+        
+        setCallCenterAverageForPeriod(weekKey, averageData);
+        alert('✅ Call center averages saved!');
+    });
 
 function setupMetricTrendsListeners() {
     // Generate trend email button
