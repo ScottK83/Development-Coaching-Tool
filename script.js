@@ -2812,11 +2812,17 @@ function populateUploadedDataDropdown() {
 }
 
 function loadUploadedDataPeriod(weekKey) {
+    const mondayInput = document.getElementById('avgWeekMonday');
+    const sundayInput = document.getElementById('avgWeekSunday');
+    
     if (!weekKey) {
         // Clear if no selection
         document.getElementById('avgPeriodType').value = 'week';
-        document.getElementById('avgWeekMonday').value = '';
-        document.getElementById('avgWeekSunday').value = '';
+        mondayInput.value = '';
+        sundayInput.value = '';
+        // Enable date fields for manual entry
+        mondayInput.disabled = false;
+        sundayInput.disabled = false;
         return;
     }
     
@@ -2829,15 +2835,19 @@ function loadUploadedDataPeriod(weekKey) {
     
     // Set the Monday date
     const mondayDate = weekKey; // weekKey is in format YYYY-MM-DD for the Monday
-    document.getElementById('avgWeekMonday').value = mondayDate;
+    mondayInput.value = mondayDate;
     
     // Auto-calculate Sunday (6 days after Monday)
     const monday = new Date(mondayDate);
     if (!isNaN(monday)) {
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-        document.getElementById('avgWeekSunday').value = sunday.toISOString().split('T')[0];
+        sundayInput.value = sunday.toISOString().split('T')[0];
     }
+    
+    // Disable date fields since they're determined by the dropdown selection
+    mondayInput.disabled = true;
+    sundayInput.disabled = true;
     
     showToast(`Selected week of ${week.week_start || mondayDate}`, 5000);
 }
@@ -2885,11 +2895,17 @@ function populatePastDataDropdown() {
 }
 
 function loadPastDataEntry(storageKey) {
+    const mondayInput = document.getElementById('avgWeekMonday');
+    const sundayInput = document.getElementById('avgWeekSunday');
+    
     if (!storageKey) {
         // Clear the form if no selection
         document.getElementById('avgPeriodType').value = 'week';
-        document.getElementById('avgWeekMonday').value = '';
-        document.getElementById('avgWeekSunday').value = '';
+        mondayInput.value = '';
+        sundayInput.value = '';
+        // Enable date fields for manual entry
+        mondayInput.disabled = false;
+        sundayInput.disabled = false;
         document.getElementById('avgAdherence').value = '';
         document.getElementById('avgOverallExperience').value = '';
         document.getElementById('avgRepSatisfaction').value = '';
@@ -2916,15 +2932,19 @@ function loadPastDataEntry(storageKey) {
     
     // Set form fields
     document.getElementById('avgPeriodType').value = periodType;
-    document.getElementById('avgWeekMonday').value = date;
+    mondayInput.value = date;
     
     // Auto-calculate Sunday
     const monday = new Date(date);
     if (!isNaN(monday)) {
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-        document.getElementById('avgWeekSunday').value = sunday.toISOString().split('T')[0];
+        sundayInput.value = sunday.toISOString().split('T')[0];
     }
+    
+    // Disable date fields since they're loaded from saved data
+    mondayInput.disabled = true;
+    sundayInput.disabled = true;
     
     // Populate metric fields
     document.getElementById('avgAdherence').value = averages.adherence || '';
