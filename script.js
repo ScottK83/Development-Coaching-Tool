@@ -3320,18 +3320,25 @@ function setupMetricTrendsListeners() {
         console.error('copyTrendEmailBtn element not found!');
     } else {
         copyTrendEmailBtn.addEventListener('click', () => {
-        const emailContent = document.getElementById('trendEmailContent')?.textContent;
-        
-        if (!emailContent || emailContent.trim() === '') {
-            showToast('Generate an email first', 5000);
-            return;
-        }
-        
-        navigator.clipboard.writeText(emailContent).then(() => {
-            showToast('Email copied to clipboard!', 5000);
-        }).catch(() => {
-            showToast('Failed to copy email', 5000);
-        });
+            const htmlEmail = window.latestTrendEmailHtml;
+            
+            if (!htmlEmail || htmlEmail.trim() === '') {
+                showToast('Generate an email first', 5000);
+                return;
+            }
+            
+            const blob = new Blob([htmlEmail], { type: 'text/html' });
+            const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
+            
+            navigator.clipboard.write([htmlClipboardItem]).then(() => {
+                showToast('Email copied to clipboard!', 5000);
+            }).catch(() => {
+                navigator.clipboard.writeText(htmlEmail).then(() => {
+                    showToast('Copied as plain text', 5000);
+                }).catch(() => {
+                    showToast('Failed to copy email', 5000);
+                });
+            });
         });
     }
 }
@@ -3786,25 +3793,39 @@ function generateTrendEmail() {
         }
     });
     
-    // Add visual cards to HTML email
+    // Add visual cards to HTML email (Outlook-safe table layout)
     htmlEmail += `
-        <div class="cards">
-            <div class="card card-success">
-                <div class="card-label">✅ Meeting Target Goals</div>
-                <div class="card-value">${meetsTargetCount}/${totalMetricsEvaluated}</div>
-                <div class="card-label">${totalMetricsEvaluated > 0 ? Math.round((meetsTargetCount/totalMetricsEvaluated)*100) : 0}% Success Rate</div>
-            </div>
-            <div class="card card-info">
-                <div class="card-label">📈 Outpacing Your Peers</div>
-                <div class="card-value">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
-                <div class="card-label">${totalMetricsEvaluated > 0 ? Math.round((outpacingPeersCount/totalMetricsEvaluated)*100) : 0}% Above Center</div>
-            </div>
-            <div class="card card-warning">
-                <div class="card-label">⬆️ Improved Metrics</div>
-                <div class="card-value">${improvedCount}</div>
-                <div class="card-label">From ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'}</div>
-            </div>
-        </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-collapse: collapse;">
+            <tr>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d4edda; background: #d4edda; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">✅ Meeting Target Goals</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${meetsTargetCount}/${totalMetricsEvaluated}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((meetsTargetCount/totalMetricsEvaluated)*100) : 0}% Success Rate</div>
+                        </td></tr>
+                    </table>
+                </td>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d1ecf1; background: #d1ecf1; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">📈 Outpacing Your Peers</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((outpacingPeersCount/totalMetricsEvaluated)*100) : 0}% Above Center</div>
+                        </td></tr>
+                    </table>
+                </td>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #fff3cd; background: #fff3cd; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">⬆️ Improved Metrics</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${improvedCount}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">From ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'}</div>
+                        </td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
         
         <div class="section">
             <div class="section-title">📊 Your Metrics</div>
@@ -3890,7 +3911,8 @@ function generateTrendEmail() {
     console.log('🎯 Preview content:', previewContent);
     
     if (previewContainer && previewContent) {
-        previewContent.innerHTML = htmlEmail;
+        window.latestTrendEmailHtml = htmlEmail;
+        previewContent.srcdoc = htmlEmail;
         previewContainer.style.display = 'block';
         console.log('✅ Email displayed in preview panel');
     } else {
@@ -4280,9 +4302,21 @@ function initializeYearlyIndividualSummary() {
     
     // Add event listener for copy button
     document.getElementById('copyExecutiveSummaryEmailBtn')?.addEventListener('click', () => {
-        const email = document.getElementById('executiveSummaryEmailPreview').textContent;
-        navigator.clipboard.writeText(email).then(() => {
+        const htmlEmail = window.latestExecutiveSummaryHtml;
+        if (!htmlEmail || htmlEmail.trim() === '') {
+            showToast('Generate an email first', 5000);
+            return;
+        }
+        const blob = new Blob([htmlEmail], { type: 'text/html' });
+        const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
+        navigator.clipboard.write([htmlClipboardItem]).then(() => {
             showToast('Email copied to clipboard!', 5000);
+        }).catch(() => {
+            navigator.clipboard.writeText(htmlEmail).then(() => {
+                showToast('Copied as plain text', 5000);
+            }).catch(() => {
+                showToast('Failed to copy email', 5000);
+            });
         });
     });
     
@@ -5320,18 +5354,28 @@ function generateExecutiveSummaryEmail() {
         <p>Report Date: ${new Date().toLocaleDateString()} | Period: Year-to-Date</p>
     </div>
     
-    <div class="cards">
-        <div class="card success">
-            <div class="card-label">✅ Meeting Target Goals</div>
-            <div class="card-value">${meetsTargetCount}/${totalMetricsEvaluated}</div>
-            <div class="card-label">${Math.round((meetsTargetCount/totalMetricsEvaluated)*100)}% Success Rate</div>
-        </div>
-        <div class="card info">
-            <div class="card-label">📈 Outpacing Your Peers</div>
-            <div class="card-value">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
-            <div class="card-label">${Math.round((outpacingPeersCount/totalMetricsEvaluated)*100)}% Above Center</div>
-        </div>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-collapse: collapse;">
+        <tr>
+            <td width="50%" style="padding: 10px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d4edda; background: #d4edda; border-radius: 8px;">
+                    <tr><td style="padding: 14px; text-align: center; font-family: Arial, sans-serif;">
+                        <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">✅ Meeting Target Goals</div>
+                        <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${meetsTargetCount}/${totalMetricsEvaluated}</div>
+                        <div style="font-size: 12px; color: #2c3e50;">${Math.round((meetsTargetCount/totalMetricsEvaluated)*100)}% Success Rate</div>
+                    </td></tr>
+                </table>
+            </td>
+            <td width="50%" style="padding: 10px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d1ecf1; background: #d1ecf1; border-radius: 8px;">
+                    <tr><td style="padding: 14px; text-align: center; font-family: Arial, sans-serif;">
+                        <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">📈 Outpacing Your Peers</div>
+                        <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
+                        <div style="font-size: 12px; color: #2c3e50;">${Math.round((outpacingPeersCount/totalMetricsEvaluated)*100)}% Above Center</div>
+                    </td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
     
     ${!hasSurveys ? '<p style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px;">ℹ️ <strong>Note:</strong> No survey data available for this period. Survey-based metrics are marked as meeting goals by default.</p>' : ''}
     
@@ -5362,7 +5406,8 @@ function generateExecutiveSummaryEmail() {
     // Display and copy
     const previewContainer = document.getElementById('executiveSummaryEmailPreview');
     if (previewContainer) {
-        previewContainer.innerHTML = htmlEmail;
+        window.latestExecutiveSummaryHtml = htmlEmail;
+        previewContainer.srcdoc = htmlEmail;
         previewContainer.style.display = 'block';
         console.log('✅ HTML email generated and displayed');
     }
