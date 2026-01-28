@@ -3055,8 +3055,8 @@ function populateUploadedDataDropdown() {
     let options = '<option value="">-- Choose a period from your data --</option>';
     allWeeks.forEach(weekKey => {
         const week = weeklyData[weekKey];
-        const displayText = week.week_start || weekKey;
-        options += `<option value="${weekKey}">Week of ${displayText}</option>`;
+        const displayText = week.metadata?.label || week.week_start || weekKey;
+        options += `<option value="${weekKey}">${displayText}</option>`;
     });
     
     avgUploadedDataSelect.innerHTML = options;
@@ -3508,6 +3508,15 @@ function generateTrendEmail() {
             line += ` (${sign}${trendDelta}${metric.unit})`;
         }
         
+        // ============ WEEKLY STATISTICS (only when viewing by week) ============
+        if (periodType === 'week') {
+            const weeklyStats = getWeeklyStatisticsForEmployee(employeeName, metric.key, metric.lowerIsBetter);
+            if (weeklyStats.totalWeeks > 1) {
+                line += `\n  └─ Meeting target ${weeklyStats.meetingTarget} out of ${weeklyStats.totalWeeks} weeks. Above average ${weeklyStats.aboveAverage} out of ${weeklyStats.totalWeeks} weeks`;
+                console.log(`  Weekly Stats: ${weeklyStats.meetingTarget}/${weeklyStats.totalWeeks} meeting target, ${weeklyStats.aboveAverage}/${weeklyStats.totalWeeks} above avg`);
+            }
+        }
+        
         email += `${line}\n`;
     });
     
@@ -3599,6 +3608,76 @@ function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
             return { status: 'below', icon: '⬇️' };
         }
     }
+}
+
+function getWeeklyStatisticsForEmployee(employeeName, metricKey, lowerIsBetter) {
+    /**
+     * Calculate how many weeks employee met target and beat center average
+     * Returns: { meetingTarget: number, aboveAverage: number, totalWeeks: number }
+     */
+    const metricRegistry = METRICS_REGISTRY[metricKey];
+    if (!metricRegistry) return { meetingTarget: 0, aboveAverage: 0, totalWeeks: 0 };
+    
+    const targetValue = metricRegistry.target.value;
+    const targetType = metricRegistry.target.type; // 'min' or 'max'
+    
+    let meetingTarget = 0;
+    let aboveAverage = 0;
+    let totalWeeks = 0;
+    
+    // Only count weeks with periodType === 'week'
+    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
+        if (weekData.metadata?.periodType !== 'week') return;
+        
+        const employee = weekData.employees?.find(emp => emp.name === employeeName);
+        if (!employee) return;
+        
+        const employeeValue = parseFloat(employee[metricKey]);
+        if (isNaN(employeeValue)) return;
+        
+        totalWeeks++;
+        
+        // Check if meeting target
+        if (targetType === 'min') {
+            if (employeeValue >= targetValue) meetingTarget++;
+        } else if (targetType === 'max') {
+            if (employeeValue <= targetValue) meetingTarget++;
+        }
+        
+        // Check if above center average
+        const centerAvg = getCallCenterAverageForPeriod(weekKey);
+        if (centerAvg) {
+            // Convert metric key to center key
+            const centerKeyMap = {
+                'scheduleAdherence': 'adherence',
+                'overallExperience': 'overallExperience',
+                'cxRepOverall': 'repSatisfaction',
+                'fcr': 'fcr',
+                'transfers': 'transfers',
+                'overallSentiment': 'sentiment',
+                'positiveWord': 'positiveWord',
+                'negativeWord': 'negativeWord',
+                'managingEmotions': 'managingEmotions',
+                'aht': 'aht',
+                'acw': 'acw',
+                'holdTime': 'holdTime',
+                'reliability': 'reliability'
+            };
+            
+            const centerKey = centerKeyMap[metricKey];
+            const centerValue = centerAvg[centerKey];
+            
+            if (centerValue !== undefined && centerValue !== null) {
+                if (lowerIsBetter) {
+                    if (employeeValue <= centerValue) aboveAverage++;
+                } else {
+                    if (employeeValue >= centerValue) aboveAverage++;
+                }
+            }
+        }
+    });
+    
+    return { meetingTarget, aboveAverage, totalWeeks };
 }
 
 // ============================================
