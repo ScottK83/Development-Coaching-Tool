@@ -1709,7 +1709,10 @@ function populateDeleteWeekDropdown() {
     dropdown.innerHTML = '<option value="">-- Choose a week --</option>';
     
     const weeks = Object.keys(weeklyData).map(weekKey => {
-        const endDate = new Date(weekKey.split('|')[1]);
+        const endDateStr = weekKey.split('|')[1];
+        // Parse date safely to avoid timezone issues
+        const [year, month, day] = endDateStr.split('-').map(Number);
+        const endDate = new Date(year, month - 1, day);
         const label = `Week ending ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
         return { weekKey, label, endDate };
     });
