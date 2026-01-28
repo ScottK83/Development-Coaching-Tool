@@ -2723,15 +2723,22 @@ ${opportunitiesSection}${additionalContext}
 
 Can you help me write an email to ${firstName} that has these two main sections:
 
-1. WINS SECTION: A paragraph celebrating their achievements. Be specific about each metric they hit and what the target was. Be genuinely enthusiastic and encourage them to keep up the great work.
+1. WINS SECTION: 
+   - Start with a warm intro sentence celebrating their achievements
+   - Follow with bullets for each win, showing: the metric name, where they landed, and what the goal was
+   - End with an encouraging sentence about keeping up the great work
 
-2. OPPORTUNITIES SECTION: A paragraph addressing areas where they can improve. For each metric below target, mention what they scored, what the goal is, and incorporate the coaching tip provided (but reword it naturally — don't just copy it). Be constructive and supportive, not critical. If there's a reliability note, include that naturally here.
+2. OPPORTUNITIES SECTION:
+   - Start with a supportive intro sentence about areas to improve
+   - Follow with bullets for each opportunity, showing: the metric name, where they landed, what the goal is, and how they can improve (reword the coaching tip naturally)
+   - If there's a reliability note, include it naturally
+   - End with constructive encouragement
 
 Email structure:
-- Start with a warm, conversational greeting
-- Wins paragraph (celebrate achievements with specifics)
-- Opportunities paragraph (constructive guidance with tips woven in naturally)
-- Close with encouragement and an invitation to discuss
+- Warm, conversational greeting
+- WINS section (intro + bullets with specifics + encouragement)
+- OPPORTUNITIES section (intro + bullets with specifics and tips + encouragement)
+- Close with an invitation to discuss
 
 Keep it sounding like a real supervisor who genuinely wants them to succeed. Use "you" language throughout. Make it conversational, upbeat, and motivating. Avoid corporate buzzwords and any mention of metrics being analyzed or AI involvement. Most importantly, make this email unique and natural — something that doesn't follow a template pattern.
 
