@@ -199,6 +199,23 @@ const METRICS_REGISTRY = {
 // UTILITY FUNCTIONS
 // ============================================
 
+/**
+ * Hide all sections except the specified one
+ */
+function showOnlySection(sectionId) {
+    // Hide all sections
+    const sections = document.querySelectorAll('section[id$="Section"], form[id$="Form"]');
+    sections.forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Show the specified section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.style.display = 'block';
+    }
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
