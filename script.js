@@ -864,8 +864,9 @@ function loadWeeklyData() {
 function saveWeeklyData() {
     try {
         localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
+        console.log('💾 Weekly data saved to localStorage. Current weeks:', Object.keys(weeklyData));
     } catch (error) {
-        console.error('Error saving weekly data:', error);
+        console.error('❌ Error saving weekly data:', error);
     }
 }
 
@@ -3807,13 +3808,19 @@ function renderEmployeesList() {
 // ============================================
 
 function initApp() {
-    console.log('?? Initializing Development Coaching Tool...');
+    console.log('🚀 Initializing Development Coaching Tool...');
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     coachingLogYTD = loadCoachingLog();
     
-    console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
+    console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
+    console.log('📦 weeklyData keys:', Object.keys(weeklyData));
+    if (Object.keys(weeklyData).length > 0) {
+        console.log('✅ Weekly data successfully loaded from localStorage');
+    } else {
+        console.warn('⚠️ No weekly data in localStorage. Upload CSV to populate.');
+    }
     
     // Initialize event handlers
     initializeEventHandlers();
