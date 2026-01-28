@@ -19,6 +19,7 @@
                 <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
                 <button type="button" id="employeeDashboard" class="btn-secondary">👥 Employee History</button>
                 <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
+                <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
             </div>
@@ -274,6 +275,111 @@
                 <div class="form-section">
                     <h2>💡 Manage Coaching Tips</h2>
                     <div id="tipsContainer"></div>
+                </div>
+            </section>
+
+            <!-- Metric Trends Section -->
+            <section id="metricTrendsSection" style="display: none;">
+                <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #9c27b0;">
+                    <h2>📈 Metric Trend Reports</h2>
+                    <p style="margin-bottom: 20px;">Generate trend summary emails showing associate performance vs call center averages and week-over-week changes.</p>
+                    
+                    <!-- Call Center Averages Management -->
+                    <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                        <h3 style="color: #9c27b0; margin-top: 0;">📊 Manage Call Center Averages</h3>
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">Set the call center average metrics for each period to compare against.</p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="avgPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Period:</label>
+                            <select id="avgPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose a period to set averages --</option>
+                            </select>
+                        </div>
+                        
+                        <div id="avgMetricsForm" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Adherence (%):</label>
+                                    <input type="number" id="avgAdherence" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">CX Rep Overall FCR (%):</label>
+                                    <input type="number" id="avgFCR" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Overall Experience (%):</label>
+                                    <input type="number" id="avgOverallExperience" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Transfers (%):</label>
+                                    <input type="number" id="avgTransfers" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sentiment (%):</label>
+                                    <input type="number" id="avgSentiment" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Positive Word (%):</label>
+                                    <input type="number" id="avgPositiveWord" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Avoiding Negative Words (%):</label>
+                                    <input type="number" id="avgNegativeWord" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Managing Emotions (%):</label>
+                                    <input type="number" id="avgManagingEmotions" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">AHT (seconds):</label>
+                                    <input type="number" id="avgAHT" step="1" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">ACW (seconds):</label>
+                                    <input type="number" id="avgACW" step="1" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Hold Time (seconds):</label>
+                                    <input type="number" id="avgHoldTime" step="1" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Reliability (%):</label>
+                                    <input type="number" id="avgReliability" step="0.01" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                            <button type="button" id="saveAvgBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">💾 Save Averages</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Generate Trend Email -->
+                    <div style="padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                        <h3 style="color: #9c27b0; margin-top: 0;">✉️ Generate Trend Email</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee:</label>
+                            <select id="trendEmployeeSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose an employee --</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Period:</label>
+                            <select id="trendPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose a period --</option>
+                            </select>
+                        </div>
+                        
+                        <button type="button" id="generateTrendBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📈 Generate Trend Email</button>
+                        
+                        <!-- Email Preview -->
+                        <div id="trendEmailPreview" style="display: none; margin-top: 20px; padding: 20px; background: #f9f9f9; border: 2px solid #9c27b0; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: #9c27b0;">Email Preview</h4>
+                                <button type="button" id="copyTrendEmailBtn" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold;">📋 Copy Email</button>
+                            </div>
+                            <div id="trendEmailContent" style="white-space: pre-wrap; font-family: monospace; padding: 15px; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 500px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

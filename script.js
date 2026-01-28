@@ -301,6 +301,10 @@ function initializeSection(sectionId) {
             // Manage Tips - render tips management interface
             renderTipsManagement();
             break;
+        case 'metricTrendsSection':
+            // Metric Trends - initialize trend email generator
+            initializeMetricTrends();
+            break;
         case 'manageDataSection':
             // Manage Data - populate delete week dropdown
             populateDeleteWeekDropdown();
@@ -860,6 +864,42 @@ function saveWeeklyData() {
     }
 }
 
+// ============================================
+// CALL CENTER AVERAGES - FOR METRIC TRENDS
+// ============================================
+
+function loadCallCenterAverages() {
+    try {
+        const saved = localStorage.getItem('callCenterAverages');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading call center averages:', error);
+        return {};
+    }
+}
+
+function saveCallCenterAverages(averages) {
+    try {
+        localStorage.setItem('callCenterAverages', JSON.stringify(averages));
+    } catch (error) {
+        console.error('Error saving call center averages:', error);
+    }
+}
+
+function getCallCenterAverageForPeriod(periodKey) {
+    const averages = loadCallCenterAverages();
+    return averages[periodKey] || null;
+}
+
+function setCallCenterAverageForPeriod(periodKey, avgData) {
+    const averages = loadCallCenterAverages();
+    averages[periodKey] = {
+        ...avgData,
+        lastUpdated: new Date().toISOString()
+    };
+    saveCallCenterAverages(averages);
+}
+
 function loadCoachingLog() {
     try {
         const saved = localStorage.getItem('coachingLogYTD');
@@ -1263,6 +1303,10 @@ function initializeEventHandlers() {
     document.getElementById('manageTips')?.addEventListener('click', () => {
         showOnlySection('tipsManagementSection');
         renderTipsManagement();
+    });
+    document.getElementById('metricTrendsBtn')?.addEventListener('click', () => {
+        showOnlySection('metricTrendsSection');
+        initializeMetricTrends();
     });
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
@@ -2603,6 +2647,361 @@ function renderEmployeeCharts(employeeData, employeeName) {
         });
     });
 }
+
+// ============================================
+// METRIC TREND EMAIL GENERATOR
+// ============================================
+
+function initializeMetricTrends() {
+    // Populate period dropdowns
+    populatePeriodDropdowns();
+    
+    // Populate employee dropdown
+    populateEmployeeDropdown();
+    
+    // Load existing averages if any
+    loadExistingAverages();
+    
+    // Set up event listeners
+    setupMetricTrendsListeners();
+}
+
+function populatePeriodDropdowns() {
+    const avgPeriodSelect = document.getElementById('avgPeriodSelect');
+    const trendPeriodSelect = document.getElementById('trendPeriodSelect');
+    
+    if (!avgPeriodSelect || !trendPeriodSelect) return;
+    
+    // Get all weeks from weeklyData
+    const allWeeks = Object.keys(weeklyData).sort();
+    
+    if (allWeeks.length === 0) {
+        avgPeriodSelect.innerHTML = '<option value="">No data available</option>';
+        trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
+        return;
+    }
+    
+    // Build options for both dropdowns
+    let options = '<option value="">Select Period...</option>';
+    allWeeks.forEach(weekKey => {
+        const week = weeklyData[weekKey];
+        const displayText = `${week.week_start} (${week.period_type})`;
+        options += `<option value="${weekKey}">${displayText}</option>`;
+    });
+    
+    avgPeriodSelect.innerHTML = options;
+    trendPeriodSelect.innerHTML = options;
+}
+
+function populateEmployeeDropdown() {
+    const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
+    
+    if (!trendEmployeeSelect) return;
+    
+    // Get all unique employees
+    const employeeSet = new Set();
+    Object.values(weeklyData).forEach(week => {
+        if (week && week.employees) {
+            week.employees.forEach(emp => {
+                employeeSet.add(emp.name);
+            });
+        }
+    });
+    
+    if (employeeSet.size === 0) {
+        trendEmployeeSelect.innerHTML = '<option value="">No employees available</option>';
+        return;
+    }
+    
+    // Build options
+    let options = '<option value="">Select Employee...</option>';
+    Array.from(employeeSet).sort().forEach(name => {
+        options += `<option value="${name}">${name}</option>`;
+    });
+    
+    trendEmployeeSelect.innerHTML = options;
+}
+
+function loadExistingAverages() {
+    const avgPeriodSelect = document.getElementById('avgPeriodSelect');
+    
+    if (!avgPeriodSelect) return;
+    
+    // When user selects a period, load existing values if they exist
+    avgPeriodSelect.addEventListener('change', (e) => {
+        const weekKey = e.target.value;
+        if (!weekKey) return;
+        
+        const averages = getCallCenterAverageForPeriod(weekKey);
+        
+        // Populate form fields
+        document.getElementById('avgAdherence').value = averages.adherence || '';
+        document.getElementById('avgFCR').value = averages.fcr || '';
+        document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
+        document.getElementById('avgTransfers').value = averages.transfers || '';
+        document.getElementById('avgSentiment').value = averages.sentiment || '';
+        document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
+        document.getElementById('avgNegativeWord').value = averages.negativeWord || '';
+        document.getElementById('avgManagingEmotions').value = averages.managingEmotions || '';
+        document.getElementById('avgAHT').value = averages.aht || '';
+        document.getElementById('avgACW').value = averages.acw || '';
+        document.getElementById('avgHoldTime').value = averages.holdTime || '';
+        document.getElementById('avgReliability').value = averages.reliability || '';
+    });
+}
+
+function setupMetricTrendsListeners() {
+    // Save averages button
+    const saveAvgBtn = document.getElementById('saveAvgBtn');
+    saveAvgBtn?.addEventListener('click', () => {
+        const weekKey = document.getElementById('avgPeriodSelect')?.value;
+        
+        if (!weekKey) {
+            showToast('Please select a period first', 'error');
+            return;
+        }
+        
+        // Read all metric values
+        const averages = {
+            adherence: parseFloat(document.getElementById('avgAdherence')?.value) || null,
+            fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
+            overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || null,
+            transfers: parseFloat(document.getElementById('avgTransfers')?.value) || null,
+            sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || null,
+            positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || null,
+            negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || null,
+            managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || null,
+            aht: parseFloat(document.getElementById('avgAHT')?.value) || null,
+            acw: parseFloat(document.getElementById('avgACW')?.value) || null,
+            holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || null,
+            reliability: parseFloat(document.getElementById('avgReliability')?.value) || null
+        };
+        
+        // Validate at least one value entered
+        const hasValue = Object.values(averages).some(v => v !== null);
+        if (!hasValue) {
+            showToast('Please enter at least one metric value', 'error');
+            return;
+        }
+        
+        // Save to storage
+        setCallCenterAverageForPeriod(weekKey, averages);
+        showToast('Call center averages saved successfully!', 'success');
+    });
+    
+    // Generate trend email button
+    const generateTrendBtn = document.getElementById('generateTrendBtn');
+    generateTrendBtn?.addEventListener('click', generateTrendEmail);
+    
+    // Copy to clipboard button
+    const copyTrendEmailBtn = document.getElementById('copyTrendEmailBtn');
+    copyTrendEmailBtn?.addEventListener('click', () => {
+        const emailContent = document.getElementById('trendEmailContent')?.textContent;
+        
+        if (!emailContent || emailContent.trim() === '') {
+            showToast('Generate an email first', 'error');
+            return;
+        }
+        
+        navigator.clipboard.writeText(emailContent).then(() => {
+            showToast('Email copied to clipboard!', 'success');
+        }).catch(() => {
+            showToast('Failed to copy email', 'error');
+        });
+    });
+}
+
+function generateTrendEmail() {
+    const employeeName = document.getElementById('trendEmployeeSelect')?.value;
+    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    
+    if (!employeeName || !weekKey) {
+        showToast('Please select both employee and period', 'error');
+        return;
+    }
+    
+    // Get employee data for this week
+    const week = weeklyData[weekKey];
+    if (!week || !week.employees) {
+        showToast('No data found for this period', 'error');
+        return;
+    }
+    
+    const employee = week.employees.find(emp => emp.name === employeeName);
+    if (!employee) {
+        showToast('Employee not found in this period', 'error');
+        return;
+    }
+    
+    // Get call center averages for this period
+    const centerAvg = getCallCenterAverageForPeriod(weekKey);
+    
+    // Find previous week for WoW comparison
+    const allWeeks = Object.keys(weeklyData).sort();
+    const currentIndex = allWeeks.indexOf(weekKey);
+    const previousWeek = currentIndex > 0 ? allWeeks[currentIndex - 1] : null;
+    
+    let previousEmployee = null;
+    if (previousWeek) {
+        const prevWeekData = weeklyData[previousWeek];
+        if (prevWeekData && prevWeekData.employees) {
+            previousEmployee = prevWeekData.employees.find(emp => emp.name === employeeName);
+        }
+    }
+    
+    // Build email content
+    const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
+    const weekStart = week.week_start;
+    
+    let email = `Subject: Metric Trend Summary – ${employeeName} – Week of ${weekStart}\n\n`;
+    email += `Hi ${nickname},\n\n`;
+    
+    // Summary Section
+    email += `Here's your performance summary for the week of ${weekStart}.\n\n`;
+    
+    // Metrics breakdown
+    email += `📊 Your Metrics:\n\n`;
+    
+    // Define metrics to analyze
+    const metricsToAnalyze = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', centerKey: 'adherence', lowerIsBetter: false, unit: '%' },
+        { key: 'fcr', label: 'CX Rep Overall FCR', centerKey: 'fcr', lowerIsBetter: false, unit: '%' },
+        { key: 'overallExperience', label: 'Overall Experience', centerKey: 'overallExperience', lowerIsBetter: false, unit: '%' },
+        { key: 'transfers', label: 'Transfers', centerKey: 'transfers', lowerIsBetter: true, unit: '%' },
+        { key: 'sentiment', label: 'Sentiment Score', centerKey: 'sentiment', lowerIsBetter: false, unit: '%' },
+        { key: 'positiveWord', label: 'Positive Word Usage', centerKey: 'positiveWord', lowerIsBetter: false, unit: '%' },
+        { key: 'negativeWord', label: 'Avoiding Negative Words', centerKey: 'negativeWord', lowerIsBetter: false, unit: '%' },
+        { key: 'managingEmotions', label: 'Managing Emotions', centerKey: 'managingEmotions', lowerIsBetter: false, unit: '%' },
+        { key: 'aht', label: 'Average Handle Time', centerKey: 'aht', lowerIsBetter: true, unit: 's' },
+        { key: 'acw', label: 'After Call Work', centerKey: 'acw', lowerIsBetter: true, unit: 's' },
+        { key: 'holdTime', label: 'Hold Time', centerKey: 'holdTime', lowerIsBetter: true, unit: 's' },
+        { key: 'reliability', label: 'Reliability', centerKey: 'reliability', lowerIsBetter: false, unit: '%' }
+    ];
+    
+    const highlights = [];
+    const watchAreas = [];
+    
+    metricsToAnalyze.forEach(metric => {
+        const employeeValue = employee[metric.key];
+        
+        // Skip if employee doesn't have this metric
+        if (employeeValue === undefined || employeeValue === null) return;
+        
+        let line = `• ${metric.label}: ${employeeValue}${metric.unit}`;
+        
+        // Compare vs center average
+        const centerValue = centerAvg[metric.centerKey];
+        if (centerValue !== undefined && centerValue !== null) {
+            line += ` | Center Avg: ${centerValue}${metric.unit}`;
+            
+            const vsCenter = compareToCenter(employeeValue, centerValue, metric.lowerIsBetter);
+            line += ` ${vsCenter.icon}`;
+            
+            if (vsCenter.status === 'meets') {
+                highlights.push(`${metric.label} ${vsCenter.icon}`);
+            } else if (vsCenter.status === 'below') {
+                watchAreas.push(`${metric.label} ${vsCenter.icon}`);
+            }
+        }
+        
+        // Compare WoW if previous data exists
+        if (previousEmployee) {
+            const previousValue = previousEmployee[metric.key];
+            if (previousValue !== undefined && previousValue !== null) {
+                const wow = compareWeekOverWeek(employeeValue, previousValue, metric.lowerIsBetter);
+                line += ` | WoW: ${wow.icon}`;
+                
+                if (wow.delta !== 0) {
+                    const sign = wow.delta > 0 ? '+' : '';
+                    line += ` (${sign}${wow.delta}${metric.unit})`;
+                }
+                
+                if (wow.status === 'improved') {
+                    highlights.push(`${metric.label} improved WoW ${wow.icon}`);
+                }
+            } else {
+                line += ` | WoW: ➖ (no previous data)`;
+            }
+        } else {
+            line += ` | WoW: ➖ (Baseline Week)`;
+        }
+        
+        email += `${line}\n`;
+    });
+    
+    email += `\n`;
+    
+    // Highlights section
+    if (highlights.length > 0) {
+        email += `✨ Highlights:\n`;
+        highlights.forEach(h => email += `• ${h}\n`);
+        email += `\n`;
+    }
+    
+    // Watch areas section
+    if (watchAreas.length > 0) {
+        email += `⚠️ Watch Areas:\n`;
+        watchAreas.forEach(w => email += `• ${w}\n`);
+        email += `\n`;
+    }
+    
+    // Closing
+    email += `Let me know if you have any questions or want to discuss these results.\n\n`;
+    email += `Best,\n[Your Name]`;
+    
+    // Display in preview panel
+    const previewContainer = document.getElementById('trendEmailPreview');
+    const previewContent = document.getElementById('trendEmailContent');
+    if (previewContainer && previewContent) {
+        previewContent.textContent = email;
+        previewContainer.style.display = 'block';
+    }
+    
+    showToast('Email generated successfully!', 'success');
+}
+
+function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
+    if (lowerIsBetter) {
+        // For AHT, ACW: lower is better
+        if (employeeValue <= centerValue) {
+            return { status: 'meets', icon: '✅' };
+        } else {
+            return { status: 'below', icon: '🔻' };
+        }
+    } else {
+        // For all others: higher is better
+        if (employeeValue >= centerValue) {
+            return { status: 'meets', icon: '✅' };
+        } else {
+            return { status: 'below', icon: '🔻' };
+        }
+    }
+}
+
+function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
+    const delta = currentValue - previousValue;
+    
+    if (delta === 0) {
+        return { status: 'nochange', icon: '➖', delta: 0 };
+    }
+    
+    if (lowerIsBetter) {
+        // For AHT, ACW: decrease is improvement
+        if (delta < 0) {
+            return { status: 'improved', icon: '🔺', delta: Math.round(delta * 100) / 100 };
+        } else {
+            return { status: 'declined', icon: '❌', delta: Math.round(delta * 100) / 100 };
+        }
+    } else {
+        // For others: increase is improvement
+        if (delta > 0) {
+            return { status: 'improved', icon: '🔺', delta: Math.round(delta * 100) / 100 };
+        } else {
+            return { status: 'declined', icon: '❌', delta: Math.round(delta * 100) / 100 };
+        }
+    }
+}
+
 
 // ============================================
 // EXECUTIVE SUMMARY
