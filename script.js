@@ -2735,6 +2735,12 @@ function populateTrendPeriodDropdown() {
     
     trendPeriodSelect.innerHTML = options;
     console.log('✅ Populated trend period dropdown with', allWeeks.length, 'periods');
+    
+    // Add change listener to filter employees by selected period
+    trendPeriodSelect.addEventListener('change', (e) => {
+        console.log('📅 Period selected:', e.target.value);
+        populateEmployeeDropdownForPeriod(e.target.value);
+    });
 }
 
 function populateEmployeeDropdown() {
@@ -2745,7 +2751,7 @@ function populateEmployeeDropdown() {
         return;
     }
     
-    // Get all unique employees
+    // Get all unique employees (for initial load)
     const employeeSet = new Set();
     Object.values(weeklyData).forEach(week => {
         if (week && week.employees) {
@@ -2772,6 +2778,41 @@ function populateEmployeeDropdown() {
     
     trendEmployeeSelect.innerHTML = options;
     console.log('✅ Populated employee dropdown with', employeeSet.size, 'employees');
+}
+
+function populateEmployeeDropdownForPeriod(weekKey) {
+    const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
+    
+    if (!trendEmployeeSelect) {
+        console.warn('❌ trendEmployeeSelect element not found');
+        return;
+    }
+    
+    if (!weekKey) {
+        // No period selected, show all employees
+        populateEmployeeDropdown();
+        return;
+    }
+    
+    // Get employees only for selected period
+    const week = weeklyData[weekKey];
+    if (!week || !week.employees) {
+        trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
+        console.warn('⚠️ No employees found for period:', weekKey);
+        return;
+    }
+    
+    const employees = week.employees.map(emp => emp.name).sort();
+    console.log('👥 Employees in period', weekKey + ':', employees);
+    
+    // Build options
+    let options = '<option value="">Select Employee...</option>';
+    employees.forEach(name => {
+        options += `<option value="${name}">${name}</option>`;
+    });
+    
+    trendEmployeeSelect.innerHTML = options;
+    console.log('✅ Populated employee dropdown for period with', employees.length, 'employees');
 }
 
 function setupAveragesLoader() {
@@ -2982,9 +3023,17 @@ function loadPastDataEntry(storageKey) {
 }
 
 function setupMetricTrendsListeners() {
+    console.log('🔌 setupMetricTrendsListeners called');
+    
     // Save averages button
     const saveAvgBtn = document.getElementById('saveAvgBtn');
-    saveAvgBtn?.addEventListener('click', () => {
+    console.log('saveAvgBtn element:', saveAvgBtn);
+    
+    if (!saveAvgBtn) {
+        console.error('❌ saveAvgBtn element not found!');
+    } else {
+        console.log('✅ Found saveAvgBtn, attaching listener');
+        saveAvgBtn.addEventListener('click', () => {
         const periodType = document.getElementById('avgPeriodType')?.value;
         const mondayDate = document.getElementById('avgWeekMonday')?.value;
         const sundayDate = document.getElementById('avgWeekSunday')?.value;
@@ -3026,14 +3075,28 @@ function setupMetricTrendsListeners() {
         const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
         showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 5000);
     });
+    }
     
     // Generate trend email button
     const generateTrendBtn = document.getElementById('generateTrendBtn');
-    generateTrendBtn?.addEventListener('click', generateTrendEmail);
+    console.log('generateTrendBtn element:', generateTrendBtn);
+    
+    if (!generateTrendBtn) {
+        console.error('❌ generateTrendBtn element not found!');
+    } else {
+        console.log('✅ Found generateTrendBtn, attaching listener');
+        generateTrendBtn.addEventListener('click', generateTrendEmail);
+    }
     
     // Copy to clipboard button
     const copyTrendEmailBtn = document.getElementById('copyTrendEmailBtn');
-    copyTrendEmailBtn?.addEventListener('click', () => {
+    console.log('copyTrendEmailBtn element:', copyTrendEmailBtn);
+    
+    if (!copyTrendEmailBtn) {
+        console.error('❌ copyTrendEmailBtn element not found!');
+    } else {
+        console.log('✅ Found copyTrendEmailBtn, attaching listener');
+        copyTrendEmailBtn.addEventListener('click', () => {
         const emailContent = document.getElementById('trendEmailContent')?.textContent;
         
         if (!emailContent || emailContent.trim() === '') {
@@ -3046,7 +3109,9 @@ function setupMetricTrendsListeners() {
         }).catch(() => {
             showToast('Failed to copy email', 5000);
         });
-    });
+        });
+    }
+    console.log('✅ setupMetricTrendsListeners completed');
 }
 
 function generateTrendEmail() {
