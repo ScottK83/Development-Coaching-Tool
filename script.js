@@ -1457,6 +1457,9 @@ function initializeEventHandlers() {
             populateDeleteWeekDropdown();
             populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
             
+            // Populate team member selector
+            populateTeamMemberSelector();
+            
             // Show success
             document.getElementById('uploadSuccessMessage').style.display = 'block';
             document.getElementById('pasteDataTextarea').value = '';
