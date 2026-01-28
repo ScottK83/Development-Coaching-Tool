@@ -3325,10 +3325,25 @@ function generateTrendEmail() {
         previewContent.textContent = email;
         previewContainer.style.display = 'block';
         console.log('✅ Email displayed in preview panel');
-        showToast('Email generated! Use the 📋 Copy Email button to copy it.', 5000);
     } else {
         console.error('❌ Preview elements not found!');
     }
+    
+    // Auto-copy to clipboard
+    console.log('📋 Attempting to copy to clipboard...');
+    navigator.clipboard.writeText(email).then(() => {
+        console.log('✅ Email copied to clipboard!');
+        showToast('Email copied to clipboard!', 5000);
+        
+        // Auto-open Outlook with mailto link
+        const subject = `Metric Trend Summary – ${employeeName} – Week of ${week.week_start}`;
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(email)}`;
+        window.location.href = mailtoLink;
+        
+    }).catch((error) => {
+        console.error('❌ Failed to copy to clipboard:', error);
+        showToast('Failed to copy email. Use the Copy button below.', 5000);
+    });
 }
 
 function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
