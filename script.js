@@ -643,10 +643,25 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         // Extract name parts for display
         const nameField = cells[0];
-        const nameParts = nameField.match(/^([^,]+),\s*(.+)$/);
-        const lastName = nameParts ? nameParts[1].trim() : '';
-        const firstName = nameParts ? nameParts[2].trim() : '';
-        const displayName = `${firstName} ${lastName}`;
+        let firstName = '', lastName = '';
+        
+        // Try parsing "LastName, FirstName" format
+        const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
+        if (lastFirstMatch) {
+            lastName = lastFirstMatch[1].trim();
+            firstName = lastFirstMatch[2].trim();
+        } else {
+            // Fallback: "FirstName LastName" format
+            const parts = nameField.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                firstName = parts[0];
+                lastName = parts.slice(1).join(' ');
+            } else if (parts.length === 1) {
+                firstName = parts[0];
+            }
+        }
+        
+        const displayName = `${firstName} ${lastName}`.trim();
         
         console.log(`? ${displayName} - ${cells.length}/22 cells`);
         
@@ -1175,7 +1190,7 @@ function getEmployeeDataForPeriod(employeeName) {
             const week = weeklyData[weekKey];
             if (week && week.employees) {
                 const emp = week.employees.find(e => e.name === employeeName);
-                if (emp) {
+                if (emp && isTeamMember(weekKey, emp.name)) {
                     Object.keys(values).forEach(key => {
                         if (key === 'surveyTotal') {
                             values.surveyTotal += (emp.surveyTotal || 0);
@@ -4385,7 +4400,7 @@ function populateExecutiveSummaryAssociate() {
         const week = weeklyData[weekKey];
         if (week.employees && Array.isArray(week.employees)) {
             week.employees.forEach(emp => {
-                if (emp.name && isTeamMember(emp.name)) {
+                if (emp.name && isTeamMember(weekKey, emp.name)) {
                     allEmployees.add(emp.name);
                 }
             });
@@ -4588,7 +4603,8 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: true, isSurveyBased: false }
     ];
     
-    // First pass: Calculate summary statistics
+    // First pass: Calculate summary statistics and store for rendering
+    const metricsData = [];
     let metricsMetTarget = 0;
     let metricsOutpacingPeers = 0;
     
@@ -4606,9 +4622,11 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         // Calculate center average
         let centerSum = 0, centerCount = 0;
         periods.forEach(period => {
-            const centerAvg = period.centerAverage;
-            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null && centerAvg[metric.key] !== '') {
-                centerSum += parseFloat(centerAvg[metric.key]);
+            const centerAverageData = period.centerAverage;
+            // Check if the value exists (0 is valid, only skip if undefined, null, or empty string)
+            // Must check for null/undefined FIRST before accessing properties
+            if (centerAverageData !== null && centerAverageData !== undefined && centerAverageData[metric.key] !== undefined && centerAverageData[metric.key] !== null && centerAverageData[metric.key] !== '') {
+                centerSum += parseFloat(centerAverageData[metric.key]);
                 centerCount++;
             }
         });
@@ -4622,22 +4640,35 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
         
         // Check if meeting target
+        let isMeetingTarget = false;
         if (typeof targetValue === 'number' && !hasNoSurveyData) {
-            if (metric.lowerIsBetter) {
-                if (employeeAvg <= targetValue) metricsMetTarget++;
-            } else {
-                if (employeeAvg >= targetValue) metricsMetTarget++;
-            }
+            isMeetingTarget = metric.lowerIsBetter ? (employeeAvg <= targetValue) : (employeeAvg >= targetValue);
+            if (isMeetingTarget) metricsMetTarget++;
         }
         
         // Check if outpacing peers (center average)
+        let isOutpacingPeers = false;
         if (centerAvg !== null && !hasNoSurveyData && typeof targetValue === 'number') {
-            if (metric.lowerIsBetter) {
-                if (employeeAvg <= centerAvg) metricsOutpacingPeers++;
-            } else {
-                if (employeeAvg >= centerAvg) metricsOutpacingPeers++;
-            }
+            isOutpacingPeers = metric.lowerIsBetter ? (employeeAvg <= centerAvg) : (employeeAvg >= centerAvg);
+            if (isOutpacingPeers) metricsOutpacingPeers++;
         }
+        
+        // Store data for rendering
+        const maxValue = Math.max(
+            employeeAvg || 0,
+            centerAvg || 0,
+            typeof targetValue === 'number' ? targetValue : employeeAvg || 0
+        ) * 1.15;
+        
+        metricsData.push({
+            metric,
+            employeeAvg,
+            centerAvg,
+            targetValue,
+            hasNoSurveyData,
+            isMeetingTarget,
+            maxValue
+        });
     });
     
     // Display summary cards at top
@@ -4664,47 +4695,9 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     
     container.appendChild(summaryDiv);
     
-    metrics.forEach(metric => {
-        // Calculate employee average
-        let employeeSum = 0, employeeCount = 0;
-        periods.forEach(period => {
-            if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
-                employeeSum += parseFloat(period.employee[metric.key]);
-                employeeCount++;
-            }
-        });
-        const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
-        
-        // Calculate center average
-        let centerSum = 0, centerCount = 0;
-        periods.forEach(period => {
-            const centerAvg = period.centerAverage;
-            // Check if the value exists (0 is valid, only skip if undefined, null, or empty string)
-            if (centerAvg && centerAvg[metric.key] !== undefined && centerAvg[metric.key] !== null && centerAvg[metric.key] !== '') {
-                centerSum += parseFloat(centerAvg[metric.key]);
-                centerCount++;
-            }
-        });
-        const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
-        
-        // Get target from METRICS_REGISTRY - extract the value from the object
-        const targetObj = METRICS_REGISTRY[metric.key]?.target;
-        const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
-        
-        // Check if survey-based metric has no data
-        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
-        
-        // Determine if employee is meeting target
-        let isMeetingTarget = false;
-        if (typeof targetValue === 'number' && !hasNoSurveyData) {
-            if (metric.lowerIsBetter) {
-                // For lower-is-better metrics, employee meets target if they're at or below target
-                isMeetingTarget = employeeAvg <= targetValue;
-            } else {
-                // For higher-is-better metrics, employee meets target if they're at or above target
-                isMeetingTarget = employeeAvg >= targetValue;
-            }
-        }
+    // Render metrics using pre-calculated data (no recalculation needed)
+    metricsData.forEach(calc => {
+        const { metric, employeeAvg, centerAvg, targetValue, hasNoSurveyData, isMeetingTarget, maxValue } = calc;
         
         // Determine bar color based on target achievement
         const barColor = isMeetingTarget ? 
@@ -4714,12 +4707,6 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         // Create visual bar
         const chartDiv = document.createElement('div');
         chartDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
-        
-        const maxValue = Math.max(
-            employeeAvg || 0,
-            centerAvg || 0,
-            typeof targetValue === 'number' ? targetValue : employeeAvg || 0
-        ) * 1.15; // Add 15% padding
         
         chartDiv.innerHTML = `
             <h5 style="margin: 0 0 12px 0; color: #ff9800;">${metric.label}</h5>
@@ -4761,7 +4748,7 @@ function getCenterAverageForWeek(weekKey) {
     
     if (!avg || Object.keys(avg).length === 0) {
         console.warn(`⚠️ No call center average found for ${weekKey}. Make sure it's entered in Metric Trends.`);
-        return {};
+        return null;
     }
     
     // Map center average keys to employee data keys for consistency
