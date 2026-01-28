@@ -2875,7 +2875,7 @@ function generateTrendEmail() {
         { key: 'aht', label: 'Average Handle Time', centerKey: 'aht', lowerIsBetter: true, unit: 's' },
         { key: 'acw', label: 'After Call Work', centerKey: 'acw', lowerIsBetter: true, unit: 's' },
         { key: 'holdTime', label: 'Hold Time', centerKey: 'holdTime', lowerIsBetter: true, unit: 's' },
-        { key: 'reliability', label: 'Reliability', centerKey: 'reliability', lowerIsBetter: false, unit: '%' }
+        { key: 'reliability', label: 'Reliability', centerKey: 'reliability', lowerIsBetter: true, unit: 'hrs' }
     ];
     
     const highlights = [];
