@@ -5097,12 +5097,19 @@ function generateExecutiveSummaryEmail() {
         console.log('✅ HTML email generated and displayed');
     }
     
-    // Copy HTML to clipboard
-    navigator.clipboard.writeText(htmlEmail).then(() => {
-        console.log('✅ HTML email copied to clipboard');
-        showToast('✅ HTML email copied to clipboard! Paste into Outlook as HTML.', 5000);
-    }).catch(() => {
-        console.error('❌ Failed to copy email');
+    // Copy HTML to clipboard with formatting
+    const blob = new Blob([htmlEmail], { type: 'text/html' });
+    const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
+    
+    navigator.clipboard.write([htmlClipboardItem]).then(() => {
+        console.log('✅ HTML email copied to clipboard with formatting');
+        showToast('✅ Email copied! Paste into Outlook to see formatted version.', 5000);
+    }).catch((err) => {
+        console.error('❌ Failed to copy formatted email:', err);
+        // Fallback to plain text if HTML clipboard fails
+        navigator.clipboard.writeText(htmlEmail).then(() => {
+            showToast('⚠️ Copied as plain text. You may need to paste into Outlook\'s HTML editor.', 5000);
+        });
     });
 }
 
