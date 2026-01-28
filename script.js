@@ -3325,19 +3325,10 @@ function generateTrendEmail() {
         previewContent.textContent = email;
         previewContainer.style.display = 'block';
         console.log('✅ Email displayed in preview panel');
+        showToast('Email generated! Use the 📋 Copy Email button to copy it.', 5000);
     } else {
         console.error('❌ Preview elements not found!');
     }
-    
-    // Auto-copy to clipboard
-    console.log('📋 Attempting to copy to clipboard...');
-    navigator.clipboard.writeText(email).then(() => {
-        console.log('✅ Email copied to clipboard!');
-        showToast('Email generated and copied to clipboard! Ready to paste into Outlook.', 5000);
-    }).catch((error) => {
-        console.error('❌ Failed to copy to clipboard:', error);
-        showToast('Email generated but failed to copy. Use the Copy button below.', 5000);
-    });
 }
 
 function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
