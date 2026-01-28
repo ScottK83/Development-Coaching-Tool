@@ -1344,15 +1344,21 @@ function initializeEventHandlers() {
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
+        console.log('📋 Load Data button clicked');
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
+        
+        console.log('📊 Paste data received - Length:', pastedData.length, 'chars');
+        console.log('📅 Dates: Start=' + startDate, 'End=' + endDate);
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
                            document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
                            document.querySelector('.upload-period-btn[data-period="week"]');
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
+        
+        console.log('⏰ Period type:', periodType);
         
         if (!startDate || !endDate) {
             alert('⚠️ Please select both start and end dates');
@@ -1366,6 +1372,7 @@ function initializeEventHandlers() {
         
         try {
             const employees = parsePastedData(pastedData, startDate, endDate);
+            console.log('👥 Parsed employees:', employees.length);
             
             if (employees.length === 0) {
                 alert('❌ No valid employee data found');
@@ -1374,6 +1381,7 @@ function initializeEventHandlers() {
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
+            console.log('🔑 Created weekKey:', weekKey);
             
             // Parse dates safely (avoid timezone issues)
             const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
@@ -1403,7 +1411,11 @@ function initializeEventHandlers() {
                 }
             };
             
+            console.log('📦 Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
+            
             saveWeeklyData();
+            console.log('✅ Data saved to localStorage');
+            
             populateDeleteWeekDropdown();
             populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
             
