@@ -2756,8 +2756,9 @@ function setupAveragesLoader() {
         
         // Populate form fields
         document.getElementById('avgAdherence').value = averages.adherence || '';
-        document.getElementById('avgFCR').value = averages.fcr || '';
         document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
+        document.getElementById('avgRepSatisfaction').value = averages.repSatisfaction || '';
+        document.getElementById('avgFCR').value = averages.fcr || '';
         document.getElementById('avgTransfers').value = averages.transfers || '';
         document.getElementById('avgSentiment').value = averages.sentiment || '';
         document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
@@ -2792,8 +2793,9 @@ function setupMetricTrendsListeners() {
         // Read all metric values
         const averages = {
             adherence: parseFloat(document.getElementById('avgAdherence')?.value) || null,
-            fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
             overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || null,
+            repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || null,
+            fcr: parseFloat(document.getElementById('avgFCR')?.value) || null,
             transfers: parseFloat(document.getElementById('avgTransfers')?.value) || null,
             sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || null,
             positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || null,
@@ -2894,8 +2896,9 @@ function generateTrendEmail() {
     // Define metrics to analyze
     const metricsToAnalyze = [
         { key: 'scheduleAdherence', label: 'Schedule Adherence', centerKey: 'adherence', lowerIsBetter: false, unit: '%' },
-        { key: 'fcr', label: 'CX Rep Overall FCR', centerKey: 'fcr', lowerIsBetter: false, unit: '%' },
         { key: 'overallExperience', label: 'Overall Experience', centerKey: 'overallExperience', lowerIsBetter: false, unit: '%' },
+        { key: 'repSatisfaction', label: 'Rep Satisfaction', centerKey: 'repSatisfaction', lowerIsBetter: false, unit: '%' },
+        { key: 'fcr', label: 'FCR', centerKey: 'fcr', lowerIsBetter: false, unit: '%' },
         { key: 'transfers', label: 'Transfers', centerKey: 'transfers', lowerIsBetter: true, unit: '%' },
         { key: 'sentiment', label: 'Sentiment Score', centerKey: 'sentiment', lowerIsBetter: false, unit: '%' },
         { key: 'positiveWord', label: 'Positive Word Usage', centerKey: 'positiveWord', lowerIsBetter: false, unit: '%' },
