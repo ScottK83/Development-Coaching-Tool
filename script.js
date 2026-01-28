@@ -941,12 +941,22 @@ function calculateAveragesFromEmployees(employees) {
         cxRepOverall: 'repSatisfaction'
     };
 
+    // Survey-based metrics that should only include employees with surveyTotal > 0
+    const surveyMetrics = ['cxRepOverall', 'fcr', 'overallExperience'];
+
     const sums = {};
     const counts = {};
 
     employees.forEach(emp => {
+        const hasSurveyData = emp.surveyTotal && parseInt(emp.surveyTotal) > 0;
+        
         Object.keys(emp).forEach(key => {
             if (key === 'name' || key === 'id' || key === 'firstName' || key === 'surveyTotal' || key === 'totalCalls' || key === 'talkTime') return;
+
+            // Skip survey metrics if employee has no surveys
+            if (surveyMetrics.includes(key) && !hasSurveyData) {
+                return;
+            }
 
             const mappedKey = keyMapping[key] || key;
             const value = parseFloat(emp[key]);
