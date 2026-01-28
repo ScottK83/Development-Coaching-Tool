@@ -2897,10 +2897,10 @@ function generateTrendEmail() {
     const metricsToAnalyze = [
         { key: 'scheduleAdherence', label: 'Schedule Adherence', centerKey: 'adherence', lowerIsBetter: false, unit: '%' },
         { key: 'overallExperience', label: 'Overall Experience', centerKey: 'overallExperience', lowerIsBetter: false, unit: '%' },
-        { key: 'repSatisfaction', label: 'Rep Satisfaction', centerKey: 'repSatisfaction', lowerIsBetter: false, unit: '%' },
+        { key: 'cxRepOverall', label: 'Rep Satisfaction', centerKey: 'repSatisfaction', lowerIsBetter: false, unit: '%' },
         { key: 'fcr', label: 'FCR', centerKey: 'fcr', lowerIsBetter: false, unit: '%' },
         { key: 'transfers', label: 'Transfers', centerKey: 'transfers', lowerIsBetter: true, unit: '%' },
-        { key: 'sentiment', label: 'Sentiment Score', centerKey: 'sentiment', lowerIsBetter: false, unit: '%' },
+        { key: 'overallSentiment', label: 'Sentiment Score', centerKey: 'sentiment', lowerIsBetter: false, unit: '%' },
         { key: 'positiveWord', label: 'Positive Word Usage', centerKey: 'positiveWord', lowerIsBetter: false, unit: '%' },
         { key: 'negativeWord', label: 'Avoiding Negative Words', centerKey: 'negativeWord', lowerIsBetter: false, unit: '%' },
         { key: 'managingEmotions', label: 'Managing Emotions', centerKey: 'managingEmotions', lowerIsBetter: false, unit: '%' },
