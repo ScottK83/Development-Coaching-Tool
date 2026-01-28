@@ -743,12 +743,13 @@ async function loadServerTips() {
         // Apply modified server tips from localStorage
         const modifiedServerTips = JSON.parse(localStorage.getItem('modifiedServerTips') || '{}');
         Object.keys(modifiedServerTips).forEach(metricKey => {
-            if (tips[metricKey]) {
+            if (tipsWithOriginalIndex[metricKey]) {
                 Object.keys(modifiedServerTips[metricKey]).forEach(index => {
-                    const idx = parseInt(index);
-                    if (tips[metricKey][idx] !== undefined) {
-                        tips[metricKey][idx] = modifiedServerTips[metricKey][index];
-                        tipsWithOriginalIndex[metricKey][idx].tip = modifiedServerTips[metricKey][index];
+                    const originalIdx = parseInt(index);
+                    // Find the tip object with this original index
+                    const tipObj = tipsWithOriginalIndex[metricKey].find(t => t.originalIndex === originalIdx);
+                    if (tipObj) {
+                        tipObj.tip = modifiedServerTips[metricKey][index];
                     }
                 });
             }
