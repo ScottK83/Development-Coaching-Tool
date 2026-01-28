@@ -3562,7 +3562,7 @@ function generateTrendEmail() {
             // Calculate target hit rate for this metric (filtered by current period type)
             const periodType = week.metadata?.periodType || 'week';
             const targetStats = getTargetHitRate(employeeName, metric.key, periodType);
-            const statsText = targetStats.total > 0 ? ` - Met target ${targetStats.hits}/${targetStats.total} times` : '';
+            const statsText = targetStats.total > 0 ? ` - Met target ${targetStats.hits}/${targetStats.total} ${getPeriodUnit(periodType, targetStats.total)}` : '';
             watchAreas.push(`${metric.label}: ${employeeValue}${metric.unit} (Center: ${callCenterComparison.centerAvg}${metric.unit})${statsText}`);
         }
     });
@@ -3757,6 +3757,16 @@ function getTargetHitRate(employeeName, metricKey, periodType = 'week') {
     });
     
     return { hits, total };
+}
+
+function getPeriodUnit(periodType, count) {
+    /**
+     * Returns the correct period unit label (singular/plural)
+     */
+    if (periodType === 'week') return count === 1 ? 'week' : 'weeks';
+    if (periodType === 'month') return count === 1 ? 'month' : 'months';
+    if (periodType === 'quarter') return count === 1 ? 'quarter' : 'quarters';
+    return 'times'; // for ytd or unknown
 }
 
 // ============================================
