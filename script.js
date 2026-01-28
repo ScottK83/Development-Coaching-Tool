@@ -2906,25 +2906,40 @@ function initializeMetricTrends() {
 
 function populateTrendPeriodDropdown() {
     const trendPeriodSelect = document.getElementById('trendPeriodSelect');
+    const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
     
     if (!trendPeriodSelect) {
         console.warn('trendPeriodSelect element not found');
         return;
     }
     
+    console.log(`📅 Populating periods for type: ${selectedPeriodType}`);
+    
     // Get all weeks from weeklyData
-    const allWeeks = Object.keys(weeklyData).sort();
+    const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
     
     if (allWeeks.length === 0) {
         trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
         return;
     }
     
+    // Filter by period type
+    const filteredPeriods = allWeeks.filter(weekKey => {
+        const week = weeklyData[weekKey];
+        const periodType = week.metadata?.periodType || 'week';
+        return periodType === selectedPeriodType;
+    });
+    
+    if (filteredPeriods.length === 0) {
+        trendPeriodSelect.innerHTML = `<option value="">No ${selectedPeriodType} data available</option>`;
+        return;
+    }
+    
     // Build options
     let options = '<option value="">Select Period...</option>';
-    allWeeks.forEach(weekKey => {
+    filteredPeriods.forEach(weekKey => {
         const week = weeklyData[weekKey];
-        const displayText = week.week_start || weekKey;
+        const displayText = week.metadata?.label || weekKey;
         options += `<option value="${weekKey}">${displayText}</option>`;
     });
     
@@ -2934,6 +2949,8 @@ function populateTrendPeriodDropdown() {
     trendPeriodSelect.addEventListener('change', (e) => {
         populateEmployeeDropdownForPeriod(e.target.value);
     });
+    
+    console.log(`✅ ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
 }
 
 function populateEmployeeDropdown() {
@@ -3227,6 +3244,17 @@ function displayCallCenterAverages(weekKey) {
     });
 
 function setupMetricTrendsListeners() {
+    // Add event listeners to period type radio buttons
+    const periodTypeRadios = document.querySelectorAll('input[name="trendPeriodType"]');
+    periodTypeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            const selectedType = radio.value;
+            console.log(`🔄 Period type changed to: ${selectedType}`);
+            populateTrendPeriodDropdown();
+            document.getElementById('trendEmployeeSelect').innerHTML = '<option value="">-- Choose an employee --</option>';
+        });
+    });
+    
     // Generate trend email button
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     

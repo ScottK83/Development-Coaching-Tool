@@ -381,6 +381,24 @@
                     <div style="padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
                         <h3 style="color: #9c27b0; margin-top: 0;">✉️ Generate Trend Email</h3>
                         
+                        <div style="margin-bottom: 20px; padding: 15px; background: #f3e5f5; border-radius: 4px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 10px;">Select Period Type:</label>
+                            <div style="display: flex; gap: 20px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="week" checked style="cursor: pointer;">
+                                    <span>📅 Week</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="month" style="cursor: pointer;">
+                                    <span>📆 Month</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="ytd" style="cursor: pointer;">
+                                    <span>📊 Year-to-Date</span>
+                                </label>
+                            </div>
+                        </div>
+                        
                         <div style="margin-bottom: 15px;">
                             <label for="trendPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Period:</label>
                             <select id="trendPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
