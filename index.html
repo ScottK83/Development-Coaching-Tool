@@ -295,7 +295,7 @@
                         <h3 style="color: #9c27b0; margin-top: 0;">📊 Manage Call Center Averages</h3>
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">Set the call center average metrics for each period to compare against.</p>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <div>
                                 <label for="avgPeriodType" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Type:</label>
                                 <select id="avgPeriodType" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
@@ -306,8 +306,12 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="avgPeriodDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Start Date:</label>
-                                <input type="date" id="avgPeriodDate" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <label for="avgWeekMonday" style="font-weight: bold; display: block; margin-bottom: 5px;">Week of (Monday):</label>
+                                <input type="date" id="avgWeekMonday" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                            </div>
+                            <div>
+                                <label for="avgWeekSunday" style="font-weight: bold; display: block; margin-bottom: 5px;">Through (Sunday):</label>
+                                <input type="date" id="avgWeekSunday" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
                             </div>
                         </div>
                         

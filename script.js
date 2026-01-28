@@ -2640,11 +2640,35 @@ function initializeMetricTrends() {
         if (statusDiv) statusDiv.style.display = 'none';
     }
     
-    // Set default date to today
-    const avgPeriodDate = document.getElementById('avgPeriodDate');
-    if (avgPeriodDate && !avgPeriodDate.value) {
-        avgPeriodDate.value = new Date().toISOString().split('T')[0];
+    // Set default dates to current week (Monday-Sunday)
+    const avgWeekMonday = document.getElementById('avgWeekMonday');
+    const avgWeekSunday = document.getElementById('avgWeekSunday');
+    
+    if (avgWeekMonday && !avgWeekMonday.value) {
+        // Get this Monday
+        const today = new Date();
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+        const monday = new Date(today.setDate(diff));
+        avgWeekMonday.value = monday.toISOString().split('T')[0];
+        
+        // Auto-set Sunday (6 days after Monday)
+        if (avgWeekSunday) {
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            avgWeekSunday.value = sunday.toISOString().split('T')[0];
+        }
     }
+    
+    // Auto-calculate Sunday when Monday changes
+    avgWeekMonday?.addEventListener('change', (e) => {
+        const monday = new Date(e.target.value);
+        if (avgWeekSunday && !isNaN(monday)) {
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            avgWeekSunday.value = sunday.toISOString().split('T')[0];
+        }
+    });
     
     // Show the metrics form immediately
     const avgMetricsForm = document.getElementById('avgMetricsForm');
@@ -2716,18 +2740,18 @@ function populateEmployeeDropdown() {
 
 function setupAveragesLoader() {
     const avgPeriodType = document.getElementById('avgPeriodType');
-    const avgPeriodDate = document.getElementById('avgPeriodDate');
+    const avgWeekMonday = document.getElementById('avgWeekMonday');
     
-    if (!avgPeriodType || !avgPeriodDate) return;
+    if (!avgPeriodType || !avgWeekMonday) return;
     
     const loadAveragesForPeriod = () => {
         const periodType = avgPeriodType.value;
-        const periodDate = avgPeriodDate.value;
+        const mondayDate = avgWeekMonday.value;
         
-        if (!periodDate) return;
+        if (!mondayDate) return;
         
-        // Create storage key from period type and date
-        const storageKey = `${periodDate}_${periodType}`;
+        // Create storage key from period type and Monday date
+        const storageKey = `${mondayDate}_${periodType}`;
         const averages = getCallCenterAverageForPeriod(storageKey);
         
         // Populate form fields
@@ -2746,7 +2770,7 @@ function setupAveragesLoader() {
     };
     
     avgPeriodType.addEventListener('change', loadAveragesForPeriod);
-    avgPeriodDate.addEventListener('change', loadAveragesForPeriod);
+    avgWeekMonday.addEventListener('change', loadAveragesForPeriod);
 }
 
 function setupMetricTrendsListeners() {
@@ -2754,15 +2778,16 @@ function setupMetricTrendsListeners() {
     const saveAvgBtn = document.getElementById('saveAvgBtn');
     saveAvgBtn?.addEventListener('click', () => {
         const periodType = document.getElementById('avgPeriodType')?.value;
-        const periodDate = document.getElementById('avgPeriodDate')?.value;
+        const mondayDate = document.getElementById('avgWeekMonday')?.value;
+        const sundayDate = document.getElementById('avgWeekSunday')?.value;
         
-        if (!periodDate) {
-            showToast('Please select a period date', 'error');
+        if (!mondayDate) {
+            showToast('Please select the Monday date', 'error');
             return;
         }
         
-        // Create storage key from period type and date
-        const storageKey = `${periodDate}_${periodType}`;
+        // Create storage key from period type and Monday date
+        const storageKey = `${mondayDate}_${periodType}`;
         
         // Read all metric values
         const averages = {
@@ -2789,7 +2814,8 @@ function setupMetricTrendsListeners() {
         
         // Save to storage
         setCallCenterAverageForPeriod(storageKey, averages);
-        showToast(`Call center averages saved for ${periodType} starting ${periodDate}!`, 'success');
+        const dateRange = sundayDate ? `${mondayDate} to ${sundayDate}` : mondayDate;
+        showToast(`Call center averages saved for ${periodType}: ${dateRange}!`, 'success');
     });
     
     // Generate trend email button
