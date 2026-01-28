@@ -3614,8 +3614,8 @@ function generateTrendEmail() {
         }
     </style>
 </head>
-<body>
-    <div class="container">
+<body style="margin: 0; padding: 20px; background: #f5f5f5;">
+    <div class="container" style="background: white; padding: 30px; border-radius: 12px;">
         <div class="header">
             <h1>📊 Performance Summary</h1>
             <p>${weekStart} • ${periodLabel} Report</p>
