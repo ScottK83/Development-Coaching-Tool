@@ -4951,7 +4951,7 @@ function generateExecutiveSummaryEmail() {
         let centerSum = 0, centerCount = 0;
         
         periods.forEach(period => {
-            if (period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
+            if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
                 empSum += parseFloat(period.employee[metric.key]);
                 empCount++;
             }
