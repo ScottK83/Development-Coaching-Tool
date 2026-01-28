@@ -4447,11 +4447,24 @@ async function generateCopilotPrompt() {
     
     // Add reliability note if applicable
     const reliabilityMetric = needsCoaching.find(item => item.includes('Reliability'));
+    let reliabilityHours = null;
     if (reliabilityMetric) {
         const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
-        const hoursValue = hoursMatch ? hoursMatch[1] : employeeData.reliability;
-        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${hoursValue} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timeReference} that was unscheduled. If this is an error, please let me know.\n`;
+        const parsedHours = hoursMatch?.[1] ? parseFloat(hoursMatch[1]) : NaN;
+        reliabilityHours = Number.isFinite(parsedHours) ? parsedHours : employeeData.reliability;
+        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${reliabilityHours} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timeReference} that was unscheduled. If this is an error, please let me know.\n`;
     }
+
+    // Store data for Verint summary generation
+    window.latestCoachingSummaryData = {
+        firstName,
+        periodLabel,
+        celebrate,
+        needsCoaching,
+        reliabilityHours,
+        customNotes,
+        timeReference
+    };
     
     let additionalContext = '';
     if (customNotes) {
@@ -4514,14 +4527,66 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
 }
 
 function generateVerintSummary() {
-    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+    const summaryData = window.latestCoachingSummaryData;
     
-    if (!copilotEmail) {
-        alert('⚠️ Please paste the Copilot-generated email first');
+    if (summaryData) {
+        const cleanLabel = (item) => {
+            if (!item) return '';
+            const match = item.match(/^-\s*(.+?):/);
+            if (match) return match[1].trim();
+            return item.replace(/^-/,'').split(':')[0].trim();
+        };
+        const formatList = (items) => {
+            const list = items.filter(Boolean);
+            if (list.length === 0) return '';
+            if (list.length === 1) return list[0];
+            if (list.length === 2) return `${list[0]} and ${list[1]}`;
+            return `${list[0]}, ${list[1]}, and ${list[2]}`;
+        };
+        
+        const winsLabels = summaryData.celebrate.map(cleanLabel).filter(Boolean);
+        const oppLabels = summaryData.needsCoaching.map(cleanLabel).filter(Boolean);
+        
+        const winsSentence = winsLabels.length > 0
+            ? `Recognized strengths in ${formatList(winsLabels)}.`
+            : `Reviewed overall performance highlights for ${summaryData.periodLabel}.`;
+        
+        const oppSentence = oppLabels.length > 0
+            ? `Coached on improving ${formatList(oppLabels)} with clear next steps.`
+            : `No major coaching gaps identified for this period.`;
+        
+        const reliabilitySentence = summaryData.reliabilityHours !== null && summaryData.reliabilityHours !== undefined
+            ? `Reviewed ${summaryData.reliabilityHours} hours of unscheduled time and Verint alignment.`
+            : '';
+        
+        const notesSentence = summaryData.customNotes
+            ? `Additional context noted: ${summaryData.customNotes.trim().replace(/\s+/g, ' ')}.`
+            : '';
+        
+        const summaryParts = [winsSentence, oppSentence];
+        if (reliabilitySentence) {
+            summaryParts.push(reliabilitySentence);
+        } else if (notesSentence) {
+            summaryParts.push(notesSentence);
+        }
+        
+        const verintSummary = summaryParts.join(' ');
+        
+        navigator.clipboard.writeText(verintSummary).then(() => {
+            alert('✅ Verint summary copied to clipboard.');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('❌ Failed to copy summary to clipboard. Please try again.');
+        });
         return;
     }
     
-    // Create a prompt for Copilot to generate a Verint summary
+    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+    if (!copilotEmail) {
+        alert('⚠️ Generate the coaching prompt first so I can build a Verint summary.');
+        return;
+    }
+    
     const summaryPrompt = `Based on this coaching email, create a brief Verint coaching summary (2-3 sentences max) that captures the key coaching points. Make it concise and suitable for internal system notes.
 
 Email:
@@ -4529,7 +4594,6 @@ ${copilotEmail}
 
 Verint Summary:`;
     
-    // Copy to clipboard
     navigator.clipboard.writeText(summaryPrompt).then(() => {
         alert('✅ Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
         window.open('https://m365.cloud.microsoft.com/chat', '_blank');
