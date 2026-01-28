@@ -3551,7 +3551,8 @@ function generateTrendEmail() {
         line += ` | ${trendIcon}`;
         if (trendDelta !== 0) {
             const sign = trendDelta > 0 ? '+' : '';
-            line += ` (${sign}${trendDelta}${metric.unit})`;
+            const periodLabel = periodType === 'week' ? 'from last week' : periodType === 'month' ? 'from last month' : periodType === 'ytd' ? 'from last year' : 'from last period';
+            line += ` (${sign}${trendDelta}${metric.unit} ${periodLabel})`;
         }
         
         email += `${line}\n`;
