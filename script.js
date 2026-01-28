@@ -933,7 +933,17 @@ function saveCallCenterAverages(averages) {
 function calculateAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
-    console.log(`📊 Calculating averages from ${employees.length} employees`);
+    console.log(`📊 Calculating averages from ${employees.length} total employees`);
+
+    // Filter out employees with 0 calls answered
+    const activeEmployees = employees.filter(emp => {
+        const totalCalls = parseInt(emp.totalCalls);
+        return !isNaN(totalCalls) && totalCalls > 0;
+    });
+
+    console.log(`📞 ${activeEmployees.length} employees with calls answered (excluding ${employees.length - activeEmployees.length} with 0 calls)`);
+
+    if (activeEmployees.length === 0) return null;
 
     const keyMapping = {
         scheduleAdherence: 'adherence',
@@ -947,7 +957,7 @@ function calculateAveragesFromEmployees(employees) {
     const sums = {};
     const counts = {};
 
-    employees.forEach(emp => {
+    activeEmployees.forEach(emp => {
         const hasSurveyData = emp.surveyTotal && parseInt(emp.surveyTotal) > 0;
         
         Object.keys(emp).forEach(key => {
@@ -975,7 +985,7 @@ function calculateAveragesFromEmployees(employees) {
 
     console.log('📈 Calculated averages:', averages);
     console.log('📊 Count per metric:', counts);
-    averages.employeeCount = employees.length;
+    averages.employeeCount = activeEmployees.length;
 
     return Object.keys(averages).length > 0 ? averages : null;
 }
