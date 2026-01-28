@@ -3953,11 +3953,11 @@ function renderExecutiveSummary() {
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
     
     const cards = [
-        { label: 'Total Weeks', value: metrics.totalWeeks, icon: '??' },
-        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '??' },
-        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '?' },
-        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '??' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '??' }
+        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
+        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
+        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '⏰' },
+        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📞' },
+        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
     ];
     
     cards.forEach(card => {
@@ -3968,30 +3968,6 @@ function renderExecutiveSummary() {
                 <div style="font-size: 0.9em; opacity: 0.9;">${card.label}</div>
             </div>
         `;
-    });
-    
-    html += '</div></div>';
-    
-    // Recent uploads
-    html += '<div style="margin-top: 30px;">';
-    html += '<h3>Recent Uploads</h3>';
-    html += '<div style="margin-top: 15px;">';
-    
-    allWeeks.slice(-5).reverse().forEach(weekKey => {
-        const week = weeklyData[weekKey];
-        if (week && week.metadata) {
-            html += `
-                <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong>${week.metadata.label}</strong>
-                        <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">${week.employees.length} employees</p>
-                    </div>
-                    <div style="color: #666; font-size: 0.9em;">
-                        Uploaded: ${new Date(week.metadata.uploadedAt).toLocaleDateString()}
-                    </div>
-                </div>
-            `;
-        }
     });
     
     html += '</div></div>';
@@ -4008,13 +3984,38 @@ function initializeYearlyIndividualSummary() {
     
     // Add event listeners for period type radio buttons
     document.querySelectorAll('input[name="summaryPeriodType"]').forEach(radio => {
-        radio.addEventListener('change', loadExecutiveSummaryData);
+        radio.addEventListener('change', () => {
+            loadExecutiveSummaryData();
+            showEmailSection();
+        });
     });
     
     // Add event listener for associate dropdown
-    document.getElementById('summaryAssociateSelect')?.addEventListener('change', loadExecutiveSummaryData);
+    document.getElementById('summaryAssociateSelect')?.addEventListener('change', () => {
+        loadExecutiveSummaryData();
+        showEmailSection();
+    });
+    
+    // Add event listener for email generation button
+    document.getElementById('generateExecutiveSummaryEmailBtn')?.addEventListener('click', generateExecutiveSummaryEmail);
+    
+    // Add event listener for copy button
+    document.getElementById('copyExecutiveSummaryEmailBtn')?.addEventListener('click', () => {
+        const email = document.getElementById('executiveSummaryEmailPreview').textContent;
+        navigator.clipboard.writeText(email).then(() => {
+            showToast('Email copied to clipboard!', 5000);
+        });
+    });
     
     console.log('✅ Yearly Individual Summary initialized');
+}
+
+function showEmailSection() {
+    const associate = document.getElementById('summaryAssociateSelect').value;
+    const section = document.getElementById('summaryEmailSection');
+    if (associate && section) {
+        section.style.display = 'block';
+    }
 }
 
 // ============================================
@@ -4456,27 +4457,56 @@ function populateExecutiveSummaryTable(associate, periods, periodType) {
     const tbody = document.getElementById('summaryDataTable');
     tbody.innerHTML = '';
     
+    // Create a single YTD summary row instead of showing all periods
+    // Aggregate all metrics across all periods
+    let adherenceSum = 0, adherenceCount = 0;
+    let experienceSum = 0, experienceCount = 0;
+    let fcrSum = 0, fcrCount = 0;
+    let transfersSum = 0, transfersCount = 0;
+    
     periods.forEach(period => {
         if (!period.employee) return;
         
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td style="padding: 12px; border: 1px solid #ddd; background: #f9f9f9;">${period.label}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.scheduleAdherence || 0).toFixed(1)}%</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.overallExperience || 0).toFixed(1)}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${(period.employee.fcr || 0).toFixed(1)}%</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${period.employee.transfers || 0}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">
-                <input type="text" class="redflags-input" data-week="${period.weekKey}" placeholder="Add red flags..." 
-                    style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
-            </td>
-            <td style="padding: 12px; border: 1px solid #ddd;">
-                <input type="text" class="phishing-input" data-week="${period.weekKey}" placeholder="Phishing attempts..." 
-                    style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
-            </td>
-        `;
-        tbody.appendChild(row);
+        if (period.employee.scheduleAdherence !== undefined && period.employee.scheduleAdherence !== null && period.employee.scheduleAdherence !== '') {
+            adherenceSum += parseFloat(period.employee.scheduleAdherence);
+            adherenceCount++;
+        }
+        if (period.employee.overallExperience !== undefined && period.employee.overallExperience !== null && period.employee.overallExperience !== '') {
+            experienceSum += parseFloat(period.employee.overallExperience);
+            experienceCount++;
+        }
+        if (period.employee.fcr !== undefined && period.employee.fcr !== null && period.employee.fcr !== '') {
+            fcrSum += parseFloat(period.employee.fcr);
+            fcrCount++;
+        }
+        if (period.employee.transfers !== undefined && period.employee.transfers !== null && period.employee.transfers !== '') {
+            transfersSum += parseFloat(period.employee.transfers);
+            transfersCount++;
+        }
     });
+    
+    const avgAdherence = adherenceCount > 0 ? (adherenceSum / adherenceCount).toFixed(1) : 0;
+    const avgExperience = experienceCount > 0 ? (experienceSum / experienceCount).toFixed(1) : 0;
+    const avgFCR = fcrCount > 0 ? (fcrSum / fcrCount).toFixed(1) : 0;
+    const avgTransfers = transfersCount > 0 ? (transfersSum / transfersCount).toFixed(1) : 0;
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td style="padding: 12px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Year-to-Date Summary</td>
+        <td style="padding: 12px; border: 1px solid #ddd;">${avgAdherence}%</td>
+        <td style="padding: 12px; border: 1px solid #ddd;">${avgExperience}</td>
+        <td style="padding: 12px; border: 1px solid #ddd;">${avgFCR}%</td>
+        <td style="padding: 12px; border: 1px solid #ddd;">${avgTransfers}</td>
+        <td style="padding: 12px; border: 1px solid #ddd;">
+            <input type="text" class="redflags-input" data-week="ytd-summary" placeholder="Add red flags..." 
+                style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
+        </td>
+        <td style="padding: 12px; border: 1px solid #ddd;">
+            <input type="text" class="phishing-input" data-week="ytd-summary" placeholder="Phishing attempts..." 
+                style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">
+        </td>
+    `;
+    tbody.appendChild(row);
     
     // Load saved red flags and phishing data
     loadExecutiveSummaryNotes(associate);
@@ -4567,8 +4597,9 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         });
         const centerAvg = centerCount > 0 ? centerSum / centerCount : 0;
         
-        // Get target from METRICS_REGISTRY
-        const target = METRICS_REGISTRY[metric.key]?.target || 'N/A';
+        // Get target from METRICS_REGISTRY - extract the value from the object
+        const targetObj = METRICS_REGISTRY[metric.key]?.target;
+        const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
         
         // Create visual bar
         const chartDiv = document.createElement('div');
@@ -4577,7 +4608,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         const maxValue = Math.max(
             employeeAvg,
             centerAvg,
-            typeof target === 'number' ? target : employeeAvg
+            typeof targetValue === 'number' ? targetValue : employeeAvg
         ) * 1.15; // Add 15% padding
         
         chartDiv.innerHTML = `
@@ -4599,7 +4630,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 </div>
                 <div style="display: flex; align-items: center;">
                     <span style="width: 100px; font-weight: bold;">Target:</span>
-                    <span style="margin-left: 12px; font-weight: bold; color: #ff9800; font-size: 1.1em;">${typeof target === 'number' ? target.toFixed(1) + metric.unit : target}</span>
+                    <span style="margin-left: 12px; font-weight: bold; color: #ff9800; font-size: 1.1em;">${typeof targetValue === 'number' ? targetValue.toFixed(1) + metric.unit : targetValue}</span>
                 </div>
             </div>
             <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
@@ -4612,12 +4643,146 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
 }
 
 function getCenterAverageForWeek(weekKey) {
-    const weekData = weeklyData[weekKey];
-    if (!weekData || !weekData.employees) return {};
-    
     // Load call center averages from localStorage
     const callCenterAverages = localStorage.getItem('callCenterAverages') ? JSON.parse(localStorage.getItem('callCenterAverages')) : {};
-    return callCenterAverages[weekKey] || {};
+    const avg = callCenterAverages[weekKey];
+    
+    if (!avg || Object.keys(avg).length === 0) {
+        console.warn(`⚠️ No call center average found for ${weekKey}. Make sure it's entered in Metric Trends.`);
+        return {};
+    }
+    
+    return avg;
+}
+
+function generateExecutiveSummaryEmail() {
+    console.log('📧 Generating Executive Summary email...');
+    const associate = document.getElementById('summaryAssociateSelect').value;
+    const periodType = document.querySelector('input[name="summaryPeriodType"]:checked').value;
+    
+    if (!associate) {
+        showToast('Please select an associate first', 5000);
+        return;
+    }
+    
+    // Get the summary data
+    const tbody = document.getElementById('summaryDataTable');
+    const redFlags = tbody.querySelector('.redflags-input')?.value || '';
+    const phishing = tbody.querySelector('.phishing-input')?.value || '';
+    
+    // Get YTD metrics for the associate
+    const periods = [];
+    for (const weekKey in weeklyData) {
+        const weekData = weeklyData[weekKey];
+        const dataType = weekData.metadata?.periodType || 'week';
+        
+        if (dataType === periodType) {
+            const employee = weekData.employees.find(e => e.name === associate);
+            if (employee) {
+                periods.push({
+                    employee,
+                    centerAverage: getCenterAverageForWeek(weekKey)
+                });
+            }
+        }
+    }
+    
+    if (periods.length === 0) {
+        showToast('No data found for this associate and period type', 5000);
+        return;
+    }
+    
+    // Calculate YTD averages
+    const metrics = [
+        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%' },
+        { key: 'overallExperience', label: 'Overall Experience', unit: '' },
+        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '' },
+        { key: 'fcr', label: 'First Call Resolution', unit: '%' },
+        { key: 'transfers', label: 'Transfers', unit: '' },
+        { key: 'sentiment', label: 'Sentiment', unit: '%' },
+        { key: 'positiveWord', label: 'Positive Words', unit: '' },
+        { key: 'negativeWord', label: 'Negative Words', unit: '' },
+        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%' },
+        { key: 'aht', label: 'Average Handle Time', unit: 's' },
+        { key: 'acw', label: 'After Call Work', unit: 's' },
+        { key: 'holdTime', label: 'Hold Time', unit: 's' },
+        { key: 'reliability', label: 'Reliability', unit: 'hrs' }
+    ];
+    
+    let email = `YEARLY PERFORMANCE REVIEW - ${associate.toUpperCase()}\n`;
+    email += `Report Date: ${new Date().toLocaleDateString()}\n`;
+    email += `Period: Year-to-Date (${periodType === 'ytd' ? 'Jan 1 - Today' : periodType === 'month' ? 'Monthly' : 'Weekly'})\n\n`;
+    
+    email += `========== PERFORMANCE METRICS ==========\n\n`;
+    
+    metrics.forEach(metric => {
+        // Calculate averages
+        let empSum = 0, empCount = 0;
+        let centerSum = 0, centerCount = 0;
+        
+        periods.forEach(period => {
+            if (period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
+                empSum += parseFloat(period.employee[metric.key]);
+                empCount++;
+            }
+            if (period.centerAverage[metric.key] !== undefined && period.centerAverage[metric.key] !== null) {
+                centerSum += parseFloat(period.centerAverage[metric.key]);
+                centerCount++;
+            }
+        });
+        
+        const empAvg = empCount > 0 ? empSum / empCount : 0;
+        const centerAvg = centerCount > 0 ? centerSum / centerCount : 0;
+        const targetObj = METRICS_REGISTRY[metric.key]?.target;
+        const targetValue = targetObj && typeof targetObj === 'object' ? targetObj.value : 'N/A';
+        
+        // Status icon
+        let status = '❓';
+        if (typeof targetValue === 'number') {
+            if (metric.key === 'transfers' || metric.key === 'aht' || metric.key === 'acw' || metric.key === 'holdTime' || metric.key === 'negativeWord') {
+                // Lower is better
+                status = empAvg <= targetValue ? '✅' : '❌';
+            } else {
+                // Higher is better
+                status = empAvg >= targetValue ? '✅' : '❌';
+            }
+        }
+        
+        email += `${metric.label}: ${empAvg.toFixed(1)}${metric.unit} | Center: ${centerAvg.toFixed(1)}${metric.unit} | Target: ${typeof targetValue === 'number' ? targetValue + metric.unit : targetValue} ${status}\n`;
+    });
+    
+    email += `\n========== OBSERVATIONS ==========\n\n`;
+    
+    if (redFlags) {
+        email += `Red Flags:\n${redFlags}\n\n`;
+    }
+    
+    if (phishing) {
+        email += `Phishing/Security Concerns:\n${phishing}\n\n`;
+    }
+    
+    if (!redFlags && !phishing) {
+        email += `No red flags or concerns noted.\n\n`;
+    }
+    
+    email += `========== NEXT STEPS ==========\n`;
+    email += `Continue developing areas marked with ❌. Excellent performance in areas marked with ✅.\n`;
+    
+    // Display and copy
+    const previewContainer = document.getElementById('executiveSummaryEmailPreview');
+    if (previewContainer) {
+        previewContainer.textContent = email;
+        previewContainer.style.display = 'block';
+        console.log('✅ Email generated and displayed');
+    }
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(email).then(() => {
+        console.log('✅ Email copied to clipboard');
+        showToast('Email copied to clipboard!', 5000);
+    }).catch(() => {
+        console.error('❌ Failed to copy email');
+    });
 }
 
 // ===== END EXECUTIVE SUMMARY FUNCTIONS =====

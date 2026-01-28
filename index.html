@@ -491,7 +491,7 @@
                             <table style="width: 100%; border-collapse: collapse; background: white;">
                                 <thead style="background: #ff9800; color: white;">
                                     <tr>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Period</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Summary</th>
                                         <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Adherence</th>
                                         <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Experience</th>
                                         <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">FCR</th>
@@ -507,7 +507,18 @@
                         <!-- Metric Comparison Charts -->
                         <div id="summaryChartsContainer" style="display: none;">
                             <h4 style="color: #ff9800; margin-bottom: 20px;">Metric Comparison vs Center Average & Target</h4>
-                            <div id="summaryMetricsVisuals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;"></div>
+                        <div id="summaryMetricsVisuals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;"></div>
+                        
+                        <!-- Email Generation Section -->
+                        <div style="margin-top: 25px; padding: 20px; background: #fff3e0; border-radius: 8px; border: 2px solid #ff9800; display: none;" id="summaryEmailSection">
+                            <h4 style="color: #ff9800; margin-top: 0;">📧 End of Month Review Email</h4>
+                            <button type="button" id="generateExecutiveSummaryEmailBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-bottom: 15px;">
+                                📧 Generate Email
+                            </button>
+                            <button type="button" id="copyExecutiveSummaryEmailBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-left: 10px; display: none;">
+                                📋 Copy Email
+                            </button>
+                            <div id="executiveSummaryEmailPreview" style="display: none; margin-top: 15px; padding: 15px; background: white; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9em; max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>
                     
