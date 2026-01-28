@@ -722,7 +722,9 @@ async function loadServerTips() {
         const dataLines = lines.slice(1);
         
         const tips = {};
-        dataLines.forEach(line => {
+        const tipsWithOriginalIndex = {}; // Track original indices
+        
+        dataLines.forEach((line, lineIndex) => {
             const match = line.match(/^([^,]+),"?([^"]*)"?$/);
             if (match) {
                 const metric = match[1].trim();
@@ -730,8 +732,11 @@ async function loadServerTips() {
                 
                 if (!tips[metric]) {
                     tips[metric] = [];
+                    tipsWithOriginalIndex[metric] = [];
                 }
+                const originalIndex = tips[metric].length;
                 tips[metric].push(tip);
+                tipsWithOriginalIndex[metric].push({ tip, originalIndex });
             }
         });
         
@@ -743,26 +748,33 @@ async function loadServerTips() {
                     const idx = parseInt(index);
                     if (tips[metricKey][idx] !== undefined) {
                         tips[metricKey][idx] = modifiedServerTips[metricKey][index];
+                        tipsWithOriginalIndex[metricKey][idx].tip = modifiedServerTips[metricKey][index];
                     }
                 });
             }
         });
         
-        // Filter out deleted server tips
+        // Filter out deleted server tips (using original indices)
         const deletedServerTips = JSON.parse(localStorage.getItem('deletedServerTips') || '{}');
         Object.keys(deletedServerTips).forEach(metricKey => {
-            if (tips[metricKey]) {
-                // Sort indices in descending order to avoid index shifting issues
-                const indicesToDelete = deletedServerTips[metricKey].sort((a, b) => b - a);
-                indicesToDelete.forEach(index => {
-                    if (tips[metricKey][index] !== undefined) {
-                        tips[metricKey].splice(index, 1);
-                    }
-                });
+            if (tipsWithOriginalIndex[metricKey]) {
+                const deletedIndices = deletedServerTips[metricKey] || [];
+                tipsWithOriginalIndex[metricKey] = tipsWithOriginalIndex[metricKey].filter(
+                    item => !deletedIndices.includes(item.originalIndex)
+                );
             }
         });
         
-        return tips;
+        // Store the indexed version for later use
+        window._serverTipsWithIndex = tipsWithOriginalIndex;
+        
+        // Return simple array for backward compatibility
+        const simpleTips = {};
+        Object.keys(tipsWithOriginalIndex).forEach(metricKey => {
+            simpleTips[metricKey] = tipsWithOriginalIndex[metricKey].map(item => item.tip);
+        });
+        
+        return simpleTips;
     } catch (error) {
         console.error('Error loading tips:', error);
         return {};
@@ -1894,30 +1906,33 @@ async function renderTipsManagement() {
         const currentServerTips = await loadServerTips();
         const currentUserTips = loadUserTips();
         const serverTipsForMetric = currentServerTips[metricKey] || [];
+        const serverTipsWithIndex = (window._serverTipsWithIndex && window._serverTipsWithIndex[metricKey]) || [];
         const userTipsForMetric = currentUserTips[metricKey] || [];
         const metricName = metricNames[metricKey];
         
         let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
         tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">${metricName}</h3>`;
         
-        // Server tips
-        if (serverTipsForMetric.length > 0) {
+        // Server tips - use original indices
+        if (serverTipsWithIndex.length > 0) {
             tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Server Tips (from tips.csv)</h4>';
-            serverTipsForMetric.forEach((tip, index) => {
+            serverTipsWithIndex.forEach((tipObj) => {
+                const tip = tipObj.tip;
+                const originalIndex = tipObj.originalIndex;
                 tipsHtml += `
                     <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
-                            <textarea id="editServerTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
+                            <textarea id="editServerTip_${metricKey}_${originalIndex}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateServerTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteServerTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
                             </div>
                         </div>
                     </div>
                 `;
             });
             tipsHtml += '</div>';
-        } else {
+        } else if (serverTipsForMetric.length === 0) {
             tipsHtml += '<div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"><em>No server tips found for this metric in tips.csv</em></div>';
         }
         
