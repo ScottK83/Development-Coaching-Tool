@@ -3674,11 +3674,11 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook with full subject line
-                const metadata = period.metadata || {};
-                const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-                const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
-                const endDate = metadata.endDate || 'unknown';
-                const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
+                const periodMeta = period.metadata || {};
+                const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+                const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
+                const mailEndDate = periodMeta.endDate || 'unknown';
+                const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${empName}`;
                 
                 setTimeout(() => {
                     window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
@@ -3704,11 +3704,11 @@ function downloadImageFallback(blob, empName, period) {
     URL.revokeObjectURL(url);
     showToast('📥 Image downloaded! Open Outlook and insert the file.', 4000);
     
-    const metadata = period.metadata || {};
-    const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-    const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
-    const endDate = metadata.endDate || 'unknown';
-    const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
+    const fallbackMeta = period.metadata || {};
+    const fallbackPeriodType = fallbackMeta.periodType === 'week' ? 'Weekly' : fallbackMeta.periodType === 'month' ? 'Monthly' : fallbackMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+    const fallbackPeriodLabel = fallbackMeta.periodType === 'week' ? 'Week' : fallbackMeta.periodType === 'month' ? 'Month' : fallbackMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
+    const fallbackEndDate = fallbackMeta.endDate || 'unknown';
+    const emailSubject = `Trending Metrics - ${fallbackPeriodType} - ${fallbackPeriodLabel} ending ${fallbackEndDate} for ${empName}`;
     
     setTimeout(() => {
         window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
