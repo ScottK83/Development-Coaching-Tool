@@ -3503,8 +3503,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     // ========== HIGHLIGHTS SECTION ==========
     y += 30;
     
-    // Calculate improved and focus metrics
+    // Calculate improved, key wins, and focus metrics
     const improvedMetrics = [];
+    const keyWins = [];
     const focusMetrics = [];
     
     metricOrder.forEach(({ key }) => {
@@ -3515,48 +3516,79 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const curr = parseFloat(metrics[key]) || 0;
         const prev = parseFloat(prevMetrics[key]) || 0;
         const center = parseFloat(centerAvg[key]) || 0;
+        const target = getMetricTarget(key);
+        const isReverse = isReverseMetric(key);
         
         // Check if improved from last week
         if (previous && prev > 0) {
             const change = curr - prev;
-            const percentChange = Math.abs((change / prev) * 100).toFixed(1);
-            const arrow = change > 0 ? '⬆️' : change < 0 ? '⬇️' : '➡️';
+            const hasImproved = isReverse ? change < 0 : change > 0;
             
-            if (change > 0 && !isReverseMetric(key)) {
+            if (hasImproved && Math.abs(change) > 0.1) {
+                const arrow = change > 0 ? '⬆️' : '⬇️';
+                const changeText = formatMetricDisplay(key, Math.abs(change));
                 improvedMetrics.push({
-                    label: metric.displayLabel,
-                    text: `${curr.toFixed(1)}% ${arrow} +${percentChange}% vs last week`
-                });
-            } else if (change < 0 && isReverseMetric(key)) {
-                improvedMetrics.push({
-                    label: metric.displayLabel,
-                    text: `${curr.toFixed(1)}% ${arrow} -${percentChange}% vs last week`
+                    label: metric.label,
+                    curr: formatMetricDisplay(key, curr),
+                    change: changeText,
+                    arrow: arrow
                 });
             }
         }
         
+        // Check for key wins (meeting target AND beating center)
+        const meetingTarget = isReverse ? curr <= target : curr >= target;
+        const beatingCenter = center > 0 && (isReverse ? curr < center : curr > center);
+        
+        if (meetingTarget && beatingCenter) {
+            keyWins.push({
+                label: metric.label,
+                curr: formatMetricDisplay(key, curr),
+                target: formatMetricDisplay(key, target),
+                center: formatMetricDisplay(key, center)
+            });
+        }
+        
         // Check if below center average
         if (center > 0) {
-            const isReverse = isReverseMetric(key);
             const isBelowCenter = isReverse ? curr > center : curr < center;
             
             if (isBelowCenter) {
-                const target = getMetricTarget(key);
                 focusMetrics.push({
-                    label: metric.displayLabel,
-                    curr: curr.toFixed(1),
-                    center: center.toFixed(1),
-                    target: target
+                    label: metric.label,
+                    curr: formatMetricDisplay(key, curr),
+                    center: formatMetricDisplay(key, center),
+                    target: formatMetricDisplay(key, target)
                 });
             }
         }
     });
     
-    // Highlights (Improved from Last Week)
-    if (improvedMetrics.length > 0 || previous) {
+    // Key Wins (Meeting Target AND Beating Center)
+    if (keyWins.length > 0) {
         ctx.fillStyle = '#e8f5e9';
         ctx.fillRect(40, y, 820, 40);
-        ctx.fillStyle = '#2e7d32';
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
+        y += 50;
+        
+        keyWins.slice(0, 5).forEach((item, idx) => {
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`• ${item.label}:`, 60, y + 20);
+            ctx.font = '14px Arial';
+            ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
+            y += 35;
+        });
+    }
+    
+    // Highlights (Improved from Last Week)
+    if (improvedMetrics.length > 0 || previous) {
+        y += 10;
+        ctx.fillStyle = '#e3f2fd';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#0d47a1';
         ctx.font = 'bold 18px Arial';
         ctx.fillText('✅ Highlights (Improved from Last Week)', 50, y + 26);
         y += 50;
@@ -3572,7 +3604,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 ctx.font = 'bold 14px Arial';
                 ctx.fillText(`• ${item.label}:`, 60, y + 20);
                 ctx.font = '14px Arial';
-                ctx.fillText(item.text, 220, y + 20);
+                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last week`, 220, y + 20);
                 y += 35;
             });
         }
@@ -3593,7 +3625,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             ctx.font = 'bold 14px Arial';
             ctx.fillText(`• ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
-            ctx.fillText(`${item.curr}% (Center: ${item.center}%) - Target: ${item.target}%`, 220, y + 20);
+            ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
             y += 35;
         });
     }
@@ -3749,6 +3781,37 @@ function getMetricTarget(metric) {
     }
     console.warn(`⚠️ Target not found for metric: ${metric}`);
     return 90; // Safe fallback
+}
+
+function formatMetricValue(key, value) {
+    const metric = METRICS_REGISTRY[key];
+    if (!metric) return value.toFixed(1);
+    
+    if (metric.unit === 'sec') {
+        // Seconds - no decimal points
+        return Math.round(value).toString();
+    } else if (metric.unit === '%') {
+        // Percentages - one decimal point
+        return value.toFixed(1);
+    } else {
+        // Raw numbers - no decimal points
+        return Math.round(value).toString();
+    }
+}
+
+function formatMetricDisplay(key, value) {
+    const metric = METRICS_REGISTRY[key];
+    if (!metric) return value.toString();
+    
+    const formatted = formatMetricValue(key, value);
+    
+    if (metric.unit === 'sec') {
+        return `${formatted}s`;
+    } else if (metric.unit === '%') {
+        return `${formatted}%`;
+    } else {
+        return formatted;
+    }
 }
 
 function isMetricMeetingTarget(metric, value, target) {
