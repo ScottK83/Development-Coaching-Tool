@@ -3925,9 +3925,18 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillText(`Here's your performance summary for Week ending ${period.endDate}.`, 50, y);
     y += 60;
 
-    // Metrics comparison
+    // Metrics comparison - validate data structure
+    if (!current || !current.metrics) {
+        console.error('Invalid employee data:', current);
+        showToast('❌ Employee data is missing metrics', 5000);
+        return;
+    }
+
     const metrics = current.metrics;
     const prevMetrics = previous?.metrics || {};
+
+    console.log('Current metrics:', metrics);
+    console.log('Previous metrics:', prevMetrics);
 
     // Count summary cards
     let meetingGoals = 0;
@@ -3944,6 +3953,7 @@ function createTrendEmailImage(empName, period, current, previous) {
             const prev = parseFloat(prevMetrics[metric]) || 0;
             if (curr > prev) improved++;
         }
+    });        }
     });
 
     const totalMetrics = Object.keys(metrics).length;
