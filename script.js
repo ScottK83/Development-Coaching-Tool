@@ -2117,7 +2117,7 @@ async function renderTipsManagement() {
     // Create New Metric section (hidden by default)
     html += '<div id="createMetricSection" style="display: none; margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<h3 style="color: #2196F3; margin: 0;">? Create New Category</h3>';
+    html += '<h3 style="color: #2196F3; margin: 0;">➕ Create New Category</h3>';
     html += '<button id="backToManageBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Back</button>';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
@@ -2229,11 +2229,11 @@ async function renderTipsManagement() {
         const metricName = metricNames[metricKey];
         
         let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
-        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">?? ${metricName}</h3>`;
+        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">📂 ${metricName}</h3>`;
         
         // Server tips - use original indices
         if (serverTipsWithIndex.length > 0) {
-            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">?? Server Tips (from tips.csv)</h4>';
+            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Server Tips (from tips.csv)</h4>';
             serverTipsWithIndex.forEach((tipObj) => {
                 // Safety check for tipObj structure
                 if (!tipObj || typeof tipObj.originalIndex === 'undefined') {
@@ -2247,8 +2247,8 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editServerTip_${metricKey}_${originalIndex}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
-                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">??? Delete</button>
+                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
                             </div>
                         </div>
                     </div>
@@ -2260,7 +2260,7 @@ async function renderTipsManagement() {
         }
         
         // Custom tips
-        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">?? Your Custom Tips</h4>';
+        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">✏️ Your Custom Tips</h4>';
         if (userTipsForMetric.length > 0) {
             userTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
@@ -2268,8 +2268,8 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
-                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">??? Delete</button>
+                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
                             </div>
                         </div>
                     </div>
@@ -2281,7 +2281,7 @@ async function renderTipsManagement() {
         tipsHtml += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
                 <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">? Add Custom Tip</button>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
             </div>
         `;
         tipsHtml += '</div>';
