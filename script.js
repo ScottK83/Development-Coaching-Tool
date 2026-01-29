@@ -3189,11 +3189,14 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Target
     ctx.fillText(target.toString(), x + 480, y + 24);
     
-    // VS CENTER CELL - show raw difference
+    // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
     let vsCenterColor;
     let vsCenterText;
     
-    if (!centerExists) {
+    if (noSurveys) {
+        vsCenterColor = '#999999'; // Gray - no surveys
+        vsCenterText = 'N/A';
+    } else if (!centerExists) {
         vsCenterColor = '#999999'; // Gray - no data
         vsCenterText = 'N/A';
     } else {
