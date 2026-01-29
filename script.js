@@ -4375,12 +4375,11 @@ function initApp() {
     initializeEventHandlers();
     initializeKeyboardShortcuts();
     
-    // Restore active section
-    const activeSection = localStorage.getItem('activeSection') || 'coachingForm';
-    showOnlySection(activeSection);
+    // Always show Upload Data page on refresh
+    showOnlySection('coachingForm');
     
     // Initialize data for the active section (fixes refresh behavior)
-    initializeSection(activeSection);
+    initializeSection('coachingForm');
     
     // If we have data, update the period dropdown
     if (Object.keys(weeklyData).length > 0) {
