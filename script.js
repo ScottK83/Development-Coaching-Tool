@@ -3170,7 +3170,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Target
     ctx.fillText(target.toString(), x + 480, y + 24);
     
-    // VS CENTER CELL - nested color logic
+    // VS CENTER CELL - show raw difference
     let vsCenterColor;
     let vsCenterText;
     
@@ -3180,17 +3180,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     } else {
         const difference = associateValue - centerAvg;
         
-        // For percentage metrics: show % difference
-        // For raw numbers (seconds, counts): show raw difference
-        if (metric.unit === '%') {
-            const percentDiff = (difference / centerAvg * 100).toFixed(1);
-            vsCenterText = `${percentDiff}%`;
-        } else {
-            // Raw number - show raw difference
-            vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
-            if (difference > 0) vsCenterText = `+${vsCenterText}`;
-            else if (difference < 0) vsCenterText = `-${vsCenterText}`;
-        }
+        // Always show raw difference
+        vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
+        if (difference > 0) vsCenterText = `+${vsCenterText}`;
+        else if (difference < 0) vsCenterText = `-${vsCenterText}`;
         
         if (isAboveCenter) {
             vsCenterColor = '#0056B3'; // Blue - above center
