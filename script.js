@@ -191,7 +191,7 @@ const METRICS_REGISTRY = {
         label: 'Reliability',
         icon: '🛡️',
         target: { type: 'max', value: 16 },
-        unit: '%',
+        unit: 'hrs',
         columnIndex: 21,
         chartType: 'bar',
         chartColor: '#795548',
@@ -3908,6 +3908,8 @@ function formatMetricDisplay(key, value) {
         return `${formatted}s`;
     } else if (metric.unit === '%') {
         return `${formatted}%`;
+    } else if (metric.unit === 'hrs') {
+        return `${formatted} hrs`;
     } else {
         return formatted;
     }
