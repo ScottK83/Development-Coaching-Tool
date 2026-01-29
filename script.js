@@ -2948,21 +2948,135 @@ function formatMetricName(camelCase) {
 }
 
 function getMetricOrder() {
-    // Define the order and grouping of metrics
+    // PHASE 3 - LOCKED ORDER: Core Performance → Survey → Sentiment → Reliability
     return [
-        { key: 'scheduleAdherence', group: null },
-        { key: 'overallExperience', group: 'Surveys' },
-        { key: 'cxRepOverall', group: 'Surveys' },
-        { key: 'fcr', group: 'Surveys' },
+        // CORE PERFORMANCE GROUP (6 metrics)
+        { key: 'scheduleAdherence', group: 'Core Performance' },
+        { key: 'transfers', group: 'Core Performance' },
+        { key: 'aht', group: 'Core Performance' },
+        { key: 'holdTime', group: 'Core Performance' },
+        { key: 'acw', group: 'Core Performance' },
+        { key: 'managingEmotions', group: 'Core Performance' },
+        // SURVEY GROUP (3 metrics)
+        { key: 'overallExperience', group: 'Survey' },
+        { key: 'cxRepOverall', group: 'Survey' },
+        { key: 'fcr', group: 'Survey' },
+        // SENTIMENT GROUP (3 metrics)
         { key: 'overallSentiment', group: 'Sentiment' },
         { key: 'positiveWord', group: 'Sentiment' },
         { key: 'negativeWord', group: 'Sentiment' },
-        { key: 'managingEmotions', group: 'Sentiment' },
-        { key: 'aht', group: null },
-        { key: 'acw', group: null },
-        { key: 'holdTime', group: null },
-        { key: 'reliability', group: null }
+        // RELIABILITY GROUP (1 metric)
+        { key: 'reliability', group: 'Reliability' }
     ];
+}
+
+// ============================================
+// PHASE 3 - METRIC ROW RENDERER
+// ============================================
+
+function isReverseMetric(metricKey) {
+    // Lower is better for these metrics
+    const reverseMetrics = ['transfers', 'aht', 'holdTime', 'acw', 'reliability'];
+    return reverseMetrics.includes(metricKey);
+}
+
+function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor) {
+    /**
+     * PHASE 3.1 - METRIC ROW RENDERER
+     * Renders a single metric row with full conditional logic
+     * 
+     * ROW COLORS:
+     * - Green: Metric meets goal
+     * - Yellow: Metric does NOT meet goal
+     * 
+     * VS CENTER CELL COLORS (nested within row):
+     * - Blue: Associate is above center average
+     * - Dark Yellow: Associate is below center average
+     * - Gray: Center average unavailable
+     * 
+     * Reverse logic applies to: Transfers, AHT, Hold Time, ACW, Reliability
+     */
+    
+    const meetsGoal = isMetricMeetingTarget(metric.key, associateValue, target);
+    const isReverse = isReverseMetric(metric.key);
+    
+    // Determine if associate is above/below center
+    const centerExists = centerAvg > 0;
+    const isAboveCenter = centerExists ? 
+        (isReverse ? associateValue < centerAvg : associateValue > centerAvg) : 
+        false;
+    
+    // ROW BACKGROUND COLOR
+    let rowBgColor;
+    if (meetsGoal) {
+        rowBgColor = '#d4edda'; // Green - meets goal
+    } else {
+        rowBgColor = '#fff3cd'; // Yellow - does not meet goal
+    }
+    
+    // Draw row background
+    ctx.fillStyle = rowBgColor;
+    ctx.fillRect(x, y, width, height);
+    
+    // Draw row border
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, width, height);
+    
+    // Metric name
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.fillText(metric.label, x + 10, y + 24);
+    
+    // Associate value
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(associateValue.toFixed(2), x + 250, y + 24);
+    
+    // Center average
+    ctx.font = '14px Arial';
+    ctx.fillText(centerExists ? centerAvg.toFixed(2) : 'N/A', x + 370, y + 24);
+    
+    // Target
+    ctx.fillText(target.toString(), x + 480, y + 24);
+    
+    // VS CENTER CELL - nested color logic
+    let vsCenterColor;
+    let vsCenterText;
+    
+    if (!centerExists) {
+        vsCenterColor = '#999999'; // Gray - no data
+        vsCenterText = 'N/A';
+    } else {
+        const difference = associateValue - centerAvg;
+        const percentDiff = (difference / centerAvg * 100).toFixed(1);
+        vsCenterText = `${percentDiff}%`;
+        
+        if (isAboveCenter) {
+            vsCenterColor = '#0056B3'; // Blue - above center
+        } else {
+            vsCenterColor = '#DAA520'; // Dark yellow - below center
+        }
+    }
+    
+    ctx.fillStyle = vsCenterColor;
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(vsCenterText, x + 570, y + 24);
+    
+    // Trending (if previous data exists)
+    let trendingColor = '#666666';
+    let trendingText = 'N/A';
+    
+    if (previousValue !== undefined && previousValue > 0) {
+        const trendDiff = associateValue - previousValue;
+        const trendPercent = (trendDiff / previousValue * 100).toFixed(1);
+        trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
+        trendingColor = trendDiff > 0 ? '#28a745' : (trendDiff < 0 ? '#dc3545' : '#666666');
+    }
+    
+    ctx.fillStyle = trendingColor;
+    ctx.font = '14px Arial';
+    ctx.fillText(trendingText, x + 670, y + 24);
 }
 
 function createTrendEmailImage(empName, period, current, previous) {
@@ -3100,7 +3214,7 @@ function createTrendEmailImage(empName, period, current, previous) {
     
     y += 45;
 
-    // Table rows with group headers
+    // PHASE 3.2 - GROUPED TABLE LAYOUT WITH NEW RENDERER
     let currentGroup = null;
     let rowIdx = 0;
     
@@ -3108,77 +3222,44 @@ function createTrendEmailImage(empName, period, current, previous) {
         // Skip if metric doesn't exist in data
         if (metrics[key] === undefined) return;
         
+        const metric = METRICS_REGISTRY[key];
+        if (!metric) {
+            console.warn(`⚠️ Metric not in registry: ${key}`);
+            return;
+        }
+        
         // Draw group header if entering a new group
-        if (group !== currentGroup && group !== null) {
+        if (group !== currentGroup) {
             currentGroup = group;
             ctx.fillStyle = '#e3f2fd';
-            ctx.fillRect(40, y, 820, 35);
+            ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
-            ctx.fillText(`📋 ${group}`, 50, y + 22);
-            y += 35;
-            rowIdx = 0; // Reset alternating row colors for new group
+            ctx.fillText(`📋 ${group}`, 50, y + 26);
+            y += 45;
+            rowIdx = 0; // Reset row index for new group
         }
         
         const curr = parseFloat(metrics[key]) || 0;
         const prev = parseFloat(prevMetrics[key]) || 0;
         const center = parseFloat(centerAvg[key]) || 0;
         const target = getMetricTarget(key);
-        const formattedMetricName = formatMetricName(key);
         
-        // Check if beating center average
-        const lowerMetric = key.toLowerCase();
-        const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
-                              lowerMetric.includes('defect') || lowerMetric.includes('transfer');
-        const isBeatingCenter = center > 0 && (isLowerBetter ? curr < center : curr > center);
-        
-        // vs. Center Avg calculation
-        const vsCenter = center > 0 ? ((curr - center) / center * 100).toFixed(1) + '%' : 'N/A';
-        
-        // Trending calculation
-        const trendingValue = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
-        const trendingSymbol = prev ? (curr > prev ? '📈' : (curr < prev ? '📉' : '➡️')) : '';
-
-        // Row background - light green if beating center average
-        if (isBeatingCenter) {
-            ctx.fillStyle = '#d4edda'; // Light green for beating center
-        } else {
-            ctx.fillStyle = rowIdx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-        }
-        ctx.fillRect(40, y, 820, 38);
-
-        // Metric name
-        ctx.fillStyle = '#333333';
-        ctx.font = '14px Arial';
-        ctx.fillText(formattedMetricName, 50, y + 24);
-        
-        // Your Metric value
-        ctx.fillStyle = '#333333';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(curr.toFixed(2), 300, y + 24);
-        
-        // Center Average
-        ctx.font = '14px Arial';
-        ctx.fillText(center > 0 ? center.toFixed(2) : 'N/A', 420, y + 24);
-        
-        // Target
-        ctx.fillText(target.toString(), 540, y + 24);
-        
-        // vs. Center Avg
-        const vsCenterNum = center > 0 ? ((curr - center) / center * 100) : 0;
-        if (isBeatingCenter) {
-            ctx.fillStyle = '#28a745'; // Green for beating center
-        } else if (center > 0) {
-            ctx.fillStyle = '#dc3545'; // Red for behind center
-        } else {
-            ctx.fillStyle = '#666666';
-        }
-        ctx.fillText(vsCenter, 630, y + 24);
-        
-        // Trending
-        const changeNum = prev ? ((curr - prev) / prev * 100) : 0;
-        ctx.fillStyle = changeNum > 0 ? '#28a745' : (changeNum < 0 ? '#dc3545' : '#666666');
-        ctx.fillText(`${trendingSymbol} ${trendingValue}`, 770, y + 24);
+        // Use the PHASE 3.1 metric row renderer
+        renderMetricRow(
+            ctx,
+            40,                    // x position
+            y,                     // y position
+            820,                   // width
+            38,                    // height
+            metric,                // metric definition from METRICS_REGISTRY
+            curr,                  // associate value
+            center,                // center average
+            target,                // goal target
+            prev || undefined,     // previous value (for trending)
+            rowIdx,                // row index (for alternating colors)
+            rowIdx % 2 === 0 ? '#f8f9fa' : '#ffffff'  // alternating color
+        );
 
         y += 38;
         rowIdx++;
@@ -3268,37 +3349,23 @@ function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, s
 }
 
 function getMetricTarget(metric) {
-    const lowerMetric = metric.toLowerCase();
-    // High percentage goals (95+)
-    if (lowerMetric.includes('quality') || lowerMetric.includes('yield') || lowerMetric.includes('fcr')) return 95;
-    // Medium-high percentage goals (90+)
-    if (lowerMetric.includes('adherence') || lowerMetric.includes('experience') || lowerMetric.includes('satisfaction') || 
-        lowerMetric.includes('sentiment') || lowerMetric.includes('positive') || lowerMetric.includes('negative') || 
-        lowerMetric.includes('emotion') || lowerMetric.includes('overall')) return 90;
-    // Lower percentage goals (85+)
-    if (lowerMetric.includes('oee') || lowerMetric.includes('utilization')) return 85;
-    // Time-based goals (seconds)
-    if (lowerMetric.includes('aht') || lowerMetric.includes('handle')) return 300; // 5 minutes
-    if (lowerMetric.includes('acw') || lowerMetric.includes('aftercall')) return 90;
-    if (lowerMetric.includes('talk') || lowerMetric.includes('talktime')) return 240; // 4 minutes
-    if (lowerMetric.includes('hold')) return 30;
-    // Reliability (hours)
-    if (lowerMetric.includes('reliability')) return 2;
-    // Lower is better metrics
-    if (lowerMetric.includes('downtime')) return 5;
-    if (lowerMetric.includes('scrap')) return 2;
-    if (lowerMetric.includes('transfer')) return 10;
-    // Survey/Call counts
-    if (lowerMetric.includes('survey') || lowerMetric.includes('totalcalls') || lowerMetric.includes('calls')) return 100;
-    // Default
-    return 90;
+    // PHASE 3 - Use METRICS_REGISTRY as single source of truth
+    const metricDef = METRICS_REGISTRY[metric];
+    if (metricDef && metricDef.target) {
+        return metricDef.target.value;
+    }
+    console.warn(`⚠️ Target not found for metric: ${metric}`);
+    return 90; // Safe fallback
 }
 
 function isMetricMeetingTarget(metric, value, target) {
-    const lowerMetric = metric.toLowerCase();
-    const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
-                          lowerMetric.includes('defect') || lowerMetric.includes('transfer');
-    return isLowerBetter ? value <= target : value >= target;
+    // PHASE 3 - Use METRICS_REGISTRY target type
+    const metricDef = METRICS_REGISTRY[metric];
+    if (metricDef && metricDef.target) {
+        return metricDef.target.type === 'min' ? value >= target : value <= target;
+    }
+    // Fallback: assume 'min' type
+    return value >= target;
 }
 
 
