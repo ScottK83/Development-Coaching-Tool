@@ -3953,7 +3953,6 @@ function createTrendEmailImage(empName, period, current, previous) {
             const prev = parseFloat(prevMetrics[metric]) || 0;
             if (curr > prev) improved++;
         }
-    });        }
     });
 
     const totalMetrics = Object.keys(metrics).length;
