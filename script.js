@@ -6070,12 +6070,17 @@ function copyShiftEmail() {
     // Visual feedback
     const button = document.getElementById('copyShiftEmailBtn');
     const originalText = button.textContent;
-    button.textContent = '✓ Copied to Clipboard!';
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 2000);
+    button.textContent = '✓ Copied! Opening Outlook...';
     
-    console.log('📅 Shift email copied to clipboard');
+    // Open Outlook
+    setTimeout(() => {
+        window.open('mailto:', '_blank');
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 500);
+    }, 500);
+    
+    console.log('📅 Shift email copied to clipboard and opening Outlook');
 }
 
 function clearShiftEmail() {
