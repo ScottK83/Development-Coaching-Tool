@@ -3150,19 +3150,22 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, height);
     
-    // Metric name
+    // Metric name with target
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
-    ctx.fillText(metric.label, x + 10, y + 24);
+    const targetLabel = metric.unit === 'sec' ? `${target}s` : metric.unit === '%' ? `${target}%` : target;
+    ctx.fillText(`${metric.label} (Target: ${targetLabel})`, x + 10, y + 24);
     
-    // Associate value
+    // Associate value - use formatMetricValue
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
-    ctx.fillText(associateValue.toFixed(2), x + 250, y + 24);
+    const formattedValue = formatMetricValue(metric.key, associateValue);
+    ctx.fillText(formattedValue, x + 250, y + 24);
     
-    // Center average
+    // Center average - use formatMetricValue
     ctx.font = '14px Arial';
-    ctx.fillText(centerExists ? centerAvg.toFixed(2) : 'N/A', x + 370, y + 24);
+    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
+    ctx.fillText(formattedCenter, x + 370, y + 24);
     
     // Target
     ctx.fillText(target.toString(), x + 480, y + 24);
@@ -3369,7 +3372,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         const curr = parseFloat(metrics[key]) || 0;
         const target = getMetricTarget(key);
-        const center = parseFloat(centerAvg[key]) || 0;
+        const center = getCenterAverageForMetric(centerAvg, key);
         
         if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
         
@@ -3492,7 +3495,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         const curr = parseFloat(metrics[key]) || 0;
         const prev = parseFloat(prevMetrics[key]) || 0;
-        const center = parseFloat(centerAvg[key]) || 0;
+        const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         
         renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '');
@@ -3515,7 +3518,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         const curr = parseFloat(metrics[key]) || 0;
         const prev = parseFloat(prevMetrics[key]) || 0;
-        const center = parseFloat(centerAvg[key]) || 0;
+        const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         const isReverse = isReverseMetric(key);
         
@@ -3812,6 +3815,18 @@ function formatMetricDisplay(key, value) {
     } else {
         return formatted;
     }
+}
+
+function getCenterAverageForMetric(centerAvg, metricKey) {
+    // Map metric keys to center average keys
+    const keyMapping = {
+        scheduleAdherence: 'adherence',
+        overallSentiment: 'sentiment',
+        cxRepOverall: 'repSatisfaction'
+    };
+    
+    const lookupKey = keyMapping[metricKey] || metricKey;
+    return parseFloat(centerAvg[lookupKey]) || 0;
 }
 
 function isMetricMeetingTarget(metric, value, target) {
