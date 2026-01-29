@@ -3179,8 +3179,18 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         vsCenterText = 'N/A';
     } else {
         const difference = associateValue - centerAvg;
-        const percentDiff = (difference / centerAvg * 100).toFixed(1);
-        vsCenterText = `${percentDiff}%`;
+        
+        // For percentage metrics: show % difference
+        // For raw numbers (seconds, counts): show raw difference
+        if (metric.unit === '%') {
+            const percentDiff = (difference / centerAvg * 100).toFixed(1);
+            vsCenterText = `${percentDiff}%`;
+        } else {
+            // Raw number - show raw difference
+            vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
+            if (difference > 0) vsCenterText = `+${vsCenterText}`;
+            else if (difference < 0) vsCenterText = `-${vsCenterText}`;
+        }
         
         if (isAboveCenter) {
             vsCenterColor = '#0056B3'; // Blue - above center
