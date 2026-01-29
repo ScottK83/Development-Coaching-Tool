@@ -1749,6 +1749,7 @@ function initializeEventHandlers() {
     
     // Export data
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
+        console.log('🔘 Backup Data button clicked');
         exportToExcel();
     });
     
@@ -1766,21 +1767,25 @@ function initializeEventHandlers() {
     
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
+        console.log('🔘 Restore Data button clicked');
         document.getElementById('dataFileInput').click();
     });
     
     document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
+        console.log('📥 File selected for restore');
         const file = e.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
+                console.log('🔄 Parsing JSON data...');
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
                 
                 saveWeeklyData();
+                console.log('✅ Data restored and saved to localStorage');
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
@@ -1795,6 +1800,7 @@ function initializeEventHandlers() {
     
     // Delete selected week
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
+        console.log('🔘 Delete Selected Week button clicked');
         const weekSelect = document.getElementById('deleteWeekSelect');
         const selectedWeek = weekSelect.value;
         
@@ -1809,10 +1815,12 @@ function initializeEventHandlers() {
             return;
         }
         
+        console.log('🗑️ Deleting week:', selectedWeek);
         delete weeklyData[selectedWeek];
         delete myTeamMembers[selectedWeek];
         saveWeeklyData();
         saveTeamMembers();
+        console.log('✅ Week deleted and data saved to localStorage');
         
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
@@ -1849,6 +1857,7 @@ function initializeEventHandlers() {
     
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
+        console.log('🔘 Delete All Data button clicked');
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
@@ -1868,10 +1877,12 @@ function initializeEventHandlers() {
             return;
         }
         
+        console.log('🗑️ Deleting all data...');
         // Clear all data
         weeklyData = {};
         
         saveWeeklyData();
+        console.log('✅ All data cleared from localStorage');
         
         populateDeleteWeekDropdown();
         
@@ -4003,6 +4014,7 @@ function showEmailSection() {
 // ============================================
 
 function exportToExcel() {
+    console.log('🔄 exportToExcel() function executing...');
     try {
         const wb = XLSX.utils.book_new();
         
