@@ -3906,9 +3906,41 @@ function generateTrendEmail() {
 }
 
 function formatMetricName(camelCase) {
-    // Convert camelCase to Title Case with spaces
-    const withSpaces = camelCase.replace(/([A-Z])/g, ' $1').trim();
-    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+    // Map camelCase property names to display names
+    const metricNameMap = {
+        'scheduleAdherence': 'Schedule Adherence',
+        'overallExperience': 'Overall Experience',
+        'cxRepOverall': 'Rep Satisfaction',
+        'fcr': 'FCR',
+        'overallSentiment': 'Sentiment Overall',
+        'positiveWord': 'Positive Word Usage',
+        'negativeWord': 'Avoiding Negative Words',
+        'managingEmotions': 'Managing Emotions',
+        'aht': 'AHT',
+        'acw': 'ACW',
+        'holdTime': 'Hold Time',
+        'reliability': 'Reliability'
+    };
+    
+    return metricNameMap[camelCase] || camelCase;
+}
+
+function getMetricOrder() {
+    // Define the order and grouping of metrics
+    return [
+        { key: 'scheduleAdherence', group: null },
+        { key: 'overallExperience', group: 'Surveys' },
+        { key: 'cxRepOverall', group: 'Surveys' },
+        { key: 'fcr', group: 'Surveys' },
+        { key: 'overallSentiment', group: 'Sentiment' },
+        { key: 'positiveWord', group: 'Sentiment' },
+        { key: 'negativeWord', group: 'Sentiment' },
+        { key: 'managingEmotions', group: 'Sentiment' },
+        { key: 'aht', group: null },
+        { key: 'acw', group: null },
+        { key: 'holdTime', group: null },
+        { key: 'reliability', group: null }
+    ];
 }
 
 function createTrendEmailImage(empName, period, current, previous) {
@@ -3960,41 +3992,39 @@ function createTrendEmailImage(empName, period, current, previous) {
     }
 
     // Metrics are direct properties on the employee object
-    // Filter out non-metric properties (name, firstName, etc.)
-    const excludeProps = ['name', 'firstName', 'fname', 'lastName', 'lname'];
+    // Filter to only include the metrics we want to show
+    const metricOrder = getMetricOrder();
     const metrics = {};
     const prevMetrics = {};
     
-    Object.keys(current).forEach(key => {
-        if (!excludeProps.includes(key)) {
+    // Only include metrics that are in our defined order
+    metricOrder.forEach(({ key }) => {
+        if (current[key] !== undefined) {
             metrics[key] = current[key];
         }
+        if (previous && previous[key] !== undefined) {
+            prevMetrics[key] = previous[key];
+        }
     });
-    
-    if (previous) {
-        Object.keys(previous).forEach(key => {
-            if (!excludeProps.includes(key)) {
-                prevMetrics[key] = previous[key];
-            }
-        });
-    }
 
     console.log('Current metrics:', metrics);
     console.log('Previous metrics:', prevMetrics);
 
-    // Count summary cards
+    // Count summary cards - only count metrics that exist
     let meetingGoals = 0;
     let improved = 0;
 
-    Object.keys(metrics).forEach(metric => {
-        const curr = parseFloat(metrics[metric]) || 0;
-        const target = getMetricTarget(metric);
+    metricOrder.forEach(({ key }) => {
+        if (metrics[key] === undefined) return;
         
-        if (isMetricMeetingTarget(metric, curr, target)) meetingGoals++;
+        const curr = parseFloat(metrics[key]) || 0;
+        const target = getMetricTarget(key);
+        
+        if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
         
         // Only count improvements if we have previous data
-        if (previous && prevMetrics[metric] !== undefined) {
-            const prev = parseFloat(prevMetrics[metric]) || 0;
+        if (previous && prevMetrics[key] !== undefined) {
+            const prev = parseFloat(prevMetrics[key]) || 0;
             if (curr > prev) improved++;
         }
     });
@@ -4032,21 +4062,39 @@ function createTrendEmailImage(empName, period, current, previous) {
     
     y += 45;
 
-    // Table rows
-    Object.keys(metrics).forEach((metric, idx) => {
-        const curr = parseFloat(metrics[metric]) || 0;
-        const prev = parseFloat(prevMetrics[metric]) || 0;
+    // Table rows with group headers
+    let currentGroup = null;
+    let rowIdx = 0;
+    
+    metricOrder.forEach(({ key, group }) => {
+        // Skip if metric doesn't exist in data
+        if (metrics[key] === undefined) return;
+        
+        // Draw group header if entering a new group
+        if (group !== currentGroup && group !== null) {
+            currentGroup = group;
+            ctx.fillStyle = '#e3f2fd';
+            ctx.fillRect(40, y, 820, 35);
+            ctx.fillStyle = '#0056B3';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText(`📋 ${group}`, 50, y + 22);
+            y += 35;
+            rowIdx = 0; // Reset alternating row colors for new group
+        }
+        
+        const curr = parseFloat(metrics[key]) || 0;
+        const prev = parseFloat(prevMetrics[key]) || 0;
         const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
-        const target = getMetricTarget(metric);
-        const isGood = isMetricMeetingTarget(metric, curr, target);
+        const target = getMetricTarget(key);
+        const isGood = isMetricMeetingTarget(key, curr, target);
         const status = isGood ? '✓ Better' : '✗ Behind';
-        const formattedMetricName = formatMetricName(metric);
+        const formattedMetricName = formatMetricName(key);
 
-        // Row background - light blue if good, white/light gray alternating otherwise
+        // Row background - light green if good, white/light gray alternating otherwise
         if (isGood) {
             ctx.fillStyle = '#d4edda'; // Light green for good metrics
         } else {
-            ctx.fillStyle = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
+            ctx.fillStyle = rowIdx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         }
         ctx.fillRect(40, y, 820, 38);
 
@@ -4075,6 +4123,7 @@ function createTrendEmailImage(empName, period, current, previous) {
         ctx.fillText(status, 760, y + 24);
 
         y += 38;
+        rowIdx++;
     });
 
     // Footer with light background
