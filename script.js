@@ -1834,8 +1834,10 @@ function initializeEventHandlers() {
         populateTeamMemberSelector();
         showToast('✅ Week deleted successfully');
         
-        // Clear coaching form if needed
-        document.getElementById('employeeSelect').value = '';
+        // Clear coaching form if needed (safely check if elements exist)
+        const employeeSelect = document.getElementById('employeeSelect');
+        if (employeeSelect) employeeSelect.value = '';
+        
         ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
