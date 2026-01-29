@@ -355,20 +355,33 @@
             ctx.font = '12px Arial';
             ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
 
-            // Convert to image and download
+            // Convert to image and copy to clipboard
             canvas.toBlob(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `TrendReport_${empName}_${period.startDate}.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-                showToast('✅ Email image downloaded!');
-                
-                // Also open Outlook
-                setTimeout(() => {
-                    window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
-                }, 500);
+                // Copy to clipboard
+                navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]).then(() => {
+                    showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
+                    
+                    // Open Outlook
+                    setTimeout(() => {
+                        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                    }, 500);
+                }).catch(err => {
+                    console.error('Clipboard error:', err);
+                    // Fallback to download
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `TrendReport_${empName}_${period.startDate}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('⚠️ Could not copy to clipboard. Image downloaded instead.', 4000);
+                    
+                    setTimeout(() => {
+                        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                    }, 500);
+                });
             }, 'image/png');
         }
 
