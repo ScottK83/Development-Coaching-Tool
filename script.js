@@ -3717,19 +3717,19 @@ function buildTrendEmailHtml(employeeName, weekKey, options = {}) {
             console.log(`  No previous ${currentPeriodType} data available`);
         }
         
-        // Build HTML table row
-        const rowClass = meetsTarget ? 'metric-row-good' : 'metric-row-watch';
+        // Build HTML table row - use inline styles for Outlook compatibility
+        const rowBgColor = meetsTarget ? '#d4edda' : '#fff3cd';
         const statusIcon = meetsTarget ? '✅' : '❌';
         const vsCenter = centerValue !== null ? (outpacingPeers ? '📈 Better' : '📉 Behind') : 'N/A';
         
         metricsHtml += `
-            <tr class="${rowClass}">
-                <td>${statusIcon} ${metric.label}</td>
-                <td style="text-align: center; font-weight: bold;">${employeeValue.toFixed(1)}${metric.unit}</td>
-                <td style="text-align: center;">${centerValue !== null ? centerValue.toFixed(1) + metric.unit : 'N/A'}</td>
-                <td style="text-align: center;">${targetValue !== null ? targetValue + metric.unit : 'N/A'}</td>
-                <td style="text-align: center;">${vsCenter}</td>
-                <td style="text-align: center;">${trendIcon} ${trendText}</td>
+            <tr style="background: ${rowBgColor};">
+                <td style="padding: 10px; border: 1px solid #ddd;">${statusIcon} ${metric.label}</td>
+                <td style="padding: 10px; text-align: center; font-weight: bold; border: 1px solid #ddd;">${employeeValue.toFixed(1)}${metric.unit}</td>
+                <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${centerValue !== null ? centerValue.toFixed(1) + metric.unit : 'N/A'}</td>
+                <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${targetValue !== null ? targetValue + metric.unit : 'N/A'}</td>
+                <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${vsCenter}</td>
+                <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${trendIcon} ${trendText}</td>
             </tr>
         `;
         
@@ -3752,46 +3752,46 @@ function buildTrendEmailHtml(employeeName, weekKey, options = {}) {
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-collapse: collapse;">
             <tr>
                 <td width="33%" style="padding: 10px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d4edda; background: #d4edda; border-radius: 8px;">
-                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
-                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">✅ Meeting Target Goals</div>
-                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${meetsTargetCount}/${totalMetricsEvaluated}</div>
-                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((meetsTargetCount/totalMetricsEvaluated)*100) : 0}% Success Rate</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 2px solid #28a745; background: #d4edda; margin: 0;">
+                        <tr><td style="padding: 15px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 11px; color: #155724; font-weight: bold; margin: 0;">✅ MEETING TARGET GOALS</div>
+                            <div style="font-size: 36px; font-weight: bold; color: #155724; margin: 8px 0;"><span style="display: inline-block;">${meetsTargetCount}/${totalMetricsEvaluated}</span></div>
+                            <div style="font-size: 12px; color: #155724; margin: 0;">${totalMetricsEvaluated > 0 ? Math.round((meetsTargetCount/totalMetricsEvaluated)*100) : 0}% Success</div>
                         </td></tr>
                     </table>
                 </td>
                 <td width="33%" style="padding: 10px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d1ecf1; background: #d1ecf1; border-radius: 8px;">
-                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
-                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">📈 Outpacing Your Peers</div>
-                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
-                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((outpacingPeersCount/totalMetricsEvaluated)*100) : 0}% Above Center</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 2px solid #0056b3; background: #cfe2ff; margin: 0;">
+                        <tr><td style="padding: 15px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 11px; color: #004085; font-weight: bold; margin: 0;">📈 OUTPACING YOUR PEERS</div>
+                            <div style="font-size: 36px; font-weight: bold; color: #004085; margin: 8px 0;"><span style="display: inline-block;">${outpacingPeersCount}/${totalMetricsEvaluated}</span></div>
+                            <div style="font-size: 12px; color: #004085; margin: 0;">${totalMetricsEvaluated > 0 ? Math.round((outpacingPeersCount/totalMetricsEvaluated)*100) : 0}% Above Center</div>
                         </td></tr>
                     </table>
                 </td>
                 <td width="33%" style="padding: 10px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #fff3cd; background: #fff3cd; border-radius: 8px;">
-                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
-                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">⬆️ Improved Metrics</div>
-                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${improvedCount}</div>
-                            <div style="font-size: 12px; color: #2c3e50;">From ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'}</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 2px solid #ff9800; background: #fff3cd; margin: 0;">
+                        <tr><td style="padding: 15px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 11px; color: #664d03; font-weight: bold; margin: 0;">⬆️ IMPROVED METRICS</div>
+                            <div style="font-size: 36px; font-weight: bold; color: #664d03; margin: 8px 0;"><span style="display: inline-block;">${improvedCount}</span></div>
+                            <div style="font-size: 12px; color: #664d03; margin: 0;">From ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'}</div>
                         </td></tr>
                     </table>
                 </td>
             </tr>
         </table>
         
-        <div class="section">
-            <div class="section-title">📊 Your Metrics</div>
-            <table>
+        <div style="margin: 25px 0;">
+            <div style="font-size: 18px; font-weight: bold; color: #667eea; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #667eea;">📊 Your Metrics</div>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 <thead>
                     <tr>
-                        <th>Metric</th>
-                        <th style="text-align: center;">Your Value</th>
-                        <th style="text-align: center;">Center Avg</th>
-                        <th style="text-align: center;">Target</th>
-                        <th style="text-align: center;">vs. Center</th>
-                        <th style="text-align: center;">Trend</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: left; font-weight: 600; border: 1px solid #999;">Metric</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: center; font-weight: 600; border: 1px solid #999;">Your Value</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: center; font-weight: 600; border: 1px solid #999;">Center Avg</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: center; font-weight: 600; border: 1px solid #999;">Target</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: center; font-weight: 600; border: 1px solid #999;">vs. Center</th>
+                        <th style="background: #667eea; color: white; padding: 12px; text-align: center; font-weight: 600; border: 1px solid #999;">Trend</th>
                     </tr>
                 </thead>
                 <tbody>
