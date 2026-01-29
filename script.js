@@ -4007,20 +4007,35 @@ function createTrendEmailImage(empName, period, current, previous) {
         }
     });
 
-    console.log('Current metrics:', metrics);
-    console.log('Previous metrics:', prevMetrics);
+    // Get center averages for this period
+    const callCenterAverages = loadCallCenterAverages();
+    const centerAvg = callCenterAverages[period.startDate] || {};
+
+    console.log('Center averages:', centerAvg);
 
     // Count summary cards - only count metrics that exist
     let meetingGoals = 0;
     let improved = 0;
+    let beatingCenter = 0;
 
     metricOrder.forEach(({ key }) => {
         if (metrics[key] === undefined) return;
         
         const curr = parseFloat(metrics[key]) || 0;
         const target = getMetricTarget(key);
+        const center = parseFloat(centerAvg[key]) || 0;
         
         if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
+        
+        // Check if beating center average
+        if (center > 0) {
+            const lowerMetric = key.toLowerCase();
+            const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
+                                  lowerMetric.includes('defect') || lowerMetric.includes('transfer');
+            if (isLowerBetter ? curr < center : curr > center) {
+                beatingCenter++;
+            }
+        }
         
         // Only count improvements if we have previous data
         if (previous && prevMetrics[key] !== undefined) {
@@ -4036,7 +4051,7 @@ function createTrendEmailImage(empName, period, current, previous) {
 
     // Draw summary cards with white background and colored borders
     drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
-    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📊 Above Average', `${meetingGoals}/${totalMetrics}`, `Better than Call Center`);
+    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📊 Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
     drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '🔼 Improved', improvedText, improvedSub);
 
     y += 140;
@@ -4053,12 +4068,13 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillStyle = '#003DA5';
     ctx.fillRect(40, y, 820, 45);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 15px Arial';
+    ctx.font = 'bold 14px Arial';
     ctx.fillText('Metric', 50, y + 28);
-    ctx.fillText('Current', 400, y + 28);
-    ctx.fillText('Previous', 530, y + 28);
-    ctx.fillText('Change', 660, y + 28);
-    ctx.fillText('Status', 760, y + 28);
+    ctx.fillText('Your Metric', 300, y + 28);
+    ctx.fillText('Center Avg', 420, y + 28);
+    ctx.fillText('Target', 540, y + 28);
+    ctx.fillText('vs. Center Avg', 630, y + 28);
+    ctx.fillText('Trending', 770, y + 28);
     
     y += 45;
 
@@ -4084,43 +4100,63 @@ function createTrendEmailImage(empName, period, current, previous) {
         
         const curr = parseFloat(metrics[key]) || 0;
         const prev = parseFloat(prevMetrics[key]) || 0;
-        const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
+        const center = parseFloat(centerAvg[key]) || 0;
         const target = getMetricTarget(key);
-        const isGood = isMetricMeetingTarget(key, curr, target);
-        const status = isGood ? '✓ Better' : '✗ Behind';
         const formattedMetricName = formatMetricName(key);
+        
+        // Check if beating center average
+        const lowerMetric = key.toLowerCase();
+        const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
+                              lowerMetric.includes('defect') || lowerMetric.includes('transfer');
+        const isBeatingCenter = center > 0 && (isLowerBetter ? curr < center : curr > center);
+        
+        // vs. Center Avg calculation
+        const vsCenter = center > 0 ? ((curr - center) / center * 100).toFixed(1) + '%' : 'N/A';
+        
+        // Trending calculation
+        const trendingValue = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
+        const trendingSymbol = prev ? (curr > prev ? '📈' : (curr < prev ? '📉' : '➡️')) : '';
 
-        // Row background - light green if good, white/light gray alternating otherwise
-        if (isGood) {
-            ctx.fillStyle = '#d4edda'; // Light green for good metrics
+        // Row background - light green if beating center average
+        if (isBeatingCenter) {
+            ctx.fillStyle = '#d4edda'; // Light green for beating center
         } else {
             ctx.fillStyle = rowIdx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         }
         ctx.fillRect(40, y, 820, 38);
 
-        // Metric name with target goal
+        // Metric name
         ctx.fillStyle = '#333333';
         ctx.font = '14px Arial';
-        ctx.fillText(`${formattedMetricName} (Goal: ${target})`, 50, y + 24);
+        ctx.fillText(formattedMetricName, 50, y + 24);
         
-        // Current value
+        // Your Metric value
         ctx.fillStyle = '#333333';
         ctx.font = 'bold 14px Arial';
-        ctx.fillText(curr.toFixed(2), 400, y + 24);
+        ctx.fillText(curr.toFixed(2), 300, y + 24);
         
-        // Previous value
+        // Center Average
         ctx.font = '14px Arial';
-        ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 530, y + 24);
+        ctx.fillText(center > 0 ? center.toFixed(2) : 'N/A', 420, y + 24);
         
-        // Change percentage
+        // Target
+        ctx.fillText(target.toString(), 540, y + 24);
+        
+        // vs. Center Avg
+        const vsCenterNum = center > 0 ? ((curr - center) / center * 100) : 0;
+        if (isBeatingCenter) {
+            ctx.fillStyle = '#28a745'; // Green for beating center
+        } else if (center > 0) {
+            ctx.fillStyle = '#dc3545'; // Red for behind center
+        } else {
+            ctx.fillStyle = '#666666';
+        }
+        ctx.fillText(vsCenter, 630, y + 24);
+        
+        // Trending
         const changeNum = prev ? ((curr - prev) / prev * 100) : 0;
         ctx.fillStyle = changeNum > 0 ? '#28a745' : (changeNum < 0 ? '#dc3545' : '#666666');
-        ctx.fillText(change, 660, y + 24);
-        
-        // Status text
-        ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
-        ctx.font = 'bold 13px Arial';
-        ctx.fillText(status, 760, y + 24);
+        ctx.fillText(`${trendingSymbol} ${trendingValue}`, 770, y + 24);
 
         y += 38;
         rowIdx++;
