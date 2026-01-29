@@ -4031,31 +4031,50 @@ function createTrendEmailImage(empName, period, current, previous) {
 
     // Convert to image and copy to clipboard
     canvas.toBlob(blob => {
-        navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-        ]).then(() => {
-            showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
-            
-            // Open Outlook
-            setTimeout(() => {
-                window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
-            }, 500);
-        }).catch(err => {
-            console.error('Clipboard error:', err);
-            // Fallback to download
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `TrendReport_${empName}_${period.startDate}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('⚠️ Could not copy to clipboard. Image downloaded instead.', 4000);
-            
-            setTimeout(() => {
-                window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
-            }, 500);
-        });
+        if (!blob) {
+            console.error('Failed to create blob from canvas');
+            showToast('❌ Error creating image', 5000);
+            return;
+        }
+
+        console.log('Canvas blob created successfully');
+
+        // Try clipboard copy
+        if (navigator.clipboard && navigator.clipboard.write) {
+            navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]).then(() => {
+                console.log('✅ Copied to clipboard');
+                showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
+                
+                // Open Outlook
+                setTimeout(() => {
+                    window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                }, 500);
+            }).catch(err => {
+                console.error('Clipboard error:', err);
+                // Fallback to download
+                downloadImageFallback(blob, empName, period);
+            });
+        } else {
+            console.warn('Clipboard API not available, downloading instead');
+            downloadImageFallback(blob, empName, period);
+        }
     }, 'image/png');
+}
+
+function downloadImageFallback(blob, empName, period) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TrendReport_${empName}_${period.startDate}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 Image downloaded! Open Outlook and insert the file.', 4000);
+    
+    setTimeout(() => {
+        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+    }, 500);
 }
 
 function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
