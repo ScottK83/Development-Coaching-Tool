@@ -3119,7 +3119,7 @@ function isReverseMetric(metricKey) {
     return reverseMetrics.includes(metricKey);
 }
 
-function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '') {
+function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week') {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
      * Renders a single metric row with full conditional logic
@@ -3214,7 +3214,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.font = 'bold 14px Arial';
     ctx.fillText(vsCenterText, x + 510, y + 24);
     
-    // Trending (if previous data exists)
+    // Trending (if previous data exists) - show emoji + change value
     let trendingColor = '#666666';
     let trendingText = 'N/A';
     let trendingEmoji = '';
@@ -3236,20 +3236,27 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         if (Math.abs(trendDiff) < 0.1) {
             trendingEmoji = '➡️'; // Flat/no change
             trendingColor = '#666666';
+            trendingText = '➡️ No change';
         } else if (isImprovement) {
             trendingEmoji = '📈'; // Chart increasing (green)
             trendingColor = '#28a745';
+            // Format change value
+            const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
+            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+            trendingText = `📈 +${changeValue} vs last ${periodLabel}`;
         } else {
             trendingEmoji = '📉'; // Chart decreasing (red)
             trendingColor = '#dc3545';
+            // Format change value
+            const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
+            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+            trendingText = `📉 -${changeValue} vs last ${periodLabel}`;
         }
-        
-        trendingText = trendingEmoji;
     }
     
     ctx.fillStyle = trendingColor;
-    ctx.font = '20px Arial'; // Slightly larger for emoji visibility
-    ctx.fillText(trendingText, x + 710, y + 26);
+    ctx.font = '13px Arial'; // Smaller font to fit change description
+    ctx.fillText(trendingText, x + 665, y + 24);
 }
 
 // ============================================
@@ -3545,7 +3552,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '', surveyTotal, key);
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '', surveyTotal, key, metadata.periodType);
         y += 38;
         rowIdx++;
     });
