@@ -337,7 +337,8 @@
                 const prev = parseFloat(prevMetrics[metric]) || 0;
                 const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
                 const target = getTarget(metric);
-                const status = isMetricGood(metric, curr, target) ? '✓' : '✗';
+                const isGood = isMetricGood(metric, curr, target);
+                const status = isGood ? '✓ Better than Center Average' : '✗ Behind Center Average';
 
                 // Alternating row colors
                 ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
@@ -350,9 +351,9 @@
                 ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
                 ctx.fillText(change, 650, y + 22);
                 
-                ctx.fillStyle = status === '✓' ? '#28a745' : '#dc3545';
-                ctx.font = 'bold 16px Arial';
-                ctx.fillText(status, 760, y + 22);
+                ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(status, 750, y + 22);
 
                 y += 35;
             });
