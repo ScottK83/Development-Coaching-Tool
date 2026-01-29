@@ -3423,35 +3423,176 @@ function buildTrendEmailHtml(employeeName, weekKey, options = {}) {
     const periodType = week.metadata?.periodType || 'week';
     const periodLabel = periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : periodType === 'ytd' ? 'Year' : 'Period';
     
-    // Build the email HTML - simplified version
+    // Initialize tracking variables
+    let totalMetricsEvaluated = 0;
+    let meetsTargetCount = 0;
+    let outpacingPeersCount = 0;
+    let improvedCount = 0;
+    
+    // Start building HTML email
     let htmlEmail = `
+<!DOCTYPE html>
 <html>
 <head>
-<style>
-body { font-family: Arial, sans-serif; color: #333; }
-.container { max-width: 800px; margin: 0 auto; padding: 20px; }
-.header { background: #667eea; color: white; padding: 20px; border-radius: 8px; }
-.section { margin: 20px 0; }
-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-th { background: #667eea; color: white; }
-.metric-good { background: #d4edda; }
-.metric-watch { background: #fff3cd; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: -30px -30px 30px -30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.95;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .cards {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .card {
+            flex: 1;
+            min-width: 180px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card-success { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+        .card-info { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        .card-warning { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+        .card-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        .card-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #34495e;
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .metric-row-good { background: #d4edda; }
+        .metric-row-watch { background: #fff3cd; }
+        .section {
+            margin: 25px 0;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #667eea;
+        }
+        .highlight-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .watch-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .reliability-box {
+            background: #ffe0e0;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .legend {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #ddd;
+            margin-top: 30px;
+        }
+        .disclaimer {
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+            margin-top: 15px;
+        }
+    </style>
 </head>
-<body>
-<div class="container">
-<div class="header">
-<h1>Performance Summary</h1>
-<p>${weekStart} Report</p>
-</div>
+<body style="margin: 0; padding: 20px; background: #f5f5f5;">
+    <div class="container" style="background: white; padding: 30px; border-radius: 12px;">
+        <div class="header">
+            <h1>📊 Performance Summary</h1>
+            <p>${weekStart} • ${periodLabel} Report</p>
+        </div>
+        
+        <div class="greeting">Hi ${getEmployeeNickname(employeeName) || employeeName.split(' ')[0]},</div>
+        <p>Here's your performance summary for ${weekStart}.</p>
 `;
-    
-    const nickname = getEmployeeNickname(employeeName) || employeeName.split(' ')[0];
-    htmlEmail += `<p>Hi ${nickname},</p><p>Here's your performance summary for ${weekStart}.</p>`;
-    
-    // Build metrics table
+
+    // Temporarily store metrics data for later processing
     let metricsHtml = '';
+    const highlights = [];
+    const watchAreas = [];
+    let hasReliabilityMetric = false;
+    
+    // Define metrics to analyze
     const metricsToAnalyze = [
         { key: 'scheduleAdherence', label: 'Schedule Adherence', centerKey: 'adherence', lowerIsBetter: false, unit: '%' },
         { key: 'overallExperience', label: 'Overall Experience', centerKey: 'overallExperience', lowerIsBetter: false, unit: '%' },
@@ -3470,13 +3611,30 @@ th { background: #667eea; color: white; }
     
     metricsToAnalyze.forEach(metric => {
         const employeeValue = employeeToUse[metric.key];
+        
+        // Skip if employee doesn't have this metric
+        // Allow Reliability to be 0 (that's good!), but skip empty strings, null, undefined, NaN, etc.
         const isReliability = metric.key === 'reliability';
         const isEmpty = employeeValue === undefined || employeeValue === null || employeeValue === '' || isNaN(employeeValue);
         const isZeroButNotReliability = employeeValue === 0 && !isReliability;
         
-        if (isEmpty || isZeroButNotReliability) return;
+        if (isEmpty || isZeroButNotReliability) {
+            console.log(`⏭️  Skipping ${metric.label}: value=${employeeValue}`);
+            return;
+        }
         
-        // Get target
+        // Track if reliability metric is present
+        if (isReliability) {
+            hasReliabilityMetric = true;
+        }
+        
+        totalMetricsEvaluated++;
+        
+        // Get period type for comparison
+        const currentPeriodType = week.metadata?.periodType || 'week';
+        console.log(`📈 ${metric.label} - Period Type: ${currentPeriodType}`);
+        
+        // ============ TARGET CHECK ============
         const metricRegistry = METRICS_REGISTRY[metric.key];
         let meetsTarget = false;
         let targetValue = null;
@@ -3484,6 +3642,7 @@ th { background: #667eea; color: white; }
         if (metricRegistry && metricRegistry.target) {
             targetValue = metricRegistry.target.value;
             const targetType = metricRegistry.target.type;
+            
             if (targetType === 'min') {
                 meetsTarget = employeeValue >= targetValue;
             } else if (targetType === 'max') {
@@ -3491,55 +3650,208 @@ th { background: #667eea; color: white; }
             }
         }
         
-        // Get center comparison
+        if (meetsTarget) meetsTargetCount++;
+        
+        // ============ CALL CENTER AVERAGE COMPARISON ============
+        let callCenterComparison = null;
         let centerValue = null;
-        let vsCenter = 'N/A';
+        let outpacingPeers = false;
+        
         if (centerAvg && centerAvg[metric.centerKey] !== undefined && centerAvg[metric.centerKey] !== null) {
             centerValue = centerAvg[metric.centerKey];
             const meetsCenter = metric.lowerIsBetter 
                 ? employeeValue <= centerValue 
                 : employeeValue >= centerValue;
-            vsCenter = meetsCenter ? '✅ Better' : '❌ Behind';
+            outpacingPeers = meetsCenter;
+            const icon = meetsCenter ? '✅' : '❌';
+            callCenterComparison = {
+                centerAvg: centerValue,
+                status: meetsCenter ? 'meets' : 'below',
+                icon: icon
+            };
+            console.log(`  Call Center Avg: ${centerValue}, Status: ${callCenterComparison.status}, Icon: ${icon}`);
         }
         
-        const rowClass = meetsTarget ? 'metric-good' : 'metric-watch';
+        if (outpacingPeers) outpacingPeersCount++;
+        
+        // ============ TREND COMPARISON (WoW/MoM/YoY) ============
+        let trendIcon = '➖';
+        let trendDelta = 0;
+        let trendText = 'No change';
+        let improved = false;
+        
+        const previousKey = getPreviousPeriodData(weekKey, currentPeriodType);
+        if (previousKey && weeklyData[previousKey]) {
+            const prevWeekData = weeklyData[previousKey];
+            const previousEmployee = prevWeekData.employees?.find(emp => emp.name === employeeName);
+            
+            if (previousEmployee) {
+                const previousValue = previousEmployee[metric.key];
+                if (previousValue !== undefined && previousValue !== null) {
+                    const wow = compareWeekOverWeek(employeeValue, previousValue, metric.lowerIsBetter);
+                    trendIcon = wow.icon;
+                    trendDelta = wow.delta;
+                    improved = wow.status === 'improved';
+                    
+                    const sign = trendDelta > 0 ? '+' : '';
+                    const periodLabel2 = currentPeriodType === 'week' ? 'last week' : currentPeriodType === 'month' ? 'last month' : currentPeriodType === 'ytd' ? 'last year' : 'last period';
+                    trendText = `${sign}${trendDelta.toFixed(1)}${metric.unit} vs ${periodLabel2}`;
+                    
+                    console.log(`  ${currentPeriodType === 'week' ? 'WoW' : currentPeriodType === 'month' ? 'MoM' : 'YoY'}: ${previousValue} → ${employeeValue}, Delta: ${trendDelta}, Icon: ${trendIcon}`);
+                    
+                    // Add to highlights if improved
+                    if (improved) {
+                        improvedCount++;
+                        highlights.push({
+                            label: metric.label,
+                            value: employeeValue,
+                            unit: metric.unit,
+                            centerValue: centerValue,
+                            trendText: trendText,
+                            icon: trendIcon
+                        });
+                    }
+                }
+            }
+        } else {
+            console.log(`  No previous ${currentPeriodType} data available`);
+        }
+        
+        // Build HTML table row
+        const rowClass = meetsTarget ? 'metric-row-good' : 'metric-row-watch';
         const statusIcon = meetsTarget ? '✅' : '❌';
+        const vsCenter = centerValue !== null ? (outpacingPeers ? '📈 Better' : '📉 Behind') : 'N/A';
         
         metricsHtml += `
             <tr class="${rowClass}">
                 <td>${statusIcon} ${metric.label}</td>
-                <td>${employeeValue.toFixed(1)}${metric.unit}</td>
-                <td>${centerValue !== null ? centerValue.toFixed(1) + metric.unit : 'N/A'}</td>
-                <td>${targetValue !== null ? targetValue + metric.unit : 'N/A'}</td>
-                <td>${vsCenter}</td>
+                <td style="text-align: center; font-weight: bold;">${employeeValue.toFixed(1)}${metric.unit}</td>
+                <td style="text-align: center;">${centerValue !== null ? centerValue.toFixed(1) + metric.unit : 'N/A'}</td>
+                <td style="text-align: center;">${targetValue !== null ? targetValue + metric.unit : 'N/A'}</td>
+                <td style="text-align: center;">${vsCenter}</td>
+                <td style="text-align: center;">${trendIcon} ${trendText}</td>
             </tr>
         `;
+        
+        // Track for watch areas
+        if (callCenterComparison && callCenterComparison.status === 'below') {
+            const targetStats = getTargetHitRate(employeeName, metric.key, currentPeriodType);
+            const statsText = targetStats.total > 0 ? ` - Met target ${targetStats.hits}/${targetStats.total} ${getPeriodUnit(currentPeriodType, targetStats.total)}` : '';
+            watchAreas.push({
+                label: metric.label,
+                value: employeeValue,
+                unit: metric.unit,
+                centerValue: centerValue,
+                statsText: statsText
+            });
+        }
     });
     
+    // Add visual cards to HTML email (Outlook-safe table layout)
     htmlEmail += `
-    <div class="section">
-        <h3>Your Metrics</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Your Value</th>
-                    <th>Center Avg</th>
-                    <th>Target</th>
-                    <th>vs. Center</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${metricsHtml}
-            </tbody>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0; border-collapse: collapse;">
+            <tr>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d4edda; background: #d4edda; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">✅ Meeting Target Goals</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${meetsTargetCount}/${totalMetricsEvaluated}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((meetsTargetCount/totalMetricsEvaluated)*100) : 0}% Success Rate</div>
+                        </td></tr>
+                    </table>
+                </td>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #d1ecf1; background: #d1ecf1; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">📈 Outpacing Your Peers</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${outpacingPeersCount}/${totalMetricsEvaluated}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">${totalMetricsEvaluated > 0 ? Math.round((outpacingPeersCount/totalMetricsEvaluated)*100) : 0}% Above Center</div>
+                        </td></tr>
+                    </table>
+                </td>
+                <td width="33%" style="padding: 10px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #fff3cd; background: #fff3cd; border-radius: 8px;">
+                        <tr><td style="padding: 12px; text-align: center; font-family: Arial, sans-serif;">
+                            <div style="font-size: 12px; color: #2c3e50; font-weight: bold;">⬆️ Improved Metrics</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 6px 0;">${improvedCount}</div>
+                            <div style="font-size: 12px; color: #2c3e50;">From ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'}</div>
+                        </td></tr>
+                    </table>
+                </td>
+            </tr>
         </table>
-    </div>
+        
+        <div class="section">
+            <div class="section-title">📊 Your Metrics</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th style="text-align: center;">Your Value</th>
+                        <th style="text-align: center;">Center Avg</th>
+                        <th style="text-align: center;">Target</th>
+                        <th style="text-align: center;">vs. Center</th>
+                        <th style="text-align: center;">Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${metricsHtml}
+                </tbody>
+            </table>
+        </div>
+    `;
     
-    <div class="section">
-        <p>Let me know if you have any questions about these results.</p>
-        <p style="color: #999; font-size: 12px;">Disclaimer: This summary is close enough to use as a guide. YTD stats will be used in future shift bids.</p>
+    // Only show highlights if there are any
+    if (highlights.length > 0) {
+        htmlEmail += `
+        <div class="highlight-box">
+            <div class="section-title">✨ Highlights (Improved from ${periodLabel === 'Week' ? 'Last Week' : periodLabel === 'Month' ? 'Last Month' : 'Last Period'})</div>
+        `;
+        highlights.slice(0, 3).forEach(h => {
+            htmlEmail += `<div>• ${h.label}: <strong>${h.value.toFixed(1)}${h.unit}</strong> ${h.icon} <em>${h.trendText}</em></div>`;
+        });
+        htmlEmail += `</div>`;
+    }
+    
+    // Only show watch areas if there are any
+    if (watchAreas.length > 0) {
+        htmlEmail += `
+        <div class="watch-box">
+            <div class="section-title">📈 Focus Areas (Below Center Average)</div>
+        `;
+        watchAreas.slice(0, 3).forEach(w => {
+            htmlEmail += `<div>• ${w.label}: <strong>${w.value.toFixed(1)}${w.unit}</strong> (Center: ${w.centerValue.toFixed(1)}${w.unit})${w.statsText}</div>`;
+        });
+        htmlEmail += `</div>`;
+    }
+    
+    // Reliability explanation section (if metric exists and has a value > 0)
+    if (hasReliabilityMetric && employeeToUse.reliability > 0) {
+        htmlEmail += `
+        <div class="reliability-box">
+            <div class="section-title">📋 Reliability Note</div>
+            <p>You have <strong>${employeeToUse.reliability} hours</strong> of unscheduled time. This represents time missed that was not pre-approved in Verint and not covered by sick time. If you would like to use sick time to cover this, please let me know.</p>
+            <p><strong>Important:</strong> You have 40 hours of sick time to cover unscheduled/unplanned time missed. After those 40 hours are used, any time missed that is not pre-scheduled will be subject to our attendance policy.</p>
+            <p>If you feel this was done in error, let me know and I can research further.</p>
+        </div>
+        `;
+    }
+    
+    // Legend and closing
+    htmlEmail += `
+        <div class="legend">
+            <strong>Legend:</strong> ✅ = Meeting target | ❌ = Below target | 📈 = Better than center | 📉 = Behind center | ⬆️ = Improved | ⬇️ = Declined | ➖ = No change
+        </div>
+        
+        <p>Let me know if you have any questions or want to discuss these results.</p>
+        
+        <div class="footer">
+            <p>Keep up the great work! 🌟</p>
+            <div class="disclaimer">
+                Disclaimer: This summary is close enough to use as a guide. YTD stats will be used in future shift bids.
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>
     `;
