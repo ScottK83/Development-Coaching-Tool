@@ -258,28 +258,25 @@
             // Create canvas
             const canvas = document.createElement('canvas');
             canvas.width = 900;
-            canvas.height = 1200;
+            canvas.height = 1300;
             const ctx = canvas.getContext('2d');
 
             // Background
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(0, 0, 900, 1300);
+
+            let y = 40;
+
+            // Greeting
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, 900, 1200);
+            ctx.font = '20px Arial';
+            ctx.fillText(`Hi ${empName},`, 50, y);
+            y += 50;
 
-            // Header with gradient
-            const gradient = ctx.createLinearGradient(0, 0, 900, 100);
-            gradient.addColorStop(0, '#667eea');
-            gradient.addColorStop(1, '#764ba2');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 900, 100);
-
-            // Header text
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 32px Arial';
-            ctx.fillText('Performance Trend Report', 50, 55);
-            ctx.font = '18px Arial';
-            ctx.fillText(`${empName} | ${period.startDate} to ${period.endDate}`, 50, 85);
-
-            let y = 140;
+            // Summary line
+            ctx.font = '16px Arial';
+            ctx.fillText(`Here's your performance summary for Week ending ${period.endDate}.`, 50, y);
+            y += 60;
 
             // Metrics comparison
             const metrics = current.metrics;
@@ -288,7 +285,6 @@
             // Count summary cards
             let meetingGoals = 0;
             let improved = 0;
-            let declined = 0;
 
             Object.keys(metrics).forEach(metric => {
                 const curr = parseFloat(metrics[metric]) || 0;
@@ -297,26 +293,28 @@
                 
                 if (isMetricGood(metric, curr, target)) meetingGoals++;
                 if (prev && curr > prev) improved++;
-                if (prev && curr < prev) declined++;
             });
 
-            // Draw summary cards
-            drawCard(ctx, 50, y, 250, 120, '#d4edda', '#155724', '✅ Meeting Goals', `${meetingGoals}/${Object.keys(metrics).length}`, `${Math.round(meetingGoals/Object.keys(metrics).length*100)}% Success`);
-            drawCard(ctx, 325, y, 250, 120, '#fff3cd', '#664d03', '📈 Improved', improved.toString(), 'vs Last Period');
-            drawCard(ctx, 600, y, 250, 120, '#f8d7da', '#721c24', '📉 Declined', declined.toString(), 'vs Last Period');
+            const totalMetrics = Object.keys(metrics).length;
+            const successRate = Math.round(meetingGoals / totalMetrics * 100);
+
+            // Draw summary cards with borders
+            drawBorderedCard(ctx, 50, y, 250, 120, '#ffffff', '#28a745', '✅ Meeting Target Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+            drawBorderedCard(ctx, 325, y, 250, 120, '#ffffff', '#6c757d', '📊 Outpacing Your Peers', `${meetingGoals}/${totalMetrics}`, `${successRate}% Above Center`);
+            drawBorderedCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improved.toString(), 'From Last Week');
 
             y += 150;
 
-            // Metrics table
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 20px Arial';
-            ctx.fillText('Metrics Detail', 50, y);
-            y += 30;
+            // "Your Metrics" header
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('📊 Your Metrics', 50, y);
+            y += 40;
 
             // Table headers
-            ctx.fillStyle = '#f8f9fa';
+            ctx.fillStyle = '#2c2c2c';
             ctx.fillRect(50, y, 800, 40);
-            ctx.fillStyle = '#333';
+            ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 14px Arial';
             ctx.fillText('Metric', 60, y + 25);
             ctx.fillText('Current', 350, y + 25);
@@ -334,12 +332,10 @@
                 const status = isMetricGood(metric, curr, target) ? '✓' : '✗';
 
                 // Alternating row colors
-                if (idx % 2 === 0) {
-                    ctx.fillStyle = '#f9f9f9';
-                    ctx.fillRect(50, y, 800, 35);
-                }
+                ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+                ctx.fillRect(50, y, 800, 35);
 
-                ctx.fillStyle = '#333';
+                ctx.fillStyle = '#ffffff';
                 ctx.font = '13px Arial';
                 ctx.fillText(metric, 60, y + 22);
                 ctx.fillText(curr.toFixed(2), 350, y + 22);
@@ -355,7 +351,7 @@
 
             // Footer
             y += 30;
-            ctx.fillStyle = '#666';
+            ctx.fillStyle = '#999';
             ctx.font = '12px Arial';
             ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
 
@@ -374,6 +370,32 @@
                     window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
                 }, 500);
             }, 'image/png');
+        }
+
+        function drawBorderedCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
+            // Card background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(x, y, w, h);
+            
+            // Border
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+
+            // Text
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + w/2, y + 30);
+            
+            ctx.font = 'bold 40px Arial';
+            ctx.fillText(mainText, x + w/2, y + 75);
+            
+            ctx.font = '13px Arial';
+            ctx.fillStyle = '#666';
+            ctx.fillText(subText, x + w/2, y + 100);
+            
+            ctx.textAlign = 'left';
         }
 
         function drawCard(ctx, x, y, w, h, bgColor, textColor, title, mainText, subText) {
