@@ -1425,6 +1425,13 @@ function copyToClipboard() {
 // ============================================
 
 function initializeEventHandlers() {
+    console.log('🔧 initializeEventHandlers() STARTED');
+    console.log('🔍 Checking for delete buttons...');
+    console.log('  exportDataBtn:', document.getElementById('exportDataBtn') ? 'FOUND' : 'NOT FOUND');
+    console.log('  importDataBtn:', document.getElementById('importDataBtn') ? 'FOUND' : 'NOT FOUND');
+    console.log('  deleteSelectedWeekBtn:', document.getElementById('deleteSelectedWeekBtn') ? 'FOUND' : 'NOT FOUND');
+    console.log('  deleteAllDataBtn:', document.getElementById('deleteAllDataBtn') ? 'FOUND' : 'NOT FOUND');
+    
     // Upload period type buttons
     let selectedUploadPeriod = 'week'; // default
     document.querySelectorAll('.upload-period-btn').forEach(btn => {
