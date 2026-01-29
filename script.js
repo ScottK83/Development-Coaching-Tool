@@ -3201,7 +3201,72 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
 }
 
 function createTrendEmailImage(empName, period, current, previous) {
-    // Create canvas
+    // ============================================
+    // PHASE 5 - SINGLE-SOURCE EMAIL GENERATION
+    // ============================================
+    
+    if (!current) {
+        console.error('Invalid employee data:', current);
+        showToast('❌ Employee data is missing', 5000);
+        return;
+    }
+
+    // SINGLE LOAD - Use for all calculations
+    const metricOrder = getMetricOrder();
+    const metrics = {};
+    const prevMetrics = {};
+    
+    metricOrder.forEach(({ key }) => {
+        if (current[key] !== undefined) {
+            metrics[key] = current[key];
+        }
+        if (previous && previous[key] !== undefined) {
+            prevMetrics[key] = previous[key];
+        }
+    });
+
+    // SINGLE DATA SOURCE - Center averages
+    const callCenterAverages = loadCallCenterAverages();
+    const centerAvg = callCenterAverages[period.startDate] || {};
+
+    console.log('📊 Email generation started for:', empName);
+    console.log('Center averages:', centerAvg);
+
+    // SUMMARY STATISTICS (used by both canvas and HTML)
+    let meetingGoals = 0;
+    let improved = 0;
+    let beatingCenter = 0;
+
+    metricOrder.forEach(({ key }) => {
+        if (metrics[key] === undefined) return;
+        
+        const curr = parseFloat(metrics[key]) || 0;
+        const target = getMetricTarget(key);
+        const center = parseFloat(centerAvg[key]) || 0;
+        
+        if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
+        
+        // Check if beating center average
+        if (center > 0) {
+            const isReverse = isReverseMetric(key);
+            if (isReverse ? curr < center : curr > center) {
+                beatingCenter++;
+            }
+        }
+        
+        // Only count improvements if we have previous data
+        if (previous && prevMetrics[key] !== undefined) {
+            const prev = parseFloat(prevMetrics[key]) || 0;
+            if (curr > prev) improved++;
+        }
+    });
+
+    const totalMetrics = Object.keys(metrics).length;
+    const successRate = Math.round(meetingGoals / totalMetrics * 100);
+    const improvedText = previous ? improved.toString() : 'N/A';
+    const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
+
+    // CREATE CANVAS IMAGE
     const canvas = document.createElement('canvas');
     canvas.width = 900;
     canvas.height = 1400;
@@ -3213,7 +3278,7 @@ function createTrendEmailImage(empName, period, current, previous) {
 
     let y = 0;
 
-    // Blue gradient header (matching webpage)
+    // Blue gradient header
     const gradient = ctx.createLinearGradient(0, 0, 900, 100);
     gradient.addColorStop(0, '#003DA5');
     gradient.addColorStop(1, '#0056B3');
@@ -3241,79 +3306,14 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
     y += 50;
 
-    // Metrics comparison - validate data structure
-    if (!current) {
-        console.error('Invalid employee data:', current);
-        showToast('❌ Employee data is missing', 5000);
-        return;
-    }
-
-    // Metrics are direct properties on the employee object
-    // Filter to only include the metrics we want to show
-    const metricOrder = getMetricOrder();
-    const metrics = {};
-    const prevMetrics = {};
-    
-    // Only include metrics that are in our defined order
-    metricOrder.forEach(({ key }) => {
-        if (current[key] !== undefined) {
-            metrics[key] = current[key];
-        }
-        if (previous && previous[key] !== undefined) {
-            prevMetrics[key] = previous[key];
-        }
-    });
-
-    // Get center averages for this period
-    const callCenterAverages = loadCallCenterAverages();
-    const centerAvg = callCenterAverages[period.startDate] || {};
-
-    console.log('Center averages:', centerAvg);
-
-    // Count summary cards - only count metrics that exist
-    let meetingGoals = 0;
-    let improved = 0;
-    let beatingCenter = 0;
-
-    metricOrder.forEach(({ key }) => {
-        if (metrics[key] === undefined) return;
-        
-        const curr = parseFloat(metrics[key]) || 0;
-        const target = getMetricTarget(key);
-        const center = parseFloat(centerAvg[key]) || 0;
-        
-        if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
-        
-        // Check if beating center average
-        if (center > 0) {
-            const lowerMetric = key.toLowerCase();
-            const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
-                                  lowerMetric.includes('defect') || lowerMetric.includes('transfer');
-            if (isLowerBetter ? curr < center : curr > center) {
-                beatingCenter++;
-            }
-        }
-        
-        // Only count improvements if we have previous data
-        if (previous && prevMetrics[key] !== undefined) {
-            const prev = parseFloat(prevMetrics[key]) || 0;
-            if (curr > prev) improved++;
-        }
-    });
-
-    const totalMetrics = Object.keys(metrics).length;
-    const successRate = Math.round(meetingGoals / totalMetrics * 100);
-    const improvedText = previous ? improved.toString() : 'N/A';
-    const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
-
-    // Draw summary cards with white background and colored borders
+    // Summary cards (using shared statistics)
     drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
     drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📊 Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
     drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '🔼 Improved', improvedText, improvedSub);
 
     y += 140;
 
-    // "Your Metrics" section header with light blue background
+    // Metrics section header
     ctx.fillStyle = '#e3f2fd';
     ctx.fillRect(40, y, 820, 50);
     ctx.fillStyle = '#003DA5';
@@ -3321,7 +3321,7 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillText('📊 Your Metrics', 50, y + 32);
     y += 70;
 
-    // Table headers with blue background
+    // Table headers
     ctx.fillStyle = '#003DA5';
     ctx.fillRect(40, y, 820, 45);
     ctx.fillStyle = '#ffffff';
@@ -3335,21 +3335,17 @@ function createTrendEmailImage(empName, period, current, previous) {
     
     y += 45;
 
-    // PHASE 3.2 - GROUPED TABLE LAYOUT WITH NEW RENDERER
+    // RENDER METRICS using Phase 3 renderer
     let currentGroup = null;
     let rowIdx = 0;
     
     metricOrder.forEach(({ key, group }) => {
-        // Skip if metric doesn't exist in data
         if (metrics[key] === undefined) return;
         
         const metric = METRICS_REGISTRY[key];
-        if (!metric) {
-            console.warn(`⚠️ Metric not in registry: ${key}`);
-            return;
-        }
+        if (!metric) return;
         
-        // Draw group header if entering a new group
+        // Draw group header
         if (group !== currentGroup) {
             currentGroup = group;
             ctx.fillStyle = '#e3f2fd';
@@ -3358,7 +3354,7 @@ function createTrendEmailImage(empName, period, current, previous) {
             ctx.font = 'bold 16px Arial';
             ctx.fillText(`📋 ${group}`, 50, y + 26);
             y += 45;
-            rowIdx = 0; // Reset row index for new group
+            rowIdx = 0;
         }
         
         const curr = parseFloat(metrics[key]) || 0;
@@ -3366,27 +3362,12 @@ function createTrendEmailImage(empName, period, current, previous) {
         const center = parseFloat(centerAvg[key]) || 0;
         const target = getMetricTarget(key);
         
-        // Use the PHASE 3.1 metric row renderer
-        renderMetricRow(
-            ctx,
-            40,                    // x position
-            y,                     // y position
-            820,                   // width
-            38,                    // height
-            metric,                // metric definition from METRICS_REGISTRY
-            curr,                  // associate value
-            center,                // center average
-            target,                // goal target
-            prev || undefined,     // previous value (for trending)
-            rowIdx,                // row index (for alternating colors)
-            rowIdx % 2 === 0 ? '#f8f9fa' : '#ffffff'  // alternating color
-        );
-
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '');
         y += 38;
         rowIdx++;
     });
 
-    // Footer with light background
+    // Footer
     y += 20;
     ctx.fillStyle = '#f8f9fa';
     ctx.fillRect(0, y, 900, 50);
@@ -3395,7 +3376,7 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y + 30);
     ctx.fillText('Development Coaching Tool', 700, y + 30);
 
-    // Convert to image and copy to clipboard
+    // Convert to image blob and handle output
     canvas.toBlob(blob => {
         if (!blob) {
             console.error('Failed to create blob from canvas');
@@ -3403,14 +3384,14 @@ function createTrendEmailImage(empName, period, current, previous) {
             return;
         }
 
-        console.log('Canvas blob created successfully');
+        console.log('✅ Canvas image created successfully');
 
         // Try clipboard copy
         if (navigator.clipboard && navigator.clipboard.write) {
             navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]).then(() => {
-                console.log('✅ Copied to clipboard');
+                console.log('✅ Image copied to clipboard');
                 showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook
@@ -3419,7 +3400,6 @@ function createTrendEmailImage(empName, period, current, previous) {
                 }, 500);
             }).catch(err => {
                 console.error('Clipboard error:', err);
-                // Fallback to download
                 downloadImageFallback(blob, empName, period);
             });
         } else {
