@@ -1478,7 +1478,8 @@ function initializeEventHandlers() {
         renderExecutiveSummary();
     });
     
-    document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
+    // TEMPORARILY DISABLED - function doesn't exist
+    // document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
     
     // LEGACY COACHING WORKFLOW — DO NOT DELETE OR REFACTOR
     document.getElementById('copyCoachingPromptBtn')?.addEventListener('click', copyCoachingPrompt);
