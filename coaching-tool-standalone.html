@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Development Coaching Tool - Standalone</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        h2 { color: #2196F3; margin: 20px 0 10px; font-size: 1.3em; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        .section { display: none; }
+        .section.active { display: block; }
+        textarea { width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }
+        input, select { padding: 8px; border: 2px solid #ddd; border-radius: 4px; font-size: 14px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-group { margin-bottom: 20px; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #333; color: white; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; animation: slideIn 0.3s; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #2196F3; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .data-table th { background: #f8f9fa; font-weight: 600; }
+        .date-inputs { display: flex; gap: 15px; margin-bottom: 15px; }
+        .date-inputs > div { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Development Coaching Tool</h1>
+        <p class="subtitle">Metric tracking and trend analysis</p>
+        
+        <div class="nav-buttons">
+            <button class="btn-secondary" onclick="showSection('upload')">📊 Upload Data</button>
+            <button class="btn-primary" onclick="showSection('trends')">📈 Metric Trends</button>
+            <button class="btn-warning" onclick="showSection('manage')">🗄️ Manage Data</button>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload" class="section active">
+            <h2>📊 Upload New Data</h2>
+            <p style="color: #666; margin-bottom: 15px;">Paste data from PowerBI. Format: Employee | Metric1 | Metric2 | ...</p>
+            
+            <div class="form-group">
+                <label>PowerBI Data:</label>
+                <textarea id="pasteData" placeholder="Paste data here..."></textarea>
+            </div>
+
+            <div class="date-inputs">
+                <div>
+                    <label>Start Date:</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div>
+                    <label>End Date:</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+
+            <button class="btn-success" onclick="loadData()">Load Data</button>
+        </div>
+
+        <!-- Trends Section -->
+        <div id="trends" class="section">
+            <h2>📈 Generate Metric Trend Email</h2>
+            
+            <div class="form-group">
+                <label>Employee:</label>
+                <select id="trendEmployee"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Period:</label>
+                <select id="trendPeriod"></select>
+            </div>
+
+            <button class="btn-success" onclick="generateEmail()">Generate & Download Email Image</button>
+        </div>
+
+        <!-- Manage Section -->
+        <div id="manage" class="section">
+            <h2>🗄️ Manage Data</h2>
+            
+            <div class="form-group">
+                <label>Delete Period:</label>
+                <select id="deletePeriod"></select>
+                <button class="btn-warning" onclick="deletePeriod()" style="margin-top: 10px;">Delete Selected</button>
+            </div>
+
+            <h3 style="margin-top: 30px;">Stored Periods:</h3>
+            <div id="periodsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE MANAGEMENT =====
+        const appState = {
+            data: JSON.parse(localStorage.getItem('coachingData') || '{}')
+        };
+
+        function saveState() {
+            localStorage.setItem('coachingData', JSON.stringify(appState.data));
+        }
+
+        // ===== UI HELPERS =====
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'trends') populateTrendsDropdowns();
+            if (id === 'manage') populateManageSection();
+        }
+
+        function showToast(msg, duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ===== DATA LOADING =====
+        function loadData() {
+            const data = document.getElementById('pasteData').value.trim();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!data || !startDate || !endDate) {
+                showToast('Please fill all fields');
+                return;
+            }
+
+            const lines = data.split('\n').filter(l => l.trim());
+            if (lines.length < 2) {
+                showToast('Need at least header + 1 data row');
+                return;
+            }
+
+            const headers = lines[0].split('\t').map(h => h.trim());
+            const nameCol = headers.findIndex(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('employee'));
+            
+            if (nameCol === -1) {
+                showToast('Could not find employee name column');
+                return;
+            }
+
+            const weekKey = `${startDate}_${endDate}`;
+            const employees = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split('\t');
+                if (cols.length <= nameCol) continue;
+
+                const name = cols[nameCol].trim();
+                if (!name) continue;
+
+                const metrics = {};
+                headers.forEach((header, idx) => {
+                    if (idx !== nameCol) {
+                        const val = cols[idx]?.trim() || '';
+                        metrics[header] = isNaN(val) ? val : parseFloat(val);
+                    }
+                });
+
+                employees.push({ name, metrics });
+            }
+
+            if (employees.length === 0) {
+                showToast('No valid data found');
+                return;
+            }
+
+            appState.data[weekKey] = {
+                startDate,
+                endDate,
+                employees,
+                headers: headers.filter((_, i) => i !== nameCol)
+            };
+
+            saveState();
+            showToast(`✅ Loaded ${employees.length} employees for ${startDate} to ${endDate}`);
+            document.getElementById('pasteData').value = '';
+        }
+
+        // ===== TRENDS =====
+        function populateTrendsDropdowns() {
+            const empSelect = document.getElementById('trendEmployee');
+            const periodSelect = document.getElementById('trendPeriod');
+            
+            empSelect.innerHTML = '<option value="">Select Employee</option>';
+            periodSelect.innerHTML = '<option value="">Select Period</option>';
+
+            const periods = Object.keys(appState.data).sort().reverse();
+            if (periods.length === 0) {
+                showToast('No data available');
+                return;
+            }
+
+            // Get employees from latest period
+            const latestPeriod = periods[0];
+            const employees = appState.data[latestPeriod].employees.map(e => e.name).sort();
+            employees.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                empSelect.appendChild(opt);
+            });
+
+            periods.forEach(key => {
+                const period = appState.data[key];
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${period.startDate} to ${period.endDate}`;
+                periodSelect.appendChild(opt);
+            });
+        }
+
+        function generateEmail() {
+            const empName = document.getElementById('trendEmployee').value;
+            const weekKey = document.getElementById('trendPeriod').value;
+
+            if (!empName || !weekKey) {
+                showToast('Please select employee and period');
+                return;
+            }
+
+            const period = appState.data[weekKey];
+            const employee = period.employees.find(e => e.name === empName);
+            
+            if (!employee) {
+                showToast('Employee not found in selected period');
+                return;
+            }
+
+            // Get previous period
+            const allPeriods = Object.keys(appState.data).sort();
+            const currentIdx = allPeriods.indexOf(weekKey);
+            const prevPeriod = currentIdx > 0 ? appState.data[allPeriods[currentIdx - 1]] : null;
+            const prevEmployee = prevPeriod?.employees.find(e => e.name === empName);
+
+            // Build email content
+            showToast('⏳ Creating email image...');
+            
+            setTimeout(() => {
+                createEmailImage(empName, period, employee, prevEmployee);
+            }, 100);
+        }
+
+        function createEmailImage(empName, period, current, previous) {
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 900;
+            canvas.height = 1200;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 900, 1200);
+
+            // Header with gradient
+            const gradient = ctx.createLinearGradient(0, 0, 900, 100);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 900, 100);
+
+            // Header text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText('Performance Trend Report', 50, 55);
+            ctx.font = '18px Arial';
+            ctx.fillText(`${empName} | ${period.startDate} to ${period.endDate}`, 50, 85);
+
+            let y = 140;
+
+            // Metrics comparison
+            const metrics = current.metrics;
+            const prevMetrics = previous?.metrics || {};
+
+            // Count summary cards
+            let meetingGoals = 0;
+            let improved = 0;
+            let declined = 0;
+
+            Object.keys(metrics).forEach(metric => {
+                const curr = parseFloat(metrics[metric]) || 0;
+                const prev = parseFloat(prevMetrics[metric]) || 0;
+                const target = getTarget(metric);
+                
+                if (isMetricGood(metric, curr, target)) meetingGoals++;
+                if (prev && curr > prev) improved++;
+                if (prev && curr < prev) declined++;
+            });
+
+            // Draw summary cards
+            drawCard(ctx, 50, y, 250, 120, '#d4edda', '#155724', '✅ Meeting Goals', `${meetingGoals}/${Object.keys(metrics).length}`, `${Math.round(meetingGoals/Object.keys(metrics).length*100)}% Success`);
+            drawCard(ctx, 325, y, 250, 120, '#fff3cd', '#664d03', '📈 Improved', improved.toString(), 'vs Last Period');
+            drawCard(ctx, 600, y, 250, 120, '#f8d7da', '#721c24', '📉 Declined', declined.toString(), 'vs Last Period');
+
+            y += 150;
+
+            // Metrics table
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText('Metrics Detail', 50, y);
+            y += 30;
+
+            // Table headers
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(50, y, 800, 40);
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('Metric', 60, y + 25);
+            ctx.fillText('Current', 350, y + 25);
+            ctx.fillText('Previous', 500, y + 25);
+            ctx.fillText('Change', 650, y + 25);
+            ctx.fillText('Status', 750, y + 25);
+            y += 40;
+
+            // Table rows
+            Object.keys(metrics).forEach((metric, idx) => {
+                const curr = parseFloat(metrics[metric]) || 0;
+                const prev = parseFloat(prevMetrics[metric]) || 0;
+                const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
+                const target = getTarget(metric);
+                const status = isMetricGood(metric, curr, target) ? '✓' : '✗';
+
+                // Alternating row colors
+                if (idx % 2 === 0) {
+                    ctx.fillStyle = '#f9f9f9';
+                    ctx.fillRect(50, y, 800, 35);
+                }
+
+                ctx.fillStyle = '#333';
+                ctx.font = '13px Arial';
+                ctx.fillText(metric, 60, y + 22);
+                ctx.fillText(curr.toFixed(2), 350, y + 22);
+                ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
+                ctx.fillText(change, 650, y + 22);
+                
+                ctx.fillStyle = status === '✓' ? '#28a745' : '#dc3545';
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(status, 760, y + 22);
+
+                y += 35;
+            });
+
+            // Footer
+            y += 30;
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
+
+            // Convert to image and download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `TrendReport_${empName}_${period.startDate}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Email image downloaded!');
+                
+                // Also open Outlook
+                setTimeout(() => {
+                    window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                }, 500);
+            }, 'image/png');
+        }
+
+        function drawCard(ctx, x, y, w, h, bgColor, textColor, title, mainText, subText) {
+            // Card background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(x, y, w, h);
+            
+            // Border
+            ctx.strokeStyle = textColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+
+            // Text
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + w/2, y + 25);
+            
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText(mainText, x + w/2, y + 70);
+            
+            ctx.font = '12px Arial';
+            ctx.fillText(subText, x + w/2, y + 95);
+            
+            ctx.textAlign = 'left';
+        }
+
+        function getTarget(metric) {
+            const lowerMetric = metric.toLowerCase();
+            if (lowerMetric.includes('oee') || lowerMetric.includes('utilization')) return 85;
+            if (lowerMetric.includes('quality') || lowerMetric.includes('yield')) return 95;
+            if (lowerMetric.includes('downtime')) return 5;
+            if (lowerMetric.includes('scrap')) return 2;
+            return 90;
+        }
+
+        function isMetricGood(metric, value, target) {
+            const lowerMetric = metric.toLowerCase();
+            const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || lowerMetric.includes('defect');
+            return isLowerBetter ? value <= target : value >= target;
+        }
+
+        // ===== MANAGE DATA =====
+        function populateManageSection() {
+            const deleteSelect = document.getElementById('deletePeriod');
+            const periodsList = document.getElementById('periodsList');
+
+            deleteSelect.innerHTML = '<option value="">Select Period</option>';
+            periodsList.innerHTML = '';
+
+            const periods = Object.keys(appState.data).sort().reverse();
+            
+            if (periods.length === 0) {
+                periodsList.innerHTML = '<p style="color: #666;">No data stored</p>';
+                return;
+            }
+
+            periods.forEach(key => {
+                const period = appState.data[key];
+                
+                // Delete dropdown
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${period.startDate} to ${period.endDate} (${period.employees.length} employees)`;
+                deleteSelect.appendChild(opt);
+
+                // List display
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.innerHTML = `
+                    <strong>${period.startDate} to ${period.endDate}</strong><br>
+                    ${period.employees.length} employees | ${period.headers.length} metrics
+                `;
+                periodsList.appendChild(card);
+            });
+        }
+
+        function deletePeriod() {
+            const key = document.getElementById('deletePeriod').value;
+            if (!key) {
+                showToast('Please select a period');
+                return;
+            }
+
+            if (confirm(`Delete period ${key}?`)) {
+                delete appState.data[key];
+                saveState();
+                showToast('✅ Period deleted');
+                populateManageSection();
+            }
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+        });
+    </script>
+</body>
+</html>
