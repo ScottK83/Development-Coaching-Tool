@@ -3874,62 +3874,219 @@ function generateTrendEmail() {
         return;
     }
     
-    const result = buildTrendEmailHtml(employeeName, weekKey, { useEdits: true });
-    if (!result) {
+    // Get current period data
+    const period = weeklyData[weekKey];
+    if (!period) {
         showToast('No data found for this period', 5000);
         return;
     }
     
-    const { htmlEmail, subject: subjectLine } = result;
-    window.latestTrendEmailHtml = htmlEmail;
+    const employee = period.employees.find(e => e.name === employeeName);
+    if (!employee) {
+        showToast('Employee not found in selected period', 5000);
+        return;
+    }
     
-    // Show converting toast
-    showToast('⏳ Converting email to image...', 3000);
+    // Get previous period
+    const allPeriods = Object.keys(weeklyData).sort();
+    const currentIdx = allPeriods.indexOf(weekKey);
+    const prevPeriod = currentIdx > 0 ? weeklyData[allPeriods[currentIdx - 1]] : null;
+    const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
     
-    // Create temporary container with the email HTML
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.width = '900px';
-    tempContainer.innerHTML = htmlEmail;
-    document.body.appendChild(tempContainer);
+    // Build email image
+    showToast('⏳ Creating email image...', 3000);
     
-    // Convert to image using html2canvas
-    html2canvas(tempContainer, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false
-    }).then(canvas => {
-        // Convert canvas to blob (JPG)
-        canvas.toBlob((blob) => {
-            // Copy image to clipboard
-            navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob })
-            ]).then(() => {
-                console.log('✅ Email image copied to clipboard');
-                
-                // Clean up
-                document.body.removeChild(tempContainer);
-                
-                // Auto-open Outlook with mailto link
-                const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
-                setTimeout(() => {
-                    window.open(outlookUrl, '_blank');
-                }, 300);
-                
-                showToast('✅ Email converted to image! Outlook opening... paste the image and send!', 5000);
-            }).catch((err) => {
-                console.error('❌ Copy failed:', err);
-                document.body.removeChild(tempContainer);
-                showToast('❌ Could not copy image to clipboard', 5000);
-            });
-        }, 'image/png');
-    }).catch(err => {
-        console.error('Error converting to image:', err);
-        document.body.removeChild(tempContainer);
-        showToast('❌ Error converting email to image', 5000);
-    });
+    setTimeout(() => {
+        createTrendEmailImage(employeeName, period, employee, prevEmployee);
+    }, 100);
 }
+
+function createTrendEmailImage(empName, period, current, previous) {
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 1300;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(0, 0, 900, 1300);
+
+    let y = 40;
+
+    // Greeting
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Hi ${empName},`, 50, y);
+    y += 50;
+
+    // Summary line
+    ctx.font = '16px Arial';
+    ctx.fillText(`Here's your performance summary for Week ending ${period.endDate}.`, 50, y);
+    y += 60;
+
+    // Metrics comparison
+    const metrics = current.metrics;
+    const prevMetrics = previous?.metrics || {};
+
+    // Count summary cards
+    let meetingGoals = 0;
+    let improved = 0;
+
+    Object.keys(metrics).forEach(metric => {
+        const curr = parseFloat(metrics[metric]) || 0;
+        const target = getMetricTarget(metric);
+        
+        if (isMetricMeetingTarget(metric, curr, target)) meetingGoals++;
+        
+        // Only count improvements if we have previous data
+        if (previous && prevMetrics[metric] !== undefined) {
+            const prev = parseFloat(prevMetrics[metric]) || 0;
+            if (curr > prev) improved++;
+        }
+    });
+
+    const totalMetrics = Object.keys(metrics).length;
+    const successRate = Math.round(meetingGoals / totalMetrics * 100);
+    const improvedText = previous ? improved.toString() : 'N/A';
+    const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
+
+    // Draw summary cards with borders
+    drawEmailCard(ctx, 50, y, 250, 120, '#ffffff', '#28a745', '✅ Meeting Target Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+    drawEmailCard(ctx, 325, y, 250, 120, '#ffffff', '#6c757d', '📊 Outpacing Your Peers', `${meetingGoals}/${totalMetrics}`, `${successRate} percent of your metrics are above center average`);
+    drawEmailCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improvedText, improvedSub);
+
+    y += 150;
+
+    // "Your Metrics" header
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('📊 Your Metrics', 50, y);
+    y += 40;
+
+    // Table headers
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(50, y, 800, 40);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('Metric', 60, y + 25);
+    ctx.fillText('Current', 350, y + 25);
+    ctx.fillText('Previous', 500, y + 25);
+    ctx.fillText('Change', 650, y + 25);
+    ctx.fillText('Status', 750, y + 25);
+    
+    // Legend
+    ctx.font = '11px Arial';
+    ctx.fillStyle = '#dc3545';
+    ctx.fillText('✗ Behind Center Average', 60, y + 60);
+    ctx.fillStyle = '#28a745';
+    ctx.fillText('✓ Better than Center Average', 60, y + 75);
+    
+    y += 85;
+
+    // Table rows
+    Object.keys(metrics).forEach((metric, idx) => {
+        const curr = parseFloat(metrics[metric]) || 0;
+        const prev = parseFloat(prevMetrics[metric]) || 0;
+        const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
+        const target = getMetricTarget(metric);
+        const isGood = isMetricMeetingTarget(metric, curr, target);
+        const status = isGood ? '✓ Better than Center Average' : '✗ Behind Center Average';
+
+        // Alternating row colors
+        ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+        ctx.fillRect(50, y, 800, 35);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '13px Arial';
+        ctx.fillText(metric, 60, y + 22);
+        ctx.fillText(curr.toFixed(2), 350, y + 22);
+        ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
+        ctx.fillText(change, 650, y + 22);
+        
+        ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
+        ctx.font = 'bold 11px Arial';
+        ctx.fillText(status, 750, y + 22);
+
+        y += 35;
+    });
+
+    // Footer
+    y += 30;
+    ctx.fillStyle = '#999';
+    ctx.font = '12px Arial';
+    ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
+
+    // Convert to image and copy to clipboard
+    canvas.toBlob(blob => {
+        navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+        ]).then(() => {
+            showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
+            
+            // Open Outlook
+            setTimeout(() => {
+                window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+            }, 500);
+        }).catch(err => {
+            console.error('Clipboard error:', err);
+            // Fallback to download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `TrendReport_${empName}_${period.startDate}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('⚠️ Could not copy to clipboard. Image downloaded instead.', 4000);
+            
+            setTimeout(() => {
+                window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+            }, 500);
+        });
+    }, 'image/png');
+}
+
+function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
+    // Card background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x, y, w, h);
+    
+    // Border
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+
+    // Text
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, x + w/2, y + 30);
+    
+    ctx.font = 'bold 40px Arial';
+    ctx.fillText(mainText, x + w/2, y + 75);
+    
+    ctx.font = '13px Arial';
+    ctx.fillStyle = '#666';
+    ctx.fillText(subText, x + w/2, y + 100);
+    
+    ctx.textAlign = 'left';
+}
+
+function getMetricTarget(metric) {
+    const lowerMetric = metric.toLowerCase();
+    if (lowerMetric.includes('oee') || lowerMetric.includes('utilization')) return 85;
+    if (lowerMetric.includes('quality') || lowerMetric.includes('yield')) return 95;
+    if (lowerMetric.includes('downtime')) return 5;
+    if (lowerMetric.includes('scrap')) return 2;
+    return 90;
+}
+
+function isMetricMeetingTarget(metric, value, target) {
+    const lowerMetric = metric.toLowerCase();
+    const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || lowerMetric.includes('defect');
+    return isLowerBetter ? value <= target : value >= target;
+}
+
 
 function generateAllTrendEmails() {
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
