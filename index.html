@@ -490,10 +490,14 @@
                     <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
                         <h3 style="color: #dc3545; margin-top: 0;">➕ Create Red Flag Coaching Email</h3>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <div>
                                 <label for="redFlagAssociateName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Associate Name:</label>
                                 <input type="text" id="redFlagAssociateName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label for="redFlagCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                                <input type="text" id="redFlagCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
                             </div>
                             <div>
                                 <label for="redFlagAccountNumber" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Account Number:</label>
@@ -503,8 +507,8 @@
                         
                         <div style="margin-bottom: 15px;">
                             <label for="redFlagReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Red Flag Reason/Details:</label>
-                            <textarea id="redFlagReason" placeholder="Describe what happened (e.g., 'Added authorized user before receiving required Picture ID from Experian verification')" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
-                            <small style="color: #666; display: block; margin-top: 5px;">Example issues: Added user without Picture ID, Completed order before Experian verification, Ignored Experian "more info needed" message</small>
+                            <textarea id="redFlagReason" placeholder="You can paste comments or describe what happened (e.g., 'Failed KIQ (JAH ADDED WITHOUT ID)' or 'Added authorized user before receiving required Picture ID from Experian verification')" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+                            <small style="color: #666; display: block; margin-top: 5px;">Examples: "Failed KIQ (JAH ADDED WITHOUT ID)", "Added user without Picture ID", "Completed order before Experian verification"</small>
                         </div>
                         
                         <button type="button" id="generateRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Generate Red Flag Coaching Email</button>
