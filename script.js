@@ -3901,29 +3901,52 @@ function generateTrendEmail() {
     }, 100);
 }
 
+function formatMetricName(camelCase) {
+    // Convert camelCase to Title Case with spaces
+    const withSpaces = camelCase.replace(/([A-Z])/g, ' $1').trim();
+    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
+
 function createTrendEmailImage(empName, period, current, previous) {
     // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = 900;
-    canvas.height = 1300;
+    canvas.height = 1400;
     const ctx = canvas.getContext('2d');
 
-    // Background
-    ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(0, 0, 900, 1300);
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 900, 1400);
 
-    let y = 40;
+    let y = 0;
+
+    // Blue gradient header (matching webpage)
+    const gradient = ctx.createLinearGradient(0, 0, 900, 100);
+    gradient.addColorStop(0, '#003DA5');
+    gradient.addColorStop(1, '#0056B3');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 900, 100);
+
+    // Header text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('📊 Performance Summary', 50, 50);
+    ctx.font = '16px Arial';
+    ctx.fillText(`Week ending ${period.endDate}`, 50, 80);
+
+    y = 130;
 
     // Greeting
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '20px Arial';
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 20px Arial';
     ctx.fillText(`Hi ${empName},`, 50, y);
-    y += 50;
+    y += 40;
 
     // Summary line
-    ctx.font = '16px Arial';
-    ctx.fillText(`Here's your performance summary for Week ending ${period.endDate}.`, 50, y);
-    y += 60;
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#666666';
+    ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
+    y += 50;
 
     // Metrics comparison - validate data structure
     if (!current) {
@@ -3977,38 +4000,33 @@ function createTrendEmailImage(empName, period, current, previous) {
     const improvedText = previous ? improved.toString() : 'N/A';
     const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
 
-    // Draw summary cards with borders
-    drawEmailCard(ctx, 50, y, 250, 120, '#ffffff', '#28a745', '✅ Meeting Target Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
-    drawEmailCard(ctx, 325, y, 250, 120, '#ffffff', '#6c757d', '📊 Outpacing Your Peers', `${meetingGoals}/${totalMetrics}`, `${successRate} percent of your metrics are above center average`);
-    drawEmailCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improvedText, improvedSub);
+    // Draw summary cards with white background and colored borders
+    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📊 Above Average', `${meetingGoals}/${totalMetrics}`, `Better than Call Center`);
+    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '🔼 Improved', improvedText, improvedSub);
 
-    y += 150;
+    y += 140;
 
-    // "Your Metrics" header
+    // "Your Metrics" section header with light blue background
+    ctx.fillStyle = '#e3f2fd';
+    ctx.fillRect(40, y, 820, 50);
+    ctx.fillStyle = '#003DA5';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('📊 Your Metrics', 50, y + 32);
+    y += 70;
+
+    // Table headers with blue background
+    ctx.fillStyle = '#003DA5';
+    ctx.fillRect(40, y, 820, 45);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px Arial';
-    ctx.fillText('📊 Your Metrics', 50, y);
-    y += 40;
-
-    // Table headers
-    ctx.fillStyle = '#2c2c2c';
-    ctx.fillRect(50, y, 800, 40);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText('Metric', 60, y + 25);
-    ctx.fillText('Current', 350, y + 25);
-    ctx.fillText('Previous', 500, y + 25);
-    ctx.fillText('Change', 650, y + 25);
-    ctx.fillText('Status', 750, y + 25);
+    ctx.font = 'bold 15px Arial';
+    ctx.fillText('Metric', 50, y + 28);
+    ctx.fillText('Current', 400, y + 28);
+    ctx.fillText('Previous', 530, y + 28);
+    ctx.fillText('Change', 660, y + 28);
+    ctx.fillText('Status', 760, y + 28);
     
-    // Legend
-    ctx.font = '11px Arial';
-    ctx.fillStyle = '#dc3545';
-    ctx.fillText('✗ Behind Center Average', 60, y + 60);
-    ctx.fillStyle = '#28a745';
-    ctx.fillText('✓ Better than Center Average', 60, y + 75);
-    
-    y += 85;
+    y += 45;
 
     // Table rows
     Object.keys(metrics).forEach((metric, idx) => {
@@ -4017,43 +4035,52 @@ function createTrendEmailImage(empName, period, current, previous) {
         const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
         const target = getMetricTarget(metric);
         const isGood = isMetricMeetingTarget(metric, curr, target);
-        const status = isGood ? '✓ Better than Center Average' : '✗ Behind Center Average';
+        const status = isGood ? '✓ Better' : '✗ Behind';
+        const formattedMetricName = formatMetricName(metric);
 
-        // Row background - light blue if meeting target, otherwise alternating dark
+        // Row background - light blue if good, white/light gray alternating otherwise
         if (isGood) {
-            ctx.fillStyle = '#add8e6'; // Light blue for good metrics
+            ctx.fillStyle = '#d4edda'; // Light green for good metrics
         } else {
-            ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+            ctx.fillStyle = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         }
-        ctx.fillRect(50, y, 800, 35);
+        ctx.fillRect(40, y, 820, 38);
 
         // Metric name with target goal
-        ctx.fillStyle = isGood ? '#000000' : '#ffffff';
-        ctx.font = '13px Arial';
-        ctx.fillText(`${metric} (Goal: ${target})`, 60, y + 22);
+        ctx.fillStyle = '#333333';
+        ctx.font = '14px Arial';
+        ctx.fillText(`${formattedMetricName} (Goal: ${target})`, 50, y + 24);
         
         // Current value
-        ctx.fillText(curr.toFixed(2), 350, y + 22);
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(curr.toFixed(2), 400, y + 24);
         
         // Previous value
-        ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
+        ctx.font = '14px Arial';
+        ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 530, y + 24);
         
         // Change percentage
-        ctx.fillText(change, 650, y + 22);
+        const changeNum = prev ? ((curr - prev) / prev * 100) : 0;
+        ctx.fillStyle = changeNum > 0 ? '#28a745' : (changeNum < 0 ? '#dc3545' : '#666666');
+        ctx.fillText(change, 660, y + 24);
         
         // Status text
-        ctx.fillStyle = isGood ? '#006400' : '#dc3545'; // Dark green on light blue, red on dark
-        ctx.font = 'bold 11px Arial';
-        ctx.fillText(status, 750, y + 22);
+        ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText(status, 760, y + 24);
 
-        y += 35;
+        y += 38;
     });
 
-    // Footer
-    y += 30;
-    ctx.fillStyle = '#999';
-    ctx.font = '12px Arial';
-    ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
+    // Footer with light background
+    y += 20;
+    ctx.fillStyle = '#f8f9fa';
+    ctx.fillRect(0, y, 900, 50);
+    ctx.fillStyle = '#666666';
+    ctx.font = '13px Arial';
+    ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y + 30);
+    ctx.fillText('Development Coaching Tool', 700, y + 30);
 
     // Convert to image and copy to clipboard
     canvas.toBlob(blob => {
@@ -4131,16 +4158,35 @@ function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, s
 
 function getMetricTarget(metric) {
     const lowerMetric = metric.toLowerCase();
+    // High percentage goals (95+)
+    if (lowerMetric.includes('quality') || lowerMetric.includes('yield') || lowerMetric.includes('fcr')) return 95;
+    // Medium-high percentage goals (90+)
+    if (lowerMetric.includes('adherence') || lowerMetric.includes('experience') || lowerMetric.includes('satisfaction') || 
+        lowerMetric.includes('sentiment') || lowerMetric.includes('positive') || lowerMetric.includes('negative') || 
+        lowerMetric.includes('emotion') || lowerMetric.includes('overall')) return 90;
+    // Lower percentage goals (85+)
     if (lowerMetric.includes('oee') || lowerMetric.includes('utilization')) return 85;
-    if (lowerMetric.includes('quality') || lowerMetric.includes('yield')) return 95;
+    // Time-based goals (seconds)
+    if (lowerMetric.includes('aht') || lowerMetric.includes('handle')) return 300; // 5 minutes
+    if (lowerMetric.includes('acw') || lowerMetric.includes('aftercall')) return 90;
+    if (lowerMetric.includes('talk') || lowerMetric.includes('talktime')) return 240; // 4 minutes
+    if (lowerMetric.includes('hold')) return 30;
+    // Reliability (hours)
+    if (lowerMetric.includes('reliability')) return 2;
+    // Lower is better metrics
     if (lowerMetric.includes('downtime')) return 5;
     if (lowerMetric.includes('scrap')) return 2;
+    if (lowerMetric.includes('transfer')) return 10;
+    // Survey/Call counts
+    if (lowerMetric.includes('survey') || lowerMetric.includes('totalcalls') || lowerMetric.includes('calls')) return 100;
+    // Default
     return 90;
 }
 
 function isMetricMeetingTarget(metric, value, target) {
     const lowerMetric = metric.toLowerCase();
-    const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || lowerMetric.includes('defect');
+    const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || 
+                          lowerMetric.includes('defect') || lowerMetric.includes('transfer');
     return isLowerBetter ? value <= target : value >= target;
 }
 
