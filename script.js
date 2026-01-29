@@ -4373,6 +4373,22 @@ function initApp() {
     console.log('? Application initialized successfully!');
 }
 
+// ============================================
+// INITIALIZATION TRIGGER
+// ============================================
+
+// Initialize app when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('📄 DOMContentLoaded fired - initializing app...');
+        initApp();
+    });
+} else {
+    // DOM already loaded (if script runs late)
+    console.log('📄 DOM already loaded - initializing app immediately...');
+    initApp();
+}
+
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
 function populateExecutiveSummaryAssociate() {
