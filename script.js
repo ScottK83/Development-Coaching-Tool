@@ -3867,6 +3867,7 @@ function buildTrendEmailHtml(employeeName, weekKey, options = {}) {
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    const nickname = document.getElementById('trendNickname')?.value.trim();
     
     if (!employeeName || !weekKey) {
         console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
@@ -3893,11 +3894,14 @@ function generateTrendEmail() {
     const prevPeriod = currentIdx > 0 ? weeklyData[allPeriods[currentIdx - 1]] : null;
     const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
     
+    // Use nickname if provided, otherwise use full name
+    const displayName = nickname || employeeName;
+    
     // Build email image
     showToast('⏳ Creating email image...', 3000);
     
     setTimeout(() => {
-        createTrendEmailImage(employeeName, period, employee, prevEmployee);
+        createTrendEmailImage(displayName, period, employee, prevEmployee);
     }, 100);
 }
 
