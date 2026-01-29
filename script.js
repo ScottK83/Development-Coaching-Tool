@@ -1504,6 +1504,9 @@ function initializeEventHandlers() {
     document.getElementById('shiftEmailsBtn')?.addEventListener('click', () => {
         showOnlySection('shiftEmailsSection');
     });
+    document.getElementById('redFlagBtn')?.addEventListener('click', () => {
+        showOnlySection('redFlagSection');
+    });
     
     // TEMPORARILY DISABLED - function doesn't exist
     // document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
@@ -1936,6 +1939,9 @@ function initializeEventHandlers() {
     
     // Initialize shift emails handlers
     initializeShiftEmails();
+    
+    // Initialize red flag handlers
+    initializeRedFlag();
 }
 
 function populateDeleteWeekDropdown() {
@@ -6094,6 +6100,136 @@ function clearShiftEmail() {
     document.getElementById('shiftEmailPreviewText').textContent = '';
     
     console.log('📅 Shift email form cleared');
+}
+
+// ============================================
+// RED FLAG COACHING FUNCTIONALITY
+// ============================================
+
+function initializeRedFlag() {
+    document.getElementById('generateRedFlagEmailBtn')?.addEventListener('click', generateRedFlagEmail);
+    document.getElementById('copyRedFlagEmailBtn')?.addEventListener('click', copyRedFlagEmail);
+    document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
+}
+
+function generateRedFlagEmail() {
+    const associateName = document.getElementById('redFlagAssociateName').value.trim();
+    const accountNumber = document.getElementById('redFlagAccountNumber').value.trim();
+    const reason = document.getElementById('redFlagReason').value.trim();
+    
+    // Validation
+    if (!associateName) {
+        alert('⚠️ Please enter the associate name.');
+        return;
+    }
+    if (!accountNumber) {
+        alert('⚠️ Please enter the account number.');
+        return;
+    }
+    if (!reason) {
+        alert('⚠️ Please enter the red flag reason/details.');
+        return;
+    }
+    
+    // Generate email
+    const emailTemplate = generateRedFlagEmailTemplate(associateName, accountNumber, reason);
+    
+    // Display preview
+    document.getElementById('redFlagEmailPreviewText').textContent = emailTemplate;
+    document.getElementById('redFlagEmailPreviewSection').style.display = 'block';
+    
+    console.log('🚩 Red flag coaching email generated for ' + associateName);
+}
+
+function generateRedFlagEmailTemplate(associateName, accountNumber, reason) {
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    const emailTemplate = `Subject: Important Coaching - Compliance with Experian Verification Procedures
+
+Hi ${associateName},
+
+I need to discuss an important compliance matter with you regarding account #${accountNumber}.
+
+Issue Identified:
+${reason}
+
+Why This Matters:
+Following Experian verification procedures is critical for regulatory compliance, fraud prevention, and protecting both our customers and the company. When Experian flags an account for additional verification, we must follow those requirements before completing any account changes.
+
+Correct Procedure:
+
+1. ALWAYS review Experian results carefully before proceeding
+2. If Experian indicates "Picture ID Required" or requests additional information:
+   - DO NOT add the authorized user or complete the order yet
+   - Place the order on HOLD
+   - Inform the customer that we need the requested documentation
+   - Explain what they need to send and how to send it
+3. Once the required documents are received:
+   - The team member who opens/receives the ID will verify it
+   - Only after verification should the order be completed
+
+Common Experian Flags to Watch For:
+• Picture ID Required
+• Additional Information Needed
+• Manual Review Required
+• Verification Pending
+
+Expectation Going Forward:
+I need you to carefully review ALL Experian results before completing any account modifications. If you're ever unsure about what action to take based on Experian's response, please ask a supervisor before proceeding.
+
+This is a serious compliance matter, and I trust that you understand the importance of following these procedures consistently. Let's schedule a time to discuss this further and ensure you're comfortable with the verification process.
+
+Please confirm you've received and understood this email.
+
+Thank you,
+Management Team`;
+    
+    return emailTemplate;
+}
+
+function copyRedFlagEmail() {
+    const emailText = document.getElementById('redFlagEmailPreviewText').textContent;
+    
+    if (!emailText.trim()) {
+        alert('⚠️ No email to copy. Please generate an email first.');
+        return;
+    }
+    
+    // Copy to clipboard
+    const textarea = document.createElement('textarea');
+    textarea.value = emailText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    
+    // Visual feedback
+    const button = document.getElementById('copyRedFlagEmailBtn');
+    const originalText = button.textContent;
+    button.textContent = '✓ Copied! Opening Outlook...';
+    
+    // Open Outlook
+    setTimeout(() => {
+        window.open('mailto:', '_blank');
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 500);
+    }, 500);
+    
+    console.log('🚩 Red flag email copied to clipboard and opening Outlook');
+}
+
+function clearRedFlagEmail() {
+    // Clear form
+    document.getElementById('redFlagAssociateName').value = '';
+    document.getElementById('redFlagAccountNumber').value = '';
+    document.getElementById('redFlagReason').value = '';
+    
+    // Hide preview
+    document.getElementById('redFlagEmailPreviewSection').style.display = 'none';
+    document.getElementById('redFlagEmailPreviewText').textContent = '';
+    
+    console.log('🚩 Red flag form cleared');
 }
 
 
