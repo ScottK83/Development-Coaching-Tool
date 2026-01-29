@@ -3892,12 +3892,23 @@ function generateTrendEmail() {
     
     navigator.clipboard.write([htmlClipboardItem]).then(() => {
         console.log('✅ HTML email copied to clipboard');
-        showToast('✅ Email preview opened & copied! Select all in preview, copy, paste in Outlook.', 5000);
+        
+        // Auto-open Outlook with mailto link
+        const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
+        setTimeout(() => {
+            window.open(outlookUrl, '_blank');
+        }, 300);
+        
+        showToast('✅ Preview opened, Outlook opening... paste the styled email and send!', 5000);
     }).catch((err) => {
         console.error('❌ Copy failed:', err);
         // Fallback to plain text if HTML clipboard fails
         navigator.clipboard.writeText(htmlEmail).then(() => {
-            showToast('📋 Email preview opened. In preview window: Ctrl+A to select all, Ctrl+C to copy', 5000);
+            const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
+            setTimeout(() => {
+                window.open(outlookUrl, '_blank');
+            }, 300);
+            showToast('📋 Preview & Outlook opened. Paste the styled email from preview and send!', 5000);
         });
     });
 }
