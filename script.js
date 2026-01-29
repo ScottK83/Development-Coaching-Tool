@@ -1462,6 +1462,10 @@ function initializeEventHandlers() {
         populateDeleteWeekDropdown();
         renderEmployeesList();
     });
+    document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
+        showOnlySection('executiveSummarySection');
+        renderExecutiveSummary();
+    });
     
     document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
     
