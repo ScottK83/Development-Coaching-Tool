@@ -1449,10 +1449,6 @@ function initializeEventHandlers() {
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
-    document.getElementById('manageTips')?.addEventListener('click', () => {
-        showOnlySection('tipsManagementSection');
-        renderTipsManagement();
-    });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
         initializeCoachingEmail();
