@@ -221,12 +221,6 @@ function showOnlySection(sectionId) {
  */
 function initializeSection(sectionId) {
     switch(sectionId) {
-        case 'coachingSection':
-            resetEmployeeSelection();
-            break;
-        case 'dashboardSection':
-            renderEmployeeHistory();
-            break;
         case 'tipsManagementSection':
             renderTipsManagement();
             break;
@@ -1364,14 +1358,6 @@ function initializeEventHandlers() {
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
-    document.getElementById('generateCoachingBtn')?.addEventListener('click', () => {
-        showOnlySection('coachingSection');
-        resetEmployeeSelection();
-    });
-    document.getElementById('employeeDashboard')?.addEventListener('click', () => {
-        showOnlySection('dashboardSection');
-        renderEmployeeHistory();
-    });
     document.getElementById('manageTips')?.addEventListener('click', () => {
         showOnlySection('tipsManagementSection');
         renderTipsManagement();
@@ -1384,10 +1370,6 @@ function initializeEventHandlers() {
         showOnlySection('manageDataSection');
         populateDeleteWeekDropdown();
         renderEmployeesList();
-    });
-    document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
-        showOnlySection('executiveSummarySection');
-        renderExecutiveSummary();
     });
     
     document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
@@ -1657,11 +1639,6 @@ function initializeEventHandlers() {
     // Generate Verint Summary Button
     document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', () => {
         generateVerintSummary();
-    });
-    
-    // Generate Outlook Email Button
-    document.getElementById('generateOutlookEmailBtn')?.addEventListener('click', () => {
-        generateOutlookEmail();
     });
     
     // Metric input highlighting - attach to all metrics in registry
@@ -1944,8 +1921,6 @@ function initializeKeyboardShortcuts() {
         }
     });
 }
-
-// TO BE CONTINUED WITH TIPS MANAGEMENT, HISTORY, AND EXPORT FUNCTIONS...
 
 // ============================================
 // TIPS MANAGEMENT UI
