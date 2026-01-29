@@ -1468,6 +1468,10 @@ function initializeEventHandlers() {
         showOnlySection('metricTrendsSection');
         initializeMetricTrends();
     });
+    document.getElementById('sentimentBtn')?.addEventListener('click', () => {
+        showOnlySection('sentimentSection');
+        initializeSentiment();
+    });
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
         populateDeleteWeekDropdown();
@@ -1485,6 +1489,14 @@ function initializeEventHandlers() {
     document.getElementById('copyCoachingPromptBtn')?.addEventListener('click', copyCoachingPrompt);
     document.getElementById('openCoachingOutlookBtn')?.addEventListener('click', openCoachingOutlook);
     document.getElementById('coachingEmployeeSelect')?.addEventListener('change', updateCoachingReview);
+    
+    // SENTIMENT ANALYSIS WORKFLOW
+    document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
+    document.getElementById('copySentimentPromptBtn')?.addEventListener('click', copySentimentPrompt);
+    document.getElementById('sentimentEmployeeSelect')?.addEventListener('change', updateSentimentReview);
+    document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
+    document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
+    document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
     
     // UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
     document.getElementById('addTipBtn')?.addEventListener('click', addNewTip);
@@ -3421,10 +3433,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const improvedText = previous ? improved.toString() : 'N/A';
     const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
 
-    // CREATE CANVAS IMAGE (increased height for legend + highlights)
+    // CREATE CANVAS IMAGE (will be resized based on content)
     const canvas = document.createElement('canvas');
     canvas.width = 900;
-    canvas.height = 1900;
+    canvas.height = 2400; // Increased to accommodate legend + all sections
     const ctx = canvas.getContext('2d');
 
     // White background
@@ -5718,4 +5730,239 @@ function escapeHtml(text) {
     };
     return text.replace(/[&<>"']/g, m => map[m]);
 }
+
+// ============================================
+// SENTIMENT ANALYSIS FUNCTIONS
+// ============================================
+
+let sentimentData = {
+    positive: { totalCalls: 0, phrases: [] },
+    negative: { totalCalls: 0, phrases: [] },
+    emotions: { totalCalls: 0, phrases: [] }
+};
+
+function initializeSentiment() {
+    console.log('🎭 Initializing Sentiment section');
+    populateSentimentEmployeeSelector();
+}
+
+function populateSentimentEmployeeSelector() {
+    const select = document.getElementById('sentimentEmployeeSelect');
+    const employeeNames = new Set();
+    
+    Object.values(weeklyData).forEach(weekData => {
+        if (weekData.employees && Array.isArray(weekData.employees)) {
+            weekData.employees.forEach(emp => {
+                if (emp.name) employeeNames.add(emp.name);
+            });
+        }
+    });
+    
+    // Keep current selection if exists
+    const currentValue = select.value;
+    
+    select.innerHTML = '<option value="">-- Choose an employee --</option>';
+    Array.from(employeeNames).sort().forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+    
+    // Restore selection
+    if (currentValue && Array.from(employeeNames).includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+function handleSentimentFileUpload(fileType) {
+    const fileInput = document.getElementById(`sentiment${fileType.charAt(0).toUpperCase() + fileType.slice(1)}File`);
+    const statusDiv = document.getElementById(`sentiment${fileType.charAt(0).toUpperCase() + fileType.slice(1)}Status`);
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        statusDiv.textContent = '';
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            const content = e.target.result;
+            const lines = content.split('\n').filter(line => line.trim());
+            
+            // Parse file format: look for "Total calls analyzed: X" and phrases with counts
+            let totalCalls = 0;
+            const phrases = [];
+            
+            for (const line of lines) {
+                // Check for total calls line
+                const totalMatch = line.match(/Total\s+calls\s+analyzed[:\s]+(\d+)/i);
+                if (totalMatch) {
+                    totalCalls = parseInt(totalMatch[1]);
+                    continue;
+                }
+                
+                // Parse phrase lines (format: phrase (X/Y) or phrase X/Y)
+                const phraseMatch = line.match(/^(.+?)\s*\((\d+)\/(\d+)\)\s*$/);
+                if (phraseMatch) {
+                    const phrase = phraseMatch[1].trim();
+                    const used = parseInt(phraseMatch[2]);
+                    const total = parseInt(phraseMatch[3]);
+                    phrases.push({ phrase, used, total });
+                    continue;
+                }
+                
+                // Also try without parentheses: phrase X/Y
+                const phraseMatch2 = line.match(/^(.+?)\s+(\d+)\/(\d+)\s*$/);
+                if (phraseMatch2) {
+                    const phrase = phraseMatch2[1].trim();
+                    const used = parseInt(phraseMatch2[2]);
+                    const total = parseInt(phraseMatch2[3]);
+                    phrases.push({ phrase, used, total });
+                }
+            }
+            
+            // Store parsed data
+            const keyMap = { positive: 'positive', negative: 'negative', emotions: 'emotions' };
+            sentimentData[keyMap[fileType]] = { totalCalls, phrases };
+            
+            statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
+            statusDiv.style.color = '#4caf50';
+        } catch (error) {
+            statusDiv.textContent = `❌ Error parsing file`;
+            statusDiv.style.color = '#f44336';
+            console.error('File parsing error:', error);
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function updateSentimentReview() {
+    const employeeName = document.getElementById('sentimentEmployeeSelect').value;
+    
+    if (!employeeName) {
+        return;
+    }
+    
+    // Employee selected - enable generate button
+    document.getElementById('generateSentimentPromptBtn').style.opacity = '1';
+    document.getElementById('generateSentimentPromptBtn').style.cursor = 'pointer';
+}
+
+function generateSentimentPrompt() {
+    const employeeName = document.getElementById('sentimentEmployeeSelect').value;
+    const promptArea = document.getElementById('sentimentPromptArea');
+    
+    if (!employeeName) {
+        alert('⚠️ Please select an employee first');
+        return;
+    }
+    
+    if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
+        alert('⚠️ Please upload at least one sentiment report');
+        return;
+    }
+    
+    // Build sentiment summary
+    let sentimentSummary = '';
+    
+    if (sentimentData.positive.totalCalls > 0) {
+        sentimentSummary += `\n**POSITIVE LANGUAGE ANALYSIS (${sentimentData.positive.totalCalls} calls analyzed):**\n`;
+        sentimentData.positive.phrases.forEach(p => {
+            const percentage = ((p.used / p.total) * 100).toFixed(0);
+            sentimentSummary += `- "${p.phrase}": Used ${p.used}/${p.total} calls (${percentage}%)\n`;
+        });
+    }
+    
+    if (sentimentData.negative.totalCalls > 0) {
+        sentimentSummary += `\n**NEGATIVE LANGUAGE ANALYSIS (${sentimentData.negative.totalCalls} calls analyzed):**\n`;
+        sentimentData.negative.phrases.forEach(p => {
+            const percentage = ((p.used / p.total) * 100).toFixed(0);
+            sentimentSummary += `- "${p.phrase}": Used ${p.used}/${p.total} calls (${percentage}%)\n`;
+        });
+    }
+    
+    if (sentimentData.emotions.totalCalls > 0) {
+        sentimentSummary += `\n**EMOTIONAL INDICATORS ANALYSIS (${sentimentData.emotions.totalCalls} calls analyzed):**\n`;
+        sentimentData.emotions.phrases.forEach(p => {
+            const percentage = ((p.used / p.total) * 100).toFixed(0);
+            sentimentSummary += `- "${p.phrase}": Observed ${p.used}/${p.total} calls (${percentage}%)\n`;
+        });
+    }
+    
+    // Build the ChatGPT prompt per specification
+    const prompt = `This summary is not a 1:1 reflection of weekly reporting and is intended to be used as a coaching guide.
+
+You are an experienced contact center supervisor providing coaching guidance to ${employeeName} based on their recent sentiment analysis. Use this data to create a personalized coaching message that is warm, encouraging, and actionable.
+
+DATA SUMMARY:
+${sentimentSummary}
+
+Generate a coaching message with the following structure:
+
+**Subject Line**: Create a clear, specific subject line focused on sentiment improvement
+
+**Opening**: Start with genuine appreciation for their commitment to customer interactions
+
+**Positive Language**: Highlight the positive phrases they're using effectively and the impact on customer experience
+
+**Opportunities**: Identify areas where they could increase usage of positive language or reduce negative language patterns
+
+**Avoiding Negative Language**: Provide specific, constructive suggestions for replacing or reducing negative phrases
+
+**Language Shifts**: Suggest 2-3 specific language patterns they could adopt to improve sentiment
+
+**Emotional Indicators**: Provide observations on emotional tone and suggest ways to project confidence and calm
+
+**Confidence & Ownership**: Encourage them to take ownership of their communication style and build confidence
+
+**Focus Areas**: Identify 1-2 key priority areas for next week
+
+**Close**: End with confidence in their ability to improve and an offer of support
+
+Requirements:
+- Use a coaching tone (supportive, not critical)
+- Be specific and reference the actual data
+- Provide actionable guidance
+- No emojis in the output
+- Ready to send to employee as-is
+- Keep message professional but warm
+- Focus on growth and improvement
+
+Generate the coaching message now:`;
+    
+    promptArea.value = prompt;
+    console.log(`💬 Sentiment coaching prompt generated for ${employeeName}`);
+}
+
+function copySentimentPrompt() {
+    const promptArea = document.getElementById('sentimentPromptArea');
+    
+    if (!promptArea.value.trim()) {
+        alert('⚠️ No prompt to copy. Please generate a prompt first.');
+        return;
+    }
+    
+    promptArea.select();
+    document.execCommand('copy');
+    
+    // Visual feedback
+    const button = document.getElementById('copySentimentPromptBtn');
+    const originalText = button.textContent;
+    button.textContent = '✅ Copied to CoPilot!';
+    
+    // Open ChatGPT Copilot after short delay
+    setTimeout(() => {
+        window.open('https://copilot.microsoft.com', '_blank');
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 500);
+    }, 500);
+    
+    console.log('📋 Sentiment prompt copied to clipboard');
+}
+
 

@@ -21,6 +21,7 @@
                 <button type="button" id="manageTips" class="btn-secondary" style="background: #00796b; color: white;">💡 Manage Tips</button>
                 <button type="button" id="coachingEmailBtn" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
                 <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
+                <button type="button" id="sentimentBtn" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
                 <button type="button" id="downloadOfflineBtn" class="btn-secondary" style="background: #4CAF50; color: white;">📥 Download Offline</button>
@@ -301,6 +302,66 @@
                     </div>
                     
                     <p style="font-size: 0.85em; color: #999; margin: 0;">📝 Workflow: 1) Select employee → 2) Review data → 3) Copy prompt → 4) Use ChatGPT → 5) Paste generated email → 6) Send via Outlook</p>
+                </div>
+            </section>
+
+            <!-- Sentiment Section -->
+            <section id="sentimentSection" style="display: none;">
+                <div class="form-section" style="background: #e0f2f1; border-left: 4px solid #00acc1;">
+                    <h2>💬 Sentiment Analysis</h2>
+                    <p style="color: #004d40; margin-bottom: 20px;">Upload sentiment reports and generate AI coaching guidance for employee communication patterns.</p>
+                    
+                    <!-- File Upload Area -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #00acc1;">
+                        <h3 style="color: #00796b; margin-top: 0;">📄 Upload Sentiment Reports</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Upload three reports: Positive Words, Negative Words, and Managing Emotions (CSV or Excel format)</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <!-- Positive Words File -->
+                            <div style="padding: 15px; background: #e8f5e9; border-radius: 4px; border: 1px solid #4caf50;">
+                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #1b5e20;">➕ Positive Words Report</label>
+                                <input type="file" id="sentimentPositiveFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                <div id="sentimentPositiveStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;"></div>
+                            </div>
+                            
+                            <!-- Negative Words File -->
+                            <div style="padding: 15px; background: #ffebee; border-radius: 4px; border: 1px solid #f44336;">
+                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #b71c1c;">➖ Negative Words Report</label>
+                                <input type="file" id="sentimentNegativeFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                <div id="sentimentNegativeStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;"></div>
+                            </div>
+                            
+                            <!-- Managing Emotions File -->
+                            <div style="padding: 15px; background: #f3e5f5; border-radius: 4px; border: 1px solid #9c27b0;">
+                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #4a148c;">🎭 Managing Emotions Report</label>
+                                <input type="file" id="sentimentEmotionsFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                <div id="sentimentEmotionsStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employee Selection -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #00acc1;">
+                        <label for="sentimentEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 10px; color: #333;">Select Employee:</label>
+                        <select id="sentimentEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                            <option value="">-- Choose an employee --</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Generate Button -->
+                    <div style="margin-bottom: 20px;">
+                        <button type="button" id="generateSentimentPromptBtn" style="background: #00acc1; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; width: 100%;">💬 Generate Sentiment Coaching Prompt</button>
+                    </div>
+                    
+                    <!-- Sentiment Prompt Area -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #E91E63;">
+                        <h3 style="color: #4a148c; margin-top: 0;">🤖 ChatGPT Copilot Prompt</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Copy the prompt below, paste it into ChatGPT, and let the AI generate personalized coaching guidance.</p>
+                        <textarea id="sentimentPromptArea" readonly style="width: 100%; height: 250px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                            <button type="button" id="copySentimentPromptBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🤖 Copy to CoPilot</button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
