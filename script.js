@@ -3881,22 +3881,23 @@ function generateTrendEmail() {
     const { htmlEmail, subject: subjectLine } = result;
     window.latestTrendEmailHtml = htmlEmail;
     
-    // Copy HTML to clipboard with formatting
+    // Open a preview window with the email
+    const previewWindow = window.open('', 'emailPreview', 'width=900,height=1000,scrollbars=yes');
+    previewWindow.document.write(htmlEmail);
+    previewWindow.document.close();
+    
+    // Also copy to clipboard (for Outlook users who need it)
     const blob = new Blob([htmlEmail], { type: 'text/html' });
     const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
     
     navigator.clipboard.write([htmlClipboardItem]).then(() => {
-        console.log('✅ HTML email copied to clipboard with formatting');
-        showToast('✅ Email copied! Opening new email...', 3000);
-        
-        // Auto-open email client with subject
-        window.location.href = 'mailto:?subject=' + encodeURIComponent(subjectLine);
+        console.log('✅ HTML email copied to clipboard');
+        showToast('✅ Email preview opened & copied! Select all in preview, copy, paste in Outlook.', 5000);
     }).catch((err) => {
-        console.error('❌ Failed to copy formatted email:', err);
+        console.error('❌ Copy failed:', err);
         // Fallback to plain text if HTML clipboard fails
         navigator.clipboard.writeText(htmlEmail).then(() => {
-            showToast('⚠️ Copied as plain text. Opening email...', 5000);
-            window.location.href = 'mailto:?subject=' + encodeURIComponent(subjectLine);
+            showToast('📋 Email preview opened. In preview window: Ctrl+A to select all, Ctrl+C to copy', 5000);
         });
     });
 }
