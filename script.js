@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    DEVELOPMENT COACHING TOOL
    Complete rewrite with proper encoding and parsing
    ======================================== */
@@ -53,7 +53,7 @@ const METRICS_REGISTRY = {
     scheduleAdherence: {
         key: 'scheduleAdherence',
         label: 'Schedule Adherence',
-        icon: '⏰',
+        icon: '?',
         target: { type: 'min', value: 93 },
         unit: '%',
         columnIndex: 7,
@@ -64,7 +64,7 @@ const METRICS_REGISTRY = {
     cxRepOverall: {
         key: 'cxRepOverall',
         label: 'Rep Satisfaction',
-        icon: '⭐',
+        icon: '?',
         target: { type: 'min', value: 80 },
         unit: '%',
         columnIndex: 14,
@@ -75,7 +75,7 @@ const METRICS_REGISTRY = {
     fcr: {
         key: 'fcr',
         label: 'First Call Resolution',
-        icon: '✓',
+        icon: '?',
         target: { type: 'min', value: 70 },
         unit: '%',
         columnIndex: 12,
@@ -86,7 +86,7 @@ const METRICS_REGISTRY = {
     overallExperience: {
         key: 'overallExperience',
         label: 'Overall Experience',
-        icon: '🎯',
+        icon: '??',
         target: { type: 'min', value: 81 },
         unit: '%',
         columnIndex: 16,
@@ -97,7 +97,7 @@ const METRICS_REGISTRY = {
     transfers: {
         key: 'transfers',
         label: 'Transfers',
-        icon: '📞',
+        icon: '??',
         target: { type: 'max', value: 6 },
         unit: '%',
         columnIndex: 2,
@@ -108,7 +108,7 @@ const METRICS_REGISTRY = {
     overallSentiment: {
         key: 'overallSentiment',
         label: 'Overall Sentiment',
-        icon: '😊',
+        icon: '??',
         target: { type: 'min', value: 88 },
         unit: '%',
         columnIndex: 11,
@@ -119,7 +119,7 @@ const METRICS_REGISTRY = {
     positiveWord: {
         key: 'positiveWord',
         label: 'Positive Word',
-        icon: '👍',
+        icon: '??',
         target: { type: 'min', value: 86 },
         unit: '%',
         columnIndex: 10,
@@ -130,7 +130,7 @@ const METRICS_REGISTRY = {
     negativeWord: {
         key: 'negativeWord',
         label: 'Avoid Negative Words',
-        icon: '🚫',
+        icon: '??',
         target: { type: 'min', value: 83 },
         unit: '%',
         columnIndex: 9,
@@ -141,7 +141,7 @@ const METRICS_REGISTRY = {
     managingEmotions: {
         key: 'managingEmotions',
         label: 'Managing Emotions',
-        icon: '❤️',
+        icon: '??',
         target: { type: 'min', value: 95 },
         unit: '%',
         columnIndex: 8,
@@ -152,7 +152,7 @@ const METRICS_REGISTRY = {
     aht: {
         key: 'aht',
         label: 'Average Handle Time',
-        icon: '⏱️',
+        icon: '??',
         target: { type: 'max', value: 440 },
         unit: 'sec',
         columnIndex: 3,
@@ -163,7 +163,7 @@ const METRICS_REGISTRY = {
     acw: {
         key: 'acw',
         label: 'After Call Work',
-        icon: '📋',
+        icon: '??',
         target: { type: 'max', value: 60 },
         unit: 'sec',
         columnIndex: 6,
@@ -174,7 +174,7 @@ const METRICS_REGISTRY = {
     holdTime: {
         key: 'holdTime',
         label: 'Hold Time',
-        icon: '☎️',
+        icon: '??',
         target: { type: 'max', value: 30 },
         unit: 'sec',
         columnIndex: 5,
@@ -185,7 +185,7 @@ const METRICS_REGISTRY = {
     reliability: {
         key: 'reliability',
         label: 'Reliability',
-        icon: '🛡️',
+        icon: '???',
         target: { type: 'max', value: 16 },
         unit: 'hrs',
         columnIndex: 21,
@@ -208,50 +208,50 @@ function validatePhase6Deployment() {
     const checks = {
         'PHASE 1 - Deprecated Functions': {
             passed: true,
-            note: '✅ All deprecated functions deleted (buildTrendEmailHtml, generateOutlookEmail, generateExecutiveSummaryEmail, renderEmployeeHistory)'
+            note: '? All deprecated functions deleted (buildTrendEmailHtml, generateOutlookEmail, generateExecutiveSummaryEmail, renderEmployeeHistory)'
         },
         'PHASE 2 - 13-Metric Contract': {
             passed: Object.keys(METRICS_REGISTRY).length === 13,
-            note: `✅ METRICS_REGISTRY contains ${Object.keys(METRICS_REGISTRY).length}/13 metrics`
+            note: `? METRICS_REGISTRY contains ${Object.keys(METRICS_REGISTRY).length}/13 metrics`
         },
         'PHASE 2 - Metric Keys': {
             passed: ['scheduleAdherence', 'transfers', 'aht', 'holdTime', 'acw', 'managingEmotions', 'overallExperience', 'cxRepOverall', 'fcr', 'overallSentiment', 'positiveWord', 'negativeWord', 'reliability'].every(k => METRICS_REGISTRY[k]),
-            note: '✅ All 13 metric keys defined in METRICS_REGISTRY'
+            note: '? All 13 metric keys defined in METRICS_REGISTRY'
         },
         'PHASE 3 - Canvas Renderer': {
             passed: typeof renderMetricRow === 'function' && typeof createTrendEmailImage === 'function',
-            note: '✅ Canvas rendering functions present'
+            note: '? Canvas rendering functions present'
         },
         'PHASE 3 - Metric Order': {
             passed: getMetricOrder().length === 13,
-            note: `✅ getMetricOrder() returns ${getMetricOrder().length}/13 metrics`
+            note: `? getMetricOrder() returns ${getMetricOrder().length}/13 metrics`
         },
         'PHASE 4 - HTML Table Renderer': {
             passed: typeof buildMetricTableHTML === 'function',
-            note: '✅ HTML table renderer function present'
+            note: '? HTML table renderer function present'
         },
         'PHASE 5 - Single Source': {
             passed: typeof isReverseMetric === 'function' && typeof getMetricTarget === 'function',
-            note: '✅ Single-source logic functions present'
+            note: '? Single-source logic functions present'
         },
         'REVERSE METRICS': {
             passed: ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].every(k => isReverseMetric(k)),
-            note: '✅ All 5 reverse metrics correctly identified'
+            note: '? All 5 reverse metrics correctly identified'
         },
         'ENTRY POINT': {
             passed: typeof generateTrendEmail === 'function',
-            note: '✅ generateTrendEmail() entry point ready'
+            note: '? generateTrendEmail() entry point ready'
         }
     };
     
     console.log('');
-    console.log('╔════════════════════════════════════════════════════════════════╗');
-    console.log('║       PHASE 6 - VALIDATION CHECKLIST (DEPLOYMENT READY)        ║');
-    console.log('╚════════════════════════════════════════════════════════════════╝');
+    console.log('+----------------------------------------------------------------+');
+    console.log('�       PHASE 6 - VALIDATION CHECKLIST (DEPLOYMENT READY)        �');
+    console.log('+----------------------------------------------------------------+');
     
     let allPassed = true;
     Object.entries(checks).forEach(([label, check]) => {
-        const status = check.passed ? '✅ PASS' : '❌ FAIL';
+        const status = check.passed ? '? PASS' : '? FAIL';
         console.log(`${status} - ${label}`);
         console.log(`         ${check.note}`);
         if (!check.passed) allPassed = false;
@@ -259,21 +259,21 @@ function validatePhase6Deployment() {
     
     console.log('');
     if (allPassed) {
-        console.log('╔════════════════════════════════════════════════════════════════╗');
-        console.log('║          ✅ ALL CHECKS PASSED - READY FOR DEPLOYMENT          ║');
-        console.log('╚════════════════════════════════════════════════════════════════╝');
+        console.log('+----------------------------------------------------------------+');
+        console.log('�          ? ALL CHECKS PASSED - READY FOR DEPLOYMENT          �');
+        console.log('+----------------------------------------------------------------+');
         console.log('');
         console.log('ARCHITECTURE SUMMARY:');
         console.log('- Single Source of Truth: METRICS_REGISTRY');
         console.log('- Canvas Rendering: createTrendEmailImage()');
         console.log('- HTML Table Rendering: buildMetricTableHTML()');
         console.log('- Entry Point: generateTrendEmail()');
-        console.log('- Metric Order: Core Performance → Survey → Sentiment → Reliability');
+        console.log('- Metric Order: Core Performance ? Survey ? Sentiment ? Reliability');
         console.log('- All 13 metrics locked per Phase 2 contract');
         console.log('- No deprecated code in codebase');
         console.log('');
     } else {
-        console.log('❌ VALIDATION FAILED - Fix errors before deployment');
+        console.log('? VALIDATION FAILED - Fix errors before deployment');
     }
     
     return allPassed;
@@ -979,7 +979,7 @@ function saveCallCenterAverages(averages) {
 function calculateAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
-    console.log(`📊 Calculating averages from ${employees.length} total employees`);
+    console.log(`?? Calculating averages from ${employees.length} total employees`);
 
     // Filter out employees with 0 calls answered
     const activeEmployees = employees.filter(emp => {
@@ -987,7 +987,7 @@ function calculateAveragesFromEmployees(employees) {
         return !isNaN(totalCalls) && totalCalls > 0;
     });
 
-    console.log(`📞 ${activeEmployees.length} employees with calls answered (excluding ${employees.length - activeEmployees.length} with 0 calls)`);
+    console.log(`?? ${activeEmployees.length} employees with calls answered (excluding ${employees.length - activeEmployees.length} with 0 calls)`);
 
     if (activeEmployees.length === 0) return null;
 
@@ -1021,7 +1021,7 @@ function calculateAveragesFromEmployees(employees) {
     });
 
     console.log(' Calculated averages:', averages);
-    console.log('📊 Count per metric:', counts);
+    console.log('?? Count per metric:', counts);
     averages.employeeCount = activeEmployees.length;
 
     return Object.keys(averages).length > 0 ? averages : null;
@@ -1042,9 +1042,42 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
 }
 
 function getEmployeeNickname(fullName) {
-    // Extract first name from full name
     if (!fullName) return '';
+    
+    // Check if a custom preferred name has been set
+    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    if (preferredNames[fullName]) {
+        return preferredNames[fullName];
+    }
+    
+    // Default: return first name
     return fullName.split(' ')[0];
+}
+
+function setEmployeePreferredName(fullName, preferredName) {
+    if (!fullName) return;
+    
+    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    
+    if (preferredName && preferredName.trim()) {
+        preferredNames[fullName] = preferredName.trim();
+    } else {
+        // If empty, remove the custom preference (fall back to first name)
+        delete preferredNames[fullName];
+    }
+    
+    localStorage.setItem('employeePreferredNames', JSON.stringify(preferredNames));
+}
+
+window.saveEmployeePreferredName = function(fullName) {
+    const input = document.getElementById(`prefName_${fullName}`);
+    if (!input) return;
+    
+    const preferredName = input.value.trim();
+    setEmployeePreferredName(fullName, preferredName);
+    
+    showToast('? Preferred name updated!');
+    renderEmployeesList();
 }
 
 function formatDateMMDDYYYY(dateString) {
@@ -1400,10 +1433,10 @@ function copyToClipboard() {
     const text = emailOutput.innerText;
     
     navigator.clipboard.writeText(text).then(() => {
-        showToast('✅ Email copied to clipboard!');
+        showToast('? Email copied to clipboard!');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        showToast('❌ Failed to copy to clipboard');
+        showToast('? Failed to copy to clipboard');
     });
 }
 
@@ -1412,8 +1445,8 @@ function copyToClipboard() {
 // ============================================
 
 function initializeEventHandlers() {
-    console.log('🔧 initializeEventHandlers() STARTED');
-    console.log('🔍 Checking for delete buttons...');
+    console.log('?? initializeEventHandlers() STARTED');
+    console.log('?? Checking for delete buttons...');
     console.log('  exportDataBtn:', document.getElementById('exportDataBtn') ? 'FOUND' : 'NOT FOUND');
     console.log('  importDataBtn:', document.getElementById('importDataBtn') ? 'FOUND' : 'NOT FOUND');
     console.log('  deleteSelectedWeekBtn:', document.getElementById('deleteSelectedWeekBtn') ? 'FOUND' : 'NOT FOUND');
@@ -1480,19 +1513,19 @@ function initializeEventHandlers() {
     document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
     document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
     
-    // UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
+    // UTILITY FEATURE � MANAGE TIPS � DO NOT DELETE
     document.getElementById('addTipBtn')?.addEventListener('click', addNewTip);
 
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
-        console.log('📋 Load Data button clicked');
+        console.log('?? Load Data button clicked');
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
         
-        console.log('📊 Paste data received - Length:', pastedData.length, 'chars');
-        console.log('📅 Dates: Start=' + startDate, 'End=' + endDate);
+        console.log('?? Paste data received - Length:', pastedData.length, 'chars');
+        console.log('?? Dates: Start=' + startDate, 'End=' + endDate);
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
@@ -1500,30 +1533,30 @@ function initializeEventHandlers() {
                            document.querySelector('.upload-period-btn[data-period="week"]');
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
         
-        console.log('⏰ Period type:', periodType);
+        console.log('? Period type:', periodType);
         
         if (!startDate || !endDate) {
-            alert('⚠️ Please select both start and end dates');
+            alert('?? Please select both start and end dates');
             return;
         }
         
         if (!pastedData) {
-            alert('⚠️ Please paste data first');
+            alert('?? Please paste data first');
             return;
         }
         
         try {
             const employees = parsePastedData(pastedData, startDate, endDate);
-            console.log('👥 Parsed employees:', employees.length);
+            console.log('?? Parsed employees:', employees.length);
             
             if (employees.length === 0) {
-                alert('❌ No valid employee data found');
+                alert('? No valid employee data found');
                 return;
             }
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
-            console.log('🔑 Created weekKey:', weekKey);
+            console.log('?? Created weekKey:', weekKey);
             
             // Parse dates safely (avoid timezone issues)
             const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
@@ -1553,10 +1586,10 @@ function initializeEventHandlers() {
                 }
             };
             
-            console.log('📦 Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
+            console.log('?? Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
             
             saveWeeklyData();
-            console.log('✅ Data saved to localStorage');
+            console.log('? Data saved to localStorage');
             
             populateDeleteWeekDropdown();
             populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
@@ -1605,7 +1638,7 @@ function initializeEventHandlers() {
                 }
             }
             
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "🗄️ Manage Data" section.`);
+            alert(`? Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "??? Manage Data" section.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
@@ -1665,7 +1698,7 @@ function initializeEventHandlers() {
         const employee = getEmployeeDataForPeriod(selectedName);
         
         if (!employee) {
-            alert('❌ Error loading employee data');
+            alert('? Error loading employee data');
             return;
         }
         
@@ -1751,7 +1784,7 @@ function initializeEventHandlers() {
     
     // Export data
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
-        console.log('🔘 Backup Data button clicked');
+        console.log('?? Backup Data button clicked');
         exportToExcel();
     });
     
@@ -1769,32 +1802,32 @@ function initializeEventHandlers() {
     
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
-        console.log('🔘 Restore Data button clicked');
+        console.log('?? Restore Data button clicked');
         document.getElementById('dataFileInput').click();
     });
     
     document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
-        console.log('📥 File selected for restore');
+        console.log('?? File selected for restore');
         const file = e.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                console.log('🔄 Parsing JSON data...');
+                console.log('?? Parsing JSON data...');
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
                 
                 saveWeeklyData();
-                console.log('✅ Data restored and saved to localStorage');
+                console.log('? Data restored and saved to localStorage');
                 
-                showToast('✅ Data imported successfully!');
+                showToast('? Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
-                alert('❌ Error importing data: ' + error.message);
+                alert('? Error importing data: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -1802,12 +1835,12 @@ function initializeEventHandlers() {
     
     // Delete selected week
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
-        console.log('🔘 Delete Selected Week button clicked');
+        console.log('?? Delete Selected Week button clicked');
         const weekSelect = document.getElementById('deleteWeekSelect');
         const selectedWeek = weekSelect.value;
         
         if (!selectedWeek) {
-            alert('⚠️ Please select a week to delete');
+            alert('?? Please select a week to delete');
             return;
         }
         
@@ -1817,16 +1850,16 @@ function initializeEventHandlers() {
             return;
         }
         
-        console.log('🗑️ Deleting week:', selectedWeek);
+        console.log('??? Deleting week:', selectedWeek);
         delete weeklyData[selectedWeek];
         delete myTeamMembers[selectedWeek];
         saveWeeklyData();
         saveTeamMembers();
-        console.log('✅ Week deleted and data saved to localStorage');
+        console.log('? Week deleted and data saved to localStorage');
         
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
-        showToast('✅ Week deleted successfully');
+        showToast('? Week deleted successfully');
         
         // Clear coaching form if needed (safely check if elements exist)
         const employeeSelect = document.getElementById('employeeSelect');
@@ -1861,32 +1894,32 @@ function initializeEventHandlers() {
     
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
-        console.log('🔘 Delete All Data button clicked');
+        console.log('?? Delete All Data button clicked');
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
-            alert('ℹ️ No data to delete');
+            alert('?? No data to delete');
             return;
         }
         
-        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
-            `📊 ${weekCount} week(s) of employee data\n\n` +
+        const message = `?? WARNING: This will permanently delete:\n\n` +
+            `?? ${weekCount} week(s) of employee data\n\n` +
             `This action CANNOT be undone!\n\n` +
             `Type "DELETE" to confirm:`;
         
         const confirmation = prompt(message);
         
         if (confirmation !== 'DELETE') {
-            alert('ℹ️ Deletion cancelled');
+            alert('?? Deletion cancelled');
             return;
         }
         
-        console.log('🗑️ Deleting all data...');
+        console.log('??? Deleting all data...');
         // Clear all data
         weeklyData = {};
         
         saveWeeklyData();
-        console.log('✅ All data cleared from localStorage');
+        console.log('? All data cleared from localStorage');
         
         populateDeleteWeekDropdown();
         
@@ -1896,7 +1929,7 @@ function initializeEventHandlers() {
             if (el) el.style.display = 'none';
         });
         
-        alert('✅ All data has been deleted');
+        alert('? All data has been deleted');
     });
     
     // Populate delete week dropdown on load
@@ -1985,7 +2018,7 @@ function updateTeamSelection() {
     const selectedMembers = Array.from(selectedCheckboxes).map(cb => cb.dataset.name);
     
     setTeamMembersForWeek(weekKey, selectedMembers);
-    console.log(`✅ Updated team members for ${weekKey}:`, selectedMembers);
+    console.log(`? Updated team members for ${weekKey}:`, selectedMembers);
 }
 
 // ============================================
@@ -2032,7 +2065,7 @@ function initializeKeyboardShortcuts() {
             if (employeeSelect && employeeSelect.value) {
                 employeeSelect.value = '';
                 employeeSelect.dispatchEvent(new Event('change'));
-                showToast('🧹 Form cleared');
+                showToast('?? Form cleared');
             }
         }
     });
@@ -2058,55 +2091,57 @@ async function renderTipsManagement() {
     // Add custom metrics
     Object.assign(metricNames, customMetrics);
     
+    // Sort all tip categories alphabetically by display name
+    const sortedCategories = Object.keys(metricNames)
+        .sort((a, b) => metricNames[a].localeCompare(metricNames[b]));
+    
     let html = '<div style="margin-bottom: 20px;">';
-    html += '<p>Select a metric to view and manage its coaching tips. Server tips (from tips.csv) are shown in blue and are read-only. Your custom tips can be edited or deleted.</p>';
+    html += '<p>Select a tip category below to expand and manage its coaching tips. Server tips (from tips.csv) are shown in blue and are read-only. Your custom tips can be edited or deleted.</p>';
     html += '</div>';
     
-    // Manage Existing Metric section (default visible)
-    html += '<div id="manageMetricSection" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">';
+    // Category Selector Section
+    html += '<div id="manageCategorySection" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<label for="metricSelector" style="font-weight: bold; color: #2196F3; font-size: 1.1em; margin: 0;">Select Metric:</label>';
-    html += '<button id="newMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">+ New Metric</button>';
+    html += '<label for="categoriesSelector" style="font-weight: bold; color: #2196F3; font-size: 1.1em; margin: 0;">Select Tip Category:</label>';
+    html += '<button id="newMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">+ New Category</button>';
     html += '</div>';
-    html += '<select id="metricSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
-    html += '<option value="">-- Choose a metric --</option>';
-    // Sort metrics alphabetically by label
-    Object.keys(metricNames)
-        .sort((a, b) => metricNames[a].localeCompare(metricNames[b]))
-        .forEach(metricKey => {
-            html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
-        });
+    html += '<select id="categoriesSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
+    html += '<option value="">-- Choose a category --</option>';
+    // Add sorted categories
+    sortedCategories.forEach(metricKey => {
+        html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
+    });
     html += '</select>';
     html += '</div>';
     
     // Create New Metric section (hidden by default)
     html += '<div id="createMetricSection" style="display: none; margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<h3 style="color: #2196F3; margin: 0;">? Create New Metric</h3>';
+    html += '<h3 style="color: #2196F3; margin: 0;">? Create New Category</h3>';
     html += '<button id="backToManageBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Back</button>';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
-    html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">Metric Name:</label>';
+    html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">Category Name:</label>';
     html += '<input type="text" id="newMetricName" placeholder="e.g., Accuracy, Compliance, Efficiency" style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; box-sizing: border-box;">';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
     html += '<label for="newMetricTip" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">First Tip:</label>';
-    html += '<textarea id="newMetricTip" placeholder="Enter a coaching tip for this new metric..." style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; resize: vertical; box-sizing: border-box;" rows="2"></textarea>';
+    html += '<textarea id="newMetricTip" placeholder="Enter a coaching tip for this new category..." style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; resize: vertical; box-sizing: border-box;" rows="2"></textarea>';
     html += '</div>';
-    html += '<button id="createMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">Create Metric</button>';
+    html += '<button id="createMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">Create Category</button>';
     html += '</div>';
     
-    // Tips display area
+    // Tips display area (expandable category)
     html += '<div id="tipsDisplayArea" style="display: none;"></div>';
     
     container.innerHTML = html;
     
     // Helper function to switch to create mode
     function switchToCreateMode() {
-        document.getElementById('manageMetricSection').style.display = 'none';
+        document.getElementById('manageCategorySection').style.display = 'none';
         document.getElementById('createMetricSection').style.display = 'block';
         document.getElementById('tipsDisplayArea').style.display = 'none';
-        document.getElementById('metricSelector').value = '';
+        document.getElementById('categoriesSelector').value = '';
         document.getElementById('newMetricName').value = '';
         document.getElementById('newMetricTip').value = '';
         document.getElementById('newMetricName').focus();
@@ -2114,10 +2149,10 @@ async function renderTipsManagement() {
     
     // Helper function to switch back to manage mode
     function switchToManageMode() {
-        document.getElementById('manageMetricSection').style.display = 'block';
+        document.getElementById('manageCategorySection').style.display = 'block';
         document.getElementById('createMetricSection').style.display = 'none';
         document.getElementById('tipsDisplayArea').style.display = 'none';
-        document.getElementById('metricSelector').value = '';
+        document.getElementById('categoriesSelector').value = '';
     }
     
     // + New Metric button handler
@@ -2134,12 +2169,12 @@ async function renderTipsManagement() {
         const initialTip = tipInput.value.trim();
         
         if (!metricName) {
-            alert('⚠️ Please enter a metric name');
+            alert('?? Please enter a metric name');
             return;
         }
         
         if (!initialTip) {
-            alert('⚠️ Please enter at least one tip');
+            alert('?? Please enter at least one tip');
             return;
         }
         
@@ -2147,7 +2182,7 @@ async function renderTipsManagement() {
         
         // Check for duplicates
         if (metricNames[metricKey]) {
-            alert('⚠️ A metric with this name already exists');
+            alert('?? A metric with this name already exists');
             return;
         }
         
@@ -2164,15 +2199,15 @@ async function renderTipsManagement() {
         tips[metricKey].push(initialTip);
         saveUserTips(tips);
         
-        showToast('✅ Metric created successfully!');
+        showToast('? Metric created successfully!');
         
         // Switch back to manage mode and re-render
         switchToManageMode();
         renderTipsManagement();
     });
     
-    // Add change listener for metric selection
-    document.getElementById('metricSelector').addEventListener('change', async (e) => {
+    // Add change listener for category selection
+    document.getElementById('categoriesSelector').addEventListener('change', async (e) => {
         const metricKey = e.target.value;
         const displayArea = document.getElementById('tipsDisplayArea');
         
@@ -2182,7 +2217,7 @@ async function renderTipsManagement() {
         }
         
         // Exit create mode if we were in it
-        document.getElementById('manageMetricSection').style.display = 'block';
+        document.getElementById('manageCategorySection').style.display = 'block';
         document.getElementById('createMetricSection').style.display = 'none';
         
         displayArea.style.display = 'block';
@@ -2194,11 +2229,11 @@ async function renderTipsManagement() {
         const metricName = metricNames[metricKey];
         
         let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
-        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">${metricName}</h3>`;
+        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">?? ${metricName}</h3>`;
         
         // Server tips - use original indices
         if (serverTipsWithIndex.length > 0) {
-            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Server Tips (from tips.csv)</h4>';
+            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">?? Server Tips (from tips.csv)</h4>';
             serverTipsWithIndex.forEach((tipObj) => {
                 // Safety check for tipObj structure
                 if (!tipObj || typeof tipObj.originalIndex === 'undefined') {
@@ -2212,8 +2247,8 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editServerTip_${metricKey}_${originalIndex}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
+                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">??? Delete</button>
                             </div>
                         </div>
                     </div>
@@ -2225,7 +2260,7 @@ async function renderTipsManagement() {
         }
         
         // Custom tips
-        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">✏️ Your Custom Tips</h4>';
+        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">?? Your Custom Tips</h4>';
         if (userTipsForMetric.length > 0) {
             userTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
@@ -2233,8 +2268,8 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">?? Save</button>
+                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">??? Delete</button>
                             </div>
                         </div>
                     </div>
@@ -2246,7 +2281,7 @@ async function renderTipsManagement() {
         tipsHtml += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
                 <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">? Add Custom Tip</button>
             </div>
         `;
         tipsHtml += '</div>';
@@ -2264,7 +2299,7 @@ window.addTip = function(metricKey) {
     const tip = textarea.value.trim();
     
     if (!tip) {
-        alert('⚠️ Please enter a tip first');
+        alert('?? Please enter a tip first');
         return;
     }
     
@@ -2283,10 +2318,10 @@ window.addTip = function(metricKey) {
     saveUserTips(userTips);
     
     textarea.value = '';
-    showToast('✅ Tip added successfully!');
+    showToast('? Tip added successfully!');
     
     // Re-trigger the dropdown to refresh the display
-    const selector = document.getElementById('metricSelector');
+    const selector = document.getElementById('categoriesSelector');
     if (selector && selector.value) {
         selector.dispatchEvent(new Event('change'));
     } else {
@@ -2304,7 +2339,7 @@ window.updateTip = function(metricKey, index) {
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('⚠️ Tip cannot be empty');
+        alert('?? Tip cannot be empty');
         return;
     }
     
@@ -2313,7 +2348,7 @@ window.updateTip = function(metricKey, index) {
         userTips[metricKey][index] = updatedTip;
         saveUserTips(userTips);
         
-        showToast('✅ Tip updated successfully!');
+        showToast('? Tip updated successfully!');
         
         // Re-trigger the dropdown to refresh the display
         const selector = document.getElementById('metricSelector');
@@ -2322,7 +2357,7 @@ window.updateTip = function(metricKey, index) {
         }
     } else {
         console.warn(`Invalid index ${index} for metric ${metricKey}`);
-        showToast('⚠️ Could not update tip - please refresh the page');
+        showToast('?? Could not update tip - please refresh the page');
     }
 };
 
@@ -2330,21 +2365,21 @@ window.updateServerTip = function(metricKey, index) {
     const textarea = document.getElementById(`editServerTip_${metricKey}_${index}`);
     if (!textarea) {
         console.error('Textarea not found for server tip edit operation');
-        showToast('⚠️ Could not update tip - please refresh the page');
+        showToast('?? Could not update tip - please refresh the page');
         return;
     }
     
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('⚠️ Tip cannot be empty');
+        alert('?? Tip cannot be empty');
         return;
     }
     
     // Validate index is a valid number
     if (typeof index !== 'number' && isNaN(parseInt(index))) {
         console.error('Invalid index for server tip update:', index);
-        showToast('⚠️ Could not update tip - invalid index');
+        showToast('?? Could not update tip - invalid index');
         return;
     }
     
@@ -2358,7 +2393,7 @@ window.updateServerTip = function(metricKey, index) {
     modifiedServerTips[metricKey][index] = updatedTip;
     localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
     
-    showToast('✅ Server tip updated!');
+    showToast('? Server tip updated!');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -2386,7 +2421,7 @@ window.deleteServerTip = function(metricKey, index) {
     
     localStorage.setItem('deletedServerTips', JSON.stringify(deletedServerTips));
     
-    showToast('🗑️ Server tip deleted');
+    showToast('??? Server tip deleted');
     
     // Re-trigger the dropdown to refresh the display
     const selector = document.getElementById('metricSelector');
@@ -2405,7 +2440,7 @@ window.deleteTip = function(metricKey, index) {
         // Validate index is within bounds
         if (index < 0 || index >= userTips[metricKey].length) {
             console.warn(`Invalid index ${index} for deletion. Array length: ${userTips[metricKey].length}`);
-            showToast('⚠️ Could not delete tip - please refresh the page');
+            showToast('?? Could not delete tip - please refresh the page');
             return;
         }
         
@@ -2415,10 +2450,10 @@ window.deleteTip = function(metricKey, index) {
         }
         saveUserTips(userTips);
         
-        showToast('🗑️ Tip deleted');
+        showToast('??? Tip deleted');
     } else {
         console.warn(`No tips found for metric ${metricKey}`);
-        showToast('⚠️ Could not delete tip - please refresh the page');
+        showToast('?? Could not delete tip - please refresh the page');
         return;
     }
     
@@ -2514,7 +2549,7 @@ function populateTrendPeriodDropdown() {
         return;
     }
     
-    console.log(`📅 Populating periods for type: ${selectedPeriodType}`);
+    console.log(`?? Populating periods for type: ${selectedPeriodType}`);
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
@@ -2551,7 +2586,7 @@ function populateTrendPeriodDropdown() {
         populateEmployeeDropdownForPeriod(e.target.value);
     });
     
-    console.log(`✅ ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
+    console.log(`? ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
 }
 
 function populateEmployeeDropdown() {
@@ -2665,7 +2700,7 @@ function populateUploadedDataDropdown() {
     
     if (!avgUploadedDataSelect) return;
     
-    console.log(`📅 Populating Call Center Average dropdown for type: ${selectedPeriodType}`);
+    console.log(`?? Populating Call Center Average dropdown for type: ${selectedPeriodType}`);
     
     // Get all weeks from weeklyData
     const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
@@ -2696,7 +2731,7 @@ function populateUploadedDataDropdown() {
     });
     
     avgUploadedDataSelect.innerHTML = options;
-    console.log(`✅ ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
+    console.log(`? ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
 }
 
 function loadUploadedDataPeriod(weekKey) {
@@ -2781,7 +2816,7 @@ function setupUploadedDataListener() {
             if (trendPeriodSelect) {
                 trendPeriodSelect.value = weekKey;
                 trendPeriodSelect.dispatchEvent(new Event('change'));
-                console.log(`📊 Auto-synced period to Metric Trends: ${weekKey}`);
+                console.log(`?? Auto-synced period to Metric Trends: ${weekKey}`);
             }
         }
     });
@@ -2853,7 +2888,7 @@ function displayCallCenterAverages(weekKey) {
         const weekKey = document.getElementById('avgUploadedDataSelect')?.value;
         
         if (!weekKey) {
-            alert('⚠️ Please select a period first');
+            alert('?? Please select a period first');
             return;
         }
         
@@ -2874,7 +2909,7 @@ function displayCallCenterAverages(weekKey) {
         };
         
         setCallCenterAverageForPeriod(weekKey, averageData);
-        alert('✅ Call center averages saved!');
+        alert('? Call center averages saved!');
     });
 
 function setupMetricTrendsListeners() {
@@ -2883,7 +2918,7 @@ function setupMetricTrendsListeners() {
     periodTypeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
             const selectedType = radio.value;
-            console.log(`🔄 Period type changed to: ${selectedType}`);
+            console.log(`?? Period type changed to: ${selectedType}`);
             
             // Update both dropdowns
             populateUploadedDataDropdown(); // Call Center Average dropdown
@@ -2968,7 +3003,7 @@ function displayMetricsPreview(employeeName, weekKey) {
     const employee = week.employees.find(emp => emp.name === employeeName);
     if (!employee) return;
     
-    console.log(`📊 Displaying metrics preview for ${employeeName} (${weekKey})`);
+    console.log(`?? Displaying metrics preview for ${employeeName} (${weekKey})`);
     
     // Define metrics to show
     const metricsToPreview = [
@@ -3041,7 +3076,7 @@ function generateTrendEmail() {
     const displayName = nickname || employeeName;
     
     // Build email image
-    showToast('⏳ Creating email image...', 3000);
+    showToast('? Creating email image...', 3000);
     
     setTimeout(() => {
         createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee);
@@ -3069,7 +3104,7 @@ function formatMetricName(camelCase) {
 }
 
 function getMetricOrder() {
-    // PHASE 3 - LOCKED ORDER: Core Performance → Survey → Sentiment → Reliability
+    // PHASE 3 - LOCKED ORDER: Core Performance ? Survey ? Sentiment ? Reliability
     return [
         // CORE PERFORMANCE GROUP (6 metrics)
         { key: 'scheduleAdherence', group: 'Core Performance' },
@@ -3220,23 +3255,23 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         
         // Set emoji and color
         if (Math.abs(trendDiff) < 0.1) {
-            trendingEmoji = '➡️'; // Flat/no change
+            trendingEmoji = '??'; // Flat/no change
             trendingColor = '#666666';
-            trendingText = '➡️ No change';
+            trendingText = '?? No change';
         } else if (isImprovement) {
-            trendingEmoji = '📈'; // Chart increasing (green)
+            trendingEmoji = '??'; // Chart increasing (green)
             trendingColor = '#28a745';
             // Format change value
             const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
             const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `📈 +${changeValue} vs last ${periodLabel}`;
+            trendingText = `?? +${changeValue} vs last ${periodLabel}`;
         } else {
-            trendingEmoji = '📉'; // Chart decreasing (red)
+            trendingEmoji = '??'; // Chart decreasing (red)
             trendingColor = '#dc3545';
             // Format change value
             const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
             const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `📉 -${changeValue} vs last ${periodLabel}`;
+            trendingText = `?? -${changeValue} vs last ${periodLabel}`;
         }
     }
     
@@ -3311,7 +3346,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
             currentGroup = group;
             html += `<tr style="background-color: #e3f2fd; border: 1px solid #ddd;">
                 <td colspan="6" style="padding: 12px; font-weight: bold; color: #0056B3; font-size: 15px;">
-                    📋 ${group}
+                    ?? ${group}
                 </td>
             </tr>`;
         }
@@ -3373,7 +3408,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     if (!current) {
         console.error('Invalid employee data:', current);
-        showToast('❌ Employee data is missing', 5000);
+        showToast('? Employee data is missing', 5000);
         return;
     }
 
@@ -3398,7 +3433,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     // Extract survey total for survey metrics
     const surveyTotal = current.survey_total ? parseInt(current.survey_total, 10) : 0;
 
-    console.log('📊 Email generation started for:', empName);
+    console.log('?? Email generation started for:', empName);
     console.log('Center averages:', centerAvg);
     console.log('Survey total:', surveyTotal);
 
@@ -3464,7 +3499,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('📊 Performance Summary', 50, 45);
+    ctx.fillText('?? Performance Summary', 50, 45);
     ctx.font = '14px Arial';
     ctx.fillText(subjectLine, 50, 75);
 
@@ -3483,9 +3518,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     y += 50;
 
     // Summary cards (using shared statistics)
-    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
-    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📊 Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
-    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '🔼 Improved', improvedText, improvedSub);
+    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '? Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '?? Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
+    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '?? Improved', improvedText, improvedSub);
 
     y += 140;
 
@@ -3494,7 +3529,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillRect(40, y, 820, 50);
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('📊 Your Metrics', 50, y + 32);
+    ctx.fillText('?? Your Metrics', 50, y + 32);
     y += 70;
 
     // Table headers
@@ -3527,7 +3562,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
-            const groupLabel = group === 'Survey' ? `📋 ${group} (${surveyTotal} surveys)` : `📋 ${group}`;
+            const groupLabel = group === 'Survey' ? `?? ${group} (${surveyTotal} surveys)` : `?? ${group}`;
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
@@ -3568,7 +3603,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             const hasImproved = isReverse ? change < 0 : change > 0;
             
             if (hasImproved && Math.abs(change) > 0.1) {
-                const arrow = change > 0 ? '⬆️' : '⬇️';
+                const arrow = change > 0 ? '??' : '??';
                 const changeText = formatMetricDisplay(key, Math.abs(change));
                 improvedMetrics.push({
                     label: metric.label,
@@ -3613,13 +3648,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#1b5e20';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
+        ctx.fillText('?? Key Wins (Meeting Target & Beating Center)', 50, y + 26);
         y += 50;
         
         keyWins.slice(0, 5).forEach((item, idx) => {
             ctx.fillStyle = '#333333';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText(`• ${item.label}:`, 60, y + 20);
+            ctx.fillText(`� ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
             ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
             y += 35;
@@ -3633,19 +3668,19 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#0d47a1';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('✅ Highlights (Improved from Last Week)', 50, y + 26);
+        ctx.fillText('? Highlights (Improved from Last Week)', 50, y + 26);
         y += 50;
         
         if (improvedMetrics.length === 0 && previous) {
             ctx.fillStyle = '#666666';
             ctx.font = '14px Arial';
-            ctx.fillText('• No improvements detected this week', 60, y + 20);
+            ctx.fillText('� No improvements detected this week', 60, y + 20);
             y += 40;
         } else {
             improvedMetrics.slice(0, 5).forEach((item, idx) => {
                 ctx.fillStyle = '#333333';
                 ctx.font = 'bold 14px Arial';
-                ctx.fillText(`• ${item.label}:`, 60, y + 20);
+                ctx.fillText(`� ${item.label}:`, 60, y + 20);
                 ctx.font = '14px Arial';
                 ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last week`, 220, y + 20);
                 y += 35;
@@ -3660,13 +3695,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#e65100';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
+        ctx.fillText('?? Focus Areas (Below Center Average)', 50, y + 26);
         y += 50;
         
         focusMetrics.slice(0, 5).forEach((item, idx) => {
             ctx.fillStyle = '#333333';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText(`• ${item.label}:`, 60, y + 20);
+            ctx.fillText(`� ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
             ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
             y += 35;
@@ -3680,16 +3715,16 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('📋 Legend', 50, y + 30);
+    ctx.fillText('?? Legend', 50, y + 30);
     
     const legendItems = [
         { color: '#28a745', label: 'Meeting target' },
         { color: '#dc3545', label: 'Below target' },
         { color: '#6c757d', label: 'Better than center' },
         { color: '#ffc107', label: 'Behind center' },
-        { color: '#28a745', symbol: '⬆️', label: 'Improved from last week' },
-        { color: '#dc3545', symbol: '⬇️', label: 'Declined from last week' },
-        { color: '#6c757d', symbol: '➡️', label: 'No change from last week' }
+        { color: '#28a745', symbol: '??', label: 'Improved from last week' },
+        { color: '#dc3545', symbol: '??', label: 'Declined from last week' },
+        { color: '#6c757d', symbol: '??', label: 'No change from last week' }
     ];
     
     let legendY = y + 60;
@@ -3733,7 +3768,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         ctx.fillStyle = '#856404';
         ctx.font = 'bold 16px Arial';
-        ctx.fillText('⚠️ Reliability Note', 50, y + 25);
+        ctx.fillText('?? Reliability Note', 50, y + 25);
         
         ctx.fillStyle = '#333333';
         ctx.font = '13px Arial';
@@ -3754,19 +3789,19 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     canvas.toBlob(blob => {
         if (!blob) {
             console.error('Failed to create blob from canvas');
-            showToast('❌ Error creating image', 5000);
+            showToast('? Error creating image', 5000);
             return;
         }
 
-        console.log('✅ Canvas image created successfully');
+        console.log('? Canvas image created successfully');
 
         // Try clipboard copy
         if (navigator.clipboard && navigator.clipboard.write) {
             navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]).then(() => {
-                console.log('✅ Image copied to clipboard');
-                showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
+                console.log('? Image copied to clipboard');
+                showToast('? Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook with full subject line
                 const periodMeta = period.metadata || {};
@@ -3797,7 +3832,7 @@ function downloadImageFallback(blob, empName, period) {
     a.download = `TrendReport_${empName}_${metadata.startDate || 'unknown'}.png`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('📥 Image downloaded! Open Outlook and insert the file.', 4000);
+    showToast('?? Image downloaded! Open Outlook and insert the file.', 4000);
     
     const fallbackMeta = period.metadata || {};
     const fallbackPeriodType = fallbackMeta.periodType === 'week' ? 'Weekly' : fallbackMeta.periodType === 'month' ? 'Monthly' : fallbackMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
@@ -3842,7 +3877,7 @@ function getMetricTarget(metric) {
     if (metricDef && metricDef.target) {
         return metricDef.target.value;
     }
-    console.warn(`⚠️ Target not found for metric: ${metric}`);
+    console.warn(`?? Target not found for metric: ${metric}`);
     return 90; // Safe fallback
 }
 
@@ -3939,16 +3974,16 @@ function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
     if (lowerIsBetter) {
         // For AHT, ACW: lower is better
         if (employeeValue <= centerValue) {
-            return { status: 'meets', icon: '✅' };
+            return { status: 'meets', icon: '?' };
         } else {
-            return { status: 'below', icon: '⬇️' };
+            return { status: 'below', icon: '??' };
         }
     } else {
         // For all others: higher is better
         if (employeeValue >= centerValue) {
-            return { status: 'meets', icon: '✅' };
+            return { status: 'meets', icon: '?' };
         } else {
-            return { status: 'below', icon: '⬇️' };
+            return { status: 'below', icon: '??' };
         }
     }
 }
@@ -4159,20 +4194,20 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
 function compareToYearlyAverage(employeeName, metricKey, currentValue, lowerIsBetter) {
     /**
      * Compare employee's current value to their yearly average
-     * Returns: { status: 'meets'|'below'|'first', icon: '✅'|'❌'|'⚠️', yearlyAvg: number }
+     * Returns: { status: 'meets'|'below'|'first', icon: '?'|'?'|'??', yearlyAvg: number }
      */
     const yearlyAvg = getYearlyAverageForEmployee(employeeName, metricKey);
     
     if (!yearlyAvg) {
-        return { status: 'first', icon: '⚠️', yearlyAvg: null };
+        return { status: 'first', icon: '??', yearlyAvg: null };
     }
     
     const isMeeting = lowerIsBetter ? currentValue <= yearlyAvg.value : currentValue >= yearlyAvg.value;
     
     if (isMeeting) {
-        return { status: 'meets', icon: '✅', yearlyAvg: yearlyAvg.value };
+        return { status: 'meets', icon: '?', yearlyAvg: yearlyAvg.value };
     } else {
-        return { status: 'below', icon: '❌', yearlyAvg: yearlyAvg.value };
+        return { status: 'below', icon: '?', yearlyAvg: yearlyAvg.value };
     }
 }
 
@@ -4180,22 +4215,22 @@ function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
     const delta = currentValue - previousValue;
     
     if (delta === 0) {
-        return { status: 'nochange', icon: '➖', delta: 0 };
+        return { status: 'nochange', icon: '?', delta: 0 };
     }
     
     if (lowerIsBetter) {
         // For AHT, ACW: decrease is improvement
         if (delta < 0) {
-            return { status: 'improved', icon: '⬆️', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '??', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '⬇️', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '??', delta: Math.round(delta * 100) / 100 };
         }
     } else {
         // For others: increase is improvement
         if (delta > 0) {
-            return { status: 'improved', icon: '⬆️', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '??', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '⬇️', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '??', delta: Math.round(delta * 100) / 100 };
         }
     }
 }
@@ -4254,11 +4289,11 @@ function renderExecutiveSummary() {
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
     
     const cards = [
-        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
-        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
-        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '⏰' },
-        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📞' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
+        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '??' },
+        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '??' },
+        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '?' },
+        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '??' },
+        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '??' }
     ];
     
     cards.forEach(card => {
@@ -4280,7 +4315,7 @@ function renderExecutiveSummary() {
 }
 
 function initializeYearlyIndividualSummary() {
-    console.log('📊 Initializing Yearly Individual Summary...');
+    console.log('?? Initializing Yearly Individual Summary...');
     populateExecutiveSummaryAssociate();
     
     // Period type is always YTD for executive summary
@@ -4313,7 +4348,7 @@ function initializeYearlyIndividualSummary() {
         });
     });
     
-    console.log('✅ Yearly Individual Summary initialized');
+    console.log('? Yearly Individual Summary initialized');
 }
 
 function showEmailSection() {
@@ -4329,7 +4364,7 @@ function showEmailSection() {
 // ============================================
 
 function exportToExcel() {
-    console.log('🔄 exportToExcel() function executing...');
+    console.log('?? exportToExcel() function executing...');
     try {
         const wb = XLSX.utils.book_new();
         
@@ -4364,11 +4399,11 @@ function exportToExcel() {
         
         // Save file
         XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-showToast('✅ Data exported to Excel!');
+showToast('? Data exported to Excel!');
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
-        alert('❌ Error exporting data: ' + error.message);
+        alert('? Error exporting data: ' + error.message);
     }
 }
 
@@ -4393,7 +4428,7 @@ async function generateCopilotPrompt() {
     }
     const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
     if (!employeeData) {
-        alert('❌ Unable to load metrics for this employee. Please reload data.');
+        alert('? Unable to load metrics for this employee. Please reload data.');
         return;
     }
     const { periodLabel, timeReference } = getActivePeriodContext();
@@ -4478,7 +4513,7 @@ async function generateCopilotPrompt() {
     }
     
     // Build the unified Copilot prompt - conversational format to avoid detection as system prompt
-    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone — not corporate or template-like.
+    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone � not corporate or template-like.
 
 Here's the performance data:
 
@@ -4492,24 +4527,24 @@ Can you help me write an email to ${firstName} with this structure:
 
 2. WINS section:
    - Brief intro line
-   - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
+   - Bullets in this concise format: "� Metric Name - Goal X%. You were at Y%."
    - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
 
 3. OPPORTUNITIES section:
    - Brief supportive intro line
-   - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
-   - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
+   - Bullets in this format: "� Metric Name - Goal X%. You were at Y%."
+   - Note: If Reliability is included, format as: "� Reliability - X hours unscheduled" (no goal needed)
    - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive. If there's a reliability note, weave it in naturally here.
 
 4. Warm close inviting them to discuss
 
 Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
 
-Vary your wording and sentence structure so it doesn’t sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
+Vary your wording and sentence structure so it doesn�t sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
 
 Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
 
-Do NOT use em dashes (—) anywhere in the email.
+Do NOT use em dashes (�) anywhere in the email.
 
 The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
@@ -4527,10 +4562,10 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         // Scroll to paste section
         document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
-        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
+        showToast('? Prompt copied! Paste into Copilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('❌ Failed to copy prompt to clipboard. Please try again.');
+        alert('? Failed to copy prompt to clipboard. Please try again.');
     });
 }
 
@@ -4581,17 +4616,17 @@ function generateVerintSummary() {
         const verintSummary = summaryParts.join(' ');
         
         navigator.clipboard.writeText(verintSummary).then(() => {
-            alert('✅ Verint summary copied to clipboard.');
+            alert('? Verint summary copied to clipboard.');
         }).catch(err => {
             console.error('Failed to copy:', err);
-            alert('❌ Failed to copy summary to clipboard. Please try again.');
+            alert('? Failed to copy summary to clipboard. Please try again.');
         });
         return;
     }
     
     const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
     if (!copilotEmail) {
-        alert('⚠️ Generate the coaching prompt first so I can build a Verint summary.');
+        alert('?? Generate the coaching prompt first so I can build a Verint summary.');
         return;
     }
     
@@ -4603,11 +4638,11 @@ ${copilotEmail}
 Verint Summary:`;
     
     navigator.clipboard.writeText(summaryPrompt).then(() => {
-        alert('✅ Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
+        alert('? Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
         window.open('https://m365.cloud.microsoft.com/chat', '_blank');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('❌ Failed to copy summary prompt to clipboard. Please try again.');
+        alert('? Failed to copy summary prompt to clipboard. Please try again.');
     });
 }
 
@@ -4636,17 +4671,28 @@ function renderEmployeesList() {
         return;
     }
     
+    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    
     container.innerHTML = `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` + 
     employees.map(name => {
-        // Get employee nickname if set
-        const nickname = getEmployeeNickname(name);
-        const nicknameDisplay = nickname ? ` (${nickname})` : '';
+        const currentPreferred = preferredNames[name] || getEmployeeNickname(name);
+        const defaultValue = preferredNames[name] || '';
         
         return `
-        <div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <div>
-                <strong style="color: #6a1b9a;">${name}</strong>${nicknameDisplay}
-                <div style="font-size: 0.8em; color: #666;">Source: Weekly Data Uploads</div>
+        <div style="padding: 15px; border-bottom: 1px solid #eee; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
+                <div style="flex: 1;">
+                    <strong style="color: #6a1b9a;">${name}</strong>
+                    <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Weekly Data Uploads</div>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
+                    <input type="text" id="prefName_${name}" value="${defaultValue}" placeholder="${getEmployeeNickname(name)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                    <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${currentPreferred}</strong></div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="saveEmployeePreferredName('${name}')" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">?? Save</button>
+                </div>
             </div>
         </div>
     `}).join('');
@@ -4658,18 +4704,18 @@ function renderEmployeesList() {
 // ============================================
 
 function initApp() {
-    console.log('🚀 Initializing Development Coaching Tool...');
+    console.log('?? Initializing Development Coaching Tool...');
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     loadTeamMembers();
     
-    console.log(`📊 Loaded ${Object.keys(weeklyData).length} weeks of data`);
-    console.log('📦 weeklyData keys:', Object.keys(weeklyData));
+    console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
+    console.log('?? weeklyData keys:', Object.keys(weeklyData));
     if (Object.keys(weeklyData).length > 0) {
-        console.log('✅ Weekly data successfully loaded from localStorage');
+        console.log('? Weekly data successfully loaded from localStorage');
     } else {
-        console.warn('⚠️ No weekly data in localStorage. Upload CSV to populate.');
+        console.warn('?? No weekly data in localStorage. Upload CSV to populate.');
     }
     
     // Initialize default coaching tips (first load only)
@@ -4696,7 +4742,7 @@ function initApp() {
     // Ensure data is saved before page unload (survives Ctrl+Shift+R)
     window.addEventListener('beforeunload', () => {
         saveWeeklyData();
-        console.log('💾 Auto-saving weekly data on page unload');
+        console.log('?? Auto-saving weekly data on page unload');
     });
     
     console.log('? Application initialized successfully!');
@@ -4709,19 +4755,19 @@ function initApp() {
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('📄 DOMContentLoaded fired - initializing app...');
+        console.log('?? DOMContentLoaded fired - initializing app...');
         initApp();
     });
 } else {
     // DOM already loaded (if script runs late)
-    console.log('📄 DOM already loaded - initializing app immediately...');
+    console.log('?? DOM already loaded - initializing app immediately...');
     initApp();
 }
 
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
 function populateExecutiveSummaryAssociate() {
-    console.log('📋 Populating Executive Summary associate dropdown...');
+    console.log('?? Populating Executive Summary associate dropdown...');
     const select = document.getElementById('summaryAssociateSelect');
     const allEmployees = new Set();
     
@@ -4747,23 +4793,23 @@ function populateExecutiveSummaryAssociate() {
         select.appendChild(option);
     });
     
-    console.log(`✅ Populated ${sortedEmployees.length} team members`);
+    console.log(`? Populated ${sortedEmployees.length} team members`);
 }
 
 function loadExecutiveSummaryData() {
     const associate = document.getElementById('summaryAssociateSelect').value;
     const periodType = 'ytd'; // Always use Year-to-Date
     
-    console.log(`\n📊 loadExecutiveSummaryData started - associate: ${associate}`);
+    console.log(`\n?? loadExecutiveSummaryData started - associate: ${associate}`);
     
     if (!associate) {
-        console.log('⚠️ No associate selected');
+        console.log('?? No associate selected');
         document.getElementById('summaryDataContainer').style.display = 'none';
         document.getElementById('summaryChartsContainer').style.display = 'none';
         return;
     }
     
-    console.log(`📊 Loading executive summary for ${associate} (YTD)`);
+    console.log(`?? Loading executive summary for ${associate} (YTD)`);
     console.log(`Available weeks in weeklyData: ${Object.keys(weeklyData).length}`);
     
     // Collect ALL periods (regardless of upload type) for YTD view
@@ -4774,7 +4820,7 @@ function loadExecutiveSummaryData() {
         // For executive summary (YTD), include all periods regardless of metadata type
         const employee = weekData.employees.find(e => e.name === associate);
         if (employee) {
-            console.log(`  ✅ Found ${associate} in period ${weekKey}`);
+            console.log(`  ? Found ${associate} in period ${weekKey}`);
             matchingPeriods.push({
                 weekKey,
                 label: weekData.metadata?.label || weekKey,
@@ -4896,11 +4942,11 @@ function saveExecutiveSummaryNotes(associate) {
     });
     
     localStorage.setItem('executiveSummaryNotes', JSON.stringify(saved));
-    showToast(`✅ Notes saved for ${associate}`, 3000);
+    showToast(`? Notes saved for ${associate}`, 3000);
 }
 
 function displayExecutiveSummaryCharts(associate, periods, periodType) {
-    console.log(`📊 displayExecutiveSummaryCharts called for ${associate} with ${periods.length} periods`);
+    console.log(`?? displayExecutiveSummaryCharts called for ${associate} with ${periods.length} periods`);
     
     const container = document.getElementById('summaryMetricsVisuals');
     if (!container) {
@@ -4910,7 +4956,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     container.innerHTML = '';
     
     if (!periods || periods.length === 0) {
-        console.warn('⚠️ No periods provided to displayExecutiveSummaryCharts');
+        console.warn('?? No periods provided to displayExecutiveSummaryCharts');
         container.innerHTML = '<p style="color: #999; padding: 20px;">No data available for this associate.</p>';
         return;
     }
@@ -5061,14 +5107,14 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 </div>
             </div>
             <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                ${hasNoSurveyData ? '💬 Awaiting customer survey data' : (centerAvg === null ? '⚠️ No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average') : (employeeAvg >= centerAvg ? '✅ Meeting center average' : '⚠️ Below center average')))}
+                ${hasNoSurveyData ? '?? Awaiting customer survey data' : (centerAvg === null ? '?? No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '? Meeting center average' : '?? Below center average') : (employeeAvg >= centerAvg ? '? Meeting center average' : '?? Below center average')))}
             </div>
         `;
         
         container.appendChild(chartDiv);
     });
     
-    console.log(`✅ displayExecutiveSummaryCharts completed - rendered ${metrics.length} metrics`);
+    console.log(`? displayExecutiveSummaryCharts completed - rendered ${metrics.length} metrics`);
 }
 
 function getCenterAverageForWeek(weekKey) {
@@ -5077,7 +5123,7 @@ function getCenterAverageForWeek(weekKey) {
     const avg = callCenterAverages[weekKey];
     
     if (!avg || Object.keys(avg).length === 0) {
-        console.warn(`⚠️ No call center average found for ${weekKey}. Make sure it's entered in Metric Trends.`);
+        console.warn(`?? No call center average found for ${weekKey}. Make sure it's entered in Metric Trends.`);
         return null;
     }
     
@@ -5205,10 +5251,10 @@ function generateComparisonChart(metricsData) {
     });
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// COACHING EMAIL — WEEKLY CHECK-IN (METRIC-BASED)
+// -----------------------------------------------------------------------------
+// COACHING EMAIL � WEEKLY CHECK-IN (METRIC-BASED)
 // Uses latest uploaded data + coaching tips bank to build a Copilot prompt
-// ═════════════════════════════════════════════════════════════════════════════
+// -----------------------------------------------------------------------------
 
 function getLatestWeekKeyForCoaching() {
     const weekKeys = Object.keys(weeklyData || {});
@@ -5285,7 +5331,7 @@ function initializeCoachingEmail() {
         generateBtn.dataset.bound = 'true';
     }
 
-    console.log('💌 Coaching Email initialized for latest period:', coachingLatestWeekKey);
+    console.log('?? Coaching Email initialized for latest period:', coachingLatestWeekKey);
 }
 
 function updateCoachingEmailDisplay() {
@@ -5350,7 +5396,7 @@ function updateCoachingEmailDisplay() {
         ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
         : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
 
-    summary.textContent = `Week of ${endDate} • ${wins.length} wins • ${opportunities.length} focus areas`;
+    summary.textContent = `Week of ${endDate} � ${wins.length} wins � ${opportunities.length} focus areas`;
 
     winsList.innerHTML = wins.length
         ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
@@ -5404,15 +5450,106 @@ function buildCoachingPrompt(employeeRecord) {
         ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
         : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
 
+    const preferredName = getEmployeeNickname(employeeRecord.name);
+
     const winsText = wins.length
         ? wins.map(w => `- ${w.label}: ${w.value} vs target ${w.target}`).join('\n')
         : '- No metrics meeting goal in this period.';
 
     const oppText = opportunities.length
-        ? opportunities.map(o => `- ${o.label}: ${o.value} vs target ${o.target}\n  • Tip to rewrite (do not quote): ${o.tip}`).join('\n')
+        ? opportunities.map(o => `- ${o.label}: ${o.value} vs target ${o.target}\n  Coaching tip: ${o.tip}`).join('\n')
         : '- No metrics below target in this period.';
 
-    return `ROLE\n\nYou are a real contact center supervisor writing a weekly coaching check-in email for ${employeeRecord.name}.\nThis should sound like it is coming directly from their supervisor — warm, human, supportive, and invested in their success.\n\nThis is a recurring weekly email.\nAssume you have written to this associate before.\nVary wording and structure naturally like a human would.\n\nDATA CONTEXT\n\nYou will receive structured weekly performance data for one associate.\n\nWeek of ${endDate}\n\nKey Wins:\n${winsText}\n\nKey Opportunities:\n${oppText}\n\nOnly reference what is supported by the data provided.\nDo not invent feedback.\n\nWRITING RULES (CRITICAL)\n\n- Do NOT number sections\n- Do NOT label sections (no “Key Wins”, “Opportunities”, etc.)\n- Do NOT sound like a report or checklist\n- Do NOT use robotic or instructional language\n- Do NOT repeat phrasing across bullets\n- Do NOT use HR clichés\n- Do NOT use the phrase “This is an opportunity to”\n\nWrite in natural paragraphs with clean, simple bullet points where appropriate.\n\nTONE & STYLE\n\n- Warm\n- Friendly\n- Confident\n- Encouraging\n- Forward-looking\n- Clear expectations\n- Cheerleading first, coaching second\n\nThis should sound like a supervisor who knows the associate and wants to help them succeed.\n\nREQUIRED FLOW (INTERNAL – DO NOT SHOW)\n\nOpening:\n- Start the email by greeting ${employeeRecord.name} by name\n- Lead with confidence and appreciation\n- Set a positive, supportive tone\n\nCelebrate Wins:\n- Call out strong metrics first\n- Include current performance and target\n- Explain briefly why those wins matter\n- Use bullets where helpful, but keep them clean and natural\n\nCoaching Focus Areas:\n- Discuss only metrics below target\n- Include current performance and target\n- Pull exactly ONE relevant tip per metric from the tips bank\n- Rewrite the tip naturally in your own words\n- Make the guidance actionable but conversational\n- Frame as refinement and focus, not correction\n\nExpectations:\n- Clearly state that improvement is expected where metrics are off\n- Balance accountability with belief in the associate\n- Emphasize progress, consistency, and confidence\n\nClose:\n- End on encouragement and confidence\n- Reinforce momentum\n- Offer support\n- Tie focus areas to growth and future readiness (including next shift bid when relevant)\n\nHARD REQUIREMENTS\n\n- Address ${employeeRecord.name} by name in the opening (Hi ${employeeRecord.name}, or similar greeting)\n- Use bullets for metrics (wins and opportunities)\n- Show current performance vs target in each bullet\n- Pull ONE tip per opportunity (no more, no less)\n- Rewrite tips — never copy verbatim\n- Sound natural, human, and supportive\n- No numbered sections\n- No labeled sections\n\nGenerate the coaching email now.`;
+    return `ROLE
+
+You are a real contact center supervisor writing a weekly coaching check-in email for ${employeeRecord.name}.
+This should sound like it is coming directly from their supervisor — warm, human, supportive, and invested in their success.
+This is a recurring weekly email.
+Assume you have written to this associate before.
+Vary wording and structure naturally like a human would.
+
+VOICE & TONE (CRITICAL)
+
+- Warm and empathetic
+- Friendly and conversational
+- Confident and assured
+- Encouraging and forward-looking
+- Clear and direct expectations
+- Supportive and invested in success
+- Authentic supervisor-to-associate connection
+- Cheerleading first, coaching second
+
+HARD WRITING RULES
+
+- Do NOT number sections
+- Do NOT label sections (no "Key Wins," "Opportunities," etc.)
+- Do NOT sound like a report or checklist
+- Do NOT use robotic or instructional language
+- Do NOT repeat phrasing across bullets
+- Do NOT use HR clichés or jargon
+- Do NOT use the phrase "This is an opportunity to"
+- Write in natural paragraphs with clean, simple bullet points where appropriate
+
+EMAIL FLOW (INTERNAL – DO NOT SHOW)
+
+Opening:
+- Start by greeting ${preferredName} by name
+- Lead with confidence and appreciation
+- Set a positive, supportive tone
+
+Celebrate Wins:
+- Call out strong metrics first with current performance and target
+- Explain briefly why those wins matter
+- Use bullets where helpful, but keep them clean and natural
+
+Coaching:
+- Discuss only metrics below target
+- Include current performance and target for each metric
+- Pull exactly ONE relevant coaching tip per metric
+- Rewrite the tip naturally in your own words
+- Make guidance actionable but conversational
+- Frame as refinement and focus, not correction
+
+Expectations:
+- Clearly state that improvement is expected where metrics are off
+- Balance accountability with belief in the associate
+- Emphasize progress, consistency, and confidence
+
+Close:
+- End on encouragement and confidence
+- Reinforce momentum and support
+- Tie focus areas to growth and future readiness
+
+OUTPUT REQUIREMENTS
+
+- Address ${preferredName} by name in the opening
+- Use clean bullets for metrics (wins and opportunities)
+- Show current performance vs target in each bullet
+- Pull exactly ONE tip per opportunity metric
+- Rewrite tips in natural language—never copy verbatim
+- Sound like a real supervisor: natural, human, and supportive
+- No numbered sections or labels
+
+DATA FOR THIS EMAIL
+
+Week of ${endDate}
+
+Strengths:
+${winsText}
+
+Focus Areas:
+${oppText}
+
+DATA RULES
+
+- Only reference metrics and data provided above
+- Do not invent feedback or metrics
+- Do not assume external factors
+- Every tip must relate directly to the data provided
+
+FINAL INSTRUCTION
+
+Generate the coaching email for ${preferredName} now.`;
 }
 
 function generateCoachingPromptAndCopy() {
@@ -5421,13 +5558,13 @@ function generateCoachingPromptAndCopy() {
     const button = document.getElementById('generateCoachingPromptBtn');
 
     if (!employeeName) {
-        alert('⚠️ Please select an associate first.');
+        alert('?? Please select an associate first.');
         return;
     }
 
     const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
     if (!employeeRecord) {
-        alert('⚠️ No data found for that associate in the latest period.');
+        alert('?? No data found for that associate in the latest period.');
         return;
     }
 
@@ -5438,7 +5575,7 @@ function generateCoachingPromptAndCopy() {
 
     if (button) {
         const originalText = button.textContent;
-        button.textContent = '✅ Copied to CoPilot';
+        button.textContent = '? Copied to CoPilot';
         setTimeout(() => {
             button.textContent = originalText;
         }, 1200);
@@ -5450,10 +5587,10 @@ function generateCoachingPromptAndCopy() {
     }, 500);
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
+// -----------------------------------------------------------------------------
+// UTILITY FEATURE � MANAGE TIPS � DO NOT DELETE
 // Completely isolated from Metric Trends, emails, and coaching workflows.
-// ═════════════════════════════════════════════════════════════════════════════
+// -----------------------------------------------------------------------------
 
 // Default tips for each metric (preloaded on first use)
 const DEFAULT_METRIC_TIPS = {
@@ -5472,7 +5609,7 @@ const DEFAULT_METRIC_TIPS = {
         "How you say it matters as much as the solution itself."
     ],
     "First Call Resolution": [
-        "Fully understand the customer’s need before taking action.",
+        "Fully understand the customer�s need before taking action.",
         "Use available tools to resolve issues in one interaction.",
         "Clarify expectations so the customer knows what will happen next.",
         "Confirm all questions are addressed before closing the call.",
@@ -5486,7 +5623,7 @@ const DEFAULT_METRIC_TIPS = {
         "Reassurance helps create a positive overall experience."
     ],
     "Transfers": [
-        "Take a moment to fully assess the customer’s request before transferring.",
+        "Take a moment to fully assess the customer�s request before transferring.",
         "Use available job aids and resources to resolve more calls independently.",
         "Building confidence in handling issues reduces unnecessary transfers.",
         "When a transfer is needed, clearly explain the reason to the customer.",
@@ -5553,19 +5690,19 @@ const DEFAULT_METRIC_TIPS = {
 function initializeDefaultTips() {
     const stored = localStorage.getItem('metricCoachingTips');
     if (stored) {
-        console.log('📋 Metric tips already exist in storage, skipping preload');
+        console.log('?? Metric tips already exist in storage, skipping preload');
         return;
     }
     
-    console.log('🌱 First load detected - preloading default tips for all 13 metrics');
+    console.log('?? First load detected - preloading default tips for all 13 metrics');
     localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
-    console.log('✅ Preloaded tips for 13 metrics');
+    console.log('? Preloaded tips for 13 metrics');
 }
 
 function seedManageTipsIfEmpty() {
     const existingTips = getTipsFromStorage();
     if (existingTips.length > 0) {
-        console.log('📋 Manage Tips already populated, skipping seed');
+        console.log('?? Manage Tips already populated, skipping seed');
         return;
     }
 
@@ -5578,7 +5715,7 @@ function seedManageTipsIfEmpty() {
             "Building consistent habits now supports future shift flexibility."
         ],
         "Transfers": [
-            "Take a moment to fully assess the customer’s request before transferring.",
+            "Take a moment to fully assess the customer�s request before transferring.",
             "Use available job aids and resources to resolve more calls independently.",
             "Building confidence in handling issues reduces unnecessary transfers.",
             "When a transfer is needed, clearly explain the reason to the customer.",
@@ -5606,7 +5743,7 @@ function seedManageTipsIfEmpty() {
             "How you say it matters as much as the solution itself."
         ],
         "First Call Resolution": [
-            "Fully understand the customer’s need before taking action.",
+            "Fully understand the customer�s need before taking action.",
             "Use available tools to resolve issues in one interaction.",
             "Clarify expectations so the customer knows what will happen next.",
             "Confirm all questions are addressed before closing the call.",
@@ -5658,7 +5795,7 @@ function seedManageTipsIfEmpty() {
     });
 
     saveTipsToStorage(seededTips);
-    console.log('✅ Seeded Manage Tips with starter coaching tips');
+    console.log('? Seeded Manage Tips with starter coaching tips');
 }
 
 function getTipsFromStorage() {
@@ -5687,7 +5824,7 @@ function getMetricTips(metricName) {
 
 function saveTipsToStorage(tips) {
     localStorage.setItem('coachingTips', JSON.stringify(tips));
-    console.log('💾 Tips saved to storage');
+    console.log('?? Tips saved to storage');
 }
 
 function addNewTip() {
@@ -5698,7 +5835,7 @@ function addNewTip() {
     const content = contentInput.value.trim();
     
     if (!title || !content) {
-        alert('⚠️ Please enter both a title and content for the tip');
+        alert('?? Please enter both a title and content for the tip');
         return;
     }
     
@@ -5719,7 +5856,7 @@ function addNewTip() {
     
     // Re-render
     renderTipsManagement();
-    console.log('✅ New tip added:', title);
+    console.log('? New tip added:', title);
 }
 
 function editTip(tipId) {
@@ -5735,7 +5872,7 @@ function editTip(tipId) {
     if (newContent === null) return;
     
     if (!newTitle.trim() || !newContent.trim()) {
-        alert('⚠️ Title and content cannot be empty');
+        alert('?? Title and content cannot be empty');
         return;
     }
     
@@ -5743,11 +5880,11 @@ function editTip(tipId) {
     tip.content = newContent.trim();
     saveTipsToStorage(tips);
     renderTipsManagement();
-    console.log('✏️ Tip edited:', tip.title);
+    console.log('?? Tip edited:', tip.title);
 }
 
 function deleteTip(tipId) {
-    if (!confirm('❌ Are you sure you want to delete this tip?')) {
+    if (!confirm('? Are you sure you want to delete this tip?')) {
         return;
     }
     
@@ -5755,7 +5892,7 @@ function deleteTip(tipId) {
     tips = tips.filter(t => t.id !== tipId);
     saveTipsToStorage(tips);
     renderTipsManagement();
-    console.log('🗑️ Tip deleted');
+    console.log('??? Tip deleted');
 }
 
 function copyTipContent(tipId) {
@@ -5768,20 +5905,20 @@ function copyTipContent(tipId) {
     
     // Copy to clipboard
     navigator.clipboard.writeText(text).then(() => {
-        console.log('📋 Tip copied to clipboard');
+        console.log('?? Tip copied to clipboard');
         
         // Visual feedback
         const button = document.querySelector(`[data-copy-btn="${tipId}"]`);
         if (button) {
             const originalText = button.textContent;
-            button.textContent = '✅ Copied!';
+            button.textContent = '? Copied!';
             setTimeout(() => {
                 button.textContent = originalText;
             }, 2000);
         }
     }).catch(err => {
         console.error('Error copying to clipboard:', err);
-        alert('⚠️ Could not copy to clipboard');
+        alert('?? Could not copy to clipboard');
     });
 }
 
@@ -5804,14 +5941,14 @@ function renderTipsManagement() {
             </div>
             <p style="margin: 10px 0; color: #333; line-height: 1.5; word-break: break-word;">${escapeHtml(tip.content)}</p>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-                <button type="button" data-copy-btn="${tip.id}" onclick="copyTipContent(${tip.id})" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">📋 Copy</button>
-                <button type="button" onclick="editTip(${tip.id})" style="background: #1976d2; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">✏️ Edit</button>
-                <button type="button" onclick="deleteTip(${tip.id})" style="background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">🗑️ Delete</button>
+                <button type="button" data-copy-btn="${tip.id}" onclick="copyTipContent(${tip.id})" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">?? Copy</button>
+                <button type="button" onclick="editTip(${tip.id})" style="background: #1976d2; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">?? Edit</button>
+                <button type="button" onclick="deleteTip(${tip.id})" style="background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">??? Delete</button>
             </div>
         </div>
     `).join('');
     
-    console.log(`📋 Rendered ${tips.length} tips`);
+    console.log(`?? Rendered ${tips.length} tips`);
 }
 
 function escapeHtml(text) {
@@ -5836,7 +5973,7 @@ let sentimentData = {
 };
 
 function initializeSentiment() {
-    console.log('🎭 Initializing Sentiment section');
+    console.log('?? Initializing Sentiment section');
     populateSentimentEmployeeSelector();
 }
 
@@ -5922,10 +6059,10 @@ function handleSentimentFileUpload(fileType) {
             const keyMap = { positive: 'positive', negative: 'negative', emotions: 'emotions' };
             sentimentData[keyMap[fileType]] = { totalCalls, phrases };
             
-            statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
+            statusDiv.textContent = `? Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
             statusDiv.style.color = '#4caf50';
         } catch (error) {
-            statusDiv.textContent = `❌ Error parsing file`;
+            statusDiv.textContent = `? Error parsing file`;
             statusDiv.style.color = '#f44336';
             console.error('File parsing error:', error);
         }
@@ -5951,12 +6088,12 @@ function generateSentimentPrompt() {
     const promptArea = document.getElementById('sentimentPromptArea');
     
     if (!employeeName) {
-        alert('⚠️ Please select an employee first');
+        alert('?? Please select an employee first');
         return;
     }
     
     if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
-        alert('⚠️ Please upload at least one sentiment report');
+        alert('?? Please upload at least one sentiment report');
         return;
     }
     
@@ -6029,14 +6166,14 @@ Requirements:
 Generate the coaching message now:`;
     
     promptArea.value = prompt;
-    console.log(`💬 Sentiment coaching prompt generated for ${employeeName}`);
+    console.log(`?? Sentiment coaching prompt generated for ${employeeName}`);
 }
 
 function copySentimentPrompt() {
     const promptArea = document.getElementById('sentimentPromptArea');
     
     if (!promptArea.value.trim()) {
-        alert('⚠️ No prompt to copy. Please generate a prompt first.');
+        alert('?? No prompt to copy. Please generate a prompt first.');
         return;
     }
     
@@ -6046,7 +6183,7 @@ function copySentimentPrompt() {
     // Visual feedback
     const button = document.getElementById('copySentimentPromptBtn');
     const originalText = button.textContent;
-    button.textContent = '✅ Copied to CoPilot!';
+    button.textContent = '? Copied to CoPilot!';
     
     // Open ChatGPT Copilot after short delay
     setTimeout(() => {
@@ -6056,7 +6193,8 @@ function copySentimentPrompt() {
         }, 500);
     }, 500);
     
-    console.log('📋 Sentiment prompt copied to clipboard');
+    console.log('?? Sentiment prompt copied to clipboard');
 }
+
 
 
