@@ -6,7 +6,9 @@
   "scripts": {
     "build": "terser script.js -o script.min.js --compress --mangle"
   },
-  "dependencies": {},
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  },
   "devDependencies": {
     "terser": "^5.19.2"
   }

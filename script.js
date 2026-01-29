@@ -3881,35 +3881,51 @@ function generateTrendEmail() {
     const { htmlEmail, subject: subjectLine } = result;
     window.latestTrendEmailHtml = htmlEmail;
     
-    // Open a preview window with the email
-    const previewWindow = window.open('', 'emailPreview', 'width=900,height=1000,scrollbars=yes');
-    previewWindow.document.write(htmlEmail);
-    previewWindow.document.close();
+    // Show converting toast
+    showToast('⏳ Converting email to image...', 3000);
     
-    // Also copy to clipboard (for Outlook users who need it)
-    const blob = new Blob([htmlEmail], { type: 'text/html' });
-    const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
+    // Create temporary container with the email HTML
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '900px';
+    tempContainer.innerHTML = htmlEmail;
+    document.body.appendChild(tempContainer);
     
-    navigator.clipboard.write([htmlClipboardItem]).then(() => {
-        console.log('✅ HTML email copied to clipboard');
-        
-        // Auto-open Outlook with mailto link
-        const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
-        setTimeout(() => {
-            window.open(outlookUrl, '_blank');
-        }, 300);
-        
-        showToast('✅ Preview opened, Outlook opening... paste the styled email and send!', 5000);
-    }).catch((err) => {
-        console.error('❌ Copy failed:', err);
-        // Fallback to plain text if HTML clipboard fails
-        navigator.clipboard.writeText(htmlEmail).then(() => {
-            const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
-            setTimeout(() => {
-                window.open(outlookUrl, '_blank');
-            }, 300);
-            showToast('📋 Preview & Outlook opened. Paste the styled email from preview and send!', 5000);
-        });
+    // Convert to image using html2canvas
+    html2canvas(tempContainer, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false
+    }).then(canvas => {
+        // Convert canvas to blob (JPG)
+        canvas.toBlob((blob) => {
+            // Copy image to clipboard
+            navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]).then(() => {
+                console.log('✅ Email image copied to clipboard');
+                
+                // Clean up
+                document.body.removeChild(tempContainer);
+                
+                // Auto-open Outlook with mailto link
+                const outlookUrl = `mailto:?subject=${encodeURIComponent(subjectLine)}`;
+                setTimeout(() => {
+                    window.open(outlookUrl, '_blank');
+                }, 300);
+                
+                showToast('✅ Email converted to image! Outlook opening... paste the image and send!', 5000);
+            }).catch((err) => {
+                console.error('❌ Copy failed:', err);
+                document.body.removeChild(tempContainer);
+                showToast('❌ Could not copy image to clipboard', 5000);
+            });
+        }, 'image/png');
+    }).catch(err => {
+        console.error('Error converting to image:', err);
+        document.body.removeChild(tempContainer);
+        showToast('❌ Error converting email to image', 5000);
     });
 }
 
