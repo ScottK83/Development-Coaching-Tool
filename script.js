@@ -5918,48 +5918,8 @@ function copyTipContent(tipId) {
         }
     }).catch(err => {
         console.error('Error copying to clipboard:', err);
-        alert('?? Could not copy to clipboard');
+        alert('⚠️ Could not copy to clipboard');
     });
-}
-
-function renderTipsManagement() {
-    const container = document.getElementById('tipsContainer');
-    const tips = getTipsFromStorage();
-    
-    if (tips.length === 0) {
-        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No tips yet. Add one to get started!</p>';
-        return;
-    }
-    
-    container.innerHTML = tips.map(tip => `
-        <div style="padding: 15px; background: #f5f5f5; border-radius: 6px; border-left: 4px solid #00796b;">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                <div>
-                    <h4 style="margin: 0 0 5px 0; color: #004d40; word-break: break-word;">${escapeHtml(tip.title)}</h4>
-                    <small style="color: #999;">Added: ${tip.createdDate}</small>
-                </div>
-            </div>
-            <p style="margin: 10px 0; color: #333; line-height: 1.5; word-break: break-word;">${escapeHtml(tip.content)}</p>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-                <button type="button" data-copy-btn="${tip.id}" onclick="copyTipContent(${tip.id})" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">?? Copy</button>
-                <button type="button" onclick="editTip(${tip.id})" style="background: #1976d2; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">?? Edit</button>
-                <button type="button" onclick="deleteTip(${tip.id})" style="background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">??? Delete</button>
-            </div>
-        </div>
-    `).join('');
-    
-    console.log(`?? Rendered ${tips.length} tips`);
-}
-
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 // ============================================
