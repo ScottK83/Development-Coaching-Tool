@@ -3219,7 +3219,11 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let trendingText = 'N/A';
     let trendingEmoji = '';
     
-    if (previousValue !== undefined && previousValue > 0) {
+    // Don't show trending if this is a survey metric with no surveys
+    if (noSurveys) {
+        trendingColor = '#999999';
+        trendingText = 'N/A';
+    } else if (previousValue !== undefined && previousValue > 0) {
         const trendDiff = associateValue - previousValue;
         
         // Determine trend direction based on metric type
