@@ -3095,7 +3095,6 @@ function getMetricOrder() {
         { key: 'aht', group: 'Core Performance' },
         { key: 'holdTime', group: 'Core Performance' },
         { key: 'acw', group: 'Core Performance' },
-        { key: 'managingEmotions', group: 'Core Performance' },
         // SURVEY GROUP (3 metrics)
         { key: 'overallExperience', group: 'Survey' },
         { key: 'cxRepOverall', group: 'Survey' },
@@ -3104,6 +3103,7 @@ function getMetricOrder() {
         { key: 'overallSentiment', group: 'Sentiment' },
         { key: 'positiveWord', group: 'Sentiment' },
         { key: 'negativeWord', group: 'Sentiment' },
+        { key: 'managingEmotions', group: 'Sentiment' },
         // RELIABILITY GROUP (1 metric)
         { key: 'reliability', group: 'Reliability' }
     ];
