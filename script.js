@@ -1453,6 +1453,10 @@ function initializeEventHandlers() {
         showOnlySection('tipsManagementSection');
         renderTipsManagement();
     });
+    document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
+        showOnlySection('coachingEmailSection');
+        initializeCoachingEmail();
+    });
     document.getElementById('metricTrendsBtn')?.addEventListener('click', () => {
         showOnlySection('metricTrendsSection');
         initializeMetricTrends();
@@ -1469,6 +1473,10 @@ function initializeEventHandlers() {
     
     document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
     
+    // LEGACY COACHING WORKFLOW — DO NOT DELETE OR REFACTOR
+    document.getElementById('copyCoachingPromptBtn')?.addEventListener('click', copyCoachingPrompt);
+    document.getElementById('openCoachingOutlookBtn')?.addEventListener('click', openCoachingOutlook);
+    document.getElementById('coachingEmployeeSelect')?.addEventListener('change', updateCoachingReview);
 
     
     // Load pasted data
@@ -4847,5 +4855,187 @@ function generateComparisonChart(metricsData) {
             resolve('');
         }
     });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// LEGACY COACHING WORKFLOW — DO NOT DELETE OR REFACTOR
+// Isolated from Phase 3-6 Metric Trends system. Simple data display + Copilot workflow.
+// ═════════════════════════════════════════════════════════════════════════════
+
+function initializeCoachingEmail() {
+    console.log('🔧 Initializing Coaching Email section');
+    
+    const select = document.getElementById('coachingEmployeeSelect');
+    if (!select) return;
+    
+    // Clear existing options
+    select.innerHTML = '<option value="">-- Choose an employee --</option>';
+    
+    // Get stored weekly data
+    const storedData = getAllStoredWeeklyData();
+    if (!storedData || Object.keys(storedData).length === 0) {
+        console.warn('⚠️ No stored data found for coaching email');
+        return;
+    }
+    
+    // Collect all unique employees from all weeks
+    const allEmployees = new Set();
+    Object.values(storedData).forEach(weekData => {
+        if (Array.isArray(weekData)) {
+            weekData.forEach(emp => {
+                if (emp.Associate_Name) {
+                    allEmployees.add(emp.Associate_Name);
+                }
+            });
+        }
+    });
+    
+    // Sort and add to dropdown
+    const sortedEmployees = Array.from(allEmployees).sort();
+    sortedEmployees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+    
+    console.log(`✅ Loaded ${sortedEmployees.length} employees for coaching`);
+}
+
+function updateCoachingReview() {
+    const employeeName = document.getElementById('coachingEmployeeSelect').value;
+    const reviewArea = document.getElementById('coachingReviewArea');
+    const reviewContent = document.getElementById('coachingReviewContent');
+    const promptArea = document.getElementById('coachingPromptArea');
+    
+    if (!employeeName) {
+        reviewArea.style.display = 'none';
+        promptArea.value = '';
+        return;
+    }
+    
+    // Find employee data from most recent week
+    const storedData = getAllStoredWeeklyData();
+    let employeeRecord = null;
+    let weekLabel = '';
+    
+    // Search through all weeks (newest first) to find this employee
+    const weeks = Object.keys(storedData).sort().reverse();
+    for (const week of weeks) {
+        const weekData = storedData[week];
+        if (Array.isArray(weekData)) {
+            const found = weekData.find(emp => emp.Associate_Name === employeeName);
+            if (found) {
+                employeeRecord = found;
+                weekLabel = week;
+                break;
+            }
+        }
+    }
+    
+    if (!employeeRecord) {
+        reviewArea.style.display = 'none';
+        promptArea.value = '';
+        alert('⚠️ No data found for this employee');
+        return;
+    }
+    
+    // Display employee review data
+    let reviewText = `EMPLOYEE: ${employeeRecord.Associate_Name}\n`;
+    reviewText += `WEEK: ${weekLabel}\n`;
+    reviewText += `\n--- METRICS ---\n`;
+    
+    // Display key metrics
+    const metricsToShow = [
+        'Calls_Handled', 'Average_Handle_Time', 'Hold_Time', 'ACW_Time',
+        'Adherence', 'Reliability', 'Quality_Score', 'NPS'
+    ];
+    
+    metricsToShow.forEach(metric => {
+        if (employeeRecord[metric] !== undefined && employeeRecord[metric] !== null) {
+            const value = employeeRecord[metric];
+            reviewText += `${metric}: ${value}\n`;
+        }
+    });
+    
+    // Display all other fields
+    reviewText += `\n--- ADDITIONAL DATA ---\n`;
+    Object.entries(employeeRecord).forEach(([key, value]) => {
+        if (!metricsToShow.includes(key) && key !== 'Associate_Name' && value !== null && value !== undefined) {
+            reviewText += `${key}: ${value}\n`;
+        }
+    });
+    
+    reviewContent.textContent = reviewText;
+    reviewArea.style.display = 'block';
+    
+    // Generate Copilot prompt
+    generateCoachingPrompt(employeeRecord);
+}
+
+function generateCoachingPrompt(employeeRecord) {
+    const promptArea = document.getElementById('coachingPromptArea');
+    
+    const prompt = `Create a personalized development coaching email for ${employeeRecord.Associate_Name} based on these performance metrics:
+
+Employee Name: ${employeeRecord.Associate_Name}
+Calls Handled: ${employeeRecord.Calls_Handled || 'N/A'}
+Average Handle Time: ${employeeRecord.Average_Handle_Time || 'N/A'}
+Hold Time: ${employeeRecord.Hold_Time || 'N/A'}
+ACW Time: ${employeeRecord.ACW_Time || 'N/A'}
+Adherence: ${employeeRecord.Adherence || 'N/A'}
+Reliability: ${employeeRecord.Reliability || 'N/A'}
+Quality Score: ${employeeRecord.Quality_Score || 'N/A'}
+NPS: ${employeeRecord.NPS || 'N/A'}
+
+Please write a supportive, constructive coaching email that:
+1. Acknowledges their strengths
+2. Identifies 1-2 areas for development
+3. Provides specific, actionable recommendations
+4. Encourages growth and improvement
+5. Maintains a positive, motivational tone
+
+Keep the email professional but friendly, around 150-250 words.`;
+    
+    promptArea.value = prompt;
+    console.log('📝 Coaching prompt generated for ' + employeeRecord.Associate_Name);
+}
+
+function copyCoachingPrompt() {
+    const promptArea = document.getElementById('coachingPromptArea');
+    
+    if (!promptArea.value.trim()) {
+        alert('⚠️ No prompt to copy. Please select an employee first.');
+        return;
+    }
+    
+    promptArea.select();
+    document.execCommand('copy');
+    
+    // Visual feedback
+    const button = document.getElementById('copyCoachingPromptBtn');
+    const originalText = button.textContent;
+    button.textContent = '✅ Copied!';
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 2000);
+    
+    console.log('📋 Prompt copied to clipboard');
+}
+
+function openCoachingOutlook() {
+    const employeeName = document.getElementById('coachingEmployeeSelect').value;
+    
+    if (!employeeName) {
+        alert('⚠️ Please select an employee first');
+        return;
+    }
+    
+    // Open Outlook with subject line
+    const subject = `Coaching: ${employeeName} - Performance Development`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('Paste your coaching email here (generated by ChatGPT Copilot):')}`;
+    
+    window.location.href = mailtoLink;
+    console.log('✉️ Opening Outlook for coaching email');
 }
 
