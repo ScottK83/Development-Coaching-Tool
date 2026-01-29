@@ -3993,18 +3993,30 @@ function createTrendEmailImage(empName, period, current, previous) {
         const isGood = isMetricMeetingTarget(metric, curr, target);
         const status = isGood ? '✓ Better than Center Average' : '✗ Behind Center Average';
 
-        // Alternating row colors
-        ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+        // Row background - light blue if meeting target, otherwise alternating dark
+        if (isGood) {
+            ctx.fillStyle = '#add8e6'; // Light blue for good metrics
+        } else {
+            ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+        }
         ctx.fillRect(50, y, 800, 35);
 
-        ctx.fillStyle = '#ffffff';
+        // Metric name with target goal
+        ctx.fillStyle = isGood ? '#000000' : '#ffffff';
         ctx.font = '13px Arial';
-        ctx.fillText(metric, 60, y + 22);
+        ctx.fillText(`${metric} (Goal: ${target})`, 60, y + 22);
+        
+        // Current value
         ctx.fillText(curr.toFixed(2), 350, y + 22);
+        
+        // Previous value
         ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
+        
+        // Change percentage
         ctx.fillText(change, 650, y + 22);
         
-        ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
+        // Status text
+        ctx.fillStyle = isGood ? '#006400' : '#dc3545'; // Dark green on light blue, red on dark
         ctx.font = 'bold 11px Arial';
         ctx.fillText(status, 750, y + 22);
 
