@@ -321,7 +321,15 @@
             ctx.fillText('Previous', 500, y + 25);
             ctx.fillText('Change', 650, y + 25);
             ctx.fillText('Status', 750, y + 25);
-            y += 40;
+            
+            // Legend next to status column
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#dc3545';
+            ctx.fillText('✗ Behind Center Average', 60, y + 60);
+            ctx.fillStyle = '#28a745';
+            ctx.fillText('✓ Better than Center Average', 60, y + 75);
+            
+            y += 85;
 
             // Table rows
             Object.keys(metrics).forEach((metric, idx) => {
