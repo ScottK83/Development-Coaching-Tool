@@ -3926,14 +3926,31 @@ function createTrendEmailImage(empName, period, current, previous) {
     y += 60;
 
     // Metrics comparison - validate data structure
-    if (!current || !current.metrics) {
+    if (!current) {
         console.error('Invalid employee data:', current);
-        showToast('❌ Employee data is missing metrics', 5000);
+        showToast('❌ Employee data is missing', 5000);
         return;
     }
 
-    const metrics = current.metrics;
-    const prevMetrics = previous?.metrics || {};
+    // Metrics are direct properties on the employee object
+    // Filter out non-metric properties (name, firstName, etc.)
+    const excludeProps = ['name', 'firstName', 'fname', 'lastName', 'lname'];
+    const metrics = {};
+    const prevMetrics = {};
+    
+    Object.keys(current).forEach(key => {
+        if (!excludeProps.includes(key)) {
+            metrics[key] = current[key];
+        }
+    });
+    
+    if (previous) {
+        Object.keys(previous).forEach(key => {
+            if (!excludeProps.includes(key)) {
+                prevMetrics[key] = previous[key];
+            }
+        });
+    }
 
     console.log('Current metrics:', metrics);
     console.log('Previous metrics:', prevMetrics);
