@@ -3393,10 +3393,10 @@ function createTrendEmailImage(empName, period, current, previous) {
     const improvedText = previous ? improved.toString() : 'N/A';
     const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
 
-    // CREATE CANVAS IMAGE
+    // CREATE CANVAS IMAGE (increased height for legend + highlights)
     const canvas = document.createElement('canvas');
     canvas.width = 900;
-    canvas.height = 1400;
+    canvas.height = 1800;
     const ctx = canvas.getContext('2d');
 
     // White background
@@ -3412,12 +3412,16 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 900, 100);
 
-    // Header text
+    // Header text with dynamic subject
+    const periodType = period.type || 'Weekly'; // Weekly/Monthly/Quarterly
+    const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
+    const subjectLine = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+    
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px Arial';
-    ctx.fillText('📊 Performance Summary', 50, 50);
-    ctx.font = '16px Arial';
-    ctx.fillText(`Week ending ${period.endDate}`, 50, 80);
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText('📊 Performance Summary', 50, 45);
+    ctx.font = '14px Arial';
+    ctx.fillText(subjectLine, 50, 75);
 
     y = 130;
 
@@ -3494,6 +3498,152 @@ function createTrendEmailImage(empName, period, current, previous) {
         rowIdx++;
     });
 
+    // ========== HIGHLIGHTS SECTION ==========
+    y += 30;
+    
+    // Calculate improved and focus metrics
+    const improvedMetrics = [];
+    const focusMetrics = [];
+    
+    metricOrder.forEach(({ key }) => {
+        if (metrics[key] === undefined) return;
+        const metric = METRICS_REGISTRY[key];
+        if (!metric) return;
+        
+        const curr = parseFloat(metrics[key]) || 0;
+        const prev = parseFloat(prevMetrics[key]) || 0;
+        const center = parseFloat(centerAvg[key]) || 0;
+        
+        // Check if improved from last week
+        if (previous && prev > 0) {
+            const change = curr - prev;
+            const percentChange = Math.abs((change / prev) * 100).toFixed(1);
+            const arrow = change > 0 ? '⬆️' : change < 0 ? '⬇️' : '➡️';
+            
+            if (change > 0 && !isReverseMetric(key)) {
+                improvedMetrics.push({
+                    label: metric.displayLabel,
+                    text: `${curr.toFixed(1)}% ${arrow} +${percentChange}% vs last week`
+                });
+            } else if (change < 0 && isReverseMetric(key)) {
+                improvedMetrics.push({
+                    label: metric.displayLabel,
+                    text: `${curr.toFixed(1)}% ${arrow} -${percentChange}% vs last week`
+                });
+            }
+        }
+        
+        // Check if below center average
+        if (center > 0) {
+            const isReverse = isReverseMetric(key);
+            const isBelowCenter = isReverse ? curr > center : curr < center;
+            
+            if (isBelowCenter) {
+                const target = getMetricTarget(key);
+                focusMetrics.push({
+                    label: metric.displayLabel,
+                    curr: curr.toFixed(1),
+                    center: center.toFixed(1),
+                    target: target
+                });
+            }
+        }
+    });
+    
+    // Highlights (Improved from Last Week)
+    if (improvedMetrics.length > 0 || previous) {
+        ctx.fillStyle = '#e8f5e9';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('✅ Highlights (Improved from Last Week)', 50, y + 26);
+        y += 50;
+        
+        if (improvedMetrics.length === 0 && previous) {
+            ctx.fillStyle = '#666666';
+            ctx.font = '14px Arial';
+            ctx.fillText('• No improvements detected this week', 60, y + 20);
+            y += 40;
+        } else {
+            improvedMetrics.slice(0, 5).forEach((item, idx) => {
+                ctx.fillStyle = '#333333';
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(`• ${item.label}:`, 60, y + 20);
+                ctx.font = '14px Arial';
+                ctx.fillText(item.text, 220, y + 20);
+                y += 35;
+            });
+        }
+    }
+    
+    // Focus Areas (Below Center Average)
+    if (focusMetrics.length > 0) {
+        y += 10;
+        ctx.fillStyle = '#fff3e0';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#e65100';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
+        y += 50;
+        
+        focusMetrics.slice(0, 5).forEach((item, idx) => {
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`• ${item.label}:`, 60, y + 20);
+            ctx.font = '14px Arial';
+            ctx.fillText(`${item.curr}% (Center: ${item.center}%) - Target: ${item.target}%`, 220, y + 20);
+            y += 35;
+        });
+    }
+    
+    // ========== LEGEND SECTION ==========
+    y += 30;
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(40, y, 820, 180);
+    
+    ctx.fillStyle = '#003DA5';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('📋 Legend', 50, y + 30);
+    
+    const legendItems = [
+        { color: '#28a745', label: 'Meeting target' },
+        { color: '#dc3545', label: 'Below target' },
+        { color: '#6c757d', label: 'Better than center' },
+        { color: '#ffc107', label: 'Behind center' },
+        { color: '#28a745', symbol: '⬆️', label: 'Improved from last week' },
+        { color: '#dc3545', symbol: '⬇️', label: 'Declined from last week' },
+        { color: '#6c757d', symbol: '➡️', label: 'No change from last week' }
+    ];
+    
+    let legendY = y + 60;
+    let legendX = 60;
+    
+    legendItems.forEach((item, idx) => {
+        if (idx === 4) {
+            legendX = 60;
+            legendY += 35;
+        }
+        
+        if (item.symbol) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = item.color;
+            ctx.fillText(item.symbol, legendX, legendY);
+            ctx.fillStyle = '#333333';
+            ctx.font = '13px Arial';
+            ctx.fillText(item.label, legendX + 25, legendY);
+            legendX += 200;
+        } else {
+            ctx.fillStyle = item.color;
+            ctx.fillRect(legendX, legendY - 12, 15, 15);
+            ctx.fillStyle = '#333333';
+            ctx.font = '13px Arial';
+            ctx.fillText(item.label, legendX + 22, legendY);
+            legendX += 200;
+        }
+    });
+    
+    y += 190;
+    
     // Footer
     y += 20;
     ctx.fillStyle = '#f8f9fa';
@@ -3521,9 +3671,13 @@ function createTrendEmailImage(empName, period, current, previous) {
                 console.log('✅ Image copied to clipboard');
                 showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
-                // Open Outlook
+                // Open Outlook with full subject line
+                const periodType = period.type || 'Weekly';
+                const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
+                const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+                
                 setTimeout(() => {
-                    window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                    window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
                 }, 500);
             }).catch(err => {
                 console.error('Clipboard error:', err);
@@ -3545,8 +3699,12 @@ function downloadImageFallback(blob, empName, period) {
     URL.revokeObjectURL(url);
     showToast('📥 Image downloaded! Open Outlook and insert the file.', 4000);
     
+    const periodType = period.type || 'Weekly';
+    const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
+    const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+    
     setTimeout(() => {
-        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+        window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
     }, 500);
 }
 
