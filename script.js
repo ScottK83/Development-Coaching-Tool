@@ -3050,7 +3050,7 @@ function generateTrendEmail() {
     showToast('⏳ Creating email image...', 3000);
     
     setTimeout(() => {
-        createTrendEmailImage(displayName, period, employee, prevEmployee);
+        createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee);
     }, 100);
 }
 
@@ -3327,7 +3327,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
     return html;
 }
 
-function createTrendEmailImage(empName, period, current, previous) {
+function createTrendEmailImage(empName, weekKey, period, current, previous) {
     // ============================================
     // PHASE 5 - SINGLE-SOURCE EMAIL GENERATION
     // ============================================
@@ -3352,9 +3352,9 @@ function createTrendEmailImage(empName, period, current, previous) {
         }
     });
 
-    // SINGLE DATA SOURCE - Center averages
+    // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
     const callCenterAverages = loadCallCenterAverages();
-    const centerAvg = callCenterAverages[period.startDate] || {};
+    const centerAvg = callCenterAverages[weekKey] || {};
 
     console.log('📊 Email generation started for:', empName);
     console.log('Center averages:', centerAvg);
@@ -3413,9 +3413,11 @@ function createTrendEmailImage(empName, period, current, previous) {
     ctx.fillRect(0, 0, 900, 100);
 
     // Header text with dynamic subject
-    const periodType = period.type || 'Weekly'; // Weekly/Monthly/Quarterly
-    const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
-    const subjectLine = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+    const metadata = period.metadata || {};
+    const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+    const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
+    const endDate = metadata.endDate || 'unknown';
+    const subjectLine = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
     
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
@@ -3672,9 +3674,11 @@ function createTrendEmailImage(empName, period, current, previous) {
                 showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook with full subject line
-                const periodType = period.type || 'Weekly';
-                const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
-                const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+                const metadata = period.metadata || {};
+                const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+                const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
+                const endDate = metadata.endDate || 'unknown';
+                const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
                 
                 setTimeout(() => {
                     window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
@@ -3694,14 +3698,17 @@ function downloadImageFallback(blob, empName, period) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `TrendReport_${empName}_${period.startDate}.png`;
+    const metadata = period.metadata || {};
+    a.download = `TrendReport_${empName}_${metadata.startDate || 'unknown'}.png`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('📥 Image downloaded! Open Outlook and insert the file.', 4000);
     
-    const periodType = period.type || 'Weekly';
-    const periodLabel = periodType === 'Weekly' ? 'Week' : periodType === 'Monthly' ? 'Month' : 'Quarter';
-    const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${period.endDate} for ${empName}`;
+    const metadata = period.metadata || {};
+    const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+    const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
+    const endDate = metadata.endDate || 'unknown';
+    const emailSubject = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
     
     setTimeout(() => {
         window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
