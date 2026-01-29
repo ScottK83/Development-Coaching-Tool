@@ -4346,6 +4346,9 @@ function initApp() {
         console.warn('⚠️ No weekly data in localStorage. Upload CSV to populate.');
     }
     
+    // Initialize default coaching tips (first load only)
+    initializeDefaultTips();
+    
     // Initialize event handlers
     initializeEventHandlers();
     initializeKeyboardShortcuts();
@@ -4995,29 +4998,95 @@ function updateCoachingReview() {
 function generateCoachingPrompt(employeeRecord) {
     const promptArea = document.getElementById('coachingPromptArea');
     
-    const prompt = `Create a personalized development coaching email for ${employeeRecord.Associate_Name} based on these performance metrics:
+    // Evaluate all 13 metrics against targets
+    const failingMetrics = [];
+    
+    // Map employee record fields to METRICS_REGISTRY keys
+    const metricMappings = {
+        'Adherence': 'scheduleAdherence',
+        'CX_Rep_Overall': 'cxRepOverall',
+        'FCR': 'fcr',
+        'Overall_Experience': 'overallExperience',
+        'Transfers': 'transfers',
+        'Overall_Sentiment': 'overallSentiment',
+        'Positive_Word': 'positiveWord',
+        'Negative_Word': 'negativeWord',
+        'Managing_Emotions': 'managingEmotions',
+        'Average_Handle_Time': 'aht',
+        'ACW_Time': 'acw',
+        'Hold_Time': 'holdTime',
+        'Reliability': 'reliability'
+    };
+    
+    // Check each metric
+    Object.entries(metricMappings).forEach(([recordKey, registryKey]) => {
+        const metricConfig = METRICS_REGISTRY[registryKey];
+        const value = employeeRecord[recordKey];
+        
+        if (value === null || value === undefined || value === 'N/A') {
+            return; // Skip missing data
+        }
+        
+        const numValue = parseFloat(value);
+        const target = metricConfig.target.value;
+        const isMin = metricConfig.target.type === 'min';
+        
+        // Check if failing
+        const isFailing = isMin ? numValue < target : numValue > target;
+        
+        if (isFailing) {
+            // Get a random tip for this metric
+            const tips = getMetricTips(metricConfig.label);
+            const randomTip = tips.length > 0 ? tips[Math.floor(Math.random() * tips.length)] : metricConfig.defaultTip;
+            
+            failingMetrics.push({
+                name: metricConfig.label,
+                value: numValue,
+                target: target,
+                unit: metricConfig.unit,
+                tip: randomTip
+            });
+        }
+    });
+    
+    // Build intelligent prompt
+    let prompt = `You are an experienced, supportive contact center supervisor writing a development coaching email for ${employeeRecord.Associate_Name}.
 
-Employee Name: ${employeeRecord.Associate_Name}
-Calls Handled: ${employeeRecord.Calls_Handled || 'N/A'}
-Average Handle Time: ${employeeRecord.Average_Handle_Time || 'N/A'}
-Hold Time: ${employeeRecord.Hold_Time || 'N/A'}
-ACW Time: ${employeeRecord.ACW_Time || 'N/A'}
-Adherence: ${employeeRecord.Adherence || 'N/A'}
-Reliability: ${employeeRecord.Reliability || 'N/A'}
-Quality Score: ${employeeRecord.Quality_Score || 'N/A'}
-NPS: ${employeeRecord.NPS || 'N/A'}
+**Context:**
+${employeeRecord.Associate_Name} is a valued team member. Use an encouraging, confident tone that emphasizes growth and improvement. Your role is to motivate while providing clear, actionable guidance.
 
-Please write a supportive, constructive coaching email that:
-1. Acknowledges their strengths
-2. Identifies 1-2 areas for development
-3. Provides specific, actionable recommendations
-4. Encourages growth and improvement
-5. Maintains a positive, motivational tone
+**Performance Summary:**
+`;
 
-Keep the email professional but friendly, around 150-250 words.`;
+    if (failingMetrics.length === 0) {
+        prompt += `✅ ${employeeRecord.Associate_Name} is meeting or exceeding targets across all tracked metrics. Focus on celebrating their success and encouraging them to maintain this strong performance.\n\n`;
+    } else {
+        prompt += `The following metrics need attention:\n\n`;
+        failingMetrics.forEach((metric, idx) => {
+            prompt += `${idx + 1}. **${metric.name}**: Current ${metric.value}${metric.unit}, Target ${metric.target}${metric.unit}\n`;
+            prompt += `   💡 Coaching Tip: ${metric.tip}\n\n`;
+        });
+    }
+    
+    prompt += `**Your Task:**
+Write a personalized coaching email (150-250 words) that:
+1. Opens with genuine appreciation for their work
+2. ${failingMetrics.length > 0 ? 'Addresses the metrics above naturally (do NOT list them—weave them into your message)' : 'Celebrates their strong performance'}
+3. ${failingMetrics.length > 0 ? 'Incorporates the coaching tips above but REWRITE them in your own words—vary the phrasing, tone, and examples' : 'Encourages continued excellence'}
+4. Provides 1-2 specific, actionable steps they can take this week
+5. Ends with confidence in their ability to succeed
+
+**Important:**
+- Do NOT copy-paste the tips verbatim
+- Do NOT create a bulleted list of metrics
+- Write naturally and conversationally
+- Vary your word choice and sentence structure
+- Be warm, specific, and motivational
+
+Generate the email now:`;
     
     promptArea.value = prompt;
-    console.log('📝 Coaching prompt generated for ' + employeeRecord.Associate_Name);
+    console.log(`📝 Intelligent coaching prompt generated for ${employeeRecord.Associate_Name} (${failingMetrics.length} metrics need attention)`);
 }
 
 function copyCoachingPrompt() {
@@ -5063,9 +5132,122 @@ function openCoachingOutlook() {
 // Completely isolated from Metric Trends, emails, and coaching workflows.
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Default tips for each metric (preloaded on first use)
+const DEFAULT_METRIC_TIPS = {
+    "Schedule Adherence": [
+        "Being present and available is essential. Work on meeting your scheduled hours consistently.",
+        "Plan your breaks and lunches to align with your schedule. Consistency builds reliability.",
+        "If you need to step away, communicate with your supervisor in advance.",
+        "Review your schedule daily to stay aware of your commitments.",
+        "Strong adherence shows dedication and helps the team meet service level goals."
+    ],
+    "Rep Satisfaction": [
+        "Customers appreciate your service! Keep building those strong relationships through empathy and professionalism.",
+        "Active listening creates trust. Show customers you understand their concerns.",
+        "Personalize your interactions by using the customer's name and acknowledging their situation.",
+        "Follow up on promises you make. Reliability builds satisfaction.",
+        "Stay positive and patient, even when conversations are challenging."
+    ],
+    "First Call Resolution": [
+        "You're doing well! Continue focusing on resolving issues on the first contact whenever possible.",
+        "Gather all necessary information upfront to avoid callbacks.",
+        "Use available resources and knowledge bases to find answers quickly.",
+        "If you're unsure, ask for help rather than providing incomplete information.",
+        "Confirm with the customer that their issue is fully resolved before ending the call."
+    ],
+    "Overall Experience": [
+        "Great job creating positive experiences! Continue to personalize your interactions.",
+        "Small gestures like thanking the customer and showing empathy go a long way.",
+        "Set clear expectations about what you can do and when.",
+        "End calls on a positive note by summarizing what was accomplished.",
+        "Your tone and energy directly impact how customers feel about their experience."
+    ],
+    "Transfers": [
+        "You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience.",
+        "Before transferring, explain why and set expectations for the customer.",
+        "Use warm transfers when possible to ensure continuity.",
+        "Build your knowledge base to reduce the need for transfers over time.",
+        "If you must transfer, stay on the line briefly to introduce the customer."
+    ],
+    "Overall Sentiment": [
+        "Keep up the positive tone in your interactions. It makes a big difference!",
+        "Mirror the customer's energy, but steer conversations toward positive outcomes.",
+        "Avoid defensive language. Stay solution-focused.",
+        "Smile while you talk—it changes your tone and is felt by the customer.",
+        "Reframe negative situations into opportunities to help."
+    ],
+    "Positive Word": [
+        "Your positive language is appreciated! Continue using encouraging and supportive words.",
+        "Replace 'I can't' with 'Here's what I can do for you'.",
+        "Use words like 'absolutely,' 'definitely,' and 'happy to help.'",
+        "Avoid filler words that undermine confidence like 'maybe' or 'I think.'",
+        "Celebrate small wins with customers: 'Great! We're making progress.'"
+    ],
+    "Avoid Negative Words": [
+        "You're doing great at keeping conversations positive. Keep it up!",
+        "Avoid words like 'unfortunately,' 'problem,' or 'issue'—rephrase positively.",
+        "Instead of 'I don't know,' try 'Let me find that out for you.'",
+        "Replace 'You have to' with 'What works best is...'",
+        "Focus on solutions, not limitations."
+    ],
+    "Managing Emotions": [
+        "You're doing great here! Keep maintaining composure even during challenging interactions.",
+        "Take a deep breath before responding to emotional customers.",
+        "Acknowledge the customer's feelings: 'I understand this is frustrating.'",
+        "Stay calm and professional, even if the customer is upset.",
+        "If needed, take a brief pause after difficult calls to reset."
+    ],
+    "Average Handle Time": [
+        "Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps.",
+        "Use shortcuts and tools available to you to save time.",
+        "Balance speed with quality—don't rush to the detriment of the customer experience.",
+        "Keep your workspace organized so you can find information quickly.",
+        "Practice your most common responses to build confidence and speed."
+    ],
+    "After Call Work": [
+        "Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy.",
+        "Have templates ready for common call types to speed up ACW.",
+        "Document as you go during the call when possible.",
+        "Be thorough but concise in your notes.",
+        "If you're spending too long, ask your supervisor for tips on streamlining."
+    ],
+    "Hold Time": [
+        "Minimize hold time by gathering information upfront. It improves customer experience and efficiency.",
+        "Explain what you're doing when you place someone on hold.",
+        "Set realistic time expectations: 'This will take about 30 seconds.'",
+        "Check back every 30-45 seconds if research is taking longer.",
+        "If the hold will be long, offer to call the customer back instead."
+    ],
+    "Reliability": [
+        "Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance.",
+        "Plan ahead for time off and submit requests early.",
+        "If you're feeling unwell, communicate with your supervisor as soon as possible.",
+        "Build healthy habits outside work to support your well-being and attendance.",
+        "Consistent attendance shows commitment and helps the team succeed."
+    ]
+};
+
+function initializeDefaultTips() {
+    const stored = localStorage.getItem('metricCoachingTips');
+    if (stored) {
+        console.log('📋 Metric tips already exist in storage, skipping preload');
+        return;
+    }
+    
+    console.log('🌱 First load detected - preloading default tips for all 13 metrics');
+    localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+    console.log('✅ Preloaded tips for 13 metrics');
+}
+
 function getTipsFromStorage() {
     const stored = localStorage.getItem('coachingTips');
     return stored ? JSON.parse(stored) : [];
+}
+
+function getMetricTips(metricName) {
+    const stored = localStorage.getItem('metricCoachingTips');
+    const allTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
+    return allTips[metricName] || [];
 }
 
 function saveTipsToStorage(tips) {
