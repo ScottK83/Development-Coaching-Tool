@@ -10,6 +10,7 @@
     "html2canvas": "^1.4.1"
   },
   "devDependencies": {
+    "archiver": "^7.0.1",
     "terser": "^5.19.2"
   }
 }

@@ -1390,6 +1390,8 @@ function initializeEventHandlers() {
         renderExecutiveSummary();
     });
     
+    document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
+    
 
     
     // Load pasted data
@@ -5520,6 +5522,103 @@ function generateExecutiveSummaryEmail() {
 }
 
 // ===== END EXECUTIVE SUMMARY FUNCTIONS =====
+
+// ===== OFFLINE PACKAGE DOWNLOAD =====
+async function downloadOfflinePackage() {
+    showToast('📦 Preparing offline package...', 3000);
+    
+    try {
+        // Create JSZip instance
+        const JSZip = window.JSZip || await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+        const zip = new JSZip();
+        
+        // Fetch current page HTML
+        const indexResponse = await fetch('index.html');
+        const indexHtml = await indexResponse.text();
+        
+        // Replace CDN links with local files
+        const offlineIndex = indexHtml
+            .replace('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js', 'lib-xlsx.js')
+            .replace('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js', 'lib-chart.js')
+            .replace('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'lib-html2canvas.js')
+            .replace('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'lib-jszip.js');
+        
+        zip.file('index.html', offlineIndex);
+        
+        // Add essential files
+        const files = [
+            'homepage.html',
+            'script.js',
+            'styles.css',
+            'homepage-styles.css',
+            'tips.csv',
+            'lib-xlsx.js',
+            'lib-chart.js',
+            'lib-html2canvas.js',
+            'lib-jszip.js'
+        ];
+        
+        for (const file of files) {
+            try {
+                const response = await fetch(file);
+                if (response.ok) {
+                    const content = await response.blob();
+                    zip.file(file, content);
+                }
+            } catch (err) {
+                console.log(`⚠️ Could not fetch ${file}:`, err);
+            }
+        }
+        
+        // Add README
+        const readme = `# Development Coaching Tool - Offline Package
+
+This package contains everything you need to run the Development Coaching Tool offline.
+
+## How to Use:
+
+1. Extract this ZIP file to a folder on your computer
+2. Open index.html in your web browser
+3. The tool will work completely offline - no internet required!
+
+## What's Included:
+
+- Main application files (index.html, script.js, styles.css)
+- All JavaScript libraries (Chart.js, SheetJS, html2canvas)
+- Tips database (tips.csv)
+- Homepage and styling files
+
+## System Requirements:
+
+- Any modern web browser (Chrome, Firefox, Edge, Safari)
+- No internet connection required after extraction
+- No installation needed - just open index.html
+
+Created: ${new Date().toLocaleString()}
+`;
+        
+        zip.file('OFFLINE-README.txt', readme);
+        
+        // Generate ZIP
+        const blob = await zip.generateAsync({ type: 'blob' });
+        
+        // Trigger download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'coaching-tool-offline.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('✅ Offline package downloaded! Extract and open index.html', 5000);
+    } catch (err) {
+        console.error('Error creating offline package:', err);
+        showToast('❌ Could not create offline package. Check console for details.', 5000);
+    }
+}
+// ===== END OFFLINE PACKAGE =====
 
 // Start the app when DOM is ready
 if (document.readyState === 'loading') {
