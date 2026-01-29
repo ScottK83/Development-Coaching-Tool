@@ -288,20 +288,26 @@
 
             Object.keys(metrics).forEach(metric => {
                 const curr = parseFloat(metrics[metric]) || 0;
-                const prev = parseFloat(prevMetrics[metric]) || 0;
                 const target = getTarget(metric);
                 
                 if (isMetricGood(metric, curr, target)) meetingGoals++;
-                if (prev && curr > prev) improved++;
+                
+                // Only count improvements if we have previous data
+                if (previous && prevMetrics[metric] !== undefined) {
+                    const prev = parseFloat(prevMetrics[metric]) || 0;
+                    if (curr > prev) improved++;
+                }
             });
 
             const totalMetrics = Object.keys(metrics).length;
             const successRate = Math.round(meetingGoals / totalMetrics * 100);
+            const improvedText = previous ? improved.toString() : 'N/A';
+            const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
 
             // Draw summary cards with borders
             drawBorderedCard(ctx, 50, y, 250, 120, '#ffffff', '#28a745', '✅ Meeting Target Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
             drawBorderedCard(ctx, 325, y, 250, 120, '#ffffff', '#6c757d', '📊 Outpacing Your Peers', `${meetingGoals}/${totalMetrics}`, `${successRate} percent of your metrics are above center average`);
-            drawBorderedCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improved.toString(), 'From Last Week');
+            drawBorderedCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improvedText, improvedSub);
 
             y += 150;
 
