@@ -3178,12 +3178,12 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
     const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
-    ctx.fillText(formattedValue, x + 240, y + 24);
+    ctx.fillText(formattedValue, x + 250, y + 24);
     
     // Center average - use formatMetricValue
     ctx.font = '14px Arial';
     const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 360, y + 24);
+    ctx.fillText(formattedCenter, x + 380, y + 24);
     
     // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
     let vsCenterColor;
@@ -3212,7 +3212,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = vsCenterColor;
     ctx.font = 'bold 14px Arial';
-    ctx.fillText(vsCenterText, x + 500, y + 24);
+    ctx.fillText(vsCenterText, x + 510, y + 24);
     
     // Trending (if previous data exists) - show emoji + change value
     let trendingColor = '#666666';
@@ -3259,22 +3259,8 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     }
     
     ctx.fillStyle = trendingColor;
-    ctx.font = '12px Arial'; // Smaller font to fit change description
-    ctx.fillText(trendingText, x + 630, y + 24);
-
-    // YTD placeholder box (manual entry)
-    const ytdBoxX = x + 740;
-    const ytdBoxY = y + 8;
-    const ytdBoxW = 70;
-    const ytdBoxH = 22;
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(ytdBoxX, ytdBoxY, ytdBoxW, ytdBoxH);
-    ctx.fillStyle = '#9e9e9e';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('YTD', ytdBoxX + ytdBoxW / 2, ytdBoxY + 15);
-    ctx.textAlign = 'left';
+    ctx.font = '13px Arial'; // Smaller font to fit change description
+    ctx.fillText(trendingText, x + 650, y + 24);
 }
 
 // ============================================
@@ -3535,11 +3521,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.fillText('Metric', 50, y + 28);
-    ctx.fillText('Your Metric', 240, y + 28);
-    ctx.fillText('Center Avg', 360, y + 28);
-    ctx.fillText('vs. Center Avg', 500, y + 28);
-    ctx.fillText(`Change vs last ${periodLabel}`, 640, y + 28);
-    ctx.fillText('YTD', 780, y + 28);
+    ctx.fillText('Your Metric', 250, y + 28);
+    ctx.fillText('Center Avg', 380, y + 28);
+    ctx.fillText('vs. Center Avg', 510, y + 28);
+    ctx.fillText(`Change vs last ${periodLabel}`, 650, y + 28);
     
     y += 45;
 
