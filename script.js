@@ -5376,12 +5376,17 @@ function copyCoachingPrompt() {
     // Visual feedback
     const button = document.getElementById('copyCoachingPromptBtn');
     const originalText = button.textContent;
-    button.textContent = '✅ Copied!';
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 2000);
+    button.textContent = '✅ Copied to CoPilot!';
     
-    console.log('📋 Prompt copied to clipboard');
+    // Open ChatGPT Copilot after short delay
+    setTimeout(() => {
+        window.open('https://copilot.microsoft.com', '_blank');
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 500);
+    }, 500);
+    
+    console.log('📋 Prompt copied to clipboard and opening ChatGPT Copilot');
 }
 
 function openCoachingOutlook() {
