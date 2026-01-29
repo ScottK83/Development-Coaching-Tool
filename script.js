@@ -63,7 +63,7 @@ const METRICS_REGISTRY = {
     },
     cxRepOverall: {
         key: 'cxRepOverall',
-        label: 'CX Rep Overall',
+        label: 'Rep Satisfaction',
         icon: '⭐',
         target: { type: 'min', value: 80 },
         unit: '%',
@@ -129,7 +129,7 @@ const METRICS_REGISTRY = {
     },
     negativeWord: {
         key: 'negativeWord',
-        label: 'Avoid Negative Word',
+        label: 'Avoid Negative Words',
         icon: '🚫',
         target: { type: 'min', value: 83 },
         unit: '%',
