@@ -3199,17 +3199,39 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Trending (if previous data exists)
     let trendingColor = '#666666';
     let trendingText = 'N/A';
+    let trendingEmoji = '';
     
     if (previousValue !== undefined && previousValue > 0) {
         const trendDiff = associateValue - previousValue;
-        const trendPercent = (trendDiff / previousValue * 100).toFixed(1);
-        trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
-        trendingColor = trendDiff > 0 ? '#28a745' : (trendDiff < 0 ? '#dc3545' : '#666666');
+        
+        // Determine trend direction based on metric type
+        let isImprovement;
+        if (isReverse) {
+            // For reverse metrics (lower is better), negative change is improvement
+            isImprovement = trendDiff < 0;
+        } else {
+            // For normal metrics (higher is better), positive change is improvement
+            isImprovement = trendDiff > 0;
+        }
+        
+        // Set emoji and color
+        if (Math.abs(trendDiff) < 0.1) {
+            trendingEmoji = '➡️'; // Flat/no change
+            trendingColor = '#666666';
+        } else if (isImprovement) {
+            trendingEmoji = '📈'; // Chart increasing (green)
+            trendingColor = '#28a745';
+        } else {
+            trendingEmoji = '📉'; // Chart decreasing (red)
+            trendingColor = '#dc3545';
+        }
+        
+        trendingText = trendingEmoji;
     }
     
     ctx.fillStyle = trendingColor;
-    ctx.font = '14px Arial';
-    ctx.fillText(trendingText, x + 670, y + 24);
+    ctx.font = '20px Arial'; // Slightly larger for emoji visibility
+    ctx.fillText(trendingText, x + 710, y + 26);
 }
 
 // ============================================
@@ -3402,12 +3424,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     // CREATE CANVAS IMAGE (increased height for legend + highlights)
     const canvas = document.createElement('canvas');
     canvas.width = 900;
-    canvas.height = 1800;
+    canvas.height = 1900;
     const ctx = canvas.getContext('2d');
 
     // White background
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 900, 1400);
+    ctx.fillRect(0, 0, 900, 1900);
 
     let y = 0;
 
