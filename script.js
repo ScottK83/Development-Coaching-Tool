@@ -53,7 +53,7 @@ const METRICS_REGISTRY = {
     scheduleAdherence: {
         key: 'scheduleAdherence',
         label: 'Schedule Adherence',
-        icon: '?',
+        icon: '📅',
         target: { type: 'min', value: 93 },
         unit: '%',
         columnIndex: 7,
@@ -64,7 +64,7 @@ const METRICS_REGISTRY = {
     cxRepOverall: {
         key: 'cxRepOverall',
         label: 'Rep Satisfaction',
-        icon: '?',
+        icon: '😊',
         target: { type: 'min', value: 80 },
         unit: '%',
         columnIndex: 14,
@@ -75,7 +75,7 @@ const METRICS_REGISTRY = {
     fcr: {
         key: 'fcr',
         label: 'First Call Resolution',
-        icon: '?',
+        icon: '✅',
         target: { type: 'min', value: 70 },
         unit: '%',
         columnIndex: 12,
@@ -86,7 +86,7 @@ const METRICS_REGISTRY = {
     overallExperience: {
         key: 'overallExperience',
         label: 'Overall Experience',
-        icon: '??',
+        icon: '⭐',
         target: { type: 'min', value: 81 },
         unit: '%',
         columnIndex: 16,
@@ -97,7 +97,7 @@ const METRICS_REGISTRY = {
     transfers: {
         key: 'transfers',
         label: 'Transfers',
-        icon: '??',
+        icon: '🔄',
         target: { type: 'max', value: 6 },
         unit: '%',
         columnIndex: 2,
@@ -108,7 +108,7 @@ const METRICS_REGISTRY = {
     overallSentiment: {
         key: 'overallSentiment',
         label: 'Overall Sentiment',
-        icon: '??',
+        icon: '💭',
         target: { type: 'min', value: 88 },
         unit: '%',
         columnIndex: 11,
@@ -119,7 +119,7 @@ const METRICS_REGISTRY = {
     positiveWord: {
         key: 'positiveWord',
         label: 'Positive Word',
-        icon: '??',
+        icon: '👍',
         target: { type: 'min', value: 86 },
         unit: '%',
         columnIndex: 10,
@@ -130,7 +130,7 @@ const METRICS_REGISTRY = {
     negativeWord: {
         key: 'negativeWord',
         label: 'Avoid Negative Words',
-        icon: '??',
+        icon: '⚠️',
         target: { type: 'min', value: 83 },
         unit: '%',
         columnIndex: 9,
@@ -141,7 +141,7 @@ const METRICS_REGISTRY = {
     managingEmotions: {
         key: 'managingEmotions',
         label: 'Managing Emotions',
-        icon: '??',
+        icon: '😌',
         target: { type: 'min', value: 95 },
         unit: '%',
         columnIndex: 8,
@@ -152,7 +152,7 @@ const METRICS_REGISTRY = {
     aht: {
         key: 'aht',
         label: 'Average Handle Time',
-        icon: '??',
+        icon: '⏱️',
         target: { type: 'max', value: 440 },
         unit: 'sec',
         columnIndex: 3,
@@ -163,7 +163,7 @@ const METRICS_REGISTRY = {
     acw: {
         key: 'acw',
         label: 'After Call Work',
-        icon: '??',
+        icon: '📝',
         target: { type: 'max', value: 60 },
         unit: 'sec',
         columnIndex: 6,
@@ -174,7 +174,7 @@ const METRICS_REGISTRY = {
     holdTime: {
         key: 'holdTime',
         label: 'Hold Time',
-        icon: '??',
+        icon: '⏳',
         target: { type: 'max', value: 30 },
         unit: 'sec',
         columnIndex: 5,
@@ -185,7 +185,7 @@ const METRICS_REGISTRY = {
     reliability: {
         key: 'reliability',
         label: 'Reliability',
-        icon: '???',
+        icon: '🎯',
         target: { type: 'max', value: 16 },
         unit: 'hrs',
         columnIndex: 21,
@@ -251,7 +251,7 @@ function validatePhase6Deployment() {
     
     let allPassed = true;
     Object.entries(checks).forEach(([label, check]) => {
-        const status = check.passed ? '? PASS' : '? FAIL';
+        const status = check.passed ? '✅ PASS' : '❌ FAIL';
         console.log(`${status} - ${label}`);
         console.log(`         ${check.note}`);
         if (!check.passed) allPassed = false;
@@ -273,7 +273,7 @@ function validatePhase6Deployment() {
         console.log('- No deprecated code in codebase');
         console.log('');
     } else {
-        console.log('? VALIDATION FAILED - Fix errors before deployment');
+        console.log('❌ VALIDATION FAILED - Fix errors before deployment');
     }
     
     return allPassed;
@@ -619,7 +619,7 @@ function mapHeadersToSchema(headers) {
     }
     
     const mapping = {};
-    console.log('? Detected 22 columns - using positional mapping');
+    console.log('ℹ️ Detected 22 columns - using positional mapping');
     
     // Map by position
     for (let i = 0; i < 22; i++) {
@@ -628,7 +628,7 @@ function mapHeadersToSchema(headers) {
         }
     }
     
-    console.log('?? Column Mapping:');
+    console.log('ℹ️ Column Mapping:');
     for (let i = 0; i < 22; i++) {
         console.log(`  [${i}] ${headers[i]}`);
     }
@@ -647,7 +647,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    console.log('?? Using Smart PowerBI Parser');
+    console.log('ℹ️ Using Smart PowerBI Parser');
     
     // Skip the header line - we don't need to parse it since we use positional logic
     // We just validate that the first row looks like a header
@@ -655,10 +655,10 @@ function parsePastedData(pastedText, startDate, endDate) {
     const hasNameHeader = headerLine.toLowerCase().includes('name');
     
     if (!hasNameHeader) {
-        throw new Error('? Header row not found! Make sure to include the header row at the top of your pasted data.');
+        throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
     }
     
-    console.log('? Header detected, parsing data rows...');
+    console.log('ℹ️ Header detected, parsing data rows...');
     
     // Parse employee data
     const employees = [];
@@ -1021,7 +1021,7 @@ function calculateAveragesFromEmployees(employees) {
     });
 
     console.log(' Calculated averages:', averages);
-    console.log('?? Count per metric:', counts);
+    console.log('ℹ️ Count per metric:', counts);
     averages.employeeCount = activeEmployees.length;
 
     return Object.keys(averages).length > 0 ? averages : null;
@@ -1076,7 +1076,7 @@ window.saveEmployeePreferredName = function(fullName) {
     const preferredName = input.value.trim();
     setEmployeePreferredName(fullName, preferredName);
     
-    showToast('? Preferred name updated!');
+    showToast('✅ Preferred name updated!');
     renderEmployeesList();
 }
 
@@ -1433,10 +1433,10 @@ function copyToClipboard() {
     const text = emailOutput.innerText;
     
     navigator.clipboard.writeText(text).then(() => {
-        showToast('? Email copied to clipboard!');
+        showToast('✅ Email copied to clipboard!');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        showToast('? Failed to copy to clipboard');
+        showToast('✅ Failed to copy to clipboard');
     });
 }
 
@@ -1445,8 +1445,8 @@ function copyToClipboard() {
 // ============================================
 
 function initializeEventHandlers() {
-    console.log('?? initializeEventHandlers() STARTED');
-    console.log('?? Checking for delete buttons...');
+    console.log('ℹ️ initializeEventHandlers() STARTED');
+    console.log('ℹ️ Checking for delete buttons...');
     console.log('  exportDataBtn:', document.getElementById('exportDataBtn') ? 'FOUND' : 'NOT FOUND');
     console.log('  importDataBtn:', document.getElementById('importDataBtn') ? 'FOUND' : 'NOT FOUND');
     console.log('  deleteSelectedWeekBtn:', document.getElementById('deleteSelectedWeekBtn') ? 'FOUND' : 'NOT FOUND');
@@ -1501,6 +1501,9 @@ function initializeEventHandlers() {
         showOnlySection('executiveSummarySection');
         renderExecutiveSummary();
     });
+    document.getElementById('shiftEmailsBtn')?.addEventListener('click', () => {
+        showOnlySection('shiftEmailsSection');
+    });
     
     // TEMPORARILY DISABLED - function doesn't exist
     // document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
@@ -1513,19 +1516,15 @@ function initializeEventHandlers() {
     document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
     document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
     
-    // UTILITY FEATURE � MANAGE TIPS � DO NOT DELETE
-    document.getElementById('addTipBtn')?.addEventListener('click', addNewTip);
-
-    
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
-        console.log('?? Load Data button clicked');
+        console.log('ℹ️ Load Data button clicked');
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
         
-        console.log('?? Paste data received - Length:', pastedData.length, 'chars');
-        console.log('?? Dates: Start=' + startDate, 'End=' + endDate);
+        console.log('ℹ️ Paste data received - Length:', pastedData.length, 'chars');
+        console.log('ℹ️ Dates: Start=' + startDate, 'End=' + endDate);
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
@@ -1533,30 +1532,30 @@ function initializeEventHandlers() {
                            document.querySelector('.upload-period-btn[data-period="week"]');
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
         
-        console.log('? Period type:', periodType);
+        console.log('ℹ️ Period type:', periodType);
         
         if (!startDate || !endDate) {
-            alert('?? Please select both start and end dates');
+            alert('⚠️ Please select both start and end dates');
             return;
         }
         
         if (!pastedData) {
-            alert('?? Please paste data first');
+            alert('⚠️ Please paste data first');
             return;
         }
         
         try {
             const employees = parsePastedData(pastedData, startDate, endDate);
-            console.log('?? Parsed employees:', employees.length);
+            console.log('ℹ️ Parsed employees:', employees.length);
             
             if (employees.length === 0) {
-                alert('? No valid employee data found');
+                alert('ℹ️ No valid employee data found');
                 return;
             }
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
-            console.log('?? Created weekKey:', weekKey);
+            console.log('ℹ️ Created weekKey:', weekKey);
             
             // Parse dates safely (avoid timezone issues)
             const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
@@ -1586,10 +1585,10 @@ function initializeEventHandlers() {
                 }
             };
             
-            console.log('?? Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
+            console.log('ℹ️ Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
             
             saveWeeklyData();
-            console.log('? Data saved to localStorage');
+            console.log('✅ Data saved to localStorage');
             
             populateDeleteWeekDropdown();
             populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
@@ -1638,11 +1637,11 @@ function initializeEventHandlers() {
                 }
             }
             
-            alert(`? Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "??? Manage Data" section.`);
+            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
             
         } catch (error) {
             console.error('Error parsing pasted data:', error);
-            alert(`? Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+            alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
         }
     });
     
@@ -1698,7 +1697,7 @@ function initializeEventHandlers() {
         const employee = getEmployeeDataForPeriod(selectedName);
         
         if (!employee) {
-            alert('? Error loading employee data');
+            alert('ℹ️ Error loading employee data');
             return;
         }
         
@@ -1784,7 +1783,7 @@ function initializeEventHandlers() {
     
     // Export data
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
-        console.log('?? Backup Data button clicked');
+        console.log('ℹ️ Backup Data button clicked');
         exportToExcel();
     });
     
@@ -1802,32 +1801,32 @@ function initializeEventHandlers() {
     
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
-        console.log('?? Restore Data button clicked');
+        console.log('ℹ️ Restore Data button clicked');
         document.getElementById('dataFileInput').click();
     });
     
     document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
-        console.log('?? File selected for restore');
+        console.log('ℹ️ File selected for restore');
         const file = e.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                console.log('?? Parsing JSON data...');
+                console.log('ℹ️ Parsing JSON data...');
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
                 
                 saveWeeklyData();
-                console.log('? Data restored and saved to localStorage');
+                console.log('✅ Data restored and saved to localStorage');
                 
-                showToast('? Data imported successfully!');
+                showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
-                alert('? Error importing data: ' + error.message);
+                alert('ℹ️ Error importing data: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -1835,12 +1834,12 @@ function initializeEventHandlers() {
     
     // Delete selected week
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
-        console.log('?? Delete Selected Week button clicked');
+        console.log('ℹ️ Delete Selected Week button clicked');
         const weekSelect = document.getElementById('deleteWeekSelect');
         const selectedWeek = weekSelect.value;
         
         if (!selectedWeek) {
-            alert('?? Please select a week to delete');
+            alert('⚠️ Please select a week to delete');
             return;
         }
         
@@ -1850,16 +1849,16 @@ function initializeEventHandlers() {
             return;
         }
         
-        console.log('??? Deleting week:', selectedWeek);
+        console.log('🗑️ Deleting week:', selectedWeek);
         delete weeklyData[selectedWeek];
         delete myTeamMembers[selectedWeek];
         saveWeeklyData();
         saveTeamMembers();
-        console.log('? Week deleted and data saved to localStorage');
+        console.log('✅ Week deleted and data saved to localStorage');
         
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
-        showToast('? Week deleted successfully');
+        showToast('✅ Week deleted successfully');
         
         // Clear coaching form if needed (safely check if elements exist)
         const employeeSelect = document.getElementById('employeeSelect');
@@ -1894,32 +1893,32 @@ function initializeEventHandlers() {
     
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
-        console.log('?? Delete All Data button clicked');
+        console.log('ℹ️ Delete All Data button clicked');
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
-            alert('?? No data to delete');
+            alert('⚠️ No data to delete');
             return;
         }
         
-        const message = `?? WARNING: This will permanently delete:\n\n` +
-            `?? ${weekCount} week(s) of employee data\n\n` +
+        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
+            `📊 ${weekCount} week(s) of employee data\n\n` +
             `This action CANNOT be undone!\n\n` +
             `Type "DELETE" to confirm:`;
         
         const confirmation = prompt(message);
         
         if (confirmation !== 'DELETE') {
-            alert('?? Deletion cancelled');
+            alert('⚠️ Deletion cancelled');
             return;
         }
         
-        console.log('??? Deleting all data...');
+        console.log('🗑️ Deleting all data...');
         // Clear all data
         weeklyData = {};
         
         saveWeeklyData();
-        console.log('? All data cleared from localStorage');
+        console.log('✅ All data cleared from localStorage');
         
         populateDeleteWeekDropdown();
         
@@ -1929,11 +1928,14 @@ function initializeEventHandlers() {
             if (el) el.style.display = 'none';
         });
         
-        alert('? All data has been deleted');
+        alert('✅ All data has been deleted');
     });
     
     // Populate delete week dropdown on load
     populateDeleteWeekDropdown();
+    
+    // Initialize shift emails handlers
+    initializeShiftEmails();
 }
 
 function populateDeleteWeekDropdown() {
@@ -2065,7 +2067,7 @@ function initializeKeyboardShortcuts() {
             if (employeeSelect && employeeSelect.value) {
                 employeeSelect.value = '';
                 employeeSelect.dispatchEvent(new Event('change'));
-                showToast('?? Form cleared');
+                showToast('✅ Form cleared');
             }
         }
     });
@@ -2162,19 +2164,19 @@ async function renderTipsManagement() {
     document.getElementById('backToManageBtn').addEventListener('click', switchToManageMode);
     
     // Create metric button handler
-    document.getElementById('createMetricBtn').addEventListener('click', () => {
+    document.getElementById('createMetricBtn').addEventListener('click', async () => {
         const nameInput = document.getElementById('newMetricName');
         const tipInput = document.getElementById('newMetricTip');
         const metricName = nameInput.value.trim();
         const initialTip = tipInput.value.trim();
         
         if (!metricName) {
-            alert('?? Please enter a metric name');
+            alert('⚠️ Please enter a metric name');
             return;
         }
         
         if (!initialTip) {
-            alert('?? Please enter at least one tip');
+            alert('⚠️ Please enter at least one tip');
             return;
         }
         
@@ -2182,7 +2184,7 @@ async function renderTipsManagement() {
         
         // Check for duplicates
         if (metricNames[metricKey]) {
-            alert('?? A metric with this name already exists');
+            alert('⚠️ A metric with this name already exists');
             return;
         }
         
@@ -2199,11 +2201,11 @@ async function renderTipsManagement() {
         tips[metricKey].push(initialTip);
         saveUserTips(tips);
         
-        showToast('? Metric created successfully!');
+        showToast('✅ Metric created successfully!');
         
         // Switch back to manage mode and re-render
         switchToManageMode();
-        renderTipsManagement();
+        await renderTipsManagement();
     });
     
     // Add change listener for category selection
@@ -2289,7 +2291,7 @@ async function renderTipsManagement() {
     });
 }
 
-window.addTip = function(metricKey) {
+window.addTip = async function(metricKey) {
     const textarea = document.getElementById(`newTip_${metricKey}`);
     if (!textarea) {
         console.error('Textarea not found for add operation');
@@ -2299,7 +2301,7 @@ window.addTip = function(metricKey) {
     const tip = textarea.value.trim();
     
     if (!tip) {
-        alert('?? Please enter a tip first');
+        alert('⚠️ Please enter a tip first');
         return;
     }
     
@@ -2318,18 +2320,23 @@ window.addTip = function(metricKey) {
     saveUserTips(userTips);
     
     textarea.value = '';
-    showToast('? Tip added successfully!');
+    showToast('✅ Tip added successfully!');
     
-    // Re-trigger the dropdown to refresh the display
+    // Save current selection before re-rendering
+    const currentSelection = metricKey;
+    
+    // Re-render the entire tips management section
+    await renderTipsManagement();
+    
+    // Restore the selection and trigger display
     const selector = document.getElementById('categoriesSelector');
-    if (selector && selector.value) {
+    if (selector && currentSelection) {
+        selector.value = currentSelection;
         selector.dispatchEvent(new Event('change'));
-    } else {
-        renderTipsManagement();
     }
 };
 
-window.updateTip = function(metricKey, index) {
+window.updateTip = async function(metricKey, index) {
     const textarea = document.getElementById(`editTip_${metricKey}_${index}`);
     if (!textarea) {
         console.error('Textarea not found for edit operation');
@@ -2339,7 +2346,7 @@ window.updateTip = function(metricKey, index) {
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('?? Tip cannot be empty');
+        alert('⚠️ Tip cannot be empty');
         return;
     }
     
@@ -2348,38 +2355,45 @@ window.updateTip = function(metricKey, index) {
         userTips[metricKey][index] = updatedTip;
         saveUserTips(userTips);
         
-        showToast('? Tip updated successfully!');
+        showToast('✅ Tip updated successfully!');
         
-        // Re-trigger the dropdown to refresh the display
-        const selector = document.getElementById('metricSelector');
-        if (selector && selector.value) {
+        // Save current selection before re-rendering
+        const currentSelection = metricKey;
+        
+        // Re-render the entire tips management section
+        await renderTipsManagement();
+        
+        // Restore the selection and trigger display
+        const selector = document.getElementById('categoriesSelector');
+        if (selector && currentSelection) {
+            selector.value = currentSelection;
             selector.dispatchEvent(new Event('change'));
         }
     } else {
         console.warn(`Invalid index ${index} for metric ${metricKey}`);
-        showToast('?? Could not update tip - please refresh the page');
+        showToast('⚠️ Could not update tip - please refresh the page');
     }
 };
 
-window.updateServerTip = function(metricKey, index) {
+window.updateServerTip = async function(metricKey, index) {
     const textarea = document.getElementById(`editServerTip_${metricKey}_${index}`);
     if (!textarea) {
         console.error('Textarea not found for server tip edit operation');
-        showToast('?? Could not update tip - please refresh the page');
+        showToast('⚠️ Could not update tip - please refresh the page');
         return;
     }
     
     const updatedTip = textarea.value.trim();
     
     if (!updatedTip) {
-        alert('?? Tip cannot be empty');
+        alert('⚠️ Tip cannot be empty');
         return;
     }
     
     // Validate index is a valid number
     if (typeof index !== 'number' && isNaN(parseInt(index))) {
         console.error('Invalid index for server tip update:', index);
-        showToast('?? Could not update tip - invalid index');
+        showToast('⚠️ Could not update tip - invalid index');
         return;
     }
     
@@ -2393,16 +2407,23 @@ window.updateServerTip = function(metricKey, index) {
     modifiedServerTips[metricKey][index] = updatedTip;
     localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
     
-    showToast('? Server tip updated!');
+    showToast('✅ Server tip updated!');
     
-    // Re-trigger the dropdown to refresh the display
-    const selector = document.getElementById('metricSelector');
-    if (selector && selector.value) {
+    // Save current selection before re-rendering
+    const currentSelection = metricKey;
+    
+    // Re-render the entire tips management section
+    await renderTipsManagement();
+    
+    // Restore the selection and trigger display
+    const selector = document.getElementById('categoriesSelector');
+    if (selector && currentSelection) {
+        selector.value = currentSelection;
         selector.dispatchEvent(new Event('change'));
     }
 };
 
-window.deleteServerTip = function(metricKey, index) {
+window.deleteServerTip = async function(metricKey, index) {
     if (!confirm('Are you sure you want to delete this server tip? This will hide it from the list.')) {
         return;
     }
@@ -2421,16 +2442,23 @@ window.deleteServerTip = function(metricKey, index) {
     
     localStorage.setItem('deletedServerTips', JSON.stringify(deletedServerTips));
     
-    showToast('??? Server tip deleted');
+    showToast('\u{1F5D1}\u{FE0F} Server tip deleted');
     
-    // Re-trigger the dropdown to refresh the display
-    const selector = document.getElementById('metricSelector');
-    if (selector && selector.value) {
+    // Save current selection before re-rendering
+    const currentSelection = metricKey;
+    
+    // Re-render the entire tips management section
+    await renderTipsManagement();
+    
+    // Restore the selection and trigger display
+    const selector = document.getElementById('categoriesSelector');
+    if (selector && currentSelection) {
+        selector.value = currentSelection;
         selector.dispatchEvent(new Event('change'));
     }
 };
 
-window.deleteTip = function(metricKey, index) {
+window.deleteTip = async function(metricKey, index) {
     if (!confirm('Are you sure you want to delete this tip?')) {
         return;
     }
@@ -2440,7 +2468,7 @@ window.deleteTip = function(metricKey, index) {
         // Validate index is within bounds
         if (index < 0 || index >= userTips[metricKey].length) {
             console.warn(`Invalid index ${index} for deletion. Array length: ${userTips[metricKey].length}`);
-            showToast('?? Could not delete tip - please refresh the page');
+            showToast('⚠️ Could not delete tip - please refresh the page');
             return;
         }
         
@@ -2450,19 +2478,24 @@ window.deleteTip = function(metricKey, index) {
         }
         saveUserTips(userTips);
         
-        showToast('??? Tip deleted');
+        showToast('\u{1F5D1}\u{FE0F} Tip deleted');
     } else {
         console.warn(`No tips found for metric ${metricKey}`);
-        showToast('?? Could not delete tip - please refresh the page');
+        showToast('⚠️ Could not delete tip - please refresh the page');
         return;
     }
     
-    // Re-trigger the dropdown to refresh the display
-    const selector = document.getElementById('metricSelector');
-    if (selector && selector.value) {
+    // Save current selection before re-rendering
+    const currentSelection = metricKey;
+    
+    // Re-render the entire tips management section
+    await renderTipsManagement();
+    
+    // Restore the selection and trigger display
+    const selector = document.getElementById('categoriesSelector');
+    if (selector && currentSelection) {
+        selector.value = currentSelection;
         selector.dispatchEvent(new Event('change'));
-    } else {
-        renderTipsManagement();
     }
 };
 
@@ -2888,7 +2921,7 @@ function displayCallCenterAverages(weekKey) {
         const weekKey = document.getElementById('avgUploadedDataSelect')?.value;
         
         if (!weekKey) {
-            alert('?? Please select a period first');
+            alert('⚠️ Please select a period first');
             return;
         }
         
@@ -2909,7 +2942,7 @@ function displayCallCenterAverages(weekKey) {
         };
         
         setCallCenterAverageForPeriod(weekKey, averageData);
-        alert('? Call center averages saved!');
+        alert('✅ Call center averages saved!');
     });
 
 function setupMetricTrendsListeners() {
@@ -3076,7 +3109,7 @@ function generateTrendEmail() {
     const displayName = nickname || employeeName;
     
     // Build email image
-    showToast('? Creating email image...', 3000);
+    showToast('ℹ️ Creating email image...', 3000);
     
     setTimeout(() => {
         createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee);
@@ -3255,18 +3288,18 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         
         // Set emoji and color
         if (Math.abs(trendDiff) < 0.1) {
-            trendingEmoji = '??'; // Flat/no change
+            trendingEmoji = '➡️'; // Flat/no change
             trendingColor = '#666666';
-            trendingText = '?? No change';
+            trendingText = '➡️ No change';
         } else if (isImprovement) {
-            trendingEmoji = '??'; // Chart increasing (green)
+            trendingEmoji = '📈'; // Chart increasing (green)
             trendingColor = '#28a745';
             // Format change value
             const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
             const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `?? +${changeValue} vs last ${periodLabel}`;
+            trendingText = `📈 +${changeValue} vs last ${periodLabel}`;
         } else {
-            trendingEmoji = '??'; // Chart decreasing (red)
+            trendingEmoji = '📉'; // Chart decreasing (red)
             trendingColor = '#dc3545';
             // Format change value
             const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
@@ -3408,7 +3441,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     if (!current) {
         console.error('Invalid employee data:', current);
-        showToast('? Employee data is missing', 5000);
+        showToast('ℹ️ Employee data is missing', 5000);
         return;
     }
 
@@ -3433,7 +3466,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     // Extract survey total for survey metrics
     const surveyTotal = current.survey_total ? parseInt(current.survey_total, 10) : 0;
 
-    console.log('?? Email generation started for:', empName);
+    console.log('ℹ️ Email generation started for:', empName);
     console.log('Center averages:', centerAvg);
     console.log('Survey total:', surveyTotal);
 
@@ -3499,7 +3532,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('?? Performance Summary', 50, 45);
+    ctx.fillText('📊 Performance Summary', 50, 45);
     ctx.font = '14px Arial';
     ctx.fillText(subjectLine, 50, 75);
 
@@ -3518,9 +3551,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     y += 50;
 
     // Summary cards (using shared statistics)
-    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '? Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
-    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '?? Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
-    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '?? Improved', improvedText, improvedSub);
+    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📈 Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
+    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '📈 Improved', improvedText, improvedSub);
 
     y += 140;
 
@@ -3529,7 +3562,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillRect(40, y, 820, 50);
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('?? Your Metrics', 50, y + 32);
+    ctx.fillText('📊 Your Metrics', 50, y + 32);
     y += 70;
 
     // Table headers
@@ -3603,7 +3636,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             const hasImproved = isReverse ? change < 0 : change > 0;
             
             if (hasImproved && Math.abs(change) > 0.1) {
-                const arrow = change > 0 ? '??' : '??';
+                const arrow = change > 0 ? '📈' : '📉';
                 const changeText = formatMetricDisplay(key, Math.abs(change));
                 improvedMetrics.push({
                     label: metric.label,
@@ -3648,7 +3681,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#1b5e20';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('?? Key Wins (Meeting Target & Beating Center)', 50, y + 26);
+        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
         y += 50;
         
         keyWins.slice(0, 5).forEach((item, idx) => {
@@ -3668,7 +3701,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#0d47a1';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('? Highlights (Improved from Last Week)', 50, y + 26);
+        ctx.fillText('⭐ Highlights (Improved from Last Week)', 50, y + 26);
         y += 50;
         
         if (improvedMetrics.length === 0 && previous) {
@@ -3695,7 +3728,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#e65100';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('?? Focus Areas (Below Center Average)', 50, y + 26);
+        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
         y += 50;
         
         focusMetrics.slice(0, 5).forEach((item, idx) => {
@@ -3715,16 +3748,16 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('?? Legend', 50, y + 30);
+    ctx.fillText('📋 Legend', 50, y + 30);
     
     const legendItems = [
         { color: '#28a745', label: 'Meeting target' },
         { color: '#dc3545', label: 'Below target' },
         { color: '#6c757d', label: 'Better than center' },
         { color: '#ffc107', label: 'Behind center' },
-        { color: '#28a745', symbol: '??', label: 'Improved from last week' },
-        { color: '#dc3545', symbol: '??', label: 'Declined from last week' },
-        { color: '#6c757d', symbol: '??', label: 'No change from last week' }
+        { color: '#28a745', symbol: '📈', label: 'Improved from last week' },
+        { color: '#dc3545', symbol: '📉', label: 'Declined from last week' },
+        { color: '#6c757d', symbol: '➡️', label: 'No change from last week' }
     ];
     
     let legendY = y + 60;
@@ -3768,7 +3801,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         ctx.fillStyle = '#856404';
         ctx.font = 'bold 16px Arial';
-        ctx.fillText('?? Reliability Note', 50, y + 25);
+        ctx.fillText('🎯 Reliability Note', 50, y + 25);
         
         ctx.fillStyle = '#333333';
         ctx.font = '13px Arial';
@@ -3789,19 +3822,19 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     canvas.toBlob(blob => {
         if (!blob) {
             console.error('Failed to create blob from canvas');
-            showToast('? Error creating image', 5000);
+            showToast('ℹ️ Error creating image', 5000);
             return;
         }
 
-        console.log('? Canvas image created successfully');
+        console.log('✅ Canvas image created successfully');
 
         // Try clipboard copy
         if (navigator.clipboard && navigator.clipboard.write) {
             navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]).then(() => {
-                console.log('? Image copied to clipboard');
-                showToast('? Image copied to clipboard! Opening Outlook...', 3000);
+                console.log('✅ Image copied to clipboard');
+                showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook with full subject line
                 const periodMeta = period.metadata || {};
@@ -3832,7 +3865,7 @@ function downloadImageFallback(blob, empName, period) {
     a.download = `TrendReport_${empName}_${metadata.startDate || 'unknown'}.png`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('?? Image downloaded! Open Outlook and insert the file.', 4000);
+    showToast('ℹ️ Image downloaded! Open Outlook and insert the file.', 4000);
     
     const fallbackMeta = period.metadata || {};
     const fallbackPeriodType = fallbackMeta.periodType === 'week' ? 'Weekly' : fallbackMeta.periodType === 'month' ? 'Monthly' : fallbackMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
@@ -3974,16 +4007,16 @@ function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
     if (lowerIsBetter) {
         // For AHT, ACW: lower is better
         if (employeeValue <= centerValue) {
-            return { status: 'meets', icon: '?' };
+            return { status: 'meets', icon: '✅' };
         } else {
-            return { status: 'below', icon: '??' };
+            return { status: 'below', icon: '📉' };
         }
     } else {
         // For all others: higher is better
         if (employeeValue >= centerValue) {
-            return { status: 'meets', icon: '?' };
+            return { status: 'meets', icon: '✅' };
         } else {
-            return { status: 'below', icon: '??' };
+            return { status: 'below', icon: '📉' };
         }
     }
 }
@@ -4194,20 +4227,20 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
 function compareToYearlyAverage(employeeName, metricKey, currentValue, lowerIsBetter) {
     /**
      * Compare employee's current value to their yearly average
-     * Returns: { status: 'meets'|'below'|'first', icon: '?'|'?'|'??', yearlyAvg: number }
+     * Returns: { status: 'meets'|'below'|'first', icon: '✅'|'📉'|'📈', yearlyAvg: number }
      */
     const yearlyAvg = getYearlyAverageForEmployee(employeeName, metricKey);
     
     if (!yearlyAvg) {
-        return { status: 'first', icon: '??', yearlyAvg: null };
+        return { status: 'first', icon: '📈', yearlyAvg: null };
     }
     
     const isMeeting = lowerIsBetter ? currentValue <= yearlyAvg.value : currentValue >= yearlyAvg.value;
     
     if (isMeeting) {
-        return { status: 'meets', icon: '?', yearlyAvg: yearlyAvg.value };
+        return { status: 'meets', icon: '✅', yearlyAvg: yearlyAvg.value };
     } else {
-        return { status: 'below', icon: '?', yearlyAvg: yearlyAvg.value };
+        return { status: 'below', icon: '📉', yearlyAvg: yearlyAvg.value };
     }
 }
 
@@ -4215,22 +4248,22 @@ function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
     const delta = currentValue - previousValue;
     
     if (delta === 0) {
-        return { status: 'nochange', icon: '?', delta: 0 };
+        return { status: 'nochange', icon: '➡️', delta: 0 };
     }
     
     if (lowerIsBetter) {
         // For AHT, ACW: decrease is improvement
         if (delta < 0) {
-            return { status: 'improved', icon: '??', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '📈', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '??', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
         }
     } else {
         // For others: increase is improvement
         if (delta > 0) {
-            return { status: 'improved', icon: '??', delta: Math.round(delta * 100) / 100 };
+            return { status: 'improved', icon: '📈', delta: Math.round(delta * 100) / 100 };
         } else {
-            return { status: 'declined', icon: '??', delta: Math.round(delta * 100) / 100 };
+            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
         }
     }
 }
@@ -4289,11 +4322,11 @@ function renderExecutiveSummary() {
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
     
     const cards = [
-        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '??' },
-        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '??' },
-        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '?' },
-        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '??' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '??' }
+        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
+        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
+        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '✅' },
+        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📉' },
+        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
     ];
     
     cards.forEach(card => {
@@ -4315,7 +4348,7 @@ function renderExecutiveSummary() {
 }
 
 function initializeYearlyIndividualSummary() {
-    console.log('?? Initializing Yearly Individual Summary...');
+    console.log('ℹ️ Initializing Yearly Individual Summary...');
     populateExecutiveSummaryAssociate();
     
     // Period type is always YTD for executive summary
@@ -4348,7 +4381,7 @@ function initializeYearlyIndividualSummary() {
         });
     });
     
-    console.log('? Yearly Individual Summary initialized');
+    console.log('✅ Yearly Individual Summary initialized');
 }
 
 function showEmailSection() {
@@ -4364,7 +4397,7 @@ function showEmailSection() {
 // ============================================
 
 function exportToExcel() {
-    console.log('?? exportToExcel() function executing...');
+    console.log('ℹ️ exportToExcel() function executing...');
     try {
         const wb = XLSX.utils.book_new();
         
@@ -4399,11 +4432,11 @@ function exportToExcel() {
         
         // Save file
         XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-showToast('? Data exported to Excel!');
+showToast('✅ Data exported to Excel!');
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
-        alert('? Error exporting data: ' + error.message);
+        alert('⚠️ Error exporting data: ' + error.message);
     }
 }
 
@@ -4418,17 +4451,17 @@ async function generateCopilotPrompt() {
     const firstName = (employeeName || '').split(' ')[0] || employeeName || (selectedEmployeeId ? selectedEmployeeId.split(' ')[0] : '');
     
     if (!firstName) {
-        alert('? Please select an employee first');
+        alert('⚠️ Please select an employee first');
         return;
     }
 
     if (!selectedEmployeeId) {
-        alert('? Please select an employee first');
+        alert('⚠️ Please select an employee first');
         return;
     }
     const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
     if (!employeeData) {
-        alert('? Unable to load metrics for this employee. Please reload data.');
+        alert('⚠️ Unable to load metrics for this employee. Please reload data.');
         return;
     }
     const { periodLabel, timeReference } = getActivePeriodContext();
@@ -4562,10 +4595,10 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         // Scroll to paste section
         document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
-        showToast('? Prompt copied! Paste into Copilot, then paste the result back here.');
+        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('? Failed to copy prompt to clipboard. Please try again.');
+        alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
     });
 }
 
@@ -4616,17 +4649,17 @@ function generateVerintSummary() {
         const verintSummary = summaryParts.join(' ');
         
         navigator.clipboard.writeText(verintSummary).then(() => {
-            alert('? Verint summary copied to clipboard.');
+            alert('✅ Verint summary copied to clipboard.');
         }).catch(err => {
             console.error('Failed to copy:', err);
-            alert('? Failed to copy summary to clipboard. Please try again.');
+            alert('⚠️ Failed to copy summary to clipboard. Please try again.');
         });
         return;
     }
     
     const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
     if (!copilotEmail) {
-        alert('?? Generate the coaching prompt first so I can build a Verint summary.');
+        alert('⚠️ Generate the coaching prompt first so I can build a Verint summary.');
         return;
     }
     
@@ -4638,11 +4671,11 @@ ${copilotEmail}
 Verint Summary:`;
     
     navigator.clipboard.writeText(summaryPrompt).then(() => {
-        alert('? Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
+        alert('✅ Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
         window.open('https://m365.cloud.microsoft.com/chat', '_blank');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('? Failed to copy summary prompt to clipboard. Please try again.');
+        alert('⚠️ Failed to copy summary prompt to clipboard. Please try again.');
     });
 }
 
@@ -4704,23 +4737,22 @@ function renderEmployeesList() {
 // ============================================
 
 function initApp() {
-    console.log('?? Initializing Development Coaching Tool...');
+    console.log('ℹ️ Initializing Development Coaching Tool...');
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     loadTeamMembers();
     
     console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
-    console.log('?? weeklyData keys:', Object.keys(weeklyData));
+    console.log('ℹ️ weeklyData keys:', Object.keys(weeklyData));
     if (Object.keys(weeklyData).length > 0) {
-        console.log('? Weekly data successfully loaded from localStorage');
+        console.log('✅ Weekly data successfully loaded from localStorage');
     } else {
-        console.warn('?? No weekly data in localStorage. Upload CSV to populate.');
+        console.warn('⚠️ No weekly data in localStorage. Upload CSV to populate.');
     }
     
     // Initialize default coaching tips (first load only)
     initializeDefaultTips();
-    seedManageTipsIfEmpty();
     
     // Initialize event handlers
     initializeEventHandlers();
@@ -4742,10 +4774,10 @@ function initApp() {
     // Ensure data is saved before page unload (survives Ctrl+Shift+R)
     window.addEventListener('beforeunload', () => {
         saveWeeklyData();
-        console.log('?? Auto-saving weekly data on page unload');
+        console.log('ℹ️ Auto-saving weekly data on page unload');
     });
     
-    console.log('? Application initialized successfully!');
+    console.log('✅ Application initialized successfully!');
 }
 
 // ============================================
@@ -4755,19 +4787,19 @@ function initApp() {
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('?? DOMContentLoaded fired - initializing app...');
+        console.log('ℹ️ DOMContentLoaded fired - initializing app...');
         initApp();
     });
 } else {
     // DOM already loaded (if script runs late)
-    console.log('?? DOM already loaded - initializing app immediately...');
+    console.log('ℹ️ DOM already loaded - initializing app immediately...');
     initApp();
 }
 
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
 function populateExecutiveSummaryAssociate() {
-    console.log('?? Populating Executive Summary associate dropdown...');
+    console.log('ℹ️ Populating Executive Summary associate dropdown...');
     const select = document.getElementById('summaryAssociateSelect');
     const allEmployees = new Set();
     
@@ -4803,7 +4835,7 @@ function loadExecutiveSummaryData() {
     console.log(`\n?? loadExecutiveSummaryData started - associate: ${associate}`);
     
     if (!associate) {
-        console.log('?? No associate selected');
+        console.log('⚠️ No associate selected');
         document.getElementById('summaryDataContainer').style.display = 'none';
         document.getElementById('summaryChartsContainer').style.display = 'none';
         return;
@@ -4956,7 +4988,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     container.innerHTML = '';
     
     if (!periods || periods.length === 0) {
-        console.warn('?? No periods provided to displayExecutiveSummaryCharts');
+        console.warn('⚠️ No periods provided to displayExecutiveSummaryCharts');
         container.innerHTML = '<p style="color: #999; padding: 20px;">No data available for this associate.</p>';
         return;
     }
@@ -5107,7 +5139,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
                 </div>
             </div>
             <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                ${hasNoSurveyData ? '?? Awaiting customer survey data' : (centerAvg === null ? '?? No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '? Meeting center average' : '?? Below center average') : (employeeAvg >= centerAvg ? '? Meeting center average' : '?? Below center average')))}
+                ${hasNoSurveyData ? '⏳ Awaiting customer survey data' : (centerAvg === null ? '⚠️ No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '✅ Meeting center average' : '📉 Below center average') : (employeeAvg >= centerAvg ? '✅ Meeting center average' : '📉 Below center average')))}
             </div>
         `;
         
@@ -5558,13 +5590,13 @@ function generateCoachingPromptAndCopy() {
     const button = document.getElementById('generateCoachingPromptBtn');
 
     if (!employeeName) {
-        alert('?? Please select an associate first.');
+        alert('⚠️ Please select an associate first.');
         return;
     }
 
     const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
     if (!employeeRecord) {
-        alert('?? No data found for that associate in the latest period.');
+        alert('⚠️ No data found for that associate in the latest period.');
         return;
     }
 
@@ -5575,7 +5607,7 @@ function generateCoachingPromptAndCopy() {
 
     if (button) {
         const originalText = button.textContent;
-        button.textContent = '? Copied to CoPilot';
+        button.textContent = '✅ Copied to CoPilot';
         setTimeout(() => {
             button.textContent = originalText;
         }, 1200);
@@ -5699,227 +5731,20 @@ function initializeDefaultTips() {
     console.log('? Preloaded tips for 13 metrics');
 }
 
-function seedManageTipsIfEmpty() {
-    const existingTips = getTipsFromStorage();
-    if (existingTips.length > 0) {
-        console.log('?? Manage Tips already populated, skipping seed');
-        return;
-    }
-
-    const seedMap = {
-        "Schedule Adherence": [
-            "Focus on being work-ready at the start of shift, after breaks, and after lunches.",
-            "Use alarms or reminders to stay aligned with your schedule throughout the day.",
-            "If something unexpected pulls you off schedule, communicate early.",
-            "Strong adherence helps keep call volume balanced for the team.",
-            "Building consistent habits now supports future shift flexibility."
-        ],
-        "Transfers": [
-            "Take a moment to fully assess the customer�s request before transferring.",
-            "Use available job aids and resources to resolve more calls independently.",
-            "Building confidence in handling issues reduces unnecessary transfers.",
-            "When a transfer is needed, clearly explain the reason to the customer.",
-            "Fewer transfers improve both customer experience and call flow."
-        ],
-        "Average Handle Time": [
-            "Use confident ownership statements to guide the call.",
-            "Ask focused questions early to avoid rework later.",
-            "Navigate systems efficiently using common paths and shortcuts.",
-            "Balance efficiency with accuracy to avoid repeat work.",
-            "Confidence and structure naturally improve handle time."
-        ],
-        "Overall Experience (Customer Survey)": [
-            "Set a positive tone early by explaining how you will help.",
-            "Clear explanations shape how the interaction is remembered.",
-            "Avoid rushed language so customers feel supported.",
-            "Summarize next steps before ending the call.",
-            "Reassurance helps create a positive overall experience."
-        ],
-        "Rep Satisfaction (Customer Survey)": [
-            "Be mindful of tone, especially during challenging moments.",
-            "Show patience and empathy when addressing concerns.",
-            "Take ownership of the issue, even if another team is involved.",
-            "Calm delivery builds trust with customers.",
-            "How you say it matters as much as the solution itself."
-        ],
-        "First Call Resolution": [
-            "Fully understand the customer�s need before taking action.",
-            "Use available tools to resolve issues in one interaction.",
-            "Clarify expectations so the customer knows what will happen next.",
-            "Confirm all questions are addressed before closing the call.",
-            "Strong ownership helps reduce repeat contacts."
-        ],
-        "Overall Sentiment (Speech Analytics)": [
-            "Lead the call with calm confidence.",
-            "A steady approach helps de-escalate tense situations.",
-            "Acknowledge emotions without taking them personally.",
-            "Respectful communication improves sentiment.",
-            "Staying composed supports better outcomes."
-        ],
-        "Positive Words": [
-            "Emphasize what you can do for the customer.",
-            "Use affirming language throughout the interaction.",
-            "Reinforce helpful actions verbally.",
-            "Keep conversations solution-focused.",
-            "Intentional word choice shapes tone."
-        ],
-        "Avoiding Negative Words": [
-            "Replace limiting phrases with neutral or positive alternatives.",
-            "Focus on solutions rather than constraints.",
-            "Small wording changes can shift customer perception.",
-            "Practice positive phrasing consistently.",
-            "Clear communication builds trust."
-        ],
-        "Reliability": [
-            "Plan ahead and submit time-off requests early.",
-            "Communicate promptly if something unexpected affects attendance.",
-            "Consistent reliability supports the entire team.",
-            "Strong attendance builds long-term flexibility.",
-            "Proactive planning prevents last-minute coverage issues."
-        ]
-    };
-
-    const createdDate = new Date().toLocaleDateString();
-    const seededTips = [];
-    let idSeed = Date.now();
-
-    Object.entries(seedMap).forEach(([title, tips]) => {
-        tips.slice(0, 5).forEach(tip => {
-            seededTips.push({
-                id: idSeed++,
-                title: title,
-                content: tip,
-                createdDate: createdDate
-            });
-        });
-    });
-
-    saveTipsToStorage(seededTips);
-    console.log('? Seeded Manage Tips with starter coaching tips');
-}
-
-function getTipsFromStorage() {
-    const stored = localStorage.getItem('coachingTips');
-    return stored ? JSON.parse(stored) : [];
-}
-
 function getMetricTips(metricName) {
     const normalizedMetric = metricName.toLowerCase();
-    const manageTips = getTipsFromStorage()
-        .filter(t => {
-            const title = (t.title || '').toLowerCase();
-            return title === normalizedMetric || title.startsWith(normalizedMetric);
-        })
-        .map(t => t.content)
-        .filter(Boolean);
-
-    if (manageTips.length > 0) {
-        return manageTips;
+    
+    // First check the new user tips system
+    const userTips = loadUserTips();
+    const userTipsForMetric = userTips[metricName] || [];
+    if (userTipsForMetric.length > 0) {
+        return userTipsForMetric;
     }
 
+    // Fall back to default tips
     const stored = localStorage.getItem('metricCoachingTips');
     const allTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
     return allTips[metricName] || [];
-}
-
-function saveTipsToStorage(tips) {
-    localStorage.setItem('coachingTips', JSON.stringify(tips));
-    console.log('?? Tips saved to storage');
-}
-
-function addNewTip() {
-    const titleInput = document.getElementById('tipTitleInput');
-    const contentInput = document.getElementById('tipContentInput');
-    
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
-    
-    if (!title || !content) {
-        alert('?? Please enter both a title and content for the tip');
-        return;
-    }
-    
-    const tips = getTipsFromStorage();
-    const newTip = {
-        id: Date.now(),
-        title: title,
-        content: content,
-        createdDate: new Date().toLocaleDateString()
-    };
-    
-    tips.push(newTip);
-    saveTipsToStorage(tips);
-    
-    // Clear inputs
-    titleInput.value = '';
-    contentInput.value = '';
-    
-    // Re-render
-    renderTipsManagement();
-    console.log('? New tip added:', title);
-}
-
-function editTip(tipId) {
-    const tips = getTipsFromStorage();
-    const tip = tips.find(t => t.id === tipId);
-    
-    if (!tip) return;
-    
-    const newTitle = prompt('Edit tip title:', tip.title);
-    if (newTitle === null) return;
-    
-    const newContent = prompt('Edit tip content:', tip.content);
-    if (newContent === null) return;
-    
-    if (!newTitle.trim() || !newContent.trim()) {
-        alert('?? Title and content cannot be empty');
-        return;
-    }
-    
-    tip.title = newTitle.trim();
-    tip.content = newContent.trim();
-    saveTipsToStorage(tips);
-    renderTipsManagement();
-    console.log('?? Tip edited:', tip.title);
-}
-
-function deleteTip(tipId) {
-    if (!confirm('? Are you sure you want to delete this tip?')) {
-        return;
-    }
-    
-    let tips = getTipsFromStorage();
-    tips = tips.filter(t => t.id !== tipId);
-    saveTipsToStorage(tips);
-    renderTipsManagement();
-    console.log('??? Tip deleted');
-}
-
-function copyTipContent(tipId) {
-    const tips = getTipsFromStorage();
-    const tip = tips.find(t => t.id === tipId);
-    
-    if (!tip) return;
-    
-    const text = `${tip.title}\n${tip.content}`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(text).then(() => {
-        console.log('?? Tip copied to clipboard');
-        
-        // Visual feedback
-        const button = document.querySelector(`[data-copy-btn="${tipId}"]`);
-        if (button) {
-            const originalText = button.textContent;
-            button.textContent = '? Copied!';
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
-        }
-    }).catch(err => {
-        console.error('Error copying to clipboard:', err);
-        alert('⚠️ Could not copy to clipboard');
-    });
 }
 
 // ============================================
@@ -6048,12 +5873,12 @@ function generateSentimentPrompt() {
     const promptArea = document.getElementById('sentimentPromptArea');
     
     if (!employeeName) {
-        alert('?? Please select an employee first');
+        alert('⚠️ Please select an employee first');
         return;
     }
     
     if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
-        alert('?? Please upload at least one sentiment report');
+        alert('⚠️ Please upload at least one sentiment report');
         return;
     }
     
@@ -6133,7 +5958,7 @@ function copySentimentPrompt() {
     const promptArea = document.getElementById('sentimentPromptArea');
     
     if (!promptArea.value.trim()) {
-        alert('?? No prompt to copy. Please generate a prompt first.');
+        alert('⚠️ No prompt to copy. Please generate a prompt first.');
         return;
     }
     
@@ -6155,6 +5980,117 @@ function copySentimentPrompt() {
     
     console.log('?? Sentiment prompt copied to clipboard');
 }
+
+// ============================================
+// SHIFT EMAILS FUNCTIONALITY
+// ============================================
+
+function initializeShiftEmails() {
+    document.getElementById('generateShiftEmailBtn')?.addEventListener('click', generateShiftEmail);
+    document.getElementById('copyShiftEmailBtn')?.addEventListener('click', copyShiftEmail);
+    document.getElementById('clearShiftEmailBtn')?.addEventListener('click', clearShiftEmail);
+}
+
+function generateShiftEmail() {
+    const employeeName = document.getElementById('shiftEmployeeName').value.trim();
+    const newShift = document.getElementById('shiftNewShift').value.trim();
+    const newSupervisor = document.getElementById('shiftNewSupervisor').value.trim();
+    
+    // Validation
+    if (!employeeName) {
+        alert('⚠️ Please enter the employee name.');
+        return;
+    }
+    if (!newShift) {
+        alert('⚠️ Please enter the new shift.');
+        return;
+    }
+    if (!newSupervisor) {
+        alert('⚠️ Please enter the new supervisor/manager.');
+        return;
+    }
+    
+    // Generate email
+    const emailTemplate = generateShiftEmailTemplate(employeeName, newShift, newSupervisor);
+    
+    // Display preview
+    document.getElementById('shiftEmailPreviewText').textContent = emailTemplate;
+    document.getElementById('shiftEmailPreviewSection').style.display = 'block';
+    
+    console.log('📅 Shift email generated for ' + employeeName);
+}
+
+function generateShiftEmailTemplate(employeeName, newShift, newSupervisor) {
+    const currentDate = new Date();
+    const effectiveDate = new Date(2026, 2, 2); // March 2, 2026
+    const formattedDate = effectiveDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    const emailTemplate = `Subject: Your Shift Bid Results - Effective ${formattedDate}
+
+Hi ${employeeName},
+
+I wanted to share the results of the shift bid and inform you of your new shift assignment.
+
+Effective Date: ${formattedDate}
+
+Your New Shift Assignment:
+${newShift}
+
+Your New Manager/Supervisor:
+${newSupervisor}
+
+These assignments have been determined based on the results of our comprehensive bid process, which carefully considered your performance metrics, seniority, and our operational needs. Your peers have been equally evaluated, and this placement reflects our assessment of where you can best contribute to our team's success.
+
+As you transition into this new role, remember that your strong work ethic and commitment to excellence have been valued. I am confident that you will continue to bring the same level of dedication and professionalism to your new schedule and reporting structure.
+
+If you have any questions regarding your assignment or need any clarification, please don't hesitate to reach out. We're here to support your success.
+
+Best regards,
+Management Team`;
+    
+    return emailTemplate;
+}
+
+function copyShiftEmail() {
+    const emailText = document.getElementById('shiftEmailPreviewText').textContent;
+    
+    if (!emailText.trim()) {
+        alert('⚠️ No email to copy. Please generate an email first.');
+        return;
+    }
+    
+    // Copy to clipboard
+    const textarea = document.createElement('textarea');
+    textarea.value = emailText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    
+    // Visual feedback
+    const button = document.getElementById('copyShiftEmailBtn');
+    const originalText = button.textContent;
+    button.textContent = '✓ Copied to Clipboard!';
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 2000);
+    
+    console.log('📅 Shift email copied to clipboard');
+}
+
+function clearShiftEmail() {
+    // Clear form
+    document.getElementById('shiftEmployeeName').value = '';
+    document.getElementById('shiftNewShift').value = '';
+    document.getElementById('shiftNewSupervisor').value = '';
+    
+    // Hide preview
+    document.getElementById('shiftEmailPreviewSection').style.display = 'none';
+    document.getElementById('shiftEmailPreviewText').textContent = '';
+    
+    console.log('📅 Shift email form cleared');
+}
+
 
 
 
