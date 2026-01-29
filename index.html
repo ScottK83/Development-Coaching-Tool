@@ -18,8 +18,6 @@
             <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button type="button" onclick="window.location.href='homepage.html';" class="btn-secondary">🏠 Home</button>
                 <button type="button" id="homeBtn" class="btn-secondary">📊 Upload Data</button>
-                <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
-                <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
                 <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
@@ -70,7 +68,7 @@
                     <!-- Success message -->
                     <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
                         <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
-                        <p style="margin: 10px 0 0 0;">Click <strong>"✉️ Generate Coaching"</strong> at the top to select a date and create coaching emails.</p>
+                        <p style="margin: 10px 0 0 0;">Click <strong>"📈 Metric Trends"</strong> at the top to generate trend emails.</p>
                         <div style="margin-top: 15px;">
                             <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
                         </div>
@@ -79,166 +77,7 @@
             </form>
 
             <!-- Generate Coaching Section -->
-            <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                <h2>✉️ Generate Coaching Email</h2>
-                    
-                <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
-                    <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
-                    
-                    <!-- Time Period Type -->
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">1. View By:</label>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" class="period-type-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #2196F3; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
-                            <button type="button" class="period-type-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
-                            <button type="button" class="period-type-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
-                            <button type="button" class="period-type-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Specific Period Selector -->
-                    <div id="specificPeriodContainer" style="margin-bottom: 15px;">
-                        <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Date Range:</label>
-                        <select id="specificPeriod" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose a date range --</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Employee Selector -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Select Employee:</label>
-                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
-                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose an employee --</option>
-                        </select>
-                    </div>
-                </div>
 
-                <!-- Employee Information -->
-                <form id="coachingFormInternal">
-                    <section class="form-section" id="employeeInfoSection" style="display: none;">
-                        <h2>Employee Information</h2>
-                        <div class="form-group">
-                            <label for="employeeName">Preferred Name/Nickname for Email:</label>
-                            <input type="text" id="employeeName" required placeholder="Enter first name or nickname">
-                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 4px;">This name will appear in the coaching email. Auto-fills with first name, but you can use a nickname.</small>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group">
-                                <label for="totalCalls">Total Calls Answered:</label>
-                                <input type="number" id="totalCalls" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                            </div>
-                            <div class="form-group">
-                                <label for="surveyTotal">Total Surveys Received:</label>
-                                <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                            </div>
-                        </div>
-                        <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
-                    </section>
-
-                    <!-- Metrics Input -->
-                    <section class="form-section" id="metricsSection" style="display: none;">
-                        <h2>Performance Metrics</h2>
-                        <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;"></div>
-                        <div class="metrics-grid">
-                            <div class="form-group">
-                                <label for="scheduleAdherence">Schedule Adherence (93%)</label>
-                                <input type="number" id="scheduleAdherence" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="cxRepOverall">CX Rep Overall (80%)</label>
-                                <input type="number" id="cxRepOverall" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="fcr">First Call Resolution (70%)</label>
-                                <input type="number" id="fcr" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="overallExperience">Overall Experience (81%)</label>
-                                <input type="number" id="overallExperience" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="transfers">Transfers (<6%)</label>
-                                <input type="number" id="transfers" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="overallSentiment">Overall Sentiment (88%+)</label>
-                                <input type="number" id="overallSentiment" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="positiveWord">Positive Word (86%+)</label>
-                                <input type="number" id="positiveWord" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="negativeWord">Avoid Negative Word (83%+)</label>
-                                <input type="number" id="negativeWord" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="managingEmotions">Managing Emotions (95%+)</label>
-                                <input type="number" id="managingEmotions" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="aht">Avg Handle Time (≤440s)</label>
-                                <input type="number" id="aht" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="acw">After Call Work (≤60s)</label>
-                                <input type="number" id="acw" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="holdTime">Hold Time (≤30s)</label>
-                                <input type="number" id="holdTime" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="reliability">Reliability (≤16 hrs)</label>
-                                <input type="number" id="reliability" step="0.01" min="0">
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Custom Notes -->
-                    <section class="form-section" id="customNotesSection" style="display: none;">
-                        <h2>Additional Coaching to Include in Copilot (Optional)</h2>
-                        <div class="form-group">
-                            <label for="customNotes">Supervisor Context:</label>
-                            <textarea id="customNotes" rows="4" placeholder="Enter any situational notes (e.g., holiday reminders, follow-ups from recent conversations, one-off coaching points)..."></textarea>
-                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 8px;">
-                                This will be included in the Copilot prompt as supervisor context.
-                            </small>
-                        </div>
-                    </section>
-
-                    <!-- AI Assistance Section -->
-                    <section class="form-section" id="aiAssistSection" style="display: none; background: #f3e8ff; border-left: 4px solid #6f42c1;">
-                        <h2>🤖 Step 1: Generate Copilot Prompt</h2>
-                        <p style="color: #666; margin-bottom: 15px;">This will create a structured prompt, copy it to your clipboard, and open GitHub Copilot.</p>
-                        <button type="button" id="generateCopilotPromptBtn" class="btn-secondary" style="background: #6f42c1; color: white; font-weight: bold; font-size: 1.1em; padding: 12px 24px;">🤖 Generate with Copilot</button>
-                        
-                        <!-- Copilot Output Section -->
-                        <div id="copilotOutputSection" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #6f42c1;">
-                            <h3 style="color: #6f42c1; margin-top: 0;">Step 2: Paste Copilot's Response Here</h3>
-                            <p style="color: #666; margin-bottom: 10px;">After Copilot generates the email, paste it below:</p>
-                            <textarea id="copilotOutputText" rows="15" style="width: 100%; padding: 15px; border: 2px solid #6f42c1; border-radius: 4px; font-family: Arial, sans-serif; font-size: 1em; resize: vertical;" placeholder="Paste the email from Copilot here..."></textarea>
-                            <div style="margin-top: 15px;">
-                                <button type="button" id="generateOutlookEmailBtn" class="btn-primary" disabled style="background: #0078d4; opacity: 0.5; cursor: not-allowed; font-size: 1.1em; padding: 12px 24px;">📧 Generate Email (Outlook)</button>
-                                <p style="color: #999; font-size: 0.9em; margin-top: 8px;">Button will enable after you paste content above</p>
-                            </div>
-                        </div>
-                    </section>
-                </form>
-            </section>
-
-            <!-- Results Section -->
-            <section id="resultsSection" style="display: none;">
-                <div class="form-section">
-                    <h2>✉️ Generated Coaching Email</h2>
-                    <div id="emailOutput"></div>
-                    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
-                        <button type="button" onclick="showOnlySection('coachingSection')" class="btn-secondary">← Back to Form</button>
-                    </div>
-                </div>
-            </section>
 
             <!-- Employee Dashboard/History Section -->
             <!-- Tips Management Section -->
