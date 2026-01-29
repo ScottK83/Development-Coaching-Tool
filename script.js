@@ -39,6 +39,7 @@ let weeklyData = {};
 let currentPeriodType = 'week';
 let currentPeriod = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
+let coachingLatestWeekKey = null;
 
 // ============================================
 // TARGET METRICS
@@ -5205,19 +5206,244 @@ function generateComparisonChart(metricsData) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// COACHING EMAIL — REBUILT (IN PROGRESS)
-// New system based on Positive Words, Negative Words, and Managing Emotions reports
+// COACHING EMAIL — WEEKLY CHECK-IN (METRIC-BASED)
+// Uses latest uploaded data + coaching tips bank to build a Copilot prompt
 // ═════════════════════════════════════════════════════════════════════════════
 
-function initializeCoachingEmail() {
-    // Placeholder - will be rebuilt with new coaching email system
-    console.log('🔧 Coaching Email section initialized (new system in development)');
+function getLatestWeekKeyForCoaching() {
+    const weekKeys = Object.keys(weeklyData || {});
+    if (weekKeys.length === 0) return null;
+
+    const getEndDate = (weekKey) => {
+        const metaEnd = weeklyData[weekKey]?.metadata?.endDate;
+        if (metaEnd) return new Date(metaEnd);
+        const parts = weekKey.split('|');
+        const endDate = parts[1] || parts[0];
+        return new Date(endDate);
+    };
+
+    return weekKeys.reduce((latest, key) => {
+        if (!latest) return key;
+        return getEndDate(key) > getEndDate(latest) ? key : latest;
+    }, null);
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// COACHING EMAIL — REBUILT (IN PROGRESS)
-// New system based on Positive Words, Negative Words, and Managing Emotions reports
-// ═════════════════════════════════════════════════════════════════════════════
+function initializeCoachingEmail() {
+    const select = document.getElementById('coachingEmployeeSelect');
+    const status = document.getElementById('coachingEmailStatus');
+    const panel = document.getElementById('coachingMetricsPanel');
+    const promptArea = document.getElementById('coachingPromptArea');
+    const generateBtn = document.getElementById('generateCoachingPromptBtn');
+
+    if (!select || !status || !panel || !promptArea || !generateBtn) return;
+
+    status.style.display = 'none';
+    panel.style.display = 'none';
+    promptArea.value = '';
+
+    select.innerHTML = '<option value="">-- Choose an associate --</option>';
+
+    if (!weeklyData || Object.keys(weeklyData).length === 0) {
+        status.textContent = 'No data available. Upload data first to generate coaching emails.';
+        status.style.display = 'block';
+        return;
+    }
+
+    coachingLatestWeekKey = getLatestWeekKeyForCoaching();
+    if (!coachingLatestWeekKey || !weeklyData[coachingLatestWeekKey]) {
+        status.textContent = 'Unable to find the latest data period.';
+        status.style.display = 'block';
+        return;
+    }
+
+    const latestWeek = weeklyData[coachingLatestWeekKey];
+    const employees = (latestWeek.employees || [])
+        .filter(emp => emp && emp.name)
+        .filter(emp => isTeamMember(coachingLatestWeekKey, emp.name))
+        .map(emp => emp.name)
+        .sort();
+
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
+    status.textContent = `Using latest period: Week of ${endDate}`;
+    status.style.display = 'block';
+
+    if (!select.dataset.bound) {
+        select.addEventListener('change', updateCoachingEmailDisplay);
+        select.dataset.bound = 'true';
+    }
+    if (!generateBtn.dataset.bound) {
+        generateBtn.addEventListener('click', generateCoachingPromptAndCopy);
+        generateBtn.dataset.bound = 'true';
+    }
+
+    console.log('💌 Coaching Email initialized for latest period:', coachingLatestWeekKey);
+}
+
+function updateCoachingEmailDisplay() {
+    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
+    const panel = document.getElementById('coachingMetricsPanel');
+    const summary = document.getElementById('coachingMetricsSummary');
+    const winsList = document.getElementById('coachingWinsList');
+    const oppList = document.getElementById('coachingOpportunitiesList');
+    const promptArea = document.getElementById('coachingPromptArea');
+
+    if (!panel || !summary || !winsList || !oppList || !promptArea) return;
+
+    winsList.innerHTML = '';
+    oppList.innerHTML = '';
+    promptArea.value = '';
+
+    if (!employeeName || !coachingLatestWeekKey) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
+    if (!employeeRecord) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const metricKeys = getMetricOrder().map(m => m.key);
+    const wins = [];
+    const opportunities = [];
+
+    metricKeys.forEach(key => {
+        const metricConfig = METRICS_REGISTRY[key];
+        const value = employeeRecord[key];
+        if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
+
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return;
+
+        const target = metricConfig.target?.value;
+        if (target === undefined || target === null) return;
+
+        const meetsTarget = isMetricMeetingTarget(key, numValue, target);
+        const displayValue = formatMetricDisplay(key, numValue);
+        const displayTarget = formatMetricDisplay(key, target);
+
+        const entry = {
+            key: key,
+            label: metricConfig.label,
+            value: displayValue,
+            target: displayTarget
+        };
+
+        if (meetsTarget) {
+            wins.push(entry);
+        } else {
+            opportunities.push(entry);
+        }
+    });
+
+    const endDate = weeklyData[coachingLatestWeekKey]?.metadata?.endDate
+        ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
+        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
+
+    summary.textContent = `Week of ${endDate} • ${wins.length} wins • ${opportunities.length} focus areas`;
+
+    winsList.innerHTML = wins.length
+        ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
+        : '<li>No metrics meeting goal in the latest period.</li>';
+
+    oppList.innerHTML = opportunities.length
+        ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
+        : '<li>No focus areas below target in the latest period.</li>';
+
+    panel.style.display = 'block';
+}
+
+function buildCoachingPrompt(employeeRecord) {
+    const metricKeys = getMetricOrder().map(m => m.key);
+    const wins = [];
+    const opportunities = [];
+    const usedTips = new Set();
+
+    metricKeys.forEach(key => {
+        const metricConfig = METRICS_REGISTRY[key];
+        const value = employeeRecord[key];
+        if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
+
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return;
+
+        const target = metricConfig.target?.value;
+        if (target === undefined || target === null) return;
+
+        const meetsTarget = isMetricMeetingTarget(key, numValue, target);
+        const displayValue = formatMetricDisplay(key, numValue);
+        const displayTarget = formatMetricDisplay(key, target);
+
+        if (meetsTarget) {
+            wins.push({ label: metricConfig.label, value: displayValue, target: displayTarget });
+        } else {
+            const tips = getMetricTips(metricConfig.label);
+            let selectedTip = metricConfig.defaultTip;
+            if (tips && tips.length > 0) {
+                const available = tips.filter(t => !usedTips.has(t));
+                selectedTip = (available.length > 0
+                    ? available[Math.floor(Math.random() * available.length)]
+                    : tips[Math.floor(Math.random() * tips.length)]);
+            }
+            usedTips.add(selectedTip);
+            opportunities.push({ label: metricConfig.label, value: displayValue, target: displayTarget, tip: selectedTip });
+        }
+    });
+
+    const endDate = weeklyData[coachingLatestWeekKey]?.metadata?.endDate
+        ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
+        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
+
+    const winsText = wins.length
+        ? wins.map(w => `- ${w.label}: ${w.value} vs target ${w.target}`).join('\n')
+        : '- No metrics meeting goal in this period.';
+
+    const oppText = opportunities.length
+        ? opportunities.map(o => `- ${o.label}: ${o.value} vs target ${o.target}\n  • Tip to rewrite (do not quote): ${o.tip}`).join('\n')
+        : '- No metrics below target in this period.';
+
+    return `ROLE\n\nYou are a real contact center supervisor writing a weekly coaching check-in email for ${employeeRecord.name}.\nThis should sound like it is coming directly from their supervisor — warm, human, supportive, and invested in their success.\n\nThis is a recurring weekly email.\nAssume you have written to this associate before.\nVary wording and structure naturally like a human would.\n\nDATA CONTEXT\n\nYou will receive structured weekly performance data for one associate.\n\nWeek of ${endDate}\n\nKey Wins:\n${winsText}\n\nKey Opportunities:\n${oppText}\n\nOnly reference what is supported by the data provided.\nDo not invent feedback.\n\nWRITING RULES (CRITICAL)\n\n- Do NOT number sections\n- Do NOT label sections (no “Key Wins”, “Opportunities”, etc.)\n- Do NOT sound like a report or checklist\n- Do NOT use robotic or instructional language\n- Do NOT repeat phrasing across bullets\n- Do NOT use HR clichés\n- Do NOT use the phrase “This is an opportunity to”\n\nWrite in natural paragraphs with clean, simple bullet points where appropriate.\n\nTONE & STYLE\n\n- Warm\n- Friendly\n- Confident\n- Encouraging\n- Forward-looking\n- Clear expectations\n- Cheerleading first, coaching second\n\nThis should sound like a supervisor who knows the associate and wants to help them succeed.\n\nREQUIRED FLOW (INTERNAL – DO NOT SHOW)\n\nOpening:\n- Greet the associate by name\n- Lead with confidence and appreciation\n- Set a positive, supportive tone\n\nCelebrate Wins:\n- Call out strong metrics first\n- Include current performance and target\n- Explain briefly why those wins matter\n- Use bullets where helpful, but keep them clean and natural\n\nCoaching Focus Areas:\n- Discuss only metrics below target\n- Include current performance and target\n- Pull exactly ONE relevant tip per metric from the tips bank\n- Rewrite the tip naturally in your own words\n- Make the guidance actionable but conversational\n- Frame as refinement and focus, not correction\n\nExpectations:\n- Clearly state that improvement is expected where metrics are off\n- Balance accountability with belief in the associate\n- Emphasize progress, consistency, and confidence\n\nClose:\n- End on encouragement and confidence\n- Reinforce momentum\n- Offer support\n- Tie focus areas to growth and future readiness (including next shift bid when relevant)\n\nHARD REQUIREMENTS\n\n- Use bullets for metrics (wins and opportunities)\n- Show current performance vs target in each bullet\n- Pull ONE tip per opportunity (no more, no less)\n- Rewrite tips — never copy verbatim\n- Sound natural, human, and supportive\n- No numbered sections\n- No labeled sections\n\nGenerate the coaching email now.`;
+}
+
+function generateCoachingPromptAndCopy() {
+    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
+    const promptArea = document.getElementById('coachingPromptArea');
+    const button = document.getElementById('generateCoachingPromptBtn');
+
+    if (!employeeName) {
+        alert('⚠️ Please select an associate first.');
+        return;
+    }
+
+    const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
+    if (!employeeRecord) {
+        alert('⚠️ No data found for that associate in the latest period.');
+        return;
+    }
+
+    const prompt = buildCoachingPrompt(employeeRecord);
+    promptArea.value = prompt;
+    promptArea.select();
+    document.execCommand('copy');
+
+    if (button) {
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied to CoPilot';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 1200);
+    }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
