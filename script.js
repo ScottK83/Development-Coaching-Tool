@@ -3119,7 +3119,7 @@ function isReverseMetric(metricKey) {
     return reverseMetrics.includes(metricKey);
 }
 
-function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor) {
+function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '') {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
      * Renders a single metric row with full conditional logic
@@ -3134,7 +3134,14 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
      * - Gray: Center average unavailable
      * 
      * Reverse logic applies to: Transfers, AHT, Hold Time, ACW, Reliability
+     * 
+     * Survey metrics show N/A if no surveys received
      */
+    
+    // Check if this is a survey metric with no surveys
+    const SURVEY_METRICS = ['cxRepOverall', 'fcr', 'overallExperience'];
+    const isSurveyMetric = SURVEY_METRICS.includes(metricKey);
+    const noSurveys = isSurveyMetric && surveyTotal === 0;
     
     const meetsGoal = isMetricMeetingTarget(metric.key, associateValue, target);
     const isReverse = isReverseMetric(metric.key);
@@ -3168,10 +3175,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const targetLabel = metric.unit === 'sec' ? `${target}s` : metric.unit === '%' ? `${target}%` : target;
     ctx.fillText(`${metric.label} (Target: ${targetLabel})`, x + 10, y + 24);
     
-    // Associate value - use formatMetricValue
+    // Associate value - use formatMetricValue (or N/A if no surveys for survey metrics)
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
-    const formattedValue = formatMetricValue(metric.key, associateValue);
+    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
     ctx.fillText(formattedValue, x + 250, y + 24);
     
     // Center average - use formatMetricValue
@@ -3396,8 +3403,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const callCenterAverages = loadCallCenterAverages();
     const centerAvg = callCenterAverages[weekKey] || {};
 
+    // Extract survey total for survey metrics
+    const surveyTotal = current.survey_total ? parseInt(current.survey_total, 10) : 0;
+
     console.log('📊 Email generation started for:', empName);
     console.log('Center averages:', centerAvg);
+    console.log('Survey total:', surveyTotal);
 
     // SUMMARY STATISTICS (used by both canvas and HTML)
     let meetingGoals = 0;
@@ -3525,7 +3536,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
-            ctx.fillText(`📋 ${group}`, 50, y + 26);
+            const groupLabel = group === 'Survey' ? `📋 ${group} (${surveyTotal} surveys)` : `📋 ${group}`;
+            ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
         }
@@ -3535,7 +3547,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '');
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '', surveyTotal, key);
         y += 38;
         rowIdx++;
     });
@@ -3746,15 +3758,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         
         y += 130;
     }
-    
-    // Footer
-    y += 20;
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, y, 900, 50);
-    ctx.fillStyle = '#666666';
-    ctx.font = '13px Arial';
-    ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y + 30);
-    ctx.fillText('Development Coaching Tool', 700, y + 30);
 
     // Convert to image blob and handle output
     canvas.toBlob(blob => {
