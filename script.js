@@ -3079,6 +3079,127 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.fillText(trendingText, x + 670, y + 24);
 }
 
+// ============================================
+// PHASE 4 - HTML TABLE RENDERER
+// ============================================
+
+function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
+    /**
+     * PHASE 4 - HTML TABLE RENDERER
+     * Mirrors canvas rendering logic in web-friendly HTML format
+     * 
+     * Uses same color logic:
+     * - Green row: Meets goal
+     * - Yellow row: Below goal
+     * - Blue cell: Above center average
+     * - Dark yellow cell: Below center average
+     * - Gray cell: Center unavailable
+     * 
+     * Reverse logic for: Transfers, AHT, Hold Time, ACW, Reliability
+     */
+    
+    if (!current) return '';
+    
+    // Extract metrics data
+    const metricOrder = getMetricOrder();
+    const metrics = {};
+    const prevMetrics = {};
+    
+    metricOrder.forEach(({ key }) => {
+        if (current[key] !== undefined) {
+            metrics[key] = current[key];
+        }
+        if (previous && previous[key] !== undefined) {
+            prevMetrics[key] = previous[key];
+        }
+    });
+    
+    // Build HTML table
+    let html = `<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin: 20px 0;">`;
+    
+    // Table headers
+    html += `<thead>
+        <tr style="background-color: #003DA5; color: white;">
+            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold;">Metric</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Your Value</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Center Avg</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Target</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">vs Center</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Trend</th>
+        </tr>
+    </thead>`;
+    
+    html += '<tbody>';
+    
+    let currentGroup = null;
+    
+    metricOrder.forEach(({ key, group }) => {
+        // Skip if metric doesn't exist in data
+        if (metrics[key] === undefined) return;
+        
+        const metric = METRICS_REGISTRY[key];
+        if (!metric) return;
+        
+        // Insert group header if entering new group
+        if (group !== currentGroup) {
+            currentGroup = group;
+            html += `<tr style="background-color: #e3f2fd; border: 1px solid #ddd;">
+                <td colspan="6" style="padding: 12px; font-weight: bold; color: #0056B3; font-size: 15px;">
+                    📋 ${group}
+                </td>
+            </tr>`;
+        }
+        
+        const curr = parseFloat(metrics[key]) || 0;
+        const prev = parseFloat(prevMetrics[key]) || 0;
+        const center = parseFloat(centerAvg[key]) || 0;
+        const target = getMetricTarget(key);
+        const meetsGoal = isMetricMeetingTarget(key, curr, target);
+        const isReverse = isReverseMetric(key);
+        
+        // Determine row background color
+        const rowBgColor = meetsGoal ? '#d4edda' : '#fff3cd';
+        
+        // Determine vs center color
+        const centerExists = center > 0;
+        const isAboveCenter = centerExists ? 
+            (isReverse ? curr < center : curr > center) : 
+            false;
+        
+        let vsCenterColor, vsCenterText;
+        if (!centerExists) {
+            vsCenterColor = '#999999';
+            vsCenterText = 'N/A';
+        } else {
+            const percentDiff = ((curr - center) / center * 100).toFixed(1);
+            vsCenterText = `${percentDiff}%`;
+            vsCenterColor = isAboveCenter ? '#0056B3' : '#DAA520';
+        }
+        
+        // Trending
+        let trendingColor = '#666666';
+        let trendingText = 'N/A';
+        if (prev > 0) {
+            const trendPercent = ((curr - prev) / prev * 100).toFixed(1);
+            trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
+            trendingColor = curr > prev ? '#28a745' : (curr < prev ? '#dc3545' : '#666666');
+        }
+        
+        html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
+            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table>';
+    
+    return html;
+}
+
 function createTrendEmailImage(empName, period, current, previous) {
     // Create canvas
     const canvas = document.createElement('canvas');
