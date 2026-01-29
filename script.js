@@ -3169,11 +3169,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, height);
     
-    // Metric name with target
+    // Metric name (without target - target shown in header)
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
-    const targetLabel = metric.unit === 'sec' ? `${target}s` : metric.unit === '%' ? `${target}%` : target;
-    ctx.fillText(`${metric.label} (Target: ${targetLabel})`, x + 10, y + 24);
+    ctx.fillText(`${metric.label}`, x + 10, y + 24);
     
     // Associate value - use formatMetricValue (or N/A if no surveys for survey metrics)
     ctx.fillStyle = '#333333';
@@ -3184,10 +3183,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Center average - use formatMetricValue
     ctx.font = '14px Arial';
     const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 370, y + 24);
-    
-    // Target
-    ctx.fillText(target.toString(), x + 480, y + 24);
+    ctx.fillText(formattedCenter, x + 380, y + 24);
     
     // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
     let vsCenterColor;
@@ -3216,7 +3212,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = vsCenterColor;
     ctx.font = 'bold 14px Arial';
-    ctx.fillText(vsCenterText, x + 570, y + 24);
+    ctx.fillText(vsCenterText, x + 510, y + 24);
     
     // Trending (if previous data exists)
     let trendingColor = '#666666';
@@ -3514,11 +3510,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.fillText('Metric', 50, y + 28);
-    ctx.fillText('Your Metric', 300, y + 28);
-    ctx.fillText('Center Avg', 420, y + 28);
-    ctx.fillText('Target', 540, y + 28);
-    ctx.fillText('vs. Center Avg', 630, y + 28);
-    ctx.fillText('Trending', 770, y + 28);
+    ctx.fillText('Your Metric', 250, y + 28);
+    ctx.fillText('Center Avg', 380, y + 28);
+    ctx.fillText('vs. Center Avg', 510, y + 28);
+    ctx.fillText('Change', 680, y + 28);
     
     y += 45;
 
