@@ -294,11 +294,18 @@
                     <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #E91E63;">
                         <h3 style="color: #4a148c; margin-top: 0;">🤖 ChatGPT Copilot Prompt</h3>
                         <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Copy the prompt below, paste it into ChatGPT, and let the AI generate a personalized coaching email.</p>
-                        <textarea id="coachingPromptArea" readonly style="width: 100%; height: 200px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
+                        <textarea id="coachingPromptArea" style="width: 100%; height: 200px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
                         <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
                             <button type="button" id="copyCoachingPromptBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🤖 Copy to CoPilot</button>
                             <button type="button" id="openCoachingOutlookBtn" style="background: #0078d4; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">✉️ Open Outlook</button>
                         </div>
+                    </div>
+
+                    <!-- Coaching History Panel -->
+                    <div id="coachingHistoryPanel" style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #4CAF50;">
+                        <h3 style="color: #2e7d32; margin-top: 0;">📈 Coaching History</h3>
+                        <div id="coachingHistorySummary" style="margin-bottom: 12px; color: #444; font-size: 0.9em;"></div>
+                        <div id="coachingHistoryList" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 10px; background: #fafafa;"></div>
                     </div>
                     
                     <p style="font-size: 0.85em; color: #999; margin: 0;">📝 Workflow: 1) Select employee → 2) Review data → 3) Copy prompt → 4) Use ChatGPT → 5) Paste generated email → 6) Send via Outlook</p>

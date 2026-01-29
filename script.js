@@ -40,6 +40,10 @@ let coachingLogYTD = [];
 let currentPeriodType = 'week';
 let currentPeriod = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
+let coachingPromptEdited = false;
+let currentCoachingEmployee = null;
+let currentCoachingContext = null;
+let currentCoachingPromptData = null;
 
 // ============================================
 // TARGET METRICS
@@ -1047,6 +1051,17 @@ function getEmployeeNickname(fullName) {
     return fullName.split(' ')[0];
 }
 
+function formatDateMMDDYYYY(dateString) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day) return '';
+    return `${month}/${day}/${year}`;
+}
+
+function getTodayYYYYMMDD() {
+    return new Date().toISOString().slice(0, 10);
+}
+
 function loadCoachingLog() {
     try {
         const saved = localStorage.getItem('coachingLogYTD');
@@ -1489,6 +1504,9 @@ function initializeEventHandlers() {
     document.getElementById('copyCoachingPromptBtn')?.addEventListener('click', copyCoachingPrompt);
     document.getElementById('openCoachingOutlookBtn')?.addEventListener('click', openCoachingOutlook);
     document.getElementById('coachingEmployeeSelect')?.addEventListener('change', updateCoachingReview);
+    document.getElementById('coachingPromptArea')?.addEventListener('input', () => {
+        coachingPromptEdited = true;
+    });
     
     // SENTIMENT ANALYSIS WORKFLOW
     document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
@@ -4691,6 +4709,7 @@ function initApp() {
     
     // Initialize default coaching tips (first load only)
     initializeDefaultTips();
+    seedManageTipsIfEmpty();
     
     // Initialize event handlers
     initializeEventHandlers();
@@ -5274,6 +5293,10 @@ function updateCoachingReview() {
     if (!employeeName) {
         reviewArea.style.display = 'none';
         promptArea.value = '';
+        coachingPromptEdited = false;
+        currentCoachingEmployee = null;
+        currentCoachingContext = null;
+        renderCoachingHistory(null);
         return;
     }
     
@@ -5301,7 +5324,19 @@ function updateCoachingReview() {
         alert('⚠️ No data found for this employee');
         return;
     }
-    
+
+    // Store coaching context
+    const weekMeta = weeklyData[weekLabel]?.metadata || {};
+    const weekEnding = weekMeta.endDate ? formatDateMMDDYYYY(weekMeta.endDate) : (weekLabel.split('|')[1] ? formatDateMMDDYYYY(weekLabel.split('|')[1]) : 'Unknown');
+    const previousEmployee = currentCoachingEmployee;
+    currentCoachingEmployee = employeeRecord.name;
+    currentCoachingContext = {
+        employeeName: employeeRecord.name,
+        weekKey: weekLabel,
+        weekEnding: weekEnding,
+        periodType: weekMeta.periodType || currentPeriodType || 'week'
+    };
+
     // Display employee review data (using correct field names from parsePastedData)
     let reviewText = `EMPLOYEE: ${employeeRecord.name}\n`;
     reviewText += `WEEK: ${weekLabel}\n`;
@@ -5338,103 +5373,298 @@ function updateCoachingReview() {
     
     reviewContent.textContent = reviewText;
     reviewArea.style.display = 'block';
-    
-    // Generate Copilot prompt
-    generateCoachingPrompt(employeeRecord);
+
+    // Render coaching history for selected employee
+    renderCoachingHistory(employeeRecord.name);
+
+    // Generate Copilot prompt (do not overwrite user edits)
+    const shouldGeneratePrompt = !coachingPromptEdited || previousEmployee !== employeeRecord.name;
+    if (shouldGeneratePrompt) {
+        coachingPromptEdited = false;
+        generateCoachingPrompt(employeeRecord);
+    }
 }
 
 function generateCoachingPrompt(employeeRecord) {
     const promptArea = document.getElementById('coachingPromptArea');
-    
-    // Evaluate all 13 metrics against targets
-    const failingMetrics = [];
-    
-    // Map employee record fields to METRICS_REGISTRY keys (both are same now)
-    const metricKeys = [
-        'scheduleAdherence',
-        'cxRepOverall',
-        'fcr',
-        'overallExperience',
-        'transfers',
-        'overallSentiment',
-        'positiveWord',
-        'negativeWord',
-        'managingEmotions',
-        'aht',
-        'acw',
-        'holdTime',
-        'reliability'
-    ];
-    
-    // Check each metric
+    const usedTips = new Set();
+    const wins = [];
+    const opportunities = [];
+
+    const metricKeys = getMetricOrder().map(m => m.key);
+
     metricKeys.forEach(registryKey => {
         const metricConfig = METRICS_REGISTRY[registryKey];
         const value = employeeRecord[registryKey];
-        
-        if (value === null || value === undefined || value === 'N/A') {
+        if (!metricConfig) return;
+
+        if (value === null || value === undefined || value === '' || value === 'N/A') {
             return; // Skip missing data
         }
-        
+
         const numValue = parseFloat(value);
+        if (isNaN(numValue)) return;
+
         const target = metricConfig.target.value;
-        const isMin = metricConfig.target.type === 'min';
-        
-        // Check if failing
-        const isFailing = isMin ? numValue < target : numValue > target;
-        
-        if (isFailing) {
-            // Get a random tip for this metric
+        const meetsTarget = isMetricMeetingTarget(registryKey, numValue, target);
+        const displayValue = formatMetricDisplay(registryKey, numValue);
+        const displayTarget = formatMetricDisplay(registryKey, target);
+
+        if (meetsTarget) {
+            wins.push({
+                metric: metricConfig.label,
+                value: displayValue,
+                target: displayTarget
+            });
+        } else {
             const tips = getMetricTips(metricConfig.label);
-            const randomTip = tips.length > 0 ? tips[Math.floor(Math.random() * tips.length)] : metricConfig.defaultTip;
-            
-            failingMetrics.push({
-                name: metricConfig.label,
-                value: numValue,
-                target: target,
-                unit: metricConfig.unit,
-                tip: randomTip
+            let selectedTip = metricConfig.defaultTip;
+            if (tips && tips.length > 0) {
+                const available = tips.filter(t => !usedTips.has(t));
+                selectedTip = (available.length > 0 ? available[Math.floor(Math.random() * available.length)] : tips[Math.floor(Math.random() * tips.length)]);
+            }
+            usedTips.add(selectedTip);
+
+            opportunities.push({
+                metric: metricConfig.label,
+                value: displayValue,
+                target: displayTarget,
+                tipUsed: selectedTip,
+                supportiveStatement: `This is an opportunity to bring ${metricConfig.label} closer to target with steady, focused improvements.`
             });
         }
     });
-    
-    // Build intelligent prompt
-    let prompt = `You are an experienced, supportive contact center supervisor writing a development coaching email for ${employeeRecord.name}.
 
-**Context:**
-${employeeRecord.name} is a valued team member. Use an encouraging, confident tone that emphasizes growth and improvement. Your role is to motivate while providing clear, actionable guidance.
+    const periodLabel = currentCoachingContext?.periodType === 'month'
+        ? 'month'
+        : currentCoachingContext?.periodType === 'quarter'
+            ? 'quarter'
+            : 'week';
+    const weekEnding = currentCoachingContext?.weekEnding || 'N/A';
 
-**Performance Summary:**
-`;
+    currentCoachingPromptData = {
+        employeeName: employeeRecord.name,
+        weekEnding: weekEnding,
+        periodType: periodLabel,
+        wins: wins,
+        opportunities: opportunities,
+        coachedMetrics: opportunities.map(o => ({
+            metric: o.metric,
+            value: o.value,
+            goal: o.target,
+            tipUsed: o.tipUsed
+        }))
+    };
 
-    if (failingMetrics.length === 0) {
-        prompt += `✅ ${employeeRecord.name} is meeting or exceeding targets across all tracked metrics. Focus on celebrating their success and encouraging them to maintain this strong performance.\n\n`;
-    } else {
-        prompt += `The following metrics need attention:\n\n`;
-        failingMetrics.forEach((metric, idx) => {
-            prompt += `${idx + 1}. **${metric.name}**: Current ${metric.value}${metric.unit}, Target ${metric.target}${metric.unit}\n`;
-            prompt += `   💡 Coaching Tip: ${metric.tip}\n\n`;
-        });
-    }
-    
-    prompt += `**Your Task:**
-Write a personalized coaching email (150-250 words) that:
-1. Opens with genuine appreciation for their work
-2. ${failingMetrics.length > 0 ? 'Addresses the metrics above naturally (do NOT list them—weave them into your message)' : 'Celebrates their strong performance'}
-3. ${failingMetrics.length > 0 ? 'Incorporates the coaching tips above but REWRITE them in your own words—vary the phrasing, tone, and examples' : 'Encourages continued excellence'}
-4. Provides 1-2 specific, actionable steps they can take this week
-5. Ends with confidence in their ability to succeed
+    const winsText = wins.length > 0
+        ? wins.map(w => `- ${w.metric}: ${w.value} (Target: ${w.target})`).join('\n')
+        : '- No metrics meeting goal this period.';
 
-**Important:**
-- Do NOT copy-paste the tips verbatim
-- Do NOT create a bulleted list of metrics
-- Write naturally and conversationally
-- Vary your word choice and sentence structure
-- Be warm, specific, and motivational
+    const opportunitiesText = opportunities.length > 0
+        ? opportunities.map(o => `- ${o.metric}: ${o.value} vs target ${o.target}\n  • Supportive statement: ${o.supportiveStatement}\n  • Coaching tip to rewrite: ${o.tipUsed}`).join('\n')
+        : '- No opportunities identified this period.';
 
-Generate the email now:`;
-    
+    const prompt = `You are a real contact center supervisor writing a coaching check-in for ${employeeRecord.name}.
+
+**Data Summary (Week of ${weekEnding})**
+Key Wins:
+${winsText}
+
+Opportunities for Growth:
+${opportunitiesText}
+
+**Required Output Structure (use exactly):**
+1. Greeting  
+Friendly, professional greeting using the employee’s name.
+
+2. Positive Opening  
+State how well the employee is doing overall. Build confidence and momentum.
+
+3. Key Wins (Bullets)  
+Celebrate major accomplishments and metrics meeting or exceeding goal.
+
+4. Opportunities for Growth (Bullets)  
+For each metric not meeting goal:
+• Metric name
+• Current performance vs target
+• One supportive coaching statement
+• One coaching tip (rewritten naturally)
+
+5. Strong Closing  
+Encouraging, supportive close that reinforces confidence and offers help.
+
+**Copilot Instructions:**
+- Act as a real supervisor
+- Rewrite tips naturally (never verbatim)
+- Sound warm, genuine, and encouraging
+- Vary phrasing every time
+- Balance cheerleading with clear expectations
+- Do not invent feedback not supported by the data
+
+Generate the coaching email now.`;
+
     promptArea.value = prompt;
-    console.log(`📝 Intelligent coaching prompt generated for ${employeeRecord.name} (${failingMetrics.length} metrics need attention)`);
+    coachingPromptEdited = false;
+    console.log(`📝 Coaching prompt generated for ${employeeRecord.name} (${opportunities.length} opportunities)`);
+}
+
+function logCoachingHistoryIfNew() {
+    if (!currentCoachingContext || !currentCoachingPromptData) return;
+
+    const date = getTodayYYYYMMDD();
+    const metricsCoached = currentCoachingPromptData.coachedMetrics || [];
+    const fingerprint = `${currentCoachingContext.employeeName}|${currentCoachingContext.weekEnding}|${date}|${metricsCoached.map(m => m.metric).join('|')}`;
+
+    const alreadyLogged = coachingLogYTD.some(entry => entry.fingerprint === fingerprint);
+    if (alreadyLogged) return;
+
+    appendCoachingLogEntry({
+        fingerprint: fingerprint,
+        employee: currentCoachingContext.employeeName,
+        date: date,
+        weekEnding: currentCoachingContext.weekEnding,
+        coachedMetrics: metricsCoached,
+        metricsCount: metricsCoached.length,
+        periodType: currentCoachingContext.periodType,
+        generatedAt: new Date().toISOString()
+    });
+}
+
+function renderCoachingHistory(employeeName) {
+    const panel = document.getElementById('coachingHistoryPanel');
+    const summary = document.getElementById('coachingHistorySummary');
+    const list = document.getElementById('coachingHistoryList');
+
+    if (!panel || !summary || !list) return;
+    if (!employeeName) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+
+    const entries = coachingLogYTD
+        .filter(e => e.employee === employeeName)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+    if (entries.length === 0) {
+        summary.textContent = 'No coaching history yet for this employee.';
+        list.innerHTML = '<div style="color:#999; padding:8px;">No coaching events logged yet.</div>';
+        return;
+    }
+
+    const stats = getCoachingHistoryStats(entries);
+    summary.innerHTML = `
+        <strong>Total Sessions:</strong> ${stats.totalSessions} &nbsp;|&nbsp;
+        <strong>Top Metrics:</strong> ${stats.topMetrics} &nbsp;|&nbsp;
+        <strong>Repeating (30d):</strong> ${stats.repeating30} &nbsp;|&nbsp;
+        <strong>Repeating (60d):</strong> ${stats.repeating60} &nbsp;|&nbsp;
+        <strong>Repeating (90d):</strong> ${stats.repeating90}
+        <br><strong>Trends:</strong> ${stats.trends}
+    `;
+
+    list.innerHTML = entries.map(entry => {
+        const metricsList = (entry.coachedMetrics || []).map(m => m.metric).join(', ');
+        const metricCount = entry.metricsCount || (entry.coachedMetrics ? entry.coachedMetrics.length : 0);
+        return `
+            <div style="padding: 8px 10px; border-bottom: 1px solid #eee;">
+                <div style="font-weight: bold; color: #333;">${entry.date} • Week of ${entry.weekEnding}</div>
+                <div style="color: #555; font-size: 0.9em;">Opportunities: ${metricCount} • Metrics: ${metricsList || 'None'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getCoachingHistoryStats(entries) {
+    const totalSessions = entries.length;
+    const counts = {};
+    entries.forEach(entry => {
+        (entry.coachedMetrics || []).forEach(m => {
+            counts[m.metric] = (counts[m.metric] || 0) + 1;
+        });
+    });
+
+    const topMetricsArr = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([metric, count]) => `${metric} (${count})`);
+
+    const repeating30 = getRepeatingMetrics(entries, 30);
+    const repeating60 = getRepeatingMetrics(entries, 60);
+    const repeating90 = getRepeatingMetrics(entries, 90);
+
+    const trends = buildTrendIndicators(entries);
+
+    return {
+        totalSessions,
+        topMetrics: topMetricsArr.length > 0 ? topMetricsArr.join(', ') : 'None',
+        repeating30: repeating30.length > 0 ? repeating30.join(', ') : 'None',
+        repeating60: repeating60.length > 0 ? repeating60.join(', ') : 'None',
+        repeating90: repeating90.length > 0 ? repeating90.join(', ') : 'None',
+        trends: trends.length > 0 ? trends.join(', ') : 'None'
+    };
+}
+
+function getRepeatingMetrics(entries, days) {
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    const counts = {};
+
+    entries.forEach(entry => {
+        if (entry.timestamp && entry.timestamp < cutoff) return;
+        (entry.coachedMetrics || []).forEach(m => {
+            counts[m.metric] = (counts[m.metric] || 0) + 1;
+        });
+    });
+
+    return Object.entries(counts)
+        .filter(([, count]) => count >= 2)
+        .map(([metric]) => metric);
+}
+
+function buildTrendIndicators(entries) {
+    const metrics = {};
+    entries.forEach(entry => {
+        (entry.coachedMetrics || []).forEach(m => {
+            metrics[m.metric] = true;
+        });
+    });
+
+    return Object.keys(metrics).map(metric => {
+        const count30 = countMetricInWindow(entries, metric, 30);
+        const count60 = countMetricInWindow(entries, metric, 60);
+        const count90 = countMetricInWindow(entries, metric, 90);
+
+        let indicator = 'Stagnant';
+        if (count30 === 0 && (count60 > 0 || count90 > 0)) {
+            indicator = 'Improving';
+        } else if (count30 >= 2) {
+            indicator = 'Repeating issue';
+        }
+
+        return `${metric} (${indicator})`;
+    });
+}
+
+function countMetricInWindow(entries, metric, days) {
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    let count = 0;
+    entries.forEach(entry => {
+        if (entry.timestamp && entry.timestamp < cutoff) return;
+        (entry.coachedMetrics || []).forEach(m => {
+            if (m.metric === metric) count++;
+        });
+    });
+    return count;
+}
+
+function getCoachingAnalytics() {
+    return {
+        topCoachedMetrics: getRepeatingMetrics(coachingLogYTD, 30),
+        employeesWithRepeatCoaching: coachingLogYTD.reduce((acc, entry) => {
+            acc[entry.employee] = (acc[entry.employee] || 0) + (entry.metricsCount || 0);
+            return acc;
+        }, {})
+    };
 }
 
 function copyCoachingPrompt() {
@@ -5447,13 +5677,18 @@ function copyCoachingPrompt() {
     
     promptArea.select();
     document.execCommand('copy');
+
+    // Log coaching event
+    logCoachingHistoryIfNew();
+    renderCoachingHistory(currentCoachingEmployee);
     
     // Visual feedback
     const button = document.getElementById('copyCoachingPromptBtn');
     const originalText = button.textContent;
-    button.textContent = '✅ Copied to CoPilot!';
+    button.textContent = '✅ Prompt copied. Paste into Copilot.';
+    showToast('Prompt copied. Paste into Copilot.', 3000);
     
-    // Open ChatGPT Copilot after short delay
+    // Open Copilot after short delay
     setTimeout(() => {
         window.open('https://copilot.microsoft.com', '_blank');
         setTimeout(() => {
@@ -5461,7 +5696,7 @@ function copyCoachingPrompt() {
         }, 500);
     }, 500);
     
-    console.log('📋 Prompt copied to clipboard and opening ChatGPT Copilot');
+    console.log('📋 Prompt copied to clipboard and opening Copilot');
 }
 
 function openCoachingOutlook() {
@@ -5471,10 +5706,10 @@ function openCoachingOutlook() {
         alert('⚠️ Please select an employee first');
         return;
     }
-    
-    // Open Outlook with subject line
-    const subject = `Coaching: ${employeeName} - Performance Development`;
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('Paste your coaching email here (generated by ChatGPT Copilot):')}`;
+
+    const weekEnding = currentCoachingContext?.weekEnding || 'N/A';
+    const subject = `Coaching Check-In: Week of ${weekEnding} – ${employeeName}`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('')}`;
     
     window.location.href = mailtoLink;
     console.log('✉️ Opening Outlook for coaching email');
@@ -5488,60 +5723,60 @@ function openCoachingOutlook() {
 // Default tips for each metric (preloaded on first use)
 const DEFAULT_METRIC_TIPS = {
     "Schedule Adherence": [
-        "Being present and available is essential. Work on meeting your scheduled hours consistently.",
-        "Plan your breaks and lunches to align with your schedule. Consistency builds reliability.",
-        "If you need to step away, communicate with your supervisor in advance.",
-        "Review your schedule daily to stay aware of your commitments.",
-        "Strong adherence shows dedication and helps the team meet service level goals."
+        "Focus on being work-ready at the start of shift, after breaks, and after lunches.",
+        "Use alarms or reminders to stay aligned with your schedule throughout the day.",
+        "If something unexpected pulls you off schedule, communicate early.",
+        "Strong adherence helps keep call volume balanced for the team.",
+        "Building consistent habits now supports future shift flexibility."
     ],
     "Rep Satisfaction": [
-        "Customers appreciate your service! Keep building those strong relationships through empathy and professionalism.",
-        "Active listening creates trust. Show customers you understand their concerns.",
-        "Personalize your interactions by using the customer's name and acknowledging their situation.",
-        "Follow up on promises you make. Reliability builds satisfaction.",
-        "Stay positive and patient, even when conversations are challenging."
+        "Be mindful of tone, especially during challenging moments.",
+        "Show patience and empathy when addressing concerns.",
+        "Take ownership of the issue, even if another team is involved.",
+        "Calm delivery builds trust with customers.",
+        "How you say it matters as much as the solution itself."
     ],
     "First Call Resolution": [
-        "You're doing well! Continue focusing on resolving issues on the first contact whenever possible.",
-        "Gather all necessary information upfront to avoid callbacks.",
-        "Use available resources and knowledge bases to find answers quickly.",
-        "If you're unsure, ask for help rather than providing incomplete information.",
-        "Confirm with the customer that their issue is fully resolved before ending the call."
+        "Fully understand the customer’s need before taking action.",
+        "Use available tools to resolve issues in one interaction.",
+        "Clarify expectations so the customer knows what will happen next.",
+        "Confirm all questions are addressed before closing the call.",
+        "Strong ownership helps reduce repeat contacts."
     ],
     "Overall Experience": [
-        "Great job creating positive experiences! Continue to personalize your interactions.",
-        "Small gestures like thanking the customer and showing empathy go a long way.",
-        "Set clear expectations about what you can do and when.",
-        "End calls on a positive note by summarizing what was accomplished.",
-        "Your tone and energy directly impact how customers feel about their experience."
+        "Set a positive tone early by explaining how you will help.",
+        "Clear explanations shape how the interaction is remembered.",
+        "Avoid rushed language so customers feel supported.",
+        "Summarize next steps before ending the call.",
+        "Reassurance helps create a positive overall experience."
     ],
     "Transfers": [
-        "You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience.",
-        "Before transferring, explain why and set expectations for the customer.",
-        "Use warm transfers when possible to ensure continuity.",
-        "Build your knowledge base to reduce the need for transfers over time.",
-        "If you must transfer, stay on the line briefly to introduce the customer."
+        "Take a moment to fully assess the customer’s request before transferring.",
+        "Use available job aids and resources to resolve more calls independently.",
+        "Building confidence in handling issues reduces unnecessary transfers.",
+        "When a transfer is needed, clearly explain the reason to the customer.",
+        "Fewer transfers improve both customer experience and call flow."
     ],
     "Overall Sentiment": [
-        "Keep up the positive tone in your interactions. It makes a big difference!",
-        "Mirror the customer's energy, but steer conversations toward positive outcomes.",
-        "Avoid defensive language. Stay solution-focused.",
-        "Smile while you talk—it changes your tone and is felt by the customer.",
-        "Reframe negative situations into opportunities to help."
+        "Lead the call with calm confidence.",
+        "A steady approach helps de-escalate tense situations.",
+        "Acknowledge emotions without taking them personally.",
+        "Respectful communication improves sentiment.",
+        "Staying composed supports better outcomes."
     ],
     "Positive Word": [
-        "Your positive language is appreciated! Continue using encouraging and supportive words.",
-        "Replace 'I can't' with 'Here's what I can do for you'.",
-        "Use words like 'absolutely,' 'definitely,' and 'happy to help.'",
-        "Avoid filler words that undermine confidence like 'maybe' or 'I think.'",
-        "Celebrate small wins with customers: 'Great! We're making progress.'"
+        "Emphasize what you can do for the customer.",
+        "Use affirming language throughout the interaction.",
+        "Reinforce helpful actions verbally.",
+        "Keep conversations solution-focused.",
+        "Intentional word choice shapes tone."
     ],
     "Avoid Negative Words": [
-        "You're doing great at keeping conversations positive. Keep it up!",
-        "Avoid words like 'unfortunately,' 'problem,' or 'issue'—rephrase positively.",
-        "Instead of 'I don't know,' try 'Let me find that out for you.'",
-        "Replace 'You have to' with 'What works best is...'",
-        "Focus on solutions, not limitations."
+        "Replace limiting phrases with neutral or positive alternatives.",
+        "Focus on solutions rather than constraints.",
+        "Small wording changes can shift customer perception.",
+        "Practice positive phrasing consistently.",
+        "Clear communication builds trust."
     ],
     "Managing Emotions": [
         "You're doing great here! Keep maintaining composure even during challenging interactions.",
@@ -5551,11 +5786,11 @@ const DEFAULT_METRIC_TIPS = {
         "If needed, take a brief pause after difficult calls to reset."
     ],
     "Average Handle Time": [
-        "Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps.",
-        "Use shortcuts and tools available to you to save time.",
-        "Balance speed with quality—don't rush to the detriment of the customer experience.",
-        "Keep your workspace organized so you can find information quickly.",
-        "Practice your most common responses to build confidence and speed."
+        "Use confident ownership statements to guide the call.",
+        "Ask focused questions early to avoid rework later.",
+        "Navigate systems efficiently using common paths and shortcuts.",
+        "Balance efficiency with accuracy to avoid repeat work.",
+        "Confidence and structure naturally improve handle time."
     ],
     "After Call Work": [
         "Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy.",
@@ -5572,11 +5807,11 @@ const DEFAULT_METRIC_TIPS = {
         "If the hold will be long, offer to call the customer back instead."
     ],
     "Reliability": [
-        "Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance.",
-        "Plan ahead for time off and submit requests early.",
-        "If you're feeling unwell, communicate with your supervisor as soon as possible.",
-        "Build healthy habits outside work to support your well-being and attendance.",
-        "Consistent attendance shows commitment and helps the team succeed."
+        "Plan ahead and submit time-off requests early.",
+        "Communicate promptly if something unexpected affects attendance.",
+        "Consistent reliability supports the entire team.",
+        "Strong attendance builds long-term flexibility.",
+        "Proactive planning prevents last-minute coverage issues."
     ]
 };
 
@@ -5592,12 +5827,124 @@ function initializeDefaultTips() {
     console.log('✅ Preloaded tips for 13 metrics');
 }
 
+function seedManageTipsIfEmpty() {
+    const existingTips = getTipsFromStorage();
+    if (existingTips.length > 0) {
+        console.log('📋 Manage Tips already populated, skipping seed');
+        return;
+    }
+
+    const seedMap = {
+        "Schedule Adherence": [
+            "Focus on being work-ready at the start of shift, after breaks, and after lunches.",
+            "Use alarms or reminders to stay aligned with your schedule throughout the day.",
+            "If something unexpected pulls you off schedule, communicate early.",
+            "Strong adherence helps keep call volume balanced for the team.",
+            "Building consistent habits now supports future shift flexibility."
+        ],
+        "Transfers": [
+            "Take a moment to fully assess the customer’s request before transferring.",
+            "Use available job aids and resources to resolve more calls independently.",
+            "Building confidence in handling issues reduces unnecessary transfers.",
+            "When a transfer is needed, clearly explain the reason to the customer.",
+            "Fewer transfers improve both customer experience and call flow."
+        ],
+        "Average Handle Time": [
+            "Use confident ownership statements to guide the call.",
+            "Ask focused questions early to avoid rework later.",
+            "Navigate systems efficiently using common paths and shortcuts.",
+            "Balance efficiency with accuracy to avoid repeat work.",
+            "Confidence and structure naturally improve handle time."
+        ],
+        "Overall Experience (Customer Survey)": [
+            "Set a positive tone early by explaining how you will help.",
+            "Clear explanations shape how the interaction is remembered.",
+            "Avoid rushed language so customers feel supported.",
+            "Summarize next steps before ending the call.",
+            "Reassurance helps create a positive overall experience."
+        ],
+        "Rep Satisfaction (Customer Survey)": [
+            "Be mindful of tone, especially during challenging moments.",
+            "Show patience and empathy when addressing concerns.",
+            "Take ownership of the issue, even if another team is involved.",
+            "Calm delivery builds trust with customers.",
+            "How you say it matters as much as the solution itself."
+        ],
+        "First Call Resolution": [
+            "Fully understand the customer’s need before taking action.",
+            "Use available tools to resolve issues in one interaction.",
+            "Clarify expectations so the customer knows what will happen next.",
+            "Confirm all questions are addressed before closing the call.",
+            "Strong ownership helps reduce repeat contacts."
+        ],
+        "Overall Sentiment (Speech Analytics)": [
+            "Lead the call with calm confidence.",
+            "A steady approach helps de-escalate tense situations.",
+            "Acknowledge emotions without taking them personally.",
+            "Respectful communication improves sentiment.",
+            "Staying composed supports better outcomes."
+        ],
+        "Positive Words": [
+            "Emphasize what you can do for the customer.",
+            "Use affirming language throughout the interaction.",
+            "Reinforce helpful actions verbally.",
+            "Keep conversations solution-focused.",
+            "Intentional word choice shapes tone."
+        ],
+        "Avoiding Negative Words": [
+            "Replace limiting phrases with neutral or positive alternatives.",
+            "Focus on solutions rather than constraints.",
+            "Small wording changes can shift customer perception.",
+            "Practice positive phrasing consistently.",
+            "Clear communication builds trust."
+        ],
+        "Reliability": [
+            "Plan ahead and submit time-off requests early.",
+            "Communicate promptly if something unexpected affects attendance.",
+            "Consistent reliability supports the entire team.",
+            "Strong attendance builds long-term flexibility.",
+            "Proactive planning prevents last-minute coverage issues."
+        ]
+    };
+
+    const createdDate = new Date().toLocaleDateString();
+    const seededTips = [];
+    let idSeed = Date.now();
+
+    Object.entries(seedMap).forEach(([title, tips]) => {
+        tips.slice(0, 5).forEach(tip => {
+            seededTips.push({
+                id: idSeed++,
+                title: title,
+                content: tip,
+                createdDate: createdDate
+            });
+        });
+    });
+
+    saveTipsToStorage(seededTips);
+    console.log('✅ Seeded Manage Tips with starter coaching tips');
+}
+
 function getTipsFromStorage() {
     const stored = localStorage.getItem('coachingTips');
     return stored ? JSON.parse(stored) : [];
 }
 
 function getMetricTips(metricName) {
+    const normalizedMetric = metricName.toLowerCase();
+    const manageTips = getTipsFromStorage()
+        .filter(t => {
+            const title = (t.title || '').toLowerCase();
+            return title === normalizedMetric || title.startsWith(normalizedMetric);
+        })
+        .map(t => t.content)
+        .filter(Boolean);
+
+    if (manageTips.length > 0) {
+        return manageTips;
+    }
+
     const stored = localStorage.getItem('metricCoachingTips');
     const allTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
     return allTips[metricName] || [];
