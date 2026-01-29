@@ -4914,20 +4914,19 @@ function initializeCoachingEmail() {
     // Clear existing options
     select.innerHTML = '<option value="">-- Choose an employee --</option>';
     
-    // Get stored weekly data
-    const storedData = getAllStoredWeeklyData();
-    if (!storedData || Object.keys(storedData).length === 0) {
+    // Get stored weekly data (use global weeklyData)
+    if (!weeklyData || Object.keys(weeklyData).length === 0) {
         console.warn('⚠️ No stored data found for coaching email');
         return;
     }
     
     // Collect all unique employees from all weeks
     const allEmployees = new Set();
-    Object.values(storedData).forEach(weekData => {
-        if (Array.isArray(weekData)) {
-            weekData.forEach(emp => {
-                if (emp.Associate_Name) {
-                    allEmployees.add(emp.Associate_Name);
+    Object.values(weeklyData).forEach(weekData => {
+        if (weekData && weekData.employees && Array.isArray(weekData.employees)) {
+            weekData.employees.forEach(emp => {
+                if (emp.name) {
+                    allEmployees.add(emp.name);
                 }
             });
         }
@@ -4957,17 +4956,16 @@ function updateCoachingReview() {
         return;
     }
     
-    // Find employee data from most recent week
-    const storedData = getAllStoredWeeklyData();
+    // Find employee data from most recent week (use global weeklyData)
     let employeeRecord = null;
     let weekLabel = '';
     
     // Search through all weeks (newest first) to find this employee
-    const weeks = Object.keys(storedData).sort().reverse();
+    const weeks = Object.keys(weeklyData).sort().reverse();
     for (const week of weeks) {
-        const weekData = storedData[week];
-        if (Array.isArray(weekData)) {
-            const found = weekData.find(emp => emp.Associate_Name === employeeName);
+        const weekData = weeklyData[week];
+        if (weekData && weekData.employees && Array.isArray(weekData.employees)) {
+            const found = weekData.employees.find(emp => emp.name === employeeName);
             if (found) {
                 employeeRecord = found;
                 weekLabel = week;
@@ -4983,28 +4981,36 @@ function updateCoachingReview() {
         return;
     }
     
-    // Display employee review data
-    let reviewText = `EMPLOYEE: ${employeeRecord.Associate_Name}\n`;
+    // Display employee review data (using correct field names from parsePastedData)
+    let reviewText = `EMPLOYEE: ${employeeRecord.name}\n`;
     reviewText += `WEEK: ${weekLabel}\n`;
     reviewText += `\n--- METRICS ---\n`;
     
-    // Display key metrics
+    // Display key metrics (using actual field names)
     const metricsToShow = [
-        'Calls_Handled', 'Average_Handle_Time', 'Hold_Time', 'ACW_Time',
-        'Adherence', 'Reliability', 'Quality_Score', 'NPS'
+        { field: 'scheduleAdherence', label: 'Schedule Adherence' },
+        { field: 'cxRepOverall', label: 'CX Rep Overall' },
+        { field: 'fcr', label: 'FCR' },
+        { field: 'overallExperience', label: 'Overall Experience' },
+        { field: 'transfers', label: 'Transfers' },
+        { field: 'aht', label: 'Average Handle Time' },
+        { field: 'holdTime', label: 'Hold Time' },
+        { field: 'acw', label: 'ACW Time' },
+        { field: 'reliability', label: 'Reliability' }
     ];
     
     metricsToShow.forEach(metric => {
-        if (employeeRecord[metric] !== undefined && employeeRecord[metric] !== null) {
-            const value = employeeRecord[metric];
-            reviewText += `${metric}: ${value}\n`;
+        if (employeeRecord[metric.field] !== undefined && employeeRecord[metric.field] !== null && employeeRecord[metric.field] !== '') {
+            const value = employeeRecord[metric.field];
+            reviewText += `${metric.label}: ${value}\n`;
         }
     });
     
     // Display all other fields
     reviewText += `\n--- ADDITIONAL DATA ---\n`;
     Object.entries(employeeRecord).forEach(([key, value]) => {
-        if (!metricsToShow.includes(key) && key !== 'Associate_Name' && value !== null && value !== undefined) {
+        const shownFields = metricsToShow.map(m => m.field);
+        if (!shownFields.includes(key) && key !== 'name' && value !== null && value !== undefined && value !== '') {
             reviewText += `${key}: ${value}\n`;
         }
     });
@@ -5022,27 +5028,27 @@ function generateCoachingPrompt(employeeRecord) {
     // Evaluate all 13 metrics against targets
     const failingMetrics = [];
     
-    // Map employee record fields to METRICS_REGISTRY keys
-    const metricMappings = {
-        'Adherence': 'scheduleAdherence',
-        'CX_Rep_Overall': 'cxRepOverall',
-        'FCR': 'fcr',
-        'Overall_Experience': 'overallExperience',
-        'Transfers': 'transfers',
-        'Overall_Sentiment': 'overallSentiment',
-        'Positive_Word': 'positiveWord',
-        'Negative_Word': 'negativeWord',
-        'Managing_Emotions': 'managingEmotions',
-        'Average_Handle_Time': 'aht',
-        'ACW_Time': 'acw',
-        'Hold_Time': 'holdTime',
-        'Reliability': 'reliability'
-    };
+    // Map employee record fields to METRICS_REGISTRY keys (both are same now)
+    const metricKeys = [
+        'scheduleAdherence',
+        'cxRepOverall',
+        'fcr',
+        'overallExperience',
+        'transfers',
+        'overallSentiment',
+        'positiveWord',
+        'negativeWord',
+        'managingEmotions',
+        'aht',
+        'acw',
+        'holdTime',
+        'reliability'
+    ];
     
     // Check each metric
-    Object.entries(metricMappings).forEach(([recordKey, registryKey]) => {
+    metricKeys.forEach(registryKey => {
         const metricConfig = METRICS_REGISTRY[registryKey];
-        const value = employeeRecord[recordKey];
+        const value = employeeRecord[registryKey];
         
         if (value === null || value === undefined || value === 'N/A') {
             return; // Skip missing data
@@ -5071,16 +5077,16 @@ function generateCoachingPrompt(employeeRecord) {
     });
     
     // Build intelligent prompt
-    let prompt = `You are an experienced, supportive contact center supervisor writing a development coaching email for ${employeeRecord.Associate_Name}.
+    let prompt = `You are an experienced, supportive contact center supervisor writing a development coaching email for ${employeeRecord.name}.
 
 **Context:**
-${employeeRecord.Associate_Name} is a valued team member. Use an encouraging, confident tone that emphasizes growth and improvement. Your role is to motivate while providing clear, actionable guidance.
+${employeeRecord.name} is a valued team member. Use an encouraging, confident tone that emphasizes growth and improvement. Your role is to motivate while providing clear, actionable guidance.
 
 **Performance Summary:**
 `;
 
     if (failingMetrics.length === 0) {
-        prompt += `✅ ${employeeRecord.Associate_Name} is meeting or exceeding targets across all tracked metrics. Focus on celebrating their success and encouraging them to maintain this strong performance.\n\n`;
+        prompt += `✅ ${employeeRecord.name} is meeting or exceeding targets across all tracked metrics. Focus on celebrating their success and encouraging them to maintain this strong performance.\n\n`;
     } else {
         prompt += `The following metrics need attention:\n\n`;
         failingMetrics.forEach((metric, idx) => {
@@ -5107,7 +5113,7 @@ Write a personalized coaching email (150-250 words) that:
 Generate the email now:`;
     
     promptArea.value = prompt;
-    console.log(`📝 Intelligent coaching prompt generated for ${employeeRecord.Associate_Name} (${failingMetrics.length} metrics need attention)`);
+    console.log(`📝 Intelligent coaching prompt generated for ${employeeRecord.name} (${failingMetrics.length} metrics need attention)`);
 }
 
 function copyCoachingPrompt() {
