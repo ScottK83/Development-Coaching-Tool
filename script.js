@@ -1449,6 +1449,10 @@ function initializeEventHandlers() {
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
+    document.getElementById('manageTips')?.addEventListener('click', () => {
+        showOnlySection('tipsManagementSection');
+        renderTipsManagement();
+    });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
         initializeCoachingEmail();
@@ -1473,6 +1477,9 @@ function initializeEventHandlers() {
     document.getElementById('copyCoachingPromptBtn')?.addEventListener('click', copyCoachingPrompt);
     document.getElementById('openCoachingOutlookBtn')?.addEventListener('click', openCoachingOutlook);
     document.getElementById('coachingEmployeeSelect')?.addEventListener('change', updateCoachingReview);
+    
+    // UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
+    document.getElementById('addTipBtn')?.addEventListener('click', addNewTip);
 
     
     // Load pasted data
@@ -5033,5 +5040,155 @@ function openCoachingOutlook() {
     
     window.location.href = mailtoLink;
     console.log('✉️ Opening Outlook for coaching email');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// UTILITY FEATURE — MANAGE TIPS — DO NOT DELETE
+// Completely isolated from Metric Trends, emails, and coaching workflows.
+// ═════════════════════════════════════════════════════════════════════════════
+
+function getTipsFromStorage() {
+    const stored = localStorage.getItem('coachingTips');
+    return stored ? JSON.parse(stored) : [];
+}
+
+function saveTipsToStorage(tips) {
+    localStorage.setItem('coachingTips', JSON.stringify(tips));
+    console.log('💾 Tips saved to storage');
+}
+
+function addNewTip() {
+    const titleInput = document.getElementById('tipTitleInput');
+    const contentInput = document.getElementById('tipContentInput');
+    
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+    
+    if (!title || !content) {
+        alert('⚠️ Please enter both a title and content for the tip');
+        return;
+    }
+    
+    const tips = getTipsFromStorage();
+    const newTip = {
+        id: Date.now(),
+        title: title,
+        content: content,
+        createdDate: new Date().toLocaleDateString()
+    };
+    
+    tips.push(newTip);
+    saveTipsToStorage(tips);
+    
+    // Clear inputs
+    titleInput.value = '';
+    contentInput.value = '';
+    
+    // Re-render
+    renderTipsManagement();
+    console.log('✅ New tip added:', title);
+}
+
+function editTip(tipId) {
+    const tips = getTipsFromStorage();
+    const tip = tips.find(t => t.id === tipId);
+    
+    if (!tip) return;
+    
+    const newTitle = prompt('Edit tip title:', tip.title);
+    if (newTitle === null) return;
+    
+    const newContent = prompt('Edit tip content:', tip.content);
+    if (newContent === null) return;
+    
+    if (!newTitle.trim() || !newContent.trim()) {
+        alert('⚠️ Title and content cannot be empty');
+        return;
+    }
+    
+    tip.title = newTitle.trim();
+    tip.content = newContent.trim();
+    saveTipsToStorage(tips);
+    renderTipsManagement();
+    console.log('✏️ Tip edited:', tip.title);
+}
+
+function deleteTip(tipId) {
+    if (!confirm('❌ Are you sure you want to delete this tip?')) {
+        return;
+    }
+    
+    let tips = getTipsFromStorage();
+    tips = tips.filter(t => t.id !== tipId);
+    saveTipsToStorage(tips);
+    renderTipsManagement();
+    console.log('🗑️ Tip deleted');
+}
+
+function copyTipContent(tipId) {
+    const tips = getTipsFromStorage();
+    const tip = tips.find(t => t.id === tipId);
+    
+    if (!tip) return;
+    
+    const text = `${tip.title}\n${tip.content}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(text).then(() => {
+        console.log('📋 Tip copied to clipboard');
+        
+        // Visual feedback
+        const button = document.querySelector(`[data-copy-btn="${tipId}"]`);
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+    }).catch(err => {
+        console.error('Error copying to clipboard:', err);
+        alert('⚠️ Could not copy to clipboard');
+    });
+}
+
+function renderTipsManagement() {
+    const container = document.getElementById('tipsContainer');
+    const tips = getTipsFromStorage();
+    
+    if (tips.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No tips yet. Add one to get started!</p>';
+        return;
+    }
+    
+    container.innerHTML = tips.map(tip => `
+        <div style="padding: 15px; background: #f5f5f5; border-radius: 6px; border-left: 4px solid #00796b;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                    <h4 style="margin: 0 0 5px 0; color: #004d40; word-break: break-word;">${escapeHtml(tip.title)}</h4>
+                    <small style="color: #999;">Added: ${tip.createdDate}</small>
+                </div>
+            </div>
+            <p style="margin: 10px 0; color: #333; line-height: 1.5; word-break: break-word;">${escapeHtml(tip.content)}</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                <button type="button" data-copy-btn="${tip.id}" onclick="copyTipContent(${tip.id})" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">📋 Copy</button>
+                <button type="button" onclick="editTip(${tip.id})" style="background: #1976d2; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">✏️ Edit</button>
+                <button type="button" onclick="deleteTip(${tip.id})" style="background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em;">🗑️ Delete</button>
+            </div>
+        </div>
+    `).join('');
+    
+    console.log(`📋 Rendered ${tips.length} tips`);
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
