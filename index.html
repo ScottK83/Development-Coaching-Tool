@@ -3,514 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Development Coaching Tool</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <title>Development Coaching Tool - Standalone</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        h2 { color: #2196F3; margin: 20px 0 10px; font-size: 1.3em; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        .section { display: none; }
+        .section.active { display: block; }
+        textarea { width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; }
+        input, select { padding: 8px; border: 2px solid #ddd; border-radius: 4px; font-size: 14px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-group { margin-bottom: 20px; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #333; color: white; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; animation: slideIn 0.3s; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #2196F3; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .data-table th { background: #f8f9fa; font-weight: 600; }
+        .date-inputs { display: flex; gap: 15px; margin-bottom: 15px; }
+        .date-inputs > div { flex: 1; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Development Coaching Tool</h1>
-            <p class="subtitle">Personalized coaching with knowledge base guidance</p>
-            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button type="button" onclick="window.location.href='homepage.html';" class="btn-secondary">🏠 Home</button>
-                <button type="button" id="homeBtn" class="btn-secondary">📊 Upload Data</button>
-                <button type="button" id="generateCoachingBtn" class="btn-secondary" style="background: #2196F3; color: white;">✉️ Generate Coaching</button>
-                <button type="button" id="manageTips" class="btn-secondary">💡 Manage Tips</button>
-                <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
-                <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
-                <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
-                <button type="button" id="downloadOfflineBtn" class="btn-secondary" style="background: #4CAF50; color: white;">📥 Download Offline</button>
+        <h1>Development Coaching Tool</h1>
+        <p class="subtitle">Metric tracking and trend analysis</p>
+        
+        <div class="nav-buttons">
+            <button class="btn-secondary" onclick="showSection('upload')">📊 Upload Data</button>
+            <button class="btn-primary" onclick="showSection('trends')">📈 Metric Trends</button>
+            <button class="btn-warning" onclick="showSection('manage')">🗄️ Manage Data</button>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload" class="section active">
+            <h2>📊 Upload New Data</h2>
+            <p style="color: #666; margin-bottom: 15px;">Paste data from PowerBI. Format: Employee | Metric1 | Metric2 | ...</p>
+            
+            <div class="form-group">
+                <label>PowerBI Data:</label>
+                <textarea id="pasteData" placeholder="Paste data here..."></textarea>
             </div>
-        </header>
 
-        <main>
-            <!-- Upload Section -->
-            <form id="coachingForm">
-                <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
-                    <h2>📊 Get Started</h2>
-                    
-                    <!-- Upload Data -->
-                    <div id="pasteDataContainer" style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
-                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload New Data</h3>
-                        <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy/Paste the data from PowerBI into the box below. Enter date range. You'll manage your team in the Manage Data section.</p>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">PowerBI Data:</label>
-                            <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period Type:</label>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <button type="button" class="upload-period-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
-                                <button type="button" class="upload-period-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
-                                <button type="button" class="upload-period-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 150px;">
-                                <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Start Date:</label>
-                                <input type="date" id="pasteStartDate" onclick="this.showPicker()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                            </div>
-                            <div style="flex: 1; min-width: 150px;">
-                                <label for="pasteEndDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">End Date:</label>
-                                <input type="date" id="pasteEndDate" onclick="this.showPicker()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                            </div>
-                            <div style="flex: 0 0 auto;">
-                                <button type="button" id="loadPastedDataBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 8px 20px; white-space: nowrap; font-weight: bold;">📊 Load Data</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Success message -->
-                    <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
-                        <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
-                        <p style="margin: 10px 0 0 0;">Click <strong>"✉️ Generate Coaching"</strong> at the top to select a date and create coaching emails.</p>
-                        <div style="margin-top: 15px;">
-                            <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
-                        </div>
-                    </div>
-                </section>
-            </form>
-
-            <!-- Generate Coaching Section -->
-            <section class="form-section" id="coachingSection" style="display: none; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                <h2>✉️ Generate Coaching Email</h2>
-                    
-                <div id="periodSelectionContainer" style="padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196F3;">
-                    <h3 style="color: #2196F3; margin-top: 0;">📅 Select Time Period & Employee</h3>
-                    
-                    <!-- Time Period Type -->
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">1. View By:</label>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" class="period-type-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #2196F3; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
-                            <button type="button" class="period-type-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
-                            <button type="button" class="period-type-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
-                            <button type="button" class="period-type-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Specific Period Selector -->
-                    <div id="specificPeriodContainer" style="margin-bottom: 15px;">
-                        <label for="specificPeriod" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Date Range:</label>
-                        <select id="specificPeriod" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose a date range --</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Employee Selector -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="employeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Select Employee:</label>
-                        <input type="text" id="employeeSearch" placeholder="Search employees..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; margin-bottom: 8px;">
-                        <select id="employeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Choose an employee --</option>
-                        </select>
-                    </div>
+            <div class="date-inputs">
+                <div>
+                    <label>Start Date:</label>
+                    <input type="date" id="startDate">
                 </div>
-
-                <!-- Employee Information -->
-                <form id="coachingFormInternal">
-                    <section class="form-section" id="employeeInfoSection" style="display: none;">
-                        <h2>Employee Information</h2>
-                        <div class="form-group">
-                            <label for="employeeName">Preferred Name/Nickname for Email:</label>
-                            <input type="text" id="employeeName" required placeholder="Enter first name or nickname">
-                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 4px;">This name will appear in the coaching email. Auto-fills with first name, but you can use a nickname.</small>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group">
-                                <label for="totalCalls">Total Calls Answered:</label>
-                                <input type="number" id="totalCalls" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                            </div>
-                            <div class="form-group">
-                                <label for="surveyTotal">Total Surveys Received:</label>
-                                <input type="number" id="surveyTotal" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                            </div>
-                        </div>
-                        <div id="surveyStatusMsg" style="color: #666; font-size: 0.9em; margin-top: 6px;"></div>
-                    </section>
-
-                    <!-- Metrics Input -->
-                    <section class="form-section" id="metricsSection" style="display: none;">
-                        <h2>Performance Metrics</h2>
-                        <div id="ytdComparison" style="display: none; margin-bottom: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;"></div>
-                        <div class="metrics-grid">
-                            <div class="form-group">
-                                <label for="scheduleAdherence">Schedule Adherence (93%)</label>
-                                <input type="number" id="scheduleAdherence" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="cxRepOverall">CX Rep Overall (80%)</label>
-                                <input type="number" id="cxRepOverall" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="fcr">First Call Resolution (70%)</label>
-                                <input type="number" id="fcr" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="overallExperience">Overall Experience (81%)</label>
-                                <input type="number" id="overallExperience" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="transfers">Transfers (<6%)</label>
-                                <input type="number" id="transfers" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="overallSentiment">Overall Sentiment (88%+)</label>
-                                <input type="number" id="overallSentiment" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="positiveWord">Positive Word (86%+)</label>
-                                <input type="number" id="positiveWord" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="negativeWord">Avoid Negative Word (83%+)</label>
-                                <input type="number" id="negativeWord" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="managingEmotions">Managing Emotions (95%+)</label>
-                                <input type="number" id="managingEmotions" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label for="aht">Avg Handle Time (≤440s)</label>
-                                <input type="number" id="aht" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="acw">After Call Work (≤60s)</label>
-                                <input type="number" id="acw" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="holdTime">Hold Time (≤30s)</label>
-                                <input type="number" id="holdTime" step="1" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="reliability">Reliability (≤16 hrs)</label>
-                                <input type="number" id="reliability" step="0.01" min="0">
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Custom Notes -->
-                    <section class="form-section" id="customNotesSection" style="display: none;">
-                        <h2>Additional Coaching to Include in Copilot (Optional)</h2>
-                        <div class="form-group">
-                            <label for="customNotes">Supervisor Context:</label>
-                            <textarea id="customNotes" rows="4" placeholder="Enter any situational notes (e.g., holiday reminders, follow-ups from recent conversations, one-off coaching points)..."></textarea>
-                            <small style="color: #666; font-size: 0.85em; display: block; margin-top: 8px;">
-                                This will be included in the Copilot prompt as supervisor context.
-                            </small>
-                        </div>
-                    </section>
-
-                    <!-- AI Assistance Section -->
-                    <section class="form-section" id="aiAssistSection" style="display: none; background: #f3e8ff; border-left: 4px solid #6f42c1;">
-                        <h2>🤖 Step 1: Generate Copilot Prompt</h2>
-                        <p style="color: #666; margin-bottom: 15px;">This will create a structured prompt, copy it to your clipboard, and open GitHub Copilot.</p>
-                        <button type="button" id="generateCopilotPromptBtn" class="btn-secondary" style="background: #6f42c1; color: white; font-weight: bold; font-size: 1.1em; padding: 12px 24px;">🤖 Generate with Copilot</button>
-                        
-                        <!-- Copilot Output Section -->
-                        <div id="copilotOutputSection" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #6f42c1;">
-                            <h3 style="color: #6f42c1; margin-top: 0;">Step 2: Paste Copilot's Response Here</h3>
-                            <p style="color: #666; margin-bottom: 10px;">After Copilot generates the email, paste it below:</p>
-                            <textarea id="copilotOutputText" rows="15" style="width: 100%; padding: 15px; border: 2px solid #6f42c1; border-radius: 4px; font-family: Arial, sans-serif; font-size: 1em; resize: vertical;" placeholder="Paste the email from Copilot here..."></textarea>
-                            <div style="margin-top: 15px;">
-                                <button type="button" id="generateOutlookEmailBtn" class="btn-primary" disabled style="background: #0078d4; opacity: 0.5; cursor: not-allowed; font-size: 1.1em; padding: 12px 24px;">📧 Generate Email (Outlook)</button>
-                                <p style="color: #999; font-size: 0.9em; margin-top: 8px;">Button will enable after you paste content above</p>
-                            </div>
-                        </div>
-                    </section>
-                </form>
-            </section>
-
-            <!-- Results Section -->
-            <section id="resultsSection" style="display: none;">
-                <div class="form-section">
-                    <h2>✉️ Generated Coaching Email</h2>
-                    <div id="emailOutput"></div>
-                    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
-                        <button type="button" onclick="showOnlySection('coachingSection')" class="btn-secondary">← Back to Form</button>
-                    </div>
+                <div>
+                    <label>End Date:</label>
+                    <input type="date" id="endDate">
                 </div>
-            </section>
+            </div>
 
-            <!-- Employee Dashboard/History Section -->
-            <!-- Tips Management Section -->
-            <section id="tipsManagementSection" style="display: none;">
-                <div class="form-section">
-                    <h2>💡 Manage Coaching Tips</h2>
-                    <div id="tipsContainer"></div>
-                </div>
-            </section>
+            <button class="btn-success" onclick="loadData()">Load Data</button>
+        </div>
 
-            <!-- Metric Trends Section -->
-            <section id="metricTrendsSection" style="display: none;">
-                <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #9c27b0;">
-                    <h2>📈 Metric Trend Reports</h2>
-                    <p style="margin-bottom: 20px;">Generate trend summary emails showing associate performance vs call center averages and week-over-week changes.</p>
-                    
-                    <!-- Status Message -->
-                    <div id="metricTrendsStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                        <strong>⚠️ No Data Available</strong>
-                        <p style="margin: 5px 0 0 0;">Please upload weekly data first using the <strong>📤 Upload Data</strong> tab to use this feature.</p>
-                    </div>
-                    
-                    <!-- Call Center Averages Management -->
-                    <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
-                        <h3 style="color: #9c27b0; margin-top: 0;">📊 Call Center Averages</h3>
-                        <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">View the call center average metrics for your selected period.</p>
-                        
-                        <!-- Period Type Selection -->
-                        <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196F3;">
-                            <label style="font-weight: bold; display: block; margin-bottom: 10px;">Select Period Type:</label>
-                            <div style="display: flex; gap: 20px;">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="radio" name="trendPeriodType" value="week" checked style="cursor: pointer;">
-                                    <span>📅 Week</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="radio" name="trendPeriodType" value="month" style="cursor: pointer;">
-                                    <span>📆 Month</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="radio" name="trendPeriodType" value="ytd" style="cursor: pointer;">
-                                    <span>📊 Year-to-Date</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Select Period to View -->
-                        <div style="margin-bottom: 20px; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;">
-                            <label for="avgUploadedDataSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">📋 Select Period:</label>
-                            <select id="avgUploadedDataSelect" style="width: 100%; padding: 10px; border: 2px solid #4caf50; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose a period from your data --</option>
-                            </select>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <label for="avgPeriodType" style="font-weight: bold; display: block; margin-bottom: 5px;">Period Type:</label>
-                                <input type="text" id="avgPeriodType" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; background-color: #f9f9f9;">
-                            </div>
-                            <div>
-                                <label for="avgWeekMonday" style="font-weight: bold; display: block; margin-bottom: 5px;">Week of (Monday):</label>
-                                <input type="date" id="avgWeekMonday" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; background-color: #f9f9f9;">
-                            </div>
-                            <div>
-                                <label for="avgWeekSunday" style="font-weight: bold; display: block; margin-bottom: 5px;">Through (Sunday):</label>
-                                <input type="date" id="avgWeekSunday" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; background-color: #f9f9f9;">
-                            </div>
-                        </div>
-                        
-                        <div id="avgMetricsForm" style="display: none;">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Adherence (%):</label>
-                                    <input type="number" id="avgAdherence" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Overall Experience (%):</label>
-                                    <input type="number" id="avgOverallExperience" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Rep Satisfaction (%):</label>
-                                    <input type="number" id="avgRepSatisfaction" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">FCR (%):</label>
-                                    <input type="number" id="avgFCR" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Transfers (%):</label>
-                                    <input type="number" id="avgTransfers" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sentiment (%):</label>
-                                    <input type="number" id="avgSentiment" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Positive Word (%):</label>
-                                    <input type="number" id="avgPositiveWord" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Avoiding Negative Words (%):</label>
-                                    <input type="number" id="avgNegativeWord" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Managing Emotions (%):</label>
-                                    <input type="number" id="avgManagingEmotions" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">AHT (seconds):</label>
-                                    <input type="number" id="avgAHT" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">ACW (seconds):</label>
-                                    <input type="number" id="avgACW" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Hold Time (seconds):</label>
-                                    <input type="number" id="avgHoldTime" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Reliability (hours):</label>
-                                    <input type="number" id="avgReliability" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                            </div>
-                            <button type="button" id="saveAvgBtn" class="btn-primary" style="margin-top: 15px;">💾 Save Averages</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Generate Trend Email -->
-                    <div style="padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
-                        <h3 style="color: #9c27b0; margin-top: 0;">✉️ Generate Trend Email</h3>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label for="trendPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Period:</label>
-                            <select id="trendPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose a period --</option>
-                            </select>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label for="trendEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Employee:</label>
-                            <select id="trendEmployeeSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose an employee --</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Metrics Preview Section -->
-                        <div id="metricsPreviewSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9c27b0;">
-                            <h4 style="color: #9c27b0; margin-top: 0;">📊 Employee Metrics (Auto-populated - Edit if needed)</h4>
-                            <div id="metricsPreviewGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-                                <!-- Metrics will be populated here -->
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="generateTrendBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📈 Generate Trend Email</button>
-                            <button type="button" id="generateAllTrendBtn" style="background: #6f42c1; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📬 Generate All</button>
-                        </div>
-                        
-                    </div>
-                </div>
-            </section>
+        <!-- Trends Section -->
+        <div id="trends" class="section">
+            <h2>📈 Generate Metric Trend Email</h2>
+            
+            <div class="form-group">
+                <label>Employee:</label>
+                <select id="trendEmployee"></select>
+            </div>
 
-            <!-- Manage Data Section -->
-            <section id="manageDataSection" style="display: none;">
-                <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
-                    <h2>🗄️ Manage Data</h2>
-                    <p style="color: #856404; margin-bottom: 20px;">View employees, backup, restore, or delete your data.</p>
-                    
-                    <!-- Existing Employees List -->
-                    <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
-                        <h3 style="color: #6a1b9a; margin-top: 0;">👥 View Employees</h3>
-                        <p style="color: #666; margin-bottom: 15px;">View all employees from your uploaded weekly data.</p>
-                        <div id="employeesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white;">
-                            <div style="padding: 20px; text-align: center; color: #999;">No employees yet. Add one above!</div>
-                        </div>
-                    </div>
+            <div class="form-group">
+                <label>Period:</label>
+                <select id="trendPeriod"></select>
+            </div>
 
-                    <!-- Backup / Restore -->
-                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
-                        <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Export your data to Excel or restore from a previous backup.</p>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (Excel)</button>
-                            <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
-                            <input type="file" id="dataFileInput" accept=".json" style="display: none;">
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
-                        <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
-                        <div style="margin-bottom: 15px;">
-                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Week to Delete:</label>
-                            <select id="deleteWeekSelect" style="width: 100%; padding: 12px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em; cursor: pointer;">
-                                <option value="">-- Choose a week --</option>
-                            </select>
-                        </div>
-                        <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Week</button>
-                    </div>
-                    
-                    <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
-                        <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
-                        <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data and coaching history. This action cannot be undone!</p>
-                        <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white; font-size: 1.1em; padding: 12px 24px;">⚠️ Delete All Data</button>
-                    </div>
-                </div>
-            </section>
+            <button class="btn-success" onclick="generateEmail()">Generate & Download Email Image</button>
+        </div>
 
-            <!-- Executive Summary Section -->
-            <section id="executiveSummarySection" style="display: none;">
-                <div class="form-section">
-                    <h2>📊 Executive Summary</h2>
-                    
-                    <!-- Yearly Individual Summary -->
-                    <div style="margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; border: 2px solid #ff9800;">
-                        <h3 style="color: #ff9800; margin-top: 0;">📈 Yearly Individual Summary</h3>
-                        
-                        <!-- Associate Selection -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                            <div>
-                                <label for="summaryAssociateSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Associate:</label>
-                                <select id="summaryAssociateSelect" style="width: 100%; padding: 10px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em;">
-                                    <option value="">-- Choose an associate --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period: Year-to-Date (YTD)</label>
-                            </div>
-                        </div>
-                        
-                        <!-- Data Table -->
-                        <div id="summaryDataContainer" style="display: none; overflow-x: auto; margin-bottom: 20px;">
-                            <table style="width: 100%; border-collapse: collapse; background: white;">
-                                <thead style="background: #ff9800; color: white;">
-                                    <tr>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Summary</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Adherence</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Experience</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">FCR</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Transfers</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Red Flags</th>
-                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Phishing</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="summaryDataTable"></tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Metric Comparison Charts -->
-                        <div id="summaryChartsContainer" style="display: none;">
-                            <h4 style="color: #ff9800; margin-bottom: 20px;">Metric Comparison vs Center Average & Target</h4>
-                        <div id="summaryMetricsVisuals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;"></div>
-                        
-                        <!-- Email Generation Section -->
-                        <div style="margin-top: 25px; padding: 20px; background: #fff3e0; border-radius: 8px; border: 2px solid #ff9800; display: none;" id="summaryEmailSection">
-                            <h4 style="color: #ff9800; margin-top: 0;">📧 End of Month Review Email</h4>
-                            <button type="button" id="generateExecutiveSummaryEmailBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-bottom: 15px;">
-                                📧 Generate Email
-                            </button>
-                            <button type="button" id="copyExecutiveSummaryEmailBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-left: 10px; display: none;">
-                                📋 Copy Email
-                            </button>
-                            <iframe id="executiveSummaryEmailPreview" title="Executive Summary Email Preview" style="display: none; margin-top: 15px; width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 4px; background: white;"></iframe>
-                        </div>
-                    </div>
-                    
-                    <div id="executiveSummaryContainer"></div>
-                </div>
-            </section>
-        </main>
+        <!-- Manage Section -->
+        <div id="manage" class="section">
+            <h2>🗄️ Manage Data</h2>
+            
+            <div class="form-group">
+                <label>Delete Period:</label>
+                <select id="deletePeriod"></select>
+                <button class="btn-warning" onclick="deletePeriod()" style="margin-top: 10px;">Delete Selected</button>
+            </div>
+
+            <h3 style="margin-top: 30px;">Stored Periods:</h3>
+            <div id="periodsList"></div>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // ===== STATE MANAGEMENT =====
+        const appState = {
+            data: JSON.parse(localStorage.getItem('coachingData') || '{}')
+        };
+
+        function saveState() {
+            localStorage.setItem('coachingData', JSON.stringify(appState.data));
+        }
+
+        // ===== UI HELPERS =====
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'trends') populateTrendsDropdowns();
+            if (id === 'manage') populateManageSection();
+        }
+
+        function showToast(msg, duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ===== DATA LOADING =====
+        function loadData() {
+            const data = document.getElementById('pasteData').value.trim();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!data || !startDate || !endDate) {
+                showToast('Please fill all fields');
+                return;
+            }
+
+            const lines = data.split('\n').filter(l => l.trim());
+            if (lines.length < 2) {
+                showToast('Need at least header + 1 data row');
+                return;
+            }
+
+            const headers = lines[0].split('\t').map(h => h.trim());
+            const nameCol = headers.findIndex(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('employee'));
+            
+            if (nameCol === -1) {
+                showToast('Could not find employee name column');
+                return;
+            }
+
+            const weekKey = `${startDate}_${endDate}`;
+            const employees = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split('\t');
+                if (cols.length <= nameCol) continue;
+
+                const name = cols[nameCol].trim();
+                if (!name) continue;
+
+                const metrics = {};
+                headers.forEach((header, idx) => {
+                    if (idx !== nameCol) {
+                        const val = cols[idx]?.trim() || '';
+                        metrics[header] = isNaN(val) ? val : parseFloat(val);
+                    }
+                });
+
+                employees.push({ name, metrics });
+            }
+
+            if (employees.length === 0) {
+                showToast('No valid data found');
+                return;
+            }
+
+            appState.data[weekKey] = {
+                startDate,
+                endDate,
+                employees,
+                headers: headers.filter((_, i) => i !== nameCol)
+            };
+
+            saveState();
+            showToast(`✅ Loaded ${employees.length} employees for ${startDate} to ${endDate}`);
+            document.getElementById('pasteData').value = '';
+        }
+
+        // ===== TRENDS =====
+        function populateTrendsDropdowns() {
+            const empSelect = document.getElementById('trendEmployee');
+            const periodSelect = document.getElementById('trendPeriod');
+            
+            empSelect.innerHTML = '<option value="">Select Employee</option>';
+            periodSelect.innerHTML = '<option value="">Select Period</option>';
+
+            const periods = Object.keys(appState.data).sort().reverse();
+            if (periods.length === 0) {
+                showToast('No data available');
+                return;
+            }
+
+            // Get employees from latest period
+            const latestPeriod = periods[0];
+            const employees = appState.data[latestPeriod].employees.map(e => e.name).sort();
+            employees.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                empSelect.appendChild(opt);
+            });
+
+            periods.forEach(key => {
+                const period = appState.data[key];
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${period.startDate} to ${period.endDate}`;
+                periodSelect.appendChild(opt);
+            });
+        }
+
+        function generateEmail() {
+            const empName = document.getElementById('trendEmployee').value;
+            const weekKey = document.getElementById('trendPeriod').value;
+
+            if (!empName || !weekKey) {
+                showToast('Please select employee and period');
+                return;
+            }
+
+            const period = appState.data[weekKey];
+            const employee = period.employees.find(e => e.name === empName);
+            
+            if (!employee) {
+                showToast('Employee not found in selected period');
+                return;
+            }
+
+            // Get previous period
+            const allPeriods = Object.keys(appState.data).sort();
+            const currentIdx = allPeriods.indexOf(weekKey);
+            const prevPeriod = currentIdx > 0 ? appState.data[allPeriods[currentIdx - 1]] : null;
+            const prevEmployee = prevPeriod?.employees.find(e => e.name === empName);
+
+            // Build email content
+            showToast('⏳ Creating email image...');
+            
+            setTimeout(() => {
+                createEmailImage(empName, period, employee, prevEmployee);
+            }, 100);
+        }
+
+        function createEmailImage(empName, period, current, previous) {
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 900;
+            canvas.height = 1300;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(0, 0, 900, 1300);
+
+            let y = 40;
+
+            // Greeting
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Hi ${empName},`, 50, y);
+            y += 50;
+
+            // Summary line
+            ctx.font = '16px Arial';
+            ctx.fillText(`Here's your performance summary for Week ending ${period.endDate}.`, 50, y);
+            y += 60;
+
+            // Metrics comparison
+            const metrics = current.metrics;
+            const prevMetrics = previous?.metrics || {};
+
+            // Count summary cards
+            let meetingGoals = 0;
+            let improved = 0;
+
+            Object.keys(metrics).forEach(metric => {
+                const curr = parseFloat(metrics[metric]) || 0;
+                const target = getTarget(metric);
+                
+                if (isMetricGood(metric, curr, target)) meetingGoals++;
+                
+                // Only count improvements if we have previous data
+                if (previous && prevMetrics[metric] !== undefined) {
+                    const prev = parseFloat(prevMetrics[metric]) || 0;
+                    if (curr > prev) improved++;
+                }
+            });
+
+            const totalMetrics = Object.keys(metrics).length;
+            const successRate = Math.round(meetingGoals / totalMetrics * 100);
+            const improvedText = previous ? improved.toString() : 'N/A';
+            const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
+
+            // Draw summary cards with borders
+            drawBorderedCard(ctx, 50, y, 250, 120, '#ffffff', '#28a745', '✅ Meeting Target Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
+            drawBorderedCard(ctx, 325, y, 250, 120, '#ffffff', '#6c757d', '📊 Outpacing Your Peers', `${meetingGoals}/${totalMetrics}`, `${successRate} percent of your metrics are above center average`);
+            drawBorderedCard(ctx, 600, y, 250, 120, '#ffffff', '#2196F3', '🔼 Improved Metrics', improvedText, improvedSub);
+
+            y += 150;
+
+            // "Your Metrics" header
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('📊 Your Metrics', 50, y);
+            y += 40;
+
+            // Table headers
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillRect(50, y, 800, 40);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('Metric', 60, y + 25);
+            ctx.fillText('Current', 350, y + 25);
+            ctx.fillText('Previous', 500, y + 25);
+            ctx.fillText('Change', 650, y + 25);
+            ctx.fillText('Status', 750, y + 25);
+            
+            // Legend next to status column
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#dc3545';
+            ctx.fillText('✗ Behind Center Average', 60, y + 60);
+            ctx.fillStyle = '#28a745';
+            ctx.fillText('✓ Better than Center Average', 60, y + 75);
+            
+            y += 85;
+
+            // Table rows
+            Object.keys(metrics).forEach((metric, idx) => {
+                const curr = parseFloat(metrics[metric]) || 0;
+                const prev = parseFloat(prevMetrics[metric]) || 0;
+                const change = prev ? ((curr - prev) / prev * 100).toFixed(1) + '%' : 'N/A';
+                const target = getTarget(metric);
+                const isGood = isMetricGood(metric, curr, target);
+                const status = isGood ? '✓ Better than Center Average' : '✗ Behind Center Average';
+
+                // Alternating row colors
+                ctx.fillStyle = idx % 2 === 0 ? '#4a4a4a' : '#3a3a3a';
+                ctx.fillRect(50, y, 800, 35);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '13px Arial';
+                ctx.fillText(metric, 60, y + 22);
+                ctx.fillText(curr.toFixed(2), 350, y + 22);
+                ctx.fillText(prev ? prev.toFixed(2) : 'N/A', 500, y + 22);
+                ctx.fillText(change, 650, y + 22);
+                
+                ctx.fillStyle = isGood ? '#28a745' : '#dc3545';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(status, 750, y + 22);
+
+                y += 35;
+            });
+
+            // Footer
+            y += 30;
+            ctx.fillStyle = '#999';
+            ctx.font = '12px Arial';
+            ctx.fillText('Generated: ' + new Date().toLocaleDateString(), 50, y);
+
+            // Convert to image and copy to clipboard
+            canvas.toBlob(blob => {
+                // Copy to clipboard
+                navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]).then(() => {
+                    showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
+                    
+                    // Open Outlook
+                    setTimeout(() => {
+                        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                    }, 500);
+                }).catch(err => {
+                    console.error('Clipboard error:', err);
+                    // Fallback to download
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `TrendReport_${empName}_${period.startDate}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('⚠️ Could not copy to clipboard. Image downloaded instead.', 4000);
+                    
+                    setTimeout(() => {
+                        window.open(`mailto:?subject=Trend Report - ${empName}`, '_blank');
+                    }, 500);
+                });
+            }, 'image/png');
+        }
+
+        function drawBorderedCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
+            // Card background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(x, y, w, h);
+            
+            // Border
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+
+            // Text
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + w/2, y + 30);
+            
+            ctx.font = 'bold 40px Arial';
+            ctx.fillText(mainText, x + w/2, y + 75);
+            
+            ctx.font = '13px Arial';
+            ctx.fillStyle = '#666';
+            ctx.fillText(subText, x + w/2, y + 100);
+            
+            ctx.textAlign = 'left';
+        }
+
+        function drawCard(ctx, x, y, w, h, bgColor, textColor, title, mainText, subText) {
+            // Card background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(x, y, w, h);
+            
+            // Border
+            ctx.strokeStyle = textColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+
+            // Text
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + w/2, y + 25);
+            
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText(mainText, x + w/2, y + 70);
+            
+            ctx.font = '12px Arial';
+            ctx.fillText(subText, x + w/2, y + 95);
+            
+            ctx.textAlign = 'left';
+        }
+
+        function getTarget(metric) {
+            const lowerMetric = metric.toLowerCase();
+            if (lowerMetric.includes('oee') || lowerMetric.includes('utilization')) return 85;
+            if (lowerMetric.includes('quality') || lowerMetric.includes('yield')) return 95;
+            if (lowerMetric.includes('downtime')) return 5;
+            if (lowerMetric.includes('scrap')) return 2;
+            return 90;
+        }
+
+        function isMetricGood(metric, value, target) {
+            const lowerMetric = metric.toLowerCase();
+            const isLowerBetter = lowerMetric.includes('downtime') || lowerMetric.includes('scrap') || lowerMetric.includes('defect');
+            return isLowerBetter ? value <= target : value >= target;
+        }
+
+        // ===== MANAGE DATA =====
+        function populateManageSection() {
+            const deleteSelect = document.getElementById('deletePeriod');
+            const periodsList = document.getElementById('periodsList');
+
+            deleteSelect.innerHTML = '<option value="">Select Period</option>';
+            periodsList.innerHTML = '';
+
+            const periods = Object.keys(appState.data).sort().reverse();
+            
+            if (periods.length === 0) {
+                periodsList.innerHTML = '<p style="color: #666;">No data stored</p>';
+                return;
+            }
+
+            periods.forEach(key => {
+                const period = appState.data[key];
+                
+                // Delete dropdown
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${period.startDate} to ${period.endDate} (${period.employees.length} employees)`;
+                deleteSelect.appendChild(opt);
+
+                // List display
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.innerHTML = `
+                    <strong>${period.startDate} to ${period.endDate}</strong><br>
+                    ${period.employees.length} employees | ${period.headers.length} metrics
+                `;
+                periodsList.appendChild(card);
+            });
+        }
+
+        function deletePeriod() {
+            const key = document.getElementById('deletePeriod').value;
+            if (!key) {
+                showToast('Please select a period');
+                return;
+            }
+
+            if (confirm(`Delete period ${key}?`)) {
+                delete appState.data[key];
+                saveState();
+                showToast('✅ Period deleted');
+                populateManageSection();
+            }
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+        });
+    </script>
 </body>
 </html>
