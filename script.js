@@ -3310,7 +3310,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
             // Format change value
             const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
             const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `?? -${changeValue} vs last ${periodLabel}`;
+            trendingText = `📉 -${changeValue} vs last ${periodLabel}`;
         }
     }
     
@@ -3385,7 +3385,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
             currentGroup = group;
             html += `<tr style="background-color: #e3f2fd; border: 1px solid #ddd;">
                 <td colspan="6" style="padding: 12px; font-weight: bold; color: #0056B3; font-size: 15px;">
-                    ?? ${group}
+                    ${group}
                 </td>
             </tr>`;
         }
@@ -3416,17 +3416,22 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
             vsCenterColor = isAboveCenter ? '#0056B3' : '#DAA520';
         }
         
-        // Trending
+        // Trending - apply reverse logic for metrics where lower is better
         let trendingColor = '#666666';
         let trendingText = 'N/A';
         if (prev > 0) {
             const trendPercent = ((curr - prev) / prev * 100).toFixed(1);
             trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
-            trendingColor = curr > prev ? '#28a745' : (curr < prev ? '#dc3545' : '#666666');
+            // For reverse metrics (lower is better), invert the color logic
+            if (isReverse) {
+                trendingColor = curr > prev ? '#dc3545' : (curr < prev ? '#28a745' : '#666666');
+            } else {
+                trendingColor = curr > prev ? '#28a745' : (curr < prev ? '#dc3545' : '#666666');
+            }
         }
         
         html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
-            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label}</td>
+            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(Goal: ${target})</span></td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
