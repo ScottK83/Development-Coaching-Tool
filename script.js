@@ -3678,7 +3678,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const target = getMetricTarget(key);
         const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
         
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev || undefined, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal);
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal);
         y += 38;
         rowIdx++;
     });
@@ -3703,7 +3703,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const isReverse = isReverseMetric(key);
         
         // Check if improved from last week
-        if (previous && prev > 0) {
+        if (previous && prev >= 0) {
             const change = curr - prev;
             const hasImproved = isReverse ? change < 0 : change > 0;
             
