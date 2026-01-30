@@ -1642,6 +1642,12 @@ function initializeEventHandlers() {
             
             alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
             
+            // Reload page to refresh UI
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+            
+            
         } catch (error) {
             console.error('Error parsing pasted data:', error);
             alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
