@@ -4764,7 +4764,7 @@ function renderEmployeesList() {
                     <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${currentPreferred}</strong></div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="saveEmployeePreferredName('${name}')" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">?? Save</button>
+                    <button onclick="saveEmployeePreferredName('${name}')" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
                 </div>
             </div>
         </div>
