@@ -3240,10 +3240,11 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, height);
     
-    // Metric name (without target - target shown in header)
+    // Metric name with target
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
-    ctx.fillText(`${metric.label}`, x + 10, y + 24);
+    const targetDisplay = formatMetricDisplay(metric.key, target);
+    ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
     
     // Associate value - use formatMetricValue (or N/A if no surveys for survey metrics)
     ctx.fillStyle = '#333333';
@@ -3296,36 +3297,22 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         trendingText = 'N/A';
     } else if (previousValue !== undefined && previousValue > 0) {
         const trendDiff = associateValue - previousValue;
+        const absDiff = Math.abs(trendDiff);
         
-        // Determine trend direction based on metric type
-        let isImprovement;
-        if (isReverse) {
-            // For reverse metrics (lower is better), negative change is improvement
-            isImprovement = trendDiff < 0;
-        } else {
-            // For normal metrics (higher is better), positive change is improvement
-            isImprovement = trendDiff > 0;
-        }
+        // Determine improvement based on metric type
+        const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
         
-        // Set emoji and color
-        if (Math.abs(trendDiff) < 0.1) {
+        if (absDiff < 0.1) {
             trendingEmoji = '➡️'; // Flat/no change
             trendingColor = '#666666';
             trendingText = '➡️ No change';
-        } else if (isImprovement) {
-            trendingEmoji = '📈'; // Chart increasing (green)
-            trendingColor = '#28a745';
-            // Format change value
-            const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
-            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `📈 +${changeValue} vs last ${periodLabel}`;
         } else {
-            trendingEmoji = '📉'; // Chart decreasing (red)
-            trendingColor = '#dc3545';
-            // Format change value
-            const changeValue = formatMetricValue(metricKey, Math.abs(trendDiff));
+            const changeValue = formatMetricValue(metricKey, absDiff);
             const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            trendingText = `📉 -${changeValue} vs last ${periodLabel}`;
+            const sign = trendDiff > 0 ? '+' : '-';
+            const directionEmoji = trendDiff > 0 ? '📈' : '📉';
+            trendingColor = isImprovement ? '#28a745' : '#dc3545';
+            trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
         }
     }
     
@@ -3445,8 +3432,9 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
             }
         }
         
+        const targetDisplay = formatMetricDisplay(key, target);
         html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
-            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(Goal: ${target})</span></td>
+            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
