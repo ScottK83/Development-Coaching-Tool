@@ -3247,17 +3247,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Center average - use formatMetricValue
     ctx.font = '14px Arial';
     const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 350, y + 24);
-    
-    // YTD value
-    let formattedYtd = '';
-    const ytdValueNum = parseFloat(ytdValue);
-    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-    const ytdNoSurveys = isSurveyMetric && ytdSurveyTotal === 0;
-    if (ytdHasValue) {
-        formattedYtd = ytdNoSurveys ? 'N/A' : formatMetricValue(metric.key, ytdValueNum);
-    }
-    ctx.fillText(formattedYtd, x + 450, y + 24);
+    ctx.fillText(formattedCenter, x + 330, y + 24);
     
     // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
     let vsCenterColor;
@@ -3286,7 +3276,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = vsCenterColor;
     ctx.font = 'bold 14px Arial';
-    ctx.fillText(vsCenterText, x + 560, y + 24);
+    ctx.fillText(vsCenterText, x + 450, y + 24);
     
     // Trending (if previous data exists) - show emoji + change value
     let trendingColor = '#666666';
@@ -3320,7 +3310,19 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = trendingColor;
     ctx.font = '13px Arial'; // Smaller font to fit change description
-    ctx.fillText(trendingText, x + 690, y + 24);
+    ctx.fillText(trendingText, x + 570, y + 24);
+    
+    // YTD value (now last column)
+    let formattedYtd = '';
+    const ytdValueNum = parseFloat(ytdValue);
+    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
+    const ytdNoSurveys = isSurveyMetric && ytdSurveyTotal === 0;
+    if (ytdHasValue) {
+        formattedYtd = ytdNoSurveys ? 'N/A' : formatMetricValue(metric.key, ytdValueNum);
+    }
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.fillText(formattedYtd, x + 720, y + 24);
 }
 
 // ============================================
@@ -3373,10 +3375,10 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
             <th style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold;">Metric</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Your Value</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Center Avg</th>
-            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">YTD</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Target</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">vs Center</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Trend</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">YTD</th>
         </tr>
     </thead>`;
     
@@ -3447,10 +3449,10 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
             <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
         </tr>`;
     });
     
@@ -3617,10 +3619,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.font = 'bold 14px Arial';
     ctx.fillText('Metric', 50, y + 28);
     ctx.fillText('Your Metric', 230, y + 28);
-    ctx.fillText('Center Avg', 350, y + 28);
-    ctx.fillText('YTD', 450, y + 28);
-    ctx.fillText('vs. Center Avg', 560, y + 28);
-    ctx.fillText(`Change vs last ${periodLabel}`, 690, y + 28);
+    ctx.fillText('Center Avg', 330, y + 28);
+    ctx.fillText('vs. Center Avg', 450, y + 28);
+    ctx.fillText(`Change vs last ${periodLabel}`, 570, y + 28);
+    ctx.fillText('YTD', 720, y + 28);
     
     y += 45;
 
