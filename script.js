@@ -2958,10 +2958,12 @@ function setupMetricTrendsListeners() {
             if (nicknameInput) {
                 if (!employeeName || employeeName === 'ALL') {
                     nicknameInput.value = '';
+                    nicknameInput.placeholder = 'How to address them in the email (e.g., "John")';
                 } else {
                     const savedNickname = getSavedNickname(employeeName);
                     const defaultNickname = getEmployeeNickname(employeeName) || '';
-                    nicknameInput.value = savedNickname || defaultNickname;
+                    nicknameInput.value = savedNickname || defaultNickname || '';
+                    nicknameInput.placeholder = 'How to address them in the email';
                 }
             }
             
@@ -3287,7 +3289,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     if (noSurveys) {
         trendingColor = '#999999';
         trendingText = 'N/A';
-    } else if (previousValue !== undefined && previousValue > 0) {
+    } else if (previousValue !== undefined && previousValue >= 0) {
         const trendDiff = associateValue - previousValue;
         const absDiff = Math.abs(trendDiff);
         
@@ -3432,14 +3434,28 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         // Trending - apply reverse logic for metrics where lower is better
         let trendingColor = '#666666';
         let trendingText = 'N/A';
-        if (prev > 0) {
-            const trendPercent = ((curr - prev) / prev * 100).toFixed(1);
-            trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
-            // For reverse metrics (lower is better), invert the color logic
-            if (isReverse) {
-                trendingColor = curr > prev ? '#dc3545' : (curr < prev ? '#28a745' : '#666666');
+        if (prev >= 0 && prev !== undefined) {
+            // Handle case where prev is 0 (avoid division by zero)
+            if (prev === 0) {
+                // If previous was 0, show the absolute change
+                const absDiff = Math.abs(curr - prev);
+                const sign = curr > prev ? '+' : '';
+                trendingText = `${sign}${absDiff.toFixed(2)}`;
+                // For reverse metrics, lower is better
+                if (isReverse) {
+                    trendingColor = curr < 0 ? '#28a745' : (curr > 0 ? '#dc3545' : '#666666');
+                } else {
+                    trendingColor = curr > 0 ? '#28a745' : (curr < 0 ? '#dc3545' : '#666666');
+                }
             } else {
-                trendingColor = curr > prev ? '#28a745' : (curr < prev ? '#dc3545' : '#666666');
+                const trendPercent = ((curr - prev) / prev * 100).toFixed(1);
+                trendingText = `${trendPercent > 0 ? '+' : ''}${trendPercent}%`;
+                // For reverse metrics (lower is better), invert the color logic
+                if (isReverse) {
+                    trendingColor = curr > prev ? '#dc3545' : (curr < prev ? '#28a745' : '#666666');
+                } else {
+                    trendingColor = curr > prev ? '#28a745' : (curr < prev ? '#dc3545' : '#666666');
+                }
             }
         }
         
