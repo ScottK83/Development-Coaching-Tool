@@ -3240,10 +3240,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const targetDisplay = formatMetricDisplay(metric.key, target);
     ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
     
-    // Associate value - use formatMetricValue (or N/A if no surveys for survey metrics)
+    // Associate value - always display the metric value (even if surveys = 0)
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
-    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
+    const formattedValue = formatMetricValue(metric.key, associateValue);
     ctx.fillText(formattedValue, x + 230, y + 24);
     
     // Center average - use formatMetricValue
@@ -3251,14 +3251,11 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
     ctx.fillText(formattedCenter, x + 330, y + 24);
     
-    // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
+    // VS CENTER CELL - show raw difference
     let vsCenterColor;
     let vsCenterText;
     
-    if (noSurveys) {
-        vsCenterColor = '#999999'; // Gray - no surveys
-        vsCenterText = 'N/A';
-    } else if (!centerExists) {
+    if (!centerExists) {
         vsCenterColor = '#999999'; // Gray - no data
         vsCenterText = 'N/A';
     } else {
@@ -3285,11 +3282,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let trendingText = 'N/A';
     let trendingEmoji = '';
     
-    // Don't show trending if this is a survey metric with no surveys
-    if (noSurveys) {
-        trendingColor = '#999999';
-        trendingText = 'N/A';
-    } else if (previousValue !== undefined && previousValue >= 0) {
+    if (previousValue !== undefined && previousValue >= 0) {
         const trendDiff = associateValue - previousValue;
         const absDiff = Math.abs(trendDiff);
         
