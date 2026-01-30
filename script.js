@@ -3624,11 +3624,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         // Draw group header
         if (group !== currentGroup) {
             currentGroup = group;
-            console.log('📊 Drawing group header:', { group, groupValue: group.toString(), groupLength: group.length });
             ctx.fillStyle = '#e3f2fd';
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
-            ctx.font = 'bold 16px Arial';
+            ctx.font = 'bold 16px Arial, "Segoe UI Emoji", "Apple Color Emoji"';
             // Add emojis to group headers
             let groupEmoji = '📊';
             if (group === 'Core Performance') groupEmoji = '🎯';
@@ -3637,7 +3636,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             else if (group === 'Reliability') groupEmoji = '⏰';
             
             const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} surveys)` : `${groupEmoji} ${group}`;
-            console.log('📊 Group label created:', { groupLabel });
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
@@ -3729,7 +3727,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         keyWins.slice(0, 5).forEach((item, idx) => {
             ctx.fillStyle = '#333333';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText(`� ${item.label}:`, 60, y + 20);
+            ctx.fillText(`- ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
             ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
             y += 35;
@@ -3749,13 +3747,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         if (improvedMetrics.length === 0 && previous) {
             ctx.fillStyle = '#666666';
             ctx.font = '14px Arial';
-            ctx.fillText('� No improvements detected this week', 60, y + 20);
+            ctx.fillText('- No improvements detected this week', 60, y + 20);
             y += 40;
         } else {
             improvedMetrics.slice(0, 5).forEach((item, idx) => {
                 ctx.fillStyle = '#333333';
                 ctx.font = 'bold 14px Arial';
-                ctx.fillText(`� ${item.label}:`, 60, y + 20);
+                ctx.fillText(`- ${item.label}:`, 60, y + 20);
                 ctx.font = '14px Arial';
                 ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last week`, 220, y + 20);
                 y += 35;
@@ -3776,7 +3774,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         focusMetrics.slice(0, 5).forEach((item, idx) => {
             ctx.fillStyle = '#333333';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText(`� ${item.label}:`, 60, y + 20);
+            ctx.fillText(`- ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
             ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
             y += 35;
