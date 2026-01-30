@@ -3507,7 +3507,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    const surveyTotal = current.survey_total ? parseInt(current.survey_total, 10) : 0;
+    const surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     const ytdSurveyTotal = ytdEmployee?.surveyTotal ? parseInt(ytdEmployee.surveyTotal, 10) : 0;
 
     console.log('ℹ️ Email generation started for:', empName);
