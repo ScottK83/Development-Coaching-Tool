@@ -3600,13 +3600,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillText(`Hi ${empName},`, 50, y);
     y += 40;
 
-    // Survey count information
-    ctx.fillStyle = '#555555';
-    ctx.font = '13px Arial';
-    const surveyInfoText = `Surveys: ${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} year-to-date`;
-    ctx.fillText(surveyInfoText, 50, y);
-    y += 25;
-
     // Summary line
     ctx.font = '15px Arial';
     ctx.fillStyle = '#666666';
