@@ -3624,11 +3624,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         // Draw group header
         if (group !== currentGroup) {
             currentGroup = group;
+            console.log('📊 Drawing group header:', { group, groupValue: group.toString(), groupLength: group.length });
             ctx.fillStyle = '#e3f2fd';
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
             const groupLabel = group === 'Survey' ? `${group} (${surveyTotal} surveys)` : `${group}`;
+            console.log('📊 Group label created:', { groupLabel });
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
