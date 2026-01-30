@@ -1722,7 +1722,8 @@ function initializeEventHandlers() {
         
         // Populate fields
         const savedNickname = getSavedNickname(selectedName);
-        document.getElementById('employeeName').value = savedNickname || employee.firstName || '';
+        const defaultNickname = getEmployeeNickname(selectedName) || employee.firstName || '';
+        document.getElementById('employeeName').value = savedNickname || defaultNickname;
         populateMetricInputs(employee);
         
         // Update survey status message
@@ -1736,16 +1737,7 @@ function initializeEventHandlers() {
         document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     
-    // Save nickname on blur
-    document.getElementById('employeeName')?.addEventListener('blur', (e) => {
-        const employeeSelect = document.getElementById('employeeSelect');
-        const selectedName = employeeSelect?.value;
-        const nickname = e.target.value.trim();
-        
-        if (selectedName && nickname) {
-            saveNickname(selectedName, nickname);
-        }
-    });
+    // Note: nickname saves on generate actions, not on blur
     
     // Employee search
     document.getElementById('employeeSearch')?.addEventListener('input', (e) => {
@@ -2110,7 +2102,7 @@ async function renderTipsManagement() {
         .sort((a, b) => metricNames[a].localeCompare(metricNames[b]));
     
     let html = '<div style="margin-bottom: 20px;">';
-    html += '<p>Select a tip category below to expand and manage its coaching tips. Server tips (from tips.csv) are shown in blue and are read-only. Your custom tips can be edited or deleted.</p>';
+    html += '<p>Select a tip category below to expand and manage its coaching tips.</p>';
     html += '</div>';
     
     // Category Selector Section
@@ -2244,10 +2236,10 @@ async function renderTipsManagement() {
         
         let tipsHtml = `<div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">`;
         tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">📂 ${metricName}</h3>`;
+        tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Tips</h4>';
         
         // Server tips - use original indices
         if (serverTipsWithIndex.length > 0) {
-            tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Server Tips (from tips.csv)</h4>';
             serverTipsWithIndex.forEach((tipObj) => {
                 // Safety check for tipObj structure
                 if (!tipObj || typeof tipObj.originalIndex === 'undefined') {
@@ -2268,13 +2260,9 @@ async function renderTipsManagement() {
                     </div>
                 `;
             });
-            tipsHtml += '</div>';
-        } else if (serverTipsForMetric.length === 0) {
-            tipsHtml += '<div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"><em>No server tips found for this metric in tips.csv</em></div>';
         }
         
         // Custom tips
-        tipsHtml += '<div style="margin: 25px 0;"><h4 style="color: #28a745; margin-bottom: 12px;">✏️ Your Custom Tips</h4>';
         if (userTipsForMetric.length > 0) {
             userTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
@@ -2291,11 +2279,17 @@ async function renderTipsManagement() {
             });
         }
         
-        // Add new tip (single section)
+        if (serverTipsWithIndex.length === 0 && userTipsForMetric.length === 0) {
+            tipsHtml += '<div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"><em>No tips found for this metric</em></div>';
+        }
+
+        tipsHtml += '</div>';
+
+        // Add new tip
         tipsHtml += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
                 <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Custom Tip</button>
+                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Tip</button>
             </div>
         `;
         tipsHtml += '</div>';
@@ -2980,6 +2974,17 @@ function setupMetricTrendsListeners() {
         trendEmployeeSelect.addEventListener('change', (e) => {
             const employeeName = e.target.value;
             const weekKey = document.getElementById('trendPeriodSelect')?.value;
+            const nicknameInput = document.getElementById('trendNickname');
+            
+            if (nicknameInput) {
+                if (!employeeName || employeeName === 'ALL') {
+                    nicknameInput.value = '';
+                } else {
+                    const savedNickname = getSavedNickname(employeeName);
+                    const defaultNickname = getEmployeeNickname(employeeName) || '';
+                    nicknameInput.value = savedNickname || defaultNickname;
+                }
+            }
             
             if (employeeName === 'ALL') {
                 document.getElementById('metricsPreviewSection').style.display = 'none';
@@ -3096,6 +3101,10 @@ function generateTrendEmail() {
         console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
         return;
+    }
+
+    if (employeeName && nickname) {
+        saveNickname(employeeName, nickname);
     }
     
     // Get current period data
@@ -4493,6 +4502,10 @@ async function generateCopilotPrompt() {
         alert('⚠️ Please select an employee first');
         return;
     }
+
+    if (selectedEmployeeId && employeeName) {
+        saveNickname(selectedEmployeeId, employeeName.trim());
+    }
     const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
     if (!employeeData) {
         alert('⚠️ Unable to load metrics for this employee. Please reload data.');
@@ -4637,6 +4650,13 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
 }
 
 function generateVerintSummary() {
+    const employeeSelect = document.getElementById('employeeSelect');
+    const selectedEmployeeId = employeeSelect?.value;
+    const employeeName = document.getElementById('employeeName')?.value.trim();
+    if (selectedEmployeeId && employeeName) {
+        saveNickname(selectedEmployeeId, employeeName);
+    }
+
     const summaryData = window.latestCoachingSummaryData;
     
     if (summaryData) {
