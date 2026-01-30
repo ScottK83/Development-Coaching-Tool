@@ -3111,6 +3111,15 @@ function generateTrendEmail() {
     const prevPeriod = currentIdx > 0 ? weeklyData[allPeriods[currentIdx - 1]] : null;
     const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
     
+    console.log('📊 Trend Email Debug:', {
+        weekKey,
+        allPeriods,
+        currentIdx,
+        hasPrevPeriod: !!prevPeriod,
+        hasPrevEmployee: !!prevEmployee,
+        prevEmployeeKeys: prevEmployee ? Object.keys(prevEmployee) : 'N/A'
+    });
+    
     // Use nickname if provided, otherwise use full name
     const displayName = nickname || employeeName;
     
@@ -3469,6 +3478,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             prevMetrics[key] = previous[key];
         }
     });
+    
+    console.log('📊 Metrics loaded:', {
+        currentMetricsCount: Object.keys(metrics).length,
+        previousMetricsCount: Object.keys(prevMetrics).length,
+        hasPrevious: !!previous,
+        previousKeys: previous ? Object.keys(previous).slice(0, 5) : 'N/A'
+    });
 
     // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
     const callCenterAverages = loadCallCenterAverages();
@@ -3606,7 +3622,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
-            const groupLabel = group === 'Survey' ? `?? ${group} (${surveyTotal} surveys)` : `?? ${group}`;
+            const groupLabel = group === 'Survey' ? `${group} (${surveyTotal} surveys)` : `${group}`;
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
