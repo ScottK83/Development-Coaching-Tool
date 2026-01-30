@@ -3483,7 +3483,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         currentMetricsCount: Object.keys(metrics).length,
         previousMetricsCount: Object.keys(prevMetrics).length,
         hasPrevious: !!previous,
-        previousKeys: previous ? Object.keys(previous).slice(0, 5) : 'N/A'
+        previousKeys: previous ? Object.keys(previous).slice(0, 5) : 'N/A',
+        sampleMetrics: {
+            currentAHT: metrics.aht,
+            previousAHT: prevMetrics.aht,
+            currentAdherence: metrics.scheduleAdherence,
+            previousAdherence: prevMetrics.scheduleAdherence
+        }
     });
 
     // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
