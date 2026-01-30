@@ -3629,7 +3629,14 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             ctx.fillRect(40, y, 820, 40);
             ctx.fillStyle = '#0056B3';
             ctx.font = 'bold 16px Arial';
-            const groupLabel = group === 'Survey' ? `${group} (${surveyTotal} surveys)` : `${group}`;
+            // Add emojis to group headers
+            let groupEmoji = '📊';
+            if (group === 'Core Performance') groupEmoji = '🎯';
+            else if (group === 'Survey') groupEmoji = '📋';
+            else if (group === 'Sentiment') groupEmoji = '💬';
+            else if (group === 'Reliability') groupEmoji = '⏰';
+            
+            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} surveys)` : `${groupEmoji} ${group}`;
             console.log('📊 Group label created:', { groupLabel });
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
