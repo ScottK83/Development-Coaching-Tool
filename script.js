@@ -36,6 +36,7 @@
 // GLOBAL STATE
 // ============================================
 let weeklyData = {};
+let ytdData = {};
 let currentPeriodType = 'week';
 let currentPeriod = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
@@ -918,6 +919,26 @@ function saveWeeklyData() {
     }
 }
 
+function loadYtdData() {
+    try {
+        const saved = localStorage.getItem('ytdData');
+        const data = saved ? JSON.parse(saved) : {};
+        return data;
+    } catch (error) {
+        console.error('Error loading YTD data:', error);
+        return {};
+    }
+}
+
+function saveYtdData() {
+    try {
+        const dataToSave = JSON.stringify(ytdData);
+        localStorage.setItem('ytdData', dataToSave);
+    } catch (error) {
+        console.error('Error saving YTD data:', error);
+    }
+}
+
 // ============================================
 // TEAM MEMBER MANAGEMENT
 // ============================================
@@ -1092,7 +1113,8 @@ function getTodayYYYYMMDD() {
 }
 
 function getActivePeriodContext() {
-    const metadata = currentPeriod && weeklyData[currentPeriod]?.metadata ? weeklyData[currentPeriod].metadata : null;
+    const metadataSource = currentPeriodType === 'ytd' ? ytdData : weeklyData;
+    const metadata = currentPeriod && metadataSource[currentPeriod]?.metadata ? metadataSource[currentPeriod].metadata : null;
     
     // Determine friendly time reference based on period type
     let timeReference = 'this period';
@@ -1192,25 +1214,16 @@ function updateEmployeeDropdown() {
     const employees = new Set();
     
     // For week/month/quarter: currentPeriod is the weekKey
-    if (currentPeriod && weeklyData[currentPeriod]) {
+    if (currentPeriod && weeklyData[currentPeriod] && currentPeriodType !== 'ytd') {
         weeklyData[currentPeriod].employees.forEach(emp => {
             // Only add if they're on the team (or no team selection yet)
             if (isTeamMember(currentPeriod, emp.name)) {
                 employees.add(emp.name);
             }
         });
-    } else if (currentPeriodType === 'ytd' && currentPeriod) {
-        // For YTD: aggregate all weeks in the year
-        Object.keys(weeklyData).forEach(weekKey => {
-            const [year] = weekKey.split('|')[0].split('-');
-            if (year === currentPeriod) {
-                weeklyData[weekKey].employees.forEach(emp => {
-                    // Only add if they're on the team (or no team selection yet)
-                    if (isTeamMember(weekKey, emp.name)) {
-                        employees.add(emp.name);
-                    }
-                });
-            }
+    } else if (currentPeriodType === 'ytd' && currentPeriod && ytdData[currentPeriod]) {
+        ytdData[currentPeriod].employees.forEach(emp => {
+            employees.add(emp.name);
         });
     }
     
@@ -1224,69 +1237,16 @@ function updateEmployeeDropdown() {
 
 function getEmployeeDataForPeriod(employeeName) {
     // For week/month/quarter: currentPeriod is the weekKey - look it up directly
-    if (currentPeriod && weeklyData[currentPeriod]) {
+    if (currentPeriod && weeklyData[currentPeriod] && currentPeriodType !== 'ytd') {
         const week = weeklyData[currentPeriod];
         if (week && week.employees) {
             return week.employees.find(emp => emp.name === employeeName);
         }
-    } else if (currentPeriodType === 'ytd' && currentPeriod) {
-        // For YTD: aggregate all weeks in the year
-        const weekKeys = Object.keys(weeklyData).filter(weekKey => {
-            const [year] = weekKey.split('|')[0].split('-');
-            return year === currentPeriod;
-        });
-        
-        // Calculate averages
-        const values = {
-            scheduleAdherence: [],
-            cxRepOverall: [],
-            fcr: [],
-            overallExperience: [],
-            transfers: [],
-            overallSentiment: [],
-            positiveWord: [],
-            negativeWord: [],
-            managingEmotions: [],
-            aht: [],
-            acw: [],
-            holdTime: [],
-            reliability: [],
-            surveyTotal: 0
-        };
-        
-        weekKeys.forEach(weekKey => {
-            const week = weeklyData[weekKey];
-            if (week && week.employees) {
-                const emp = week.employees.find(e => e.name === employeeName);
-                if (emp && isTeamMember(weekKey, emp.name)) {
-                    Object.keys(values).forEach(key => {
-                        if (key === 'surveyTotal') {
-                            values.surveyTotal += (emp.surveyTotal || 0);
-                        } else if (emp[key] && emp[key] !== '') {
-                            values[key].push(emp[key]);
-                        }
-                    });
-                }
-            }
-        });
-        
-        // Calculate averages
-        const avgData = {
-            name: employeeName,
-            firstName: employeeName.split(' ')[0],
-            surveyTotal: values.surveyTotal
-        };
-        
-        Object.keys(values).forEach(key => {
-            if (key !== 'surveyTotal' && values[key].length > 0) {
-                const sum = values[key].reduce((a, b) => a + b, 0);
-                avgData[key] = parseFloat((sum / values[key].length).toFixed(2));
-            } else if (key !== 'surveyTotal') {
-                avgData[key] = '';
-            }
-        });
-        
-        return avgData;
+    } else if (currentPeriodType === 'ytd' && currentPeriod && ytdData[currentPeriod]) {
+        const ytdPeriod = ytdData[currentPeriod];
+        if (ytdPeriod && ytdPeriod.employees) {
+            return ytdPeriod.employees.find(emp => emp.name === employeeName);
+        }
     }
     
     return null;
@@ -1300,8 +1260,9 @@ function updatePeriodDropdown() {
     
     const periods = [];
     
-    Object.keys(weeklyData).forEach(weekKey => {
-        const metadata = weeklyData[weekKey].metadata;
+    const sourceData = currentPeriodType === 'ytd' ? ytdData : weeklyData;
+    Object.keys(sourceData).forEach(weekKey => {
+        const metadata = sourceData[weekKey].metadata;
         const storedPeriodType = metadata.periodType || 'week';
         
         // Only show periods that match the current view type
@@ -1575,9 +1536,12 @@ function initializeEventHandlers() {
             } else if (periodType === 'quarter') {
                 const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
                 label = `Q${quarter} ${startDateObj.getFullYear()}`;
+            } else if (periodType === 'ytd') {
+                label = `YTD through ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
             }
             
-            weeklyData[weekKey] = {
+            const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
+            targetStore[weekKey] = {
                 employees: employees,
                 metadata: {
                     startDate: startDate,
@@ -1588,9 +1552,10 @@ function initializeEventHandlers() {
                 }
             };
             
-            console.log('ℹ️ Data added to weeklyData. Total weeks now:', Object.keys(weeklyData).length);
+            console.log('ℹ️ Data added. Weekly count:', Object.keys(weeklyData).length, 'YTD count:', Object.keys(ytdData).length);
             
             saveWeeklyData();
+            saveYtdData();
             console.log('✅ Data saved to localStorage');
             
             populateDeleteWeekDropdown();
@@ -1607,35 +1572,37 @@ function initializeEventHandlers() {
             showOnlySection('coachingSection');
             
             // Refresh Generate Coaching UI with new data
-            // Set period type to 'week' and refresh dropdown
-            currentPeriodType = 'week';
-            
-            // Update period type button styles
-            document.querySelectorAll('.period-type-btn').forEach(b => {
-                b.style.background = 'white';
-                b.style.color = '#666';
-                b.style.borderColor = '#ddd';
-            });
-            const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
-            if (weekBtn) {
-                weekBtn.style.background = '#2196F3';
-                weekBtn.style.color = 'white';
-                weekBtn.style.borderColor = '#2196F3';
-            }
-            
-            // Refresh period dropdown
-            updatePeriodDropdown();
-            
-            // Auto-select the newly uploaded week
-            const periodDropdown = document.getElementById('specificPeriod');
-            if (periodDropdown) {
-                // Find the option that matches the newly uploaded week
-                for (let i = 0; i < periodDropdown.options.length; i++) {
-                    if (periodDropdown.options[i].value === weekKey) {
-                        periodDropdown.selectedIndex = i;
-                        currentPeriod = weekKey;
-                        updateEmployeeDropdown();
-                        break;
+            if (periodType !== 'ytd') {
+                // Set period type to 'week' and refresh dropdown
+                currentPeriodType = 'week';
+                
+                // Update period type button styles
+                document.querySelectorAll('.period-type-btn').forEach(b => {
+                    b.style.background = 'white';
+                    b.style.color = '#666';
+                    b.style.borderColor = '#ddd';
+                });
+                const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
+                if (weekBtn) {
+                    weekBtn.style.background = '#2196F3';
+                    weekBtn.style.color = 'white';
+                    weekBtn.style.borderColor = '#2196F3';
+                }
+                
+                // Refresh period dropdown
+                updatePeriodDropdown();
+                
+                // Auto-select the newly uploaded week
+                const periodDropdown = document.getElementById('specificPeriod');
+                if (periodDropdown) {
+                    // Find the option that matches the newly uploaded week
+                    for (let i = 0; i < periodDropdown.options.length; i++) {
+                        if (periodDropdown.options[i].value === weekKey) {
+                            periodDropdown.selectedIndex = i;
+                            currentPeriod = weekKey;
+                            updateEmployeeDropdown();
+                            break;
+                        }
                     }
                 }
             }
@@ -1818,8 +1785,10 @@ function initializeEventHandlers() {
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
+                if (data.ytdData) ytdData = data.ytdData;
                 
                 saveWeeklyData();
+                saveYtdData();
                 console.log('✅ Data restored and saved to localStorage');
                 
                 showToast('✅ Data imported successfully!');
@@ -1917,8 +1886,10 @@ function initializeEventHandlers() {
         console.log('🗑️ Deleting all data...');
         // Clear all data
         weeklyData = {};
+        ytdData = {};
         
         saveWeeklyData();
+        saveYtdData();
         console.log('✅ All data cleared from localStorage');
         
         populateDeleteWeekDropdown();
@@ -2590,8 +2561,8 @@ function populateTrendPeriodDropdown() {
     
     console.log(`?? Populating periods for type: ${selectedPeriodType}`);
     
-    // Get all weeks from weeklyData
-    const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
+    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
     
     if (allWeeks.length === 0) {
         trendPeriodSelect.innerHTML = '<option value="">No data available</option>';
@@ -2600,7 +2571,7 @@ function populateTrendPeriodDropdown() {
     
     // Filter by period type
     const filteredPeriods = allWeeks.filter(weekKey => {
-        const week = weeklyData[weekKey];
+        const week = sourceData[weekKey];
         const periodType = week.metadata?.periodType || 'week';
         return periodType === selectedPeriodType;
     });
@@ -2613,7 +2584,7 @@ function populateTrendPeriodDropdown() {
     // Build options
     let options = '<option value="">Select Period...</option>';
     filteredPeriods.forEach(weekKey => {
-        const week = weeklyData[weekKey];
+        const week = sourceData[weekKey];
         const displayText = week.metadata?.label || weekKey;
         options += `<option value="${weekKey}">${displayText}</option>`;
     });
@@ -2641,6 +2612,13 @@ function populateEmployeeDropdown() {
     Object.values(weeklyData).forEach(week => {
         if (week && week.employees) {
             week.employees.forEach(emp => {
+                employeeSet.add(emp.name);
+            });
+        }
+    });
+    Object.values(ytdData).forEach(period => {
+        if (period && period.employees) {
+            period.employees.forEach(emp => {
                 employeeSet.add(emp.name);
             });
         }
@@ -2675,15 +2653,15 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         return;
     }
     
-    // Get employees only for selected period, filtered by team
-    const week = weeklyData[weekKey];
-    if (!week || !week.employees) {
+    // Get employees only for selected period
+    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    if (!periodData || !periodData.employees) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
         return;
     }
     
-    const employees = week.employees
-        .filter(emp => isTeamMember(weekKey, emp.name))
+    const employees = periodData.employees
+        .filter(emp => ytdData[weekKey] ? true : isTeamMember(weekKey, emp.name))
         .map(emp => emp.name)
         .sort();
     
@@ -2741,8 +2719,8 @@ function populateUploadedDataDropdown() {
     
     console.log(`?? Populating Call Center Average dropdown for type: ${selectedPeriodType}`);
     
-    // Get all weeks from weeklyData
-    const allWeeks = Object.keys(weeklyData).sort().reverse(); // Most recent first
+    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
     
     if (allWeeks.length === 0) {
         avgUploadedDataSelect.innerHTML = '<option value="">-- No uploaded data available --</option>';
@@ -2751,7 +2729,7 @@ function populateUploadedDataDropdown() {
     
     // Filter by period type
     const filteredPeriods = allWeeks.filter(weekKey => {
-        const week = weeklyData[weekKey];
+        const week = sourceData[weekKey];
         const periodType = week.metadata?.periodType || 'week';
         return periodType === selectedPeriodType;
     });
@@ -2764,7 +2742,7 @@ function populateUploadedDataDropdown() {
     // Build options
     let options = '<option value="">-- Choose a period from your data --</option>';
     filteredPeriods.forEach(weekKey => {
-        const week = weeklyData[weekKey];
+        const week = sourceData[weekKey];
         const displayText = week.metadata?.label || week.week_start || weekKey;
         options += `<option value="${weekKey}">${displayText}</option>`;
     });
@@ -2867,7 +2845,8 @@ function displayCallCenterAverages(weekKey) {
     const mondayField = document.getElementById('avgWeekMonday');
     const sundayField = document.getElementById('avgWeekSunday');
     
-    if (!weekKey || !weeklyData[weekKey]) {
+    const periodData = weeklyData[weekKey] || ytdData[weekKey];
+    if (!weekKey || !periodData) {
         avgMetricsForm.style.display = 'none';
         periodTypeField.value = '';
         mondayField.value = '';
@@ -2875,7 +2854,7 @@ function displayCallCenterAverages(weekKey) {
         return;
     }
     
-    const week = weeklyData[weekKey];
+    const week = periodData;
     const metadata = week.metadata || {};
     
     // Display period info - use label for better display
@@ -3047,10 +3026,10 @@ function displayMetricsPreview(employeeName, weekKey) {
     
     if (!metricsPreviewSection || !metricsPreviewGrid) return;
     
-    const week = weeklyData[weekKey];
-    if (!week || !week.employees) return;
+    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    if (!periodData || !periodData.employees) return;
     
-    const employee = week.employees.find(emp => emp.name === employeeName);
+    const employee = periodData.employees.find(emp => emp.name === employeeName);
     if (!employee) return;
     
     console.log(`?? Displaying metrics preview for ${employeeName} (${weekKey})`);
@@ -3107,10 +3086,14 @@ function generateTrendEmail() {
         saveNickname(employeeName, nickname);
     }
     
-    // Get current period data
+    // Get current period data (weekly only)
     const period = weeklyData[weekKey];
     if (!period) {
-        showToast('No data found for this period', 5000);
+        if (ytdData[weekKey]) {
+            showToast('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
+        } else {
+            showToast('No data found for this period', 5000);
+        }
         return;
     }
     
@@ -3199,7 +3182,7 @@ function isReverseMetric(metricKey) {
     return reverseMetrics.includes(metricKey);
 }
 
-function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week') {
+function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0) {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
      * Renders a single metric row with full conditional logic
@@ -3259,12 +3242,22 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
     const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
-    ctx.fillText(formattedValue, x + 250, y + 24);
+    ctx.fillText(formattedValue, x + 230, y + 24);
     
     // Center average - use formatMetricValue
     ctx.font = '14px Arial';
     const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 380, y + 24);
+    ctx.fillText(formattedCenter, x + 350, y + 24);
+    
+    // YTD value
+    let formattedYtd = '';
+    const ytdValueNum = parseFloat(ytdValue);
+    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
+    const ytdNoSurveys = isSurveyMetric && ytdSurveyTotal === 0;
+    if (ytdHasValue) {
+        formattedYtd = ytdNoSurveys ? 'N/A' : formatMetricValue(metric.key, ytdValueNum);
+    }
+    ctx.fillText(formattedYtd, x + 450, y + 24);
     
     // VS CENTER CELL - show raw difference (N/A if no surveys for survey metrics)
     let vsCenterColor;
@@ -3293,7 +3286,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = vsCenterColor;
     ctx.font = 'bold 14px Arial';
-    ctx.fillText(vsCenterText, x + 510, y + 24);
+    ctx.fillText(vsCenterText, x + 560, y + 24);
     
     // Trending (if previous data exists) - show emoji + change value
     let trendingColor = '#666666';
@@ -3327,14 +3320,14 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = trendingColor;
     ctx.font = '13px Arial'; // Smaller font to fit change description
-    ctx.fillText(trendingText, x + 650, y + 24);
+    ctx.fillText(trendingText, x + 690, y + 24);
 }
 
 // ============================================
 // PHASE 4 - HTML TABLE RENDERER
 // ============================================
 
-function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
+function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytdEmployee = null) {
     /**
      * PHASE 4 - HTML TABLE RENDERER
      * Mirrors canvas rendering logic in web-friendly HTML format
@@ -3365,8 +3358,14 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
         }
     });
     
+    const ytdAvailable = !!ytdEmployee;
+    
     // Build HTML table
-    let html = `<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin: 20px 0;">`;
+    let html = '';
+    if (!ytdAvailable) {
+        html += `<div style="color: #666; font-size: 0.9em; margin: 10px 0;">YTD not available – source data not provided.</div>`;
+    }
+    html += `<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin: 20px 0;">`;
     
     // Table headers
     html += `<thead>
@@ -3374,6 +3373,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
             <th style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold;">Metric</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Your Value</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Center Avg</th>
+            <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">YTD</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Target</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">vs Center</th>
             <th style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold;">Trend</th>
@@ -3442,10 +3442,12 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg) {
         }
         
         const targetDisplay = formatMetricDisplay(key, target);
+        const ytdDisplay = ytdEmployee && ytdEmployee[key] !== undefined ? formatMetricDisplay(key, ytdEmployee[key]) : '';
         html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
             <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
+            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
             <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
@@ -3499,12 +3501,19 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const callCenterAverages = loadCallCenterAverages();
     const centerAvg = callCenterAverages[weekKey] || {};
 
+    // YTD data (separate dataset)
+    const ytdPeriod = getYtdPeriodForWeekKey(weekKey);
+    const ytdEmployee = ytdPeriod?.employees?.find(e => e.name === current.name) || null;
+    const ytdAvailable = !!ytdEmployee;
+
     // Extract survey total for survey metrics
     const surveyTotal = current.survey_total ? parseInt(current.survey_total, 10) : 0;
+    const ytdSurveyTotal = ytdEmployee?.surveyTotal ? parseInt(ytdEmployee.surveyTotal, 10) : 0;
 
     console.log('ℹ️ Email generation started for:', empName);
     console.log('Center averages:', centerAvg);
     console.log('Survey total:', surveyTotal);
+    console.log('YTD available:', ytdAvailable);
 
     // SUMMARY STATISTICS (used by both canvas and HTML)
     let meetingGoals = 0;
@@ -3607,12 +3616,20 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.fillText('Metric', 50, y + 28);
-    ctx.fillText('Your Metric', 250, y + 28);
-    ctx.fillText('Center Avg', 380, y + 28);
-    ctx.fillText('vs. Center Avg', 510, y + 28);
-    ctx.fillText(`Change vs last ${periodLabel}`, 650, y + 28);
+    ctx.fillText('Your Metric', 230, y + 28);
+    ctx.fillText('Center Avg', 350, y + 28);
+    ctx.fillText('YTD', 450, y + 28);
+    ctx.fillText('vs. Center Avg', 560, y + 28);
+    ctx.fillText(`Change vs last ${periodLabel}`, 690, y + 28);
     
     y += 45;
+
+    if (!ytdAvailable) {
+        ctx.fillStyle = '#666666';
+        ctx.font = '12px Arial';
+        ctx.fillText('YTD not available – source data not provided.', 50, y + 18);
+        y += 28;
+    }
 
     // RENDER METRICS using Phase 3 renderer
     let currentGroup = null;
@@ -3648,8 +3665,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         const prev = parseFloat(prevMetrics[key]) || 0;
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
+        const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
         
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, target, prev || undefined, rowIdx, '', surveyTotal, key, metadata.periodType);
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev || undefined, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal);
         y += 38;
         rowIdx++;
     });
@@ -4000,6 +4018,15 @@ function getCenterAverageForMetric(centerAvg, metricKey) {
     
     const lookupKey = keyMapping[metricKey] || metricKey;
     return parseFloat(centerAvg[lookupKey]) || 0;
+}
+
+function getYtdPeriodForWeekKey(weekKey) {
+    if (!weekKey) return null;
+    const parts = weekKey.split('|');
+    const endDate = parts[1] || '';
+    if (!endDate) return null;
+    const matchingKey = Object.keys(ytdData).find(key => key.split('|')[1] === endDate);
+    return matchingKey ? ytdData[matchingKey] : null;
 }
 
 function isMetricMeetingTarget(metric, value, target) {
@@ -4795,10 +4822,13 @@ function initApp() {
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
+    ytdData = loadYtdData();
     loadTeamMembers();
     
     console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
     console.log('ℹ️ weeklyData keys:', Object.keys(weeklyData));
+    console.log(`?? Loaded ${Object.keys(ytdData).length} YTD periods`);
+    console.log('ℹ️ ytdData keys:', Object.keys(ytdData));
     if (Object.keys(weeklyData).length > 0) {
         console.log('✅ Weekly data successfully loaded from localStorage');
     } else {
@@ -4819,7 +4849,7 @@ function initApp() {
     initializeSection('coachingForm');
     
     // If we have data, update the period dropdown
-    if (Object.keys(weeklyData).length > 0) {
+    if (Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0) {
         updatePeriodDropdown();
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
@@ -4828,7 +4858,8 @@ function initApp() {
     // Ensure data is saved before page unload (survives Ctrl+Shift+R)
     window.addEventListener('beforeunload', () => {
         saveWeeklyData();
-        console.log('ℹ️ Auto-saving weekly data on page unload');
+        saveYtdData();
+        console.log('ℹ️ Auto-saving weekly/YTD data on page unload');
     });
     
     console.log('✅ Application initialized successfully!');
