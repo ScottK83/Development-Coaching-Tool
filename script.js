@@ -3666,7 +3666,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             else if (group === 'Sentiment') groupEmoji = '💬';
             else if (group === 'Reliability') groupEmoji = '⏰';
             
-            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} surveys)` : `${groupEmoji} ${group}`;
+            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)` : `${groupEmoji} ${group}`;
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
