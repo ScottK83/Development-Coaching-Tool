@@ -2901,6 +2901,7 @@ function setupMetricTrendsListeners() {
     // Generate trend email buttons
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+    const saveMetricsPreviewBtn = document.getElementById('saveMetricsPreviewBtn');
     
     if (!generateTrendBtn) {
         console.error('generateTrendBtn element not found!');
@@ -2912,6 +2913,10 @@ function setupMetricTrendsListeners() {
         console.error('generateAllTrendBtn element not found!');
     } else {
         generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
+    }
+    
+    if (saveMetricsPreviewBtn) {
+        saveMetricsPreviewBtn.addEventListener('click', saveMetricsPreviewEdits);
     }
     
     // Show/hide buttons based on employee selection
@@ -2952,6 +2957,9 @@ function displayMetricsPreview(employeeName, weekKey) {
     const employee = periodData.employees.find(emp => emp.name === employeeName);
     if (!employee) return;
     
+    metricsPreviewSection.dataset.employee = employeeName;
+    metricsPreviewSection.dataset.period = weekKey;
+    
 
     
     // Define metrics to show
@@ -2985,6 +2993,52 @@ function displayMetricsPreview(employeeName, weekKey) {
     
     metricsPreviewGrid.innerHTML = html;
     metricsPreviewSection.style.display = 'block';
+}
+
+function saveMetricsPreviewEdits() {
+    const metricsPreviewSection = document.getElementById('metricsPreviewSection');
+    if (!metricsPreviewSection) return;
+    
+    const employeeName = metricsPreviewSection.dataset.employee || document.getElementById('trendEmployeeSelect')?.value;
+    const weekKey = metricsPreviewSection.dataset.period || document.getElementById('trendPeriodSelect')?.value;
+    
+    if (!employeeName || !weekKey) {
+        showToast('Please select both period and employee', 4000);
+        return;
+    }
+    
+    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    if (!periodData || !periodData.employees) {
+        showToast('No data found for selected period', 4000);
+        return;
+    }
+    
+    const employee = periodData.employees.find(emp => emp.name === employeeName);
+    if (!employee) {
+        showToast('Employee not found for selected period', 4000);
+        return;
+    }
+    
+    const inputs = metricsPreviewSection.querySelectorAll('.metric-preview-input');
+    let updatedCount = 0;
+    inputs.forEach(input => {
+        const metricKey = input.dataset.metric;
+        if (!metricKey) return;
+        const rawValue = input.value.trim();
+        if (rawValue === '') return;
+        const parsed = parseFloat(rawValue);
+        if (Number.isNaN(parsed)) return;
+        employee[metricKey] = parsed;
+        updatedCount += 1;
+    });
+    
+    if (ytdData[weekKey]) {
+        saveYtdData();
+    } else {
+        saveWeeklyData();
+    }
+    
+    showToast(updatedCount > 0 ? '✅ Metrics saved' : 'No changes to save', 3000);
 }
 
 /**
