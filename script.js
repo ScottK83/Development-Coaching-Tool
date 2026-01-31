@@ -1462,9 +1462,6 @@ function initializeEventHandlers() {
         showOnlySection('executiveSummarySection');
         renderExecutiveSummary();
     });
-    document.getElementById('shiftEmailsBtn')?.addEventListener('click', () => {
-        showOnlySection('shiftEmailsSection');
-    });
     document.getElementById('redFlagBtn')?.addEventListener('click', () => {
         showOnlySection('redFlagSection');
     });
@@ -1905,9 +1902,6 @@ function initializeEventHandlers() {
     
     // Populate delete week dropdown on load
     populateDeleteWeekDropdown();
-    
-    // Initialize shift emails handlers
-    initializeShiftEmails();
     
     // Initialize red flag handlers
     initializeRedFlag();
@@ -6075,121 +6069,6 @@ function copySentimentPrompt() {
     }, 500);
     
     console.log('?? Sentiment prompt copied to clipboard');
-}
-
-// ============================================
-// SHIFT EMAILS FUNCTIONALITY
-// ============================================
-
-function initializeShiftEmails() {
-    document.getElementById('generateShiftEmailBtn')?.addEventListener('click', generateShiftEmail);
-    document.getElementById('copyShiftEmailBtn')?.addEventListener('click', copyShiftEmail);
-    document.getElementById('clearShiftEmailBtn')?.addEventListener('click', clearShiftEmail);
-}
-
-function generateShiftEmail() {
-    const employeeName = document.getElementById('shiftEmployeeName').value.trim();
-    const newShift = document.getElementById('shiftNewShift').value.trim();
-    const newSupervisor = document.getElementById('shiftNewSupervisor').value.trim();
-    
-    // Validation
-    if (!employeeName) {
-        alert('⚠️ Please enter the employee name.');
-        return;
-    }
-    if (!newShift) {
-        alert('⚠️ Please enter the new shift.');
-        return;
-    }
-    if (!newSupervisor) {
-        alert('⚠️ Please enter the new supervisor/manager.');
-        return;
-    }
-    
-    // Generate email
-    const emailTemplate = generateShiftEmailTemplate(employeeName, newShift, newSupervisor);
-    
-    // Display preview
-    document.getElementById('shiftEmailPreviewText').textContent = emailTemplate;
-    document.getElementById('shiftEmailPreviewSection').style.display = 'block';
-    
-    console.log('📅 Shift email generated for ' + employeeName);
-}
-
-function generateShiftEmailTemplate(employeeName, newShift, newSupervisor) {
-    const currentDate = new Date();
-    const effectiveDate = new Date(2026, 2, 2); // March 2, 2026
-    const formattedDate = effectiveDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-    const emailTemplate = `Subject: Your Shift Bid Results - Effective ${formattedDate}
-
-Hi ${employeeName},
-
-I wanted to share the results of the shift bid and inform you of your new shift assignment.
-
-Effective Date: ${formattedDate}
-
-Your New Shift Assignment:
-${newShift}
-
-Your New Manager/Supervisor:
-${newSupervisor}
-
-These assignments have been determined based on the results of our comprehensive bid process, which carefully considered your performance metrics, seniority, and our operational needs. Your peers have been equally evaluated, and this placement reflects our assessment of where you can best contribute to our team's success.
-
-As you transition into this new role, remember that your strong work ethic and commitment to excellence have been valued. I am confident that you will continue to bring the same level of dedication and professionalism to your new schedule and reporting structure.
-
-If you have any questions regarding your assignment or need any clarification, please don't hesitate to reach out. We're here to support your success.
-
-Best regards,
-Management Team`;
-    
-    return emailTemplate;
-}
-
-function copyShiftEmail() {
-    const emailText = document.getElementById('shiftEmailPreviewText').textContent;
-    
-    if (!emailText.trim()) {
-        alert('⚠️ No email to copy. Please generate an email first.');
-        return;
-    }
-    
-    // Copy to clipboard
-    const textarea = document.createElement('textarea');
-    textarea.value = emailText;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    
-    // Visual feedback
-    const button = document.getElementById('copyShiftEmailBtn');
-    const originalText = button.textContent;
-    button.textContent = '✓ Copied! Opening Outlook...';
-    
-    // Open Outlook
-    setTimeout(() => {
-        window.open('mailto:', '_blank');
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 500);
-    }, 500);
-    
-    console.log('📅 Shift email copied to clipboard and opening Outlook');
-}
-
-function clearShiftEmail() {
-    // Clear form
-    document.getElementById('shiftEmployeeName').value = '';
-    document.getElementById('shiftNewShift').value = '';
-    document.getElementById('shiftNewSupervisor').value = '';
-    
-    // Hide preview
-    document.getElementById('shiftEmailPreviewSection').style.display = 'none';
-    document.getElementById('shiftEmailPreviewText').textContent = '';
-    
-    console.log('📅 Shift email form cleared');
 }
 
 // ============================================
