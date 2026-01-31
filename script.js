@@ -1401,9 +1401,6 @@ function initializeEventHandlers() {
         showOnlySection('redFlagSection');
     });
     
-    // TEMPORARILY DISABLED - function doesn't exist
-    // document.getElementById('downloadOfflineBtn')?.addEventListener('click', downloadOfflinePackage);
-    
     // SENTIMENT ANALYSIS WORKFLOW
     document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
     document.getElementById('copySentimentPromptBtn')?.addEventListener('click', copySentimentPrompt);
@@ -3968,12 +3965,8 @@ function generateAllTrendEmails() {
     
     employeeNames.forEach((name, index) => {
         setTimeout(() => {
-            // TODO Phase 3: Implement batch email generation using new canvas-based email system
-            // const result = buildTrendEmailHtml(name, weekKey, { useEdits: false });
-            // if (!result) return;
-            // const plainText = htmlToPlainText(result.htmlEmail);
-            // const mailtoLink = `mailto:?subject=${encodeURIComponent(result.subject)}&body=${encodeURIComponent(plainText)}`;
-            // window.open(mailtoLink, '_blank');
+            // Batch email generation using canvas-based email system
+            generateTrendEmail(name, weekKey);
         }, index * 500);
     });
 }
