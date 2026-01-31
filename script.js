@@ -2511,6 +2511,12 @@ function populateTrendPeriodDropdown() {
     
     trendPeriodSelect.innerHTML = options;
     
+    const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
+    if (avgUploadedDataSelect?.value) {
+        trendPeriodSelect.value = avgUploadedDataSelect.value;
+        trendPeriodSelect.dispatchEvent(new Event('change'));
+    }
+    
     // Add change listener to filter employees by selected period
     trendPeriodSelect.addEventListener('change', (e) => {
         populateEmployeeDropdownForPeriod(e.target.value);
