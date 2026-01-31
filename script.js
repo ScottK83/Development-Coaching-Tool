@@ -4509,54 +4509,6 @@ function showEmailSection() {
 }
 
 // ============================================
-// DATA EXPORT
-// ============================================
-
-function exportToExcel() {
-    console.log('ℹ️ exportToExcel() function executing...');
-    try {
-        const wb = XLSX.utils.book_new();
-        
-        // Export each week as a separate sheet
-        Object.keys(weeklyData).forEach(weekKey => {
-            const week = weeklyData[weekKey];
-            if (week && week.employees && week.metadata) {
-                const sheetData = week.employees.map(emp => ({
-                    'Name': emp.name,
-                    'Schedule Adherence %': emp.scheduleAdherence,
-                    'CX Rep Overall %': emp.cxRepOverall || 'N/A',
-                    'FCR %': emp.fcr || 'N/A',
-                    'Overall Experience %': emp.overallExperience || 'N/A',
-                    'Transfers %': emp.transfers,
-                    'Overall Sentiment %': emp.overallSentiment || 'N/A',
-                    'Positive Word %': emp.positiveWord || 'N/A',
-                    'Negative Word %': emp.negativeWord || 'N/A',
-                    'Managing Emotions %': emp.managingEmotions || 'N/A',
-                    'AHT (sec)': emp.aht || 'N/A',
-                    'ACW (sec)': emp.acw || 'N/A',
-                    'Hold Time (sec)': emp.holdTime || 'N/A',
-                    'Reliability (hrs)': emp.reliability,
-                    'Survey Total': emp.surveyTotal
-                }));
-                
-                const ws = XLSX.utils.json_to_sheet(sheetData);
-                const sheetName = week.metadata.label.substring(0, 31); // Excel sheet name limit
-                XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            }
-        });
-        
-        
-        // Save file
-        XLSX.writeFile(wb, `coaching-tool-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-showToast('✅ Data exported to Excel!');
-        
-    } catch (error) {
-        console.error('Error exporting to Excel:', error);
-        alert('⚠️ Error exporting data: ' + error.message);
-    }
-}
-
-// ============================================
 // COPILOT PROMPT GENERATION (HUMAN-IN-LOOP)
 // ============================================
 
