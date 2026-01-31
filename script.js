@@ -195,100 +195,6 @@ const METRICS_REGISTRY = {
         chartColor: '#795548',
         defaultTip: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
     }
-};
-
-// ============================================
-// PHASE 6 - VALIDATION & DEPLOYMENT CHECKLIST
-// ============================================
-
-function validatePhase6Deployment() {
-    /**
-     * PHASE 6 VALIDATION CHECKLIST
-     * All systems must pass before deployment
-     */
-    
-    const checks = {
-        'PHASE 1 - Deprecated Functions': {
-            passed: true,
-            note: '? All deprecated functions deleted (buildTrendEmailHtml, generateOutlookEmail, generateExecutiveSummaryEmail, renderEmployeeHistory)'
-        },
-        'PHASE 2 - 13-Metric Contract': {
-            passed: Object.keys(METRICS_REGISTRY).length === 13,
-            note: `? METRICS_REGISTRY contains ${Object.keys(METRICS_REGISTRY).length}/13 metrics`
-        },
-        'PHASE 2 - Metric Keys': {
-            passed: ['scheduleAdherence', 'transfers', 'aht', 'holdTime', 'acw', 'managingEmotions', 'overallExperience', 'cxRepOverall', 'fcr', 'overallSentiment', 'positiveWord', 'negativeWord', 'reliability'].every(k => METRICS_REGISTRY[k]),
-            note: '? All 13 metric keys defined in METRICS_REGISTRY'
-        },
-        'PHASE 3 - Canvas Renderer': {
-            passed: typeof renderMetricRow === 'function' && typeof createTrendEmailImage === 'function',
-            note: '? Canvas rendering functions present'
-        },
-        'PHASE 3 - Metric Order': {
-            passed: getMetricOrder().length === 13,
-            note: `? getMetricOrder() returns ${getMetricOrder().length}/13 metrics`
-        },
-        'PHASE 4 - HTML Table Renderer': {
-            passed: typeof buildMetricTableHTML === 'function',
-            note: '? HTML table renderer function present'
-        },
-        'PHASE 5 - Single Source': {
-            passed: typeof isReverseMetric === 'function' && typeof getMetricTarget === 'function',
-            note: '? Single-source logic functions present'
-        },
-        'REVERSE METRICS': {
-            passed: ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].every(k => isReverseMetric(k)),
-            note: '? All 5 reverse metrics correctly identified'
-        },
-        'ENTRY POINT': {
-            passed: typeof generateTrendEmail === 'function',
-            note: '? generateTrendEmail() entry point ready'
-        }
-    };
-    
-    console.log('');
-    console.log('+----------------------------------------------------------------+');
-    console.log('�       PHASE 6 - VALIDATION CHECKLIST (DEPLOYMENT READY)        �');
-    console.log('+----------------------------------------------------------------+');
-    
-    let allPassed = true;
-    Object.entries(checks).forEach(([label, check]) => {
-        const status = check.passed ? '✅ PASS' : '❌ FAIL';
-        console.log(`${status} - ${label}`);
-        console.log(`         ${check.note}`);
-        if (!check.passed) allPassed = false;
-    });
-    
-    console.log('');
-    if (allPassed) {
-        console.log('+----------------------------------------------------------------+');
-        console.log('�          ? ALL CHECKS PASSED - READY FOR DEPLOYMENT          �');
-        console.log('+----------------------------------------------------------------+');
-        console.log('');
-        console.log('ARCHITECTURE SUMMARY:');
-        console.log('- Single Source of Truth: METRICS_REGISTRY');
-        console.log('- Canvas Rendering: createTrendEmailImage()');
-        console.log('- HTML Table Rendering: buildMetricTableHTML()');
-        console.log('- Entry Point: generateTrendEmail()');
-        console.log('- Metric Order: Core Performance ? Survey ? Sentiment ? Reliability');
-        console.log('- All 13 metrics locked per Phase 2 contract');
-        console.log('- No deprecated code in codebase');
-        console.log('');
-    } else {
-        console.log('❌ VALIDATION FAILED - Fix errors before deployment');
-    }
-    
-    return allPassed;
-}
-
-// Run validation on load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', validatePhase6Deployment);
-} else {
-    setTimeout(validatePhase6Deployment, 100);
-}
-
-// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
@@ -467,7 +373,7 @@ function parsePercentage(value) {
     // If value > 100, something is wrong - likely wrong column
     // This catches the 424% transfers bug
     if (parsed > 100) {
-        console.warn(`?? Unexpected percentage value: ${parsed}. Treating as 0.`);
+        
         console.trace('Called from:');
         return 0;
     }
@@ -503,7 +409,7 @@ function parseSurveyPercentage(value) {
     
     // If value > 100, something is wrong
     if (parsed > 100) {
-        console.warn(`?? Unexpected survey percentage: ${parsed}. Treating as empty.`);
+        
         return '';
     }
     
@@ -621,7 +527,6 @@ function mapHeadersToSchema(headers) {
     }
     
     const mapping = {};
-    console.log('ℹ️ Detected 22 columns - using positional mapping');
     
     // Map by position
     for (let i = 0; i < 22; i++) {
@@ -630,9 +535,9 @@ function mapHeadersToSchema(headers) {
         }
     }
     
-    console.log('ℹ️ Column Mapping:');
+    
     for (let i = 0; i < 22; i++) {
-        console.log(`  [${i}] ${headers[i]}`);
+        
     }
     
     return mapping;
@@ -649,7 +554,6 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    console.log('ℹ️ Using Smart PowerBI Parser');
     
     // Skip the header line - we don't need to parse it since we use positional logic
     // We just validate that the first row looks like a header
@@ -660,7 +564,6 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
     }
     
-    console.log('ℹ️ Header detected, parsing data rows...');
     
     // Parse employee data
     const employees = [];
@@ -676,7 +579,7 @@ function parsePastedData(pastedText, startDate, endDate) {
             const parsed = parsePowerBIRow(rawRow);
             cells = parsed;
         } catch (error) {
-            console.warn(`?? Skipping row ${i}: ${error.message}`);
+            
             continue;
         }
         
@@ -713,7 +616,6 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         const displayName = `${firstName} ${lastName}`.trim();
         
-        console.log(`? ${displayName} - ${cells.length}/22 cells`);
         
         // Direct positional access using COLUMN_MAPPING
         const getCell = (colIndex) => {
@@ -760,17 +662,16 @@ function parsePastedData(pastedText, startDate, endDate) {
         }
         
         if (i <= 3) {
-            console.log(`\n? ${displayName}:`);
-            console.log('  Transfers:', employeeData.transfers + '%');
-            console.log('  Adherence:', employeeData.scheduleAdherence + '%');
-            console.log('  TotalCalls:', totalCalls);
-            console.log('  SurveyTotal:', surveyTotal);
+            
+            
+            
+            
+            
         }
         
         employees.push(employeeData);
     }
     
-    console.log(`? Parsed ${employees.length} employees`);
     
     return employees;
 }
@@ -1041,15 +942,14 @@ function saveCallCenterAverages(averages) {
 function calculateAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
-    console.log(`?? Calculating averages from ${employees.length} total employees`);
-
+    
     // Filter out employees with 0 calls answered
     const activeEmployees = employees.filter(emp => {
         const totalCalls = parseInt(emp.totalCalls);
         return !isNaN(totalCalls) && totalCalls > 0;
     });
 
-    console.log(`?? ${activeEmployees.length} employees with calls answered (excluding ${employees.length - activeEmployees.length} with 0 calls)`);
+
 
     if (activeEmployees.length === 0) return null;
 
@@ -1082,8 +982,8 @@ function calculateAveragesFromEmployees(employees) {
         averages[key] = parseFloat((sums[key] / counts[key]).toFixed(2));
     });
 
-    console.log(' Calculated averages:', averages);
-    console.log('ℹ️ Count per metric:', counts);
+    
+    
     averages.employeeCount = activeEmployees.length;
 
     return Object.keys(averages).length > 0 ? averages : null;
@@ -1447,12 +1347,6 @@ function copyToClipboard() {
 // ============================================
 
 function initializeEventHandlers() {
-    console.log('ℹ️ initializeEventHandlers() STARTED');
-    console.log('ℹ️ Checking for delete buttons...');
-    console.log('  exportDataBtn:', document.getElementById('exportDataBtn') ? 'FOUND' : 'NOT FOUND');
-    console.log('  importDataBtn:', document.getElementById('importDataBtn') ? 'FOUND' : 'NOT FOUND');
-    console.log('  deleteSelectedWeekBtn:', document.getElementById('deleteSelectedWeekBtn') ? 'FOUND' : 'NOT FOUND');
-    console.log('  deleteAllDataBtn:', document.getElementById('deleteAllDataBtn') ? 'FOUND' : 'NOT FOUND');
     
     // Upload period type buttons
     let selectedUploadPeriod = 'week'; // default
@@ -1520,13 +1414,12 @@ function initializeEventHandlers() {
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
-        console.log('ℹ️ Load Data button clicked');
+        
         const pastedData = document.getElementById('pasteDataTextarea').value;
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
         
-        console.log('ℹ️ Paste data received - Length:', pastedData.length, 'chars');
-        console.log('ℹ️ Dates: Start=' + startDate, 'End=' + endDate);
+        
         
         // Get selected period type
         const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
@@ -1534,7 +1427,6 @@ function initializeEventHandlers() {
                            document.querySelector('.upload-period-btn[data-period="week"]');
         const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
         
-        console.log('ℹ️ Period type:', periodType);
         
         if (!startDate || !endDate) {
             alert('⚠️ Please select both start and end dates');
@@ -1548,7 +1440,6 @@ function initializeEventHandlers() {
         
         try {
             const employees = parsePastedData(pastedData, startDate, endDate);
-            console.log('ℹ️ Parsed employees:', employees.length);
             
             if (employees.length === 0) {
                 alert('ℹ️ No valid employee data found');
@@ -1557,7 +1448,6 @@ function initializeEventHandlers() {
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
-            console.log('ℹ️ Created weekKey:', weekKey);
             
             // Parse dates safely (avoid timezone issues)
             const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
@@ -1590,11 +1480,10 @@ function initializeEventHandlers() {
                 }
             };
             
-            console.log('ℹ️ Data added. Weekly count:', Object.keys(weeklyData).length, 'YTD count:', Object.keys(ytdData).length);
+
             
             saveWeeklyData();
             saveYtdData();
-            console.log('✅ Data saved to localStorage');
             
             populateDeleteWeekDropdown();
             populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
@@ -1789,7 +1678,7 @@ function initializeEventHandlers() {
     
     // Export data
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
-        console.log('ℹ️ Backup Data button clicked');
+        
         exportToExcel();
     });
     
@@ -1807,19 +1696,19 @@ function initializeEventHandlers() {
     
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
-        console.log('ℹ️ Restore Data button clicked');
+        
         document.getElementById('dataFileInput').click();
     });
     
     document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
-        console.log('ℹ️ File selected for restore');
+        
         const file = e.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                console.log('ℹ️ Parsing JSON data...');
+                
                 const data = JSON.parse(e.target.result);
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
@@ -1827,7 +1716,6 @@ function initializeEventHandlers() {
                 
                 saveWeeklyData();
                 saveYtdData();
-                console.log('✅ Data restored and saved to localStorage');
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
@@ -1842,7 +1730,7 @@ function initializeEventHandlers() {
     
     // Delete selected week
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
-        console.log('ℹ️ Delete Selected Week button clicked');
+        
         const weekSelect = document.getElementById('deleteWeekSelect');
         const selectedWeek = weekSelect.value;
         
@@ -1857,12 +1745,11 @@ function initializeEventHandlers() {
             return;
         }
         
-        console.log('🗑️ Deleting week:', selectedWeek);
+        
         delete weeklyData[selectedWeek];
         delete myTeamMembers[selectedWeek];
         saveWeeklyData();
         saveTeamMembers();
-        console.log('✅ Week deleted and data saved to localStorage');
         
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
@@ -1901,7 +1788,7 @@ function initializeEventHandlers() {
     
     // Delete all data
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
-        console.log('ℹ️ Delete All Data button clicked');
+        
         const weekCount = Object.keys(weeklyData).length;
         
         if (weekCount === 0) {
@@ -1921,14 +1808,13 @@ function initializeEventHandlers() {
             return;
         }
         
-        console.log('🗑️ Deleting all data...');
+        
         // Clear all data
         weeklyData = {};
         ytdData = {};
         
         saveWeeklyData();
         saveYtdData();
-        console.log('✅ All data cleared from localStorage');
         
         populateDeleteWeekDropdown();
         
@@ -2030,7 +1916,7 @@ function updateTeamSelection() {
     const selectedMembers = Array.from(selectedCheckboxes).map(cb => cb.dataset.name);
     
     setTeamMembersForWeek(weekKey, selectedMembers);
-    console.log(`? Updated team members for ${weekKey}:`, selectedMembers);
+    
 }
 
 // ============================================
@@ -2249,7 +2135,7 @@ async function renderTipsManagement() {
             serverTipsWithIndex.forEach((tipObj) => {
                 // Safety check for tipObj structure
                 if (!tipObj || typeof tipObj.originalIndex === 'undefined') {
-                    console.warn('Invalid tip object:', tipObj);
+                    
                     return;
                 }
                 const tip = tipObj.tip;
@@ -2382,7 +2268,7 @@ window.updateTip = async function(metricKey, index) {
             selector.dispatchEvent(new Event('change'));
         }
     } else {
-        console.warn(`Invalid index ${index} for metric ${metricKey}`);
+        
         showToast('⚠️ Could not update tip - please refresh the page');
     }
 };
@@ -2479,7 +2365,7 @@ window.deleteTip = async function(metricKey, index) {
     if (userTips[metricKey] && Array.isArray(userTips[metricKey])) {
         // Validate index is within bounds
         if (index < 0 || index >= userTips[metricKey].length) {
-            console.warn(`Invalid index ${index} for deletion. Array length: ${userTips[metricKey].length}`);
+            
             showToast('⚠️ Could not delete tip - please refresh the page');
             return;
         }
@@ -2492,7 +2378,7 @@ window.deleteTip = async function(metricKey, index) {
         
         showToast('\u{1F5D1}\u{FE0F} Tip deleted');
     } else {
-        console.warn(`No tips found for metric ${metricKey}`);
+        
         showToast('⚠️ Could not delete tip - please refresh the page');
         return;
     }
@@ -2590,11 +2476,10 @@ function populateTrendPeriodDropdown() {
     const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
     
     if (!trendPeriodSelect) {
-        console.warn('trendPeriodSelect element not found');
+        
         return;
     }
     
-    console.log(`?? Populating periods for type: ${selectedPeriodType}`);
     
     const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
     const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
@@ -2631,14 +2516,14 @@ function populateTrendPeriodDropdown() {
         populateEmployeeDropdownForPeriod(e.target.value);
     });
     
-    console.log(`? ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
+    
 }
 
 function populateEmployeeDropdown() {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
     if (!trendEmployeeSelect) {
-        console.warn('trendEmployeeSelect element not found');
+        
         return;
     }
     
@@ -2678,7 +2563,7 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
     if (!trendEmployeeSelect) {
-        console.warn('trendEmployeeSelect element not found');
+        
         return;
     }
     
@@ -2752,7 +2637,6 @@ function populateUploadedDataDropdown() {
     
     if (!avgUploadedDataSelect) return;
     
-    console.log(`?? Populating Call Center Average dropdown for type: ${selectedPeriodType}`);
     
     const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
     const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
@@ -2783,7 +2667,7 @@ function populateUploadedDataDropdown() {
     });
     
     avgUploadedDataSelect.innerHTML = options;
-    console.log(`? ${filteredPeriods.length} periods found for ${selectedPeriodType}`);
+    
 }
 
 function loadUploadedDataPeriod(weekKey) {
@@ -2868,7 +2752,7 @@ function setupUploadedDataListener() {
             if (trendPeriodSelect) {
                 trendPeriodSelect.value = weekKey;
                 trendPeriodSelect.dispatchEvent(new Event('change'));
-                console.log(`?? Auto-synced period to Metric Trends: ${weekKey}`);
+                
             }
         }
     });
@@ -2971,7 +2855,6 @@ function setupMetricTrendsListeners() {
     periodTypeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
             const selectedType = radio.value;
-            console.log(`?? Period type changed to: ${selectedType}`);
             
             // Update both dropdowns
             populateUploadedDataDropdown(); // Call Center Average dropdown
@@ -3069,7 +2952,7 @@ function displayMetricsPreview(employeeName, weekKey) {
     const employee = periodData.employees.find(emp => emp.name === employeeName);
     if (!employee) return;
     
-    console.log(`?? Displaying metrics preview for ${employeeName} (${weekKey})`);
+
     
     // Define metrics to show
     const metricsToPreview = [
@@ -3145,15 +3028,6 @@ function generateTrendEmail() {
     const currentIdx = allPeriods.indexOf(weekKey);
     const prevPeriod = currentIdx > 0 ? weeklyData[allPeriods[currentIdx - 1]] : null;
     const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
-    
-    console.log('📊 Trend Email Debug:', {
-        weekKey,
-        allPeriods,
-        currentIdx,
-        hasPrevPeriod: !!prevPeriod,
-        hasPrevEmployee: !!prevEmployee,
-        prevEmployeeKeys: prevEmployee ? Object.keys(prevEmployee) : 'N/A'
-    });
     
     // Use nickname if provided, otherwise use full name
     const displayName = nickname || employeeName;
@@ -3530,19 +3404,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         }
     });
     
-    console.log('📊 Metrics loaded:', {
-        currentMetricsCount: Object.keys(metrics).length,
-        previousMetricsCount: Object.keys(prevMetrics).length,
-        hasPrevious: !!previous,
-        previousKeys: previous ? Object.keys(previous).slice(0, 5) : 'N/A',
-        sampleMetrics: {
-            currentAHT: metrics.aht,
-            previousAHT: prevMetrics.aht,
-            currentAdherence: metrics.scheduleAdherence,
-            previousAdherence: prevMetrics.scheduleAdherence
-        }
-    });
-
     // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
     const callCenterAverages = loadCallCenterAverages();
     const centerAvg = callCenterAverages[weekKey] || {};
@@ -3556,11 +3417,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     const ytdSurveyTotal = ytdEmployee?.surveyTotal ? parseInt(ytdEmployee.surveyTotal, 10) : 0;
 
-    console.log('ℹ️ Email generation started for:', empName);
-    console.log('Center averages:', centerAvg);
-    console.log('Survey total:', surveyTotal);
-    console.log('YTD available:', ytdAvailable);
-
+    
+    
+    
+    
     // SUMMARY STATISTICS (used by both canvas and HTML)
     let meetingGoals = 0;
     let improved = 0;
@@ -3933,14 +3793,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             return;
         }
 
-        console.log('✅ Canvas image created successfully');
-
+        
         // Try clipboard copy
         if (navigator.clipboard && navigator.clipboard.write) {
             navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]).then(() => {
-                console.log('✅ Image copied to clipboard');
+                
                 showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
                 
                 // Open Outlook with full subject line
@@ -3958,7 +3817,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 downloadImageFallback(blob, empName, period);
             });
         } else {
-            console.warn('Clipboard API not available, downloading instead');
+            
             downloadImageFallback(blob, empName, period);
         }
     }, 'image/png');
@@ -4017,7 +3876,7 @@ function getMetricTarget(metric) {
     if (metricDef && metricDef.target) {
         return metricDef.target.value;
     }
-    console.warn(`?? Target not found for metric: ${metric}`);
+    
     return 90; // Safe fallback
 }
 
@@ -4464,7 +4323,7 @@ function renderExecutiveSummary() {
 }
 
 function initializeYearlyIndividualSummary() {
-    console.log('ℹ️ Initializing Yearly Individual Summary...');
+    
     populateExecutiveSummaryAssociate();
     
     // Period type is always YTD for executive summary
@@ -4497,7 +4356,7 @@ function initializeYearlyIndividualSummary() {
         });
     });
     
-    console.log('✅ Yearly Individual Summary initialized');
+    
 }
 
 function showEmailSection() {
@@ -4816,7 +4675,6 @@ function renderEmployeesList() {
 // ============================================
 
 function initApp() {
-    console.log('ℹ️ Initializing Development Coaching Tool...');
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
@@ -4824,14 +4682,11 @@ function initApp() {
     coachingHistory = loadCoachingHistory();
     loadTeamMembers();
     
-    console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
-    console.log('ℹ️ weeklyData keys:', Object.keys(weeklyData));
-    console.log(`?? Loaded ${Object.keys(ytdData).length} YTD periods`);
-    console.log('ℹ️ ytdData keys:', Object.keys(ytdData));
+
     if (Object.keys(weeklyData).length > 0) {
-        console.log('✅ Weekly data successfully loaded from localStorage');
+        
     } else {
-        console.warn('⚠️ No weekly data in localStorage. Upload CSV to populate.');
+        
     }
     
     // Initialize default coaching tips (first load only)
@@ -4859,10 +4714,10 @@ function initApp() {
         saveWeeklyData();
         saveYtdData();
         saveCoachingHistory();
-        console.log('ℹ️ Auto-saving weekly/YTD data on page unload');
+        
     });
     
-    console.log('✅ Application initialized successfully!');
+    
 }
 
 // ============================================
@@ -4872,19 +4727,19 @@ function initApp() {
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('ℹ️ DOMContentLoaded fired - initializing app...');
+        
         initApp();
     });
 } else {
     // DOM already loaded (if script runs late)
-    console.log('ℹ️ DOM already loaded - initializing app immediately...');
+    
     initApp();
 }
 
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
 function populateExecutiveSummaryAssociate() {
-    console.log('ℹ️ Populating Executive Summary associate dropdown...');
+    
     const select = document.getElementById('summaryAssociateSelect');
     const allEmployees = new Set();
     
@@ -4910,24 +4765,22 @@ function populateExecutiveSummaryAssociate() {
         select.appendChild(option);
     });
     
-    console.log(`? Populated ${sortedEmployees.length} team members`);
+    
 }
 
 function loadExecutiveSummaryData() {
     const associate = document.getElementById('summaryAssociateSelect').value;
     const periodType = 'ytd'; // Always use Year-to-Date
     
-    console.log(`\n?? loadExecutiveSummaryData started - associate: ${associate}`);
     
     if (!associate) {
-        console.log('⚠️ No associate selected');
+        
         document.getElementById('summaryDataContainer').style.display = 'none';
         document.getElementById('summaryChartsContainer').style.display = 'none';
         return;
     }
     
-    console.log(`?? Loading executive summary for ${associate} (YTD)`);
-    console.log(`Available weeks in weeklyData: ${Object.keys(weeklyData).length}`);
+
     
     // Collect ALL periods (regardless of upload type) for YTD view
     const matchingPeriods = [];
@@ -4937,7 +4790,7 @@ function loadExecutiveSummaryData() {
         // For executive summary (YTD), include all periods regardless of metadata type
         const employee = weekData.employees.find(e => e.name === associate);
         if (employee) {
-            console.log(`  ? Found ${associate} in period ${weekKey}`);
+            
             matchingPeriods.push({
                 weekKey,
                 label: weekData.metadata?.label || weekKey,
@@ -4949,7 +4802,6 @@ function loadExecutiveSummaryData() {
         }
     }
     
-    console.log(`Found ${matchingPeriods.length} periods for YTD summary`);
     
     // Populate data table
     populateExecutiveSummaryTable(associate, matchingPeriods, periodType);
@@ -5063,7 +4915,6 @@ function saveExecutiveSummaryNotes(associate) {
 }
 
 function displayExecutiveSummaryCharts(associate, periods, periodType) {
-    console.log(`?? displayExecutiveSummaryCharts called for ${associate} with ${periods.length} periods`);
     
     const container = document.getElementById('summaryMetricsVisuals');
     if (!container) {
@@ -5073,7 +4924,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     container.innerHTML = '';
     
     if (!periods || periods.length === 0) {
-        console.warn('⚠️ No periods provided to displayExecutiveSummaryCharts');
+        
         container.innerHTML = '<p style="color: #999; padding: 20px;">No data available for this associate.</p>';
         return;
     }
@@ -5231,7 +5082,7 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
         container.appendChild(chartDiv);
     });
     
-    console.log(`? displayExecutiveSummaryCharts completed - rendered ${metrics.length} metrics`);
+    
 }
 
 function getCenterAverageForWeek(weekKey) {
@@ -5240,7 +5091,7 @@ function getCenterAverageForWeek(weekKey) {
     const avg = callCenterAverages[weekKey];
     
     if (!avg || Object.keys(avg).length === 0) {
-        console.warn(`?? No call center average found for ${weekKey}. Make sure it's entered in Metric Trends.`);
+        
         return null;
     }
     
@@ -5448,7 +5299,7 @@ function initializeCoachingEmail() {
         generateBtn.dataset.bound = 'true';
     }
 
-    console.log('?? Coaching Email initialized for latest period:', coachingLatestWeekKey);
+    
 }
 
 function updateCoachingEmailDisplay() {
@@ -5881,13 +5732,13 @@ const DEFAULT_METRIC_TIPS = {
 function initializeDefaultTips() {
     const stored = localStorage.getItem('metricCoachingTips');
     if (stored) {
-        console.log('?? Metric tips already exist in storage, skipping preload');
+        
         return;
     }
     
-    console.log('?? First load detected - preloading default tips for all 13 metrics');
+    
     localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
-    console.log('? Preloaded tips for 13 metrics');
+    
 }
 
 function getMetricTips(metricName) {
@@ -5917,7 +5768,7 @@ let sentimentData = {
 };
 
 function initializeSentiment() {
-    console.log('?? Initializing Sentiment section');
+    
     populateSentimentEmployeeSelector();
 }
 
@@ -6110,7 +5961,7 @@ Requirements:
 Generate the coaching message now:`;
     
     promptArea.value = prompt;
-    console.log(`?? Sentiment coaching prompt generated for ${employeeName}`);
+    
 }
 
 function copySentimentPrompt() {
@@ -6137,7 +5988,7 @@ function copySentimentPrompt() {
         }, 500);
     }, 500);
     
-    console.log('?? Sentiment prompt copied to clipboard');
+    
 }
 
 // ============================================
@@ -6181,7 +6032,7 @@ function generateRedFlagEmail() {
     document.getElementById('redFlagEmailPreviewText').textContent = emailTemplate;
     document.getElementById('redFlagEmailPreviewSection').style.display = 'block';
     
-    console.log('🚩 Red flag coaching email generated for ' + associateName);
+    
 }
 
 function generateRedFlagEmailTemplate(associateName, customerName, accountNumber, reason) {
@@ -6277,7 +6128,7 @@ function copyRedFlagEmail() {
         }, 500);
     }, 500);
     
-    console.log('🚩 Red flag email copied to clipboard and opening Outlook');
+    
 }
 
 function clearRedFlagEmail() {
@@ -6291,8 +6142,10 @@ function clearRedFlagEmail() {
     document.getElementById('redFlagEmailPreviewSection').style.display = 'none';
     document.getElementById('redFlagEmailPreviewText').textContent = '';
     
-    console.log('🚩 Red flag form cleared');
+    
 }
+
+
 
 
 
