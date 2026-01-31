@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+lib-*.js
+*.min.js
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor directories
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package files (using CDN instead)
+package.json
+package-lock.json
+
+# Build scripts (not needed for runtime)
+create-offline-package.js
