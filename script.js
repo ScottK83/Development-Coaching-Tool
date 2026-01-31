@@ -5728,13 +5728,22 @@ const DEFAULT_METRIC_TIPS = {
 function initializeDefaultTips() {
     const stored = localStorage.getItem('metricCoachingTips');
     if (stored) {
-        
         return;
     }
     
-    
-    localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
-    
+    // Load server tips from CSV file
+    loadServerTips().then(serverTips => {
+        // Store server tips as the default tips
+        if (Object.keys(serverTips).length > 0) {
+            localStorage.setItem('metricCoachingTips', JSON.stringify(serverTips));
+        } else {
+            // If CSV doesn't load, use hardcoded defaults
+            localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+        }
+    }).catch(() => {
+        // On error, use hardcoded defaults
+        localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+    });
 }
 
 function getMetricTips(metricName) {
