@@ -41,6 +41,7 @@ let currentPeriodType = 'week';
 let currentPeriod = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
+let coachingHistory = {};
 
 // ============================================
 // TARGET METRICS
@@ -937,6 +938,46 @@ function saveYtdData() {
     } catch (error) {
         console.error('Error saving YTD data:', error);
     }
+}
+
+function loadCoachingHistory() {
+    try {
+        const saved = localStorage.getItem('coachingHistory');
+        const data = saved ? JSON.parse(saved) : {};
+        return data;
+    } catch (error) {
+        console.error('Error loading coaching history:', error);
+        return {};
+    }
+}
+
+function saveCoachingHistory() {
+    try {
+        const dataToSave = JSON.stringify(coachingHistory);
+        localStorage.setItem('coachingHistory', dataToSave);
+    } catch (error) {
+        console.error('Error saving coaching history:', error);
+    }
+}
+
+function appendCoachingLogEntry(entry) {
+    if (!entry || !entry.employeeId) return;
+    if (!coachingHistory[entry.employeeId]) {
+        coachingHistory[entry.employeeId] = [];
+    }
+    coachingHistory[entry.employeeId].push(entry);
+    if (coachingHistory[entry.employeeId].length > 200) {
+        coachingHistory[entry.employeeId] = coachingHistory[entry.employeeId].slice(-200);
+    }
+    saveCoachingHistory();
+}
+
+function getCoachingHistoryForEmployee(employeeId) {
+    if (!employeeId) return [];
+    const history = coachingHistory[employeeId] || [];
+    return history
+        .slice()
+        .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
 }
 
 // ============================================
@@ -4828,6 +4869,7 @@ function initApp() {
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     ytdData = loadYtdData();
+    coachingHistory = loadCoachingHistory();
     loadTeamMembers();
     
     console.log(`?? Loaded ${Object.keys(weeklyData).length} weeks of data`);
@@ -4864,6 +4906,7 @@ function initApp() {
     window.addEventListener('beforeunload', () => {
         saveWeeklyData();
         saveYtdData();
+        saveCoachingHistory();
         console.log('ℹ️ Auto-saving weekly/YTD data on page unload');
     });
     
@@ -5472,12 +5515,14 @@ function updateCoachingEmailDisplay() {
 
     if (!employeeName || !coachingLatestWeekKey) {
         panel.style.display = 'none';
+        renderCoachingHistory(employeeName);
         return;
     }
 
     const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
     if (!employeeRecord) {
         panel.style.display = 'none';
+        renderCoachingHistory(employeeName);
         return;
     }
 
@@ -5528,6 +5573,50 @@ function updateCoachingEmailDisplay() {
         ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
         : '<li>No focus areas below target in the latest period.</li>';
 
+    panel.style.display = 'block';
+    renderCoachingHistory(employeeName);
+}
+
+function renderCoachingHistory(employeeName) {
+    const panel = document.getElementById('coachingHistoryPanel');
+    const summary = document.getElementById('coachingHistorySummary');
+    const list = document.getElementById('coachingHistoryList');
+
+    if (!panel || !summary || !list) return;
+
+    if (!employeeName) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const history = getCoachingHistoryForEmployee(employeeName);
+    if (history.length === 0) {
+        summary.textContent = 'No coaching history saved yet.';
+        list.innerHTML = '';
+        panel.style.display = 'block';
+        return;
+    }
+
+    const latest = history[0];
+    const latestDate = latest.weekEnding ? formatDateMMDDYYYY(latest.weekEnding) || latest.weekEnding : '';
+    summary.textContent = `Last coaching: ${latestDate || 'N/A'} · Total coachings: ${history.length}`;
+
+    const formatMetrics = (keys = []) => {
+        if (!keys.length) return 'General review';
+        return keys
+            .map(key => METRICS_REGISTRY[key]?.label || key)
+            .slice(0, 4)
+            .join(', ');
+    };
+
+    const rows = history.slice(0, 5).map(entry => {
+        const dateLabel = entry.weekEnding ? formatDateMMDDYYYY(entry.weekEnding) || entry.weekEnding : 'Unknown date';
+        const metricsLabel = formatMetrics(entry.metricsCoached);
+        const aiLabel = entry.aiAssisted ? ' · AI-assisted' : '';
+        return `<li>${dateLabel} — ${metricsLabel}${aiLabel}</li>`;
+    });
+
+    list.innerHTML = rows.join('');
     panel.style.display = 'block';
 }
 
@@ -5692,6 +5781,34 @@ function generateCoachingPromptAndCopy() {
 
     const prompt = buildCoachingPrompt(employeeRecord);
     promptArea.value = prompt;
+
+    const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
+    const weekEnding = periodMeta.endDate || (coachingLatestWeekKey.split('|')[1] || '');
+    const periodLabel = periodMeta.label || (weekEnding ? `Week ending ${formatDateMMDDYYYY(weekEnding)}` : 'this period');
+    const preferredName = getEmployeeNickname(employeeRecord.name) || employeeRecord.firstName || employeeRecord.name;
+    const reliabilityHours = (() => {
+        const parsed = parseFloat(employeeRecord.reliability);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    })();
+    const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeRecord);
+
+    window.latestCoachingSummaryData = {
+        firstName: preferredName,
+        periodLabel,
+        celebrate,
+        needsCoaching,
+        reliabilityHours,
+        customNotes: '',
+        timeReference: 'this week'
+    };
+
+    recordCoachingEvent({
+        employeeId: employeeName,
+        weekEnding: weekEnding || periodLabel,
+        metricsCoached: coachedMetricKeys,
+        aiAssisted: true
+    });
+    renderCoachingHistory(employeeName);
     promptArea.select();
     document.execCommand('copy');
 
