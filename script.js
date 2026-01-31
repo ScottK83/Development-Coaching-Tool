@@ -1400,6 +1400,10 @@ function initializeEventHandlers() {
         showOnlySection('executiveSummarySection');
         renderExecutiveSummary();
     });
+    document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
+    document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
+    document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
+    document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => {
         showOnlySection('redFlagSection');
     });
@@ -4588,6 +4592,7 @@ function renderExecutiveSummary() {
     html += '</div></div>';
     
     container.innerHTML = html;
+    renderSupervisorIntelligence();
     
     // Initialize the new yearly individual summary section
     initializeYearlyIndividualSummary();
@@ -4636,6 +4641,561 @@ function showEmailSection() {
     if (associate && section) {
         section.style.display = 'block';
     }
+}
+
+// ============================================
+// SUPERVISOR INTELLIGENCE HELPERS
+// ============================================
+
+function getWeeklyKeysSorted() {
+    return Object.keys(weeklyData)
+        .map(key => ({ key, date: parseWeekKeyDate(key, weeklyData[key]) }))
+        .sort((a, b) => a.date - b.date)
+        .map(item => item.key);
+}
+
+function parseWeekKeyDate(weekKey, week) {
+    const label = week?.metadata?.label || week?.metadata?.weekEnding || week?.week_start || weekKey || '';
+    const match = label.match(/Week ending\s+(.+)$/i);
+    const dateStr = match ? match[1] : label;
+    const parsed = Date.parse(dateStr);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getLatestWeeklyKey() {
+    const keys = getWeeklyKeysSorted();
+    return keys.length ? keys[keys.length - 1] : null;
+}
+
+function getPreviousWeeklyKey(latestKey) {
+    const keys = getWeeklyKeysSorted();
+    const idx = keys.indexOf(latestKey);
+    if (idx > 0) return keys[idx - 1];
+    return null;
+}
+
+function metricMeetsTarget(metricKey, value) {
+    const def = METRICS_REGISTRY[metricKey];
+    if (!def || value === undefined || value === null || value === '') return false;
+    const target = def.target?.value ?? getMetricTarget(metricKey);
+    if (isReverseMetric(metricKey)) {
+        return value <= target;
+    }
+    return value >= target;
+}
+
+function metricGapToTarget(metricKey, value) {
+    const def = METRICS_REGISTRY[metricKey];
+    const target = def?.target?.value ?? getMetricTarget(metricKey);
+    if (value === undefined || value === null || value === '') return 0;
+    return isReverseMetric(metricKey) ? (value - target) : (target - value);
+}
+
+function metricDelta(metricKey, current, previous) {
+    if (current === undefined || previous === undefined) return 0;
+    return isReverseMetric(metricKey) ? (previous - current) : (current - previous);
+}
+
+function getMetricSeverity(metricKey, value) {
+    const gap = Math.abs(metricGapToTarget(metricKey, value));
+    const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
+    if (unit === 'sec') {
+        if (gap > 25) return 'high';
+        if (gap > 10) return 'medium';
+        return 'low';
+    }
+    if (unit === 'hrs') {
+        if (gap > 3) return 'high';
+        if (gap > 1) return 'medium';
+        return 'low';
+    }
+    if (gap > 5) return 'high';
+    if (gap > 2) return 'medium';
+    return 'low';
+}
+
+function loadTipUsageHistory() {
+    try {
+        return JSON.parse(localStorage.getItem('tipUsageHistory') || '{}');
+    } catch {
+        return {};
+    }
+}
+
+function saveTipUsageHistory(history) {
+    localStorage.setItem('tipUsageHistory', JSON.stringify(history));
+}
+
+function selectSmartTip({ employeeId, metricKey, severity, tips }) {
+    if (!tips || tips.length === 0) return null;
+    const history = loadTipUsageHistory();
+    const now = Date.now();
+    const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+    const empHistory = history[employeeId] || {};
+    const metricHistory = empHistory[metricKey] || [];
+    const recentlyUsed = new Set(metricHistory.filter(h => new Date(h.usedAt).getTime() >= cutoff).map(h => h.tip));
+
+    const available = tips.filter(tip => !recentlyUsed.has(tip));
+    const pickFrom = available.length ? available : tips;
+    const severityFiltered = pickFrom.filter(tip => {
+        if (severity === 'high') return tip.length <= 120;
+        if (severity === 'low') return tip.length >= 60;
+        return true;
+    });
+
+    const selectionPool = severityFiltered.length ? severityFiltered : pickFrom;
+    const chosen = selectionPool[Math.floor(Math.random() * selectionPool.length)];
+
+    const updated = metricHistory.concat([{ tip: chosen, usedAt: new Date().toISOString() }]).slice(-50);
+    history[employeeId] = { ...empHistory, [metricKey]: updated };
+    saveTipUsageHistory(history);
+
+    const prefixMap = {
+        high: 'Try this today:',
+        medium: 'Practice this:',
+        low: 'Keep building by:'
+    };
+    return `${prefixMap[severity] || 'Tip:'} ${chosen}`;
+}
+
+function getCoachingContext(employeeId, metricKey, currentValue) {
+    const history = getCoachingHistoryForEmployee(employeeId);
+    const last = history.find(entry => (entry.metricsCoached || []).includes(metricKey));
+    if (!last) return null;
+
+    const priorValue = getEmployeeMetricForWeek(employeeId, last.weekEnding, metricKey);
+    if (priorValue === null || priorValue === undefined) return null;
+
+    const change = metricDelta(metricKey, currentValue, priorValue);
+    const trend = change > 0 ? 'improved' : change < 0 ? 'declined' : 'unchanged';
+    const unit = METRICS_REGISTRY[metricKey]?.unit || '';
+    const amount = Math.abs(change);
+    const display = unit === '%' ? `${amount.toFixed(1)}%` : unit === 'sec' ? `${Math.round(amount)}s` : unit === 'hrs' ? `${amount.toFixed(1)} hrs` : amount.toFixed(1);
+
+    if (trend === 'improved') {
+        return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance improved by ${display}. Reinforce progress and encourage consistency.`;
+    }
+    if (trend === 'unchanged') {
+        return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance is steady. Consider a different angle (habit, confidence, or workflow).`;
+    }
+    return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance declined by ${display}. Consider a supportive reset and barrier removal.`;
+}
+
+function getEmployeeMetricForWeek(employeeId, weekKey, metricKey) {
+    const week = weeklyData[weekKey] || ytdData[weekKey];
+    if (!week || !week.employees) return null;
+    const emp = week.employees.find(e => e.name === employeeId);
+    if (!emp) return null;
+    return emp[metricKey];
+}
+
+function detectComplianceFlags(text) {
+    if (!text) return [];
+    const flags = [];
+    const lower = text.toLowerCase();
+    const keywords = [
+        { key: 'safety', label: 'Safety' },
+        { key: 'esh', label: 'ESH' },
+        { key: 'abusive', label: 'Abusive Customer' },
+        { key: 'harassment', label: 'Harassment' },
+        { key: 'threat', label: 'Threat' },
+        { key: 'pci', label: 'PCI' },
+        { key: 'credit card', label: 'Sensitive Data' },
+        { key: 'ssn', label: 'Sensitive Data' },
+        { key: 'pii', label: 'Sensitive Data' },
+        { key: 'phi', label: 'Sensitive Data' },
+        { key: 'hipaa', label: 'Sensitive Data' }
+    ];
+    keywords.forEach(({ key, label }) => {
+        if (lower.includes(key)) flags.push(label);
+    });
+    return [...new Set(flags)];
+}
+
+function logComplianceFlag(entry) {
+    try {
+        const log = JSON.parse(localStorage.getItem('complianceLog') || '[]');
+        log.push(entry);
+        localStorage.setItem('complianceLog', JSON.stringify(log.slice(-200)));
+    } catch {
+        // no-op
+    }
+}
+
+function buildConfidenceInsight(employeeData, coachedMetricKeys) {
+    if (!employeeData) return null;
+    const signals = [];
+    if ((employeeData.transfers || 0) > (getMetricTarget('transfers') + 2)) signals.push('high transfers');
+    if ((employeeData.holdTime || 0) > (getMetricTarget('holdTime') + 10)) signals.push('elevated hold time');
+    if ((employeeData.fcr || 0) < (getMetricTarget('fcr') - 3)) signals.push('lower FCR');
+    if (coachedMetricKeys && coachedMetricKeys.length >= 2) signals.push('repeat coaching');
+
+    if (signals.length >= 2) {
+        return 'Pattern suggests knowledge hesitation. Recommend job aid review, shadowing, or confidence-building practice instead of metric pressure.';
+    }
+    return null;
+}
+
+function renderSupervisorIntelligence() {
+    renderTrendIntelligence();
+    renderRecognitionIntelligence();
+    renderCoachingLoadAwareness();
+    renderComplianceAlerts();
+}
+
+function renderComplianceAlerts() {
+    const container = document.getElementById('complianceAlertsOutput');
+    if (!container) return;
+    const log = JSON.parse(localStorage.getItem('complianceLog') || '[]');
+    if (!log.length) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No compliance flags logged.</div>';
+        return;
+    }
+    const items = log.slice(-5).reverse().map(entry => {
+        return `<div style="padding: 10px; border: 1px solid #f1d5d5; border-radius: 6px; background: #fff7f7;">
+            <strong>${entry.employeeId || 'Unknown'}</strong> • ${entry.flag} • ${new Date(entry.timestamp).toLocaleString()}
+        </div>`;
+    }).join('');
+    container.innerHTML = items;
+}
+
+function renderCoachingLoadAwareness() {
+    const container = document.getElementById('coachingLoadOutput');
+    if (!container) return;
+    const now = Date.now();
+    const thirtyDays = now - 30 * 24 * 60 * 60 * 1000;
+    const fourteenDays = now - 14 * 24 * 60 * 60 * 1000;
+
+    const noRecent = [];
+    const highLoad = [];
+
+    Object.keys(coachingHistory).forEach(employeeId => {
+        const history = getCoachingHistoryForEmployee(employeeId);
+        if (!history.length) {
+            noRecent.push(employeeId);
+            return;
+        }
+        const last = history[0];
+        if (new Date(last.generatedAt).getTime() < thirtyDays) {
+            noRecent.push(employeeId);
+        }
+        const recentCount = history.filter(h => new Date(h.generatedAt).getTime() >= fourteenDays).length;
+        if (recentCount >= 3) {
+            highLoad.push(`${employeeId} (${recentCount} in 14 days)`);
+        }
+    });
+
+    container.innerHTML = `
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>Not coached in 30+ days:</strong> ${noRecent.length ? noRecent.join(', ') : 'None'}
+        </div>
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>High coaching load:</strong> ${highLoad.length ? highLoad.join(', ') : 'None'}
+        </div>
+    `;
+}
+
+async function generateOneOnOnePrep() {
+    const output = document.getElementById('oneOnOnePrepOutput');
+    if (!output) return;
+
+    const associate = document.getElementById('summaryAssociateSelect')?.value;
+    if (!associate) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const latestKey = getLatestWeeklyKey();
+    const prevKey = getPreviousWeeklyKey(latestKey);
+    const latestWeek = latestKey ? weeklyData[latestKey] : null;
+    const prevWeek = prevKey ? weeklyData[prevKey] : null;
+
+    const current = latestWeek?.employees?.find(e => e.name === associate);
+    const previous = prevWeek?.employees?.find(e => e.name === associate);
+
+    if (!current) {
+        output.value = 'No recent weekly data for this associate.';
+        return;
+    }
+
+    const metricsToUse = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+    const wins = metricsToUse.filter(key => metricMeetsTarget(key, current[key])).slice(0, 2);
+    const trends = previous ? metricsToUse.map(key => ({
+        key,
+        delta: metricDelta(key, current[key], previous[key])
+    })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 2) : [];
+
+    const history = getCoachingHistoryForEmployee(associate).slice(0, 3);
+    const lastCoaching = history.length
+        ? history.map(h => `${h.weekEnding || new Date(h.generatedAt).toLocaleDateString()}: ${(h.metricsCoached || []).join(', ') || 'General'}`)
+        : ['None in last period'];
+
+    const tips = await loadServerTips();
+    const opportunities = metricsToUse
+        .filter(key => !metricMeetsTarget(key, current[key]))
+        .sort((a, b) => Math.abs(metricGapToTarget(b, current[b])) - Math.abs(metricGapToTarget(a, current[a])));
+    const focusMetric = opportunities[0];
+    const talkingPoint = focusMetric
+        ? selectSmartTip({ employeeId: associate, metricKey: focusMetric, severity: getMetricSeverity(focusMetric, current[focusMetric]), tips: tips[focusMetric] || [] })
+        : null;
+
+    const winText = wins.length ? wins.map(key => METRICS_REGISTRY[key]?.label || key).join(', ') : 'No standout wins yet';
+    const trendText = trends.length
+        ? trends.map(t => `${METRICS_REGISTRY[t.key]?.label || t.key} (${t.delta > 0 ? 'up' : t.delta < 0 ? 'down' : 'flat'})`).join(', ')
+        : 'No clear trend changes';
+
+    output.value = `Prep for 1:1 — ${associate}\n` +
+        `Key Wins: ${winText}\n` +
+        `Current Trends: ${trendText}\n` +
+        `Last Coaching Topics: ${lastCoaching.join(' | ')}\n` +
+        `Suggested Talking Point: ${talkingPoint || 'Reinforce momentum and ask what support would help this week.'}`;
+}
+
+function copyOneOnOnePrep() {
+    const output = document.getElementById('oneOnOnePrepOutput');
+    if (!output) return;
+    navigator.clipboard.writeText(output.value || '').then(() => {
+        showToast('✅ 1:1 prep copied', 3000);
+    }).catch(() => {
+        showToast('Unable to copy 1:1 prep', 3000);
+    });
+}
+
+function renderRecognitionIntelligence() {
+    const container = document.getElementById('recognitionIntelligenceOutput');
+    if (!container) return;
+
+    const latestKey = getLatestWeeklyKey();
+    const prevKey = getPreviousWeeklyKey(latestKey);
+    if (!latestKey || !prevKey) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data for recognition signals.</div>';
+        return;
+    }
+
+    const latestWeek = weeklyData[latestKey];
+    const prevWeek = weeklyData[prevKey];
+    if (!latestWeek?.employees || !prevWeek?.employees) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data for recognition signals.</div>';
+        return;
+    }
+
+    const mostImproved = [];
+    const recoveryWins = [];
+    const quietConsistent = [];
+
+    latestWeek.employees.forEach(emp => {
+        const prevEmp = prevWeek.employees.find(e => e.name === emp.name);
+        if (!prevEmp) return;
+
+        const sentimentDelta = metricDelta('overallSentiment', emp.overallSentiment, prevEmp.overallSentiment);
+        if (sentimentDelta > 3) {
+            mostImproved.push({ name: emp.name, delta: sentimentDelta });
+        }
+
+        const recoveryMetric = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].find(key =>
+            !metricMeetsTarget(key, prevEmp[key]) && metricMeetsTarget(key, emp[key])
+        );
+        if (recoveryMetric) {
+            recoveryWins.push(`${emp.name} (${METRICS_REGISTRY[recoveryMetric]?.label || recoveryMetric})`);
+        }
+
+        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(key => metricMeetsTarget(key, emp[key]));
+        const recentCoaching = getCoachingHistoryForEmployee(emp.name).find(h =>
+            new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000
+        );
+        if (consistent && !recentCoaching) {
+            quietConsistent.push(emp.name);
+        }
+    });
+
+    mostImproved.sort((a, b) => b.delta - a.delta);
+    const mostImprovedText = mostImproved.length
+        ? `${mostImproved[0].name} (+${mostImproved[0].delta.toFixed(1)} sentiment)`
+        : 'None yet';
+
+    container.innerHTML = `
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>Most Improved (30 days):</strong> ${mostImprovedText}
+        </div>
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>Recovery Wins:</strong> ${recoveryWins.length ? recoveryWins.join(', ') : 'None'}
+        </div>
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>Quiet Consistency:</strong> ${quietConsistent.length ? quietConsistent.join(', ') : 'None'}
+        </div>
+    `;
+}
+
+function renderTrendIntelligence() {
+    const container = document.getElementById('trendIntelligenceOutput');
+    if (!container) return;
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 3) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough periods to detect patterns.</div>';
+        return;
+    }
+
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const thirdKey = keys[keys.length - 3];
+
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+    const thirdWeek = weeklyData[thirdKey];
+
+    if (!latestWeek?.employees || !previousWeek?.employees || !thirdWeek?.employees) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data to detect patterns.</div>';
+        return;
+    }
+
+    const insights = [];
+    latestWeek.employees.forEach(emp => {
+        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
+        const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
+        if (!prevEmp || !thirdEmp) return;
+
+        const key = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].find(metricKey => {
+            const a = emp[metricKey];
+            const b = prevEmp[metricKey];
+            const c = thirdEmp[metricKey];
+            if (a === undefined || b === undefined || c === undefined) return false;
+            const worse1 = metricDelta(metricKey, a, b) < 0;
+            const worse2 = metricDelta(metricKey, b, c) < 0;
+            return worse1 && worse2;
+        });
+
+        if (key) {
+            insights.push(`📉 ${emp.name} shows a 3-period decline in ${METRICS_REGISTRY[key]?.label || key}. Consider a check-in focused on barriers and emotional load.`);
+        }
+
+        const suddenKey = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].find(metricKey => {
+            const current = emp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return false;
+            const delta = metricDelta(metricKey, current, prev);
+            const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
+            const threshold = unit === 'sec' ? 20 : unit === 'hrs' ? 2 : 4;
+            return delta < -threshold;
+        });
+
+        if (suddenKey) {
+            insights.push(`⚠️ ${emp.name} had a sudden drop in ${METRICS_REGISTRY[suddenKey]?.label || suddenKey}. Consider a supportive reset conversation.`);
+        }
+
+        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => metricMeetsTarget(metricKey, emp[metricKey]));
+        if (consistent) {
+            const recentCoaching = getCoachingHistoryForEmployee(emp.name).find(h => new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000);
+            if (!recentCoaching) {
+                insights.push(`✅ ${emp.name} shows quiet consistency. Consider recognition rather than coaching.`);
+            }
+        }
+    });
+
+    const limited = insights.slice(0, 6);
+    container.innerHTML = limited.length
+        ? limited.map(text => `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">${text}</div>`).join('')
+        : '<div style="color: #666; font-size: 0.95em;">No notable patterns detected.</div>';
+}
+
+async function generateTodaysFocus() {
+    const output = document.getElementById('todaysFocusOutput');
+    if (!output) return;
+
+    const latestKey = getLatestWeeklyKey();
+    if (!latestKey) {
+        output.value = 'Today’s Focus\n• ✅ Team Win: No data available yet\n• ⚠️ Focus Area: Upload the latest data to generate focus\n• 🎯 Today’s Ask: Paste this week’s PowerBI export';
+        return;
+    }
+
+    const prevKey = getPreviousWeeklyKey(latestKey);
+    const latestWeek = weeklyData[latestKey];
+    const prevWeek = prevKey ? weeklyData[prevKey] : null;
+    if (!latestWeek?.employees) {
+        output.value = 'Today’s Focus\n• ✅ Team Win: No data available yet\n• ⚠️ Focus Area: Upload the latest data to generate focus\n• 🎯 Today’s Ask: Paste this week’s PowerBI export';
+        return;
+    }
+
+    const metricsToUse = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
+    const averages = {};
+    metricsToUse.forEach(key => {
+        const vals = latestWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+        averages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+
+    const prevAverages = {};
+    if (prevWeek?.employees) {
+        metricsToUse.forEach(key => {
+            const vals = prevWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+            prevAverages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        });
+    }
+
+    let teamWin = null;
+    let focusArea = null;
+    let bestScore = -Infinity;
+    let worstScore = -Infinity;
+
+    const distribution = {};
+    metricsToUse.forEach(key => {
+        distribution[key] = { better: 0, worse: 0, total: 0 };
+    });
+
+    latestWeek.employees.forEach(emp => {
+        metricsToUse.forEach(key => {
+            const avg = averages[key];
+            const value = emp[key];
+            if (avg === null || value === undefined || value === null || value === '') return;
+            distribution[key].total += 1;
+            const better = isReverseMetric(key) ? value <= avg : value >= avg;
+            if (better) distribution[key].better += 1;
+            else distribution[key].worse += 1;
+        });
+    });
+
+    metricsToUse.forEach(key => {
+        const value = averages[key];
+        if (value === null) return;
+        const improvement = prevAverages[key] !== null && prevAverages[key] !== undefined ? metricDelta(key, value, prevAverages[key]) : 0;
+        const ratio = distribution[key].total ? distribution[key].better / distribution[key].total : 0;
+        const score = ratio + (improvement > 0 ? 0.5 : 0);
+        if (score > bestScore) {
+            bestScore = score;
+            teamWin = key;
+        }
+
+        const focusRatio = distribution[key].total ? distribution[key].worse / distribution[key].total : 0;
+        if (focusRatio > worstScore) {
+            worstScore = focusRatio;
+            focusArea = key;
+        }
+    });
+
+    const tips = await loadServerTips();
+    const focusTip = focusArea ? selectSmartTip({
+        employeeId: 'TEAM',
+        metricKey: focusArea,
+        severity: 'medium',
+        tips: tips[focusArea] || []
+    }) : null;
+
+    const teamWinLabel = teamWin ? METRICS_REGISTRY[teamWin]?.label || teamWin : 'Team metrics';
+    const focusLabel = focusArea ? METRICS_REGISTRY[focusArea]?.label || focusArea : 'Key metric';
+
+    output.value = `Today’s Focus\n` +
+        `• ✅ Team Win: ${teamWinLabel} is ahead of the team average for many teammates\n` +
+        `• ⚠️ Focus Area: ${focusLabel} is below the team average for several teammates\n` +
+        `• 🎯 Today’s Ask: ${focusTip ? focusTip.replace(/^.*?:\s*/, '') : 'Use a quick reminder before breaks to stay green'}`;
+}
+
+function copyTodaysFocus() {
+    const output = document.getElementById('todaysFocusOutput');
+    if (!output) return;
+    navigator.clipboard.writeText(output.value || '').then(() => {
+        showToast('✅ Today’s Focus copied', 3000);
+    }).catch(() => {
+        showToast('Unable to copy Today’s Focus', 3000);
+    });
 }
 
 // ============================================
@@ -4700,20 +5260,31 @@ async function generateCopilotPrompt() {
         winsSection += `(none)\n`;
     }
     
-    // Build OPPORTUNITIES section with tips
+    // Build OPPORTUNITIES section with smart tips
     let opportunitiesSection = `OPPORTUNITIES (Areas to Improve):\n`;
+    const coachingContextLines = [];
     if (needsCoaching.length > 0) {
         needsCoaching.forEach(item => {
             opportunitiesSection += `${item}\n`;
-            // Add corresponding tip
             const metricMatch = item.match(/^- (.+?):/);
             if (metricMatch) {
                 const metricLabel = metricMatch[1];
                 const metricKey = metricKeyMap[metricLabel];
-                const metricTips = allTips[metricKey] || [];
-                if (metricTips.length > 0) {
-                    const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
-                    opportunitiesSection += `  TIP: ${randomTip}\n`;
+                if (metricKey) {
+                    const metricValue = employeeData[metricKey];
+                    const severity = getMetricSeverity(metricKey, metricValue);
+                    const metricTips = allTips[metricKey] || [];
+                    const smartTip = selectSmartTip({
+                        employeeId: selectedEmployeeId,
+                        metricKey,
+                        severity,
+                        tips: metricTips
+                    });
+                    if (smartTip) {
+                        opportunitiesSection += `  TIP: ${smartTip}\n`;
+                    }
+                    const contextLine = getCoachingContext(selectedEmployeeId, metricKey, metricValue);
+                    if (contextLine) coachingContextLines.push(contextLine);
                 }
             }
         });
@@ -4729,6 +5300,24 @@ async function generateCopilotPrompt() {
         const parsedHours = hoursMatch?.[1] ? parseFloat(hoursMatch[1]) : NaN;
         reliabilityHours = Number.isFinite(parsedHours) ? parsedHours : employeeData.reliability;
         opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${reliabilityHours} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timeReference} that was unscheduled. If this is an error, please let me know.\n`;
+    }
+
+    const confidenceInsight = buildConfidenceInsight(employeeData, coachedMetricKeys);
+    let supervisorContext = '';
+    if (coachingContextLines.length || confidenceInsight) {
+        supervisorContext = `\nSUPERVISOR CONTEXT (use naturally, do not copy verbatim):\n`;
+        coachingContextLines.forEach(line => supervisorContext += `- ${line}\n`);
+        if (confidenceInsight) supervisorContext += `- ${confidenceInsight}\n`;
+    }
+
+    const complianceFlags = detectComplianceFlags(customNotes);
+    if (complianceFlags.length > 0) {
+        supervisorContext += `\nCOMPLIANCE FLAG: ${complianceFlags.join(', ')}. Please document and follow policy.\n`;
+        logComplianceFlag({
+            employeeId: selectedEmployeeId,
+            flag: complianceFlags.join(', '),
+            timestamp: new Date().toISOString()
+        });
     }
 
     // Store data for Verint summary generation
@@ -4754,7 +5343,7 @@ Here's the performance data:
 
 ${winsSection}
 
-${opportunitiesSection}${additionalContext}
+${opportunitiesSection}${additionalContext}${supervisorContext}
 
 Can you help me write an email to ${firstName} with this structure:
 
