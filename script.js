@@ -1403,6 +1403,10 @@ function initializeEventHandlers() {
     document.getElementById('redFlagBtn')?.addEventListener('click', () => {
         showOnlySection('redFlagSection');
     });
+    document.getElementById('ptoBtn')?.addEventListener('click', () => {
+        showOnlySection('ptoSection');
+        initializePtoTracker();
+    });
     
     // SENTIMENT ANALYSIS WORKFLOW
     document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
@@ -1832,6 +1836,217 @@ function initializeEventHandlers() {
     
     // Initialize red flag handlers
     initializeRedFlag();
+}
+
+// ============================================
+// PTO / TIME-OFF TRACKER
+// ============================================
+
+const PTO_STORAGE_KEY = 'ptoTracker';
+
+function loadPtoTracker() {
+    try {
+        const saved = localStorage.getItem(PTO_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {
+            availableHours: 0,
+            thresholds: { warning: 8, policy: 16 },
+            entries: []
+        };
+    } catch (error) {
+        console.error('Error loading PTO tracker:', error);
+        return { availableHours: 0, thresholds: { warning: 8, policy: 16 }, entries: [] };
+    }
+}
+
+function savePtoTracker(data) {
+    try {
+        localStorage.setItem(PTO_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving PTO tracker:', error);
+    }
+}
+
+function initializePtoTracker() {
+    const data = loadPtoTracker();
+    const availableInput = document.getElementById('ptoAvailableHours');
+    const warningInput = document.getElementById('ptoThresholdWarning');
+    const policyInput = document.getElementById('ptoThresholdPolicy');
+    const addEntryBtn = document.getElementById('ptoAddEntryBtn');
+    const generateEmailBtn = document.getElementById('ptoGenerateEmailBtn');
+    const copyEmailBtn = document.getElementById('ptoCopyEmailBtn');
+    
+    if (availableInput) availableInput.value = data.availableHours || 0;
+    if (warningInput) warningInput.value = data.thresholds?.warning ?? 8;
+    if (policyInput) policyInput.value = data.thresholds?.policy ?? 16;
+    
+    if (availableInput) {
+        availableInput.onchange = () => {
+            const next = loadPtoTracker();
+            next.availableHours = parseFloat(availableInput.value) || 0;
+            savePtoTracker(next);
+            renderPtoSummary(next);
+        };
+    }
+    if (warningInput) {
+        warningInput.onchange = () => {
+            const next = loadPtoTracker();
+            next.thresholds.warning = parseFloat(warningInput.value) || 0;
+            savePtoTracker(next);
+            renderPtoSummary(next);
+        };
+    }
+    if (policyInput) {
+        policyInput.onchange = () => {
+            const next = loadPtoTracker();
+            next.thresholds.policy = parseFloat(policyInput.value) || 0;
+            savePtoTracker(next);
+            renderPtoSummary(next);
+        };
+    }
+    
+    if (addEntryBtn) {
+        addEntryBtn.onclick = () => addPtoEntry();
+    }
+    if (generateEmailBtn) {
+        generateEmailBtn.onclick = () => generatePtoEmail();
+    }
+    if (copyEmailBtn) {
+        copyEmailBtn.onclick = () => copyPtoEmail();
+    }
+    
+    renderPtoSummary(data);
+    renderPtoEntries(data);
+}
+
+function addPtoEntry() {
+    const dateInput = document.getElementById('ptoMissedDate');
+    const hoursInput = document.getElementById('ptoMissedHours');
+    const reasonInput = document.getElementById('ptoMissedReason');
+    
+    const date = dateInput?.value;
+    const hours = parseFloat(hoursInput?.value || '');
+    const reason = reasonInput?.value?.trim() || '';
+    
+    if (!date || Number.isNaN(hours) || hours <= 0) {
+        showToast('Please enter a valid date and hours missed', 4000);
+        return;
+    }
+    
+    const data = loadPtoTracker();
+    data.entries.push({
+        id: `${Date.now()}`,
+        date,
+        hours,
+        reason
+    });
+    savePtoTracker(data);
+    
+    if (hoursInput) hoursInput.value = '';
+    if (reasonInput) reasonInput.value = '';
+    
+    renderPtoSummary(data);
+    renderPtoEntries(data);
+}
+
+function deletePtoEntry(entryId) {
+    const data = loadPtoTracker();
+    data.entries = data.entries.filter(entry => entry.id !== entryId);
+    savePtoTracker(data);
+    renderPtoSummary(data);
+    renderPtoEntries(data);
+}
+
+function renderPtoSummary(data) {
+    const summary = document.getElementById('ptoSummary');
+    if (!summary) return;
+    
+    const totalMissed = data.entries.reduce((sum, entry) => sum + (parseFloat(entry.hours) || 0), 0);
+    const remaining = Math.max(0, (parseFloat(data.availableHours) || 0) - totalMissed);
+    const warning = data.thresholds?.warning ?? 0;
+    const policy = data.thresholds?.policy ?? 0;
+    
+    const status = totalMissed >= policy
+        ? '🔴 Policy threshold reached'
+        : totalMissed >= warning
+            ? '🟠 Warning threshold reached'
+            : '🟢 Below thresholds';
+    
+    summary.innerHTML = `
+        <strong>Total Missed:</strong> ${totalMissed.toFixed(2)} hrs<br>
+        <strong>PTO Remaining:</strong> ${remaining.toFixed(2)} hrs<br>
+        <strong>Status:</strong> ${status}
+    `;
+}
+
+function renderPtoEntries(data) {
+    const container = document.getElementById('ptoEntries');
+    if (!container) return;
+    
+    if (!data.entries.length) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No missed time entries yet.</div>';
+        return;
+    }
+    
+    const rows = data.entries
+        .slice()
+        .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+        .map(entry => {
+            const reasonText = entry.reason ? ` • ${entry.reason}` : '';
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid #e5f3f0; border-radius: 6px; background: #f9fffd;">
+                    <div>
+                        <strong>${entry.date}</strong> — ${parseFloat(entry.hours).toFixed(2)} hrs${reasonText}
+                    </div>
+                    <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
+                </div>
+            `;
+        })
+        .join('');
+    
+    container.innerHTML = rows;
+    container.querySelectorAll('button[data-entry-id]').forEach(btn => {
+        btn.addEventListener('click', () => deletePtoEntry(btn.dataset.entryId));
+    });
+}
+
+function generatePtoEmail() {
+    const data = loadPtoTracker();
+    const output = document.getElementById('ptoEmailOutput');
+    if (!output) return;
+    
+    const totalMissed = data.entries.reduce((sum, entry) => sum + (parseFloat(entry.hours) || 0), 0);
+    const warning = data.thresholds?.warning ?? 0;
+    const policy = data.thresholds?.policy ?? 0;
+    
+    let thresholdText = 'Below thresholds';
+    if (totalMissed >= policy) thresholdText = `Reached policy threshold (${policy} hrs)`;
+    else if (totalMissed >= warning) thresholdText = `Reached warning threshold (${warning} hrs)`;
+    
+    const entryLines = data.entries
+        .slice()
+        .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+        .map(entry => `- ${entry.date}: ${parseFloat(entry.hours).toFixed(2)} hrs${entry.reason ? ` (${entry.reason})` : ''}`)
+        .join('\n');
+    
+    output.value = `Hello,\n\n` +
+        `This is a time-off/attendance check-in based on recent missed time.\n\n` +
+        `Total missed time: ${totalMissed.toFixed(2)} hrs\n` +
+        `PTO available: ${(parseFloat(data.availableHours) || 0).toFixed(2)} hrs\n` +
+        `Status: ${thresholdText}\n\n` +
+        `Missed time details:\n${entryLines || '- No entries recorded'}\n\n` +
+        `If any of the missed time should be covered by PTO or needs correction, please let me know.\n\n` +
+        `Thank you.`;
+}
+
+function copyPtoEmail() {
+    const output = document.getElementById('ptoEmailOutput');
+    if (!output) return;
+    
+    navigator.clipboard.writeText(output.value || '').then(() => {
+        showToast('✅ PTO email copied to clipboard', 3000);
+    }).catch(() => {
+        showToast('Unable to copy PTO email', 3000);
+    });
 }
 
 function populateDeleteWeekDropdown() {
