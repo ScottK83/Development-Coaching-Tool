@@ -195,6 +195,9 @@ const METRICS_REGISTRY = {
         chartColor: '#795548',
         defaultTip: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
     }
+};
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
