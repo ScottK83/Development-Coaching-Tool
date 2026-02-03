@@ -8689,7 +8689,11 @@ function processSentimentUploads() {
                 
                 // Store parsed data
                 const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
-                sentimentData[keyMap[fileType.toLowerCase()]] = { totalCalls, phrases };
+                const dataKey = keyMap[fileType];
+                if (dataKey) {
+                    sentimentData[dataKey].totalCalls = totalCalls;
+                    sentimentData[dataKey].phrases = phrases;
+                }
                 
                 statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
                 statusDiv.style.color = '#4caf50';
