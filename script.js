@@ -58,7 +58,7 @@ const METRICS_REGISTRY = {
         icon: '📅',
         target: { type: 'min', value: 93 },
         unit: '%',
-        columnIndex: 7,
+        columnIndex: 8,
         chartType: 'line',
         chartColor: '#2196F3',
         defaultTip: "Schedule Adherence: Being present and available is essential. Work on meeting your scheduled hours consistently."
@@ -69,7 +69,7 @@ const METRICS_REGISTRY = {
         icon: '😊',
         target: { type: 'min', value: 80 },
         unit: '%',
-        columnIndex: 14,
+        columnIndex: 15,
         chartType: 'line',
         chartColor: '#4CAF50',
         defaultTip: "CX Rep Overall: Customers appreciate your service! Keep building those strong relationships through empathy and professionalism."
@@ -80,7 +80,7 @@ const METRICS_REGISTRY = {
         icon: '✅',
         target: { type: 'min', value: 70 },
         unit: '%',
-        columnIndex: 12,
+        columnIndex: 13,
         chartType: 'line',
         chartColor: '#FF5722',
         defaultTip: "First Call Resolution: You're doing well! Continue focusing on resolving issues on the first contact whenever possible."
@@ -91,7 +91,7 @@ const METRICS_REGISTRY = {
         icon: '⭐',
         target: { type: 'min', value: 81 },
         unit: '%',
-        columnIndex: 16,
+        columnIndex: 17,
         chartType: null,
         chartColor: null,
         defaultTip: "Overall Experience: Great job creating positive experiences! Continue to personalize your interactions."
@@ -107,13 +107,24 @@ const METRICS_REGISTRY = {
         chartColor: '#FF9800',
         defaultTip: "Transfers: You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience."
     },
+    transfersCount: {
+        key: 'transfersCount',
+        label: 'Number of Transfers',
+        icon: '🔢',
+        target: { type: 'max', value: 20 },
+        unit: '',
+        columnIndex: 3,
+        chartType: 'bar',
+        chartColor: '#FF6F00',
+        defaultTip: "Number of Transfers: Monitor your total transfer count. Focus on resolving issues independently when possible."
+    },
     overallSentiment: {
         key: 'overallSentiment',
         label: 'Overall Sentiment',
         icon: '💭',
         target: { type: 'min', value: 88 },
         unit: '%',
-        columnIndex: 11,
+        columnIndex: 12,
         chartType: 'line',
         chartColor: '#E91E63',
         defaultTip: "Overall Sentiment: Keep up the positive tone in your interactions. It makes a big difference!"
@@ -124,7 +135,7 @@ const METRICS_REGISTRY = {
         icon: '👍',
         target: { type: 'min', value: 86 },
         unit: '%',
-        columnIndex: 10,
+        columnIndex: 11,
         chartType: 'line',
         chartColor: '#4CAF50',
         defaultTip: "Positive Word Usage: Your positive language is appreciated! Continue using encouraging and supportive words."
@@ -135,7 +146,7 @@ const METRICS_REGISTRY = {
         icon: '⚠️',
         target: { type: 'min', value: 83 },
         unit: '%',
-        columnIndex: 9,
+        columnIndex: 10,
         chartType: 'line',
         chartColor: '#F44336',
         defaultTip: "Avoiding Negative Words: You're doing great at keeping conversations positive. Keep it up!"
@@ -146,7 +157,7 @@ const METRICS_REGISTRY = {
         icon: '😌',
         target: { type: 'min', value: 95 },
         unit: '%',
-        columnIndex: 8,
+        columnIndex: 9,
         chartType: 'line',
         chartColor: '#00BCD4',
         defaultTip: "Managing Emotions: You're doing great here! Keep maintaining composure even during challenging interactions."
@@ -157,7 +168,7 @@ const METRICS_REGISTRY = {
         icon: '⏱️',
         target: { type: 'max', value: 440 },
         unit: 'sec',
-        columnIndex: 3,
+        columnIndex: 4,
         chartType: 'line',
         chartColor: '#9C27B0',
         defaultTip: "Average Handle Time: Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps."
@@ -168,7 +179,7 @@ const METRICS_REGISTRY = {
         icon: '📝',
         target: { type: 'max', value: 60 },
         unit: 'sec',
-        columnIndex: 6,
+        columnIndex: 7,
         chartType: 'bar',
         chartColor: '#3F51B5',
         defaultTip: "After Call Work: Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy."
@@ -179,7 +190,7 @@ const METRICS_REGISTRY = {
         icon: '⏳',
         target: { type: 'max', value: 30 },
         unit: 'sec',
-        columnIndex: 5,
+        columnIndex: 6,
         chartType: 'bar',
         chartColor: '#009688',
         defaultTip: "Hold Time: Minimize hold time by gathering information upfront. It improves customer experience and efficiency."
@@ -190,7 +201,7 @@ const METRICS_REGISTRY = {
         icon: '🎯',
         target: { type: 'max', value: 16 },
         unit: 'hrs',
-        columnIndex: 21,
+        columnIndex: 22,
         chartType: 'bar',
         chartColor: '#795548',
         defaultTip: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
@@ -453,6 +464,7 @@ const POWERBI_COLUMNS = [
     'Name (Last, First)',
     'TotalCallsAnswered',
     'Transfers%',
+    'Number of Transfers',
     'AHT',
     'Talk',
     'Hold',
@@ -482,6 +494,7 @@ const CANONICAL_SCHEMA = {
     FCR_PERCENT: 'first_call_resolution_percent',
     OVERALL_EXPERIENCE: 'overall_experience_percent',
     TRANSFERS_PERCENT: 'transfer_percent',
+    TRANSFERS_COUNT: 'transfer_count',
     AHT_SECONDS: 'average_handle_time_seconds',
     TALK_SECONDS: 'talk_time_seconds',
     ACW_SECONDS: 'after_call_work_seconds',
@@ -501,25 +514,26 @@ const COLUMN_MAPPING = {
     0: CANONICAL_SCHEMA.EMPLOYEE_NAME,
     1: CANONICAL_SCHEMA.TOTAL_CALLS,
     2: CANONICAL_SCHEMA.TRANSFERS_PERCENT,
-    3: CANONICAL_SCHEMA.AHT_SECONDS,
-    4: CANONICAL_SCHEMA.TALK_SECONDS,
-    5: CANONICAL_SCHEMA.HOLD_SECONDS,
-    6: CANONICAL_SCHEMA.ACW_SECONDS,
-    7: CANONICAL_SCHEMA.ADHERENCE_PERCENT,
-    8: CANONICAL_SCHEMA.EMOTIONS_PERCENT,
-    9: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT,
-    10: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT,
-    11: CANONICAL_SCHEMA.SENTIMENT_PERCENT,
-    12: CANONICAL_SCHEMA.FCR_PERCENT,
-    13: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallFCRTotal
-    14: CANONICAL_SCHEMA.CX_REP_OVERALL, // RepSat%
-    15: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallRepTotal
-    16: CANONICAL_SCHEMA.OVERALL_EXPERIENCE,
-    17: CANONICAL_SCHEMA.SURVEY_TOTAL,   // OE Survey Total
-    18: 'TotalIn-OfficeShrink%',
-    19: 'TotalOOOShrink%',
-    20: 'TotalShrinkage%',
-    21: CANONICAL_SCHEMA.RELIABILITY_HOURS
+    3: CANONICAL_SCHEMA.TRANSFERS_COUNT,
+    4: CANONICAL_SCHEMA.AHT_SECONDS,
+    5: CANONICAL_SCHEMA.TALK_SECONDS,
+    6: CANONICAL_SCHEMA.HOLD_SECONDS,
+    7: CANONICAL_SCHEMA.ACW_SECONDS,
+    8: CANONICAL_SCHEMA.ADHERENCE_PERCENT,
+    9: CANONICAL_SCHEMA.EMOTIONS_PERCENT,
+    10: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT,
+    11: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT,
+    12: CANONICAL_SCHEMA.SENTIMENT_PERCENT,
+    13: CANONICAL_SCHEMA.FCR_PERCENT,
+    14: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallFCRTotal
+    15: CANONICAL_SCHEMA.CX_REP_OVERALL, // RepSat%
+    16: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallRepTotal
+    17: CANONICAL_SCHEMA.OVERALL_EXPERIENCE,
+    18: CANONICAL_SCHEMA.SURVEY_TOTAL,   // OE Survey Total
+    19: 'TotalIn-OfficeShrink%',
+    20: 'TotalOOOShrink%',
+    21: 'TotalShrinkage%',
+    22: CANONICAL_SCHEMA.RELIABILITY_HOURS
 };
 
 // Map headers to canonical schema - validates we have exactly 22 columns
@@ -645,8 +659,9 @@ function parsePastedData(pastedText, startDate, endDate) {
             fcr: parseSurveyPercentage(getCell(METRICS_REGISTRY.fcr.columnIndex)),
             overallExperience: parseSurveyPercentage(getCell(METRICS_REGISTRY.overallExperience.columnIndex)),
             transfers: parsePercentage(getCell(METRICS_REGISTRY.transfers.columnIndex)) || 0,
+            transfersCount: parseInt(getCell(METRICS_REGISTRY.transfersCount.columnIndex)) || 0,
             aht: parseSeconds(getCell(METRICS_REGISTRY.aht.columnIndex)) || '',
-            talkTime: parseSeconds(getCell(4)) || '',
+            talkTime: parseSeconds(getCell(5)) || '',
             acw: parseSeconds(getCell(METRICS_REGISTRY.acw.columnIndex)),
             holdTime: parseSeconds(getCell(METRICS_REGISTRY.holdTime.columnIndex)),
             reliability: parseHours(getCell(METRICS_REGISTRY.reliability.columnIndex)) || 0,
