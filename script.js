@@ -8598,6 +8598,9 @@ function processSentimentUploads() {
                 const content = e.target.result;
                 const lines = content.split('\n').filter(line => line.trim());
                 
+                console.log(`Processing ${fileType} file with ${lines.length} lines`);
+                console.log('First 5 lines:', lines.slice(0, 5));
+                
                 // Parse file format: look for "Total calls analyzed: X" and phrases with counts
                 let totalCalls = 0;
                 const phrases = [];
@@ -8607,6 +8610,7 @@ function processSentimentUploads() {
                     const totalMatch = line.match(/Total\s+calls\s+analyzed[:\s]+(\d+)/i);
                     if (totalMatch) {
                         totalCalls = parseInt(totalMatch[1]);
+                        console.log(`Found total calls: ${totalCalls}`);
                         continue;
                     }
                     
@@ -8628,7 +8632,18 @@ function processSentimentUploads() {
                         const total = parseInt(phraseMatch2[3]);
                         phrases.push({ phrase, used, total });
                     }
+                    
+                    // Try CSV format: "phrase",count,total or phrase,count,total
+                    const csvMatch = line.match(/^"?([^",]+)"?,(\d+),(\d+)/);
+                    if (csvMatch) {
+                        const phrase = csvMatch[1].trim();
+                        const used = parseInt(csvMatch[2]);
+                        const total = parseInt(csvMatch[3]);
+                        phrases.push({ phrase, used, total });
+                    }
                 }
+                
+                console.log(`Parsed ${phrases.length} phrases from ${fileType} file`);
                 
                 // Store parsed data
                 const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
