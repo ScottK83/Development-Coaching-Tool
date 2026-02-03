@@ -6047,8 +6047,9 @@ async function generateGroupCoachingEmail() {
             }
         });
 
-        // Categorize employees
-        if (meetsAllTargets && beatsAllCenterAvg && metricsAboveCenter.length >= 2) {
+        // Categorize employees - prioritize rockstars who beat center average
+        if (metricsAboveCenter.length >= 2) {
+            // Anyone beating center average on 2+ metrics is a ROCKSTAR
             teamAnalysis.rockstars.push({ name: emp.name, metrics: metricsAboveCenter });
         } else if (meetsAllTargets) {
             teamAnalysis.topPerformers.push(emp.name);
