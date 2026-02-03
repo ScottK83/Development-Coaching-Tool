@@ -4108,8 +4108,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 const mailEndDate = periodMeta.endDate || 'unknown';
                 const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${empName}`;
                 
-                // Use location.href instead of window.open for better compatibility
-                window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+                // Create temporary anchor and click it to open mailto
+                const mailtoLink = document.createElement('a');
+                mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+                mailtoLink.style.display = 'none';
+                document.body.appendChild(mailtoLink);
+                mailtoLink.click();
+                document.body.removeChild(mailtoLink);
             }).catch(err => {
                 console.error('Clipboard error:', err);
                 downloadImageFallback(blob, empName, period);
@@ -4137,8 +4142,13 @@ function downloadImageFallback(blob, empName, period) {
     const fallbackEndDate = fallbackMeta.endDate || 'unknown';
     const emailSubject = `Trending Metrics - ${fallbackPeriodType} - ${fallbackPeriodLabel} ending ${fallbackEndDate} for ${empName}`;
     
-    // Use location.href instead of window.open for better compatibility
-    window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+    // Create temporary anchor and click it to open mailto
+    const mailtoLink = document.createElement('a');
+    mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+    mailtoLink.style.display = 'none';
+    document.body.appendChild(mailtoLink);
+    mailtoLink.click();
+    document.body.removeChild(mailtoLink);
 }
 
 function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
