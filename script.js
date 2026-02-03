@@ -6637,7 +6637,7 @@ function renderGroupTrendAnalysis(container, keys) {
     latestWeek.employees.forEach(emp => {
         const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
         if (!prevEmp) return;
-        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+
         // Check for 3-period decline
         if (thirdWeek?.employees) {
             const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
@@ -6692,11 +6692,11 @@ function renderGroupTrendAnalysis(container, keys) {
             metricMeetsTarget(metricKey, emp[metricKey])
         );
         
-        alert('⚠️ Failed to copy summary prompt to clipboard. Please try again.');
+        if (consistent) {
             teamInsights.consistent.push(emp.name);
-// ============================================
-// EMPLOYEE LIST VIEWER
-// ============================================
+        }
+    });
+
     // Build team overview
     let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
     html += `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis</h5>`;
@@ -6713,19 +6713,7 @@ function renderGroupTrendAnalysis(container, keys) {
     html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
     html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
     html += `</div>`;
-function renderEmployeesList() {
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.improving.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">Improving (momentum)</div>`;
-    html += `</div>`;
     
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.consistent.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">Consistent performers</div>`;
-    html += `</div>`;
-    
-    html += `</div>`;
-            week.employees.forEach(emp => {
     // Detailed lists
     if (teamInsights.atRisk.length > 0) {
         html += `<div style="margin-bottom: 15px;">`;
@@ -6733,7 +6721,7 @@ function renderEmployeesList() {
         html += `<div style="padding: 12px; background: #ffebee; border-radius: 6px; border-left: 4px solid #e53935;">`;
         html += teamInsights.atRisk.join(', ');
         html += `</div></div>`;
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
+    }
 
     if (teamInsights.declining.length > 0) {
         html += `<div style="margin-bottom: 15px;">`;
@@ -6765,6 +6753,29 @@ function renderEmployeesList() {
     html += `</div>`;
     
     container.innerHTML = html;
+}
+
+// ============================================
+// EMPLOYEE LIST VIEWER
+// ============================================
+
+function renderEmployeesList() {
+    const container = document.getElementById('employeesList');
+    
+    // Get all unique employees from uploaded weekly data
+    const employeeSet = new Set();
+    Object.values(weeklyData).forEach(week => {
+        if (week && week.employees) {
+            week.employees.forEach(emp => {
+                employeeSet.add(emp.name);
+            });
+        }
+    });
+    
+    const employees = Array.from(employeeSet).sort();
+    
+    if (employees.length === 0) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
         return;
     }
     
