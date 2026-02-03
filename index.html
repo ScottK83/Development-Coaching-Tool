@@ -16,14 +16,10 @@
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
             <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button type="button" id="homeBtn" class="btn-secondary">🏠 Home (Upload Data)</button>
-                <button type="button" id="manageTips" class="btn-secondary" style="background: #00796b; color: white;">💡 Manage Tips</button>
-                <button type="button" id="coachingEmailBtn" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
-                <button type="button" id="metricTrendsBtn" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
-                <button type="button" id="sentimentBtn" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
+                <button type="button" id="coachingEmailBtn" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching & Analysis</button>
                 <button type="button" id="redFlagBtn" class="btn-secondary" style="background: #dc3545; color: white;">🚩 RED FLAG COACHING</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="ptoBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">🕒 PTO Tracker</button>
-                <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Trend Intelligence</button>
                 <button type="button" id="debugBtn" class="btn-secondary" style="background: #6c757d; color: white;">🐞 Debug</button>
             </div>
         </header>
@@ -83,7 +79,18 @@
 
             <section id="coachingEmailSection" style="display: none;">
                 <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #E91E63;">
-                    <h2>💌 Coaching Email</h2>
+                    <h2>💌 Coaching & Analysis</h2>
+                    
+                    <!-- Sub-navigation -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #E91E63; padding-bottom: 15px;">
+                        <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
+                        <button type="button" id="subNavSentiment" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
+                        <button type="button" id="subNavMetricTrends" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
+                        <button type="button" id="subNavTrendIntelligence" class="btn-secondary" style="background: #ff9800; color: white;">📊 Trend Intelligence</button>
+                    </div>
+
+                    <!-- Coaching Email Sub-section -->
+                    <div id="subSectionCoachingEmail" style="display: block;">
                     <p style="color: #4a148c; margin-bottom: 20px;">Generate weekly coaching check-ins based on the latest uploaded data.</p>
 
                     <div id="coachingEmailStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"></div>
