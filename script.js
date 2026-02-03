@@ -3359,33 +3359,30 @@ function generateTrendEmail() {
     // Use nickname if provided, otherwise use full name
     const displayName = nickname || employeeName;
     
-    // Open mailto FIRST, while still in user click context
-    const periodMeta = period.metadata || {};
-    const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-    const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
-    const mailEndDate = periodMeta.endDate || 'unknown';
-    const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
-    
-    console.log('Opening Outlook with subject:', emailSubject);
-    
-    // Try multiple methods to open Outlook
-    try {
-        const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
-        document.body.appendChild(mailtoLink);
-        mailtoLink.click();
-        document.body.removeChild(mailtoLink);
-        console.log('Mailto link clicked');
-    } catch(e) {
-        console.error('Error opening mailto:', e);
-    }
-    
-    // Build email image
+    // Build email image FIRST (while page has focus)
     showToast('ℹ️ Creating email image...', 3000);
-    
-    setTimeout(() => {
-        createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee);
-    }, 100);
+    createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
+        // AFTER image is copied to clipboard, THEN open Outlook
+        const periodMeta = period.metadata || {};
+        const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+        const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
+        const mailEndDate = periodMeta.endDate || 'unknown';
+        const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
+        
+        console.log('Opening Outlook with subject:', emailSubject);
+        
+        // Open mailto AFTER clipboard is ready
+        try {
+            const mailtoLink = document.createElement('a');
+            mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+            document.body.appendChild(mailtoLink);
+            mailtoLink.click();
+            document.body.removeChild(mailtoLink);
+            console.log('Mailto link clicked');
+        } catch(e) {
+            console.error('Error opening mailto:', e);
+        }
+    });
 }
 
 function formatMetricName(camelCase) {
@@ -3727,7 +3724,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
     return html;
 }
 
-function createTrendEmailImage(empName, weekKey, period, current, previous) {
+function createTrendEmailImage(empName, weekKey, period, current, previous, onClipboardReady) {
     // ============================================
     // PHASE 5 - SINGLE-SOURCE EMAIL GENERATION
     // ============================================
@@ -4158,6 +4155,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 navigator.clipboard.write([htmlClipboardItem]).then(() => {
                     console.log('HTML email with embedded image copied to clipboard');
                     showToast('✅ Email with image ready to paste!', 3000);
+                    // Call callback to open Outlook AFTER clipboard is ready
+                    if (onClipboardReady) onClipboardReady();
                 }).catch(err => {
                     console.error('HTML clipboard error:', err);
                     // Fallback: try plain image copy using original PNG blob
@@ -4166,14 +4165,20 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                     ]).then(() => {
                         console.log('Image copied to clipboard (HTML failed)');
                         showToast('✅ Image copied to clipboard!', 3000);
+                        // Call callback to open Outlook AFTER clipboard is ready
+                        if (onClipboardReady) onClipboardReady();
                     }).catch(err2 => {
                         console.error('Image clipboard error:', err2);
                         downloadImageFallback(pngBlob, empName, period);
+                        // Still call callback even if clipboard failed
+                        if (onClipboardReady) onClipboardReady();
                     });
                 });
             } else {
                 console.log('Clipboard API not available, downloading instead');
                 downloadImageFallback(pngBlob, empName, period);
+                // Still call callback even if clipboard not available
+                if (onClipboardReady) onClipboardReady();
             }
         };
         reader.readAsDataURL(pngBlob);
