@@ -4137,8 +4137,8 @@ function downloadImageFallback(blob, empName, period) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const metadata = period.metadata || {};
-    a.download = `TrendReport_${empName}_${metadata.startDate || 'unknown'}.png`;
+    const periodMetadata = period.metadata || {};
+    a.download = `TrendReport_${empName}_${periodMetadata.startDate || 'unknown'}.png`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('ℹ️ Image downloaded!', 4000);
