@@ -3562,22 +3562,10 @@ function generateTrendEmail() {
         return;
     }
     
-    // Get previous period (same period type only)
+    // Get previous period (strictly same period type + correct previous period)
     const currentPeriodType = period.metadata?.periodType || 'week';
-    const sameTypePeriods = Object.keys(weeklyData)
-        .filter(key => (weeklyData[key]?.metadata?.periodType || 'week') === currentPeriodType)
-        .sort((a, b) => {
-            const aEnd = (a.split('|')[1] || '').trim();
-            const bEnd = (b.split('|')[1] || '').trim();
-            const aDate = new Date(aEnd);
-            const bDate = new Date(bEnd);
-            if (isNaN(aDate) && isNaN(bDate)) return 0;
-            if (isNaN(aDate)) return -1;
-            if (isNaN(bDate)) return 1;
-            return aDate - bDate;
-        });
-    const currentIdx = sameTypePeriods.indexOf(weekKey);
-    const prevPeriod = currentIdx > 0 ? weeklyData[sameTypePeriods[currentIdx - 1]] : null;
+    const prevPeriodKey = getPreviousPeriodData(weekKey, currentPeriodType);
+    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
     const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
     
     // Use nickname if provided, otherwise use full name
@@ -4761,11 +4749,13 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
     
     const prevEndStr = `${previousPeriodEnd.getFullYear()}-${String(previousPeriodEnd.getMonth() + 1).padStart(2, '0')}-${String(previousPeriodEnd.getDate()).padStart(2, '0')}`;
     
-    // Find matching period in weeklyData
+    // Find matching period in weeklyData (must match period type)
     for (const key of Object.keys(weeklyData).sort().reverse()) {
-        if (key.includes(prevEndStr)) {
-            return key;
-        }
+        if (!key.includes(prevEndStr)) continue;
+        const metadata = weeklyData[key]?.metadata || {};
+        const keyPeriodType = metadata.periodType || 'week';
+        if (keyPeriodType !== periodType) continue;
+        return key;
     }
     
     return null;
@@ -5683,7 +5673,7 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         // Scroll to paste section
         document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
-        showToast('✅ Prompt copied! Paste into Copilot, then paste the result back here.');
+        showToast('✅ Prompt copied! Paste into CoPilot, then paste the result back here.');
     }).catch(err => {
         console.error('Failed to copy:', err);
         alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
@@ -5766,7 +5756,7 @@ ${copilotEmail}
 Verint Summary:`;
     
     navigator.clipboard.writeText(summaryPrompt).then(() => {
-        alert('✅ Verint summary prompt copied to clipboard. Paste into Copilot to generate the summary.');
+        alert('✅ Verint summary prompt copied to clipboard. Paste into CoPilot to generate the summary.');
         window.open('https://m365.cloud.microsoft.com/chat', '_blank');
     }).catch(err => {
         console.error('Failed to copy:', err);
@@ -6407,12 +6397,22 @@ function initializeCoachingEmail() {
     const panel = document.getElementById('coachingMetricsPanel');
     const promptArea = document.getElementById('coachingPromptArea');
     const generateBtn = document.getElementById('generateCoachingPromptBtn');
+    const outlookSection = document.getElementById('coachingOutlookSection');
+    const outlookBody = document.getElementById('coachingOutlookBody');
+    const outlookBtn = document.getElementById('generateOutlookEmailBtn');
 
     if (!select || !status || !panel || !promptArea || !generateBtn) return;
 
     status.style.display = 'none';
     panel.style.display = 'none';
     promptArea.value = '';
+    if (outlookSection && outlookBody && outlookBtn) {
+        outlookSection.style.display = 'none';
+        outlookBody.value = '';
+        outlookBtn.disabled = true;
+        outlookBtn.style.opacity = '0.6';
+        outlookBtn.style.cursor = 'not-allowed';
+    }
 
     select.innerHTML = '<option value="">-- Choose an associate --</option>';
 
@@ -6458,6 +6458,21 @@ function initializeCoachingEmail() {
         generateBtn.dataset.bound = 'true';
     }
 
+    if (outlookBody && outlookBtn && !outlookBody.dataset.bound) {
+        outlookBody.addEventListener('input', (e) => {
+            const hasContent = e.target.value.trim().length > 0;
+            outlookBtn.disabled = !hasContent;
+            outlookBtn.style.opacity = hasContent ? '1' : '0.6';
+            outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+        });
+        outlookBody.dataset.bound = 'true';
+    }
+
+    if (outlookBtn && !outlookBtn.dataset.bound) {
+        outlookBtn.addEventListener('click', generateOutlookEmailFromCoPilot);
+        outlookBtn.dataset.bound = 'true';
+    }
+
     
 }
 
@@ -6468,12 +6483,22 @@ function updateCoachingEmailDisplay() {
     const winsList = document.getElementById('coachingWinsList');
     const oppList = document.getElementById('coachingOpportunitiesList');
     const promptArea = document.getElementById('coachingPromptArea');
+    const outlookSection = document.getElementById('coachingOutlookSection');
+    const outlookBody = document.getElementById('coachingOutlookBody');
+    const outlookBtn = document.getElementById('generateOutlookEmailBtn');
 
     if (!panel || !summary || !winsList || !oppList || !promptArea) return;
 
     winsList.innerHTML = '';
     oppList.innerHTML = '';
     promptArea.value = '';
+    if (outlookSection && outlookBody && outlookBtn) {
+        outlookSection.style.display = 'none';
+        outlookBody.value = '';
+        outlookBtn.disabled = true;
+        outlookBtn.style.opacity = '0.6';
+        outlookBtn.style.cursor = 'not-allowed';
+    }
 
     if (!employeeName || !coachingLatestWeekKey) {
         panel.style.display = 'none';
@@ -6537,6 +6562,38 @@ function updateCoachingEmailDisplay() {
 
     panel.style.display = 'block';
     renderCoachingHistory(employeeName);
+}
+
+function generateOutlookEmailFromCoPilot() {
+    const outlookBody = document.getElementById('coachingOutlookBody');
+    if (!outlookBody) return;
+
+    const emailBody = outlookBody.value.trim();
+    if (!emailBody) {
+        alert('⚠️ Paste the CoPilot response first.');
+        return;
+    }
+
+    const summary = window.latestCoachingSummaryData || {};
+    const firstName = summary.firstName || '';
+    const periodLabel = summary.periodLabel || 'this period';
+    const subject = firstName
+        ? `Coaching Check-In - ${periodLabel} for ${firstName}`
+        : `Coaching Check-In - ${periodLabel}`;
+
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(emailBody)
+            .then(() => {
+                window.location.href = mailtoLink;
+            })
+            .catch(() => {
+                window.location.href = mailtoLink;
+            });
+    } else {
+        window.location.href = mailtoLink;
+    }
 }
 
 function renderCoachingHistory(employeeName) {
@@ -6661,6 +6718,7 @@ HARD WRITING RULES
 - Do NOT repeat phrasing across bullets
 - Do NOT use HR clichés or jargon
 - Do NOT use the phrase "This is an opportunity to"
+- Do NOT use em dashes (—)
 - Write in natural paragraphs with clean, simple bullet points where appropriate
 
 EMAIL FLOW (INTERNAL – DO NOT SHOW)
@@ -6782,7 +6840,13 @@ function generateCoachingPromptAndCopy() {
         }, 1200);
     }
 
-    // Open Copilot
+    const outlookSection = document.getElementById('coachingOutlookSection');
+    if (outlookSection) {
+        outlookSection.style.display = 'block';
+        outlookSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Open CoPilot
     setTimeout(() => {
         window.open('https://copilot.microsoft.com', '_blank');
     }, 500);
