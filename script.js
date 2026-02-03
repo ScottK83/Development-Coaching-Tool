@@ -8740,76 +8740,148 @@ function generateSentimentPrompt() {
         return;
     }
     
-    // Build sentiment summary
-    let sentimentSummary = '';
+    // Get employee's weekly sentiment scores
+    const employeeData = getEmployeeDataForPeriod(employeeName);
+    const sentimentScores = {
+        overall: employeeData?.overallSentiment || 'N/A',
+        positive: employeeData?.positiveWord || 'N/A',
+        negative: employeeData?.negativeWord || 'N/A',
+        emotions: employeeData?.managingEmotions || 'N/A'
+    };
     
-    if (sentimentData.positive.totalCalls > 0) {
-        sentimentSummary += `\n**POSITIVE LANGUAGE ANALYSIS (${sentimentData.positive.totalCalls} calls analyzed):**\n`;
+    // Collect all phrases from all three reports with their usage
+    const allPhrases = [];
+    
+    if (sentimentData.positive.phrases.length > 0) {
         sentimentData.positive.phrases.forEach(p => {
-            const percentage = ((p.used / p.total) * 100).toFixed(0);
-            sentimentSummary += `- "${p.phrase}": Used ${p.used}/${p.total} calls (${percentage}%)\n`;
+            allPhrases.push({
+                phrase: p.phrase,
+                used: p.used,
+                total: p.total,
+                percentage: ((p.used / p.total) * 100).toFixed(0),
+                type: 'Positive'
+            });
         });
     }
     
-    if (sentimentData.negative.totalCalls > 0) {
-        sentimentSummary += `\n**NEGATIVE LANGUAGE ANALYSIS (${sentimentData.negative.totalCalls} calls analyzed):**\n`;
+    if (sentimentData.negative.phrases.length > 0) {
         sentimentData.negative.phrases.forEach(p => {
-            const percentage = ((p.used / p.total) * 100).toFixed(0);
-            sentimentSummary += `- "${p.phrase}": Used ${p.used}/${p.total} calls (${percentage}%)\n`;
+            allPhrases.push({
+                phrase: p.phrase,
+                used: p.used,
+                total: p.total,
+                percentage: ((p.used / p.total) * 100).toFixed(0),
+                type: 'Avoid Negative'
+            });
         });
     }
     
-    if (sentimentData.emotions.totalCalls > 0) {
-        sentimentSummary += `\n**EMOTIONAL INDICATORS ANALYSIS (${sentimentData.emotions.totalCalls} calls analyzed):**\n`;
+    if (sentimentData.emotions.phrases.length > 0) {
         sentimentData.emotions.phrases.forEach(p => {
-            const percentage = ((p.used / p.total) * 100).toFixed(0);
-            sentimentSummary += `- "${p.phrase}": Observed ${p.used}/${p.total} calls (${percentage}%)\n`;
+            allPhrases.push({
+                phrase: p.phrase,
+                used: p.used,
+                total: p.total,
+                percentage: ((p.used / p.total) * 100).toFixed(0),
+                type: 'Managing Emotions'
+            });
         });
     }
+    
+    // Sort by usage count descending
+    allPhrases.sort((a, b) => b.used - a.used);
+    
+    // Get top 5 most used
+    const top5 = allPhrases.slice(0, 5);
+    
+    // Get bottom 5 least used (opportunities)
+    const bottom5 = allPhrases.slice(-5).reverse();
+    
+    // Build the data summary
+    let sentimentSummary = `SENTIMENT SCORES:\n`;
+    sentimentSummary += `- Overall Sentiment: ${sentimentScores.overall}%\n`;
+    sentimentSummary += `- Positive Word Usage: ${sentimentScores.positive}%\n`;
+    sentimentSummary += `- Avoiding Negative Words: ${sentimentScores.negative}%\n`;
+    sentimentSummary += `- Managing Emotions: ${sentimentScores.emotions}%\n`;
+    sentimentSummary += `\nNote: Overall Sentiment is the average of Positive, Avoiding Negative, and Managing Emotions scores.\n\n`;
+    
+    sentimentSummary += `TOP 5 PHRASES ${employeeName.split(' ')[0].toUpperCase()} USES MOST:\n`;
+    top5.forEach((p, i) => {
+        sentimentSummary += `${i + 1}. "${p.phrase}" (${p.type}) - Used ${p.used} times out of ${p.total} calls (${p.percentage}%)\n`;
+    });
+    sentimentSummary += `\n`;
+    
+    sentimentSummary += `BOTTOM 5 PHRASES - OPPORTUNITIES TO IMPROVE:\n`;
+    bottom5.forEach((p, i) => {
+        sentimentSummary += `${i + 1}. "${p.phrase}" (${p.type}) - Used ${p.used} times out of ${p.total} calls (${p.percentage}%)\n`;
+    });
+    sentimentSummary += `\n`;
     
     // Build the AI Builder Prompt per specification
-    const prompt = `You are a Customer Experience Supervisor reviewing speech analytics sentiment reports for ${employeeName}. You will be provided one or more reports, which may include:
-- Positive Word Usage
-- Negative Word Usage
-- Emotion / Customer Control indicators
+    const prompt = `You are a Customer Experience Supervisor reviewing speech analytics sentiment reports for ${employeeName}. 
 
-Your task is to write one cohesive coaching summary that explains the data in clear, human language.
+EMPLOYEE'S WEEKLY SENTIMENT SCORES:
+- Overall Sentiment: ${sentimentScores.overall}% (average of all three metrics below)
+- Positive Word Usage: ${sentimentScores.positive}%
+- Avoiding Negative Words: ${sentimentScores.negative}%
+- Managing Emotions: ${sentimentScores.emotions}%
 
-Coaching Guidelines:
-- Write as a supportive, professional supervisor
-- Start with strengths and positive behaviors first
-- Clearly explain what the data means (do not repeat raw metrics unless relevant)
-- Translate keywords and counts into real call behaviors
-- Reinforce what the agent is doing well and why it matters to the customer experience
-- Identify growth opportunities using encouraging, forward-focused language
-- If a keyword shows a value of 0, frame it as an opportunity to expand phrasing—not a deficiency
-- When "NEAR" phrases appear, explain that this reflects natural conversational flow
-- If multiple reports are provided, integrate them into one narrative (do not separate by report)
+UNDERSTANDING THE DATA:
+The employee's "Overall Sentiment" score is calculated as the average of their three individual metrics (Positive Word Usage, Avoiding Negative Words, and Managing Emotions). These scores come from speech analytics that tracks specific phrases across all customer interactions during the weekly period.
 
-What to Include:
-- Overall sentiment performance summary
-- Specific examples of positive language patterns
-- Notable trends or repetitions (positive or negative)
-- Suggestions for 1–3 practical focus areas
-- Encouraging closing that reinforces confidence and growth
+The TOP 5 PHRASES below represent the employee's most consistently used language patterns—these are strengths to celebrate and reinforce.
 
-Tone & Style:
-- Encouraging, clear, and respectful
-- Never punitive, robotic, or overly technical
-- Written as if speaking directly to the employee
-- Avoid jargon; use coaching language
+The BOTTOM 5 PHRASES represent opportunities for growth. These are high-value phrases that appear less frequently in their conversations. When an employee uses these phrases more consistently across ALL calls, their Overall Sentiment score improves because:
+1. It increases their Positive Word Usage percentage
+2. It demonstrates better emotional management and customer control
+3. It creates a more consistent, professional customer experience
 
-Output Requirements:
-- Do NOT mention internal report names or system labels
-- Do NOT list keywords mechanically
-- Do NOT sound like an audit or performance warning
-- Do NOT reference that this summary was written by AI
-- The final output should feel like thoughtful, personalized coaching from a supervisor who understands the agent's day-to-day work
+KEY COACHING INSIGHT: The goal is for ${employeeName} to use variants of ALL these phrases on EVERY call. Currently, they excel at using the Top 5, but incorporating the Bottom 5 more consistently will directly increase their Overall Sentiment score.
 
-Sentiment Data:
 ${sentimentSummary}
 
-Generate the coaching summary now:`;
+YOUR TASK:
+Write a personalized coaching email to ${employeeName} that:
+1. Celebrates their Top 5 phrases and explains why consistent use of these phrases is excellent
+2. Frames the Bottom 5 phrases as growth opportunities (NOT deficiencies)
+3. Explains the connection: using Bottom 5 phrases more = higher Overall Sentiment score
+4. Provides 2-3 specific, actionable focus areas for the upcoming week
+5. Includes brief examples of how to incorporate Bottom 5 phrases naturally
+6. Ends with encouragement and confidence in their ability to grow
+
+COACHING GUIDELINES:
+- Write as a supportive, professional supervisor who understands daily call center work
+- Start with genuine praise for their Top 5 performance
+- Use clear, human language—avoid corporate jargon and technical terms
+- Frame Bottom 5 as "expansion opportunities" rather than failures
+- Explain that phrases with 0 usage simply mean untapped potential
+- Connect phrase usage directly to customer experience and satisfaction
+- Be specific about what to practice and how it helps
+- Never sound punitive, robotic, or like an audit
+- The tone should be encouraging and forward-focused
+
+WHAT TO INCLUDE:
+- Recognition of their strengths (Top 5 phrases)
+- Clear explanation of what the data reveals about their customer interactions
+- Why using the Bottom 5 phrases matters for customer experience
+- Practical examples: "Try saying [phrase] when [situation]"
+- 2-3 focus areas for improvement this week
+- Connection to their Overall Sentiment score improvement
+- Encouraging closing that reinforces growth potential
+
+WHAT TO AVOID:
+- Do NOT list raw metrics mechanically
+- Do NOT mention "system labels" or "report types" (Positive/Negative/Emotions)
+- Do NOT sound like a performance warning
+- Do NOT reference AI or automation
+- Do NOT use technical jargon or analytics terms
+
+OUTPUT FORMAT:
+Subject: [Create an appropriate email subject]
+
+[Body of coaching email written in first person as their supervisor]
+
+Generate the coaching email now:`;
     
     promptArea.value = prompt;
     
