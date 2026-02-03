@@ -8720,44 +8720,83 @@ function generateSentimentPrompt() {
         });
     }
     
-    // Build the ChatGPT prompt per specification
-    const prompt = `This summary is not a 1:1 reflection of weekly reporting and is intended to be used as a coaching guide.
+    // Build the AI Builder Prompt per specification
+    const prompt = `AI Builder Prompt: Team Sentiment Coaching Summary
 
-You are an experienced contact center supervisor providing coaching guidance to ${employeeName} based on their recent sentiment analysis. Use this data to create a personalized coaching message that is warm, encouraging, and actionable.
+Role:
+You are a Customer Experience Supervisor writing a weekly team-level sentiment coaching email.
 
-DATA SUMMARY:
+Purpose:
+Generate a confidence-forward, encouraging team summary that highlights strengths first, then clearly outlines opportunities for improvement. This message is meant to motivate performance improvement and prepare the team for future opportunities such as shift bids.
+
+Important Context Rules:
+- This summary is not a 1:1 reflection of weekly reporting.
+- It is intended as a coaching guide, not disciplinary feedback.
+- Tone must be confident, supportive, and leadership-driven.
+- Avoid sounding robotic, punitive, or audit-like.
+- Do not mention systems, reports, dashboards, or AI.
+
+Inputs (Dynamic Fields):
+
+Team Member: ${employeeName}
+
+Sentiment Data:
 ${sentimentSummary}
 
-Generate a coaching message with the following structure:
+Writing Instructions - Structure the output exactly as follows:
 
-**Subject Line**: Create a clear, specific subject line focused on sentiment improvement
+1. Lead With Confidence and Positives
+   - Start by highlighting what the team is doing well.
+   - Reinforce professionalism, effort, and customer focus.
+   - Emphasize that the team already has the skills needed to succeed.
+   - Use confident, motivating language.
 
-**Opening**: Start with genuine appreciation for their commitment to customer interactions
+2. Emphasize Confidence as the Core Driver
+   - Clearly state that confidence is the biggest driver of call success.
+   - Explain that confident agents:
+     * Sound in control
+     * Build trust quickly
+     * Reduce customer pushback
+     * Lower AHT naturally
+   - Reinforce that second guessing or sounding unsure causes customers to lose confidence.
 
-**Positive Language**: Highlight the positive phrases they're using effectively and the impact on customer experience
+3. Call Out Key Opportunity Areas
+   - Discuss these areas clearly and directly, but in a coaching tone:
+     * Adherence struggles
+     * Managing emotions proactively
+     * Increasing consistent positive language
+     * AHT efficiency through call control
+   - Explain why each area matters and how it impacts customer experience.
 
-**Opportunities**: Identify areas where they could increase usage of positive language or reduce negative language patterns
+4. Ownership and Language Expectations
+   - Reinforce ownership statements over tentative language.
+   - Encourage phrases that signal control and reassurance.
+   - Discourage unsure phrasing or backtracking.
 
-**Avoiding Negative Language**: Provide specific, constructive suggestions for replacing or reducing negative phrases
+5. Tie to Future Opportunity
+   - Clearly state that these are the primary areas of focus that will:
+     * Strengthen performance
+     * Improve metrics
+     * Give associates a leg up for the next shift bid
+   - Keep this forward-looking and motivating.
 
-**Language Shifts**: Suggest 2-3 specific language patterns they could adopt to improve sentiment
+6. Close With Encouragement
+   - End with confidence in the team.
+   - Reinforce that improvement is achievable and already within reach.
+   - Emphasize consistency, trust in skills, and leadership on calls.
 
-**Emotional Indicators**: Provide observations on emotional tone and suggest ways to project confidence and calm
+Tone and Style Rules:
+- Professional, confident, encouraging
+- Clear and direct
+- No emojis
+- No dashes or em dashes
+- Short paragraphs
+- Leadership voice, not peer voice
 
-**Confidence & Ownership**: Encourage them to take ownership of their communication style and build confidence
-
-**Focus Areas**: Identify 1-2 key priority areas for next week
-
-**Close**: End with confidence in their ability to improve and an offer of support
-
-Requirements:
-- Use a coaching tone (supportive, not critical)
-- Be specific and reference the actual data
-- Provide actionable guidance
-- No emojis in the output
-- Ready to send to employee as-is
-- Keep message professional but warm
-- Focus on growth and improvement
+Output Requirements:
+- Output a single cohesive team email-style summary
+- No bullet overload, but clear sections
+- Ready to send without edits
 
 Generate the coaching message now:`;
     
