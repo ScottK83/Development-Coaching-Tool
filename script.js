@@ -6614,33 +6614,61 @@ function generateVerintSummary() {
             if (match) return match[1].trim();
             return item.replace(/^-/,'').split(':')[0].trim();
         };
-        const formatList = (items) => {
-            const list = items.filter(Boolean);
-            if (list.length === 0) return '';
-            if (list.length === 1) return list[0];
-            if (list.length === 2) return `${list[0]} and ${list[1]}`;
-            return `${list[0]}, ${list[1]}, and ${list[2]}`;
-        };
         
-        // Build summary for ALL coaching sessions
-        let verintText = `COACHING HISTORY FOR: ${selectedEmployeeId}\n`;
-        verintText += `Total Sessions: ${history.length}\n`;
-        verintText += `===============================================\n\n`;
+        const firstName = getEmployeeNickname(selectedEmployeeId) || selectedEmployeeId.split(' ')[0];
         
-        history.forEach((session, index) => {
-            const sessionNum = history.length - index;
-            const date = new Date(session.generatedAt).toLocaleDateString();
-            const winsLabels = (session.celebrate || []).map(cleanLabel).filter(Boolean);
-            const oppLabels = (session.needsCoaching || []).map(cleanLabel).filter(Boolean);
-            
-            verintText += `SESSION ${sessionNum} - ${date}\n`;
-            verintText += `${'-'.repeat(45)}\n`;
-            verintText += `${winsLabels.length ? 'Wins: ' + formatList(winsLabels) : 'Still building momentum'}\n\n`;
-            verintText += `${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current performance'}\n\n`;
-            if (index < history.length - 1) {
-                verintText += `\n`;
+        // Build narrative summary for the LATEST coaching session
+        const latestSession = history[0];
+        const date = new Date(latestSession.generatedAt).toLocaleDateString();
+        const winsLabels = (latestSession.celebrate || []).map(cleanLabel).filter(Boolean);
+        const oppLabels = (latestSession.needsCoaching || []).map(cleanLabel).filter(Boolean);
+        
+        let verintText = `Coaching Session with ${firstName} - ${date}\n\n`;
+        
+        // Wins section
+        if (winsLabels.length > 0) {
+            verintText += `I recognized ${firstName} for their strong performance in `;
+            if (winsLabels.length === 1) {
+                verintText += `${winsLabels[0]}`;
+            } else if (winsLabels.length === 2) {
+                verintText += `${winsLabels[0]} and ${winsLabels[1]}`;
+            } else {
+                verintText += winsLabels.slice(0, -1).join(', ') + `, and ${winsLabels[winsLabels.length - 1]}`;
             }
-        });
+            verintText += `. Encouraged them to keep up the great work in these areas.\n\n`;
+        } else {
+            verintText += `We discussed ${firstName}'s current performance and acknowledged their efforts to improve.\n\n`;
+        }
+        
+        // Development areas section
+        if (oppLabels.length > 0) {
+            verintText += `We reviewed development opportunities in `;
+            if (oppLabels.length === 1) {
+                verintText += `${oppLabels[0]}`;
+            } else if (oppLabels.length === 2) {
+                verintText += `${oppLabels[0]} and ${oppLabels[1]}`;
+            } else {
+                verintText += oppLabels.slice(0, -1).join(', ') + `, and ${oppLabels[oppLabels.length - 1]}`;
+            }
+            verintText += `. We discussed specific strategies and tips to help improve performance in these metrics. ${firstName} acknowledged the feedback and committed to implementing the discussed improvements.\n\n`;
+        }
+        
+        // Action items
+        verintText += `Action Items:\n`;
+        if (oppLabels.length > 0) {
+            oppLabels.forEach(metric => {
+                verintText += `• Focus on improving ${metric}\n`;
+            });
+        } else {
+            verintText += `• Continue current performance level\n`;
+        }
+        
+        verintText += `\nNext Steps: Follow up next week to review progress and provide additional support as needed.`;
+        
+        // Add coaching history count
+        if (history.length > 1) {
+            verintText += `\n\n--- Previous Coaching Sessions: ${history.length - 1} ---`;
+        }
 
         const outputElement = document.getElementById('verintSummaryOutput');
         outputElement.value = verintText;
@@ -6650,7 +6678,7 @@ function generateVerintSummary() {
         
         // Copy to clipboard
         navigator.clipboard.writeText(verintText).then(() => {
-            showToast(`✅ All ${history.length} coaching sessions copied to clipboard!`, 3000);
+            showToast('✅ Verint coaching notes copied to clipboard!', 3000);
         }).catch(err => {
             console.error('Failed to copy:', err);
             showToast('⚠️ Failed to copy. Text is displayed above.', 3000);
