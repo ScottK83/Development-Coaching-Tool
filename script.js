@@ -6047,14 +6047,28 @@ async function generateGroupCoachingEmail() {
             }
         });
 
-        // Categorize employees - prioritize rockstars who beat center average
-        if (metricsAboveCenter.length >= 2) {
-            // Anyone beating center average on 2+ metrics is a ROCKSTAR
-            teamAnalysis.rockstars.push({ name: emp.name, metrics: metricsAboveCenter });
+        // Categorize employees
+        if (hasImprovement) {
+            // Track improving employees with their metrics for rockstar callouts
+            const improvingMetrics = [];
+            ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'].forEach(metricKey => {
+                const current = emp[metricKey];
+                const prev = prevEmp?.[metricKey];
+                if (current !== undefined && prev !== undefined && current !== null && prev !== null && current !== '' && prev !== '') {
+                    const delta = metricDelta(metricKey, parseFloat(current), parseFloat(prev));
+                    if (delta > 5) {
+                        const metric = METRICS_REGISTRY[metricKey];
+                        improvingMetrics.push({
+                            metric: metric.label,
+                            empValue: formatMetricValue(metricKey, parseFloat(current)),
+                            trend: `+${delta.toFixed(1)}%`
+                        });
+                    }
+                }
+            });
+            teamAnalysis.improving.push({ name: emp.name, metrics: improvingMetrics });
         } else if (meetsAllTargets) {
             teamAnalysis.topPerformers.push(emp.name);
-        } else if (hasImprovement) {
-            teamAnalysis.improving.push(emp.name);
         } else if (needsHelp) {
             teamAnalysis.needsSupport.push(emp.name);
         }
@@ -6082,14 +6096,11 @@ async function generateGroupCoachingEmail() {
         });
 
     // Build team wins
-    if (teamAnalysis.rockstars.length > 0) {
-        teamAnalysis.teamWins.push(`🔥 ${teamAnalysis.rockstars.length} ROCKSTARS crushing it across the board and beating call center averages`);
+    if (teamAnalysis.improving.length > 0) {
+        teamAnalysis.teamWins.push(`🔥 ${teamAnalysis.improving.length} ROCKSTARS showing strong improvement and momentum`);
     }
     if (teamAnalysis.topPerformers.length > 0) {
         teamAnalysis.teamWins.push(`⭐ ${teamAnalysis.topPerformers.length} team members meeting all targets`);
-    }
-    if (teamAnalysis.improving.length > 0) {
-        teamAnalysis.teamWins.push(`📈 ${teamAnalysis.improving.length} team members showing strong improvement`);
     }
 
     // Build prompt
@@ -6103,14 +6114,16 @@ async function generateGroupCoachingEmail() {
     }
 
     let rockstarsText = '';
-    if (teamAnalysis.rockstars.length > 0) {
-        rockstarsText = '\n🏆 ROCKSTARS - ABSOLUTELY CRUSHING IT:\n';
-        rockstarsText += 'These team members are BLOWING THE CALL CENTER AVERAGE OUT OF THE WATER:\n';
-        teamAnalysis.rockstars.slice(0, 5).forEach(rockstar => {
-            rockstarsText += `\n${rockstar.name} - DESTROYING IT in:\n`;
-            rockstar.metrics.forEach(m => {
-                rockstarsText += `  • ${m.metric}: ${m.empValue} (Center Avg: ${m.centerValue}) - ${Math.abs(m.delta).toFixed(1)} points above!\n`;
-            });
+    if (teamAnalysis.improving.length > 0) {
+        rockstarsText = '\n🏆 ROCKSTARS - SHOWING INCREDIBLE IMPROVEMENT:\n';
+        rockstarsText += 'These team members are CRUSHING IT with strong week-over-week gains:\n';
+        teamAnalysis.improving.slice(0, 5).forEach(rockstar => {
+            rockstarsText += `\n${rockstar.name} - IMPROVING BIG TIME:\n`;
+            if (rockstar.metrics && rockstar.metrics.length > 0) {
+                rockstar.metrics.forEach(m => {
+                    rockstarsText += `  • ${m.metric}: ${m.empValue} (${m.trend} improvement!)\n`;
+                });
+            }
         });
     }
 
