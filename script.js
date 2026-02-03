@@ -4918,6 +4918,7 @@ function initializeYearlyIndividualSummary() {
     });
     
     // [DEPRECATED: generateExecutiveSummaryEmailBtn listener removed - function deleted in Phase 1 cleanup]
+    document.getElementById('generateExecutiveSummaryEmailBtn')?.addEventListener('click', generateExecutiveSummaryEmail);
     
     // Add event listener for copy button
     document.getElementById('copyExecutiveSummaryEmailBtn')?.addEventListener('click', () => {
@@ -4940,6 +4941,101 @@ function initializeYearlyIndividualSummary() {
     });
     
     
+}
+
+function generateExecutiveSummaryEmail() {
+    const associate = document.getElementById('summaryAssociateSelect')?.value;
+    if (!associate) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const latestKey = getLatestWeeklyKey();
+    const latestWeek = latestKey ? weeklyData[latestKey] : null;
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
+
+    const callouts = buildExecutiveSummaryCallouts(latestKey, latestWeek);
+    const calloutHtml = callouts.length
+        ? callouts.map(item => `
+            <li><strong>${item.name}</strong> — ${item.metric}: ${item.value} vs center ${item.center} (${item.diff})</li>
+        `).join('')
+        : '<li>No callouts available. Add call center averages to enable this section.</li>';
+
+    const subject = `Wins Spotlight - Week of ${endDate}`;
+
+    const htmlEmail = `
+        <div style="font-family: Arial, sans-serif; font-size: 11pt; color: #111;">
+            <p><strong>Subject:</strong> ${subject}</p>
+            <p>Team,</p>
+            <p>Here are this week’s wins vs the call center average. Huge shout-out to the teammates below who are absolutely crushing these metrics.</p>
+            <h3 style="margin: 16px 0 8px; color: #1b5e20;">🏆 Wins vs Call Center Average</h3>
+            <ul style="margin-top: 0;">
+                ${calloutHtml}
+            </ul>
+            <p>Thank you for the strong performance and the impact you’re making every day. Let’s keep this momentum going!</p>
+        </div>
+    `;
+
+    window.latestExecutiveSummaryHtml = htmlEmail;
+
+    const preview = document.getElementById('executiveSummaryEmailPreview');
+    const copyBtn = document.getElementById('copyExecutiveSummaryEmailBtn');
+    if (copyBtn) copyBtn.style.display = 'inline-block';
+
+    if (preview) {
+        preview.style.display = 'block';
+        const doc = preview.contentDocument || preview.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write(htmlEmail);
+            doc.close();
+        }
+    }
+}
+
+function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
+    if (!latestKey || !latestWeek?.employees?.length) return [];
+    const centerAvg = getCenterAverageForWeek(latestKey);
+    if (!centerAvg) return [];
+
+    const callouts = [];
+    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+        const metric = METRICS_REGISTRY[metricKey];
+        const centerValue = centerAvg[metricKey];
+        if (centerValue === undefined || centerValue === null || centerValue === '') return;
+
+        let best = null;
+        latestWeek.employees.forEach(emp => {
+            const value = emp[metricKey];
+            if (value === undefined || value === null || value === '') return;
+            const numericValue = parseFloat(value);
+            const numericCenter = parseFloat(centerValue);
+            if (Number.isNaN(numericValue) || Number.isNaN(numericCenter)) return;
+
+            const isReverse = isReverseMetric(metricKey);
+            const diff = isReverse ? numericCenter - numericValue : numericValue - numericCenter;
+            if (diff <= 0) return;
+
+            if (!best || diff > best.diff) {
+                best = {
+                    name: emp.name,
+                    metric: metric.label || metricKey,
+                    value: formatMetricValue(metricKey, numericValue),
+                    center: formatMetricValue(metricKey, numericCenter),
+                    diff: `+${formatMetricValue(metricKey, diff)}`,
+                    rawDiff: diff
+                };
+            }
+        });
+
+        if (best) callouts.push(best);
+    });
+
+    return callouts
+        .sort((a, b) => b.rawDiff - a.rawDiff)
+        .slice(0, 5);
 }
 
 function populateOneOnOneAssociateSelect() {
