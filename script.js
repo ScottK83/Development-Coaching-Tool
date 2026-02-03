@@ -231,6 +231,72 @@ function showOnlySection(sectionId) {
 }
 
 /**
+ * Show a specific sub-section within the Coaching & Analysis section
+ */
+function showSubSection(subSectionId) {
+    // Hide all sub-sections
+    const subSections = ['subSectionCoachingEmail', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
+    subSections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    
+    // Show the specified sub-section
+    const targetSubSection = document.getElementById(subSectionId);
+    if (targetSubSection) {
+        targetSubSection.style.display = 'block';
+    }
+    
+    // Update sub-nav button active states
+    const subNavButtons = ['subNavCoachingEmail', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
+    subNavButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            if (btnId.replace('subNav', 'subSection') === subSectionId) {
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                btn.style.opacity = '1';
+            } else {
+                btn.style.background = '#ccc';
+                btn.style.opacity = '0.7';
+            }
+        }
+    });
+}
+
+/**
+ * Show a specific sub-section within the Manage Data section
+ */
+function showManageDataSubSection(subSectionId) {
+    // Hide all sub-sections
+    const subSections = ['subSectionTeamData', 'subSectionCoachingTips'];
+    subSections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    
+    // Show the specified sub-section
+    const targetSubSection = document.getElementById(subSectionId);
+    if (targetSubSection) {
+        targetSubSection.style.display = 'block';
+    }
+    
+    // Update sub-nav button active states
+    const subNavButtons = ['subNavTeamData', 'subNavCoachingTips'];
+    subNavButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            if (btnId.replace('subNav', 'subSection') === subSectionId) {
+                btn.style.background = 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)';
+                btn.style.opacity = '1';
+            } else {
+                btn.style.background = '#ccc';
+                btn.style.opacity = '0.7';
+            }
+        }
+    });
+}
+
+/**
  * Initialize the content of a section when it's shown
  */
 function initializeSection(sectionId) {
@@ -1598,28 +1664,58 @@ function initializeEventHandlers() {
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
     document.getElementById('manageTips')?.addEventListener('click', () => {
-        showOnlySection('tipsManagementSection');
-        renderTipsManagement();
-    });
-    document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
-        showOnlySection('coachingEmailSection');
-        initializeCoachingEmail();
-    });
-    document.getElementById('metricTrendsBtn')?.addEventListener('click', () => {
-        showOnlySection('metricTrendsSection');
-        initializeMetricTrends();
-    });
-    document.getElementById('sentimentBtn')?.addEventListener('click', () => {
-        showOnlySection('sentimentSection');
-        initializeSentiment();
-    });
-    document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
         populateDeleteWeekDropdown();
         renderEmployeesList();
     });
-    document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
-        showOnlySection('executiveSummarySection');
+    document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
+        showOnlySection('coachingEmailSection');
+        showSubSection('subSectionCoachingEmail');
+        initializeCoachingEmail();
+    });
+    
+    // Sub-navigation for Coaching & Analysis section
+    document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
+        showSubSection('subSectionCoachingEmail');
+        initializeCoachingEmail();
+    });
+    document.getElementById('subNavSentiment')?.addEventListener('click', () => {
+        showSubSection('subSectionSentiment');
+        // Move sentiment section content dynamically
+        const sentimentSection = document.getElementById('sentimentSection');
+        const subSectionSentiment = document.getElementById('subSectionSentiment');
+        if (sentimentSection && subSectionSentiment) {
+            // Move all children from sentimentSection to subSectionSentiment
+            while (sentimentSection.firstChild) {
+                subSectionSentiment.appendChild(sentimentSection.firstChild);
+            }
+        }
+        initializeSentiment();
+    });
+    document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
+        showSubSection('subSectionMetricTrends');
+        // Move metric trends section content dynamically
+        const metricTrendsSection = document.getElementById('metricTrendsSection');
+        const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
+        if (metricTrendsSection && subSectionMetricTrends) {
+            // Move all children from metricTrendsSection to subSectionMetricTrends
+            while (metricTrendsSection.firstChild) {
+                subSectionMetricTrends.appendChild(metricTrendsSection.firstChild);
+            }
+        }
+        initializeMetricTrends();
+    });
+    document.getElementById('subNavTrendIntelligence')?.addEventListener('click', () => {
+        showSubSection('subSectionTrendIntelligence');
+        // Move executive summary section content dynamically
+        const executiveSummarySection = document.getElementById('executiveSummarySection');
+        const subSectionTrendIntelligence = document.getElementById('subSectionTrendIntelligence');
+        if (executiveSummarySection && subSectionTrendIntelligence) {
+            // Move all children from executiveSummarySection to subSectionTrendIntelligence
+            while (executiveSummarySection.firstChild) {
+                subSectionTrendIntelligence.appendChild(executiveSummarySection.firstChild);
+            }
+        }
         renderExecutiveSummary();
         
         // Reset the associate dropdown when navigating to this section
@@ -1637,6 +1733,34 @@ function initializeEventHandlers() {
         if (chartsContainer) chartsContainer.innerHTML = '';
         if (emailSection) emailSection.style.display = 'none';
     });
+    
+    document.getElementById('manageDataBtn')?.addEventListener('click', () => {
+        showOnlySection('manageDataSection');
+        showManageDataSubSection('subSectionTeamData');
+        populateDeleteWeekDropdown();
+        renderEmployeesList();
+    });
+    
+    // Sub-navigation for Manage Data section
+    document.getElementById('subNavTeamData')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionTeamData');
+        populateDeleteWeekDropdown();
+        renderEmployeesList();
+    });
+    document.getElementById('subNavCoachingTips')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionCoachingTips');
+        // Move tips management section content dynamically
+        const tipsManagementSection = document.getElementById('tipsManagementSection');
+        const subSectionCoachingTips = document.getElementById('subSectionCoachingTips');
+        if (tipsManagementSection && subSectionCoachingTips) {
+            // Move all children from tipsManagementSection to subSectionCoachingTips
+            while (tipsManagementSection.firstChild) {
+                subSectionCoachingTips.appendChild(tipsManagementSection.firstChild);
+            }
+        }
+        renderTipsManagement();
+    });
+    
     document.getElementById('debugBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');
         renderDebugPanel();

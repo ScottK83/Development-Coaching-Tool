@@ -152,6 +152,24 @@
                             <button type="button" id="generateOutlookEmailBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px; opacity: 0.6;">📧 Generate Outlook Email</button>
                         </div>
                     </div>
+                    </div>
+                    <!-- End Coaching Email Sub-section -->
+
+                    <!-- Sentiment Sub-section -->
+                    <div id="subSectionSentiment" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Sentiment analysis content will appear here when you click the Sentiment button above.</p>
+                    </div>
+
+                    <!-- Metric Trends Sub-section -->
+                    <div id="subSectionMetricTrends" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Metric trends content will appear here when you click the Metric Trends button above.</p>
+                    </div>
+
+                    <!-- Trend Intelligence Sub-section -->
+                    <div id="subSectionTrendIntelligence" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Trend intelligence content will appear here when you click the Trend Intelligence button above.</p>
+                    </div>
+
                 </div>
             </section>
 
@@ -441,8 +459,16 @@
             <section id="manageDataSection" style="display: none;">
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
                     <h2>🗄️ Manage Data</h2>
-                    <p style="color: #856404; margin-bottom: 20px;">View employees, backup, restore, or delete your data.</p>
+                    <p style="color: #856404; margin-bottom: 20px;">View employees, manage coaching tips, backup, restore, or delete your data.</p>
                     
+                    <!-- Sub-navigation for Manage Data -->
+                    <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button type="button" id="subNavTeamData" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Data</button>
+                        <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                    </div>
+                    
+                    <!-- Team Data Sub-section -->
+                    <div id="subSectionTeamData" style="display: block;">
                     <!-- Existing Employees List -->
                     <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
                         <h3 style="color: #6a1b9a; margin-top: 0;">👥 View Employees</h3>
@@ -479,6 +505,14 @@
                         <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data and coaching history. This action cannot be undone!</p>
                         <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white; font-size: 1.1em; padding: 12px 24px;">⚠️ Delete All Data</button>
                     </div>
+                    </div>
+                    <!-- End Team Data Sub-section -->
+                    
+                    <!-- Coaching Tips Sub-section -->
+                    <div id="subSectionCoachingTips" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Coaching tips content will appear here when you click the Coaching Tips button above.</p>
+                    </div>
+                    
                 </div>
             </section>
 
