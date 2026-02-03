@@ -6945,8 +6945,8 @@ function loadExecutiveSummaryData() {
     // Populate data table
     populateExecutiveSummaryTable(associate, matchingPeriods, periodType);
     
-    // Display metric comparisons
-    displayExecutiveSummaryCharts(associate, matchingPeriods, periodType);
+    // Display metric trend charts
+    renderYearlySummaryTrendCharts();
     
     document.getElementById('summaryDataContainer').style.display = 'block';
     document.getElementById('summaryChartsContainer').style.display = 'block';
