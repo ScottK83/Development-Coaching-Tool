@@ -4888,6 +4888,7 @@ function renderExecutiveSummary() {
 function initializeYearlyIndividualSummary() {
     
     populateExecutiveSummaryAssociate();
+    populateOneOnOneAssociateSelect();
     
     // Period type is always YTD for executive summary
     
@@ -4895,6 +4896,7 @@ function initializeYearlyIndividualSummary() {
     document.getElementById('summaryAssociateSelect')?.addEventListener('change', () => {
         loadExecutiveSummaryData();
         showEmailSection();
+        syncOneOnOneAssociateSelect();
     });
     
     // [DEPRECATED: generateExecutiveSummaryEmailBtn listener removed - function deleted in Phase 1 cleanup]
@@ -4920,6 +4922,43 @@ function initializeYearlyIndividualSummary() {
     });
     
     
+}
+
+function populateOneOnOneAssociateSelect() {
+    const select = document.getElementById('oneOnOneAssociateSelect');
+    if (!select) return;
+
+    const allEmployees = new Set();
+    for (const weekKey in weeklyData) {
+        const week = weeklyData[weekKey];
+        if (week.employees && Array.isArray(week.employees)) {
+            week.employees.forEach(emp => {
+                if (emp.name && isTeamMember(weekKey, emp.name)) {
+                    allEmployees.add(emp.name);
+                }
+            });
+        }
+    }
+
+    const sortedEmployees = Array.from(allEmployees).sort();
+    select.innerHTML = '<option value="">-- Choose an associate --</option>';
+    sortedEmployees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+
+    syncOneOnOneAssociateSelect();
+}
+
+function syncOneOnOneAssociateSelect() {
+    const select = document.getElementById('oneOnOneAssociateSelect');
+    const summarySelect = document.getElementById('summaryAssociateSelect');
+    if (!select || !summarySelect) return;
+    if (summarySelect.value && select.value !== summarySelect.value) {
+        select.value = summarySelect.value;
+    }
 }
 
 function showEmailSection() {
@@ -5186,7 +5225,8 @@ async function generateOneOnOnePrep() {
     const output = document.getElementById('oneOnOnePrepOutput');
     if (!output) return;
 
-    const associate = document.getElementById('summaryAssociateSelect')?.value;
+    const associate = document.getElementById('oneOnOneAssociateSelect')?.value
+        || document.getElementById('summaryAssociateSelect')?.value;
     if (!associate) {
         showToast('Select an associate first', 3000);
         return;
