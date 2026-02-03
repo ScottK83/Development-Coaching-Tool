@@ -6581,11 +6581,39 @@ function generateOutlookEmailFromCoPilot() {
         ? `Coaching Check-In - ${periodLabel} for ${firstName}`
         : `Coaching Check-In - ${periodLabel}`;
 
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    const buildHtmlFromPlainText = (text) => {
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        const paragraphs = escaped.split(/\n\n+/).map(block => {
+            const withBreaks = block.replace(/\n/g, '<br>');
+            return `<p style="margin: 0 0 12px 0;">${withBreaks}</p>`;
+        });
+        return `<div style="font-family: Arial, sans-serif; font-size: 11pt; color: #000;">${paragraphs.join('')}</div>`;
+    };
 
-    if (navigator.clipboard?.writeText) {
+    const htmlBody = buildHtmlFromPlainText(emailBody);
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}`;
+
+    if (navigator.clipboard?.write) {
+        const item = new ClipboardItem({
+            'text/plain': new Blob([emailBody], { type: 'text/plain' }),
+            'text/html': new Blob([htmlBody], { type: 'text/html' })
+        });
+        navigator.clipboard.write([item])
+            .then(() => {
+                showToast('✅ Email copied with formatting. Paste into Outlook.', 4000);
+                window.location.href = mailtoLink;
+            })
+            .catch(() => {
+                navigator.clipboard?.writeText?.(emailBody);
+                window.location.href = mailtoLink;
+            });
+    } else if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(emailBody)
             .then(() => {
+                showToast('✅ Email copied. Paste into Outlook.', 4000);
                 window.location.href = mailtoLink;
             })
             .catch(() => {
