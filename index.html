@@ -24,6 +24,7 @@
                 <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;">🗄️ Manage Data</button>
                 <button type="button" id="ptoBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">🕒 PTO Tracker</button>
                 <button type="button" id="executiveSummaryBtn" class="btn-secondary" style="background: #ff9800; color: white;">📊 Executive Summary</button>
+                <button type="button" id="debugBtn" class="btn-secondary" style="background: #6c757d; color: white;">🐞 Debug</button>
             </div>
         </header>
 
@@ -316,6 +317,36 @@
                             <button type="button" id="generateAllTrendBtn" style="background: #6f42c1; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📬 Generate All</button>
                         </div>
                         
+                    </div>
+                </div>
+            </section>
+
+            <!-- Debug Section -->
+            <section id="debugSection" style="display: none;">
+                <div class="form-section" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+                    <h2>🐞 Debug Panel</h2>
+                    <p style="color: #7a4f00; margin-bottom: 20px;">Use this panel to compare data, environment, and error logs between machines.</p>
+
+                    <div class="debug-actions">
+                        <button type="button" id="refreshDebugBtn" class="btn-secondary" style="background: #ff9800; color: white;">🔄 Refresh</button>
+                        <button type="button" id="copyDebugBtn" class="btn-secondary" style="background: #00796b; color: white;">📋 Copy Debug Info</button>
+                        <button type="button" id="clearDebugBtn" class="btn-secondary" style="background: #dc3545; color: white;">🧹 Clear Error Log</button>
+                    </div>
+
+                    <div class="debug-grid">
+                        <div class="debug-card">
+                            <h3>Environment</h3>
+                            <pre id="debugEnvironment" class="debug-pre"></pre>
+                        </div>
+                        <div class="debug-card">
+                            <h3>Data Snapshot</h3>
+                            <pre id="debugDataSnapshot" class="debug-pre"></pre>
+                        </div>
+                    </div>
+
+                    <div class="debug-card">
+                        <h3>Recent Errors</h3>
+                        <pre id="debugErrors" class="debug-pre"></pre>
                     </div>
                 </div>
             </section>

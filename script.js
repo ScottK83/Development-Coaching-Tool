@@ -42,6 +42,7 @@ let currentPeriod = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
 let coachingHistory = {};
+let debugState = { entries: [] };
 
 // ============================================
 // TARGET METRICS
@@ -247,6 +248,9 @@ function initializeSection(sectionId) {
         case 'executiveSummarySection':
             renderExecutiveSummary();
             break;
+        case 'debugSection':
+            renderDebugPanel();
+            break;
     }
 }
 
@@ -277,6 +281,199 @@ function showToast(message, duration = 5000) {
         toast.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+function enableDatePickerOpen(input) {
+    if (!input) return;
+    const openPicker = () => {
+        if (typeof input.showPicker === 'function') {
+            try {
+                input.showPicker();
+            } catch (error) {
+                // Ignore if browser disallows programmatic picker
+            }
+        }
+    };
+    input.addEventListener('click', openPicker);
+    input.addEventListener('focus', openPicker);
+}
+
+// ============================================
+// DEBUG PANEL
+// ============================================
+
+function addDebugEntry(type, message, details = {}) {
+    const entry = {
+        timestamp: new Date().toISOString(),
+        type,
+        message: message || 'Unknown error',
+        details
+    };
+    debugState.entries.push(entry);
+    if (debugState.entries.length > 50) {
+        debugState.entries = debugState.entries.slice(-50);
+    }
+}
+
+function installDebugListeners() {
+    window.addEventListener('error', (event) => {
+        addDebugEntry('error', event.message, {
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            stack: event.error?.stack || null
+        });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        addDebugEntry('promise', reason?.message || String(reason), {
+            stack: reason?.stack || null
+        });
+    });
+}
+
+function getPeriodTypeCounts(sourceData) {
+    const counts = {};
+    Object.values(sourceData || {}).forEach(period => {
+        const type = period?.metadata?.periodType || 'week';
+        counts[type] = (counts[type] || 0) + 1;
+    });
+    return counts;
+}
+
+function getLatestPeriodKeyByType(sourceData, periodType) {
+    const keys = Object.keys(sourceData || {})
+        .filter(key => (sourceData[key]?.metadata?.periodType || 'week') === periodType);
+
+    if (keys.length === 0) return null;
+
+    const sorted = keys.sort((a, b) => {
+        const aEnd = (a.split('|')[1] || '').trim();
+        const bEnd = (b.split('|')[1] || '').trim();
+        const aDate = new Date(aEnd);
+        const bDate = new Date(bEnd);
+        if (isNaN(aDate) && isNaN(bDate)) return 0;
+        if (isNaN(aDate)) return -1;
+        if (isNaN(bDate)) return 1;
+        return aDate - bDate;
+    });
+
+    return sorted[sorted.length - 1];
+}
+
+function getLocalStorageSummary() {
+    const keys = [
+        'weeklyData',
+        'ytdData',
+        'callCenterAverages',
+        'coachingHistory',
+        'myTeamMembers',
+        'metricCoachingTips',
+        'employeePreferredNames'
+    ];
+
+    const summary = {};
+    keys.forEach(key => {
+        const value = localStorage.getItem(key);
+        summary[key] = value ? `${value.length} chars` : 'empty';
+    });
+    return summary;
+}
+
+function buildDebugSnapshot() {
+    return {
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timestamp: new Date().toISOString(),
+        weeklyDataCount: Object.keys(weeklyData || {}).length,
+        ytdDataCount: Object.keys(ytdData || {}).length,
+        weeklyPeriodTypes: getPeriodTypeCounts(weeklyData),
+        ytdPeriodTypes: getPeriodTypeCounts(ytdData),
+        latestWeeklyByType: {
+            week: getLatestPeriodKeyByType(weeklyData, 'week'),
+            month: getLatestPeriodKeyByType(weeklyData, 'month'),
+            quarter: getLatestPeriodKeyByType(weeklyData, 'quarter')
+        },
+        latestYtd: getLatestPeriodKeyByType(ytdData, 'ytd'),
+        currentSelection: {
+            currentPeriodType,
+            currentPeriod
+        },
+        localStorage: getLocalStorageSummary()
+    };
+}
+
+function buildDebugPayload() {
+    return {
+        snapshot: buildDebugSnapshot(),
+        errors: debugState.entries
+    };
+}
+
+function renderDebugPanel() {
+    const envEl = document.getElementById('debugEnvironment');
+    const dataEl = document.getElementById('debugDataSnapshot');
+    const errEl = document.getElementById('debugErrors');
+
+    if (!envEl || !dataEl || !errEl) return;
+
+    const snapshot = buildDebugSnapshot();
+    envEl.textContent = JSON.stringify({
+        url: snapshot.url,
+        userAgent: snapshot.userAgent,
+        language: snapshot.language,
+        timezone: snapshot.timezone,
+        timestamp: snapshot.timestamp
+    }, null, 2);
+
+    dataEl.textContent = JSON.stringify({
+        weeklyDataCount: snapshot.weeklyDataCount,
+        ytdDataCount: snapshot.ytdDataCount,
+        weeklyPeriodTypes: snapshot.weeklyPeriodTypes,
+        ytdPeriodTypes: snapshot.ytdPeriodTypes,
+        latestWeeklyByType: snapshot.latestWeeklyByType,
+        latestYtd: snapshot.latestYtd,
+        currentSelection: snapshot.currentSelection,
+        localStorage: snapshot.localStorage
+    }, null, 2);
+
+    if (!debugState.entries.length) {
+        errEl.textContent = 'No errors captured yet.';
+    } else {
+        errEl.textContent = JSON.stringify(debugState.entries.slice().reverse(), null, 2);
+    }
+}
+
+function copyDebugInfo() {
+    const payload = JSON.stringify(buildDebugPayload(), null, 2);
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(payload)
+            .then(() => showToast('✅ Debug info copied to clipboard', 3000))
+            .catch(() => fallbackCopyDebug(payload));
+    } else {
+        fallbackCopyDebug(payload);
+    }
+}
+
+function fallbackCopyDebug(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showToast('✅ Debug info copied to clipboard', 3000);
+    } catch (err) {
+        console.error('Failed to copy debug info:', err);
+        showToast('⚠️ Unable to copy debug info', 3000);
+    } finally {
+        document.body.removeChild(textarea);
+    }
 }
 
 // ============================================
@@ -1415,6 +1612,10 @@ function initializeEventHandlers() {
         showOnlySection('executiveSummarySection');
         renderExecutiveSummary();
     });
+    document.getElementById('debugBtn')?.addEventListener('click', () => {
+        showOnlySection('debugSection');
+        renderDebugPanel();
+    });
     document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
     document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
@@ -1425,6 +1626,14 @@ function initializeEventHandlers() {
     document.getElementById('ptoBtn')?.addEventListener('click', () => {
         showOnlySection('ptoSection');
         initializePtoTracker();
+    });
+
+    document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);
+    document.getElementById('copyDebugBtn')?.addEventListener('click', copyDebugInfo);
+    document.getElementById('clearDebugBtn')?.addEventListener('click', () => {
+        debugState.entries = [];
+        renderDebugPanel();
+        showToast('✅ Debug errors cleared', 3000);
     });
     
     // SENTIMENT ANALYSIS WORKFLOW
@@ -1570,6 +1779,9 @@ function initializeEventHandlers() {
             alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
         }
     });
+
+    enableDatePickerOpen(document.getElementById('pasteStartDate'));
+    enableDatePickerOpen(document.getElementById('pasteEndDate'));
     
     // Excel file selection
 
@@ -3350,10 +3562,22 @@ function generateTrendEmail() {
         return;
     }
     
-    // Get previous period
-    const allPeriods = Object.keys(weeklyData).sort();
-    const currentIdx = allPeriods.indexOf(weekKey);
-    const prevPeriod = currentIdx > 0 ? weeklyData[allPeriods[currentIdx - 1]] : null;
+    // Get previous period (same period type only)
+    const currentPeriodType = period.metadata?.periodType || 'week';
+    const sameTypePeriods = Object.keys(weeklyData)
+        .filter(key => (weeklyData[key]?.metadata?.periodType || 'week') === currentPeriodType)
+        .sort((a, b) => {
+            const aEnd = (a.split('|')[1] || '').trim();
+            const bEnd = (b.split('|')[1] || '').trim();
+            const aDate = new Date(aEnd);
+            const bDate = new Date(bEnd);
+            if (isNaN(aDate) && isNaN(bDate)) return 0;
+            if (isNaN(aDate)) return -1;
+            if (isNaN(bDate)) return 1;
+            return aDate - bDate;
+        });
+    const currentIdx = sameTypePeriods.indexOf(weekKey);
+    const prevPeriod = currentIdx > 0 ? weeklyData[sameTypePeriods[currentIdx - 1]] : null;
     const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
     
     // Use nickname if provided, otherwise use full name
@@ -5608,6 +5832,8 @@ function renderEmployeesList() {
 // ============================================
 
 function initApp() {
+    
+    installDebugListeners();
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();

@@ -249,6 +249,50 @@ button {
     padding-left: 20px;
 }
 
+/* ============================================
+   DEBUG PANEL
+   ============================================ */
+
+.debug-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.debug-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.debug-card {
+    background: #ffffff;
+    border: 1px solid #ffe0b2;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.debug-card h3 {
+    margin-top: 0;
+    color: #7a4f00;
+    margin-bottom: 10px;
+}
+
+.debug-pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #fff8e1;
+    border: 1px dashed #ffcc80;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    color: #4e342e;
+    max-height: 320px;
+    overflow: auto;
+}
+
 .history-employee {
     margin-bottom: 30px;
     padding: 20px;
