@@ -5899,29 +5899,39 @@ async function generateIndividualCoachingEmail(employeeName) {
 
     const preferredName = getEmployeeNickname(employeeName) || currentEmp.firstName || employeeName.split(' ')[0];
 
-    const copilotPrompt = `Write a professional coaching email for ${preferredName} for the week ending ${endDate}.
+    const copilotPrompt = `I'm a supervisor preparing a coaching email for an employee named ${preferredName} for their week ending ${endDate} performance review. I need your help drafting this in a natural, warm tone - not corporate or template-like.
+
+Here's the performance data:
 
 ${winsText}
 ${opportunitiesText}
-COACHING CONTEXT:
-- This email is based on individual trend analysis from the Trend Intelligence system
-- Focus on specific metrics and actionable tips
-- Balance celebration of wins with constructive guidance on opportunities
 
-TONE & STYLE:
-- Address ${preferredName} by name in the opening
-- Professional and supportive
-- Use bullet points for clarity
-- Celebrate specific wins
-- Frame opportunities positively with actionable tips
-- Do NOT use em dashes (—) anywhere in the email
-- Use proper bullet points (•) not hyphens
-- Keep it concise (under 250 words)
+Can you help me write an email to ${preferredName} with this structure:
 
-SUBJECT LINE:
-Performance Check-In - Week of ${endDate}
+1. Warm, conversational greeting
 
-Please generate the coaching email now.`;
+2. WINS section:
+   - Brief intro line
+    - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
+   - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
+
+3. OPPORTUNITIES section:
+   - Brief supportive intro line
+    - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
+    - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
+   - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive.
+
+4. Warm close inviting them to discuss
+
+Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
+
+Vary your wording and sentence structure so it doesn't sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
+
+Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
+
+Do NOT use em dashes (—) anywhere in the email.
+
+The email should be ready to send as-is. Just give me the complete email to ${preferredName}, nothing else.`;
 
     // Open CoPilot with the prompt
     const encodedPrompt = encodeURIComponent(copilotPrompt);
