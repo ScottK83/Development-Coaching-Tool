@@ -458,7 +458,7 @@ function parseHours(value) {
 // CANONICAL SCHEMA & HEADER MAPPING
 // ============================================
 
-// POWERBI SCHEMA - EXACTLY 22 COLUMNS IN THIS ORDER
+// POWERBI SCHEMA - EXACTLY 23 COLUMNS IN THIS ORDER
 // This is the ground truth for all data parsing
 const POWERBI_COLUMNS = [
     'Name (Last, First)',
@@ -536,24 +536,24 @@ const COLUMN_MAPPING = {
     22: CANONICAL_SCHEMA.RELIABILITY_HOURS
 };
 
-// Map headers to canonical schema - validates we have exactly 22 columns
+// Map headers to canonical schema - validates we have exactly 23 columns
 function mapHeadersToSchema(headers) {
-    // Validate we have exactly 22 columns
-    if (headers.length !== 22) {
-        throw new Error(`Expected exactly 22 columns, found ${headers.length}. PowerBI data must have all 22 columns in order.`);
+    // Validate we have exactly 23 columns
+    if (headers.length !== 23) {
+        throw new Error(`Expected exactly 23 columns, found ${headers.length}. PowerBI data must have all 23 columns in order.`);
     }
     
     const mapping = {};
     
     // Map by position
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 23; i++) {
         if (COLUMN_MAPPING[i]) {
             mapping[COLUMN_MAPPING[i]] = i;
         }
     }
     
     
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 23; i++) {
         
     }
     
