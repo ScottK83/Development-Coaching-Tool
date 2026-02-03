@@ -5721,7 +5721,7 @@ async function generateCopilotPrompt() {
     }
     
     // Build the unified Copilot prompt - conversational format to avoid detection as system prompt
-    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone � not corporate or template-like.
+    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone - not corporate or template-like.
 
 Here's the performance data:
 
@@ -5735,24 +5735,24 @@ Can you help me write an email to ${firstName} with this structure:
 
 2. WINS section:
    - Brief intro line
-   - Bullets in this concise format: "� Metric Name - Goal X%. You were at Y%."
+    - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
    - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
 
 3. OPPORTUNITIES section:
    - Brief supportive intro line
-   - Bullets in this format: "� Metric Name - Goal X%. You were at Y%."
-   - Note: If Reliability is included, format as: "� Reliability - X hours unscheduled" (no goal needed)
+    - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
+    - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
    - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive. If there's a reliability note, weave it in naturally here.
 
 4. Warm close inviting them to discuss
 
 Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
 
-Vary your wording and sentence structure so it doesn�t sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
+Vary your wording and sentence structure so it doesn't sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
 
 Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
 
-Do NOT use em dashes (�) anywhere in the email.
+Do NOT use em dashes (—) anywhere in the email.
 
 The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
@@ -6466,7 +6466,7 @@ function generateComparisonChart(metricsData) {
 }
 
 // -----------------------------------------------------------------------------
-// COACHING EMAIL � WEEKLY CHECK-IN (METRIC-BASED)
+// COACHING EMAIL - WEEKLY CHECK-IN (METRIC-BASED)
 // Uses latest uploaded data + coaching tips bank to build a Copilot prompt
 // -----------------------------------------------------------------------------
 
@@ -6555,6 +6555,17 @@ function initializeCoachingEmail() {
         generateBtn.dataset.bound = 'true';
     }
 
+    const deleteLatestBtn = document.getElementById('deleteLatestCoachingBtn');
+    const clearHistoryBtn = document.getElementById('clearCoachingHistoryBtn');
+    if (deleteLatestBtn && !deleteLatestBtn.dataset.bound) {
+        deleteLatestBtn.addEventListener('click', deleteLatestCoachingEntry);
+        deleteLatestBtn.dataset.bound = 'true';
+    }
+    if (clearHistoryBtn && !clearHistoryBtn.dataset.bound) {
+        clearHistoryBtn.addEventListener('click', clearCoachingHistoryForEmployee);
+        clearHistoryBtn.dataset.bound = 'true';
+    }
+
     if (outlookBody && outlookBtn && !outlookBody.dataset.bound) {
         outlookBody.addEventListener('input', (e) => {
             const hasContent = e.target.value.trim().length > 0;
@@ -6571,6 +6582,44 @@ function initializeCoachingEmail() {
     }
 
     
+}
+
+function deleteLatestCoachingEntry() {
+    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
+    if (!employeeName) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const history = coachingHistory[employeeName] || [];
+    if (!history.length) {
+        showToast('No coaching history to delete', 3000);
+        return;
+    }
+
+    const confirmed = confirm(`Delete the latest coaching entry for ${employeeName}?`);
+    if (!confirmed) return;
+
+    coachingHistory[employeeName] = history.slice(1);
+    saveCoachingHistory();
+    renderCoachingHistory(employeeName);
+    showToast('✅ Latest coaching entry deleted', 3000);
+}
+
+function clearCoachingHistoryForEmployee() {
+    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
+    if (!employeeName) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const confirmed = confirm(`Clear ALL coaching history for ${employeeName}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    coachingHistory[employeeName] = [];
+    saveCoachingHistory();
+    renderCoachingHistory(employeeName);
+    showToast('✅ Coaching history cleared', 3000);
 }
 
 function updateCoachingEmailDisplay() {
@@ -6647,7 +6696,7 @@ function updateCoachingEmailDisplay() {
         ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
         : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
 
-    summary.textContent = `Week of ${endDate} � ${wins.length} wins � ${opportunities.length} focus areas`;
+    summary.textContent = `Week of ${endDate} • ${wins.length} wins • ${opportunities.length} focus areas`;
 
     winsList.innerHTML = wins.length
         ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
@@ -6978,7 +7027,7 @@ function generateCoachingPromptAndCopy() {
 }
 
 // -----------------------------------------------------------------------------
-// UTILITY FEATURE � MANAGE TIPS � DO NOT DELETE
+// UTILITY FEATURE - MANAGE TIPS - DO NOT DELETE
 // Completely isolated from Metric Trends, emails, and coaching workflows.
 // -----------------------------------------------------------------------------
 
@@ -6999,7 +7048,7 @@ const DEFAULT_METRIC_TIPS = {
         "How you say it matters as much as the solution itself."
     ],
     "First Call Resolution": [
-        "Fully understand the customer�s need before taking action.",
+        "Fully understand the customer's need before taking action.",
         "Use available tools to resolve issues in one interaction.",
         "Clarify expectations so the customer knows what will happen next.",
         "Confirm all questions are addressed before closing the call.",
@@ -7013,7 +7062,7 @@ const DEFAULT_METRIC_TIPS = {
         "Reassurance helps create a positive overall experience."
     ],
     "Transfers": [
-        "Take a moment to fully assess the customer�s request before transferring.",
+        "Take a moment to fully assess the customer's request before transferring.",
         "Use available job aids and resources to resolve more calls independently.",
         "Building confidence in handling issues reduces unnecessary transfers.",
         "When a transfer is needed, clearly explain the reason to the customer.",
