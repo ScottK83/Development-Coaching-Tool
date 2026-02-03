@@ -6048,7 +6048,7 @@ async function generateGroupCoachingEmail() {
         });
 
         // Categorize employees
-        if (meetsAllTargets && beatsAllCenterAvg && metricsAboveCenter.length >= 3) {
+        if (meetsAllTargets && beatsAllCenterAvg && metricsAboveCenter.length >= 2) {
             teamAnalysis.rockstars.push({ name: emp.name, metrics: metricsAboveCenter });
         } else if (meetsAllTargets) {
             teamAnalysis.topPerformers.push(emp.name);
@@ -6092,23 +6092,23 @@ async function generateGroupCoachingEmail() {
     }
 
     // Build prompt
-    let winsText = 'TEAM WINS & CELEBRATIONS:\\n';
+    let winsText = 'TEAM WINS & CELEBRATIONS:\n';
     if (teamAnalysis.teamWins.length > 0) {
         teamAnalysis.teamWins.forEach(win => {
-            winsText += `${win}\\n`;
+            winsText += `${win}\n`;
         });
     } else {
-        winsText += '- Team is working hard and showing effort\\n';
+        winsText += '- Team is working hard and showing effort\n';
     }
 
     let rockstarsText = '';
     if (teamAnalysis.rockstars.length > 0) {
-        rockstarsText = '\\n🏆 ROCKSTARS - ABSOLUTELY CRUSHING IT:\\n';
-        rockstarsText += 'These team members are BLOWING THE CALL CENTER AVERAGE OUT OF THE WATER:\\n';
+        rockstarsText = '\n🏆 ROCKSTARS - ABSOLUTELY CRUSHING IT:\n';
+        rockstarsText += 'These team members are BLOWING THE CALL CENTER AVERAGE OUT OF THE WATER:\n';
         teamAnalysis.rockstars.slice(0, 5).forEach(rockstar => {
-            rockstarsText += `\\n${rockstar.name} - DESTROYING IT in:\\n`;
+            rockstarsText += `\n${rockstar.name} - DESTROYING IT in:\n`;
             rockstar.metrics.forEach(m => {
-                rockstarsText += `  • ${m.metric}: ${m.empValue} (Center Avg: ${m.centerValue}) - ${Math.abs(m.delta).toFixed(1)} points above!\\n`;
+                rockstarsText += `  • ${m.metric}: ${m.empValue} (Center Avg: ${m.centerValue}) - ${Math.abs(m.delta).toFixed(1)} points above!\n`;
             });
         });
     }
@@ -6119,34 +6119,34 @@ async function generateGroupCoachingEmail() {
         .slice(0, 3);
     
     if (topMetricsToHighlight.length > 0) {
-        championText = '\\n🎯 METRIC CHAMPIONS:\\n';
+        championText = '\n🎯 METRIC CHAMPIONS:\n';
         topMetricsToHighlight.forEach(([metricKey, champions]) => {
             const metric = METRICS_REGISTRY[metricKey];
-            championText += `\\n${metric.label} Leaders:\\n`;
+            championText += `\n${metric.label} Leaders:\n`;
             champions.forEach((champ, idx) => {
-                championText += `  ${idx + 1}. ${champ.name} - ${champ.value} (${champ.delta.toFixed(1)} above center avg!)\\n`;
+                championText += `  ${idx + 1}. ${champ.name} - ${champ.value} (${champ.delta.toFixed(1)} above center avg!)\n`;
             });
         });
     }
 
     let recognitionText = '';
     if (teamAnalysis.topPerformers.length > 0) {
-        recognitionText = '\\n✅ CONSISTENT PERFORMERS (Meeting All Targets):\\n';
+        recognitionText = '\n✅ CONSISTENT PERFORMERS (Meeting All Targets):\n';
         teamAnalysis.topPerformers.slice(0, 8).forEach(name => {
-            recognitionText += `- ${name}\\n`;
+            recognitionText += `- ${name}\n`;
         });
     }
 
-    let opportunitiesText = '\\nTEAM DEVELOPMENT OPPORTUNITIES:\\n';
+    let opportunitiesText = '\nTEAM DEVELOPMENT OPPORTUNITIES:\n';
     if (topOpportunities.length > 0) {
         topOpportunities.forEach(opp => {
-            opportunitiesText += `- ${opp.metric} (${opp.count} team members need support)\\n`;
+            opportunitiesText += `- ${opp.metric} (${opp.count} team members need support)\n`;
             if (opp.tip) {
-                opportunitiesText += `  💡 TIP: ${opp.tip}\\n`;
+                opportunitiesText += `  💡 TIP: ${opp.tip}\n`;
             }
         });
     } else {
-        opportunitiesText += '- Continue current momentum and consistency\\n';
+        opportunitiesText += '- Continue current momentum and consistency\n';
     }
 
     const copilotPrompt = `Write a HIGH-ENERGY, MOTIVATIONAL team-wide email for the week ending ${endDate}.
