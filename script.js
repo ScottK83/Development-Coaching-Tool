@@ -1681,14 +1681,21 @@ function initializeEventHandlers() {
     });
     document.getElementById('subNavSentiment')?.addEventListener('click', () => {
         showSubSection('subSectionSentiment');
-        // Move sentiment section content dynamically
+        // Move sentiment section content dynamically (only if not already moved)
         const sentimentSection = document.getElementById('sentimentSection');
         const subSectionSentiment = document.getElementById('subSectionSentiment');
-        if (sentimentSection && subSectionSentiment) {
+        if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
             // Move all children from sentimentSection to subSectionSentiment
             while (sentimentSection.firstChild) {
                 subSectionSentiment.appendChild(sentimentSection.firstChild);
             }
+            // Re-attach event listeners after moving
+            document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
+            document.getElementById('copySentimentPromptBtn')?.addEventListener('click', copySentimentPrompt);
+            document.getElementById('sentimentEmployeeSelect')?.addEventListener('change', updateSentimentReview);
+            document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
+            document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
+            document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
         }
         initializeSentiment();
     });
