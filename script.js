@@ -3772,6 +3772,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const totalMetrics = Object.keys(metrics).length;
     const successRate = Math.round(meetingGoals / totalMetrics * 100);
     const improvedText = previous ? improved.toString() : 'N/A';
+    const metadata = period.metadata || {};
     const periodTypeText = metadata.periodType === 'week' ? 'week' : metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
     const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
 
@@ -3795,7 +3796,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     ctx.fillRect(0, 0, 900, 100);
 
     // Header text with dynamic subject
-    const metadata = period.metadata || {};
     const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
     const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
     const endDate = metadata.endDate || 'unknown';
