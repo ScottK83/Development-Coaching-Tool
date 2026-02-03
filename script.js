@@ -5647,45 +5647,64 @@ function renderTrendIntelligence() {
     const container = document.getElementById('trendIntelligenceOutput');
     if (!container) return;
 
+    const selectedEmployee = document.getElementById('trendEmployeeSelector')?.value;
     const keys = getWeeklyKeysSorted();
-    if (keys.length < 3) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough periods to detect patterns.</div>';
+    
+    if (keys.length < 2) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 weeks of data to see trends.</div>';
         return;
     }
 
     const latestKey = keys[keys.length - 1];
     const previousKey = keys[keys.length - 2];
-    const thirdKey = keys[keys.length - 3];
+    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
 
     const latestWeek = weeklyData[latestKey];
     const previousWeek = weeklyData[previousKey];
-    const thirdWeek = weeklyData[thirdKey];
+    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
 
-    if (!latestWeek?.employees || !previousWeek?.employees || !thirdWeek?.employees) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data to detect patterns.</div>';
+    if (!latestWeek?.employees || !previousWeek?.employees) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
         return;
     }
 
     const insights = [];
-    latestWeek.employees.forEach(emp => {
+    
+    // Filter employees based on selection
+    const employeesToAnalyze = selectedEmployee 
+        ? latestWeek.employees.filter(emp => emp.name === selectedEmployee)
+        : latestWeek.employees;
+
+    if (selectedEmployee && employeesToAnalyze.length === 0) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee not found in current data.</div>';
+        return;
+    }
+
+    employeesToAnalyze.forEach(emp => {
         const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
-        const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
-        if (!prevEmp || !thirdEmp) return;
+        if (!prevEmp) return;
 
-        const key = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].find(metricKey => {
-            const a = emp[metricKey];
-            const b = prevEmp[metricKey];
-            const c = thirdEmp[metricKey];
-            if (a === undefined || b === undefined || c === undefined) return false;
-            const worse1 = metricDelta(metricKey, a, b) < 0;
-            const worse2 = metricDelta(metricKey, b, c) < 0;
-            return worse1 && worse2;
-        });
+        // Check for 3-period decline if we have enough data
+        if (thirdWeek?.employees) {
+            const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
+            if (thirdEmp) {
+                const key = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].find(metricKey => {
+                    const a = emp[metricKey];
+                    const b = prevEmp[metricKey];
+                    const c = thirdEmp[metricKey];
+                    if (a === undefined || b === undefined || c === undefined) return false;
+                    const worse1 = metricDelta(metricKey, a, b) < 0;
+                    const worse2 = metricDelta(metricKey, b, c) < 0;
+                    return worse1 && worse2;
+                });
 
-        if (key) {
-            insights.push(`📉 ${emp.name} shows a 3-period decline in ${METRICS_REGISTRY[key]?.label || key}. Consider a check-in focused on barriers and emotional load.`);
+                if (key) {
+                    insights.push(`📉 ${emp.name} shows a 3-week decline in ${METRICS_REGISTRY[key]?.label || key}. Consider a supportive check-in focused on barriers.`);
+                }
+            }
         }
 
+        // Check for sudden drops (week over week)
         const suddenKey = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].find(metricKey => {
             const current = emp[metricKey];
             const prev = prevEmp[metricKey];
@@ -5700,6 +5719,7 @@ function renderTrendIntelligence() {
             insights.push(`⚠️ ${emp.name} had a sudden drop in ${METRICS_REGISTRY[suddenKey]?.label || suddenKey}. Consider a supportive reset conversation.`);
         }
 
+        // Check for consistency
         const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => metricMeetsTarget(metricKey, emp[metricKey]));
         if (consistent) {
             const recentCoaching = getCoachingHistoryForEmployee(emp.name).find(h => new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -5710,9 +5730,14 @@ function renderTrendIntelligence() {
     });
 
     const limited = insights.slice(0, 6);
-    container.innerHTML = limited.length
-        ? limited.map(text => `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">${text}</div>`).join('')
-        : '<div style="color: #666; font-size: 0.95em;">No notable patterns detected.</div>';
+    
+    if (selectedEmployee && limited.length === 0) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No notable trend patterns detected for this employee. Check visualizations below for metric history.</div>';
+    } else {
+        container.innerHTML = limited.length
+            ? limited.map(text => `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">${text}</div>`).join('')
+            : '<div style="color: #666; font-size: 0.95em;">No notable patterns detected. This is good - it means no major concerns!</div>';
+    }
 }
 
 function renderTrendVisualizations() {
