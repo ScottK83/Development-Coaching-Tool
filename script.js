@@ -8591,12 +8591,27 @@ function processSentimentUploads() {
         }
         
         const file = fileInput.files[0];
+        const fileName = file.name.toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        
         const reader = new FileReader();
         
         reader.onload = (e) => {
             try {
-                const content = e.target.result;
-                const lines = content.split('\n').filter(line => line.trim());
+                let lines = [];
+                
+                if (isExcel) {
+                    // Parse Excel file using XLSX library
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                    lines = csvContent.split('\n').filter(line => line.trim());
+                } else {
+                    // Parse CSV/text file
+                    const content = e.target.result;
+                    lines = content.split('\n').filter(line => line.trim());
+                }
                 
                 console.log(`Processing ${fileType} file with ${lines.length} lines`);
                 console.log('First 5 lines:', lines.slice(0, 5));
@@ -8663,7 +8678,12 @@ function processSentimentUploads() {
             }
         };
         
-        reader.readAsText(file);
+        // Read file based on type
+        if (isExcel) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file);
+        }
     });
 }
 
