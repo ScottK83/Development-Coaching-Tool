@@ -3485,7 +3485,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let trendingText = 'N/A';
     let trendingEmoji = '';
     
-    if (previousValue !== undefined && previousValue >= 0) {
+    if (previousValue !== undefined && previousValue !== null) {
         const trendDiff = associateValue - previousValue;
         const absDiff = Math.abs(trendDiff);
         
@@ -3602,7 +3602,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         }
         
         const curr = parseFloat(metrics[key]) || 0;
-        const prev = parseFloat(prevMetrics[key]) || 0;
+        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = parseFloat(centerAvg[key]) || 0;
         const target = getMetricTarget(key);
         const meetsGoal = isMetricMeetingTarget(key, curr, target);
@@ -3630,7 +3630,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         // Trending - apply reverse logic for metrics where lower is better
         let trendingColor = '#666666';
         let trendingText = 'N/A';
-        if (prev >= 0 && prev !== undefined) {
+        if (prev !== undefined && prev !== null) {
             // Handle case where prev is 0 (avoid division by zero)
             if (prev === 0) {
                 // If previous was 0, show the absolute change
@@ -3863,7 +3863,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         }
         
         const curr = parseFloat(metrics[key]) || 0;
-        const prev = parseFloat(prevMetrics[key]) || 0;
+        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
@@ -3887,13 +3887,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         if (!metric) return;
         
         const curr = parseFloat(metrics[key]) || 0;
-        const prev = parseFloat(prevMetrics[key]) || 0;
+        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTarget(key);
         const isReverse = isReverseMetric(key);
         
         // Check if improved from last week
-        if (previous && prev >= 0) {
+        if (previous && prev !== undefined && prev !== null) {
             const change = curr - prev;
             const hasImproved = isReverse ? change < 0 : change > 0;
             
