@@ -1696,6 +1696,7 @@ function initializeEventHandlers() {
             document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
             document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
             document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
+            document.getElementById('processSentimentUploadsBtn')?.addEventListener('click', processSentimentUploads);
         }
         initializeSentiment();
     });
@@ -1800,6 +1801,7 @@ function initializeEventHandlers() {
     document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
     document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
     document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
+    document.getElementById('processSentimentUploadsBtn')?.addEventListener('click', processSentimentUploads);
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
@@ -8566,64 +8568,88 @@ function handleSentimentFileUpload(fileType) {
     const statusDiv = document.getElementById(`sentiment${fileType.charAt(0).toUpperCase() + fileType.slice(1)}Status`);
     
     if (!fileInput.files || fileInput.files.length === 0) {
-        statusDiv.textContent = '';
+        statusDiv.textContent = 'No file selected';
+        statusDiv.style.color = '#666';
         return;
     }
     
     const file = fileInput.files[0];
-    const reader = new FileReader();
+    statusDiv.textContent = `📁 ${file.name} - Click "Process Uploaded Files" button`;
+    statusDiv.style.color = '#ff9800';
+}
+
+function processSentimentUploads() {
+    const fileTypes = ['Positive', 'Negative', 'Emotions'];
+    let filesProcessed = 0;
     
-    reader.onload = (e) => {
-        try {
-            const content = e.target.result;
-            const lines = content.split('\n').filter(line => line.trim());
-            
-            // Parse file format: look for "Total calls analyzed: X" and phrases with counts
-            let totalCalls = 0;
-            const phrases = [];
-            
-            for (const line of lines) {
-                // Check for total calls line
-                const totalMatch = line.match(/Total\s+calls\s+analyzed[:\s]+(\d+)/i);
-                if (totalMatch) {
-                    totalCalls = parseInt(totalMatch[1]);
-                    continue;
-                }
-                
-                // Parse phrase lines (format: phrase (X/Y) or phrase X/Y)
-                const phraseMatch = line.match(/^(.+?)\s*\((\d+)\/(\d+)\)\s*$/);
-                if (phraseMatch) {
-                    const phrase = phraseMatch[1].trim();
-                    const used = parseInt(phraseMatch[2]);
-                    const total = parseInt(phraseMatch[3]);
-                    phrases.push({ phrase, used, total });
-                    continue;
-                }
-                
-                // Also try without parentheses: phrase X/Y
-                const phraseMatch2 = line.match(/^(.+?)\s+(\d+)\/(\d+)\s*$/);
-                if (phraseMatch2) {
-                    const phrase = phraseMatch2[1].trim();
-                    const used = parseInt(phraseMatch2[2]);
-                    const total = parseInt(phraseMatch2[3]);
-                    phrases.push({ phrase, used, total });
-                }
-            }
-            
-            // Store parsed data
-            const keyMap = { positive: 'positive', negative: 'negative', emotions: 'emotions' };
-            sentimentData[keyMap[fileType]] = { totalCalls, phrases };
-            
-            statusDiv.textContent = `? Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
-            statusDiv.style.color = '#4caf50';
-        } catch (error) {
-            statusDiv.textContent = `? Error parsing file`;
-            statusDiv.style.color = '#f44336';
-            console.error('File parsing error:', error);
+    fileTypes.forEach(fileType => {
+        const fileInput = document.getElementById(`sentiment${fileType}File`);
+        const statusDiv = document.getElementById(`sentiment${fileType}Status`);
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+            return;
         }
-    };
-    
-    reader.readAsText(file);
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim());
+                
+                // Parse file format: look for "Total calls analyzed: X" and phrases with counts
+                let totalCalls = 0;
+                const phrases = [];
+                
+                for (const line of lines) {
+                    // Check for total calls line
+                    const totalMatch = line.match(/Total\s+calls\s+analyzed[:\s]+(\d+)/i);
+                    if (totalMatch) {
+                        totalCalls = parseInt(totalMatch[1]);
+                        continue;
+                    }
+                    
+                    // Parse phrase lines (format: phrase (X/Y) or phrase X/Y)
+                    const phraseMatch = line.match(/^(.+?)\s*\((\d+)\/(\d+)\)\s*$/);
+                    if (phraseMatch) {
+                        const phrase = phraseMatch[1].trim();
+                        const used = parseInt(phraseMatch[2]);
+                        const total = parseInt(phraseMatch[3]);
+                        phrases.push({ phrase, used, total });
+                        continue;
+                    }
+                    
+                    // Also try without parentheses: phrase X/Y
+                    const phraseMatch2 = line.match(/^(.+?)\s+(\d+)\/(\d+)\s*$/);
+                    if (phraseMatch2) {
+                        const phrase = phraseMatch2[1].trim();
+                        const used = parseInt(phraseMatch2[2]);
+                        const total = parseInt(phraseMatch2[3]);
+                        phrases.push({ phrase, used, total });
+                    }
+                }
+                
+                // Store parsed data
+                const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
+                sentimentData[keyMap[fileType.toLowerCase()]] = { totalCalls, phrases };
+                
+                statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
+                statusDiv.style.color = '#4caf50';
+                filesProcessed++;
+                
+                if (filesProcessed > 0) {
+                    showToast(`✅ Successfully processed ${filesProcessed} file(s)`, 3000);
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Error parsing file`;
+                statusDiv.style.color = '#f44336';
+                console.error('File parsing error:', error);
+            }
+        };
+        
+        reader.readAsText(file);
+    });
 }
 
 function updateSentimentReview() {
