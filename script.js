@@ -4108,9 +4108,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 const mailEndDate = periodMeta.endDate || 'unknown';
                 const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${empName}`;
                 
-                setTimeout(() => {
-                    window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
-                }, 500);
+                // Use location.href instead of window.open for better compatibility
+                window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
             }).catch(err => {
                 console.error('Clipboard error:', err);
                 downloadImageFallback(blob, empName, period);
@@ -4138,9 +4137,8 @@ function downloadImageFallback(blob, empName, period) {
     const fallbackEndDate = fallbackMeta.endDate || 'unknown';
     const emailSubject = `Trending Metrics - ${fallbackPeriodType} - ${fallbackPeriodLabel} ending ${fallbackEndDate} for ${empName}`;
     
-    setTimeout(() => {
-        window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}`, '_blank');
-    }, 500);
+    // Use location.href instead of window.open for better compatibility
+    window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
 }
 
 function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
