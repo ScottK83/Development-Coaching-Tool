@@ -3329,6 +3329,28 @@ function generateTrendEmail() {
     // Use nickname if provided, otherwise use full name
     const displayName = nickname || employeeName;
     
+    // Open mailto FIRST, while still in user click context
+    const periodMeta = period.metadata || {};
+    const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
+    const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
+    const mailEndDate = periodMeta.endDate || 'unknown';
+    const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
+    
+    console.log('Opening Outlook with subject:', emailSubject);
+    
+    // Try multiple methods to open Outlook
+    try {
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+        mailtoLink.target = '_blank';
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+        console.log('Mailto link clicked');
+    } catch(e) {
+        console.error('Error opening mailto:', e);
+    }
+    
     // Build email image
     showToast('ℹ️ Creating email image...', 3000);
     
@@ -4098,29 +4120,14 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]).then(() => {
-                
-                showToast('✅ Image copied to clipboard! Opening Outlook...', 3000);
-                
-                // Open Outlook with full subject line
-                const periodMeta = period.metadata || {};
-                const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-                const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
-                const mailEndDate = periodMeta.endDate || 'unknown';
-                const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${empName}`;
-                
-                // Create temporary anchor and click it to open mailto
-                const mailtoLink = document.createElement('a');
-                mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
-                mailtoLink.style.display = 'none';
-                document.body.appendChild(mailtoLink);
-                mailtoLink.click();
-                document.body.removeChild(mailtoLink);
+                console.log('Image copied to clipboard successfully');
+                showToast('✅ Image copied to clipboard!', 3000);
             }).catch(err => {
                 console.error('Clipboard error:', err);
                 downloadImageFallback(blob, empName, period);
             });
         } else {
-            
+            console.log('Clipboard API not available, using fallback');
             downloadImageFallback(blob, empName, period);
         }
     }, 'image/png');
@@ -4134,21 +4141,7 @@ function downloadImageFallback(blob, empName, period) {
     a.download = `TrendReport_${empName}_${metadata.startDate || 'unknown'}.png`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('ℹ️ Image downloaded! Open Outlook and insert the file.', 4000);
-    
-    const fallbackMeta = period.metadata || {};
-    const fallbackPeriodType = fallbackMeta.periodType === 'week' ? 'Weekly' : fallbackMeta.periodType === 'month' ? 'Monthly' : fallbackMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-    const fallbackPeriodLabel = fallbackMeta.periodType === 'week' ? 'Week' : fallbackMeta.periodType === 'month' ? 'Month' : fallbackMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
-    const fallbackEndDate = fallbackMeta.endDate || 'unknown';
-    const emailSubject = `Trending Metrics - ${fallbackPeriodType} - ${fallbackPeriodLabel} ending ${fallbackEndDate} for ${empName}`;
-    
-    // Create temporary anchor and click it to open mailto
-    const mailtoLink = document.createElement('a');
-    mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
-    mailtoLink.style.display = 'none';
-    document.body.appendChild(mailtoLink);
-    mailtoLink.click();
-    document.body.removeChild(mailtoLink);
+    showToast('ℹ️ Image downloaded!', 4000);
 }
 
 function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
