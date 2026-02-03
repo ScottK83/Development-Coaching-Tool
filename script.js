@@ -8619,10 +8619,20 @@ function processSentimentUploads() {
                 // Parse file format: look for "Interactions:" line and keyword rows
                 let totalCalls = 0;
                 let callsWithSentiment = 0;
+                let employeeName = '';
                 const phrases = [];
                 let inKeywordsSection = false;
                 
                 for (const line of lines) {
+                    // Extract employee name from "Agent:" or "Name:" field
+                    if (!employeeName) {
+                        const nameMatch = line.match(/^(?:Agent|Name|Employee)[:\s]+([^,]+)/i);
+                        if (nameMatch) {
+                            employeeName = nameMatch[1].trim();
+                            console.log(`Found employee name: ${employeeName}`);
+                        }
+                    }
+                    
                     // Check for total calls line: "Interactions: 3100 (72% out of 4278...)"
                     // We want the 4278 (total calls in period), not the 3100 (calls with this sentiment)
                     const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\([^)]*out\s+of\s+(\d+)/i);
@@ -8685,14 +8695,41 @@ function processSentimentUploads() {
                     }
                 }
                 
+                // If totalCalls is still 0 but we have phrases, use phrases.length as estimate
+                if (totalCalls === 0 && phrases.length > 0) {
+                    // Find the highest usage count as a proxy for total calls
+                    const maxUsage = Math.max(...phrases.map(p => p.used));
+                    if (maxUsage > 0) {
+                        totalCalls = maxUsage;
+                        console.log(`⚠️ Couldn't find Interactions line, using max usage count as totalCalls: ${totalCalls}`);
+                    }
+                }
+                
                 console.log(`Parsed ${phrases.length} phrases from ${fileType} file`);
                 
                 // Store parsed data
                 const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
                 const dataKey = keyMap[fileType];
+                console.log(`Storing data for ${fileType} -> ${dataKey}:`, { totalCalls, phrasesCount: phrases.length });
                 if (dataKey) {
                     sentimentData[dataKey].totalCalls = totalCalls;
                     sentimentData[dataKey].phrases = phrases;
+                    sentimentData[dataKey].employeeName = employeeName;
+                    console.log(`✅ Stored in sentimentData.${dataKey}:`, sentimentData[dataKey]);
+                }
+                
+                // Auto-select employee if name was found
+                if (employeeName) {
+                    const select = document.getElementById('sentimentEmployeeSelect');
+                    // Try to find matching option
+                    const options = Array.from(select.options);
+                    const match = options.find(opt => opt.value.toLowerCase().includes(employeeName.toLowerCase()) || employeeName.toLowerCase().includes(opt.value.toLowerCase()));
+                    if (match) {
+                        select.value = match.value;
+                        console.log(`Auto-selected employee: ${match.value}`);
+                    } else {
+                        console.log(`Could not find matching employee for: ${employeeName}`);
+                    }
                 }
                 
                 statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
@@ -8740,9 +8777,16 @@ function generateSentimentPrompt() {
     }
     
     if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
+        console.log('Sentiment data check:', sentimentData);
         alert('⚠️ Please upload at least one sentiment report');
         return;
     }
+    
+    console.log('✅ Sentiment data validated:', {
+        positive: sentimentData.positive.totalCalls,
+        negative: sentimentData.negative.totalCalls,
+        emotions: sentimentData.emotions.totalCalls
+    });
     
     // Get employee's weekly sentiment scores
     const employeeData = getEmployeeDataForPeriod(employeeName);
