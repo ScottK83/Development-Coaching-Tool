@@ -5944,6 +5944,8 @@ Add emojis throughout the email to make it fun and engaging! Use them in the gre
 
 Do NOT use em dashes (—) anywhere in the email.
 
+Use the % symbol instead of writing out "percent" (e.g., "95%" not "95 percent").
+
 The email should be ready to send as-is. Just give me the complete email to ${preferredName}, nothing else.`;
 
     // Open CoPilot with the prompt
@@ -6566,6 +6568,8 @@ Vary your wording and sentence structure so it doesn't sound templated or AI-gen
 Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
 
 Do NOT use em dashes (—) anywhere in the email.
+
+Use the % symbol instead of writing out "percent" (e.g., "95%" not "95 percent").
 
 The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
     
