@@ -604,8 +604,40 @@
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
-                            <h4 style="margin-top: 0; color: #3c78c8;">📈 Trend Intelligence (Supervisor Only)</h4>
-                            <div id="trendIntelligenceOutput" style="display: grid; gap: 10px;"></div>
+                            <h4 style="margin-top: 0; color: #3c78c8;">📈 Trend Intelligence & Coaching Hub</h4>
+                            
+                            <!-- Period & Employee Selection -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                                <div>
+                                    <label for="trendPeriodSelector" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Compare:</label>
+                                    <select id="trendPeriodSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
+                                        <option value="wow">Week over Week</option>
+                                        <option value="mom">Month over Month</option>
+                                        <option value="ytd">Year to Date</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="trendEmployeeSelector" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Employee:</label>
+                                    <select id="trendEmployeeSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
+                                        <option value="">-- All Team Members --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: #3c78c8; color: white;">🔄 Refresh Trends</button>
+                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: #6a1b9a; color: white;">🤖 Generate Coaching Email</button>
+                            </div>
+
+                            <!-- Alerts/Insights -->
+                            <div id="trendIntelligenceOutput" style="display: grid; gap: 10px; margin-bottom: 20px;"></div>
+
+                            <!-- Bar Graph Visualizations -->
+                            <div id="trendVisualizationsContainer" style="display: none; margin-top: 20px;">
+                                <h5 style="color: #3c78c8; margin-bottom: 10px;">📊 Metric Trends</h5>
+                                <div id="trendChartsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;"></div>
+                            </div>
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">

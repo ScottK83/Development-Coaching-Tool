@@ -1264,6 +1264,16 @@ function formatDateMMDDYYYY(dateString) {
     return `${month}/${day}/${year}`;
 }
 
+function formatWeekLabel(weekKey) {
+    if (!weekKey) return '';
+    const parts = weekKey.split('|');
+    if (parts.length >= 2) {
+        const endDate = parts[1];
+        return formatDateMMDDYYYY(endDate);
+    }
+    return weekKey;
+}
+
 function getTodayYYYYMMDD() {
     return new Date().toISOString().slice(0, 10);
 }
@@ -5387,10 +5397,66 @@ function buildConfidenceInsight(employeeData, coachedMetricKeys) {
 }
 
 function renderSupervisorIntelligence() {
+    initializeTrendIntelligence();
     renderTrendIntelligence();
     renderRecognitionIntelligence();
     renderCoachingLoadAwareness();
     renderComplianceAlerts();
+}
+
+function initializeTrendIntelligence() {
+    // Populate employee selector
+    const employeeSelect = document.getElementById('trendEmployeeSelector');
+    if (employeeSelect) {
+        const allEmployees = new Set();
+        for (const weekKey in weeklyData) {
+            const week = weeklyData[weekKey];
+            if (week.employees && Array.isArray(week.employees)) {
+                week.employees.forEach(emp => {
+                    if (emp.name && isTeamMember(weekKey, emp.name)) {
+                        allEmployees.add(emp.name);
+                    }
+                });
+            }
+        }
+        
+        const currentValue = employeeSelect.value;
+        const firstOption = employeeSelect.querySelector('option[value=""]');
+        employeeSelect.innerHTML = '';
+        if (firstOption) employeeSelect.appendChild(firstOption.cloneNode(true));
+        
+        Array.from(allEmployees).sort().forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            employeeSelect.appendChild(option);
+        });
+        
+        if (currentValue && Array.from(allEmployees).includes(currentValue)) {
+            employeeSelect.value = currentValue;
+        }
+    }
+
+    // Attach event listeners
+    document.getElementById('refreshTrendsBtn')?.addEventListener('click', () => {
+        renderTrendIntelligence();
+        renderTrendVisualizations();
+    });
+
+    document.getElementById('trendPeriodSelector')?.addEventListener('change', () => {
+        renderTrendIntelligence();
+        renderTrendVisualizations();
+    });
+
+    document.getElementById('trendEmployeeSelector')?.addEventListener('change', () => {
+        renderTrendIntelligence();
+        renderTrendVisualizations();
+    });
+
+    document.getElementById('generateTrendCoachingBtn')?.addEventListener('click', generateTrendCoachingEmail);
+
+    // Initial render of visualizations
+    renderTrendVisualizations();
 }
 
 function renderComplianceAlerts() {
@@ -5647,6 +5713,234 @@ function renderTrendIntelligence() {
     container.innerHTML = limited.length
         ? limited.map(text => `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">${text}</div>`).join('')
         : '<div style="color: #666; font-size: 0.95em;">No notable patterns detected.</div>';
+}
+
+function renderTrendVisualizations() {
+    const visualContainer = document.getElementById('trendVisualizationsContainer');
+    const chartsGrid = document.getElementById('trendChartsGrid');
+    if (!visualContainer || !chartsGrid) return;
+
+    const employeeName = document.getElementById('trendEmployeeSelector')?.value;
+    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
+
+    if (!employeeName) {
+        visualContainer.style.display = 'none';
+        return;
+    }
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) {
+        visualContainer.style.display = 'none';
+        return;
+    }
+
+    visualContainer.style.display = 'block';
+
+    // Get data for selected employee across periods
+    const metricsToShow = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
+    const trendData = {};
+
+    metricsToShow.forEach(metricKey => {
+        trendData[metricKey] = [];
+        keys.forEach(weekKey => {
+            const week = weeklyData[weekKey];
+            const emp = week?.employees?.find(e => e.name === employeeName);
+            if (emp && emp[metricKey] !== undefined && emp[metricKey] !== null && emp[metricKey] !== '') {
+                trendData[metricKey].push({
+                    weekKey: weekKey,
+                    value: parseFloat(emp[metricKey]),
+                    label: formatWeekLabel(weekKey)
+                });
+            }
+        });
+    });
+
+    // Create bar charts for each metric
+    chartsGrid.innerHTML = '';
+    metricsToShow.forEach(metricKey => {
+        const metric = METRICS_REGISTRY[metricKey];
+        const data = trendData[metricKey];
+        
+        if (!data || data.length < 2) return;
+
+        const chartContainer = document.createElement('div');
+        chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;';
+        
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'max-height: 250px;';
+        
+        chartContainer.appendChild(canvas);
+        chartsGrid.appendChild(chartContainer);
+
+        // Create bar chart
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.label),
+                datasets: [{
+                    label: metric.label || metricKey,
+                    data: data.map(d => d.value),
+                    backgroundColor: 'rgba(60, 120, 200, 0.6)',
+                    borderColor: 'rgba(60, 120, 200, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: `${metric.label || metricKey} Trend`,
+                        font: { size: 14, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: metric.unit === '%',
+                        title: {
+                            display: true,
+                            text: metric.unit || ''
+                        }
+                    }
+                }
+            }
+        });
+    });
+}
+
+async function generateTrendCoachingEmail() {
+    const employeeName = document.getElementById('trendEmployeeSelector')?.value;
+    if (!employeeName) {
+        showToast('Please select an employee first', 3000);
+        return;
+    }
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) {
+        showToast('Not enough data to generate coaching email', 3000);
+        return;
+    }
+
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+
+    const currentEmp = latestWeek?.employees?.find(e => e.name === employeeName);
+    const previousEmp = previousWeek?.employees?.find(e => e.name === employeeName);
+
+    if (!currentEmp) {
+        showToast('No data found for this employee', 3000);
+        return;
+    }
+
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
+
+    // Load tips
+    const allTips = await loadServerTips();
+
+    // Analyze metrics
+    const metricsToAnalyze = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
+    const wins = [];
+    const opportunities = [];
+
+    metricsToAnalyze.forEach(metricKey => {
+        const current = currentEmp[metricKey];
+        if (current === undefined || current === null || current === '') return;
+
+        const metric = METRICS_REGISTRY[metricKey];
+        const meetsTarget = metricMeetsTarget(metricKey, current);
+        
+        if (meetsTarget) {
+            wins.push({
+                metricKey: metricKey,
+                metric: metric.label || metricKey,
+                value: formatMetricValue(metricKey, parseFloat(current))
+            });
+        } else {
+            const previous = previousEmp?.[metricKey];
+            const trend = previous !== undefined ? metricDelta(metricKey, parseFloat(current), parseFloat(previous)) : 0;
+            const tips = allTips[metricKey] || [];
+            const randomTip = tips.length ? tips[Math.floor(Math.random() * tips.length)] : null;
+            
+            opportunities.push({
+                metricKey: metricKey,
+                metric: metric.label || metricKey,
+                value: formatMetricValue(metricKey, parseFloat(current)),
+                target: formatMetricValue(metricKey, metric.target.value),
+                trend: trend,
+                tip: randomTip
+            });
+        }
+    });
+
+    // Build prompt
+    let winsText = '';
+    if (wins.length > 0) {
+        winsText = 'WINS (What They Achieved):\\n';
+        wins.forEach(w => {
+            winsText += `- ${w.metric}: ${w.value}\\n`;
+        });
+    } else {
+        winsText = 'WINS: No metrics currently meeting target\\n';
+    }
+
+    let opportunitiesText = '';
+    if (opportunities.length > 0) {
+        opportunitiesText = 'OPPORTUNITIES (Areas to Improve):\\n';
+        opportunities.forEach(opp => {
+            opportunitiesText += `- ${opp.metric}: Currently ${opp.value}, Target ${opp.target}`;
+            if (opp.trend !== 0) {
+                opportunitiesText += ` (${opp.trend > 0 ? 'improving' : 'declining'})`;
+            }
+            opportunitiesText += '\\n';
+            if (opp.tip) {
+                opportunitiesText += `  TIP: ${opp.tip}\\n`;
+            }
+        });
+    } else {
+        opportunitiesText = 'OPPORTUNITIES: All metrics meeting targets!\\n';
+    }
+
+    const preferredName = getEmployeeNickname(employeeName) || currentEmp.firstName || employeeName.split(' ')[0];
+
+    const copilotPrompt = `Write a professional coaching email for ${preferredName} for the week ending ${endDate}.
+
+${winsText}
+${opportunitiesText}
+COACHING CONTEXT:
+- This email is based on trend analysis from the Trend Intelligence system
+- Focus on specific metrics and actionable tips
+- Balance celebration of wins with constructive guidance on opportunities
+
+TONE & STYLE:
+- Address ${preferredName} by name in the opening
+- Professional and supportive
+- Use bullet points for clarity
+- Celebrate specific wins
+- Frame opportunities positively with actionable tips
+- Do NOT use em dashes (—) anywhere in the email
+- Use proper bullet points (•) not hyphens
+- Keep it concise (under 250 words)
+
+SUBJECT LINE:
+Performance Check-In - Week of ${endDate}
+
+Please generate the coaching email now.`;
+
+    // Open CoPilot with the prompt
+    const encodedPrompt = encodeURIComponent(copilotPrompt);
+    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
+    window.open(copilotUrl, '_blank');
+
+    showToast('Opening CoPilot with coaching email prompt...', 3000);
 }
 
 async function generateTodaysFocus() {
