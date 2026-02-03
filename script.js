@@ -3966,13 +3966,14 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#0d47a1';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('⭐ Highlights (Improved from Last Week)', 50, y + 26);
+        const periodCapitalized = periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1);
+        ctx.fillText(`⭐ Highlights (Improved from Last ${periodCapitalized})`, 50, y + 26);
         y += 50;
         
         if (improvedMetrics.length === 0 && previous) {
             ctx.fillStyle = '#666666';
             ctx.font = '14px Arial';
-            ctx.fillText('- No improvements detected this week', 60, y + 20);
+            ctx.fillText(`- No improvements detected this ${periodTypeText}`, 60, y + 20);
             y += 40;
         } else {
             improvedMetrics.slice(0, 5).forEach((item, idx) => {
@@ -3980,7 +3981,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
                 ctx.font = 'bold 14px Arial';
                 ctx.fillText(`- ${item.label}:`, 60, y + 20);
                 ctx.font = '14px Arial';
-                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last week`, 220, y + 20);
+                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last ${periodTypeText}`, 220, y + 20);
                 y += 35;
             });
         }
@@ -4020,9 +4021,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
         { color: '#dc3545', label: 'Below target' },
         { color: '#6c757d', label: 'Better than center' },
         { color: '#ffc107', label: 'Behind center' },
-        { color: '#28a745', symbol: '📈', label: 'Improved from last week' },
-        { color: '#dc3545', symbol: '📉', label: 'Declined from last week' },
-        { color: '#6c757d', symbol: '➡️', label: 'No change from last week' }
+        { color: '#28a745', symbol: '📈', label: `Improved from last ${periodTypeText}` },
+        { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
+        { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
     ];
     
     let legendY = y + 60;
