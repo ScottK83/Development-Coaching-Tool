@@ -3498,7 +3498,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
             trendingText = '➡️ No change';
         } else {
             const changeValue = formatMetricValue(metricKey, absDiff);
-            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+            const periodLabel = metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
             const sign = trendDiff > 0 ? '+' : '-';
             const directionEmoji = trendDiff > 0 ? '📈' : '📉';
             trendingColor = isImprovement ? '#28a745' : '#dc3545';
@@ -3747,7 +3747,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     const totalMetrics = Object.keys(metrics).length;
     const successRate = Math.round(meetingGoals / totalMetrics * 100);
     const improvedText = previous ? improved.toString() : 'N/A';
-    const improvedSub = previous ? 'From Last Week' : 'No Prior Data';
+    const periodTypeText = metadata.periodType === 'week' ? 'week' : metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
+    const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
 
     // CREATE CANVAS IMAGE (will be resized based on content)
     const canvas = document.createElement('canvas');
