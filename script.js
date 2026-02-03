@@ -8614,47 +8614,58 @@ function processSentimentUploads() {
                 }
                 
                 console.log(`Processing ${fileType} file with ${lines.length} lines`);
-                console.log('First 5 lines:', lines.slice(0, 5));
+                console.log('First 10 lines:', lines.slice(0, 10));
                 
-                // Parse file format: look for "Total calls analyzed: X" and phrases with counts
+                // Parse file format: look for "Interactions:" line and keyword rows
                 let totalCalls = 0;
                 const phrases = [];
+                let inKeywordsSection = false;
                 
                 for (const line of lines) {
-                    // Check for total calls line
-                    const totalMatch = line.match(/Total\s+calls\s+analyzed[:\s]+(\d+)/i);
-                    if (totalMatch) {
-                        totalCalls = parseInt(totalMatch[1]);
-                        console.log(`Found total calls: ${totalCalls}`);
+                    // Check for total calls line: "Interactions: 3100 (72% out of..."
+                    const interactionsMatch = line.match(/Interactions[:\s]+(\d+)/i);
+                    if (interactionsMatch) {
+                        totalCalls = parseInt(interactionsMatch[1]);
+                        console.log(`Found total interactions: ${totalCalls}`);
                         continue;
                     }
                     
-                    // Parse phrase lines (format: phrase (X/Y) or phrase X/Y)
-                    const phraseMatch = line.match(/^(.+?)\s*\((\d+)\/(\d+)\)\s*$/);
-                    if (phraseMatch) {
-                        const phrase = phraseMatch[1].trim();
-                        const used = parseInt(phraseMatch[2]);
-                        const total = parseInt(phraseMatch[3]);
-                        phrases.push({ phrase, used, total });
+                    // Check if we've reached the Keywords section
+                    if (line.includes('Keywords') || line.includes('Name,Value') || line.includes('Name\tValue')) {
+                        inKeywordsSection = true;
                         continue;
                     }
                     
-                    // Also try without parentheses: phrase X/Y
-                    const phraseMatch2 = line.match(/^(.+?)\s+(\d+)\/(\d+)\s*$/);
-                    if (phraseMatch2) {
-                        const phrase = phraseMatch2[1].trim();
-                        const used = parseInt(phraseMatch2[2]);
-                        const total = parseInt(phraseMatch2[3]);
-                        phrases.push({ phrase, used, total });
+                    // Skip header row
+                    if (line.match(/^Name[,\t]/i)) {
+                        continue;
                     }
                     
-                    // Try CSV format: "phrase",count,total or phrase,count,total
-                    const csvMatch = line.match(/^"?([^",]+)"?,(\d+),(\d+)/);
-                    if (csvMatch) {
-                        const phrase = csvMatch[1].trim();
-                        const used = parseInt(csvMatch[2]);
-                        const total = parseInt(csvMatch[3]);
-                        phrases.push({ phrase, used, total });
+                    // Parse keyword rows: "#(A "phrase")",1750 or similar
+                    // Format: phrase,count or "phrase",count
+                    if (inKeywordsSection || totalCalls > 0) {
+                        // Try CSV format with quotes: "#(A ""anything else"")",1750
+                        const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
+                        if (csvQuotedMatch) {
+                            let phrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
+                            // Clean up the phrase: remove #(A and trailing )
+                            phrase = phrase.replace(/^#\(A\s+"([^"]+)"\)$/, '$1').replace(/^#\(A\s+([^)]+)\)$/, '$1');
+                            const used = parseInt(csvQuotedMatch[2]);
+                            phrases.push({ phrase, used, total: totalCalls });
+                            continue;
+                        }
+                        
+                        // Try simple CSV: phrase,count
+                        const csvMatch = line.match(/^([^,]+),(\d+)$/);
+                        if (csvMatch) {
+                            let phrase = csvMatch[1].trim();
+                            // Clean up the phrase
+                            phrase = phrase.replace(/^#\(A\s+"([^"]+)"\)$/, '$1').replace(/^#\(A\s+([^)]+)\)$/, '$1');
+                            const used = parseInt(csvMatch[2]);
+                            if (used > 0) {
+                                phrases.push({ phrase, used, total: totalCalls });
+                            }
+                        }
                     }
                 }
                 
