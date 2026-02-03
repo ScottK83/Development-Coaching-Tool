@@ -1618,6 +1618,7 @@ function initializeEventHandlers() {
     });
     document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
     document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
+    document.getElementById('generateTodaysFocusCopilotBtn')?.addEventListener('click', generateTodaysFocusCopilotEmail);
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => {
@@ -2083,86 +2084,139 @@ function loadPtoTracker() {
             thresholds: { warning: 8, policy: 16 },
             entries: []
         };
-    } catch (error) {
-        console.error('Error loading PTO tracker:', error);
-        return { availableHours: 0, thresholds: { warning: 8, policy: 16 }, entries: [] };
-    }
-}
+                const focusData = buildTodaysFocusData();
+                if (!focusData) {
 
 function savePtoTracker(data) {
     try {
-        localStorage.setItem(PTO_STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-        console.error('Error saving PTO tracker:', error);
-    }
-}
+                const tips = await loadServerTips();
+                const focusTip = focusData.focusArea ? selectSmartTip({
+                    employeeId: 'TEAM',
+                    metricKey: focusData.focusArea,
+                    severity: 'medium',
+                    tips: tips[focusData.focusArea] || []
+                }) : null;
 
-function initializePtoTracker() {
-    const data = loadPtoTracker();
-    const availableInput = document.getElementById('ptoAvailableHours');
-    const warningInput = document.getElementById('ptoThresholdWarning');
-    const policyInput = document.getElementById('ptoThresholdPolicy');
-    const addEntryBtn = document.getElementById('ptoAddEntryBtn');
-    const generateEmailBtn = document.getElementById('ptoGenerateEmailBtn');
-    const copyEmailBtn = document.getElementById('ptoCopyEmailBtn');
-    
-    if (availableInput) availableInput.value = data.availableHours || 0;
-    if (warningInput) warningInput.value = data.thresholds?.warning ?? 8;
-    if (policyInput) policyInput.value = data.thresholds?.policy ?? 16;
-    
-    if (availableInput) {
-        availableInput.onchange = () => {
-            const next = loadPtoTracker();
-            next.availableHours = parseFloat(availableInput.value) || 0;
-            savePtoTracker(next);
-            renderPtoSummary(next);
-        };
-    }
-    if (warningInput) {
-        warningInput.onchange = () => {
-            const next = loadPtoTracker();
-            next.thresholds.warning = parseFloat(warningInput.value) || 0;
-            savePtoTracker(next);
-            renderPtoSummary(next);
-        };
-    }
-    if (policyInput) {
-        policyInput.onchange = () => {
-            const next = loadPtoTracker();
-            next.thresholds.policy = parseFloat(policyInput.value) || 0;
-            savePtoTracker(next);
-            renderPtoSummary(next);
-        };
-    }
-    
-    if (addEntryBtn) {
-        addEntryBtn.onclick = () => addPtoEntry();
-    }
-    if (generateEmailBtn) {
-        generateEmailBtn.onclick = () => generatePtoEmail();
-    }
-    if (copyEmailBtn) {
-        copyEmailBtn.onclick = () => copyPtoEmail();
-    }
-    
-    renderPtoSummary(data);
-    renderPtoEntries(data);
-}
+                const teamWinLabel = focusData.teamWin ? METRICS_REGISTRY[focusData.teamWin]?.label || focusData.teamWin : 'Team metrics';
+                const focusLabel = focusData.focusArea ? METRICS_REGISTRY[focusData.focusArea]?.label || focusData.focusArea : 'Key metric';
 
-function addPtoEntry() {
-    const dateInput = document.getElementById('ptoMissedDate');
-    const hoursInput = document.getElementById('ptoMissedHours');
-    const reasonInput = document.getElementById('ptoMissedReason');
+                output.value = `Today’s Focus\n` +
+                    `• ✅ Team Win: ${teamWinLabel} is ahead of the team average for many teammates\n` +
+                    `• ⚠️ Focus Area: ${focusLabel} is below the team average for several teammates\n` +
+                    `• 🎯 Today’s Ask: ${focusTip ? focusTip.replace(/^.*?:\s*/, '') : 'Use a quick reminder before breaks to stay green'}`;
     
-    const date = dateInput?.value;
-    const hours = parseFloat(hoursInput?.value || '');
-    const reason = reasonInput?.value?.trim() || '';
-    
-    if (!date || Number.isNaN(hours) || hours <= 0) {
-        showToast('Please enter a valid date and hours missed', 4000);
-        return;
-    }
-    
+
+            function buildTodaysFocusData() {
+                const latestKey = getLatestWeeklyKey();
+                const prevKey = getPreviousWeeklyKey(latestKey);
+                const latestWeek = latestKey ? weeklyData[latestKey] : null;
+                const prevWeek = prevKey ? weeklyData[prevKey] : null;
+                if (!latestWeek?.employees) return null;
+
+                const metricsToUse = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
+                const averages = {};
+                metricsToUse.forEach(key => {
+                    const vals = latestWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+                    averages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                });
+
+                const prevAverages = {};
+                if (prevWeek?.employees) {
+                    metricsToUse.forEach(key => {
+                        const vals = prevWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+                        prevAverages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                    });
+                }
+
+                let teamWin = null;
+                let focusArea = null;
+                let bestScore = -Infinity;
+                let worstScore = -Infinity;
+
+                const distribution = {};
+                metricsToUse.forEach(key => {
+                    distribution[key] = { better: 0, worse: 0, total: 0 };
+                });
+
+                latestWeek.employees.forEach(emp => {
+                    metricsToUse.forEach(key => {
+                        const avg = averages[key];
+                        const value = emp[key];
+                        if (avg === null || value === undefined || value === null || value === '') return;
+                        distribution[key].total += 1;
+                        const better = isReverseMetric(key) ? value <= avg : value >= avg;
+                        if (better) distribution[key].better += 1;
+                        else distribution[key].worse += 1;
+                    });
+                });
+
+                metricsToUse.forEach(key => {
+                    const value = averages[key];
+                    if (value === null) return;
+                    const improvement = prevAverages[key] !== null && prevAverages[key] !== undefined ? metricDelta(key, value, prevAverages[key]) : 0;
+                    const ratio = distribution[key].total ? distribution[key].better / distribution[key].total : 0;
+                    const score = ratio + (improvement > 0 ? 0.5 : 0);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        teamWin = key;
+                    }
+
+                    const focusRatio = distribution[key].total ? distribution[key].worse / distribution[key].total : 0;
+                    if (focusRatio > worstScore) {
+                        worstScore = focusRatio;
+                        focusArea = key;
+                    }
+                });
+
+                const callouts = buildTodaysFocusCallouts(latestWeek, metricsToUse, averages);
+
+                return {
+                    latestKey,
+                    latestWeek,
+                    averages,
+                    teamWin,
+                    focusArea,
+                    callouts
+                };
+            }
+
+            function buildTodaysFocusCallouts(latestWeek, metricsToUse, averages) {
+                const scores = latestWeek.employees.map(emp => {
+                    let wins = 0;
+                    metricsToUse.forEach(key => {
+                        const avg = averages[key];
+                        const value = emp[key];
+                        if (avg === null || value === undefined || value === null || value === '') return;
+                        const better = isReverseMetric(key) ? value <= avg : value >= avg;
+                        if (better) wins += 1;
+                    });
+                    return { name: emp.name, wins };
+                });
+
+                return scores
+                    .filter(item => item.wins > 0)
+                    .sort((a, b) => b.wins - a.wins)
+                    .slice(0, 3);
+            }
+
+            function generateTodaysFocusCopilotEmail() {
+                const focusData = buildTodaysFocusData();
+                if (!focusData) {
+                    showToast('Upload the latest weekly data first', 3000);
+                    return;
+                }
+
+                const endDate = focusData.latestWeek?.metadata?.endDate
+                    ? formatDateMMDDYYYY(focusData.latestWeek.metadata.endDate)
+                    : (focusData.latestKey?.split('|')[1] ? formatDateMMDDYYYY(focusData.latestKey.split('|')[1]) : 'this week');
+
+                const winLabel = focusData.teamWin ? METRICS_REGISTRY[focusData.teamWin]?.label || focusData.teamWin : 'Team metrics';
+                const focusLabel = focusData.focusArea ? METRICS_REGISTRY[focusData.focusArea]?.label || focusData.focusArea : 'Key metric';
+                const calloutText = focusData.callouts.length
+                    ? focusData.callouts.map(c => `${c.name} (${c.wins} wins vs avg)`).join(', ')
+                    : 'No clear callouts yet';
+
+                const prompt = `You are a contact center supervisor drafting a short team email for the week ending ${endDate}.
     const data = loadPtoTracker();
     data.entries.push({
         id: `${Date.now()}`,
@@ -2171,13 +2225,16 @@ function addPtoEntry() {
         reason
     });
     savePtoTracker(data);
-    
-    if (hoursInput) hoursInput.value = '';
-    if (reasonInput) reasonInput.value = '';
-    
-    renderPtoSummary(data);
     renderPtoEntries(data);
 }
+
+                navigator.clipboard.writeText(prompt).then(() => {
+                    showToast('✅ CoPilot prompt copied. Paste into CoPilot.', 3000);
+                    window.open('https://copilot.microsoft.com', '_blank');
+                }).catch(() => {
+                    showToast('Unable to copy CoPilot prompt', 3000);
+                });
+            }
 
 function deletePtoEntry(entryId) {
     const data = loadPtoTracker();
