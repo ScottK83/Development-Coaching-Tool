@@ -8618,16 +8618,30 @@ function processSentimentUploads() {
                 
                 // Parse file format: look for "Interactions:" line and keyword rows
                 let totalCalls = 0;
+                let callsWithSentiment = 0;
                 const phrases = [];
                 let inKeywordsSection = false;
                 
                 for (const line of lines) {
-                    // Check for total calls line: "Interactions: 3100 (72% out of..."
-                    const interactionsMatch = line.match(/Interactions[:\s]+(\d+)/i);
+                    // Check for total calls line: "Interactions: 3100 (72% out of 4278...)"
+                    // We want the 4278 (total calls in period), not the 3100 (calls with this sentiment)
+                    const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\([^)]*out\s+of\s+(\d+)/i);
                     if (interactionsMatch) {
-                        totalCalls = parseInt(interactionsMatch[1]);
-                        console.log(`Found total interactions: ${totalCalls}`);
+                        callsWithSentiment = parseInt(interactionsMatch[1]);
+                        totalCalls = parseInt(interactionsMatch[2]);
+                        console.log(`Found ${callsWithSentiment} calls with sentiment out of ${totalCalls} total calls`);
                         continue;
+                    }
+                    
+                    // Fallback: just "Interactions: 3100" without the "out of" part
+                    if (!totalCalls) {
+                        const simpleMatch = line.match(/Interactions[:\s]+(\d+)/i);
+                        if (simpleMatch) {
+                            totalCalls = parseInt(simpleMatch[1]);
+                            callsWithSentiment = totalCalls;
+                            console.log(`Found total interactions: ${totalCalls}`);
+                            continue;
+                        }
                     }
                     
                     // Check if we've reached the Keywords section
@@ -8648,8 +8662,10 @@ function processSentimentUploads() {
                         const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
                         if (csvQuotedMatch) {
                             let phrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
-                            // Clean up the phrase: remove #(A and trailing )
-                            phrase = phrase.replace(/^#\(A\s+"([^"]+)"\)$/, '$1').replace(/^#\(A\s+([^)]+)\)$/, '$1');
+                            // Clean up the phrase: remove #(A, +(A, etc and trailing )
+                            phrase = phrase.replace(/^[#+-]\([AC]\s+"?([^"]+)"?\)$/, '$1')
+                                          .replace(/^[#+-]\([AC]\s+([^)]+)\)$/, '$1')
+                                          .replace(/^"(.*)"$/, '$1');
                             const used = parseInt(csvQuotedMatch[2]);
                             phrases.push({ phrase, used, total: totalCalls });
                             continue;
@@ -8660,11 +8676,11 @@ function processSentimentUploads() {
                         if (csvMatch) {
                             let phrase = csvMatch[1].trim();
                             // Clean up the phrase
-                            phrase = phrase.replace(/^#\(A\s+"([^"]+)"\)$/, '$1').replace(/^#\(A\s+([^)]+)\)$/, '$1');
+                            phrase = phrase.replace(/^[#+-]\([AC]\s+"?([^"]+)"?\)$/, '$1')
+                                          .replace(/^[#+-]\([AC]\s+([^)]+)\)$/, '$1')
+                                          .replace(/^"(.*)"$/, '$1');
                             const used = parseInt(csvMatch[2]);
-                            if (used > 0) {
-                                phrases.push({ phrase, used, total: totalCalls });
-                            }
+                            phrases.push({ phrase, used, total: totalCalls });
                         }
                     }
                 }
