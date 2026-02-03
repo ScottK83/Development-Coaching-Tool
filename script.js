@@ -4136,8 +4136,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
     }
 
     // Convert to image blob and handle output
-    canvas.toBlob(blob => {
-        if (!blob) {
+    canvas.toBlob(pngBlob => {
+        if (!pngBlob) {
             console.error('Failed to create blob from canvas');
             showToast('ℹ️ Error creating image', 5000);
             return;
@@ -4153,27 +4153,30 @@ function createTrendEmailImage(empName, weekKey, period, current, previous) {
             
             // Try to copy HTML to clipboard so image embeds in Outlook
             if (navigator.clipboard && navigator.clipboard.write) {
-                const blob = new Blob([htmlEmail], { type: 'text/html' });
-                const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
+                const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
+                const htmlClipboardItem = new ClipboardItem({ 'text/html': htmlBlob });
                 navigator.clipboard.write([htmlClipboardItem]).then(() => {
                     console.log('HTML email with embedded image copied to clipboard');
                     showToast('✅ Email with image ready to paste!', 3000);
                 }).catch(err => {
                     console.error('HTML clipboard error:', err);
-                    // Fallback: try plain image copy
+                    // Fallback: try plain image copy using original PNG blob
                     navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]).catch(err2 => {
+                        new ClipboardItem({ 'image/png': pngBlob })
+                    ]).then(() => {
+                        console.log('Image copied to clipboard (HTML failed)');
+                        showToast('✅ Image copied to clipboard!', 3000);
+                    }).catch(err2 => {
                         console.error('Image clipboard error:', err2);
-                        downloadImageFallback(blob, empName, period);
+                        downloadImageFallback(pngBlob, empName, period);
                     });
                 });
             } else {
                 console.log('Clipboard API not available, downloading instead');
-                downloadImageFallback(blob, empName, period);
+                downloadImageFallback(pngBlob, empName, period);
             }
         };
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(pngBlob);
     }, 'image/png');
 }
 
