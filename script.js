@@ -8524,9 +8524,9 @@ function getMetricTips(metricName) {
 // ============================================
 
 let sentimentData = {
-    positive: { totalCalls: 0, phrases: [] },
-    negative: { totalCalls: 0, phrases: [] },
-    emotions: { totalCalls: 0, phrases: [] }
+    positive: { totalCalls: 0, callsWithSentiment: 0, phrases: [] },
+    negative: { totalCalls: 0, callsWithSentiment: 0, phrases: [] },
+    emotions: { totalCalls: 0, callsWithSentiment: 0, phrases: [] }
 };
 
 function initializeSentiment() {
@@ -8716,9 +8716,10 @@ function processSentimentUploads() {
                 // Store parsed data
                 const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
                 const dataKey = keyMap[fileType];
-                console.log(`Storing data for ${fileType} -> ${dataKey}:`, { totalCalls, phrasesCount: phrases.length });
+                console.log(`Storing data for ${fileType} -> ${dataKey}:`, { totalCalls, callsWithSentiment, phrasesCount: phrases.length });
                 if (dataKey) {
                     sentimentData[dataKey].totalCalls = totalCalls;
+                    sentimentData[dataKey].callsWithSentiment = callsWithSentiment;
                     sentimentData[dataKey].phrases = phrases;
                     sentimentData[dataKey].employeeName = employeeName;
                     console.log(`✅ Stored in sentimentData.${dataKey}:`, sentimentData[dataKey]);
@@ -8859,6 +8860,22 @@ function generateSentimentPrompt() {
     sentimentSummary += `- Avoiding Negative Words: ${sentimentScores.negative}%\n`;
     sentimentSummary += `- Managing Emotions: ${sentimentScores.emotions}%\n`;
     sentimentSummary += `\nNote: Overall Sentiment is the average of Positive, Avoiding Negative, and Managing Emotions scores.\n\n`;
+    
+    // Add call coverage information
+    sentimentSummary += `CALL COVERAGE (Last 180 Days):\n`;
+    if (sentimentData.positive.totalCalls > 0) {
+        const posPercent = ((sentimentData.positive.callsWithSentiment / sentimentData.positive.totalCalls) * 100).toFixed(0);
+        sentimentSummary += `- ${sentimentData.positive.callsWithSentiment} out of ${sentimentData.positive.totalCalls} calls (${posPercent}%) had at least one POSITIVE phrase\n`;
+    }
+    if (sentimentData.negative.totalCalls > 0) {
+        const negPercent = ((sentimentData.negative.callsWithSentiment / sentimentData.negative.totalCalls) * 100).toFixed(0);
+        sentimentSummary += `- ${sentimentData.negative.callsWithSentiment} out of ${sentimentData.negative.totalCalls} calls (${negPercent}%) had at least one NEGATIVE phrase\n`;
+    }
+    if (sentimentData.emotions.totalCalls > 0) {
+        const emoPercent = ((sentimentData.emotions.callsWithSentiment / sentimentData.emotions.totalCalls) * 100).toFixed(0);
+        sentimentSummary += `- ${sentimentData.emotions.callsWithSentiment} out of ${sentimentData.emotions.totalCalls} calls (${emoPercent}%) had at least one EMOTION/CONTROL phrase\n`;
+    }
+    sentimentSummary += `\n`;
     
     sentimentSummary += `TOP 5 PHRASES ${employeeName.split(' ')[0].toUpperCase()} USES MOST:\n`;
     top5.forEach((p, i) => {
