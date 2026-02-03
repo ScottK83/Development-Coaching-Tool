@@ -6595,13 +6595,19 @@ function generateVerintSummary() {
     const selectedEmployeeId = employeeSelect?.value;
     const employeeName = document.getElementById('employeeName')?.value.trim();
     
+    if (!selectedEmployeeId) {
+        alert('⚠️ Please select an employee first');
+        return;
+    }
+    
     if (employeeName) {
         saveNickname(selectedEmployeeId, employeeName);
     }
 
-    const summaryData = window.latestCoachingSummaryData;
+    // Get ALL coaching history for this employee
+    const history = getCoachingHistoryForEmployee(selectedEmployeeId);
     
-    if (summaryData) {
+    if (history && history.length > 0) {
         const cleanLabel = (item) => {
             if (!item) return '';
             const match = item.match(/^-\s*(.+?):/);
@@ -6616,16 +6622,25 @@ function generateVerintSummary() {
             return `${list[0]}, ${list[1]}, and ${list[2]}`;
         };
         
-        const winsLabels = summaryData.celebrate.map(cleanLabel).filter(Boolean);
-        const oppLabels = summaryData.needsCoaching.map(cleanLabel).filter(Boolean);
-
-        const verintText = `Week Ending: ${summaryData.periodLabel}
-
-Employee: ${summaryData.firstName}
-
-${winsLabels.length ? 'Wins: ' + formatList(winsLabels) : 'Still building momentum'}
-
-${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current performance'}`;
+        // Build summary for ALL coaching sessions
+        let verintText = `COACHING HISTORY FOR: ${selectedEmployeeId}\n`;
+        verintText += `Total Sessions: ${history.length}\n`;
+        verintText += `===============================================\n\n`;
+        
+        history.forEach((session, index) => {
+            const sessionNum = history.length - index;
+            const date = new Date(session.generatedAt).toLocaleDateString();
+            const winsLabels = (session.celebrate || []).map(cleanLabel).filter(Boolean);
+            const oppLabels = (session.needsCoaching || []).map(cleanLabel).filter(Boolean);
+            
+            verintText += `SESSION ${sessionNum} - ${date}\n`;
+            verintText += `${'-'.repeat(45)}\n`;
+            verintText += `${winsLabels.length ? 'Wins: ' + formatList(winsLabels) : 'Still building momentum'}\n\n`;
+            verintText += `${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current performance'}\n\n`;
+            if (index < history.length - 1) {
+                verintText += `\n`;
+            }
+        });
 
         const outputElement = document.getElementById('verintSummaryOutput');
         outputElement.value = verintText;
@@ -6635,14 +6650,14 @@ ${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current
         
         // Copy to clipboard
         navigator.clipboard.writeText(verintText).then(() => {
-            showToast('✅ Verint summary copied to clipboard!', 3000);
+            showToast(`✅ All ${history.length} coaching sessions copied to clipboard!`, 3000);
         }).catch(err => {
             console.error('Failed to copy:', err);
             showToast('⚠️ Failed to copy. Text is displayed above.', 3000);
         });
     } else {
         const outputElement = document.getElementById('verintSummaryOutput');
-        outputElement.value = 'No coaching data available. Generate a coaching email first.';
+        outputElement.value = `No coaching history found for ${selectedEmployeeId}. Generate a coaching email first.`;
         document.getElementById('verintSummarySection').style.display = 'block';
     }
 }
@@ -6950,10 +6965,42 @@ function renderEmployeesList() {
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button onclick="saveEmployeePreferredName('${name}')" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
+                    <button onclick="deleteEmployee('${name}')" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">🗑️ Delete</button>
                 </div>
             </div>
         </div>
     `}).join('');
+}
+
+function deleteEmployee(employeeName) {
+    if (!confirm(`Are you sure you want to delete "${employeeName}" from ALL weekly data?\n\nThis will remove them from all uploaded weeks and cannot be undone.`)) {
+        return;
+    }
+    
+    // Remove from all weekly data
+    let removedCount = 0;
+    Object.keys(weeklyData).forEach(weekKey => {
+        if (weeklyData[weekKey]?.employees) {
+            const beforeLength = weeklyData[weekKey].employees.length;
+            weeklyData[weekKey].employees = weeklyData[weekKey].employees.filter(emp => emp.name !== employeeName);
+            if (weeklyData[weekKey].employees.length < beforeLength) {
+                removedCount++;
+            }
+        }
+    });
+    
+    // Save updated data
+    saveWeeklyData();
+    
+    // Remove preferred name
+    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    delete preferredNames[employeeName];
+    localStorage.setItem('employeePreferredNames', JSON.stringify(preferredNames));
+    
+    // Refresh the list
+    renderEmployeesList();
+    
+    showToast(`✅ Deleted "${employeeName}" from ${removedCount} week(s)`, 3000);
 }
 
 
