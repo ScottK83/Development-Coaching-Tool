@@ -604,7 +604,13 @@
 
                         <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
                             <h4 style="margin-top: 0; color: #3c78c8;">📈 Trend Intelligence & Coaching Hub</h4>
+                            <p style="color: #666; font-size: 0.9em; margin: -10px 0 15px 0;">Analyze trends across your team or for individual coaching. Select "All Team Members" for group insights, or choose a specific employee for personalized coaching.</p>
                             
+                            <!-- Current Mode Indicator -->
+                            <div id="trendModeIndicator" style="padding: 10px 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; margin-bottom: 15px; font-weight: 600; display: none;">
+                                <span id="trendModeText">📊 Team-Wide Analysis Mode</span>
+                            </div>
+
                             <!-- Period & Employee Selection -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
                                 <div>
@@ -618,19 +624,21 @@
                                 <div>
                                     <label for="trendEmployeeSelector" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Employee:</label>
                                     <select id="trendEmployeeSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
-                                        <option value="">-- All Team Members --</option>
+                                        <option value="">🏢 All Team Members (Group Analysis)</option>
                                     </select>
                                 </div>
                             </div>
 
                             <!-- Action Buttons -->
                             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: #3c78c8; color: white;">🔄 Refresh Trends</button>
-                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: #6a1b9a; color: white;">🤖 Generate Coaching Email</button>
+                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: #3c78c8; color: white;">🔄 Refresh Analysis</button>
+                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: #6a1b9a; color: white;">
+                                    <span id="trendEmailBtnText">🤖 Generate Coaching Email</span>
+                                </button>
                             </div>
 
                             <!-- Alerts/Insights -->
-                            <div id="trendIntelligenceOutput" style="display: grid; gap: 10px; margin-bottom: 20px;"></div>
+                            <div id="trendIntelligenceOutput" style="margin-bottom: 20px;"></div>
 
                             <!-- Bar Graph Visualizations -->
                             <div id="trendVisualizationsContainer" style="display: none; margin-top: 20px;">

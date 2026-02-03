@@ -1621,6 +1621,21 @@ function initializeEventHandlers() {
     document.getElementById('executiveSummaryBtn')?.addEventListener('click', () => {
         showOnlySection('executiveSummarySection');
         renderExecutiveSummary();
+        
+        // Reset the associate dropdown when navigating to this section
+        const summarySelect = document.getElementById('summaryAssociateSelect');
+        if (summarySelect) {
+            summarySelect.value = '';
+        }
+        
+        // Clear the data containers
+        const dataContainer = document.getElementById('summaryDataContainer');
+        const chartsContainer = document.getElementById('summaryChartsContainer');
+        const emailSection = document.getElementById('summaryEmailSection');
+        
+        if (dataContainer) dataContainer.style.display = 'none';
+        if (chartsContainer) chartsContainer.innerHTML = '';
+        if (emailSection) emailSection.style.display = 'none';
     });
     document.getElementById('debugBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');
@@ -4923,6 +4938,7 @@ function initializeYearlyIndividualSummary() {
     // Add event listener for associate dropdown
     document.getElementById('summaryAssociateSelect')?.addEventListener('change', () => {
         loadExecutiveSummaryData();
+        renderYearlySummaryTrendCharts();
         showEmailSection();
         syncOneOnOneAssociateSelect();
     });
@@ -5645,6 +5661,10 @@ function renderRecognitionIntelligence() {
 
 function renderTrendIntelligence() {
     const container = document.getElementById('trendIntelligenceOutput');
+    const modeIndicator = document.getElementById('trendModeIndicator');
+    const modeText = document.getElementById('trendModeText');
+    const emailBtnText = document.getElementById('trendEmailBtnText');
+    
     if (!container) return;
 
     const selectedEmployee = document.getElementById('trendEmployeeSelector')?.value;
@@ -5652,91 +5672,30 @@ function renderTrendIntelligence() {
     
     if (keys.length < 2) {
         container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 weeks of data to see trends.</div>';
+        if (modeIndicator) modeIndicator.style.display = 'none';
         return;
     }
 
-    const latestKey = keys[keys.length - 1];
-    const previousKey = keys[keys.length - 2];
-    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
-
-    const latestWeek = weeklyData[latestKey];
-    const previousWeek = weeklyData[previousKey];
-    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
-
-    if (!latestWeek?.employees || !previousWeek?.employees) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
-        return;
+    // Update mode indicator and button text
+    if (modeIndicator && modeText && emailBtnText) {
+        if (selectedEmployee) {
+            modeIndicator.style.display = 'block';
+            modeIndicator.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+            modeText.textContent = `👤 Individual Coaching Mode: ${selectedEmployee}`;
+            emailBtnText.textContent = '🤖 Generate Individual Coaching Email';
+        } else {
+            modeIndicator.style.display = 'block';
+            modeIndicator.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            modeText.textContent = '📊 Team-Wide Analysis Mode';
+            emailBtnText.textContent = '📧 Generate Group Email';
+        }
     }
 
-    const insights = [];
-    
-    // Filter employees based on selection
-    const employeesToAnalyze = selectedEmployee 
-        ? latestWeek.employees.filter(emp => emp.name === selectedEmployee)
-        : latestWeek.employees;
-
-    if (selectedEmployee && employeesToAnalyze.length === 0) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee not found in current data.</div>';
-        return;
-    }
-
-    employeesToAnalyze.forEach(emp => {
-        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
-        if (!prevEmp) return;
-
-        // Check for 3-period decline if we have enough data
-        if (thirdWeek?.employees) {
-            const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
-            if (thirdEmp) {
-                const key = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].find(metricKey => {
-                    const a = emp[metricKey];
-                    const b = prevEmp[metricKey];
-                    const c = thirdEmp[metricKey];
-                    if (a === undefined || b === undefined || c === undefined) return false;
-                    const worse1 = metricDelta(metricKey, a, b) < 0;
-                    const worse2 = metricDelta(metricKey, b, c) < 0;
-                    return worse1 && worse2;
-                });
-
-                if (key) {
-                    insights.push(`📉 ${emp.name} shows a 3-week decline in ${METRICS_REGISTRY[key]?.label || key}. Consider a supportive check-in focused on barriers.`);
-                }
-            }
-        }
-
-        // Check for sudden drops (week over week)
-        const suddenKey = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].find(metricKey => {
-            const current = emp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || prev === undefined) return false;
-            const delta = metricDelta(metricKey, current, prev);
-            const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
-            const threshold = unit === 'sec' ? 20 : unit === 'hrs' ? 2 : 4;
-            return delta < -threshold;
-        });
-
-        if (suddenKey) {
-            insights.push(`⚠️ ${emp.name} had a sudden drop in ${METRICS_REGISTRY[suddenKey]?.label || suddenKey}. Consider a supportive reset conversation.`);
-        }
-
-        // Check for consistency
-        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => metricMeetsTarget(metricKey, emp[metricKey]));
-        if (consistent) {
-            const recentCoaching = getCoachingHistoryForEmployee(emp.name).find(h => new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000);
-            if (!recentCoaching) {
-                insights.push(`✅ ${emp.name} shows quiet consistency. Consider recognition rather than coaching.`);
-            }
-        }
-    });
-
-    const limited = insights.slice(0, 6);
-    
-    if (selectedEmployee && limited.length === 0) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No notable trend patterns detected for this employee. Check visualizations below for metric history.</div>';
+    // Render based on mode
+    if (selectedEmployee) {
+        renderIndividualTrendAnalysis(container, selectedEmployee, keys);
     } else {
-        container.innerHTML = limited.length
-            ? limited.map(text => `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">${text}</div>`).join('')
-            : '<div style="color: #666; font-size: 0.95em;">No notable patterns detected. This is good - it means no major concerns!</div>';
+        renderGroupTrendAnalysis(container, keys);
     }
 }
 
@@ -5840,11 +5799,15 @@ function renderTrendVisualizations() {
 
 async function generateTrendCoachingEmail() {
     const employeeName = document.getElementById('trendEmployeeSelector')?.value;
-    if (!employeeName) {
-        showToast('Please select an employee first', 3000);
-        return;
+    
+    if (employeeName) {
+        await generateIndividualCoachingEmail(employeeName);
+    } else {
+        await generateGroupCoachingEmail();
     }
+}
 
+async function generateIndividualCoachingEmail(employeeName) {
     const keys = getWeeklyKeysSorted();
     if (keys.length < 2) {
         showToast('Not enough data to generate coaching email', 3000);
@@ -5941,7 +5904,7 @@ async function generateTrendCoachingEmail() {
 ${winsText}
 ${opportunitiesText}
 COACHING CONTEXT:
-- This email is based on trend analysis from the Trend Intelligence system
+- This email is based on individual trend analysis from the Trend Intelligence system
 - Focus on specific metrics and actionable tips
 - Balance celebration of wins with constructive guidance on opportunities
 
@@ -5965,7 +5928,162 @@ Please generate the coaching email now.`;
     const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
     window.open(copilotUrl, '_blank');
 
-    showToast('Opening CoPilot with coaching email prompt...', 3000);
+    showToast('Opening CoPilot with individual coaching email...', 3000);
+}
+
+async function generateGroupCoachingEmail() {
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) {
+        showToast('Not enough data to generate group email', 3000);
+        return;
+    }
+
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+
+    if (!latestWeek?.employees || !previousWeek?.employees) {
+        showToast('Not enough employee data', 3000);
+        return;
+    }
+
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
+
+    // Load tips
+    const allTips = await loadServerTips();
+
+    // Analyze team-wide patterns
+    const teamAnalysis = {
+        topPerformers: [],
+        improving: [],
+        needsSupport: [],
+        commonOpportunities: {},
+        teamWins: []
+    };
+
+    // Analyze each employee
+    latestWeek.employees.forEach(emp => {
+        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
+        if (!prevEmp) return;
+
+        let meetsAllTargets = true;
+        let hasImprovement = false;
+        let needsHelp = false;
+
+        ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'].forEach(metricKey => {
+            const current = emp[metricKey];
+            const prev = prevEmp[metricKey];
+            
+            if (current !== undefined && current !== null && current !== '') {
+                const meetsTarget = metricMeetsTarget(metricKey, current);
+                if (!meetsTarget) {
+                    meetsAllTargets = false;
+                    teamAnalysis.commonOpportunities[metricKey] = (teamAnalysis.commonOpportunities[metricKey] || 0) + 1;
+                }
+
+                if (prev !== undefined) {
+                    const delta = metricDelta(metricKey, parseFloat(current), parseFloat(prev));
+                    if (delta > 5) hasImprovement = true;
+                    if (delta < -5) needsHelp = true;
+                }
+            }
+        });
+
+        if (meetsAllTargets) teamAnalysis.topPerformers.push(emp.name);
+        else if (hasImprovement) teamAnalysis.improving.push(emp.name);
+        else if (needsHelp) teamAnalysis.needsSupport.push(emp.name);
+    });
+
+    // Find top 3 common opportunities
+    const topOpportunities = Object.entries(teamAnalysis.commonOpportunities)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([metricKey, count]) => {
+            const metric = METRICS_REGISTRY[metricKey];
+            const tips = allTips[metricKey] || [];
+            const randomTip = tips.length ? tips[Math.floor(Math.random() * tips.length)] : null;
+            return {
+                metric: metric?.label || metricKey,
+                count: count,
+                tip: randomTip
+            };
+        });
+
+    // Build team wins
+    if (teamAnalysis.topPerformers.length > 0) {
+        teamAnalysis.teamWins.push(`${teamAnalysis.topPerformers.length} team members meeting all targets`);
+    }
+    if (teamAnalysis.improving.length > 0) {
+        teamAnalysis.teamWins.push(`${teamAnalysis.improving.length} team members showing strong improvement`);
+    }
+
+    // Build prompt
+    let winsText = 'TEAM WINS:\\n';
+    if (teamAnalysis.teamWins.length > 0) {
+        teamAnalysis.teamWins.forEach(win => {
+            winsText += `- ${win}\\n`;
+        });
+    } else {
+        winsText += '- Team is working hard and showing effort\\n';
+    }
+
+    let recognitionText = '';
+    if (teamAnalysis.topPerformers.length > 0) {
+        recognitionText = '\\nTOP PERFORMERS TO RECOGNIZE:\\n';
+        teamAnalysis.topPerformers.slice(0, 5).forEach(name => {
+            recognitionText += `- ${name}\\n`;
+        });
+    }
+
+    let opportunitiesText = '\\nTEAM DEVELOPMENT OPPORTUNITIES:\\n';
+    if (topOpportunities.length > 0) {
+        topOpportunities.forEach(opp => {
+            opportunitiesText += `- ${opp.metric} (${opp.count} team members need support)\\n`;
+            if (opp.tip) {
+                opportunitiesText += `  TIP: ${opp.tip}\\n`;
+            }
+        });
+    } else {
+        opportunitiesText += '- Continue current momentum and consistency\\n';
+    }
+
+    const copilotPrompt = `Write a professional team-wide email for the week ending ${endDate}.
+
+${winsText}
+${recognitionText}
+${opportunitiesText}
+
+COACHING CONTEXT:
+- This is a GROUP email going to the entire call center team
+- Based on team-wide trend analysis from the Trend Intelligence system
+- Celebrate team achievements and recognize top performers
+- Share helpful tips for common opportunities that benefit everyone
+- Create a supportive, team-oriented tone
+
+TONE & STYLE:
+- Address the team collectively (e.g., "Team", "Everyone")
+- Professional, uplifting, and encouraging
+- Use bullet points for clarity
+- Celebrate team wins and recognize top performers by name
+- Frame opportunities as growth areas with actionable tips
+- Do NOT use em dashes (—) anywhere in the email
+- Use proper bullet points (•) not hyphens
+- Keep it concise (under 300 words)
+
+SUBJECT LINE:
+Team Insights & Wins - Week of ${endDate}
+
+Please generate the coaching email now.`;
+
+    // Open CoPilot with the prompt
+    const encodedPrompt = encodeURIComponent(copilotPrompt);
+    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
+    window.open(copilotUrl, '_blank');
+
+    showToast('Opening CoPilot with group email prompt...', 3000);
 }
 
 async function generateTodaysFocus() {
@@ -6340,7 +6458,8 @@ function generateVerintSummary() {
     const employeeSelect = document.getElementById('employeeSelect');
     const selectedEmployeeId = employeeSelect?.value;
     const employeeName = document.getElementById('employeeName')?.value.trim();
-    if (selectedEmployeeId && employeeName) {
+    
+    if (employeeName) {
         saveNickname(selectedEmployeeId, employeeName);
     }
 
@@ -6363,85 +6482,289 @@ function generateVerintSummary() {
         
         const winsLabels = summaryData.celebrate.map(cleanLabel).filter(Boolean);
         const oppLabels = summaryData.needsCoaching.map(cleanLabel).filter(Boolean);
-        
-        const winsSentence = winsLabels.length > 0
-            ? `Recognized strengths in ${formatList(winsLabels)}.`
-            : `Reviewed overall performance highlights for ${summaryData.periodLabel}.`;
-        
-        const oppSentence = oppLabels.length > 0
-            ? `Coached on improving ${formatList(oppLabels)} with clear next steps.`
-            : `No major coaching gaps identified for this period.`;
-        
-        const reliabilitySentence = summaryData.reliabilityHours !== null && summaryData.reliabilityHours !== undefined
-            ? `Reviewed ${summaryData.reliabilityHours} hours of unscheduled time and Verint alignment.`
-            : '';
-        
-        const notesSentence = summaryData.customNotes
-            ? `Additional context noted: ${summaryData.customNotes.trim().replace(/\s+/g, ' ')}.`
-            : '';
-        
-        const summaryParts = [winsSentence, oppSentence];
-        if (reliabilitySentence) {
-            summaryParts.push(reliabilitySentence);
-        } else if (notesSentence) {
-            summaryParts.push(notesSentence);
-        }
-        
-        const verintSummary = summaryParts.join(' ');
-        
-        navigator.clipboard.writeText(verintSummary).then(() => {
-            alert('✅ Verint summary copied to clipboard.');
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            alert('⚠️ Failed to copy summary to clipboard. Please try again.');
-        });
-        return;
-    }
-    
-    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
-    if (!copilotEmail) {
-        alert('⚠️ Generate the coaching prompt first so I can build a Verint summary.');
-        return;
-    }
-    
-    const summaryPrompt = `Based on this coaching email, create a brief Verint coaching summary (2-3 sentences max) that captures the key coaching points. Make it concise and suitable for internal system notes.
 
-Email:
-${copilotEmail}
+        const verintText = `Week Ending: ${summaryData.endDate}
 
-Verint Summary:`;
-    
-    navigator.clipboard.writeText(summaryPrompt).then(() => {
-        alert('✅ Verint summary prompt copied to clipboard. Paste into CoPilot to generate the summary.');
-        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('⚠️ Failed to copy summary prompt to clipboard. Please try again.');
-    });
+Employee: ${summaryData.employeeName}
+
+${winsLabels.length ? 'Wins: ' + formatList(winsLabels) : 'Still building momentum'}
+
+${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current performance'}`;
+
+        document.getElementById('verintSummaryOutput').value = verintText;
+    } else {
+        document.getElementById('verintSummaryOutput').value = 'No coaching data available. Generate a coaching email first.';
+    }
 }
 
+function renderIndividualTrendAnalysis(container, employeeName, keys) {
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
 
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
+
+    if (!latestWeek?.employees || !previousWeek?.employees) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
+        return;
+    }
+
+    const currentEmp = latestWeek.employees.find(emp => emp.name === employeeName);
+    const prevEmp = previousWeek.employees.find(e => e.name === employeeName);
+    
+    if (!currentEmp) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee not found in current data.</div>';
+        return;
+    }
+
+    const warnings = [];
+    const wins = [];
+
+    // Check for 3-period decline if we have enough data
+    if (thirdWeek?.employees && prevEmp) {
+        const thirdEmp = thirdWeek.employees.find(e => e.name === employeeName);
+        if (thirdEmp) {
+            ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
+                const a = currentEmp[metricKey];
+                const b = prevEmp[metricKey];
+                const c = thirdEmp[metricKey];
+                if (a === undefined || b === undefined || c === undefined) return;
+                const worse1 = metricDelta(metricKey, a, b) < 0;
+                const worse2 = metricDelta(metricKey, b, c) < 0;
+                if (worse1 && worse2) {
+                    warnings.push(`📉 3-week decline in ${METRICS_REGISTRY[metricKey]?.label || metricKey}. This needs immediate attention.`);
+                }
+            });
+        }
+    }
+
+    // Check for sudden drops (week over week)
+    if (prevEmp) {
+        ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].forEach(metricKey => {
+            const current = currentEmp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return;
+            const delta = metricDelta(metricKey, current, prev);
+            const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
+            const threshold = unit === 'sec' ? 20 : unit === 'hrs' ? 2 : 4;
+            if (delta < -threshold) {
+                warnings.push(`⚠️ Sudden drop in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (${delta.toFixed(1)}${unit}). Needs supportive conversation.`);
+    }
+        });
+    }
+    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+    // Check for consistency and wins
+    const meetsAllTargets = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
+        metricMeetsTarget(metricKey, currentEmp[metricKey])
+    );
+    
+    if (meetsAllTargets) {
+        wins.push(`✅ ${employeeName} is meeting all key targets. Consider recognition!`);
+    }
+
+    // Check for improvement trends
+    if (prevEmp) {
+        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].forEach(metricKey => {
+            const current = currentEmp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return;
+            const delta = metricDelta(metricKey, current, prev);
+            if (delta > 5) {
+                wins.push(`🎉 Strong improvement in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (+${delta.toFixed(1)})`);
+            }
+        });
+
+    }
+    // Build output
+    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
+    html += `<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName}</h5>`;
+    
+    if (warnings.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #e53935; margin-bottom: 8px;">🚨 Attention Needed:</div>`;
+        warnings.forEach(w => {
+            html += `<div style="padding: 10px; border-left: 3px solid #e53935; background: #ffebee; margin-bottom: 6px; border-radius: 4px;">${w}</div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (wins.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #43a047; margin-bottom: 8px;">✨ Wins & Strengths:</div>`;
+        wins.forEach(w => {
+            html += `<div style="padding: 10px; border-left: 3px solid #43a047; background: #e8f5e9; margin-bottom: 6px; border-radius: 4px;">${w}</div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (warnings.length === 0 && wins.length === 0) {
+        html += `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;">`;
+        html += `<p style="margin: 0;">📊 No significant trends detected this period. ${employeeName} is performing steadily.</p>`;
+        html += `</div>`;
+    }
+
+    html += `<div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #ff9800;">`;
+    html += `<strong>💡 Next Step:</strong> Click "Generate Individual Coaching Email" to create a personalized development email with specific tips and action items.`;
+    html += `</div>`;
+    html += `</div>`;
+    
+    container.innerHTML = html;
+}
+
+function renderGroupTrendAnalysis(container, keys) {
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
+
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
+
+    if (!latestWeek?.employees || !previousWeek?.employees) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
+        return;
+    }
+
+    const teamInsights = {
+        atRisk: [],
+        declining: [],
+        improving: [],
+        consistent: []
+    };
+
+    latestWeek.employees.forEach(emp => {
+        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
+        if (!prevEmp) return;
+        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+        // Check for 3-period decline
+        if (thirdWeek?.employees) {
+            const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
+            if (thirdEmp) {
+                const hasDecline = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+                    const a = emp[metricKey];
+                    const b = prevEmp[metricKey];
+                    const c = thirdEmp[metricKey];
+                    if (a === undefined || b === undefined || c === undefined) return false;
+                    const worse1 = metricDelta(metricKey, a, b) < 0;
+                    const worse2 = metricDelta(metricKey, b, c) < 0;
+                    return worse1 && worse2;
+                });
+
+                if (hasDecline) {
+                    teamInsights.atRisk.push(emp.name);
+                    return;
+                }
+            }
+        }
+
+        // Check for sudden drops
+        const hasSuddenDrop = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
+            const current = emp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return false;
+            const delta = metricDelta(metricKey, current, prev);
+            return delta < -4;
+        });
+
+        if (hasSuddenDrop) {
+            teamInsights.declining.push(emp.name);
+            return;
+        }
+
+        // Check for improvements
+        const hasImprovement = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+            const current = emp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return false;
+            const delta = metricDelta(metricKey, current, prev);
+            return delta > 5;
+        });
+
+        if (hasImprovement) {
+            teamInsights.improving.push(emp.name);
+            return;
+        }
+
+        // Check for consistency
+        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
+            metricMeetsTarget(metricKey, emp[metricKey])
+        );
+        
+        alert('⚠️ Failed to copy summary prompt to clipboard. Please try again.');
+            teamInsights.consistent.push(emp.name);
 // ============================================
 // EMPLOYEE LIST VIEWER
 // ============================================
-
+    // Build team overview
+    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
+    html += `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis</h5>`;
+    
+    // Summary cards
+    html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
+    
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-week decline)</div>`;
+    html += `</div>`;
+    
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
+    html += `</div>`;
 function renderEmployeesList() {
-    const container = document.getElementById('employeesList');
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.improving.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">Improving (momentum)</div>`;
+    html += `</div>`;
     
-    // Get all unique employees from uploaded weekly data
-    const employeeSet = new Set();
-    Object.values(weeklyData).forEach(week => {
-        if (week && week.employees) {
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.consistent.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">Consistent performers</div>`;
+    html += `</div>`;
+    
+    html += `</div>`;
             week.employees.forEach(emp => {
-                employeeSet.add(emp.name);
-            });
-        }
-    });
-    
-    const employees = Array.from(employeeSet).sort();
-    
-    if (employees.length === 0) {
+    // Detailed lists
+    if (teamInsights.atRisk.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #e53935; margin-bottom: 8px;">🚨 At Risk - Need Immediate Coaching:</div>`;
+        html += `<div style="padding: 12px; background: #ffebee; border-radius: 6px; border-left: 4px solid #e53935;">`;
+        html += teamInsights.atRisk.join(', ');
+        html += `</div></div>`;
         container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
+
+    if (teamInsights.declining.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #fb8c00; margin-bottom: 8px;">⚠️ Declining - Watch Closely:</div>`;
+        html += `<div style="padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #fb8c00;">`;
+        html += teamInsights.declining.join(', ');
+        html += `</div></div>`;
+    }
+
+    if (teamInsights.improving.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #43a047; margin-bottom: 8px;">🎉 Improving - Recognize Progress:</div>`;
+        html += `<div style="padding: 12px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #43a047;">`;
+        html += teamInsights.improving.join(', ');
+        html += `</div></div>`;
+    }
+
+    if (teamInsights.consistent.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #1e88e5; margin-bottom: 8px;">✅ Consistent Performers:</div>`;
+        html += `<div style="padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1e88e5;">`;
+        html += teamInsights.consistent.join(', ');
+        html += `</div></div>`;
+    }
+
+    html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
+    html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
+    html += `</div>`;
+    html += `</div>`;
+    
+    container.innerHTML = html;
         return;
     }
     
@@ -6888,6 +7211,107 @@ function displayExecutiveSummaryCharts(associate, periods, periodType) {
     });
     
     
+}
+
+function renderYearlySummaryTrendCharts() {
+    const chartsContainer = document.getElementById('summaryChartsContainer');
+    if (!chartsContainer) return;
+
+    const employeeName = document.getElementById('summaryAssociateSelect')?.value;
+    
+    if (!employeeName) {
+        chartsContainer.innerHTML = '';
+        return;
+    }
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) {
+        chartsContainer.innerHTML = '<p style="color: #999; padding: 20px;">Not enough weekly data to show trends (need at least 2 weeks).</p>';
+        return;
+    }
+
+    // Get data for selected employee across all weekly periods
+    const metricsToShow = ['scheduleAdherence', 'overallExperience', 'cxRepOverall', 'fcr', 'transfers', 'aht', 'acw', 'holdTime', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+    const trendData = {};
+
+    metricsToShow.forEach(metricKey => {
+        trendData[metricKey] = [];
+        keys.forEach(weekKey => {
+            const week = weeklyData[weekKey];
+            const emp = week?.employees?.find(e => e.name === employeeName);
+            if (emp && emp[metricKey] !== undefined && emp[metricKey] !== null && emp[metricKey] !== '') {
+                trendData[metricKey].push({
+                    weekKey: weekKey,
+                    value: parseFloat(emp[metricKey]),
+                    label: formatWeekLabel(weekKey)
+                });
+            }
+        });
+    });
+
+    // Create title
+    chartsContainer.innerHTML = '<h4 style="margin: 0 0 20px 0; color: #ff9800; font-size: 1.3em;">📊 Weekly Metric Trends</h4>';
+
+    // Create grid for charts
+    const chartsGrid = document.createElement('div');
+    chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;';
+    chartsContainer.appendChild(chartsGrid);
+
+    // Create bar charts for each metric
+    metricsToShow.forEach(metricKey => {
+        const metric = METRICS_REGISTRY[metricKey];
+        const data = trendData[metricKey];
+        
+        if (!data || data.length < 1) return;
+
+        const chartContainer = document.createElement('div');
+        chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'max-height: 250px;';
+        
+        chartContainer.appendChild(canvas);
+        chartsGrid.appendChild(chartContainer);
+
+        // Create bar chart
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.label),
+                datasets: [{
+                    label: metric.label || metricKey,
+                    data: data.map(d => d.value),
+                    backgroundColor: 'rgba(255, 152, 0, 0.6)',
+                    borderColor: 'rgba(255, 152, 0, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: `${metric.label || metricKey} Trend`,
+                        font: { size: 14, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: metric.unit === '%',
+                        title: {
+                            display: true,
+                            text: metric.unit || ''
+                        }
+                    }
+                }
+            }
+        });
+    });
 }
 
 function getCenterAverageForWeek(weekKey) {
