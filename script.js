@@ -6619,17 +6619,31 @@ function generateVerintSummary() {
         const winsLabels = summaryData.celebrate.map(cleanLabel).filter(Boolean);
         const oppLabels = summaryData.needsCoaching.map(cleanLabel).filter(Boolean);
 
-        const verintText = `Week Ending: ${summaryData.endDate}
+        const verintText = `Week Ending: ${summaryData.periodLabel}
 
-Employee: ${summaryData.employeeName}
+Employee: ${summaryData.firstName}
 
 ${winsLabels.length ? 'Wins: ' + formatList(winsLabels) : 'Still building momentum'}
 
 ${oppLabels.length ? 'Focus Areas: ' + formatList(oppLabels) : 'Continue current performance'}`;
 
-        document.getElementById('verintSummaryOutput').value = verintText;
+        const outputElement = document.getElementById('verintSummaryOutput');
+        outputElement.value = verintText;
+        
+        // Show the section
+        document.getElementById('verintSummarySection').style.display = 'block';
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(verintText).then(() => {
+            showToast('✅ Verint summary copied to clipboard!', 3000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            showToast('⚠️ Failed to copy. Text is displayed above.', 3000);
+        });
     } else {
-        document.getElementById('verintSummaryOutput').value = 'No coaching data available. Generate a coaching email first.';
+        const outputElement = document.getElementById('verintSummaryOutput');
+        outputElement.value = 'No coaching data available. Generate a coaching email first.';
+        document.getElementById('verintSummarySection').style.display = 'block';
     }
 }
 
