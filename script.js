@@ -8529,38 +8529,10 @@ let sentimentData = {
     emotions: { totalCalls: 0, callsWithSentiment: 0, phrases: [] }
 };
 
-function initializeSentiment() {
-    
-    populateSentimentEmployeeSelector();
-}
+let sentimentEmployeeName = '';
 
-function populateSentimentEmployeeSelector() {
-    const select = document.getElementById('sentimentEmployeeSelect');
-    const employeeNames = new Set();
-    
-    Object.values(weeklyData).forEach(weekData => {
-        if (weekData.employees && Array.isArray(weekData.employees)) {
-            weekData.employees.forEach(emp => {
-                if (emp.name) employeeNames.add(emp.name);
-            });
-        }
-    });
-    
-    // Keep current selection if exists
-    const currentValue = select.value;
-    
-    select.innerHTML = '<option value="">-- Choose an employee --</option>';
-    Array.from(employeeNames).sort().forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    });
-    
-    // Restore selection
-    if (currentValue && Array.from(employeeNames).includes(currentValue)) {
-        select.value = currentValue;
-    }
+function initializeSentiment() {
+    // Sentiment initialization
 }
 
 function handleSentimentFileUpload(fileType) {
@@ -8725,18 +8697,10 @@ function processSentimentUploads() {
                     console.log(`✅ Stored in sentimentData.${dataKey}:`, sentimentData[dataKey]);
                 }
                 
-                // Auto-select employee if name was found
-                if (employeeName) {
-                    const select = document.getElementById('sentimentEmployeeSelect');
-                    // Try to find matching option
-                    const options = Array.from(select.options);
-                    const match = options.find(opt => opt.value.toLowerCase().includes(employeeName.toLowerCase()) || employeeName.toLowerCase().includes(opt.value.toLowerCase()));
-                    if (match) {
-                        select.value = match.value;
-                        console.log(`Auto-selected employee: ${match.value}`);
-                    } else {
-                        console.log(`Could not find matching employee for: ${employeeName}`);
-                    }
+                // Store employee name globally (use first non-empty name found)
+                if (employeeName && !sentimentEmployeeName) {
+                    sentimentEmployeeName = employeeName;
+                    console.log(`✅ Employee name set to: ${sentimentEmployeeName}`);
                 }
                 
                 statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
@@ -8762,24 +8726,15 @@ function processSentimentUploads() {
     });
 }
 
-function updateSentimentReview() {
-    const employeeName = document.getElementById('sentimentEmployeeSelect').value;
-    
-    if (!employeeName) {
-        return;
-    }
-    
-    // Employee selected - enable generate button
-    document.getElementById('generateSentimentPromptBtn').style.opacity = '1';
-    document.getElementById('generateSentimentPromptBtn').style.cursor = 'pointer';
-}
-
 function generateSentimentPrompt() {
-    const employeeName = document.getElementById('sentimentEmployeeSelect').value;
+    const employeeName = sentimentEmployeeName;
     const promptArea = document.getElementById('sentimentPromptArea');
     
     if (!employeeName) {
-        alert('⚠️ Please select an employee first');
+        alert('⚠️ No employee name found. Please make sure your uploaded files contain an "Agent:", "Name:", or "Employee:" field.');
+        return;
+    }
+        alert('⚠️ No employee name found. Please make sure your uploaded files contain an "Agent:", "Name:", or "Employee:" field.');
         return;
     }
     
