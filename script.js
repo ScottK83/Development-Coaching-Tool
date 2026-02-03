@@ -5501,14 +5501,27 @@ function renderCoachingLoadAwareness() {
     const noRecent = [];
     const highLoad = [];
 
-    Object.keys(coachingHistory).forEach(employeeId => {
+    // Get all unique employees from weekly data
+    const allEmployees = new Set();
+    Object.values(weeklyData).forEach(week => {
+        if (week && week.employees) {
+            week.employees.forEach(emp => {
+                if (emp.name) allEmployees.add(emp.name);
+            });
+        }
+    });
+
+    // Check each employee's coaching history
+    allEmployees.forEach(employeeId => {
         const history = getCoachingHistoryForEmployee(employeeId);
         if (!history.length) {
+            // Never been coached
             noRecent.push(employeeId);
             return;
         }
         const last = history[0];
         if (new Date(last.generatedAt).getTime() < thirtyDays) {
+            // Last coaching was over 30 days ago
             noRecent.push(employeeId);
         }
         const recentCount = history.filter(h => new Date(h.generatedAt).getTime() >= fourteenDays).length;
