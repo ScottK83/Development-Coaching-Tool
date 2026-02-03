@@ -5952,16 +5952,20 @@ async function generateGroupCoachingEmail() {
         ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
         : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
 
+    const centerAvg = getCenterAverageForWeek(latestKey);
+
     // Load tips
     const allTips = await loadServerTips();
 
-    // Analyze team-wide patterns
+    // Analyze team-wide patterns with detailed metrics
     const teamAnalysis = {
-        topPerformers: [],
+        rockstars: [], // Crushing it across the board + beating center average
+        topPerformers: [], // Meeting all targets
         improving: [],
         needsSupport: [],
         commonOpportunities: {},
-        teamWins: []
+        teamWins: [],
+        metricChampions: {} // Track who's destroying specific metrics
     };
 
     // Analyze each employee
@@ -5970,18 +5974,59 @@ async function generateGroupCoachingEmail() {
         if (!prevEmp) return;
 
         let meetsAllTargets = true;
+        let beatsAllCenterAvg = true;
         let hasImprovement = false;
         let needsHelp = false;
+        let metricsAboveCenter = [];
 
         ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'].forEach(metricKey => {
             const current = emp[metricKey];
             const prev = prevEmp[metricKey];
+            const metric = METRICS_REGISTRY[metricKey];
             
             if (current !== undefined && current !== null && current !== '') {
                 const meetsTarget = metricMeetsTarget(metricKey, current);
                 if (!meetsTarget) {
                     meetsAllTargets = false;
                     teamAnalysis.commonOpportunities[metricKey] = (teamAnalysis.commonOpportunities[metricKey] || 0) + 1;
+                }
+
+                // Check if beating center average
+                const centerValue = centerAvg?.[metricKey];
+                if (centerValue !== undefined && centerValue !== null) {
+                    const currentFloat = parseFloat(current);
+                    const centerFloat = parseFloat(centerValue);
+                    const beatsCenterAvg = metric.higherIsBetter 
+                        ? currentFloat > centerFloat 
+                        : currentFloat < centerFloat;
+                    
+                    if (!beatsCenterAvg) {
+                        beatsAllCenterAvg = false;
+                    } else {
+                        // Track metrics where they're crushing it
+                        const delta = metric.higherIsBetter 
+                            ? currentFloat - centerFloat 
+                            : centerFloat - currentFloat;
+                        
+                        if (delta > 0) {
+                            metricsAboveCenter.push({
+                                metric: metric.label,
+                                empValue: current,
+                                centerValue: centerValue,
+                                delta: delta
+                            });
+                            
+                            // Track champions for this metric
+                            if (!teamAnalysis.metricChampions[metricKey]) {
+                                teamAnalysis.metricChampions[metricKey] = [];
+                            }
+                            teamAnalysis.metricChampions[metricKey].push({
+                                name: emp.name,
+                                value: current,
+                                delta: delta
+                            });
+                        }
+                    }
                 }
 
                 if (prev !== undefined) {
@@ -5992,9 +6037,22 @@ async function generateGroupCoachingEmail() {
             }
         });
 
-        if (meetsAllTargets) teamAnalysis.topPerformers.push(emp.name);
-        else if (hasImprovement) teamAnalysis.improving.push(emp.name);
-        else if (needsHelp) teamAnalysis.needsSupport.push(emp.name);
+        // Categorize employees
+        if (meetsAllTargets && beatsAllCenterAvg && metricsAboveCenter.length >= 3) {
+            teamAnalysis.rockstars.push({ name: emp.name, metrics: metricsAboveCenter });
+        } else if (meetsAllTargets) {
+            teamAnalysis.topPerformers.push(emp.name);
+        } else if (hasImprovement) {
+            teamAnalysis.improving.push(emp.name);
+        } else if (needsHelp) {
+            teamAnalysis.needsSupport.push(emp.name);
+        }
+    });
+
+    // Find metric champions (top 3 per metric)
+    Object.keys(teamAnalysis.metricChampions).forEach(metricKey => {
+        teamAnalysis.metricChampions[metricKey].sort((a, b) => b.delta - a.delta);
+        teamAnalysis.metricChampions[metricKey] = teamAnalysis.metricChampions[metricKey].slice(0, 3);
     });
 
     // Find top 3 common opportunities
@@ -6013,27 +6071,58 @@ async function generateGroupCoachingEmail() {
         });
 
     // Build team wins
+    if (teamAnalysis.rockstars.length > 0) {
+        teamAnalysis.teamWins.push(`🔥 ${teamAnalysis.rockstars.length} ROCKSTARS crushing it across the board and beating call center averages`);
+    }
     if (teamAnalysis.topPerformers.length > 0) {
-        teamAnalysis.teamWins.push(`${teamAnalysis.topPerformers.length} team members meeting all targets`);
+        teamAnalysis.teamWins.push(`⭐ ${teamAnalysis.topPerformers.length} team members meeting all targets`);
     }
     if (teamAnalysis.improving.length > 0) {
-        teamAnalysis.teamWins.push(`${teamAnalysis.improving.length} team members showing strong improvement`);
+        teamAnalysis.teamWins.push(`📈 ${teamAnalysis.improving.length} team members showing strong improvement`);
     }
 
     // Build prompt
-    let winsText = 'TEAM WINS:\\n';
+    let winsText = 'TEAM WINS & CELEBRATIONS:\\n';
     if (teamAnalysis.teamWins.length > 0) {
         teamAnalysis.teamWins.forEach(win => {
-            winsText += `- ${win}\\n`;
+            winsText += `${win}\\n`;
         });
     } else {
         winsText += '- Team is working hard and showing effort\\n';
     }
 
+    let rockstarsText = '';
+    if (teamAnalysis.rockstars.length > 0) {
+        rockstarsText = '\\n🏆 ROCKSTARS - ABSOLUTELY CRUSHING IT:\\n';
+        rockstarsText += 'These team members are BLOWING THE CALL CENTER AVERAGE OUT OF THE WATER:\\n';
+        teamAnalysis.rockstars.slice(0, 5).forEach(rockstar => {
+            rockstarsText += `\\n${rockstar.name} - DESTROYING IT in:\\n`;
+            rockstar.metrics.forEach(m => {
+                rockstarsText += `  • ${m.metric}: ${m.empValue} (Center Avg: ${m.centerValue}) - ${Math.abs(m.delta).toFixed(1)} points above!\\n`;
+            });
+        });
+    }
+
+    let championText = '';
+    const topMetricsToHighlight = Object.entries(teamAnalysis.metricChampions)
+        .filter(([_, champs]) => champs.length > 0)
+        .slice(0, 3);
+    
+    if (topMetricsToHighlight.length > 0) {
+        championText = '\\n🎯 METRIC CHAMPIONS:\\n';
+        topMetricsToHighlight.forEach(([metricKey, champions]) => {
+            const metric = METRICS_REGISTRY[metricKey];
+            championText += `\\n${metric.label} Leaders:\\n`;
+            champions.forEach((champ, idx) => {
+                championText += `  ${idx + 1}. ${champ.name} - ${champ.value} (${champ.delta.toFixed(1)} above center avg!)\\n`;
+            });
+        });
+    }
+
     let recognitionText = '';
     if (teamAnalysis.topPerformers.length > 0) {
-        recognitionText = '\\nTOP PERFORMERS TO RECOGNIZE:\\n';
-        teamAnalysis.topPerformers.slice(0, 5).forEach(name => {
+        recognitionText = '\\n✅ CONSISTENT PERFORMERS (Meeting All Targets):\\n';
+        teamAnalysis.topPerformers.slice(0, 8).forEach(name => {
             recognitionText += `- ${name}\\n`;
         });
     }
@@ -6043,47 +6132,50 @@ async function generateGroupCoachingEmail() {
         topOpportunities.forEach(opp => {
             opportunitiesText += `- ${opp.metric} (${opp.count} team members need support)\\n`;
             if (opp.tip) {
-                opportunitiesText += `  TIP: ${opp.tip}\\n`;
+                opportunitiesText += `  💡 TIP: ${opp.tip}\\n`;
             }
         });
     } else {
         opportunitiesText += '- Continue current momentum and consistency\\n';
     }
 
-    const copilotPrompt = `Write a professional team-wide email for the week ending ${endDate}.
+    const copilotPrompt = `Write a HIGH-ENERGY, MOTIVATIONAL team-wide email for the week ending ${endDate}.
 
 ${winsText}
+${rockstarsText}
+${championText}
 ${recognitionText}
 ${opportunitiesText}
 
-COACHING CONTEXT:
+CRITICAL REQUIREMENTS:
 - This is a GROUP email going to the entire call center team
-- Based on team-wide trend analysis from the Trend Intelligence system
-- Celebrate team achievements and recognize top performers
-- Share helpful tips for common opportunities that benefit everyone
-- Create a supportive, team-oriented tone
+- CALL OUT the rockstars who are KILLING IT and beating the call center average by name
+- Make it EXCITING and CELEBRATORY for top performers
+- Use phrases like "crushing it", "blowing the average out of the water", "absolutely dominating"
+- Create FOMO for those not on the list - make them want to be recognized next week
+- Be specific with numbers and metrics where people are excelling
+- Frame development opportunities positively as "join the winners circle"
 
 TONE & STYLE:
-- Address the team collectively (e.g., "Team", "Everyone")
-- Professional, uplifting, and encouraging
-- Use bullet points for clarity
-- Celebrate team wins and recognize top performers by name
-- Frame opportunities as growth areas with actionable tips
+- HIGH ENERGY, MOTIVATIONAL, and CELEBRATORY
+- Call out winners by name with specific achievements
+- Make top performers feel like ROCKSTARS
+- Professional but exciting and engaging
+- Use bullet points and emojis (🔥⭐🏆💪🎯) for impact
 - Do NOT use em dashes (—) anywhere in the email
-- Use proper bullet points (•) not hyphens
-- Keep it concise (under 300 words)
+- Keep it concise but impactful (under 350 words)
 
 SUBJECT LINE:
-Team Insights & Wins - Week of ${endDate}
+🔥 This Week's ROCKSTARS - Week of ${endDate}
 
-Please generate the coaching email now.`;
+Please generate the coaching email now with HIGH ENERGY celebrating our top performers!`;
 
     // Open CoPilot with the prompt
     const encodedPrompt = encodeURIComponent(copilotPrompt);
     const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
     window.open(copilotUrl, '_blank');
 
-    showToast('Opening CoPilot with group email prompt...', 3000);
+    showToast('Opening CoPilot with HIGH-ENERGY group email prompt...', 3000);
 }
 
 async function generateTodaysFocus() {
