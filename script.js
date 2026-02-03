@@ -3372,7 +3372,6 @@ function generateTrendEmail() {
     try {
         const mailtoLink = document.createElement('a');
         mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
-        mailtoLink.target = '_blank';
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
