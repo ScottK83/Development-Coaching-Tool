@@ -3549,7 +3549,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
             trendingText = '➡️ No change';
         } else {
             const changeValue = formatMetricValue(metricKey, absDiff);
-            const periodLabel = metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
+            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
             const sign = trendDiff > 0 ? '+' : '-';
             const directionEmoji = trendDiff > 0 ? '📈' : '📉';
             trendingColor = isImprovement ? '#28a745' : '#dc3545';
