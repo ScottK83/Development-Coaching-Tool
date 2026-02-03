@@ -602,37 +602,37 @@
                             <textarea id="todaysFocusOutput" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;"></textarea>
                         </div>
 
-                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
-                            <h4 style="margin-top: 0; color: #3c78c8;">📈 Trend Intelligence & Coaching Hub</h4>
-                            <p style="color: #666; font-size: 0.9em; margin: -10px 0 15px 0;">Analyze trends across your team or for individual coaching. Select "All Team Members" for group insights, or choose a specific employee for personalized coaching.</p>
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <h4 style="margin-top: 0; margin-bottom: 8px; color: #3c78c8; font-size: 1.2em;">📈 Trend Intelligence & Coaching Hub</h4>
+                            <p style="color: #666; font-size: 0.9em; margin: 0 0 20px 0; line-height: 1.5;">Analyze trends across your team or for individual coaching. Select "All Team Members" for group insights, or choose a specific employee for personalized coaching.</p>
                             
                             <!-- Current Mode Indicator -->
-                            <div id="trendModeIndicator" style="padding: 10px 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; margin-bottom: 15px; font-weight: 600; display: none;">
+                            <div id="trendModeIndicator" style="padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; margin-bottom: 20px; font-weight: 600; display: none; text-align: center;">
                                 <span id="trendModeText">📊 Team-Wide Analysis Mode</span>
                             </div>
 
                             <!-- Period & Employee Selection -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                                 <div>
-                                    <label for="trendPeriodSelector" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Compare:</label>
-                                    <select id="trendPeriodSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
+                                    <label for="trendPeriodSelector" style="font-weight: 600; display: block; margin-bottom: 8px; color: #345a94; font-size: 0.95em;">Compare:</label>
+                                    <select id="trendPeriodSelector" style="width: 100%; padding: 10px 12px; border: 2px solid #e3f2fd; border-radius: 6px; font-size: 0.95em; background: white; transition: border-color 0.2s;">
                                         <option value="wow">Week over Week</option>
                                         <option value="mom">Month over Month</option>
                                         <option value="ytd">Year to Date</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="trendEmployeeSelector" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Employee:</label>
-                                    <select id="trendEmployeeSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
+                                    <label for="trendEmployeeSelector" style="font-weight: 600; display: block; margin-bottom: 8px; color: #345a94; font-size: 0.95em;">Employee:</label>
+                                    <select id="trendEmployeeSelector" style="width: 100%; padding: 10px 12px; border: 2px solid #e3f2fd; border-radius: 6px; font-size: 0.95em; background: white; transition: border-color 0.2s;">
                                         <option value="">🏢 All Team Members (Group Analysis)</option>
                                     </select>
                                 </div>
                             </div>
 
                             <!-- Action Buttons -->
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: #3c78c8; color: white;">🔄 Refresh Analysis</button>
-                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: #6a1b9a; color: white;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: linear-gradient(135deg, #3c78c8 0%, #2565b1 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">🔄 Refresh Analysis</button>
+                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: linear-gradient(135deg, #6a1b9a 0%, #4a148c 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                                     <span id="trendEmailBtnText">🤖 Generate Coaching Email</span>
                                 </button>
                             </div>
