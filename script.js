@@ -8705,6 +8705,12 @@ function processSentimentUploads() {
                     }
                 }
                 
+                // Update all phrase.total values now that we have final totalCalls
+                phrases.forEach(p => {
+                    p.total = totalCalls;
+                    p.percentage = totalCalls > 0 ? ((p.used / totalCalls) * 100).toFixed(0) : 0;
+                });
+                
                 console.log(`Parsed ${phrases.length} phrases from ${fileType} file`);
                 
                 // Store parsed data
@@ -8842,8 +8848,9 @@ function generateSentimentPrompt() {
     // Get top 5 most used
     const top5 = allPhrases.slice(0, 5);
     
-    // Get bottom 5 least used (opportunities)
-    const bottom5 = allPhrases.slice(-5).reverse();
+    // Get bottom 5 least used (opportunities) - only phrases with usage > 0
+    const phrasesWithUsage = allPhrases.filter(p => p.used > 0);
+    const bottom5 = phrasesWithUsage.slice(-5).reverse();
     
     // Build the data summary
     let sentimentSummary = `SENTIMENT SCORES:\n`;
