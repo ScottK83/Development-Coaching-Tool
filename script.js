@@ -4917,28 +4917,8 @@ function initializeYearlyIndividualSummary() {
         syncOneOnOneAssociateSelect();
     });
     
-    // [DEPRECATED: generateExecutiveSummaryEmailBtn listener removed - function deleted in Phase 1 cleanup]
-    document.getElementById('generateExecutiveSummaryEmailBtn')?.addEventListener('click', generateExecutiveSummaryEmail);
-    
-    // Add event listener for copy button
-    document.getElementById('copyExecutiveSummaryEmailBtn')?.addEventListener('click', () => {
-        const htmlEmail = window.latestExecutiveSummaryHtml;
-        if (!htmlEmail || htmlEmail.trim() === '') {
-            showToast('Generate an email first', 5000);
-            return;
-        }
-        const blob = new Blob([htmlEmail], { type: 'text/html' });
-        const htmlClipboardItem = new ClipboardItem({ 'text/html': blob });
-        navigator.clipboard.write([htmlClipboardItem]).then(() => {
-            showToast('Email copied to clipboard!', 5000);
-        }).catch(() => {
-            navigator.clipboard.writeText(htmlEmail).then(() => {
-                showToast('Copied as plain text', 5000);
-            }).catch(() => {
-                showToast('Failed to copy email', 5000);
-            });
-        });
-    });
+    // Generate CoPilot prompt for Executive Summary email
+    document.getElementById('generateExecutiveSummaryCopilotBtn')?.addEventListener('click', generateExecutiveSummaryCopilotEmail);
     
     
 }
@@ -5025,7 +5005,8 @@ function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
                     value: formatMetricValue(metricKey, numericValue),
                     center: formatMetricValue(metricKey, numericCenter),
                     diff: `+${formatMetricValue(metricKey, diff)}`,
-                    rawDiff: diff
+                    rawDiff: diff,
+                    metricKey: metricKey
                 };
             }
         });
@@ -5036,6 +5017,135 @@ function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
     return callouts
         .sort((a, b) => b.rawDiff - a.rawDiff)
         .slice(0, 5);
+}
+
+async function generateExecutiveSummaryCopilotEmail() {
+    const associate = document.getElementById('summaryAssociateSelect')?.value;
+    if (!associate) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const latestKey = getLatestWeeklyKey();
+    const latestWeek = latestKey ? weeklyData[latestKey] : null;
+    if (!latestKey || !latestWeek) {
+        showToast('No weekly data available', 3000);
+        return;
+    }
+
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
+
+    // Load tips from CSV
+    const allTips = await loadServerTips();
+
+    // Build individual wins callouts
+    const individualWins = buildExecutiveSummaryCallouts(latestKey, latestWeek);
+    let individualWinsText = '';
+    if (individualWins.length > 0) {
+        individualWinsText = 'INDIVIDUAL WINS (Team Members Crushing Metrics vs Call Center Average):\\n';
+        individualWins.forEach(item => {
+            individualWinsText += `- ${item.name}: ${item.metric} at ${item.value} vs center ${item.center} (${item.diff})\\n`;
+        });
+    } else {
+        individualWinsText = 'INDIVIDUAL WINS: No call center averages configured yet.\\n';
+    }
+
+    // Build team performance vs center average
+    const teamPerformance = buildTeamVsCenterAnalysis(latestKey, latestWeek);
+    let teamPerformanceText = 'TEAM PERFORMANCE vs CALL CENTER AVERAGE:\\n';
+    if (teamPerformance.length > 0) {
+        teamPerformance.forEach(item => {
+            const indicator = item.diff > 0 ? '✓' : item.diff < 0 ? '✗' : '=';
+            teamPerformanceText += `${indicator} ${item.metric}: Team ${item.teamValue} vs Center ${item.centerValue} (${item.diffFormatted})\\n`;
+        });
+    } else {
+        teamPerformanceText += 'No call center averages configured yet.\\n';
+    }
+
+    // Find biggest opportunity and get a tip
+    let focusAreaText = '';
+    const biggestOpportunity = teamPerformance.find(item => item.diff < 0);
+    if (biggestOpportunity && allTips[biggestOpportunity.metricKey]) {
+        const tips = allTips[biggestOpportunity.metricKey] || [];
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        focusAreaText = `TEAM FOCUS AREA & TIP:\\n- ${biggestOpportunity.metric}: Team needs improvement (${biggestOpportunity.diffFormatted} below center)\\n- Tip: ${randomTip}\\n`;
+    } else {
+        focusAreaText = 'TEAM FOCUS AREA: Team is performing well across all metrics!\\n';
+    }
+
+    const copilotPrompt = `Write a professional team email recognizing wins and providing guidance for the week ending ${endDate}.
+
+${individualWinsText}
+${teamPerformanceText}
+${focusAreaText}
+TONE & STYLE:
+- Professional and motivating
+- Celebrate specific wins with names
+- Frame opportunities positively
+- Keep it concise (under 200 words)
+- Use bullet points for wins
+- Do NOT use em dashes (—) anywhere in the email
+- Use proper bullet points (•) not hyphens
+
+SUBJECT LINE:
+Team Update - Week of ${endDate}
+
+Please generate the email now.`;
+
+    // Open CoPilot in new tab with the prompt
+    const encodedPrompt = encodeURIComponent(copilotPrompt);
+    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
+    window.open(copilotUrl, '_blank');
+
+    showToast('Opening CoPilot with your email prompt...', 3000);
+}
+
+function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
+    if (!latestKey || !latestWeek?.employees?.length) return [];
+    const centerAvg = getCenterAverageForWeek(latestKey);
+    if (!centerAvg) return [];
+
+    const analysis = [];
+    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+        const metric = METRICS_REGISTRY[metricKey];
+        const centerValue = centerAvg[metricKey];
+        if (centerValue === undefined || centerValue === null || centerValue === '') return;
+
+        // Calculate team average for this metric
+        const values = latestWeek.employees
+            .map(emp => parseFloat(emp[metricKey]))
+            .filter(v => !Number.isNaN(v) && v !== null && v !== undefined);
+        
+        if (values.length === 0) return;
+        
+        const teamAvg = values.reduce((sum, v) => sum + v, 0) / values.length;
+        const numericCenter = parseFloat(centerValue);
+        
+        if (Number.isNaN(teamAvg) || Number.isNaN(numericCenter)) return;
+
+        const isReverse = isReverseMetric(metricKey);
+        const diff = isReverse ? numericCenter - teamAvg : teamAvg - numericCenter;
+        
+        const diffFormatted = diff > 0 
+            ? `+${formatMetricValue(metricKey, Math.abs(diff))} better`
+            : diff < 0
+            ? `-${formatMetricValue(metricKey, Math.abs(diff))} below`
+            : 'at center';
+
+        analysis.push({
+            metricKey: metricKey,
+            metric: metric.label || metricKey,
+            teamValue: formatMetricValue(metricKey, teamAvg),
+            centerValue: formatMetricValue(metricKey, numericCenter),
+            diff: diff,
+            diffFormatted: diffFormatted,
+            rawDiff: Math.abs(diff)
+        });
+    });
+
+    return analysis.sort((a, b) => b.rawDiff - a.rawDiff);
 }
 
 function populateOneOnOneAssociateSelect() {
