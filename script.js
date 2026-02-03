@@ -2800,6 +2800,8 @@ function populateEmployeeDropdown() {
     });
     
     trendEmployeeSelect.innerHTML = options;
+
+    updateTrendButtonsVisibility();
 }
 
 function populateEmployeeDropdownForPeriod(weekKey) {
@@ -2820,6 +2822,7 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     const periodData = ytdData[weekKey] || weeklyData[weekKey];
     if (!periodData || !periodData.employees) {
         trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
+        updateTrendButtonsVisibility();
         return;
     }
     
@@ -2836,6 +2839,8 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     });
     
     trendEmployeeSelect.innerHTML = options;
+
+    updateTrendButtonsVisibility();
 }
 
 function setupAveragesLoader() {
@@ -3092,6 +3097,24 @@ function displayCallCenterAverages(weekKey) {
         alert('✅ Call center averages saved!');
     });
 
+function updateTrendButtonsVisibility() {
+    const employeeDropdown = document.getElementById('trendEmployeeSelect');
+    const generateTrendBtn = document.getElementById('generateTrendBtn');
+    const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+    const selectedValue = employeeDropdown?.value || '';
+
+    if (selectedValue === '') {
+        if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+    } else if (selectedValue === 'ALL') {
+        if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
+    } else {
+        if (generateTrendBtn) generateTrendBtn.style.display = 'block';
+        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+    }
+}
+
 function setupMetricTrendsListeners() {
     // Add event listeners to period type radio buttons
     const periodTypeRadios = document.querySelectorAll('input[name="trendPeriodType"]');
@@ -3105,6 +3128,7 @@ function setupMetricTrendsListeners() {
             
             // Clear employee selection
             document.getElementById('trendEmployeeSelect').innerHTML = '<option value="">-- Choose an employee --</option>';
+            updateTrendButtonsVisibility();
         });
     });
     
@@ -3130,6 +3154,7 @@ function setupMetricTrendsListeners() {
             
             if (employeeName === 'ALL') {
                 document.getElementById('metricsPreviewSection').style.display = 'none';
+                updateTrendButtonsVisibility();
                 return;
             }
             
@@ -3138,6 +3163,8 @@ function setupMetricTrendsListeners() {
             } else {
                 document.getElementById('metricsPreviewSection').style.display = 'none';
             }
+
+            updateTrendButtonsVisibility();
         });
     }
     
@@ -3185,6 +3212,9 @@ function setupMetricTrendsListeners() {
             }
         });
     }
+
+    // Ensure buttons are correctly shown on initial load
+    updateTrendButtonsVisibility();
     
 }
 
