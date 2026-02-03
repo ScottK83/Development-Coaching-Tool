@@ -6180,12 +6180,19 @@ SUBJECT LINE:
 
 Please generate the coaching email now with HIGH ENERGY celebrating our top performers!`;
 
-    // Open CoPilot with the prompt
-    const encodedPrompt = encodeURIComponent(copilotPrompt);
-    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
-    window.open(copilotUrl, '_blank');
-
-    showToast('Opening CoPilot with HIGH-ENERGY group email prompt...', 3000);
+    // Copy to clipboard and open Copilot
+    navigator.clipboard.writeText(copilotPrompt).then(() => {
+        // Show instruction popup
+        alert('✅ Group email prompt copied!\n\nCtrl+V and Enter to paste into Copilot.');
+        
+        // Open Copilot
+        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+        
+        showToast('Prompt copied! Paste into CoPilot to generate the email.', 3000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
+    });
 }
 
 async function generateTodaysFocus() {
