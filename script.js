@@ -8765,14 +8765,26 @@ function handleSentimentFileChange(fileType) {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
                 lines = csvContent.split('\n').filter(line => line.trim());
+                console.log(`📊 Excel file converted to ${lines.length} lines`);
+                console.log('First 20 lines:', lines.slice(0, 20));
             } else {
                 const content = e.target.result;
                 lines = content.split('\n').filter(line => line.trim());
+                console.log(`📄 Text file has ${lines.length} lines`);
             }
             
             // Parse file
             const report = parseSentimentFile(fileType, lines);
             sentimentReports[fileType.toLowerCase()] = report;
+            
+            console.log(`✅ Parsed ${fileType}:`, {
+                name: report.associateName,
+                totalCalls: report.totalCalls,
+                detected: report.callsDetected,
+                percentage: report.percentage,
+                phrasesCount: report.phrases.length,
+                samplePhrases: report.phrases.slice(0, 3)
+            });
             
             statusDiv.textContent = `✅ ${report.associateName || 'Loaded'} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
             statusDiv.style.color = '#4caf50';
