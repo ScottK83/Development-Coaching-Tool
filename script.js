@@ -8856,12 +8856,12 @@ SCORES:
 ${sentimentSummary}
 
 TASK: Write a 3-4 paragraph coaching email that:
-1. Celebrates their Top 5 phrases (what they're doing well)
-2. Explains the Bottom 5 as expansion opportunities to boost their sentiment score
-3. Gives 2 specific examples of how to use the Bottom 5 phrases naturally
-4. Ends with encouragement
+1. Celebrates their Top 5 phrases and how often they used them
+2. Points out the Bottom 5 phrases they should use more often to improve their sentiment score
+3. Give 2 specific examples of situations where they could use the Bottom 5 phrases
+4. Ends with encouragement and confidence
 
-Keep it concise, warm, and actionable. No jargon.`;
+Keep it real, warm, and actionable. Show their actual numbers. No corporate jargon.`;
     
     promptArea.value = prompt;
     
