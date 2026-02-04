@@ -8638,6 +8638,11 @@ function processSentimentUploads() {
                         continue;
                     }
                     
+                    // Log lines that contain "Interactions" for debugging
+                    if (line.includes('Interactions')) {
+                        console.log(`Line contains 'Interactions' but didn't match regex: "${line}"`);
+                    }
+                    
                     // Fallback: just "Interactions: 3100" without the "out of" part
                     if (!totalCalls) {
                         const simpleMatch = line.match(/Interactions[:\s]+(\d+)/i);
