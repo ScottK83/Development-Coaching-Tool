@@ -2088,6 +2088,76 @@ function initializeEventHandlers() {
         showOnlySection('uploadSection');
     });
     
+    // File transfer utilities
+    let transferredFiles = [];
+    
+    document.getElementById('uploadFileBtn')?.addEventListener('click', () => {
+        const fileInput = document.getElementById('fileTransferInput');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please select at least one file');
+            return;
+        }
+        
+        Array.from(fileInput.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                transferredFiles.push({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    data: e.target.result,
+                    timestamp: new Date().toLocaleString()
+                });
+                updateTransferredFilesList();
+                showToast(`✅ File "${file.name}" uploaded to storage`, 3000);
+            };
+            if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                alert(`File "${file.name}" is too large (max 100MB)`);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        fileInput.value = '';
+    });
+    
+    function updateTransferredFilesList() {
+        const listDiv = document.getElementById('transferredFilesList');
+        if (transferredFiles.length === 0) {
+            listDiv.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">No files uploaded yet</div>';
+            return;
+        }
+        
+        let html = '<div style="padding: 10px;">';
+        transferredFiles.forEach((file, index) => {
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            html += `
+                <div style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: bold; color: #333;">${file.name}</div>
+                        <small style="color: #666;">${sizeMB} MB • ${file.timestamp}</small>
+                    </div>
+                    <button type="button" onclick="downloadTransferredFile(${index})" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">📥 Download</button>
+                </div>
+            `;
+        });
+        html += '</div>';
+        listDiv.innerHTML = html;
+    }
+    
+    window.downloadTransferredFile = function(index) {
+        const file = transferredFiles[index];
+        const blob = new Blob([file.data], { type: file.type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(`✅ Downloaded "${file.name}"`, 2000);
+    };
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         
