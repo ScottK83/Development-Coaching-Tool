@@ -8664,10 +8664,6 @@ function parseSentimentFile(fileType, lines) {
                 console.log(`✅ Found end date: ${report.endDate}`);
             }
         }
-            if (endMatch) {
-                report.endDate = endMatch[1].trim().split(',')[0]; // Remove time if present
-            }
-        }
         
         // Extract total calls and calls with category detected
         // Format in Excel CSV: "Interactions:,165 (76% out of 218 matching data filter),,"
