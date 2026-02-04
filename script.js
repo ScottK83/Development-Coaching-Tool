@@ -2216,6 +2216,92 @@ function initializeEventHandlers() {
         }
     };
     
+    // Export as Base64 text (for pasting into GitHub/text services)
+    document.getElementById('exportBase64Btn')?.addEventListener('click', () => {
+        if (transferredFiles.length === 0) {
+            alert('No files to export');
+            return;
+        }
+        
+        try {
+            const exportData = {
+                version: 1,
+                timestamp: new Date().toISOString(),
+                files: transferredFiles.map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    data: btoa(String.fromCharCode.apply(null, new Uint8Array(f.data))),
+                    timestamp: f.timestamp
+                }))
+            };
+            
+            const base64 = btoa(JSON.stringify(exportData));
+            
+            // Create a modal/textarea to show the base64 string
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+                    <h3 style="margin-top: 0;">Export as Text (for GitHub)</h3>
+                    <p style="color: #666; font-size: 0.9em;">Copy this text and paste into a GitHub gist or private repo file:</p>
+                    <textarea id="exportBase64Text" readonly style="flex: 1; padding: 10px; font-family: monospace; font-size: 0.8em; border: 1px solid #ddd; border-radius: 4px; overflow: auto; margin-bottom: 10px;"></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="document.getElementById('exportBase64Text').select(); document.execCommand('copy'); alert('Copied to clipboard!'); document.querySelector('[style*=\'background: rgba\']').remove();" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; flex: 1;">📋 Copy to Clipboard</button>
+                        <button onclick="document.querySelector('[style*=\'background: rgba\']').remove();" style="background: #999; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('exportBase64Text').value = base64;
+            showToast(`✅ Export ready - copy and paste into GitHub gist`, 3000);
+        } catch (e) {
+            alert('Error exporting: ' + e.message);
+            console.error(e);
+        }
+    });
+    
+    // Import from Base64 text
+    document.getElementById('importBase64Btn')?.addEventListener('click', () => {
+        const base64Input = prompt('Paste the exported text here:');
+        if (!base64Input) return;
+        
+        try {
+            const jsonString = atob(base64Input);
+            const importData = JSON.parse(jsonString);
+            
+            if (!importData.files || !Array.isArray(importData.files)) {
+                throw new Error('Invalid export format');
+            }
+            
+            let filesImported = 0;
+            importData.files.forEach(f => {
+                const binaryString = atob(f.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                transferredFiles.push({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    data: bytes.buffer,
+                    timestamp: f.timestamp
+                });
+                filesImported++;
+            });
+            
+            saveTransferredFiles();
+            updateTransferredFilesList();
+            showToast(`✅ Imported ${filesImported} files`, 3000);
+        } catch (e) {
+            alert('Error importing: ' + e.message + '\n\nMake sure you pasted the complete text export.');
+            console.error(e);
+        }
+    });
+    
     // Export all files as ZIP
     document.getElementById('exportFilesBtn')?.addEventListener('click', async () => {
         if (transferredFiles.length === 0) {
