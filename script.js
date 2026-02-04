@@ -975,8 +975,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         // Data integrity check: surveyTotal cannot exceed totalCalls
         if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
-            console.warn(`?? DATA INTEGRITY: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Invalidating totalCalls.`);
-            employeeData.totalCalls = 0;
+            console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Survey metrics may be inaccurate.`);
         }
         
         if (i <= 3) {
@@ -2579,10 +2578,11 @@ function populateTeamMemberSelector() {
     let html = '';
     employees.forEach(emp => {
         const isSelected = selectedMembers.length === 0 || selectedMembers.includes(emp.name);
+        const escapedName = escapeHtml(emp.name);
         html += `
             <label style="display: flex; align-items: center; gap: 10px; padding: 8px; cursor: pointer; hover: background: #f5f5f5;">
-                <input type="checkbox" class="team-member-checkbox" data-week="${selectedWeek}" data-name="${emp.name}" ${isSelected ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-                <span>${emp.name}</span>
+                <input type="checkbox" class="team-member-checkbox" data-week="${selectedWeek}" data-name="${escapedName}" ${isSelected ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                <span>${escapedName}</span>
             </label>
         `;
     });
@@ -2833,8 +2833,8 @@ async function renderTipsManagement() {
                             <textarea id="editServerTip_${metricKey}_${originalIndex}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteServerTip('${metricKey}', ${originalIndex})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
-                            </div>
+                                <button class="updateServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button class="deleteServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}
                         </div>
                     </div>
                 `;
@@ -2850,8 +2850,8 @@ async function renderTipsManagement() {
                             <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button onclick="deleteTip('${metricKey}', ${index})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
-                            </div>
+                                <button class="updateTipBtn" data-metric="${metricKey}" data-index="${index}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
+                                <button class="deleteTipBtn" data-metric="${metricKey}" data-index="${index}
                         </div>
                     </div>
                 `;
@@ -2868,11 +2868,35 @@ async function renderTipsManagement() {
         tipsHtml += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 2px dashed #28a745;">
                 <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${metricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button onclick="addTip('${metricKey}')" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Tip</button>
+                <button class="addTipBtn" data-metric="${metricKey}" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Tip</button>
             </div>
         `;
         tipsHtml += '</div>';
         displayArea.innerHTML = tipsHtml;
+        
+        // Add event delegation for tip management buttons
+        displayArea.addEventListener('click', (e) => {
+            if (e.target.classList.contains('updateServerTipBtn')) {
+                const metric = e.target.dataset.metric;
+                const index = parseInt(e.target.dataset.index);
+                updateServerTip(metric, index);
+            } else if (e.target.classList.contains('deleteServerTipBtn')) {
+                const metric = e.target.dataset.metric;
+                const index = parseInt(e.target.dataset.index);
+                deleteServerTip(metric, index);
+            } else if (e.target.classList.contains('updateTipBtn')) {
+                const metric = e.target.dataset.metric;
+                const index = parseInt(e.target.dataset.index);
+                updateTip(metric, index);
+            } else if (e.target.classList.contains('deleteTipBtn')) {
+                const metric = e.target.dataset.metric;
+                const index = parseInt(e.target.dataset.index);
+                deleteTip(metric, index);
+            } else if (e.target.classList.contains('addTipBtn')) {
+                const metric = e.target.dataset.metric;
+                addTip(metric);
+            }
+        });
     });
 }
 
@@ -7187,16 +7211,25 @@ function renderEmployeesList() {
                 </div>
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
-                    <input type="text" id="prefName_${name}" value="${defaultValue}" placeholder="${getEmployeeNickname(name)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                    <input type="text" id="prefName_${escapeHtml(name)}" value="${defaultValue}" placeholder="${getEmployeeNickname(name)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
                     <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${currentPreferred}</strong></div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="saveEmployeePreferredName('${name}')" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
-                    <button onclick="deleteEmployee('${name}')" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">🗑️ Delete</button>
+                    <button class="saveEmployeeNameBtn" data-name="${escapeHtml(name)}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
+                    <button class="deleteEmployeeBtn" data-name="${escapeHtml(name)}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">🗑️ Delete</button>
                 </div>
             </div>
         </div>
     `}).join('');
+    
+    // Add event delegation for employee management
+    container.addEventListener('click', (e) => {
+        if (e.target.classList.contains('saveEmployeeNameBtn')) {
+            saveEmployeePreferredName(e.target.dataset.name);
+        } else if (e.target.classList.contains('deleteEmployeeBtn')) {
+            deleteEmployee(e.target.dataset.name);
+        }
+    });
 }
 
 function deleteEmployee(employeeName) {
