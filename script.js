@@ -47,7 +47,7 @@ let debugState = { entries: [] };
 // ============================================
 // CONSTANTS
 // ============================================
-const TOP_PHRASES_COUNT = 3;
+const TOP_PHRASES_COUNT = 5;
 const MIN_PHRASE_VALUE = 0;
 const LOCALSTORAGE_MAX_SIZE_MB = 4;
 const REGEX_TIMEOUT_MS = 100;
@@ -8980,13 +8980,16 @@ function generateSentimentCoPilotPrompt() {
     let dataSummary = `DATA SUMMARY:\n\n`;
     dataSummary += `POSITIVE LANGUAGE: ${positive.callsDetected}/${positive.totalCalls} calls (${positive.percentage}%)\n`;
     dataSummary += `Goal: ${POSITIVE_GOAL}% | Status: ${positive.percentage >= POSITIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
+    dataSummary += `Top 5 positive phrases they're using:\n`;
     const topPos = positive.phrases
         .filter(p => p.value > MIN_PHRASE_VALUE)
         .sort((a, b) => b.value - a.value)
         .slice(0, TOP_PHRASES_COUNT);
     topPos.forEach(p => {
-        dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
+        const percentageOfCalls = ((p.value / positive.totalCalls) * 100).toFixed(0);
+        dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x / ${percentageOfCalls}% of calls)\n`;
     });
+    dataSummary += `\n→ COACHING TIP: Encourage them to use these positive phrases on MORE calls (aim for 100% usage).\n`;
     
     dataSummary += `\nAVOIDING NEGATIVE: ${negative.callsDetected}/${negative.totalCalls} calls (${negative.percentage}%)\n`;
     dataSummary += `Goal: ${NEGATIVE_GOAL}% | Status: ${negative.percentage >= NEGATIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
@@ -8995,10 +8998,11 @@ function generateSentimentCoPilotPrompt() {
         .sort((a, b) => b.value - a.value)
         .slice(0, TOP_PHRASES_COUNT);
     if (assocNeg.length > 0) {
-        dataSummary += `Associate to stop:\n`;
+        dataSummary += `Top 5 negative words associate said (MUST ELIMINATE):\n`;
         assocNeg.forEach(p => {
             dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
         });
+        dataSummary += `\n→ COACHING TIP: These words must be removed from their vocabulary completely. Replace with positive alternatives.\n`;
     } else {
         dataSummary += `  ✓ Minimal negative language detected\n`;
     }
@@ -9022,21 +9026,32 @@ function generateSentimentCoPilotPrompt() {
 
 ${dataSummary}
 
+KEY COACHING POINTS TO INCLUDE:
+
+1. POSITIVE LANGUAGE: Recognize the good phrases they're using. Encourage them to use these phrases on EVERY call (100% usage rate), not just some calls.
+
+2. NEGATIVE LANGUAGE: These words MUST be completely eliminated from their vocabulary. Help them identify positive alternatives to replace these negative words.
+
+3. Use the actual numbers and percentages from the data above.
+
 FORMAT:
 
 WHAT'S GOING WELL:
-* List 2-3 specific positive behaviors from the data
+* Highlight 2-3 positive phrases they're using effectively
+* Mention their current usage rate
 
 AREA TO FOCUS ON:
-* Identify the #1 behavior to improve based on the data
+* Address the negative language that needs elimination
+* Be specific about which words to remove
 
 CONCRETE ACTION FOR THIS WEEK:
-* Give ONE specific, actionable step they can take
+* Challenge them to use positive phrases on MORE calls (aim for 100%)
+* Give them 1-2 positive alternatives for the negative words they're saying
 
 CLOSING:
-* End with confidence in their ability
+* End with confidence and encouragement
 
-Keep it under 200 words. Real tone, no corporate speak. Use the actual numbers from the data.`;
+Keep it under 200 words. Real tone, no corporate speak. Be direct but supportive.`;
     
     // Copy to clipboard and show feedback
     navigator.clipboard.writeText(prompt).then(() => {
