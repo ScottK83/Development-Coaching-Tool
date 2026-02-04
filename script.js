@@ -8572,15 +8572,21 @@ function generateSentimentSummary() {
     summary += `AVOIDING NEGATIVE LANGUAGE\n`;
     summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n`;
     const negPhrases = negative.phrases.filter(p => p.value > 0);
+    
     if (negPhrases.length === 0) {
         summary += `- Doing well:\n`;
-        summary += `  • Minimal negative language detected\n`;
-        summary += `- Watch for:\n`;
-        summary += `  • Continue avoiding negative phrases\n`;
+        summary += `  • Minimal negative language detected - excellent avoidance\n`;
     } else {
-        summary += `- Watch for:\n`;
+        summary += `- Stop using:\n`;
         negPhrases.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
-            summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
+            summary += `  • "${p.phrase}" - said ${p.value} times, avoid this\n`;
+        });
+        summary += `- Zero-usage phrases (already avoiding well):\n`;
+        const negZero = negative.phrases
+            .filter(p => p.value === 0)
+            .slice(0, 3);
+        negZero.forEach(p => {
+            summary += `  • "${p.phrase}" - good (not used)\n`;
         });
     }
     summary += `\n`;
