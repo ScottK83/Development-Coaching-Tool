@@ -8713,27 +8713,31 @@ function parseSentimentFile(fileType, lines) {
             }
         }
         
-        // Extract start date - handle multiple formats
+        // Extract start date - handle multiple formats including Excel CSV with quotes/commas
         if (!report.startDate) {
-            // Try "Start date: 1/25/2026" or "Start date: 2026-01-25"
-            const startMatch = line.match(/^Start date[:\s]+([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
-            if (startMatch) {
-                report.startDate = startMatch[1].trim();
-                console.log(`✅ Found start date: ${report.startDate}`);
-            } else if (line.toLowerCase().includes('start date')) {
-                console.warn(`⚠️ Found "start date" line but couldn't parse: "${line}"`);
+            if (line.toLowerCase().includes('start date')) {
+                // Handle: "Start date:,"1/25/2026, 12:00 AM",," or "Start date: 1/25/2026"
+                const startMatch = line.match(/start\s+date[:\s,]*"?([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
+                if (startMatch) {
+                    report.startDate = startMatch[1].trim();
+                    console.log(`✅ Found start date: ${report.startDate}`);
+                } else {
+                    console.warn(`⚠️ Found "start date" line but couldn't parse: "${line}"`);
+                }
             }
         }
         
-        // Extract end date - handle multiple formats
+        // Extract end date - handle multiple formats including Excel CSV with quotes/commas
         if (!report.endDate) {
-            // Try "End date: 1/31/2026" or "End date: 2026-01-31"
-            const endMatch = line.match(/^End date[:\s]+([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
-            if (endMatch) {
-                report.endDate = endMatch[1].trim();
-                console.log(`✅ Found end date: ${report.endDate}`);
-            } else if (line.toLowerCase().includes('end date')) {
-                console.warn(`⚠️ Found "end date" line but couldn't parse: "${line}"`);
+            if (line.toLowerCase().includes('end date')) {
+                // Handle: "End date:,"1/31/2026, 11:59 PM",," or "End date: 1/31/2026"
+                const endMatch = line.match(/end\s+date[:\s,]*"?([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
+                if (endMatch) {
+                    report.endDate = endMatch[1].trim();
+                    console.log(`✅ Found end date: ${report.endDate}`);
+                } else {
+                    console.warn(`⚠️ Found "end date" line but couldn't parse: "${line}"`);
+                }
             }
         }
         
