@@ -8586,7 +8586,7 @@ function processSentimentUploads() {
                 }
                 
                 console.log(`Processing ${fileType} file with ${lines.length} lines`);
-                console.log('First 10 lines:', lines.slice(0, 10));
+                console.log('First 15 lines:', lines.slice(0, 15));
                 
                 // Parse file format: look for "Interactions:" line and keyword rows
                 let totalCalls = 0;
@@ -8601,8 +8601,8 @@ function processSentimentUploads() {
                         const nameMatch = line.match(/^(?:Agent|Name|Employee)[:\s]+([^,]+)/i);
                         if (nameMatch) {
                             employeeName = nameMatch[1].trim();
-                            console.log(`Found employee name: ${employeeName}`);
-                        }
+                            console.log(`Found employee name: ${employeeName}`);\n                        } else if (line.toLowerCase().includes('agent') || line.toLowerCase().includes('name') || line.toLowerCase().includes('employee')) {
+                            console.log(`Line contains name field but didn't match regex: "${line}"`);\n                        }
                     }
                     
                     // Check for total calls line: "Interactions: 3100 (72% out of 4278...)"
