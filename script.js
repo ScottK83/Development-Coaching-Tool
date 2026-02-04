@@ -9022,7 +9022,13 @@ function generateSentimentCoPilotPrompt() {
         dataSummary += `  ✓ Low emotional indicators detected\n`;
     }
     
+    // Extract date range for subject line
+    const startDate = positive.dateRange?.split(' - ')[0] || 'Unknown';
+    const endDate = positive.dateRange?.split(' - ')[1] || 'Unknown';
+    
     const prompt = `Write a brief coaching email to ${associateName} using bullet points.
+
+SUBJECT LINE: Sentiment Summary - ${startDate} - ${endDate}
 
 ${dataSummary}
 
