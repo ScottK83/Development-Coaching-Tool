@@ -8752,6 +8752,7 @@ function handleSentimentFileChange(fileType) {
     const file = fileInput.files[0];
     const fileName = file.name.toLowerCase();
     const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    const isEmotions = fileType === 'Emotions';
     
     statusDiv.textContent = `⏳ Processing ${file.name}...`;
     statusDiv.style.color = '#ff9800';
@@ -8768,26 +8769,40 @@ function handleSentimentFileChange(fileType) {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
                 lines = csvContent.split('\n').filter(line => line.trim());
-                console.log(`📊 Excel file converted to ${lines.length} lines`);
-                console.log('First 20 lines:', lines.slice(0, 20));
+                if (isEmotions) {
+                    console.log(`🎭 MANAGING EMOTIONS - Excel file converted to ${lines.length} lines`);
+                    console.log('🎭 First 30 lines:', lines.slice(0, 30));
+                }
             } else {
                 const content = e.target.result;
                 lines = content.split('\n').filter(line => line.trim());
-                console.log(`📄 Text file has ${lines.length} lines`);
+                if (isEmotions) {
+                    console.log(`🎭 MANAGING EMOTIONS - Text file has ${lines.length} lines`);
+                }
             }
             
             // Parse file
             const report = parseSentimentFile(fileType, lines);
             sentimentReports[fileType.toLowerCase()] = report;
             
-            console.log(`✅ Parsed ${fileType}:`, {
-                name: report.associateName,
-                totalCalls: report.totalCalls,
-                detected: report.callsDetected,
-                percentage: report.percentage,
-                phrasesCount: report.phrases.length,
-                samplePhrases: report.phrases.slice(0, 3)
-            });
+            if (isEmotions) {
+                console.log(`🎭 MANAGING EMOTIONS - Parsed result:`, {
+                    name: report.associateName,
+                    totalCalls: report.totalCalls,
+                    detected: report.callsDetected,
+                    percentage: report.percentage,
+                    phrasesCount: report.phrases.length,
+                    allPhrases: report.phrases
+                });
+            } else {
+                console.log(`✅ Parsed ${fileType}:`, {
+                    name: report.associateName,
+                    totalCalls: report.totalCalls,
+                    detected: report.callsDetected,
+                    percentage: report.percentage,
+                    phrasesCount: report.phrases.length
+                });
+            }
             
             statusDiv.textContent = `✅ ${report.associateName || 'Loaded'} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
             statusDiv.style.color = '#4caf50';
@@ -8795,6 +8810,9 @@ function handleSentimentFileChange(fileType) {
             statusDiv.textContent = `❌ Error parsing file`;
             statusDiv.style.color = '#f44336';
             console.error('File parsing error:', error);
+            if (isEmotions) {
+                console.error('🎭 MANAGING EMOTIONS ERROR:', error);
+            }
         }
     };
     
