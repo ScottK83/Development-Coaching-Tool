@@ -39,6 +39,7 @@
                         <div style="margin-bottom: 15px;">
                             <label style="font-weight: bold; display: block; margin-bottom: 5px;">PowerBI Data:</label>
                             <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
+                            <div id="dataValidationPreview" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
                         </div>
                         
                         <div style="margin-bottom: 15px;">
@@ -318,7 +319,10 @@
                                     <input type="number" id="avgReliability" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                                 </div>
                             </div>
-                            <button type="button" id="saveAvgBtn" class="btn-primary" style="margin-top: 15px;">💾 Save Averages</button>
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button type="button" id="saveAvgBtn" class="btn-primary">💾 Save Averages</button>
+                                <button type="button" id="copyPreviousAvgBtn" class="btn-secondary" style="background: #2196F3; color: white;">📋 Copy from Previous Week</button>
+                            </div>
                         </div>
                     </div>
                     

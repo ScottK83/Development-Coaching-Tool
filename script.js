@@ -39,15 +39,47 @@ const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
+    const originalError = console.error;
     console.log = () => {};
     console.warn = () => {};
-    console.error = () => {};
+    console.error = (...args) => {
+        // Still capture errors even when DEBUG is off
+        lastError = { message: args.join(' '), timestamp: new Date().toISOString() };
+        localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastError));
+    };
 }
+
+// Global error handler
+window.addEventListener('error', (event) => {
+    const errorInfo = {
+        message: event.message,
+        source: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        timestamp: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(errorInfo));
+    showToast('⚠️ An error occurred. Check Debug panel for details.', 5000);
+    event.preventDefault();
+});
+
+// Unsaved changes tracking
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+    }
+});
 
 let weeklyData = {};
 let ytdData = {};
 let currentPeriodType = 'week';
 let currentPeriod = null;
+
+// Smart defaults and state tracking
+let hasUnsavedChanges = false;
+let lastSelectedEmployee = null;
+let lastError = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
 let coachingHistory = {};
@@ -231,6 +263,129 @@ const METRICS_REGISTRY = {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
+/**
+ * Smart Defaults - Save and restore user preferences
+ */
+function saveSmartDefault(key, value) {
+    try {
+        localStorage.setItem(STORAGE_PREFIX + 'smartDefault_' + key, JSON.stringify(value));
+    } catch (e) {
+        console.error('Failed to save smart default:', e);
+    }
+}
+
+function getSmartDefault(key, fallback = null) {
+    try {
+        const stored = localStorage.getItem(STORAGE_PREFIX + 'smartDefault_' + key);
+        return stored ? JSON.parse(stored) : fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+/**
+ * Data Validation - Validate PowerBI paste before processing
+ */
+function validatePastedData(dataText) {
+    const lines = dataText.trim().split('\n');
+    const issues = [];
+    
+    if (lines.length < 2) {
+        issues.push('Data must have at least a header row and one data row');
+        return { valid: false, issues, preview: null };
+    }
+    
+    const headers = lines[0].split('\t');
+    const requiredHeaders = ['Name', 'Schedule Adherence'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    
+    if (missingHeaders.length > 0) {
+        issues.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+    }
+    
+    const dataRows = lines.slice(1).filter(line => line.trim());
+    const employeeCount = dataRows.length;
+    
+    if (employeeCount === 0) {
+        issues.push('No employee data found');
+    }
+    
+    // Preview first few employees
+    const preview = dataRows.slice(0, 3).map(row => {
+        const cols = row.split('\t');
+        return cols[0] || 'Unknown';
+    });
+    
+    return {
+        valid: issues.length === 0,
+        issues,
+        employeeCount,
+        preview,
+        headers
+    };
+}
+
+/**
+ * Mark changes as unsaved
+ */
+function markUnsavedChanges() {
+    hasUnsavedChanges = true;
+    document.title = document.title.includes('*') ? document.title : '* ' + document.title;
+}
+
+function clearUnsavedChanges() {
+    hasUnsavedChanges = false;
+    document.title = document.title.replace(/^\* /, '');
+}
+
+/**
+ * Restore smart defaults on page load
+ */
+function restoreSmartDefaults() {
+    // Restore period type preference
+    const lastPeriodType = getSmartDefault('lastPeriodType');
+    if (lastPeriodType) {
+        const button = document.querySelector(`button[data-period-type="${lastPeriodType}"]`);
+        if (button) {
+            // Simulate click on the period type button
+            const allPeriodButtons = document.querySelectorAll('[data-period-type]');
+            allPeriodButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        }
+    }
+    
+    // Auto-select most recent week in dropdowns
+    const weekKeys = getWeeklyKeysSorted();
+    if (weekKeys.length > 0) {
+        const mostRecentWeek = weekKeys[weekKeys.length - 1];
+        
+        // Set in main period dropdown
+        const periodSelect = document.getElementById('weekSelect');
+        if (periodSelect) {
+            periodSelect.value = mostRecentWeek;
+        }
+        
+        // Set in metric trends dropdown
+        const trendSelect = document.getElementById('trendWeekSelect');
+        if (trendSelect) {
+            trendSelect.value = mostRecentWeek;
+        }
+    }
+    
+    // Restore last selected employee
+    const lastEmployee = getSmartDefault('lastEmployee');
+    if (lastEmployee) {
+        const employeeSelect = document.getElementById('employeeSelect');
+        if (employeeSelect) {
+            // Check if this employee still exists in the data
+            const optionExists = Array.from(employeeSelect.options).some(opt => opt.value === lastEmployee);
+            if (optionExists) {
+                employeeSelect.value = lastEmployee;
+            }
+        }
+    }
+}
 
 /**
  * Hide all sections except the specified one
@@ -2001,6 +2156,95 @@ function initializeEventHandlers() {
     
     // SENTIMENT & LANGUAGE SUMMARY WORKFLOW - Duplicate listeners removed, now only attached in subNav click handler
     
+    // Drag and drop support for CSV files
+    const pasteTextarea = document.getElementById('pasteDataTextarea');
+    if (pasteTextarea) {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            pasteTextarea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Highlight drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            pasteTextarea.addEventListener(eventName, () => {
+                pasteTextarea.style.background = '#e3f2fd';
+                pasteTextarea.style.borderColor = '#2196F3';
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            pasteTextarea.addEventListener(eventName, () => {
+                pasteTextarea.style.background = '';
+                pasteTextarea.style.borderColor = '';
+            });
+        });
+        
+        // Handle dropped files
+        pasteTextarea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            
+            // Check if it's a CSV or text file
+            if (!file.name.endsWith('.csv') && !file.type.includes('text')) {
+                alert('⚠️ Please drop a CSV file');
+                return;
+            }
+            
+            // Read the file
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                pasteTextarea.value = event.target.result;
+                // Trigger validation
+                pasteTextarea.dispatchEvent(new Event('input'));
+                showToast('✅ File loaded! Review data and click Load Data.', 4000);
+            };
+            reader.onerror = () => {
+                alert('❌ Error reading file');
+            };
+            reader.readAsText(file);
+        });
+    }
+    
+    // Real-time data validation preview
+    document.getElementById('pasteDataTextarea')?.addEventListener('input', (e) => {
+        const dataText = e.target.value;
+        const preview = document.getElementById('dataValidationPreview');
+        
+        if (!dataText.trim()) {
+            preview.style.display = 'none';
+            return;
+        }
+        
+        const validation = validatePastedData(dataText);
+        preview.style.display = 'block';
+        
+        if (validation.valid) {
+            preview.style.background = '#d4edda';
+            preview.style.border = '2px solid #28a745';
+            preview.style.color = '#155724';
+            preview.innerHTML = `
+                ✅ <strong>Data looks good!</strong><br>
+                📊 ${validation.employeeCount} employees detected<br>
+                👤 Preview: ${validation.preview.join(', ')}${validation.employeeCount > 3 ? '...' : ''}
+            `;
+        } else {
+            preview.style.background = '#f8d7da';
+            preview.style.border = '2px solid #dc3545';
+            preview.style.color = '#721c24';
+            preview.innerHTML = `
+                ⚠️ <strong>Data validation issues:</strong><br>
+                ${validation.issues.map(i => `• ${i}`).join('<br>')}
+            `;
+        }
+    });
+    
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
         
@@ -2008,19 +2252,52 @@ function initializeEventHandlers() {
         const startDate = document.getElementById('pasteStartDate').value;
         const endDate = document.getElementById('pasteEndDate').value;
         
-        
-        
-        // Get selected period type
-        const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
-                           document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
-                           document.querySelector('.upload-period-btn[data-period="week"]');
-        const periodType = selectedBtn ? selectedBtn.dataset.period : 'week';
-        
+        // Validate data first
+        const validation = validatePastedData(pastedData);
+        if (!validation.valid) {
+            alert('⚠️ Data validation failed:\n\n' + validation.issues.join('\n'));
+            return;
+        }
         
         if (!startDate || !endDate) {
             alert('⚠️ Please select both start and end dates');
             return;
         }
+        
+        // Auto-detect period type from date range
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+        
+        let detectedPeriodType = 'week';
+        if (daysDiff >= 5 && daysDiff <= 9) {
+            detectedPeriodType = 'week';
+        } else if (daysDiff >= 26 && daysDiff <= 33) {
+            detectedPeriodType = 'month';
+        } else if (daysDiff >= 88 && daysDiff <= 95) {
+            detectedPeriodType = 'quarter';
+        } else if (daysDiff >= 180) {
+            detectedPeriodType = 'ytd';
+        }
+        
+        // Auto-select the detected period type button
+        const periodButtons = document.querySelectorAll('.upload-period-btn');
+        periodButtons.forEach(btn => {
+            if (btn.dataset.period === detectedPeriodType) {
+                btn.click(); // Trigger the button click to activate it
+            }
+        });
+        
+        
+        // Get selected period type (after auto-detection)
+        const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
+                           document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
+                           document.querySelector('.upload-period-btn[data-period="week"]');
+        const periodType = selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
+        
+        // Save period type as smart default
+        saveSmartDefault('lastPeriodType', periodType);
+        
         
         if (!pastedData) {
             alert('⚠️ Please paste data first');
@@ -2180,6 +2457,11 @@ function initializeEventHandlers() {
     // Employee selection
     document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
         const selectedName = e.target.value;
+        
+        // Save as smart default
+        if (selectedName) {
+            saveSmartDefault('lastEmployee', selectedName);
+        }
         
         if (!selectedName) {
             ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
@@ -2401,12 +2683,26 @@ function initializeEventHandlers() {
         }
         
         
-        // Clear all data
+        // Clear ALL data including call center averages, team members, and history
         weeklyData = {};
         ytdData = {};
+        myTeamMembers = {};
+        
+        // Clear all localStorage data
+        localStorage.removeItem(STORAGE_PREFIX + 'weeklyData');
+        localStorage.removeItem(STORAGE_PREFIX + 'ytdData');
+        localStorage.removeItem(STORAGE_PREFIX + 'myTeamMembers');
+        localStorage.removeItem(STORAGE_PREFIX + 'callCenterAverages');
+        localStorage.removeItem(STORAGE_PREFIX + 'employeeNicknames');
+        localStorage.removeItem(STORAGE_PREFIX + 'employeePreferredNames');
+        localStorage.removeItem(STORAGE_PREFIX + 'coachingHistory');
+        localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
+        localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
+        localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
         
         saveWeeklyData();
         saveYtdData();
+        saveTeamMembers();
         
         populateDeleteWeekDropdown();
         
@@ -2416,7 +2712,7 @@ function initializeEventHandlers() {
             if (el) el.style.display = 'none';
         });
         
-        alert('✅ All data has been deleted');
+        alert('✅ All data has been deleted (including call center averages and history)');
     });
     
     // Populate delete week dropdown on load
@@ -3491,6 +3787,7 @@ function setupAveragesLoader() {
 }
 
 function populateUploadedDataDropdown() {
+
     const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
     const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
     
@@ -3705,7 +4002,53 @@ function displayCallCenterAverages(weekKey) {
         };
         
         setCallCenterAverageForPeriod(weekKey, averageData);
-        alert('✅ Call center averages saved!');
+        clearUnsavedChanges();
+        showToast('✅ Call center averages saved!', 3000);
+    });
+
+    // Copy from Previous Week button
+    document.getElementById('copyPreviousAvgBtn')?.addEventListener('click', () => {
+        const currentWeekKey = document.getElementById('avgUploadedDataSelect')?.value;
+        
+        if (!currentWeekKey) {
+            alert('⚠️ Please select a period first');
+            return;
+        }
+        
+        // Find the previous week
+        const allKeys = Object.keys(weeklyData).sort();
+        const currentIndex = allKeys.indexOf(currentWeekKey);
+        
+        if (currentIndex <= 0) {
+            alert('ℹ️ No previous week found');
+            return;
+        }
+        
+        const previousWeekKey = allKeys[currentIndex - 1];
+        const previousAverages = getCallCenterAverageForPeriod(previousWeekKey);
+        
+        if (!previousAverages || Object.keys(previousAverages).length === 0) {
+            alert('ℹ️ No averages found for previous week');
+            return;
+        }
+        
+        // Copy all values
+        document.getElementById('avgAdherence').value = previousAverages.adherence || '';
+        document.getElementById('avgOverallExperience').value = previousAverages.overallExperience || '';
+        document.getElementById('avgRepSatisfaction').value = previousAverages.repSatisfaction || '';
+        document.getElementById('avgFCR').value = previousAverages.fcr || '';
+        document.getElementById('avgTransfers').value = previousAverages.transfers || '';
+        document.getElementById('avgSentiment').value = previousAverages.sentiment || '';
+        document.getElementById('avgPositiveWord').value = previousAverages.positiveWord || '';
+        document.getElementById('avgNegativeWord').value = previousAverages.negativeWord || '';
+        document.getElementById('avgManagingEmotions').value = previousAverages.managingEmotions || '';
+        document.getElementById('avgAHT').value = previousAverages.aht || '';
+        document.getElementById('avgACW').value = previousAverages.acw || '';
+        document.getElementById('avgHoldTime').value = previousAverages.holdTime || '';
+        document.getElementById('avgReliability').value = previousAverages.reliability || '';
+        
+        markUnsavedChanges();
+        showToast('✅ Copied from previous week! Click Save to apply.', 4000);
     });
 
 function updateTrendButtonsVisibility() {
@@ -7465,6 +7808,9 @@ function initApp() {
         populateDeleteWeekDropdown();
         populateTeamMemberSelector();
     }
+    
+    // Restore smart defaults
+    restoreSmartDefaults();
     
     // Ensure data is saved before page unload (survives Ctrl+Shift+R)
     window.addEventListener('beforeunload', () => {
