@@ -5476,6 +5476,10 @@ Team Update - Week of ${endDate}
 
 Please generate the email now.`;
 
+    // Call Copilot with the prompt
+    openCopilotWithPrompt(copilotPrompt, 'Executive Summary Email');
+}
+
 // ============================================
 // OFFLINE COPILOT SUPPORT
 // ============================================
@@ -9396,8 +9400,6 @@ function copyRedFlagEmail() {
             button.textContent = originalText;
         }, 500);
     }, 500);
-    
-    
 }
 
 function clearRedFlagEmail() {
