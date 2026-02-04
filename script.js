@@ -2088,8 +2088,47 @@ function initializeEventHandlers() {
         showOnlySection('uploadSection');
     });
     
-    // File transfer utilities
+    // File transfer utilities with localStorage persistence
     let transferredFiles = [];
+    
+    // Load transferred files from localStorage on page load
+    function loadTransferredFiles() {
+        try {
+            const stored = localStorage.getItem('transferredFiles');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                transferredFiles = parsed.map(f => ({
+                    ...f,
+                    data: new Uint8Array(f.data).buffer // Convert back to ArrayBuffer
+                }));
+                updateTransferredFilesList();
+            }
+        } catch (e) {
+            console.error('Error loading transferred files:', e);
+        }
+    }
+    
+    // Save transferred files to localStorage
+    function saveTransferredFiles() {
+        try {
+            const toStore = transferredFiles.map(f => ({
+                name: f.name,
+                type: f.type,
+                size: f.size,
+                data: Array.from(new Uint8Array(f.data)), // Convert ArrayBuffer to array for JSON
+                timestamp: f.timestamp
+            }));
+            localStorage.setItem('transferredFiles', JSON.stringify(toStore));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                showToast('⚠️ Storage quota exceeded. Delete some files and try again.', 4000);
+            }
+            console.error('Error saving transferred files:', e);
+        }
+    }
+    
+    // Load files on initialization
+    loadTransferredFiles();
     
     document.getElementById('uploadFileBtn')?.addEventListener('click', () => {
         const fileInput = document.getElementById('fileTransferInput');
@@ -2098,7 +2137,13 @@ function initializeEventHandlers() {
             return;
         }
         
+        let filesAdded = 0;
         Array.from(fileInput.files).forEach(file => {
+            if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                alert(`File "${file.name}" is too large (max 100MB)`);
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = (e) => {
                 transferredFiles.push({
@@ -2108,14 +2153,14 @@ function initializeEventHandlers() {
                     data: e.target.result,
                     timestamp: new Date().toLocaleString()
                 });
+                filesAdded++;
+                
+                // Save to localStorage after each file
+                saveTransferredFiles();
                 updateTransferredFilesList();
                 showToast(`✅ File "${file.name}" uploaded to storage`, 3000);
             };
-            if (file.size > 100 * 1024 * 1024) { // 100MB limit
-                alert(`File "${file.name}" is too large (max 100MB)`);
-            } else {
-                reader.readAsArrayBuffer(file);
-            }
+            reader.readAsArrayBuffer(file);
         });
         
         fileInput.value = '';
@@ -2137,7 +2182,10 @@ function initializeEventHandlers() {
                         <div style="font-weight: bold; color: #333;">${file.name}</div>
                         <small style="color: #666;">${sizeMB} MB • ${file.timestamp}</small>
                     </div>
-                    <button type="button" onclick="downloadTransferredFile(${index})" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">📥 Download</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" onclick="downloadTransferredFile(${index})" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">📥 Download</button>
+                        <button type="button" onclick="deleteTransferredFile(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">🗑️ Delete</button>
+                    </div>
                 </div>
             `;
         });
@@ -2157,6 +2205,15 @@ function initializeEventHandlers() {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         showToast(`✅ Downloaded "${file.name}"`, 2000);
+    };
+    
+    window.deleteTransferredFile = function(index) {
+        if (confirm(`Delete "${transferredFiles[index].name}"?`)) {
+            transferredFiles.splice(index, 1);
+            saveTransferredFiles();
+            updateTransferredFilesList();
+            showToast('✅ File deleted', 2000);
+        }
     };
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
