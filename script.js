@@ -8524,9 +8524,9 @@ function getMetricTips(metricName) {
 // ============================================
 
 let sentimentData = {
-    positive: { totalCalls: 0, callsWithSentiment: 0, phrases: [] },
-    negative: { totalCalls: 0, callsWithSentiment: 0, phrases: [] },
-    emotions: { totalCalls: 0, callsWithSentiment: 0, phrases: [] }
+    positive: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' },
+    negative: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' },
+    emotions: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' }
 };
 
 let sentimentEmployeeName = '';
@@ -8592,6 +8592,8 @@ function processSentimentUploads() {
                 let totalCalls = 0;
                 let callsWithSentiment = 0;
                 let employeeName = '';
+                let startDate = '';
+                let endDate = '';
                 const phrases = [];
                 let inKeywordsSection = false;
                 
@@ -8605,6 +8607,24 @@ function processSentimentUploads() {
                             console.log(`Found employee name: ${employeeName}`);
                         } else if (line.toLowerCase().includes('agent') || line.toLowerCase().includes('name') || line.toLowerCase().includes('employee')) {
                             console.log(`Line contains name field but didn't match regex: "${line}"`);
+                        }
+                    }
+                    
+                    // Extract start date
+                    if (!startDate) {
+                        const startMatch = line.match(/(?:Date Range Start|Period Start|Start Date)[:\s]+([0-9/\-]+)/i);
+                        if (startMatch) {
+                            startDate = startMatch[1].trim();
+                            console.log(`Found start date: ${startDate}`);
+                        }
+                    }
+                    
+                    // Extract end date
+                    if (!endDate) {
+                        const endMatch = line.match(/(?:Date Range End|Period End|End Date)[:\s]+([0-9/\-]+)/i);
+                        if (endMatch) {
+                            endDate = endMatch[1].trim();
+                            console.log(`Found end date: ${endDate}`);
                         }
                     }
                     
@@ -8697,6 +8717,8 @@ function processSentimentUploads() {
                     sentimentData[dataKey].callsWithSentiment = callsWithSentiment;
                     sentimentData[dataKey].phrases = phrases;
                     sentimentData[dataKey].employeeName = employeeName;
+                    sentimentData[dataKey].startDate = startDate;
+                    sentimentData[dataKey].endDate = endDate;
                     console.log(`✅ Stored in sentimentData.${dataKey}:`, sentimentData[dataKey]);
                 }
                 
@@ -8817,7 +8839,11 @@ function generateSentimentPrompt() {
     sentimentSummary += `\nNote: Overall Sentiment is the average of Positive, Avoiding Negative, and Managing Emotions scores.\n\n`;
     
     // Add call coverage information
-    sentimentSummary += `CALL COVERAGE (Last 180 Days):\n`;
+    const dateRange = (sentimentData.positive.startDate || sentimentData.negative.startDate || sentimentData.emotions.startDate) 
+        ? `${sentimentData.positive.startDate || sentimentData.negative.startDate || sentimentData.emotions.startDate} to ${sentimentData.positive.endDate || sentimentData.negative.endDate || sentimentData.emotions.endDate}` 
+        : 'Last 180 days';
+    
+    sentimentSummary += `CALL COVERAGE (${dateRange}):\n`;
     if (sentimentData.positive.totalCalls > 0) {
         const posPercent = ((sentimentData.positive.callsWithSentiment / sentimentData.positive.totalCalls) * 100).toFixed(0);
         sentimentSummary += `- ${sentimentData.positive.callsWithSentiment} out of ${sentimentData.positive.totalCalls} calls (${posPercent}%) had at least one POSITIVE phrase\n`;
