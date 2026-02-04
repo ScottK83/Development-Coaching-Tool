@@ -1690,15 +1690,12 @@ function initializeEventHandlers() {
                 subSectionSentiment.appendChild(sentimentSection.firstChild);
             }
             // Re-attach event listeners after moving
-            document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
-            document.getElementById('copySentimentPromptBtn')?.addEventListener('click', copySentimentPrompt);
-            document.getElementById('sentimentEmployeeSelect')?.addEventListener('change', updateSentimentReview);
-            document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
-            document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
-            document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
-            document.getElementById('processSentimentUploadsBtn')?.addEventListener('click', processSentimentUploads);
+            document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
+            document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
+            document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
+            document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
+            document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
         }
-        initializeSentiment();
     });
     document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
         showSubSection('subSectionMetricTrends');
@@ -1794,14 +1791,12 @@ function initializeEventHandlers() {
         showToast('✅ Debug errors cleared', 3000);
     });
     
-    // SENTIMENT ANALYSIS WORKFLOW
-    document.getElementById('generateSentimentPromptBtn')?.addEventListener('click', generateSentimentPrompt);
-    document.getElementById('copySentimentPromptBtn')?.addEventListener('click', copySentimentPrompt);
-    document.getElementById('sentimentEmployeeSelect')?.addEventListener('change', updateSentimentReview);
-    document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileUpload('positive'));
-    document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileUpload('negative'));
-    document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileUpload('emotions'));
-    document.getElementById('processSentimentUploadsBtn')?.addEventListener('click', processSentimentUploads);
+    // SENTIMENT & LANGUAGE SUMMARY WORKFLOW
+    document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
+    document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
+    document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
+    document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
+    document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
@@ -2088,250 +2083,6 @@ function initializeEventHandlers() {
         showOnlySection('uploadSection');
     });
     
-    // File transfer utilities with localStorage persistence
-    let transferredFiles = [];
-    
-    // Load transferred files from localStorage on page load
-    function loadTransferredFiles() {
-        try {
-            const stored = localStorage.getItem('transferredFiles');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                transferredFiles = parsed.map(f => ({
-                    ...f,
-                    data: new Uint8Array(f.data).buffer // Convert back to ArrayBuffer
-                }));
-                updateTransferredFilesList();
-            }
-        } catch (e) {
-            console.error('Error loading transferred files:', e);
-        }
-    }
-    
-    // Save transferred files to localStorage
-    function saveTransferredFiles() {
-        try {
-            const toStore = transferredFiles.map(f => ({
-                name: f.name,
-                type: f.type,
-                size: f.size,
-                data: Array.from(new Uint8Array(f.data)), // Convert ArrayBuffer to array for JSON
-                timestamp: f.timestamp
-            }));
-            localStorage.setItem('transferredFiles', JSON.stringify(toStore));
-        } catch (e) {
-            if (e.name === 'QuotaExceededError') {
-                showToast('⚠️ Storage quota exceeded. Delete some files and try again.', 4000);
-            }
-            console.error('Error saving transferred files:', e);
-        }
-    }
-    
-    // Load files on initialization
-    loadTransferredFiles();
-    
-    function updateTransferredFilesList() {
-        const listDiv = document.getElementById('transferredFilesList');
-        if (transferredFiles.length === 0) {
-            listDiv.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">No files uploaded yet</div>';
-            return;
-        }
-        
-        let html = '<div style="padding: 10px;">';
-        transferredFiles.forEach((file, index) => {
-            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-            html += `
-                <div style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: bold; color: #333;">${file.name}</div>
-                        <small style="color: #666;">${sizeMB} MB • ${file.timestamp}</small>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" onclick="downloadTransferredFile(${index})" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">📥 Download</button>
-                        <button type="button" onclick="deleteTransferredFile(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">🗑️ Delete</button>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        listDiv.innerHTML = html;
-    }
-    
-    window.downloadTransferredFile = function(index) {
-        const file = transferredFiles[index];
-        const blob = new Blob([file.data], { type: file.type });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        showToast(`✅ Downloaded "${file.name}"`, 2000);
-    };
-    
-    window.deleteTransferredFile = function(index) {
-        if (confirm(`Delete "${transferredFiles[index].name}"?`)) {
-            transferredFiles.splice(index, 1);
-            saveTransferredFiles();
-            updateTransferredFilesList();
-            showToast('✅ File deleted', 2000);
-        }
-    };
-    
-    // Export as Base64 text (for pasting into GitHub/text services)
-    document.getElementById('exportBase64Btn')?.addEventListener('click', () => {
-        if (transferredFiles.length === 0) {
-            alert('No files to export');
-            return;
-        }
-        
-        try {
-            const exportData = {
-                version: 1,
-                timestamp: new Date().toISOString(),
-                files: transferredFiles.map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size,
-                    data: btoa(String.fromCharCode.apply(null, new Uint8Array(f.data))),
-                    timestamp: f.timestamp
-                }))
-            };
-            
-            const base64 = btoa(JSON.stringify(exportData));
-            
-            // Create a modal/textarea to show the base64 string
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
-            modal.innerHTML = `
-                <div style="background: white; padding: 20px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
-                    <h3 style="margin-top: 0;">Export as Text (for GitHub)</h3>
-                    <p style="color: #666; font-size: 0.9em;">Copy this text and paste into a GitHub gist or private repo file:</p>
-                    <textarea id="exportBase64Text" readonly style="flex: 1; padding: 10px; font-family: monospace; font-size: 0.8em; border: 1px solid #ddd; border-radius: 4px; overflow: auto; margin-bottom: 10px;"></textarea>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="document.getElementById('exportBase64Text').select(); document.execCommand('copy'); alert('Copied to clipboard!'); document.querySelector('[style*=\'background: rgba\']').remove();" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; flex: 1;">📋 Copy to Clipboard</button>
-                        <button onclick="document.querySelector('[style*=\'background: rgba\']').remove();" style="background: #999; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Close</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            document.getElementById('exportBase64Text').value = base64;
-            showToast(`✅ Export ready - copy and paste into GitHub gist`, 3000);
-        } catch (e) {
-            alert('Error exporting: ' + e.message);
-            console.error(e);
-        }
-    });
-    
-    // Import from Base64 text
-    document.getElementById('importBase64Btn')?.addEventListener('click', () => {
-        const base64Input = prompt('Paste the exported text here:');
-        if (!base64Input) return;
-        
-        try {
-            const jsonString = atob(base64Input);
-            const importData = JSON.parse(jsonString);
-            
-            if (!importData.files || !Array.isArray(importData.files)) {
-                throw new Error('Invalid export format');
-            }
-            
-            let filesImported = 0;
-            importData.files.forEach(f => {
-                const binaryString = atob(f.data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                transferredFiles.push({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size,
-                    data: bytes.buffer,
-                    timestamp: f.timestamp
-                });
-                filesImported++;
-            });
-            
-            saveTransferredFiles();
-            updateTransferredFilesList();
-            showToast(`✅ Imported ${filesImported} files`, 3000);
-        } catch (e) {
-            alert('Error importing: ' + e.message + '\n\nMake sure you pasted the complete text export.');
-            console.error(e);
-        }
-    });
-    
-    // Export all files as ZIP
-    document.getElementById('exportFilesBtn')?.addEventListener('click', async () => {
-        if (transferredFiles.length === 0) {
-            alert('No files to export');
-            return;
-        }
-        
-        try {
-            const zip = new JSZip();
-            transferredFiles.forEach(file => {
-                zip.file(file.name, file.data);
-            });
-            
-            const blob = await zip.generateAsync({ type: 'blob' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `coaching-files-${new Date().toISOString().split('T')[0]}.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToast(`✅ Exported ${transferredFiles.length} files as ZIP`, 3000);
-        } catch (e) {
-            alert('Error creating ZIP: ' + e.message);
-            console.error(e);
-        }
-    });
-    
-    // Import files from ZIP
-    document.getElementById('importFilesBtn')?.addEventListener('click', () => {
-        document.getElementById('importFileInput').click();
-    });
-    
-    document.getElementById('importFileInput')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const zip = new JSZip();
-            const loaded = await zip.loadAsync(file);
-            let filesImported = 0;
-            
-            for (const [filename, zipFile] of Object.entries(loaded.files)) {
-                if (!zipFile.dir) {
-                    const data = await zipFile.async('arraybuffer');
-                    transferredFiles.push({
-                        name: filename,
-                        type: file.type,
-                        size: data.byteLength,
-                        data: data,
-                        timestamp: new Date().toLocaleString()
-                    });
-                    filesImported++;
-                }
-            }
-            
-            saveTransferredFiles();
-            updateTransferredFilesList();
-            showToast(`✅ Imported ${filesImported} files from ZIP`, 3000);
-            e.target.value = '';
-        } catch (error) {
-            alert('Error importing ZIP: ' + error.message);
-            console.error(error);
-        }
-    });
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         
@@ -8764,409 +8515,275 @@ function getMetricTips(metricName) {
 }
 
 // ============================================
-// SENTIMENT ANALYSIS FUNCTIONS
+// SENTIMENT & LANGUAGE SUMMARY ENGINE
 // ============================================
 
-let sentimentData = {
-    positive: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' },
-    negative: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' },
-    emotions: { totalCalls: 0, callsWithSentiment: 0, phrases: [], startDate: '', endDate: '' }
+let sentimentReports = {
+    positive: null,
+    negative: null,
+    emotions: null
 };
 
-let sentimentEmployeeName = '';
-
-function initializeSentiment() {
-    // Sentiment initialization
+function generateSentimentSummary() {
+    const { positive, negative, emotions } = sentimentReports;
+    
+    // Validation: ensure all 3 files uploaded
+    if (!positive || !negative || !emotions) {
+        alert('⚠️ Please upload all 3 files (Positive Language, Avoiding Negative Language, Managing Emotions)');
+        return;
+    }
+    
+    // Extract associate name (should be same across all files)
+    const associateName = positive.associateName || negative.associateName || emotions.associateName || 'Unknown Associate';
+    
+    // Extract date range (should be same across all files)
+    const startDate = positive.startDate || negative.startDate || emotions.startDate || 'N/A';
+    const endDate = positive.endDate || negative.endDate || emotions.endDate || 'N/A';
+    const dateRange = `${startDate} – ${endDate}`;
+    
+    // Build summary according to specification
+    let summary = '';
+    summary += `Associate: ${associateName}\n`;
+    summary += `Date Range: ${dateRange}\n\n`;
+    
+    // POSITIVE LANGUAGE Section
+    summary += `POSITIVE LANGUAGE\n`;
+    summary += `- Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positive.percentage}%)\n`;
+    summary += `- Doing well:\n`;
+    const posTopPhrases = positive.phrases
+        .filter(p => p.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+    posTopPhrases.forEach(p => {
+        summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
+    });
+    summary += `- Could increase score by using more:\n`;
+    const posLowPhrases = positive.phrases
+        .filter(p => p.value === 0 || p.value < 10)
+        .sort((a, b) => a.value - b.value)
+        .slice(0, 5);
+    posLowPhrases.forEach(p => {
+        summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
+    });
+    summary += `\n`;
+    
+    // AVOIDING NEGATIVE LANGUAGE Section
+    summary += `AVOIDING NEGATIVE LANGUAGE\n`;
+    summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n`;
+    const negPhrases = negative.phrases.filter(p => p.value > 0);
+    if (negPhrases.length === 0) {
+        summary += `- Doing well:\n`;
+        summary += `  • Minimal negative language detected\n`;
+        summary += `- Watch for:\n`;
+        summary += `  • Continue avoiding negative phrases\n`;
+    } else {
+        summary += `- Watch for:\n`;
+        negPhrases.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
+            summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
+        });
+    }
+    summary += `\n`;
+    
+    // MANAGING EMOTIONS Section
+    summary += `MANAGING EMOTIONS\n`;
+    summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
+    summary += `- Customer emotion indicators detected:\n`;
+    const emoTopPhrases = emotions.phrases
+        .filter(p => p.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+    emoTopPhrases.forEach(p => {
+        summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
+    });
+    summary += `- Opportunity:\n`;
+    summary += `  • Use steady language and acknowledgment to manage customer emotions\n`;
+    summary += `  • Phrases like "I understand" and "I appreciate" can help de-escalate\n`;
+    
+    // Display the summary
+    document.getElementById('sentimentSummaryText').textContent = summary;
+    document.getElementById('sentimentSummaryOutput').style.display = 'block';
+    
+    showToast('✅ Summary generated successfully', 2000);
 }
 
-function handleSentimentFileUpload(fileType) {
-    const fileInput = document.getElementById(`sentiment${fileType.charAt(0).toUpperCase() + fileType.slice(1)}File`);
-    const statusDiv = document.getElementById(`sentiment${fileType.charAt(0).toUpperCase() + fileType.slice(1)}Status`);
+function parseSentimentFile(fileType, lines) {
+    // Parse the "English Speech – Charts Report" format
+    const report = {
+        associateName: '',
+        startDate: '',
+        endDate: '',
+        totalCalls: 0,
+        callsDetected: 0,
+        percentage: 0,
+        phrases: []
+    };
+    
+    let inKeywordsSection = false;
+    
+    for (const line of lines) {
+        // Extract associate name: look for "Employee:", "Agent:", or "Name:"
+        if (!report.associateName) {
+            const nameMatch = line.match(/^(?:Employee|Agent|Name)[:\s]+(.+)$/i);
+            if (nameMatch) {
+                report.associateName = nameMatch[1].trim();
+            }
+        }
+        
+        // Extract start date
+        if (!report.startDate) {
+            const startMatch = line.match(/^Start date[:\s]+([0-9/\-]+)/i);
+            if (startMatch) {
+                report.startDate = startMatch[1].trim().split(',')[0]; // Remove time if present
+            }
+        }
+        
+        // Extract end date
+        if (!report.endDate) {
+            const endMatch = line.match(/^End date[:\s]+([0-9/\-]+)/i);
+            if (endMatch) {
+                report.endDate = endMatch[1].trim().split(',')[0]; // Remove time if present
+            }
+        }
+        
+        // Extract total calls and calls with category detected
+        // Format: "Interactions: 165 (76% out of 218 matching data filter)"
+        const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\(.*?(\d+)%.*?out\s+of\s+(\d+)/i);
+        if (interactionsMatch) {
+            report.callsDetected = parseInt(interactionsMatch[1]);
+            report.percentage = parseInt(interactionsMatch[2]);
+            report.totalCalls = parseInt(interactionsMatch[3]);
+            continue;
+        }
+        
+        // Detect keywords section
+        if (line.toLowerCase().includes('keywords') || line.match(/^Name[,\t]/i)) {
+            inKeywordsSection = true;
+            continue;
+        }
+        
+        // Parse keyword phrases
+        // Format: + (A:phrase) VALUE or + (C:phrase) VALUE
+        if (inKeywordsSection && report.totalCalls > 0) {
+            // Match CSV format with quotes
+            const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
+            if (csvQuotedMatch) {
+                let rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
+                const value = parseInt(csvQuotedMatch[2]);
+                
+                // Extract actual phrase from + (A:phrase) or + (C:phrase) format
+                const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
+                if (phraseMatch) {
+                    const cleanPhrase = phraseMatch[1].trim();
+                    report.phrases.push({ phrase: cleanPhrase, value });
+                }
+                continue;
+            }
+            
+            // Match simple CSV format
+            const csvMatch = line.match(/^([^,]+),(\d+)$/);
+            if (csvMatch) {
+                let rawPhrase = csvMatch[1].trim();
+                const value = parseInt(csvMatch[2]);
+                
+                // Extract actual phrase
+                const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
+                if (phraseMatch) {
+                    const cleanPhrase = phraseMatch[1].trim();
+                    report.phrases.push({ phrase: cleanPhrase, value });
+                } else {
+                    // If no prefix, use raw phrase (cleanup quotes)
+                    const cleanPhrase = rawPhrase.replace(/^"(.*)"$/, '$1');
+                    report.phrases.push({ phrase: cleanPhrase, value });
+                }
+            }
+        }
+    }
+    
+    return report;
+}
+
+function handleSentimentFileChange(fileType) {
+    const fileInput = document.getElementById(`sentiment${fileType}File`);
+    const statusDiv = document.getElementById(`sentiment${fileType}Status`);
     
     if (!fileInput.files || fileInput.files.length === 0) {
         statusDiv.textContent = 'No file selected';
         statusDiv.style.color = '#666';
+        sentimentReports[fileType.toLowerCase()] = null;
         return;
     }
     
     const file = fileInput.files[0];
-    statusDiv.textContent = `📁 ${file.name} - Click "Process Uploaded Files" button`;
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    
+    statusDiv.textContent = `⏳ Processing ${file.name}...`;
     statusDiv.style.color = '#ff9800';
-}
-
-function processSentimentUploads() {
-    const fileTypes = ['Positive', 'Negative', 'Emotions'];
-    let filesProcessed = 0;
     
-    fileTypes.forEach(fileType => {
-        const fileInput = document.getElementById(`sentiment${fileType}File`);
-        const statusDiv = document.getElementById(`sentiment${fileType}Status`);
-        
-        if (!fileInput.files || fileInput.files.length === 0) {
-            return;
-        }
-        
-        const file = fileInput.files[0];
-        const fileName = file.name.toLowerCase();
-        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-        
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            try {
-                let lines = [];
-                
-                if (isExcel) {
-                    // Parse Excel file using XLSX library
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
-                    lines = csvContent.split('\n').filter(line => line.trim());
-                } else {
-                    // Parse CSV/text file
-                    const content = e.target.result;
-                    lines = content.split('\n').filter(line => line.trim());
-                }
-                
-                console.log(`Processing ${fileType} file with ${lines.length} lines`);
-                console.log('First 15 lines:', lines.slice(0, 15));
-                
-                // Parse file format: look for "Interactions:" line and keyword rows
-                let totalCalls = 0;
-                let callsWithSentiment = 0;
-                let employeeName = '';
-                let startDate = '';
-                let endDate = '';
-                const phrases = [];
-                let inKeywordsSection = false;
-                
-                for (const line of lines) {
-                    // Extract employee name from "Agent:" or "Name:" field
-                    if (!employeeName) {
-                        // Updated regex to capture full name including commas: "Employee: Bernal, Marietta"
-                        const nameMatch = line.match(/^(?:Agent|Name|Employee)[:\s]+(.+)$/i);
-                        if (nameMatch) {
-                            employeeName = nameMatch[1].trim();
-                            console.log(`Found employee name: ${employeeName}`);
-                        } else if (line.toLowerCase().includes('agent') || line.toLowerCase().includes('name') || line.toLowerCase().includes('employee')) {
-                            console.log(`Line contains name field but didn't match regex: "${line}"`);
-                        }
-                    }
-                    
-                    // Extract start date
-                    if (!startDate) {
-                        const startMatch = line.match(/^Start date[:\s]+([0-9/\-]+)/i);
-                        if (startMatch) {
-                            startDate = startMatch[1].trim();
-                            console.log(`Found start date: ${startDate}`);
-                        }
-                    }
-                    
-                    // Extract end date
-                    if (!endDate) {
-                        const endMatch = line.match(/^End date[:\s]+([0-9/\-]+)/i);
-                        if (endMatch) {
-                            endDate = endMatch[1].trim();
-                            console.log(`Found end date: ${endDate}`);
-                        }
-                    }
-                    
-                    // Check for total calls line: "Interactions: 165 (76% out of 218 matching data filter)"
-                    // We want the 218 (total calls in period), and 165 (calls with this sentiment)
-                    const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\([^)]*out\s+of\s+(\d+)/i);
-                    if (interactionsMatch) {
-                        callsWithSentiment = parseInt(interactionsMatch[1]);
-                        totalCalls = parseInt(interactionsMatch[2]);
-                        console.log(`✅ Found ${callsWithSentiment} calls with sentiment out of ${totalCalls} total calls`);
-                        continue;
-                    }
-                    
-                    // Log lines that contain "Interactions" for debugging
-                    if (line.includes('Interactions')) {
-                        console.log(`⚠️ Line contains 'Interactions' but didn't match regex: "${line}"`);
-                    }
-                    
-                    // Fallback: just "Interactions: 3100" without the "out of" part
-                    if (!totalCalls) {
-                        const simpleMatch = line.match(/Interactions[:\s]+(\d+)/i);
-                        if (simpleMatch) {
-                            totalCalls = parseInt(simpleMatch[1]);
-                            callsWithSentiment = totalCalls;
-                            console.log(`Found total interactions: ${totalCalls}`);
-                            continue;
-                        }
-                    }
-                    
-                    // Check if we've reached the Keywords section
-                    if (line.includes('Keywords') || line.includes('Name,Value') || line.includes('Name\tValue')) {
-                        inKeywordsSection = true;
-                        continue;
-                    }
-                    
-                    // Skip header row
-                    if (line.match(/^Name[,\t]/i)) {
-                        continue;
-                    }
-                    
-                    // Parse keyword rows: "#(A "phrase")",1750 or similar
-                    // Format: phrase,count or "phrase",count
-                    if (inKeywordsSection || totalCalls > 0) {
-                        // Try CSV format with quotes: "#(A ""anything else"")",1750
-                        const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
-                        if (csvQuotedMatch) {
-                            let phrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
-                            // Clean up the phrase: remove #(A, +(A, etc and trailing )
-                            phrase = phrase.replace(/^[#+-]\([AC]\s+"?([^"]+)"?\)$/, '$1')
-                                          .replace(/^[#+-]\([AC]\s+([^)]+)\)$/, '$1')
-                                          .replace(/^"(.*)"$/, '$1');
-                            const used = parseInt(csvQuotedMatch[2]);
-                            phrases.push({ phrase, used, total: totalCalls });
-                            continue;
-                        }
-                        
-                        // Try simple CSV: phrase,count
-                        const csvMatch = line.match(/^([^,]+),(\d+)$/);
-                        if (csvMatch) {
-                            let phrase = csvMatch[1].trim();
-                            // Clean up the phrase
-                            phrase = phrase.replace(/^[#+-]\([AC]\s+"?([^"]+)"?\)$/, '$1')
-                                          .replace(/^[#+-]\([AC]\s+([^)]+)\)$/, '$1')
-                                          .replace(/^"(.*)"$/, '$1');
-                            const used = parseInt(csvMatch[2]);
-                            phrases.push({ phrase, used, total: totalCalls });
-                        }
-                    }
-                }
-                
-                // If totalCalls is still 0 but we have phrases, use phrases.length as estimate
-                if (totalCalls === 0 && phrases.length > 0) {
-                    // Find the highest usage count as a proxy for total calls
-                    const maxUsage = Math.max(...phrases.map(p => p.used));
-                    if (maxUsage > 0) {
-                        totalCalls = maxUsage;
-                        console.log(`⚠️ Couldn't find Interactions line, using max usage count as totalCalls: ${totalCalls}`);
-                    }
-                }
-                
-                // Update all phrase.total values now that we have final totalCalls
-                phrases.forEach(p => {
-                    p.total = totalCalls;
-                    p.percentage = totalCalls > 0 ? ((p.used / totalCalls) * 100).toFixed(0) : 0;
-                });
-                
-                console.log(`Parsed ${phrases.length} phrases from ${fileType} file`);
-                
-                // Store parsed data
-                const keyMap = { Positive: 'positive', Negative: 'negative', Emotions: 'emotions' };
-                const dataKey = keyMap[fileType];
-                console.log(`Storing data for ${fileType} -> ${dataKey}:`, { totalCalls, callsWithSentiment, phrasesCount: phrases.length });
-                if (dataKey) {
-                    sentimentData[dataKey].totalCalls = totalCalls;
-                    sentimentData[dataKey].callsWithSentiment = callsWithSentiment;
-                    sentimentData[dataKey].phrases = phrases;
-                    sentimentData[dataKey].employeeName = employeeName;
-                    sentimentData[dataKey].startDate = startDate;
-                    sentimentData[dataKey].endDate = endDate;
-                    console.log(`✅ Stored in sentimentData.${dataKey}:`, sentimentData[dataKey]);
-                }
-                
-                // Store employee name globally (use first non-empty name found)
-                if (employeeName && !sentimentEmployeeName) {
-                    sentimentEmployeeName = employeeName;
-                    console.log(`✅ Employee name set to: ${sentimentEmployeeName}`);
-                }
-                
-                statusDiv.textContent = `✅ Loaded: ${totalCalls} calls, ${phrases.length} phrases`;
-                statusDiv.style.color = '#4caf50';
-                filesProcessed++;
-                
-                if (filesProcessed > 0) {
-                    showToast(`✅ Successfully processed ${filesProcessed} file(s)`, 3000);
-                }
-            } catch (error) {
-                statusDiv.textContent = `❌ Error parsing file`;
-                statusDiv.style.color = '#f44336';
-                console.error('File parsing error:', error);
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            let lines = [];
+            
+            if (isExcel) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                lines = csvContent.split('\n').filter(line => line.trim());
+            } else {
+                const content = e.target.result;
+                lines = content.split('\n').filter(line => line.trim());
             }
-        };
-        
-        // Read file based on type
-        if (isExcel) {
-            reader.readAsArrayBuffer(file);
-        } else {
-            reader.readAsText(file);
+            
+            // Parse file
+            const report = parseSentimentFile(fileType, lines);
+            sentimentReports[fileType.toLowerCase()] = report;
+            
+            statusDiv.textContent = `✅ ${report.associateName || 'Loaded'} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
+            statusDiv.style.color = '#4caf50';
+        } catch (error) {
+            statusDiv.textContent = `❌ Error parsing file`;
+            statusDiv.style.color = '#f44336';
+            console.error('File parsing error:', error);
         }
-    });
-}
-
-function generateSentimentPrompt() {
-    const employeeName = sentimentEmployeeName;
-    const promptArea = document.getElementById('sentimentPromptArea');
-    
-    if (!employeeName) {
-        alert('⚠️ No employee name found. Please make sure your uploaded files contain an "Agent:", "Name:", or "Employee:" field.');
-        return;
-    }
-    
-    if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
-        console.log('Sentiment data check:', sentimentData);
-        alert('⚠️ Please upload at least one sentiment report');
-        return;
-    }
-    
-    console.log('✅ Sentiment data validated:', {
-        positive: sentimentData.positive.totalCalls,
-        negative: sentimentData.negative.totalCalls,
-        emotions: sentimentData.emotions.totalCalls
-    });
-    
-    // Get employee's weekly sentiment scores
-    const employeeData = getEmployeeDataForPeriod(employeeName);
-    const sentimentScores = {
-        overall: employeeData?.overallSentiment || 'N/A',
-        positive: employeeData?.positiveWord || 'N/A',
-        negative: employeeData?.negativeWord || 'N/A',
-        emotions: employeeData?.managingEmotions || 'N/A'
     };
     
-    // Collect all phrases from all three reports with their usage
-    const allPhrases = [];
-    
-    if (sentimentData.positive.phrases.length > 0) {
-        sentimentData.positive.phrases.forEach(p => {
-            allPhrases.push({
-                phrase: p.phrase,
-                used: p.used,
-                total: p.total,
-                percentage: ((p.used / p.total) * 100).toFixed(0),
-                type: 'Positive'
-            });
-        });
+    if (isExcel) {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsText(file);
     }
-    
-    if (sentimentData.negative.phrases.length > 0) {
-        sentimentData.negative.phrases.forEach(p => {
-            allPhrases.push({
-                phrase: p.phrase,
-                used: p.used,
-                total: p.total,
-                percentage: ((p.used / p.total) * 100).toFixed(0),
-                type: 'Avoid Negative'
-            });
-        });
-    }
-    
-    if (sentimentData.emotions.phrases.length > 0) {
-        sentimentData.emotions.phrases.forEach(p => {
-            allPhrases.push({
-                phrase: p.phrase,
-                used: p.used,
-                total: p.total,
-                percentage: ((p.used / p.total) * 100).toFixed(0),
-                type: 'Managing Emotions'
-            });
-        });
-    }
-    
-    // Sort by usage count descending
-    allPhrases.sort((a, b) => b.used - a.used);
-    
-    // Get top 5 most used
-    const top5 = allPhrases.slice(0, 5);
-    
-    // Get bottom 5 least used (opportunities) - only phrases with usage > 0
-    const phrasesWithUsage = allPhrases.filter(p => p.used > 0);
-    const bottom5 = phrasesWithUsage.slice(-5).reverse();
-    
-    // Build the data summary
-    let sentimentSummary = `SENTIMENT SCORES:\n`;
-    sentimentSummary += `- Overall Sentiment: ${sentimentScores.overall}%\n`;
-    sentimentSummary += `- Positive Word Usage: ${sentimentScores.positive}%\n`;
-    sentimentSummary += `- Avoiding Negative Words: ${sentimentScores.negative}%\n`;
-    sentimentSummary += `- Managing Emotions: ${sentimentScores.emotions}%\n`;
-    sentimentSummary += `\nNote: Overall Sentiment is the average of Positive, Avoiding Negative, and Managing Emotions scores.\n\n`;
-    
-    // Add call coverage information
-    const dateRange = (sentimentData.positive.startDate || sentimentData.negative.startDate || sentimentData.emotions.startDate) 
-        ? `${sentimentData.positive.startDate || sentimentData.negative.startDate || sentimentData.emotions.startDate} to ${sentimentData.positive.endDate || sentimentData.negative.endDate || sentimentData.emotions.endDate}` 
-        : 'Last 180 days';
-    
-    sentimentSummary += `CALL COVERAGE (${dateRange}):\n`;
-    if (sentimentData.positive.totalCalls > 0) {
-        const posPercent = ((sentimentData.positive.callsWithSentiment / sentimentData.positive.totalCalls) * 100).toFixed(0);
-        sentimentSummary += `- ${sentimentData.positive.callsWithSentiment} out of ${sentimentData.positive.totalCalls} calls (${posPercent}%) had at least one POSITIVE phrase\n`;
-    }
-    if (sentimentData.negative.totalCalls > 0) {
-        const negPercent = ((sentimentData.negative.callsWithSentiment / sentimentData.negative.totalCalls) * 100).toFixed(0);
-        sentimentSummary += `- ${sentimentData.negative.callsWithSentiment} out of ${sentimentData.negative.totalCalls} calls (${negPercent}%) had at least one NEGATIVE phrase\n`;
-    }
-    if (sentimentData.emotions.totalCalls > 0) {
-        const emoPercent = ((sentimentData.emotions.callsWithSentiment / sentimentData.emotions.totalCalls) * 100).toFixed(0);
-        sentimentSummary += `- ${sentimentData.emotions.callsWithSentiment} out of ${sentimentData.emotions.totalCalls} calls (${emoPercent}%) had at least one EMOTION/CONTROL phrase\n`;
-    }
-    sentimentSummary += `\n`;
-    
-    sentimentSummary += `TOP 5 PHRASES ${employeeName.split(' ')[0].toUpperCase()} USES MOST:\n`;
-    top5.forEach((p, i) => {
-        sentimentSummary += `${i + 1}. "${p.phrase}" (${p.type}) - Used ${p.used} times out of ${p.total} calls (${p.percentage}%)\n`;
-    });
-    sentimentSummary += `\n`;
-    
-    sentimentSummary += `BOTTOM 5 PHRASES - OPPORTUNITIES TO IMPROVE:\n`;
-    bottom5.forEach((p, i) => {
-        sentimentSummary += `${i + 1}. "${p.phrase}" (${p.type}) - Used ${p.used} times out of ${p.total} calls (${p.percentage}%)\n`;
-    });
-    sentimentSummary += `\n`;
-    
-    // Build the AI Builder Prompt - CONCISE VERSION
-    const prompt = `You are a customer service supervisor. Write a short coaching email to ${employeeName}.
-
-SCORES:
-- Overall Sentiment: ${sentimentScores.overall}% (average of Positive + Avoiding Negative + Managing Emotions)
-- Positive Word Usage: ${sentimentScores.positive}%
-- Avoiding Negative: ${sentimentScores.negative}%
-- Managing Emotions: ${sentimentScores.emotions}%
-
-${sentimentSummary}
-
-TASK: Write a 3-4 paragraph coaching email that:
-1. Celebrates their Top 5 phrases and how often they used them
-2. Points out the Bottom 5 phrases they should use more often to improve their sentiment score
-3. Give 2 specific examples of situations where they could use the Bottom 5 phrases
-4. Ends with encouragement and confidence
-
-Keep it real, warm, and actionable. Show their actual numbers. No corporate jargon.`;
-    
-    promptArea.value = prompt;
-    
 }
 
-function copySentimentPrompt() {
-    const promptArea = document.getElementById('sentimentPromptArea');
+function copySentimentSummary() {
+    const summaryText = document.getElementById('sentimentSummaryText').textContent;
     
-    if (!promptArea.value.trim()) {
-        alert('⚠️ No prompt to copy. Please generate a prompt first.');
+    if (!summaryText.trim()) {
+        alert('⚠️ No summary to copy. Generate a summary first.');
         return;
     }
     
-    promptArea.select();
-    document.execCommand('copy');
-    
-    // Visual feedback
-    const button = document.getElementById('copySentimentPromptBtn');
-    const originalText = button.textContent;
-    button.textContent = '? Copied to CoPilot!';
-    
-    // Open ChatGPT Copilot after short delay
-    setTimeout(() => {
-        window.open('https://copilot.microsoft.com', '_blank');
+    // Copy to clipboard
+    navigator.clipboard.writeText(summaryText).then(() => {
+        const button = document.getElementById('copySentimentSummaryBtn');
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
         setTimeout(() => {
             button.textContent = originalText;
-        }, 500);
-    }, 500);
-    
-    
+        }, 2000);
+        showToast('✅ Summary copied to clipboard', 2000);
+    }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = summaryText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('✅ Summary copied to clipboard', 2000);
+    });
 }
 
 // ============================================
