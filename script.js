@@ -8844,71 +8844,24 @@ function generateSentimentPrompt() {
     });
     sentimentSummary += `\n`;
     
-    // Build the AI Builder Prompt per specification
-    const prompt = `You are a Customer Experience Supervisor reviewing speech analytics sentiment reports for ${employeeName}. 
+    // Build the AI Builder Prompt - CONCISE VERSION
+    const prompt = `You are a customer service supervisor. Write a short coaching email to ${employeeName}.
 
-EMPLOYEE'S WEEKLY SENTIMENT SCORES:
-- Overall Sentiment: ${sentimentScores.overall}% (average of all three metrics below)
+SCORES:
+- Overall Sentiment: ${sentimentScores.overall}% (average of Positive + Avoiding Negative + Managing Emotions)
 - Positive Word Usage: ${sentimentScores.positive}%
-- Avoiding Negative Words: ${sentimentScores.negative}%
+- Avoiding Negative: ${sentimentScores.negative}%
 - Managing Emotions: ${sentimentScores.emotions}%
-
-UNDERSTANDING THE DATA:
-The employee's "Overall Sentiment" score is calculated as the average of their three individual metrics (Positive Word Usage, Avoiding Negative Words, and Managing Emotions). These scores come from speech analytics that tracks specific phrases across all customer interactions during the weekly period.
-
-The TOP 5 PHRASES below represent the employee's most consistently used language patterns—these are strengths to celebrate and reinforce.
-
-The BOTTOM 5 PHRASES represent opportunities for growth. These are high-value phrases that appear less frequently in their conversations. When an employee uses these phrases more consistently across ALL calls, their Overall Sentiment score improves because:
-1. It increases their Positive Word Usage percentage
-2. It demonstrates better emotional management and customer control
-3. It creates a more consistent, professional customer experience
-
-KEY COACHING INSIGHT: The goal is for ${employeeName} to use variants of ALL these phrases on EVERY call. Currently, they excel at using the Top 5, but incorporating the Bottom 5 more consistently will directly increase their Overall Sentiment score.
 
 ${sentimentSummary}
 
-YOUR TASK:
-Write a personalized coaching email to ${employeeName} that:
-1. Celebrates their Top 5 phrases and explains why consistent use of these phrases is excellent
-2. Frames the Bottom 5 phrases as growth opportunities (NOT deficiencies)
-3. Explains the connection: using Bottom 5 phrases more = higher Overall Sentiment score
-4. Provides 2-3 specific, actionable focus areas for the upcoming week
-5. Includes brief examples of how to incorporate Bottom 5 phrases naturally
-6. Ends with encouragement and confidence in their ability to grow
+TASK: Write a 3-4 paragraph coaching email that:
+1. Celebrates their Top 5 phrases (what they're doing well)
+2. Explains the Bottom 5 as expansion opportunities to boost their sentiment score
+3. Gives 2 specific examples of how to use the Bottom 5 phrases naturally
+4. Ends with encouragement
 
-COACHING GUIDELINES:
-- Write as a supportive, professional supervisor who understands daily call center work
-- Start with genuine praise for their Top 5 performance
-- Use clear, human language—avoid corporate jargon and technical terms
-- Frame Bottom 5 as "expansion opportunities" rather than failures
-- Explain that phrases with 0 usage simply mean untapped potential
-- Connect phrase usage directly to customer experience and satisfaction
-- Be specific about what to practice and how it helps
-- Never sound punitive, robotic, or like an audit
-- The tone should be encouraging and forward-focused
-
-WHAT TO INCLUDE:
-- Recognition of their strengths (Top 5 phrases)
-- Clear explanation of what the data reveals about their customer interactions
-- Why using the Bottom 5 phrases matters for customer experience
-- Practical examples: "Try saying [phrase] when [situation]"
-- 2-3 focus areas for improvement this week
-- Connection to their Overall Sentiment score improvement
-- Encouraging closing that reinforces growth potential
-
-WHAT TO AVOID:
-- Do NOT list raw metrics mechanically
-- Do NOT mention "system labels" or "report types" (Positive/Negative/Emotions)
-- Do NOT sound like a performance warning
-- Do NOT reference AI or automation
-- Do NOT use technical jargon or analytics terms
-
-OUTPUT FORMAT:
-Subject: [Create an appropriate email subject]
-
-[Body of coaching email written in first person as their supervisor]
-
-Generate the coaching email now:`;
+Keep it concise, warm, and actionable. No jargon.`;
     
     promptArea.value = prompt;
     
