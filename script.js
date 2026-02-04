@@ -8598,11 +8598,14 @@ function processSentimentUploads() {
                 for (const line of lines) {
                     // Extract employee name from "Agent:" or "Name:" field
                     if (!employeeName) {
-                        const nameMatch = line.match(/^(?:Agent|Name|Employee)[:\s]+([^,]+)/i);
+                        // Updated regex to capture full name including commas: "Employee: Bernal, Marietta"
+                        const nameMatch = line.match(/^(?:Agent|Name|Employee)[:\s]+(.+)$/i);
                         if (nameMatch) {
                             employeeName = nameMatch[1].trim();
-                            console.log(`Found employee name: ${employeeName}`);\n                        } else if (line.toLowerCase().includes('agent') || line.toLowerCase().includes('name') || line.toLowerCase().includes('employee')) {
-                            console.log(`Line contains name field but didn't match regex: "${line}"`);\n                        }
+                            console.log(`Found employee name: ${employeeName}`);
+                        } else if (line.toLowerCase().includes('agent') || line.toLowerCase().includes('name') || line.toLowerCase().includes('employee')) {
+                            console.log(`Line contains name field but didn't match regex: "${line}"`);
+                        }
                     }
                     
                     // Check for total calls line: "Interactions: 3100 (72% out of 4278...)"
