@@ -38,6 +38,12 @@
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
+if (!DEBUG) {
+    console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
+}
+
 let weeklyData = {};
 let ytdData = {};
 let currentPeriodType = 'week';
@@ -342,6 +348,9 @@ function escapeHtml(text) {
 function showToast(message, duration = 5000) {
     const toast = document.createElement('div');
     toast.textContent = message;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-atomic', 'true');
     toast.style.cssText = `
         position: fixed;
         bottom: 20px;
@@ -366,6 +375,9 @@ function showLoadingSpinner(message = 'Processing...') {
     hideLoadingSpinner(); // Remove any existing spinner
     const spinner = document.createElement('div');
     spinner.id = 'globalLoadingSpinner';
+    spinner.setAttribute('role', 'status');
+    spinner.setAttribute('aria-live', 'polite');
+    spinner.setAttribute('aria-busy', 'true');
     spinner.innerHTML = `
         <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
             <div style="background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center;">
@@ -588,7 +600,7 @@ function fallbackCopyDebug(text) {
 
 function saveNickname(employeeFullName, nickname) {
     try {
-        const nicknames = JSON.parse(localStorage.getItem('employeeNicknames') || '{}');
+        const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
         nicknames[employeeFullName] = nickname;
         localStorage.setItem(STORAGE_PREFIX + 'employeeNicknames', JSON.stringify(nicknames));
     } catch (error) {
@@ -598,7 +610,7 @@ function saveNickname(employeeFullName, nickname) {
 
 function getSavedNickname(employeeFullName) {
     try {
-        const nicknames = JSON.parse(localStorage.getItem('employeeNicknames') || '{}');
+        const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
         return nicknames[employeeFullName] || '';
     } catch (error) {
         console.error('Error getting nickname:', error);
@@ -1078,7 +1090,7 @@ async function loadServerTips() {
 
 function loadUserTips() {
     try {
-        const saved = localStorage.getItem('userCustomTips');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'userCustomTips');
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading user tips:', error);
@@ -1096,7 +1108,7 @@ function saveUserTips(tips) {
 
 function loadCustomMetrics() {
     try {
-        const saved = localStorage.getItem('customMetrics');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'customMetrics');
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading custom metrics:', error);
@@ -1106,7 +1118,7 @@ function loadCustomMetrics() {
 
 function saveCustomMetrics(metrics) {
     try {
-        localStorage.setItem('customMetrics', JSON.stringify(metrics));
+        localStorage.setItem(STORAGE_PREFIX + 'customMetrics', JSON.stringify(metrics));
     } catch (error) {
         console.error('Error saving custom metrics:', error);
     }
@@ -1270,7 +1282,7 @@ function isTeamMember(weekKey, employeeName) {
 
 function loadCallCenterAverages() {
     try {
-        const saved = localStorage.getItem('callCenterAverages');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading call center averages:', error);
@@ -1280,7 +1292,7 @@ function loadCallCenterAverages() {
 
 function saveCallCenterAverages(averages) {
     try {
-        localStorage.setItem('callCenterAverages', JSON.stringify(averages));
+        localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
     } catch (error) {
         console.error('Error saving call center averages:', error);
     }
@@ -1366,7 +1378,7 @@ function getEmployeeNickname(fullName) {
 function setEmployeePreferredName(fullName, preferredName) {
     if (!fullName) return;
     
-    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
     
     if (preferredName && preferredName.trim()) {
         preferredNames[fullName] = preferredName.trim();
@@ -1375,7 +1387,7 @@ function setEmployeePreferredName(fullName, preferredName) {
         delete preferredNames[fullName];
     }
     
-    localStorage.setItem('employeePreferredNames', JSON.stringify(preferredNames));
+    localStorage.setItem(STORAGE_PREFIX + 'employeePreferredNames', JSON.stringify(preferredNames));
 }
 
 window.saveEmployeePreferredName = function(fullName) {
@@ -3010,14 +3022,14 @@ window.updateServerTip = async function(metricKey, index) {
     }
     
     // Load modified server tips (stored separately)
-    let modifiedServerTips = JSON.parse(localStorage.getItem('modifiedServerTips') || '{}');
+    let modifiedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
     
     if (!modifiedServerTips[metricKey]) {
         modifiedServerTips[metricKey] = {};
     }
     
     modifiedServerTips[metricKey][index] = updatedTip;
-    localStorage.setItem('modifiedServerTips', JSON.stringify(modifiedServerTips));
+    localStorage.setItem(STORAGE_PREFIX + 'modifiedServerTips', JSON.stringify(modifiedServerTips));
     
     showToast('✅ Server tip updated!');
     
@@ -3041,7 +3053,7 @@ window.deleteServerTip = async function(metricKey, index) {
     }
     
     // Load deleted server tips list
-    let deletedServerTips = JSON.parse(localStorage.getItem('deletedServerTips') || '{}');
+    let deletedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
     
     if (!deletedServerTips[metricKey]) {
         deletedServerTips[metricKey] = [];
@@ -3052,7 +3064,7 @@ window.deleteServerTip = async function(metricKey, index) {
         deletedServerTips[metricKey].push(index);
     }
     
-    localStorage.setItem('deletedServerTips', JSON.stringify(deletedServerTips));
+    localStorage.setItem(STORAGE_PREFIX + 'deletedServerTips', JSON.stringify(deletedServerTips));
     
     showToast('\u{1F5D1}\u{FE0F} Server tip deleted');
     
@@ -5514,14 +5526,14 @@ function getMetricSeverity(metricKey, value) {
 
 function loadTipUsageHistory() {
     try {
-        return JSON.parse(localStorage.getItem('tipUsageHistory') || '{}');
+        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tipUsageHistory') || '{}');
     } catch {
         return {};
     }
 }
 
 function saveTipUsageHistory(history) {
-    localStorage.setItem('tipUsageHistory', JSON.stringify(history));
+    localStorage.setItem(STORAGE_PREFIX + 'tipUsageHistory', JSON.stringify(history));
 }
 
 function selectSmartTip({ employeeId, metricKey, severity, tips }) {
@@ -5612,9 +5624,9 @@ function detectComplianceFlags(text) {
 
 function logComplianceFlag(entry) {
     try {
-        const log = JSON.parse(localStorage.getItem('complianceLog') || '[]');
+        const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
         log.push(entry);
-        localStorage.setItem('complianceLog', JSON.stringify(log.slice(-200)));
+        localStorage.setItem(STORAGE_PREFIX + 'complianceLog', JSON.stringify(log.slice(-200)));
     } catch {
         // no-op
     }
@@ -5700,7 +5712,7 @@ function initializeTrendIntelligence() {
 function renderComplianceAlerts() {
     const container = document.getElementById('complianceAlertsOutput');
     if (!container) return;
-    const log = JSON.parse(localStorage.getItem('complianceLog') || '[]');
+    const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
     if (!log.length) {
         container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No compliance flags logged.</div>';
         return;
@@ -7198,7 +7210,7 @@ function renderEmployeesList() {
         return;
     }
     
-    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
     
     container.innerHTML = `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` + 
     employees.map(name => {
@@ -7256,9 +7268,9 @@ function deleteEmployee(employeeName) {
     saveWeeklyData();
     
     // Remove preferred name
-    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
     delete preferredNames[employeeName];
-    localStorage.setItem('employeePreferredNames', JSON.stringify(preferredNames));
+    localStorage.setItem(STORAGE_PREFIX + 'employeePreferredNames', JSON.stringify(preferredNames));
     
     // Refresh the list
     renderEmployeesList();
@@ -7472,7 +7484,7 @@ function populateExecutiveSummaryTable(associate, periods, periodType) {
 }
 
 function loadExecutiveSummaryNotes(associate) {
-    const saved = localStorage.getItem('executiveSummaryNotes') ? JSON.parse(localStorage.getItem('executiveSummaryNotes')) : {};
+    const saved = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')) : {};
     const employeeNotes = saved[associate] || {};
     
     // Populate red flags
@@ -7491,7 +7503,7 @@ function loadExecutiveSummaryNotes(associate) {
 }
 
 function saveExecutiveSummaryNotes(associate) {
-    const saved = localStorage.getItem('executiveSummaryNotes') ? JSON.parse(localStorage.getItem('executiveSummaryNotes')) : {};
+    const saved = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')) : {};
     
     if (!saved[associate]) {
         saved[associate] = {};
@@ -7509,7 +7521,7 @@ function saveExecutiveSummaryNotes(associate) {
         saved[associate][weekKey].phishing = input.value;
     });
     
-    localStorage.setItem('executiveSummaryNotes', JSON.stringify(saved));
+    localStorage.setItem(STORAGE_PREFIX + 'executiveSummaryNotes', JSON.stringify(saved));
     showToast(`? Notes saved for ${associate}`, 3000);
 }
 
@@ -7787,7 +7799,7 @@ function renderYearlySummaryTrendCharts() {
 
 function getCenterAverageForWeek(weekKey) {
     // Load call center averages from localStorage
-    const callCenterAverages = localStorage.getItem('callCenterAverages') ? JSON.parse(localStorage.getItem('callCenterAverages')) : {};
+    const callCenterAverages = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages')) : {};
     const avg = callCenterAverages[weekKey];
     
     if (!avg || Object.keys(avg).length === 0) {
@@ -8581,7 +8593,7 @@ const DEFAULT_METRIC_TIPS = {
 };
 
 function initializeDefaultTips() {
-    const stored = localStorage.getItem('metricCoachingTips');
+    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
     if (stored) {
         return;
     }
@@ -8590,14 +8602,14 @@ function initializeDefaultTips() {
     loadServerTips().then(serverTips => {
         // Store server tips as the default tips
         if (Object.keys(serverTips).length > 0) {
-            localStorage.setItem('metricCoachingTips', JSON.stringify(serverTips));
+            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(serverTips));
         } else {
             // If CSV doesn't load, use hardcoded defaults
-            localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
         }
     }).catch(() => {
         // On error, use hardcoded defaults
-        localStorage.setItem('metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+        localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
     });
 }
 
@@ -8612,7 +8624,7 @@ function getMetricTips(metricName) {
     }
 
     // Fall back to default tips
-    const stored = localStorage.getItem('metricCoachingTips');
+    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
     const allTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
     return allTips[metricName] || [];
 }
