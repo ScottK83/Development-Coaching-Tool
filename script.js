@@ -2215,6 +2215,73 @@ function initializeEventHandlers() {
             showToast('✅ File deleted', 2000);
         }
     };
+    
+    // Export all files as ZIP
+    document.getElementById('exportFilesBtn')?.addEventListener('click', async () => {
+        if (transferredFiles.length === 0) {
+            alert('No files to export');
+            return;
+        }
+        
+        try {
+            const zip = new JSZip();
+            transferredFiles.forEach(file => {
+                zip.file(file.name, file.data);
+            });
+            
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `coaching-files-${new Date().toISOString().split('T')[0]}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast(`✅ Exported ${transferredFiles.length} files as ZIP`, 3000);
+        } catch (e) {
+            alert('Error creating ZIP: ' + e.message);
+            console.error(e);
+        }
+    });
+    
+    // Import files from ZIP
+    document.getElementById('importFilesBtn')?.addEventListener('click', () => {
+        document.getElementById('importFileInput').click();
+    });
+    
+    document.getElementById('importFileInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const zip = new JSZip();
+            const loaded = await zip.loadAsync(file);
+            let filesImported = 0;
+            
+            for (const [filename, zipFile] of Object.entries(loaded.files)) {
+                if (!zipFile.dir) {
+                    const data = await zipFile.async('arraybuffer');
+                    transferredFiles.push({
+                        name: filename,
+                        type: file.type,
+                        size: data.byteLength,
+                        data: data,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    filesImported++;
+                }
+            }
+            
+            saveTransferredFiles();
+            updateTransferredFilesList();
+            showToast(`✅ Imported ${filesImported} files from ZIP`, 3000);
+            e.target.value = '';
+        } catch (error) {
+            alert('Error importing ZIP: ' + error.message);
+            console.error(error);
+        }
+    });
     // Import data
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         

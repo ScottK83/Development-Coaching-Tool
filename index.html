@@ -8,6 +8,7 @@
     <script src="lib-chart.js"></script>
     <script src="lib-html2canvas.js"></script>
     <script src="lib-xlsx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -487,10 +488,13 @@
                     <!-- File Transfer Utility -->
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #17a2b8;">
                         <h3 style="color: #17a2b8; margin-top: 0;">📤 File Transfer (Upload/Download)</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Upload files from work to download later, or download files to take home.</p>
+                        <p style="color: #666; margin-bottom: 15px;">Upload files from work. Export to share via OneDrive/cloud storage, or import from previously exported backup.</p>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
                             <input type="file" id="fileTransferInput" multiple style="flex: 1; padding: 8px; border: 1px solid #17a2b8; border-radius: 4px;">
                             <button type="button" id="uploadFileBtn" class="btn-secondary" style="background: #17a2b8; color: white; padding: 8px 20px;">📤 Upload</button>
+                            <button type="button" id="exportFilesBtn" class="btn-secondary" style="background: #0056b3; color: white; padding: 8px 20px;">📦 Export All (ZIP)</button>
+                            <button type="button" id="importFilesBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 8px 20px;">📥 Import (ZIP)</button>
+                            <input type="file" id="importFileInput" accept=".zip" style="display: none;">
                         </div>
                         <div id="transferredFilesList" style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
                             <div style="padding: 15px; text-align: center; color: #999;">No files uploaded yet</div>
