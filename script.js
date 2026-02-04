@@ -8652,12 +8652,18 @@ function parseSentimentFile(fileType, lines) {
             const startMatch = line.match(/^Start date[:\s]+([0-9/\-]+)/i);
             if (startMatch) {
                 report.startDate = startMatch[1].trim().split(',')[0]; // Remove time if present
+                console.log(`✅ Found start date: ${report.startDate}`);
             }
         }
         
         // Extract end date
         if (!report.endDate) {
             const endMatch = line.match(/^End date[:\s]+([0-9/\-]+)/i);
+            if (endMatch) {
+                report.endDate = endMatch[1].trim().split(',')[0]; // Remove time if present
+                console.log(`✅ Found end date: ${report.endDate}`);
+            }
+        }
             if (endMatch) {
                 report.endDate = endMatch[1].trim().split(',')[0]; // Remove time if present
             }
@@ -8882,19 +8888,26 @@ function generateSentimentCoPilotPrompt() {
     
     const associateName = positive.associateName || 'the associate';
     
+    // Goals from METRICS_REGISTRY
+    const POSITIVE_GOAL = 86; // positiveWord target
+    const NEGATIVE_GOAL = 83; // negativeWord target (higher = better at avoiding)
+    const EMOTIONS_GOAL = 95; // managingEmotions target
+    
     // Build data summary for CoPilot
     let dataSummary = `DATA SUMMARY:\n\n`;
     dataSummary += `POSITIVE LANGUAGE: ${positive.callsDetected}/${positive.totalCalls} calls (${positive.percentage}%)\n`;
+    dataSummary += `Goal: ${POSITIVE_GOAL}% | Status: ${positive.percentage >= POSITIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
     const topPos = positive.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
     topPos.forEach(p => {
         dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
     });
     
     dataSummary += `\nAVOIDING NEGATIVE: ${negative.callsDetected}/${negative.totalCalls} calls (${negative.percentage}%)\n`;
-    const negDetected = negative.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
-    if (negDetected.length > 0) {
-        dataSummary += `Watch for:\n`;
-        negDetected.forEach(p => {
+    dataSummary += `Goal: ${NEGATIVE_GOAL}% | Status: ${negative.percentage >= NEGATIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
+    const assocNeg = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    if (assocNeg.length > 0) {
+        dataSummary += `Associate to stop:\n`;
+        assocNeg.forEach(p => {
             dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
         });
     } else {
@@ -8902,6 +8915,7 @@ function generateSentimentCoPilotPrompt() {
     }
     
     dataSummary += `\nMANAGING EMOTIONS: ${emotions.callsDetected}/${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
+    dataSummary += `Goal: ${EMOTIONS_GOAL}% | Status: ${emotions.percentage >= EMOTIONS_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
     const emoDetected = emotions.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
     if (emoDetected.length > 0) {
         dataSummary += `Customer emotional phrases detected:\n`;
@@ -8912,17 +8926,25 @@ function generateSentimentCoPilotPrompt() {
         dataSummary += `  ✓ Low emotional indicators detected\n`;
     }
     
-    const prompt = `You are a customer service supervisor writing a brief, actionable coaching email to ${associateName}.
+    const prompt = `Write a brief coaching email to ${associateName} using bullet points.
 
 ${dataSummary}
 
-WRITE A SHORT EMAIL (3-4 paragraphs) that:
-1. Opens with specific positive feedback based on the data
-2. Addresses one key area for improvement
-3. Gives ONE concrete action they can take this week
-4. Closes with confidence
+FORMAT:
 
-Make it warm, direct, and real. Use the actual numbers. No corporate jargon. Keep it under 200 words.`;
+WHAT'S GOING WELL:
+* List 2-3 specific positive behaviors from the data
+
+AREA TO FOCUS ON:
+* Identify the #1 behavior to improve based on the data
+
+CONCRETE ACTION FOR THIS WEEK:
+* Give ONE specific, actionable step they can take
+
+CLOSING:
+* End with confidence in their ability
+
+Keep it under 200 words. Real tone, no corporate speak. Use the actual numbers from the data.`;
     
     // Copy to clipboard and show feedback
     navigator.clipboard.writeText(prompt).then(() => {
