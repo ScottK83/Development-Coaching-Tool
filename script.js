@@ -2130,42 +2130,6 @@ function initializeEventHandlers() {
     // Load files on initialization
     loadTransferredFiles();
     
-    document.getElementById('uploadFileBtn')?.addEventListener('click', () => {
-        const fileInput = document.getElementById('fileTransferInput');
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert('Please select at least one file');
-            return;
-        }
-        
-        let filesAdded = 0;
-        Array.from(fileInput.files).forEach(file => {
-            if (file.size > 100 * 1024 * 1024) { // 100MB limit
-                alert(`File "${file.name}" is too large (max 100MB)`);
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                transferredFiles.push({
-                    name: file.name,
-                    type: file.type,
-                    size: file.size,
-                    data: e.target.result,
-                    timestamp: new Date().toLocaleString()
-                });
-                filesAdded++;
-                
-                // Save to localStorage after each file
-                saveTransferredFiles();
-                updateTransferredFilesList();
-                showToast(`✅ File "${file.name}" uploaded to storage`, 3000);
-            };
-            reader.readAsArrayBuffer(file);
-        });
-        
-        fileInput.value = '';
-    });
-    
     function updateTransferredFilesList() {
         const listDiv = document.getElementById('transferredFilesList');
         if (transferredFiles.length === 0) {
