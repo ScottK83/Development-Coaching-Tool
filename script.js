@@ -8734,9 +8734,6 @@ function generateSentimentPrompt() {
         alert('⚠️ No employee name found. Please make sure your uploaded files contain an "Agent:", "Name:", or "Employee:" field.');
         return;
     }
-        alert('⚠️ No employee name found. Please make sure your uploaded files contain an "Agent:", "Name:", or "Employee:" field.');
-        return;
-    }
     
     if (!sentimentData.positive.totalCalls && !sentimentData.negative.totalCalls && !sentimentData.emotions.totalCalls) {
         console.log('Sentiment data check:', sentimentData);
