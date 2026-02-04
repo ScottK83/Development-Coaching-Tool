@@ -1088,7 +1088,7 @@ function loadUserTips() {
 
 function saveUserTips(tips) {
     try {
-        localStorage.setItem('userCustomTips', JSON.stringify(tips));
+        localStorage.setItem(STORAGE_PREFIX + 'userCustomTips', JSON.stringify(tips));
     } catch (error) {
         console.error('Error saving user tips:', error);
     }
@@ -3846,7 +3846,7 @@ function generateTrendEmail() {
         const mailEndDate = periodMeta.endDate || 'unknown';
         const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
         
-        console.log('Opening Outlook with subject:', emailSubject);
+            if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
         
         // Open mailto AFTER clipboard is ready
         try {
