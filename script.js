@@ -8650,23 +8650,26 @@ function parseSentimentFile(fileType, lines) {
         }
         
         // Extract total calls and calls with category detected
-        // Format: "Interactions: 165 (76% out of 218 matching data filter)"
-        const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\(.*?(\d+)%.*?out\s+of\s+(\d+)/i);
+        // Format in Excel CSV: "Interactions:,165 (76% out of 218 matching data filter),,"
+        const interactionsMatch = line.match(/Interactions:?,?\s*(\d+)\s*\(.*?(\d+)%.*?out\s+of\s+(\d+)/i);
         if (interactionsMatch) {
             report.callsDetected = parseInt(interactionsMatch[1]);
             report.percentage = parseInt(interactionsMatch[2]);
             report.totalCalls = parseInt(interactionsMatch[3]);
+            console.log(`✅ Found interactions: ${report.callsDetected} detected, ${report.totalCalls} total, ${report.percentage}%`);
             continue;
         }
         
         // Detect keywords section
-        if (line.toLowerCase().includes('keywords')) {
+        if (line.toLowerCase().includes('keywords') || line.toLowerCase().includes('query result metrics')) {
             inKeywordsSection = true;
+            console.log(`✅ Found keywords section at line: "${line}"`);
             continue;
         }
         
         // Skip "Name" and "Value" header lines
-        if (line.trim() === 'Name' || line.trim() === 'Value') {
+        if (line.trim() === 'Name' || line.trim() === 'Value' || line.match(/^Name,Value/i)) {
+            console.log(`Skipping header line: "${line}"`);
             continue;
         }
         
