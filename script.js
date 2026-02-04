@@ -8619,10 +8619,14 @@ function parseSentimentFile(fileType, lines) {
     };
     
     let inKeywordsSection = false;
+    let pendingPhrase = null; // For handling phrase/value on separate lines
     
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
         // Extract associate name: look for "Employee:", "Agent:", or "Name:"
-        if (!report.associateName) {
+        // But NOT if line is just "Name" (which is the keywords header)
+        if (!report.associateName && line.length > 10) {
             const nameMatch = line.match(/^(?:Employee|Agent|Name)[:\s]+(.+)$/i);
             if (nameMatch) {
                 report.associateName = nameMatch[1].trim();
@@ -8656,21 +8660,24 @@ function parseSentimentFile(fileType, lines) {
         }
         
         // Detect keywords section
-        if (line.toLowerCase().includes('keywords') || line.match(/^Name[,\t]/i)) {
+        if (line.toLowerCase().includes('keywords')) {
             inKeywordsSection = true;
             continue;
         }
         
-        // Parse keyword phrases
-        // Format: + (A:phrase) VALUE or + (C:phrase) VALUE
+        // Skip "Name" and "Value" header lines
+        if (line.trim() === 'Name' || line.trim() === 'Value') {
+            continue;
+        }
+        
+        // Parse keyword phrases - handling BOTH formats
         if (inKeywordsSection && report.totalCalls > 0) {
-            // Match CSV format with quotes
+            // Format 1: CSV with comma separator: "+(A:absolutely),83"
             const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
             if (csvQuotedMatch) {
                 let rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
                 const value = parseInt(csvQuotedMatch[2]);
                 
-                // Extract actual phrase from + (A:phrase) or + (C:phrase) format
                 const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
                 if (phraseMatch) {
                     const cleanPhrase = phraseMatch[1].trim();
@@ -8679,22 +8686,48 @@ function parseSentimentFile(fileType, lines) {
                 continue;
             }
             
-            // Match simple CSV format
             const csvMatch = line.match(/^([^,]+),(\d+)$/);
             if (csvMatch) {
                 let rawPhrase = csvMatch[1].trim();
                 const value = parseInt(csvMatch[2]);
                 
-                // Extract actual phrase
                 const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
                 if (phraseMatch) {
                     const cleanPhrase = phraseMatch[1].trim();
                     report.phrases.push({ phrase: cleanPhrase, value });
                 } else {
-                    // If no prefix, use raw phrase (cleanup quotes)
                     const cleanPhrase = rawPhrase.replace(/^"(.*)"$/, '$1');
                     report.phrases.push({ phrase: cleanPhrase, value });
                 }
+                continue;
+            }
+            
+            // Format 2: Phrase on one line, value on next line
+            // Check if current line is a phrase (starts with + or contains parentheses)
+            if (line.match(/^[+\-#]/)) {
+                pendingPhrase = line.trim();
+                continue;
+            }
+            
+            // Check if current line is just a number (the value for the previous phrase)
+            if (pendingPhrase && line.match(/^\d+$/)) {
+                const value = parseInt(line.trim());
+                
+                // Extract actual phrase from +(A:phrase) format
+                const phraseMatch = pendingPhrase.match(/[+\-#]\s*\(?\[?[A-Z]*:?\]?\s*\(?([AC]):\s*"?([^"]+)"?\)?/i);
+                if (phraseMatch) {
+                    const cleanPhrase = phraseMatch[2].trim();
+                    report.phrases.push({ phrase: cleanPhrase, value });
+                } else {
+                    // Fallback: try simpler extraction
+                    const simpleMatch = pendingPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^")]+)"?\)/i);
+                    if (simpleMatch) {
+                        const cleanPhrase = simpleMatch[1].trim();
+                        report.phrases.push({ phrase: cleanPhrase, value });
+                    }
+                }
+                pendingPhrase = null;
+                continue;
             }
         }
     }
