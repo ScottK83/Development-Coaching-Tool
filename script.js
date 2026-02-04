@@ -8892,7 +8892,7 @@ function processSentimentUploads() {
                     
                     // Extract start date
                     if (!startDate) {
-                        const startMatch = line.match(/(?:Date Range Start|Period Start|Start Date)[:\s]+([0-9/\-]+)/i);
+                        const startMatch = line.match(/^Start date[:\s]+([0-9/\-]+)/i);
                         if (startMatch) {
                             startDate = startMatch[1].trim();
                             console.log(`Found start date: ${startDate}`);
@@ -8901,26 +8901,26 @@ function processSentimentUploads() {
                     
                     // Extract end date
                     if (!endDate) {
-                        const endMatch = line.match(/(?:Date Range End|Period End|End Date)[:\s]+([0-9/\-]+)/i);
+                        const endMatch = line.match(/^End date[:\s]+([0-9/\-]+)/i);
                         if (endMatch) {
                             endDate = endMatch[1].trim();
                             console.log(`Found end date: ${endDate}`);
                         }
                     }
                     
-                    // Check for total calls line: "Interactions: 3100 (72% out of 4278...)"
-                    // We want the 4278 (total calls in period), not the 3100 (calls with this sentiment)
+                    // Check for total calls line: "Interactions: 165 (76% out of 218 matching data filter)"
+                    // We want the 218 (total calls in period), and 165 (calls with this sentiment)
                     const interactionsMatch = line.match(/Interactions[:\s]+(\d+)\s*\([^)]*out\s+of\s+(\d+)/i);
                     if (interactionsMatch) {
                         callsWithSentiment = parseInt(interactionsMatch[1]);
                         totalCalls = parseInt(interactionsMatch[2]);
-                        console.log(`Found ${callsWithSentiment} calls with sentiment out of ${totalCalls} total calls`);
+                        console.log(`✅ Found ${callsWithSentiment} calls with sentiment out of ${totalCalls} total calls`);
                         continue;
                     }
                     
                     // Log lines that contain "Interactions" for debugging
                     if (line.includes('Interactions')) {
-                        console.log(`Line contains 'Interactions' but didn't match regex: "${line}"`);
+                        console.log(`⚠️ Line contains 'Interactions' but didn't match regex: "${line}"`);
                     }
                     
                     // Fallback: just "Interactions: 3100" without the "out of" part
