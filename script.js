@@ -1018,10 +1018,132 @@ function parsePastedData(pastedText, startDate, endDate) {
 // TIPS MANAGEMENT
 // ============================================
 
+const EMBEDDED_TIPS_CSV = `Metric,Tip
+scheduleAdherence,Log in 2-3 minutes early to avoid system lag delays
+scheduleAdherence,Set phone reminders 5 minutes before breaks end
+scheduleAdherence,Keep a visible timer on your desk for break times
+scheduleAdherence,Put break end times in Outlook calendar with pop-up alerts
+scheduleAdherence,If you're consistently late from breaks - set a timer for 2 minutes before break ends
+scheduleAdherence,Review your Verint schedule every Sunday night so you know your week
+scheduleAdherence,Keep your workstation logged in during breaks to avoid login delays
+scheduleAdherence,Have your supervisor's number saved - call immediately if you'll be late
+scheduleAdherence,Plan bathroom breaks during natural call lulls - don't wait until urgent
+scheduleAdherence,If system issues make you late - report it immediately for exception coding
+fcr,Take 10 extra seconds to confirm you fully answered the question before ending call
+fcr,Ask 'Is there anything else I can help you with today?' and wait for actual response
+fcr,Use teach-back method: 'Let me make sure I explained that clearly...' to catch confusion
+fcr,Don't rush the close - customers will call back if they're still confused
+fcr,If you're unsure you resolved it - say 'If you have any issues call back and reference ticket X'
+fcr,Check account notes from previous calls - often tells you what customer REALLY needs
+fcr,Ask clarifying questions upfront: 'Just to make sure I help you completely - is this about X or Y?'
+fcr,Before ending call - summarize what you did: 'So I've updated X and you should see Y'
+fcr,If customer says 'I guess that works' - dig deeper - they're not satisfied yet
+fcr,Keep a list of your personal callbacks - identify your patterns and fix root causes
+transfers,Before transferring - take 10 seconds to check knowledge base - customers prefer waiting over restarting
+transfers,Say 'Let me see if I can help you with that first' before defaulting to transfer
+transfers,Memorize which department handles top 5 transfer reasons to route correctly first time
+transfers,If you do transfer - give customer the direct number in case call drops
+transfers,Warm transfer when possible - brief the next rep so customer doesn't repeat story
+transfers,Learn the 5 things you transfer most - make those your study priority this month
+transfers,Before transferring billing issues - verify you can't do a simple payment arrangement first
+transfers,If customer asks for supervisor - try to resolve first: 'I'd love to help you - let me see what I can do'
+transfers,Keep a transfer log - track why you transferred - find your knowledge gaps
+transfers,If you transfer more than 2 times in one shift - review those calls to understand why
+aht,Use quick reference card while talking - it's faster than searching knowledge base mid-call
+aht,Memorize top 5 most common customer questions to avoid looking up every time
+aht,Practice your greeting and closing to get under 10 seconds each
+aht,Type account notes WHILE talking - not in silence after
+aht,Have frequently-used links bookmarked and organized in toolbar
+aht,Use dual monitors if available - one for customer info - one for tools
+aht,Learn keyboard shortcuts for your main programs - mouse clicking adds 5-10 seconds per call
+aht,Don't over-explain simple things - 'Your payment is due the 15th' not a 3-minute explanation of billing cycles
+aht,If you're searching for something - tell customer what you're doing so silence doesn't feel awkward
+aht,Review your longest calls weekly - find your time-wasters and eliminate them
+acw,Start documentation DURING the call not after - fill in account notes while talking
+acw,Use text expander shortcuts for common phrases like 'Customer called regarding billing question'
+acw,Have your wrap-up template ready to go - fill in blanks rather than typing from scratch
+acw,Use consistent abbreviations so you type faster - create your own shorthand system
+acw,Don't write a novel - brief accurate notes are better than essays
+acw,If call was simple - notes can be simple: 'Changed due date to 20th per customer request'
+acw,Use drop-down options in CRM when available - faster than typing
+acw,Practice typing without looking - every second counts in ACW
+acw,If your ACW is high - time yourself on next 5 calls to see where seconds go
+acw,Set a personal ACW goal - try to beat your own time each day
+holdTime,Put customer on hold BEFORE looking things up not after - Say 'Let me pull that up one moment' then hit hold button
+holdTime,Keep frequently used screens already open in browser tabs
+holdTime,Learn keyboard shortcuts for your main tools - mouse clicking adds 5-10 seconds per call
+holdTime,Ask ALL your questions before putting customer on hold - don't hold multiple times
+holdTime,If you need to research - estimate time: 'This may take 2-3 minutes - are you able to hold?'
+holdTime,Check in every 30-45 seconds during long holds: 'Still researching - appreciate your patience'
+holdTime,Have your knowledge base search open in separate tab - ready to use instantly
+holdTime,Learn where information lives in systems - don't hunt around while customer waits
+holdTime,If hold will be long - offer callback instead of making customer wait
+holdTime,Practice navigation - the faster you move through screens the less customers wait
+overallSentiment,Smile while talking - customers hear it in your voice even on the phone
+overallSentiment,Use customer's name at least twice during call - beginning and end
+overallSentiment,Match the customer's energy level - if they're calm be calm - if concerned show empathy
+overallSentiment,Lead with empathy on difficult calls: 'I understand this is frustrating - let me help'
+overallSentiment,Sound genuinely interested - not robotic - vary your tone
+overallSentiment,Use their words back: If they say 'bill is confusing' say 'Let me clarify that confusing bill'
+overallSentiment,End on positive note even if you couldn't do everything: 'I'm glad I could at least help with X'
+overallSentiment,Acknowledge their effort: 'I appreciate you calling in about this instead of letting it slide'
+overallSentiment,Avoid dead air - if you're thinking say 'Let me think about best way to help you here'
+overallSentiment,Thank them for patience if call took longer: 'Thanks for bearing with me on that'
+positiveWord,Replace 'problem' with 'situation' - it sounds less negative
+positiveWord,Say 'I'd be happy to help you with that' instead of 'I can help you'
+positiveWord,Use 'absolutely' instead of 'yes' - it's more enthusiastic
+positiveWord,Say 'Let me find that information' not 'I don't have that information'
+positiveWord,Replace 'You need to' with 'The next step is' - sounds less demanding
+positiveWord,Say 'I can' instead of 'I can't' - focus on what you CAN do
+positiveWord,Use 'opportunity' instead of 'issue' when appropriate
+positiveWord,Say 'Let me get that handled for you' instead of 'Let me fix that problem'
+positiveWord,Replace 'Your account shows' with 'I see here that' - sounds more collaborative
+positiveWord,Say 'moving forward' instead of 'from now on' - sounds more optimistic
+negativeWord,Replace 'unfortunately' with 'what I can do is...' to focus on solutions
+negativeWord,Never say 'I don't know' - say 'Great question let me find that answer for you'
+negativeWord,Avoid 'but' - use 'and' or 'however' to sound less contradictory
+negativeWord,Don't say 'That's not my department' - say 'Let me connect you with the right team'
+negativeWord,Replace 'You'll have to' with 'The next step is' - sounds less harsh
+negativeWord,Avoid 'policy won't allow' - say 'Here's what I can offer instead'
+negativeWord,Don't say 'That's impossible' - say 'Let me see what options we have'
+negativeWord,Replace 'You're wrong' with 'Let me clarify what happened here'
+negativeWord,Avoid 'There's nothing I can do' - always offer SOMETHING even if small
+negativeWord,Don't say 'You didn't' - say 'It looks like this step was missed'
+managingEmotions,Take a 3-second breath before responding to frustrated customers
+managingEmotions,Use phrases like 'I understand your frustration' before solving - validate first
+managingEmotions,Lower your voice volume slightly when customer raises theirs - it naturally de-escalates
+managingEmotions,Don't take angry words personally - they're frustrated with situation not you
+managingEmotions,Stay solution-focused: 'I hear you - let me see what I can do to help'
+managingEmotions,Acknowledge their feelings: 'I can tell this has been really frustrating for you'
+managingEmotions,Give yourself 30 seconds between difficult calls to reset mentally
+managingEmotions,If customer is yelling - let them vent for 20-30 seconds then redirect calmly
+managingEmotions,Use 'we' language: 'Let's figure this out together' - creates partnership feeling
+managingEmotions,If you're getting triggered - put on hold for 10 seconds and breathe - then come back calm
+reliability,Set two alarms for your shift - one for wake up one for leave house time
+reliability,Have a backup plan for transportation issues - know your bus backup route
+reliability,If you're running late call supervisor as soon as you know - not when you arrive
+reliability,Review your Verint time entries weekly - make sure PTOST is coded correctly
+reliability,Use PTOST for first 40 hours of unplanned time off - code it in Verint ahead of time
+reliability,Schedule planned time off weeks in advance - don't wait until last minute
+reliability,If you're sick - call out at least 2 hours before shift - don't text
+reliability,Keep track of your PTOST usage - don't be surprised when you run out
+reliability,Set recurring calendar reminders for your regular shifts - avoid forgetting
+reliability,If you have consistent late issues - talk to supervisor about schedule adjustment before it becomes disciplinary
+cxRepOverall,Listen for the REAL issue behind the question - sometimes billing question is actually payment plan need
+cxRepOverall,End every call with specific next steps - don't leave customer wondering what happens next
+cxRepOverall,Follow up on promises - if you said you'd call back - call back
+cxRepOverall,Take ownership of the customer's issue - don't pass the buck
+cxRepOverall,Be proactive - if you see a potential issue on account - address it before they ask
+cxRepOverall,Make customer feel heard - repeat back their concern to show you listened
+cxRepOverall,Go one step beyond - if they ask about bill also mention upcoming due date
+cxRepOverall,Show you care about resolution not just call completion
+cxRepOverall,Use their communication style - if they're chatty engage - if they're rushed be efficient
+cxRepOverall,End with confidence: 'You're all set - reach out if you need anything else'`;
+
 async function loadServerTips() {
     try {
-        const response = await fetch('tips.csv');
-        const csv = await response.text();
+        // Use embedded CSV data for offline support
+        const csv = EMBEDDED_TIPS_CSV;
         const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
         const dataLines = lines.slice(1);
         
@@ -5354,12 +5476,37 @@ Team Update - Week of ${endDate}
 
 Please generate the email now.`;
 
-    // Open CoPilot in new tab with the prompt
-    const encodedPrompt = encodeURIComponent(copilotPrompt);
-    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
-    window.open(copilotUrl, '_blank');
+// ============================================
+// OFFLINE COPILOT SUPPORT
+// ============================================
 
-    showToast('Opening CoPilot with your email prompt...', 3000);
+function openCopilotWithPrompt(prompt, title = 'CoPilot') {
+    const encodedPrompt = encodeURIComponent(prompt);
+    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
+    
+    // Try to open Copilot; if offline or browser blocks it, offer clipboard fallback
+    const windowRef = window.open(copilotUrl, '_blank');
+    
+    // If window is null or blocked, provide clipboard alternative
+    if (!windowRef) {
+        navigator.clipboard.writeText(prompt).then(() => {
+            showToast('✅ Prompt copied to clipboard! Open Copilot and paste it there.', 5000);
+            alert(`${title} prompt copied to clipboard.\n\n1. Go to https://copilot.microsoft.com\n2. Paste the prompt (Ctrl+V)\n3. Let CoPilot generate the email\n\nThis feature requires internet connection for Copilot.`);
+        }).catch(() => {
+            // Fallback if clipboard also fails
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
+            tempDiv.innerHTML = `
+                <h3 style="margin-top: 0;">📋 Copy This Prompt</h3>
+                <p>Clipboard failed. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>
+                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em;">${escapeHtml(prompt)}</textarea>
+                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+            `;
+            document.body.appendChild(tempDiv);
+        });
+    } else {
+        showToast('Opening CoPilot with your prompt...', 3000);
+    }
 }
 
 function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
@@ -6182,12 +6329,7 @@ Use the % symbol instead of writing out "percent" (e.g., "95%" not "95 percent")
 
 The email should be ready to send as-is. Just give me the complete email to ${preferredName}, nothing else.`;
 
-    // Open CoPilot with the prompt
-    const encodedPrompt = encodeURIComponent(copilotPrompt);
-    const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
-    window.open(copilotUrl, '_blank');
-
-    showToast('Opening CoPilot with individual coaching email...', 3000);
+    openCopilotWithPrompt(copilotPrompt, 'Individual Coaching Email');
 }
 
 async function generateGroupCoachingEmail() {
