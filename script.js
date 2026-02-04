@@ -45,6 +45,16 @@ let coachingHistory = {};
 let debugState = { entries: [] };
 
 // ============================================
+// CONSTANTS
+// ============================================
+const TOP_PHRASES_COUNT = 3;
+const MIN_PHRASE_VALUE = 0;
+const LOCALSTORAGE_MAX_SIZE_MB = 4;
+const REGEX_TIMEOUT_MS = 100;
+const FILE_PARSE_CHUNK_SIZE = 100;
+const DEBUG_MAX_ENTRIES = 50;
+
+// ============================================
 // TARGET METRICS
 // ============================================
 
@@ -349,6 +359,33 @@ function showToast(message, duration = 5000) {
     }, duration);
 }
 
+function showLoadingSpinner(message = 'Processing...') {
+    hideLoadingSpinner(); // Remove any existing spinner
+    const spinner = document.createElement('div');
+    spinner.id = 'globalLoadingSpinner';
+    spinner.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center;">
+                <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #2196F3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+                <div style="font-size: 16px; color: #333; font-weight: 600;">${escapeHtml(message)}</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(spinner);
+    // Add CSS animation
+    if (!document.getElementById('spinnerStyle')) {
+        const style = document.createElement('style');
+        style.id = 'spinnerStyle';
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+    }
+}
+
+function hideLoadingSpinner() {
+    const spinner = document.getElementById('globalLoadingSpinner');
+    if (spinner) spinner.remove();
+}
+
 function enableDatePickerOpen(input) {
     if (!input) return;
     const openPicker = () => {
@@ -376,8 +413,8 @@ function addDebugEntry(type, message, details = {}) {
         details
     };
     debugState.entries.push(entry);
-    if (debugState.entries.length > 50) {
-        debugState.entries = debugState.entries.slice(-50);
+    if (debugState.entries.length > DEBUG_MAX_ENTRIES) {
+        debugState.entries = debugState.entries.slice(-DEBUG_MAX_ENTRIES);
     }
 }
 
@@ -1093,10 +1130,33 @@ function loadWeeklyData() {
     }
 }
 
+function saveWithSizeCheck(key, data) {
+    const str = JSON.stringify(data);
+    const sizeInMB = new Blob([str]).size / 1024 / 1024;
+    
+    if (sizeInMB > LOCALSTORAGE_MAX_SIZE_MB) {
+        showToast(`⚠️ Data too large (${sizeInMB.toFixed(1)}MB). Consider exporting old data.`, 5000);
+        return false;
+    }
+    
+    try {
+        localStorage.setItem(key, str);
+        return true;
+    } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            showToast('❌ Storage full! Please export/delete old data.', 5000);
+        } else {
+            console.error('Failed to save to localStorage:', e);
+        }
+        return false;
+    }
+}
+
 function saveWeeklyData() {
     try {
-        const dataToSave = JSON.stringify(weeklyData);
-        localStorage.setItem('weeklyData', dataToSave);
+        if (!saveWithSizeCheck('weeklyData', weeklyData)) {
+            console.error('Failed to save weekly data due to size');
+        }
     } catch (error) {
         console.error('Error saving weekly data:', error);
     }
@@ -1115,8 +1175,9 @@ function loadYtdData() {
 
 function saveYtdData() {
     try {
-        const dataToSave = JSON.stringify(ytdData);
-        localStorage.setItem('ytdData', dataToSave);
+        if (!saveWithSizeCheck('ytdData', ytdData)) {
+            console.error('Failed to save YTD data due to size');
+        }
     } catch (error) {
         console.error('Error saving YTD data:', error);
     }
@@ -1135,8 +1196,9 @@ function loadCoachingHistory() {
 
 function saveCoachingHistory() {
     try {
-        const dataToSave = JSON.stringify(coachingHistory);
-        localStorage.setItem('coachingHistory', dataToSave);
+        if (!saveWithSizeCheck('coachingHistory', coachingHistory)) {
+            console.error('Failed to save coaching history due to size');
+        }
     } catch (error) {
         console.error('Error saving coaching history:', error);
     }
@@ -1178,7 +1240,9 @@ function loadTeamMembers() {
 
 function saveTeamMembers() {
     try {
-        localStorage.setItem('myTeamMembers', JSON.stringify(myTeamMembers));
+        if (!saveWithSizeCheck('myTeamMembers', myTeamMembers)) {
+            console.error('Failed to save team members due to size');
+        }
     } catch (error) {
         console.error('Error saving team members:', error);
     }
@@ -1679,6 +1743,9 @@ function initializeEventHandlers() {
         showSubSection('subSectionCoachingEmail');
         initializeCoachingEmail();
     });
+    // Track if sentiment listeners are attached to prevent duplicates
+    let sentimentListenersAttached = false;
+    
     document.getElementById('subNavSentiment')?.addEventListener('click', () => {
         showSubSection('subSectionSentiment');
         // Move sentiment section content dynamically (only if not already moved)
@@ -1689,12 +1756,17 @@ function initializeEventHandlers() {
             while (sentimentSection.firstChild) {
                 subSectionSentiment.appendChild(sentimentSection.firstChild);
             }
-            // Re-attach event listeners after moving
+        }
+        
+        // Attach event listeners only once
+        if (!sentimentListenersAttached) {
             document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
             document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
+            document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
             document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
             document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
             document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
+            sentimentListenersAttached = true;
         }
     });
     document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
@@ -1791,13 +1863,7 @@ function initializeEventHandlers() {
         showToast('✅ Debug errors cleared', 3000);
     });
     
-    // SENTIMENT & LANGUAGE SUMMARY WORKFLOW
-    document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
-    document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
-    document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
-    document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
-    document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
-    document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
+    // SENTIMENT & LANGUAGE SUMMARY WORKFLOW - Duplicate listeners removed, now only attached in subNav click handler
     
     // Load pasted data
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
@@ -8544,8 +8610,8 @@ function generateSentimentSummary() {
     
     // Build summary according to specification
     let summary = '';
-    summary += `Associate: ${associateName}\n`;
-    summary += `Date Range: ${dateRange}\n\n`;
+    summary += `Associate: ${escapeHtml(associateName)}\n`;
+    summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
     
     // POSITIVE LANGUAGE Section
     summary += `POSITIVE LANGUAGE\n`;
@@ -8647,21 +8713,27 @@ function parseSentimentFile(fileType, lines) {
             }
         }
         
-        // Extract start date
+        // Extract start date - handle multiple formats
         if (!report.startDate) {
-            const startMatch = line.match(/^Start date[:\s]+([0-9/\-]+)/i);
+            // Try "Start date: 1/25/2026" or "Start date: 2026-01-25"
+            const startMatch = line.match(/^Start date[:\s]+([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
             if (startMatch) {
-                report.startDate = startMatch[1].trim().split(',')[0]; // Remove time if present
+                report.startDate = startMatch[1].trim();
                 console.log(`✅ Found start date: ${report.startDate}`);
+            } else if (line.toLowerCase().includes('start date')) {
+                console.warn(`⚠️ Found "start date" line but couldn't parse: "${line}"`);
             }
         }
         
-        // Extract end date
+        // Extract end date - handle multiple formats
         if (!report.endDate) {
-            const endMatch = line.match(/^End date[:\s]+([0-9/\-]+)/i);
+            // Try "End date: 1/31/2026" or "End date: 2026-01-31"
+            const endMatch = line.match(/^End date[:\s]+([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
             if (endMatch) {
-                report.endDate = endMatch[1].trim().split(',')[0]; // Remove time if present
+                report.endDate = endMatch[1].trim();
                 console.log(`✅ Found end date: ${report.endDate}`);
+            } else if (line.toLowerCase().includes('end date')) {
+                console.warn(`⚠️ Found "end date" line but couldn't parse: "${line}"`);
             }
         }
         
@@ -8778,6 +8850,7 @@ function handleSentimentFileChange(fileType) {
     
     statusDiv.textContent = `⏳ Processing ${file.name}...`;
     statusDiv.style.color = '#ff9800';
+    showLoadingSpinner(`Processing ${escapeHtml(file.name)}...`);
     
     const reader = new FileReader();
     
@@ -8826,8 +8899,9 @@ function handleSentimentFileChange(fileType) {
                 });
             }
             
-            statusDiv.textContent = `✅ ${report.associateName || 'Loaded'} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
+            statusDiv.textContent = `✅ ${escapeHtml(report.associateName || 'Loaded')} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
             statusDiv.style.color = '#4caf50';
+            hideLoadingSpinner();
         } catch (error) {
             statusDiv.textContent = `❌ Error parsing file`;
             statusDiv.style.color = '#f44336';
@@ -8835,7 +8909,16 @@ function handleSentimentFileChange(fileType) {
             if (isEmotions) {
                 console.error('🎭 MANAGING EMOTIONS ERROR:', error);
             }
+            hideLoadingSpinner();
+            showToast(`❌ Failed to parse ${fileType} file: ${error.message}`, 5000);
         }
+    };
+    
+    reader.onerror = () => {
+        statusDiv.textContent = '❌ Failed to read file';
+        statusDiv.style.color = '#f44336';
+        hideLoadingSpinner();
+        showToast('❌ Failed to read file', 5000);
     };
     
     if (isExcel) {
@@ -8893,18 +8976,24 @@ function generateSentimentCoPilotPrompt() {
     let dataSummary = `DATA SUMMARY:\n\n`;
     dataSummary += `POSITIVE LANGUAGE: ${positive.callsDetected}/${positive.totalCalls} calls (${positive.percentage}%)\n`;
     dataSummary += `Goal: ${POSITIVE_GOAL}% | Status: ${positive.percentage >= POSITIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    const topPos = positive.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    const topPos = positive.phrases
+        .filter(p => p.value > MIN_PHRASE_VALUE)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, TOP_PHRASES_COUNT);
     topPos.forEach(p => {
-        dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+        dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
     });
     
     dataSummary += `\nAVOIDING NEGATIVE: ${negative.callsDetected}/${negative.totalCalls} calls (${negative.percentage}%)\n`;
     dataSummary += `Goal: ${NEGATIVE_GOAL}% | Status: ${negative.percentage >= NEGATIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    const assocNeg = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    const assocNeg = negative.phrases
+        .filter(p => p.speaker === 'A' && p.value > MIN_PHRASE_VALUE)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, TOP_PHRASES_COUNT);
     if (assocNeg.length > 0) {
         dataSummary += `Associate to stop:\n`;
         assocNeg.forEach(p => {
-            dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+            dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
         });
     } else {
         dataSummary += `  ✓ Minimal negative language detected\n`;
@@ -8912,11 +9001,14 @@ function generateSentimentCoPilotPrompt() {
     
     dataSummary += `\nMANAGING EMOTIONS: ${emotions.callsDetected}/${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
     dataSummary += `Goal: ${EMOTIONS_GOAL}% | Status: ${emotions.percentage >= EMOTIONS_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    const emoDetected = emotions.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    const emoDetected = emotions.phrases
+        .filter(p => p.value > MIN_PHRASE_VALUE)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, TOP_PHRASES_COUNT);
     if (emoDetected.length > 0) {
         dataSummary += `Customer emotional phrases detected:\n`;
         emoDetected.forEach(p => {
-            dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+            dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
         });
     } else {
         dataSummary += `  ✓ Low emotional indicators detected\n`;
