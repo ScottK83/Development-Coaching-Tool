@@ -8571,22 +8571,25 @@ function generateSentimentSummary() {
     // AVOIDING NEGATIVE LANGUAGE Section
     summary += `AVOIDING NEGATIVE LANGUAGE\n`;
     summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n`;
-    const negPhrases = negative.phrases.filter(p => p.value > 0);
     
-    if (negPhrases.length === 0) {
+    // Separate associate negative from customer negative
+    const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0);
+    const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0);
+    
+    if (assocNegative.length === 0) {
         summary += `- Doing well:\n`;
         summary += `  • Minimal negative language detected - excellent avoidance\n`;
     } else {
-        summary += `- Stop using:\n`;
-        negPhrases.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
+        summary += `- Associate stop using:\n`;
+        assocNegative.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
             summary += `  • "${p.phrase}" - said ${p.value} times, avoid this\n`;
         });
-        summary += `- Zero-usage phrases (already avoiding well):\n`;
-        const negZero = negative.phrases
-            .filter(p => p.value === 0)
-            .slice(0, 3);
-        negZero.forEach(p => {
-            summary += `  • "${p.phrase}" - good (not used)\n`;
+    }
+    
+    if (custNegative.length > 0) {
+        summary += `- Customer said (context):\n`;
+        custNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
+            summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
         });
     }
     summary += `\n`;
@@ -8692,10 +8695,12 @@ function parseSentimentFile(fileType, lines) {
                 let rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
                 const value = parseInt(csvQuotedMatch[2]);
                 
-                const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
+                // Extract speaker (A or C) and phrase
+                const phraseMatch = rawPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
                 if (phraseMatch) {
-                    const cleanPhrase = phraseMatch[1].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value });
+                    const speaker = phraseMatch[1].toUpperCase();
+                    const cleanPhrase = phraseMatch[2].trim();
+                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
                 }
                 continue;
             }
@@ -8705,13 +8710,15 @@ function parseSentimentFile(fileType, lines) {
                 let rawPhrase = csvMatch[1].trim();
                 const value = parseInt(csvMatch[2]);
                 
-                const phraseMatch = rawPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^"]+)"?\)/i);
+                // Extract speaker and phrase
+                const phraseMatch = rawPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
                 if (phraseMatch) {
-                    const cleanPhrase = phraseMatch[1].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value });
+                    const speaker = phraseMatch[1].toUpperCase();
+                    const cleanPhrase = phraseMatch[2].trim();
+                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
                 } else {
                     const cleanPhrase = rawPhrase.replace(/^"(.*)"$/, '$1');
-                    report.phrases.push({ phrase: cleanPhrase, value });
+                    report.phrases.push({ phrase: cleanPhrase, value, speaker: 'A' });
                 }
                 continue;
             }
@@ -8727,17 +8734,19 @@ function parseSentimentFile(fileType, lines) {
             if (pendingPhrase && line.match(/^\d+$/)) {
                 const value = parseInt(line.trim());
                 
-                // Extract actual phrase from +(A:phrase) format
-                const phraseMatch = pendingPhrase.match(/[+\-#]\s*\(?\[?[A-Z]*:?\]?\s*\(?([AC]):\s*"?([^"]+)"?\)?/i);
+                // Extract speaker and phrase
+                const phraseMatch = pendingPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
                 if (phraseMatch) {
+                    const speaker = phraseMatch[1].toUpperCase();
                     const cleanPhrase = phraseMatch[2].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value });
+                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
                 } else {
                     // Fallback: try simpler extraction
-                    const simpleMatch = pendingPhrase.match(/[+\-#]\s*\([AC]:\s*"?([^")]+)"?\)/i);
+                    const simpleMatch = pendingPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^")]+)"?\)/i);
                     if (simpleMatch) {
-                        const cleanPhrase = simpleMatch[1].trim();
-                        report.phrases.push({ phrase: cleanPhrase, value });
+                        const speaker = simpleMatch[1].toUpperCase();
+                        const cleanPhrase = simpleMatch[2].trim();
+                        report.phrases.push({ phrase: cleanPhrase, value, speaker });
                     }
                 }
                 pendingPhrase = null;
