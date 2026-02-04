@@ -1794,6 +1794,7 @@ function initializeEventHandlers() {
     // SENTIMENT & LANGUAGE SUMMARY WORKFLOW
     document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
     document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
+    document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
     document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
     document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
     document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
@@ -8584,20 +8585,24 @@ function generateSentimentSummary() {
     }
     summary += `\n`;
     
-    // MANAGING EMOTIONS Section
+    // MANAGING EMOTIONS Section (Lower % is GOOD)
     summary += `MANAGING EMOTIONS\n`;
     summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
-    summary += `- Customer emotion indicators detected:\n`;
-    const emoTopPhrases = emotions.phrases
-        .filter(p => p.value > 0)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5);
-    emoTopPhrases.forEach(p => {
-        summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
-    });
+    const emotionPhrases = emotions.phrases.filter(p => p.value > 0);
+    if (emotionPhrases.length === 0 || emotions.percentage <= 5) {
+        summary += `- Customer emotion indicators:\n`;
+        summary += `  • Low detection (${emotions.percentage}%) - Associate managing emotions effectively\n`;
+    } else {
+        summary += `- Customer emotion indicators detected:\n`;
+        emotionPhrases.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
+            summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
+        });
+    }
     summary += `- Opportunity:\n`;
-    summary += `  • Use steady language and acknowledgment to manage customer emotions\n`;
-    summary += `  • Phrases like "I understand" and "I appreciate" can help de-escalate\n`;
+    summary += `  • Avoid interrupting or talking over the customer\n`;
+    summary += `  • Allow customers time to express concerns fully\n`;
+    summary += `  • Use sincere apologies and acknowledgment\n`;
+    summary += `  • Validate customer emotions before offering solutions\n`;
     
     // Display the summary
     document.getElementById('sentimentSummaryText').textContent = summary;
@@ -8849,6 +8854,69 @@ function copySentimentSummary() {
         document.execCommand('copy');
         document.body.removeChild(textarea);
         showToast('✅ Summary copied to clipboard', 2000);
+    });
+}
+
+function generateSentimentCoPilotPrompt() {
+    const { positive, negative, emotions } = sentimentReports;
+    
+    if (!positive || !negative || !emotions) {
+        alert('⚠️ Please generate the summary first');
+        return;
+    }
+    
+    const associateName = positive.associateName || 'the associate';
+    
+    // Build data summary for CoPilot
+    let dataSummary = `DATA SUMMARY:\n\n`;
+    dataSummary += `POSITIVE LANGUAGE: ${positive.callsDetected}/${positive.totalCalls} calls (${positive.percentage}%)\n`;
+    const topPos = positive.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    topPos.forEach(p => {
+        dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+    });
+    
+    dataSummary += `\nAVOIDING NEGATIVE: ${negative.callsDetected}/${negative.totalCalls} calls (${negative.percentage}%)\n`;
+    const negDetected = negative.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    if (negDetected.length > 0) {
+        dataSummary += `Watch for:\n`;
+        negDetected.forEach(p => {
+            dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+        });
+    } else {
+        dataSummary += `  ✓ Minimal negative language detected\n`;
+    }
+    
+    dataSummary += `\nMANAGING EMOTIONS: ${emotions.callsDetected}/${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
+    const emoDetected = emotions.phrases.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+    if (emoDetected.length > 0) {
+        dataSummary += `Customer emotional phrases detected:\n`;
+        emoDetected.forEach(p => {
+            dataSummary += `  • "${p.phrase}" (${p.value}x)\n`;
+        });
+    } else {
+        dataSummary += `  ✓ Low emotional indicators detected\n`;
+    }
+    
+    const prompt = `You are a customer service supervisor writing a brief, actionable coaching email to ${associateName}.
+
+${dataSummary}
+
+WRITE A SHORT EMAIL (3-4 paragraphs) that:
+1. Opens with specific positive feedback based on the data
+2. Addresses one key area for improvement
+3. Gives ONE concrete action they can take this week
+4. Closes with confidence
+
+Make it warm, direct, and real. Use the actual numbers. No corporate jargon. Keep it under 200 words.`;
+    
+    // Copy to clipboard and show feedback
+    navigator.clipboard.writeText(prompt).then(() => {
+        showToast('✅ CoPilot prompt copied! Opening CoPilot...', 2000);
+        setTimeout(() => {
+            window.open('https://copilot.microsoft.com', '_blank');
+        }, 500);
+    }).catch(() => {
+        alert('Could not copy. Here\'s the prompt to manually copy:\n\n' + prompt);
     });
 }
 
