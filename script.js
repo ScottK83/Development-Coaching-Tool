@@ -35,6 +35,9 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
+const DEBUG = false; // Set to true to enable console logging
+const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
+
 let weeklyData = {};
 let ytdData = {};
 let currentPeriodType = 'week';
@@ -478,7 +481,7 @@ function getLocalStorageSummary() {
 
     const summary = {};
     keys.forEach(key => {
-        const value = localStorage.getItem(key);
+        const value = localStorage.getItem(STORAGE_PREFIX + key);
         summary[key] = value ? `${value.length} chars` : 'empty';
     });
     return summary;
@@ -587,7 +590,7 @@ function saveNickname(employeeFullName, nickname) {
     try {
         const nicknames = JSON.parse(localStorage.getItem('employeeNicknames') || '{}');
         nicknames[employeeFullName] = nickname;
-        localStorage.setItem('employeeNicknames', JSON.stringify(nicknames));
+        localStorage.setItem(STORAGE_PREFIX + 'employeeNicknames', JSON.stringify(nicknames));
     } catch (error) {
         console.error('Error saving nickname:', error);
     }
@@ -1030,7 +1033,7 @@ async function loadServerTips() {
         });
         
         // Apply modified server tips from localStorage
-        const modifiedServerTips = JSON.parse(localStorage.getItem('modifiedServerTips') || '{}');
+        const modifiedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
         Object.keys(modifiedServerTips).forEach(metricKey => {
             if (tipsWithOriginalIndex[metricKey]) {
                 Object.keys(modifiedServerTips[metricKey]).forEach(index => {
@@ -1045,7 +1048,7 @@ async function loadServerTips() {
         });
         
         // Filter out deleted server tips (using original indices)
-        const deletedServerTips = JSON.parse(localStorage.getItem('deletedServerTips') || '{}');
+        const deletedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
         Object.keys(deletedServerTips).forEach(metricKey => {
             if (tipsWithOriginalIndex[metricKey]) {
                 const deletedIndices = deletedServerTips[metricKey] || [];
@@ -1120,7 +1123,7 @@ function normalizeMetricKey(name) {
 
 function loadWeeklyData() {
     try {
-        const saved = localStorage.getItem('weeklyData');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
         const data = saved ? JSON.parse(saved) : {};
         return data;
     } catch (error) {
@@ -1139,7 +1142,7 @@ function saveWithSizeCheck(key, data) {
     }
     
     try {
-        localStorage.setItem(key, str);
+        localStorage.setItem(STORAGE_PREFIX + key, str);
         return true;
     } catch (e) {
         if (e.name === 'QuotaExceededError') {
@@ -1163,7 +1166,7 @@ function saveWeeklyData() {
 
 function loadYtdData() {
     try {
-        const saved = localStorage.getItem('ytdData');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
         const data = saved ? JSON.parse(saved) : {};
         return data;
     } catch (error) {
@@ -1184,7 +1187,7 @@ function saveYtdData() {
 
 function loadCoachingHistory() {
     try {
-        const saved = localStorage.getItem('coachingHistory');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'coachingHistory');
         const data = saved ? JSON.parse(saved) : {};
         return data;
     } catch (error) {
@@ -1229,7 +1232,7 @@ function getCoachingHistoryForEmployee(employeeId) {
 
 function loadTeamMembers() {
     try {
-        const saved = localStorage.getItem('myTeamMembers');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
         myTeamMembers = saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading team members:', error);
@@ -1351,7 +1354,7 @@ function getEmployeeNickname(fullName) {
     if (!fullName) return '';
     
     // Check if a custom preferred name has been set
-    const preferredNames = JSON.parse(localStorage.getItem('employeePreferredNames') || '{}');
+    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
     if (preferredNames[fullName]) {
         return preferredNames[fullName];
     }
