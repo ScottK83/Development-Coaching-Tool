@@ -1111,7 +1111,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         };
         
         // Parse critical numeric fields with validation (using column positions)
-        const surveyTotalRaw = getCell(17); // OE Survey Total at position 17
+        const surveyTotalRaw = getCell(18); // OE Survey Total at position 18
         const totalCallsRaw = getCell(1);   // TotalCallsAnswered at position 1
         
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
