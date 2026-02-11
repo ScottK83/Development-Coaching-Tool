@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.54'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.55'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2813,11 +2813,102 @@ function initializeEventHandlers() {
         alert('✅ All data has been deleted (including call center averages and history)');
     });
     
+    // Data cleanup feature
+    document.getElementById('cleanupSurveyDataBtn')?.addEventListener('click', () => {
+        const issues = scanSurveyDataIssues();
+        const resultsDiv = document.getElementById('cleanupResults');
+        
+        if (!resultsDiv) return;
+        
+        if (issues.length === 0) {
+            resultsDiv.style.display = 'block';
+            resultsDiv.style.background = '#d4edda';
+            resultsDiv.style.border = '2px solid #28a745';
+            resultsDiv.innerHTML = '<strong style="color: #28a745;">✅ No issues found!</strong><br>All survey totals look reasonable.';
+            return;
+        }
+        
+        // Show issues found
+        let html = `<strong style="color: #ff9800;">⚠️ Found ${issues.length} suspicious survey total(s):</strong><br><br>`;
+        html += '<div style="max-height: 300px; overflow-y: auto; margin: 10px 0;">';
+        issues.forEach(issue => {
+            html += `<div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 4px;">` +
+                    `📅 <strong>${issue.weekLabel}</strong><br>` +
+                    `👤 ${issue.employeeName}: Survey Total = <span style="color: #dc3545; font-weight: bold;">${issue.currentValue}</span><br>` +
+                    `<span style="font-size: 0.85em; color: #666;">(Unusually high - likely a percentage/score instead of count)</span>` +
+                    `</div>`;
+        });
+        html += '</div>';
+        html += `<button type="button" id="fixSurveyDataBtn" class="btn-secondary" style="background: #ff9800; color: white; margin-top: 10px;">` +
+                `🛠️ Fix All (Set to 0)</button> `;
+        html += `<button type="button" id="cancelCleanupBtn" class="btn-secondary" style="background: #6c757d; color: white; margin-top: 10px;">` +
+                `Cancel</button>`;
+        
+        resultsDiv.style.display = 'block';
+        resultsDiv.style.background = '#fff3cd';
+        resultsDiv.style.border = '2px solid #ff9800';
+        resultsDiv.innerHTML = html;
+        
+        // Add fix button handler
+        document.getElementById('fixSurveyDataBtn')?.addEventListener('click', () => {
+            if (confirm(`This will set ${issues.length} suspicious survey total(s) to 0.\n\nYou can re-upload the correct data for these weeks later.\n\nContinue?`)) {
+                fixSurveyDataIssues(issues);
+                resultsDiv.style.background = '#d4edda';
+                resultsDiv.style.border = '2px solid #28a745';
+                resultsDiv.innerHTML = `<strong style="color: #28a745;">✅ Fixed ${issues.length} issue(s)!</strong><br>` +
+                                       `Survey totals have been reset to 0. You can now re-upload the correct data for those weeks.`;
+            }
+        });
+        
+        // Cancel button
+        document.getElementById('cancelCleanupBtn')?.addEventListener('click', () => {
+            resultsDiv.style.display = 'none';
+        });
+    });
+    
     // Populate delete week dropdown on load
     populateDeleteWeekDropdown();
     
     // Initialize red flag handlers
     initializeRedFlag();
+}
+
+// Scan for unrealistic survey totals
+function scanSurveyDataIssues() {
+    const issues = [];
+    const THRESHOLD = 20; // Any survey total > 20 per week is suspicious
+    
+    for (const weekKey in weeklyData) {
+        const weekData = weeklyData[weekKey];
+        const metadata = weekData.metadata || {};
+        const weekLabel = metadata.endDate ? `Week ending ${metadata.endDate}` : weekKey;
+        
+        if (weekData.employees) {
+            weekData.employees.forEach(emp => {
+                if (emp.surveyTotal && emp.surveyTotal > THRESHOLD) {
+                    issues.push({
+                        weekKey: weekKey,
+                        weekLabel: weekLabel,
+                        employeeName: emp.name,
+                        currentValue: emp.surveyTotal,
+                        employee: emp
+                    });
+                }
+            });
+        }
+    }
+    
+    return issues;
+}
+
+// Fix survey data issues
+function fixSurveyDataIssues(issues) {
+    issues.forEach(issue => {
+        issue.employee.surveyTotal = 0;
+    });
+    
+    saveWeeklyData();
+    showToast('✅ Survey data cleaned up successfully');
 }
 
 // ============================================
