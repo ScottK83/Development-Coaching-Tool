@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.24'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.25'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4447,6 +4447,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
      * ROW COLORS:
      * - Green: Metric meets goal
      * - Yellow: Metric does NOT meet goal
+     * - White: Survey metric with no surveys
      * 
      * VS CENTER CELL COLORS (nested within row):
      * - Blue: Associate is above center average
@@ -4474,7 +4475,9 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     // ROW BACKGROUND COLOR
     let rowBgColor;
-    if (meetsGoal) {
+    if (noSurveys) {
+        rowBgColor = '#ffffff'; // White - no surveys
+    } else if (meetsGoal) {
         rowBgColor = '#d4edda'; // Green - meets goal
     } else {
         rowBgColor = '#fff3cd'; // Yellow - does not meet goal
@@ -4495,7 +4498,15 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const targetDisplay = formatMetricDisplay(metric.key, target);
     ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
     
-    // Associate value - always display the metric value (even if surveys = 0)
+    // If no surveys, show "N/A - No Surveys" for the value and skip other columns
+    if (noSurveys) {
+        ctx.fillStyle = '#999999';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('N/A - No Surveys', x + 230, y + 24);
+        return;
+    }
+    
+    // Associate value - always display the metric value
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 14px Arial';
     const formattedValue = formatMetricValue(metric.key, associateValue);
@@ -4542,29 +4553,23 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const prevIsValid = prevNum !== null && !isNaN(prevNum);
     
     if (prevIsValid) {
-        // Special case: if this is a survey metric with no surveys, just show "0 surveys"
-        if (noSurveys) {
-            trendingColor = '#dc3545'; // Red for no data
-            trendingText = '📋 0 surveys this period';
+        const trendDiff = associateValue - prevNum;
+        const absDiff = Math.abs(trendDiff);
+        
+        // Determine improvement based on metric type
+        const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
+        
+        if (absDiff < 0.1) {
+            trendingEmoji = '➡️'; // Flat/no change
+            trendingColor = '#666666';
+            trendingText = '➡️ No change';
         } else {
-            const trendDiff = associateValue - prevNum;
-            const absDiff = Math.abs(trendDiff);
-            
-            // Determine improvement based on metric type
-            const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
-            
-            if (absDiff < 0.1) {
-                trendingEmoji = '➡️'; // Flat/no change
-                trendingColor = '#666666';
-                trendingText = '➡️ No change';
-            } else {
-                const changeValue = formatMetricValue(metricKey, absDiff);
-                const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-                const sign = trendDiff > 0 ? '+' : '-';
-                const directionEmoji = trendDiff > 0 ? '📈' : '📉';
-                trendingColor = isImprovement ? '#28a745' : '#dc3545';
-                trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
-            }
+            const changeValue = formatMetricValue(metricKey, absDiff);
+            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+            const sign = trendDiff > 0 ? '+' : '-';
+            const directionEmoji = trendDiff > 0 ? '📈' : '📉';
+            trendingColor = isImprovement ? '#28a745' : '#dc3545';
+            trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
         }
     }
     
@@ -4587,9 +4592,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
 
 // ============================================
 // PHASE 4 - HTML TABLE RENDERER
+
 // ============================================
 
-function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytdEmployee = null) {
+function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytdEmployee = null, surveyTotal = 0) {
     /**
      * PHASE 4 - HTML TABLE RENDERER
      * Mirrors canvas rendering logic in web-friendly HTML format
@@ -4597,6 +4603,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
      * Uses same color logic:
      * - Green row: Meets goal
      * - Yellow row: Below goal
+     * - White row: Survey metric with no surveys
      * - Blue cell: Above center average
      * - Dark yellow cell: Below center average
      * - Gray cell: Center unavailable
@@ -4620,6 +4627,8 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         }
     });
     
+    const hasSurveys = surveyTotal > 0;
+    const SURVEY_METRICS = ['cxRepOverall', 'fcr', 'overallExperience'];
     const ytdAvailable = !!ytdEmployee;
     
     // Build HTML table
@@ -4650,14 +4659,20 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         // Skip if metric doesn't exist in data
         if (metrics[key] === undefined) return;
         
+        // Skip survey metrics if no surveys exist
+        if (!hasSurveys && SURVEY_METRICS.includes(key)) return;
+        
         const metric = METRICS_REGISTRY[key];
         if (!metric) return;
         
         // Insert group header if entering new group
         if (group !== currentGroup) {
             currentGroup = group;
-            html += `<tr style="background-color: #e3f2fd; border: 1px solid #ddd;">
-                <td colspan="6" style="padding: 12px; font-weight: bold; color: #0056B3; font-size: 15px;">
+            const isSurveyGroupNoSurveys = group === 'Survey' && !hasSurveys;
+            const headerBgColor = isSurveyGroupNoSurveys ? '#ffffff' : '#e3f2fd';
+            const headerTextColor = isSurveyGroupNoSurveys ? '#999999' : '#0056B3';
+            html += `<tr style="background-color: ${headerBgColor}; border: 1px solid #ddd;">
+                <td colspan="7" style="padding: 12px; font-weight: bold; color: ${headerTextColor}; font-size: 15px;">
                     ${group}
                 </td>
             </tr>`;
@@ -4667,11 +4682,20 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = parseFloat(centerAvg[key]) || 0;
         const target = getMetricTarget(key);
+        const isSurveyMetric = SURVEY_METRICS.includes(key);
+        const noSurveys = isSurveyMetric && surveyTotal === 0;
         const meetsGoal = isMetricMeetingTarget(key, curr, target);
         const isReverse = isReverseMetric(key);
         
         // Determine row background color
-        const rowBgColor = meetsGoal ? '#d4edda' : '#fff3cd';
+        let rowBgColor;
+        if (noSurveys) {
+            rowBgColor = '#ffffff'; // White - no surveys
+        } else if (meetsGoal) {
+            rowBgColor = '#d4edda'; // Green - meets goal
+        } else {
+            rowBgColor = '#fff3cd'; // Yellow - does not meet goal
+        }
         
         // Determine vs center color
         const centerExists = center > 0;
@@ -4719,15 +4743,24 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         
         const targetDisplay = formatMetricDisplay(key, target);
         const ytdDisplay = ytdEmployee && ytdEmployee[key] !== undefined ? formatMetricDisplay(key, ytdEmployee[key]) : '';
-        html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
-            <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
-            <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
-        </tr>`;
+        
+        // If no surveys, show "N/A - No Surveys" and skip other columns
+        if (noSurveys) {
+            html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
+                <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
+                <td colspan="6" style="padding: 12px; text-align: center; border: 1px solid #ddd; color: #999999; font-weight: bold;">N/A - No Surveys</td>
+            </tr>`;
+        } else {
+            html += `<tr style="background-color: ${rowBgColor}; border: 1px solid #ddd;">
+                <td style="padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: 500;">${metric.label} <span style="color: #666; font-size: 0.9em;">(${targetDisplay})</span></td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${curr.toFixed(2)}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${centerExists ? center.toFixed(2) : 'N/A'}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
+            </tr>`;
+        }
     });
     
     html += '</tbody></table>';
@@ -4817,12 +4850,22 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     
     
     // SUMMARY STATISTICS (used by both canvas and HTML)
+    // When no surveys exist, exclude the 3 survey metrics from the denominator
+    const surveyMetricKeys = ['cxRepOverall', 'fcr', 'overallExperience'];
+    const hasSurveys = surveyTotal > 0;
+    
     let meetingGoals = 0;
     let improved = 0;
     let beatingCenter = 0;
+    let measuredMetricCount = 0;
 
     metricOrder.forEach(({ key }) => {
         if (metrics[key] === undefined) return;
+        
+        // Skip survey metrics if no surveys exist
+        if (!hasSurveys && surveyMetricKeys.includes(key)) return;
+        
+        measuredMetricCount++;
         
         const curr = parseFloat(metrics[key]) || 0;
         const target = getMetricTarget(key);
@@ -4845,7 +4888,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         }
     });
 
-    const totalMetrics = Object.keys(metrics).length;
+    const totalMetrics = measuredMetricCount;
     const successRate = Math.round(meetingGoals / totalMetrics * 100);
     const improvedText = previous ? improved.toString() : 'N/A';
     // metadata already extracted at function start
@@ -4937,8 +4980,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     let currentGroup = null;
     let rowIdx = 0;
     
+    const SURVEY_METRICS = ['cxRepOverall', 'fcr', 'overallExperience'];
+    
     metricOrder.forEach(({ key, group }) => {
         if (metrics[key] === undefined) return;
+        
+        // Skip survey metrics if no surveys exist
+        if (!hasSurveys && SURVEY_METRICS.includes(key)) return;
         
         const metric = METRICS_REGISTRY[key];
         if (!metric) return;
@@ -4946,9 +4994,15 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         // Draw group header
         if (group !== currentGroup) {
             currentGroup = group;
-            ctx.fillStyle = '#e3f2fd';
+            
+            // Survey group header styling when no surveys
+            const isSurveyGroupNoSurveys = group === 'Survey' && !hasSurveys;
+            const headerBgColor = isSurveyGroupNoSurveys ? '#ffffff' : '#e3f2fd';
+            const headerTextColor = isSurveyGroupNoSurveys ? '#999999' : '#0056B3';
+            
+            ctx.fillStyle = headerBgColor;
             ctx.fillRect(40, y, 820, 40);
-            ctx.fillStyle = '#0056B3';
+            ctx.fillStyle = headerTextColor;
             ctx.font = 'bold 16px Arial, "Segoe UI Emoji", "Apple Color Emoji"';
             // Add emojis to group headers
             let groupEmoji = '📊';
