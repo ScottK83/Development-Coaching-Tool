@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.29'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.30'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -306,6 +306,12 @@ function validatePastedData(dataText) {
     }
     
     const headers = lines[0].split('\t');
+    
+    // DEBUG: Show all headers at import time
+    if (DEBUG) {
+        console.log('=== HEADERS AT IMPORT ===');
+        headers.forEach((h, idx) => console.log(`[${idx}] "${h}"`));
+    }
     
     // Check for required columns with flexible matching
     const hasNameColumn = headers.some(h => h.toLowerCase().includes('name'));
