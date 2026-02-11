@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.32'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.33'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -314,14 +314,19 @@ function validatePastedData(dataText) {
     }
     
     // Check for required columns with flexible matching
-    const hasNameColumn = headers.some(h => h.toLowerCase().includes('name'));
-    const hasAdherenceColumn = headers.some(h => h.toLowerCase().includes('adherence'));
+    const normalize = (str) => str.toLowerCase().replace(/[\s\-_]+/g, '|');
+    const hasNameColumn = headers.some(h => {
+        const normalizedHeader = normalize(h);
+        // Match 'name' in normalized header (handles "Name (Last, First)", "name_last_first", etc.)
+        return normalizedHeader.includes('name');
+    });
+    const hasAdherenceColumn = headers.some(h => normalize(h).includes('adherence') || normalize(h).includes('schedule'));
     
     if (!hasNameColumn) {
         issues.push('Missing required column: Name');
     }
     if (!hasAdherenceColumn) {
-        issues.push('Missing required column: Adherence');
+        issues.push('Missing required column: Adherence or Schedule');
     }
     
     const dataRows = lines.slice(1).filter(line => line.trim());
