@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.33'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.34'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1084,15 +1084,24 @@ function parsePastedData(pastedText, startDate, endDate) {
             // Exact match
             if (hLower === kLower) return true;
             
-            // Normalize both header and keyword - replace spaces/hyphens/underscores with pipes for easier matching
-            const normalize = (str) => str.replace(/[\s\-_]+/g, '|');
+            // Normalize: replace separators with pipes, remove non-alphanumeric except pipes
+            const normalize = (str) => str.replace(/[\s\-_]+/g, '|').replace(/[^a-z0-9|]/g, '');
             const normalizedHeader = normalize(hLower);
             const normalizedKeyword = normalize(kLower);
             
-            // Check if normalized keyword appears as complete words in normalized header
-            // e.g., "oe|survey" matches "oe|survey|total" and "oe survey" matches "oe_survey_total"
-            // but "survey|total" does NOT match "totalin|officeshrink"
-            return normalizedHeader.includes(normalizedKeyword);
+            // Check if normalized keyword appears in normalized header
+            if (normalizedHeader.includes(normalizedKeyword)) return true;
+            
+            // Also check if all words from keyword appear in header in order (even if concatenated)
+            // e.g., "overall sentiment" should match "overallsentimentscore"
+            const keywordWords = kLower.split(/[\s\-_]+/).filter(w => w.length > 0);
+            let searchPos = 0;
+            for (const word of keywordWords) {
+                const foundPos = hLower.indexOf(word, searchPos);
+                if (foundPos === -1) return false;
+                searchPos = foundPos + word.length;
+            }
+            return true;
         };
         
         if (Array.isArray(keywords)) {
