@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.21'; // Version: YYYY.MM.DD.NN
-const DEBUG = false; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.22'; // Version: YYYY.MM.DD.NN
+const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -1158,7 +1158,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
-        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}`);
+        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}, totalCalls=${totalCalls}`);
         let totalCalls = parsedTotalCalls;
         
         const employeeData = {
@@ -1194,12 +1194,12 @@ function parsePastedData(pastedText, startDate, endDate) {
             }
         }
         
-        if (i <= 3) {
-            
-            
-            
-            
-            
+        if (i <= 3 && DEBUG) {
+            console.log(`FIRST FEW ROWS DEBUG - ${displayName}:`);
+            console.log(`  All raw cells:`, cells);
+            for (let c = 0; c < cells.length; c++) {
+                console.log(`    [${c}] "${cells[c]}" -> header: "${headers[c]}"`);
+            }
         }
         
         employees.push(employeeData);
