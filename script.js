@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.20'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.21'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4536,13 +4536,17 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let trendingText = 'N/A';
     let trendingEmoji = '';
     
-    if (previousValue !== undefined && previousValue !== null) {
+    // Only show trending if previous value exists AND is a valid number
+    const prevNum = previousValue !== undefined && previousValue !== null ? parseFloat(previousValue) : null;
+    const prevIsValid = prevNum !== null && !isNaN(prevNum);
+    
+    if (prevIsValid) {
         // Special case: if this is a survey metric with no surveys, just show "0 surveys"
         if (noSurveys) {
             trendingColor = '#dc3545'; // Red for no data
             trendingText = '📋 0 surveys this period';
         } else {
-            const trendDiff = associateValue - previousValue;
+            const trendDiff = associateValue - prevNum;
             const absDiff = Math.abs(trendDiff);
             
             // Determine improvement based on metric type
