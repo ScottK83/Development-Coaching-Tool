@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.19'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.20'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4537,23 +4537,29 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let trendingEmoji = '';
     
     if (previousValue !== undefined && previousValue !== null) {
-        const trendDiff = associateValue - previousValue;
-        const absDiff = Math.abs(trendDiff);
-        
-        // Determine improvement based on metric type
-        const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
-        
-        if (absDiff < 0.1) {
-            trendingEmoji = '➡️'; // Flat/no change
-            trendingColor = '#666666';
-            trendingText = '➡️ No change';
+        // Special case: if this is a survey metric with no surveys, just show "0 surveys"
+        if (noSurveys) {
+            trendingColor = '#dc3545'; // Red for no data
+            trendingText = '📋 0 surveys this period';
         } else {
-            const changeValue = formatMetricValue(metricKey, absDiff);
-            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            const sign = trendDiff > 0 ? '+' : '-';
-            const directionEmoji = trendDiff > 0 ? '📈' : '📉';
-            trendingColor = isImprovement ? '#28a745' : '#dc3545';
-            trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
+            const trendDiff = associateValue - previousValue;
+            const absDiff = Math.abs(trendDiff);
+            
+            // Determine improvement based on metric type
+            const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
+            
+            if (absDiff < 0.1) {
+                trendingEmoji = '➡️'; // Flat/no change
+                trendingColor = '#666666';
+                trendingText = '➡️ No change';
+            } else {
+                const changeValue = formatMetricValue(metricKey, absDiff);
+                const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+                const sign = trendDiff > 0 ? '+' : '-';
+                const directionEmoji = trendDiff > 0 ? '📈' : '📉';
+                trendingColor = isImprovement ? '#28a745' : '#dc3545';
+                trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
+            }
         }
     }
     
