@@ -9168,7 +9168,7 @@ function generateSentimentSummary() {
     const posTopPhrases = positive.phrases
         .filter(p => p.value > 0)
         .sort((a, b) => b.value - a.value)
-        .slice(0, 5);
+        .slice(0, SENTIMENT_TOP_WINS_COUNT);
     posTopPhrases.forEach(p => {
         summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
     });
@@ -9176,7 +9176,7 @@ function generateSentimentSummary() {
     const posLowPhrases = positive.phrases
         .filter(p => p.value === 0 || p.value < 10)
         .sort((a, b) => a.value - b.value)
-        .slice(0, 5);
+        .slice(0, SENTIMENT_BOTTOM_COUNT);
     posLowPhrases.forEach(p => {
         summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
     });
@@ -9195,14 +9195,14 @@ function generateSentimentSummary() {
         summary += `  • Minimal negative language detected - excellent avoidance\n`;
     } else {
         summary += `- Associate stop using:\n`;
-        assocNegative.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
+        assocNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
             summary += `  • "${p.phrase}" - said ${p.value} times, avoid this\n`;
         });
     }
     
     if (custNegative.length > 0) {
         summary += `- Customer said (context):\n`;
-        custNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
+        custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
             summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
         });
     }
@@ -9212,12 +9212,12 @@ function generateSentimentSummary() {
     summary += `MANAGING EMOTIONS\n`;
     summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
     const emotionPhrases = emotions.phrases.filter(p => p.value > 0);
-    if (emotionPhrases.length === 0 || emotions.percentage <= 5) {
+    if (emotionPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
         summary += `- Customer emotion indicators:\n`;
         summary += `  • Low detection (${emotions.percentage}%) - Associate managing emotions effectively\n`;
     } else {
         summary += `- Customer emotion indicators detected:\n`;
-        emotionPhrases.sort((a, b) => b.value - a.value).slice(0, 5).forEach(p => {
+        emotionPhrases.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
             summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
         });
     }
