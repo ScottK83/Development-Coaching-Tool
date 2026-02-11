@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.04'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.05'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1125,7 +1125,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         };
         
         // Parse critical numeric fields with validation (using column positions)
-        const surveyTotalRaw = getCell(18); // OE Survey Total at position 18
+        const surveyTotalRaw = getCell(19); // OE Survey Total at position 19
         const totalCallsRaw = getCell(1);   // TotalCallsAnswered at position 1
         
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
