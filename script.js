@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.39'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.40'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5442,15 +5442,98 @@ function getYtdPeriodForWeekKey(weekKey) {
     const parts = weekKey.split('|');
     const endDate = parts[1] || '';
     if (!endDate) return null;
-    const matchingKey = Object.keys(ytdData).find(key => key.split('|')[1] === endDate);
     
-    // If no YTD data found, fall back to current week's data (better than showing nothing)
-    if (!matchingKey) {
-        return weeklyData[weekKey] || null;
+    // First, try to find explicit YTD data
+    const matchingKey = Object.keys(ytdData).find(key => key.split('|')[1] === endDate);
+    if (matchingKey) {
+        return ytdData[matchingKey];
     }
     
-    return ytdData[matchingKey];
+    // If no explicit YTD data, calculate YTD by aggregating all weeks up to endDate
+    const endDateObj = new Date(endDate);
+    const yearStart = new Date(endDateObj.getFullYear(), 0, 1); // Jan 1 of same year
+    
+    // Find all weeks that end on or before endDate and are in same year
+    const weekKeysToAggregate = Object.keys(weeklyData).filter(wk => {
+        const wkParts = wk.split('|');
+        const wkEndDate = new Date(wkParts[1]);
+        return wkEndDate >= yearStart && wkEndDate <= endDateObj;
+    }).sort();
+    
+    if (weekKeysToAggregate.length === 0) {
+        return null;
+    }
+    
+    // Aggregate all matching weeks
+    const aggregatedEmployees = {};
+    
+    weekKeysToAggregate.forEach(wk => {
+        const week = weeklyData[wk];
+        if (week?.employees) {
+            week.employees.forEach(emp => {
+                if (!aggregatedEmployees[emp.name]) {
+                    aggregatedEmployees[emp.name] = {
+                        name: emp.name,
+                        firstName: emp.firstName,
+                        // Metrics that should be summed
+                        transfersCount: 0,
+                        surveyTotal: 0,
+                        reliability: 0,
+                        // Metrics that should be averaged
+                        counts: {},
+                        sums: {}
+                    };
+                }
+                
+                const agg = aggregatedEmployees[emp.name];
+                
+                // Sum these metrics
+                agg.transfersCount += emp.transfersCount || 0;
+                agg.surveyTotal += emp.surveyTotal || 0;
+                agg.reliability += emp.reliability || 0;
+                
+                // Track for averaging later
+                const metricsToAverage = [
+                    'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
+                    'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
+                    'negativeWord', 'positiveWord'
+                ];
+                
+                metricsToAverage.forEach(metric => {
+                    if (emp[metric] !== undefined && emp[metric] !== null && emp[metric] !== '') {
+                        agg.counts[metric] = (agg.counts[metric] || 0) + 1;
+                        agg.sums[metric] = (agg.sums[metric] || 0) + parseFloat(emp[metric]);
+                    }
+                });
+            });
+        }
+    });
+    
+    // Calculate averages and clean up
+    Object.keys(aggregatedEmployees).forEach(empName => {
+        const agg = aggregatedEmployees[empName];
+        const metricsToAverage = [
+            'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
+            'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
+            'negativeWord', 'positiveWord'
+        ];
+        
+        metricsToAverage.forEach(metric => {
+            if (agg.counts[metric] && agg.counts[metric] > 0) {
+                agg[metric] = agg.sums[metric] / agg.counts[metric];
+            }
+        });
+        
+        delete agg.counts;
+        delete agg.sums;
+    });
+    
+    return {
+        metadata: { periodType: 'ytd', startDate: yearStart.toISOString().split('T')[0], endDate: endDate },
+        employees: Object.values(aggregatedEmployees)
+    };
 }
+
 
 
 function isMetricMeetingTarget(metric, value, target) {
