@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.26'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.27'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1066,23 +1066,25 @@ function parsePastedData(pastedText, startDate, endDate) {
     const headers = headerLine.split('\t').map(h => h.toLowerCase());
     
     const findColumnIndex = (keywords) => {
+        const matchesKeyword = (header, keyword) => {
+            const hLower = header.toLowerCase();
+            const kLower = keyword.toLowerCase();
+            
+            // Exact match
+            if (hLower === kLower) return true;
+            
+            // Word-boundary match: keyword must appear as complete words
+            // e.g., "oe survey" matches "OE Survey" but not "survey total"
+            const wordBoundaryRegex = new RegExp(`(^|\\s|\\-|_)${kLower.replace(/\s+/g, '\\s')}(\\s|\\-|_|$)`, 'i');
+            return wordBoundaryRegex.test(hLower);
+        };
+        
         if (Array.isArray(keywords)) {
-            return headers.findIndex(h => keywords.some(k => {
-                const hLower = h.toLowerCase();
-                const kLower = k.toLowerCase();
-                // Match complete words separated by spaces, hyphens, underscores, or as exact match
-                // This prevents "survey total" from matching "total in office shrink"
-                const wordBoundary = /[\s\-_]|^|$/;
-                return hLower.split(wordBoundary).some(word => word === kLower) || hLower === kLower;
-            }));
+            return headers.findIndex(h => keywords.some(k => matchesKeyword(h, k)));
         }
-        const kLower = keywords.toLowerCase();
-        return headers.findIndex(h => {
-            const hLower = h.toLowerCase();
-            const wordBoundary = /[\s\-_]|^|$/;
-            return hLower.split(wordBoundary).some(word => word === kLower) || hLower === kLower;
-        });
+        return headers.findIndex(h => matchesKeyword(h, keywords));
     };
+
     
     // Map all column indices by searching headers
     const colMap = {
