@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.36'; // Version: YYYY.MM.DD.NN
-const DEBUG = true; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.37'; // Version: YYYY.MM.DD.NN
+const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -1210,8 +1210,8 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
-        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}, totalCalls=${totalCalls}`);
         let totalCalls = parsedTotalCalls;
+        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}, totalCalls=${totalCalls}`);
         
         const employeeData = {
             name: displayName,
