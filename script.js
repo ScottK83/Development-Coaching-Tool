@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.50'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.51'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4715,13 +4715,16 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     }
     
     // Sum all weeks that end on or BEFORE the current period's end date, in same calendar year
+    // CRITICAL: Only sum actual weekly records (periodType='week'), NOT monthly/quarterly aggregates
     for (const wk in weeklyData) {
         const weekMeta = weeklyData[wk]?.metadata || {};
         const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
         const weekYear = weekEndDate.substring(0, 4);
+        const weekPeriodType = weekMeta.periodType || 'week';
         
-        // Only include weeks from same calendar year AND that end on or before current period
-        if (weekYear === currentYear && weekEndDate <= currentEndDate) {
+        // Only include WEEKLY records from same calendar year that end on or before current period
+        // Skip monthly/quarterly aggregates to avoid double-counting
+        if (weekPeriodType === 'week' && weekYear === currentYear && weekEndDate <= currentEndDate) {
             const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
             if (weekEmp && weekEmp.surveyTotal) {
                 const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
