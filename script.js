@@ -305,11 +305,16 @@ function validatePastedData(dataText) {
     }
     
     const headers = lines[0].split('\t');
-    const requiredHeaders = ['Name', 'Schedule Adherence'];
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
-    if (missingHeaders.length > 0) {
-        issues.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+    // Check for required columns with flexible matching
+    const hasNameColumn = headers.some(h => h.toLowerCase().includes('name'));
+    const hasAdherenceColumn = headers.some(h => h.toLowerCase().includes('adherence'));
+    
+    if (!hasNameColumn) {
+        issues.push('Missing required column: Name');
+    }
+    if (!hasAdherenceColumn) {
+        issues.push('Missing required column: Adherence');
     }
     
     const dataRows = lines.slice(1).filter(line => line.trim());
