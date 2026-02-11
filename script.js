@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.16'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.17'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4762,73 +4762,48 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // For WEEK views: use only that week's surveyTotal
+    // For WEEK views: use only that week's surveyTotal, NO aggregation
     // For MONTH/YTD views: sum all weeks in that period
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
-    // Only calculate aggregated YTD/Month totals when actually viewing a YTD or MONTH period
-    if (metadata.periodType === 'ytd' || metadata.periodType === 'month') {
-        // Get the year from current period to only sum weeks in same year
+    // Only calculate any aggregated totals for MONTH or YTD views
+    if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
         const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
         const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
         
         if (DEBUG) {
-            console.log(`=== SURVEY TOTAL DEBUG (${current.name}) ===`);
-            console.log(`Period type: ${metadata.periodType}, endDate: ${currentEndDate}, year: ${currentYear}`);
-            console.log(`Current period surveyTotal: ${surveyTotal}`);
+            console.log(`=== AGGREGATING SURVEYS (${current.name}) for ${metadata.periodType} ===`);
+            console.log(`Current period endDate: ${currentEndDate}, year: ${currentYear}`);
         }
         
-        // Calculate aggregated total by summing from weekly data IN THE SAME YEAR
-        for (const wk in weeklyData) {
-            const weekMeta = weeklyData[wk]?.metadata || {};
-            const weekEndDate = weekMeta.endDate || wk.split('|')[1] || ''; // Get end date or try parsing key
-            const weekYear = weekEndDate.substring(0, 4); // Extract YYYY
-            
-            if (DEBUG) {
-                console.log(`  Checking week key: ${wk}, endDate: ${weekEndDate}, year: ${weekYear}`);
-            }
-            
-            // Only sum weeks from the same calendar year
-            if (weekYear === currentYear) {
-                const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
-                if (weekEmp && weekEmp.surveyTotal) {
-                    const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-                    if (DEBUG) console.log(`    Found ${current.name} in ${wk}: surveyTotal = ${weekSurvey}`);
-                    ytdSurveyTotal += weekSurvey;
-                } else if (DEBUG) {
-                    const allEmps = weeklyData[wk]?.employees?.map(e => e.name) || [];
-                    console.log(`    ${current.name} not found in ${wk}. Employees: ${allEmps.join(', ')}`);
-                }
-            }
-        }
-        
-        // For YTD/MONTH views, update surveyTotal to show the aggregated value
-        surveyTotal = ytdSurveyTotal;
-        
-        if (DEBUG) console.log(`${current.name} aggregated survey total: ${ytdSurveyTotal}`);
-    } else {
-        // For WEEK views, ytdSurveyTotal is just informational (not used for display)
-        // Still calculate it for reference in rendering
-        const currentEndDate = metadata.endDate || '';
-        const currentYear = currentEndDate.substring(0, 4);
-        
+        // Sum all weekly data for this employee in the same calendar year
         for (const wk in weeklyData) {
             const weekMeta = weeklyData[wk]?.metadata || {};
             const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
             const weekYear = weekEndDate.substring(0, 4);
             
+            // Only include weeks from same calendar year
             if (weekYear === currentYear) {
                 const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
                 if (weekEmp && weekEmp.surveyTotal) {
                     const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
                     ytdSurveyTotal += weekSurvey;
+                    if (DEBUG) console.log(`  + ${current.name} week ${wk}: ${weekSurvey}`);
                 }
             }
         }
+        
+        // For month/YTD views, the aggregated total becomes the display value
+        surveyTotal = ytdSurveyTotal;
+        
+        if (DEBUG) console.log(`${current.name} ${metadata.periodType} total surveys: ${surveyTotal}`);
+    } else {
+        // WEEK views: DO NOT aggregate, do NOT calculate ytdSurveyTotal
+        if (DEBUG) console.log(`WEEK view for ${current.name}: surveyTotal=${surveyTotal} (NO aggregation)`);
     }
     
-    if (DEBUG) console.log(`${current.name} survey display - surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
+    if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
 
     
     
