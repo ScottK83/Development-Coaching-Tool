@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.41'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.42'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4632,9 +4632,12 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let formattedYtd = '';
     const ytdValueNum = parseFloat(ytdValue);
     const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-    if (ytdHasValue) {
-        // Always show the YTD value if it exists, even for survey metrics
+    // Only show N/A if it's a survey metric AND there's no data anywhere (no current surveys AND no YTD surveys)
+    const noDataAnywhere = isSurveyMetric && surveyTotal === 0 && ytdSurveyTotal === 0;
+    if (ytdHasValue && !noDataAnywhere) {
         formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+    } else if (noDataAnywhere) {
+        formattedYtd = 'N/A';
     }
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
@@ -4646,7 +4649,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
 
 // ============================================
 
-function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytdEmployee = null, surveyTotal = 0) {
+function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytdEmployee = null, surveyTotal = 0, ytdSurveyTotal = 0) {
     /**
      * PHASE 4 - HTML TABLE RENDERER
      * Mirrors canvas rendering logic in web-friendly HTML format
@@ -4793,7 +4796,19 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
         }
         
         const targetDisplay = formatMetricDisplay(key, target);
-        const ytdDisplay = ytdEmployee && ytdEmployee[key] !== undefined ? formatMetricDisplay(key, ytdEmployee[key]) : '';
+        
+        // Smart N/A logic for YTD display - only show N/A if no data anywhere
+        let ytdDisplay = '';
+        if (ytdEmployee && ytdEmployee[key] !== undefined) {
+            const ytdValueNum = parseFloat(ytdEmployee[key]);
+            // Only show N/A if it's a survey metric AND there's no data anywhere
+            const noDataAnywhere = isSurveyMetric && surveyTotal === 0 && ytdSurveyTotal === 0;
+            if (!isNaN(ytdValueNum) && !noDataAnywhere) {
+                ytdDisplay = formatMetricDisplay(key, ytdValueNum);
+            } else if (noDataAnywhere) {
+                ytdDisplay = 'N/A';
+            }
+        }
         
         // If no surveys, show "N/A - No Surveys" and skip other columns
         if (noSurveys) {
