@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.37'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.38'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5398,6 +5398,9 @@ function formatMetricValue(key, value) {
         return Math.round(value).toString();
     } else if (metric.unit === '%') {
         // Percentages - one decimal point
+        return value.toFixed(1);
+    } else if (metric.unit === 'hrs') {
+        // Hours - one decimal point (not rounded to whole number)
         return value.toFixed(1);
     } else {
         // Raw numbers - no decimal points
