@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.40'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.41'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4632,9 +4632,9 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     let formattedYtd = '';
     const ytdValueNum = parseFloat(ytdValue);
     const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-    const ytdNoSurveys = isSurveyMetric && ytdSurveyTotal === 0;
     if (ytdHasValue) {
-        formattedYtd = ytdNoSurveys ? 'N/A' : formatMetricValue(metric.key, ytdValueNum);
+        // Always show the YTD value if it exists, even for survey metrics
+        formattedYtd = formatMetricValue(metric.key, ytdValueNum);
     }
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
@@ -4809,7 +4809,7 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
                 <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${target}</td>
                 <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${vsCenterColor}; font-weight: bold;">${vsCenterText}</td>
                 <td style="padding: 12px; text-align: center; border: 1px solid #ddd; color: ${trendingColor}; font-weight: bold;">${trendingText}</td>
-                <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${ytdDisplay}</td>
+                <td style="padding: 12px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #333;">${ytdDisplay}</td>
             </tr>`;
         }
     });
