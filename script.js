@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.09'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.10'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4761,22 +4761,18 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     // Extract survey total for survey metrics
     const surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     
-    // Calculate YTD survey total: either from ytdData or by summing all weeks
+    // Calculate YTD survey total: ALWAYS sum from weekly data, never trust cached ytdData.surveyTotal
+    // (cached value can be wrong if column detection was incorrect during paste)
     let ytdSurveyTotal = 0;
-    if (ytdEmployee?.surveyTotal) {
-        ytdSurveyTotal = parseInt(ytdEmployee.surveyTotal, 10);
-    } else {
-        // Sum all weekly survey totals for this employee across all periods
-        for (const wk in weeklyData) {
-            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
-            if (weekEmp && weekEmp.surveyTotal) {
-                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-                if (DEBUG) console.log(`${current.name} week ${wk}: surveyTotal = ${weekSurvey}`);
-                ytdSurveyTotal += weekSurvey;
-            }
+    for (const wk in weeklyData) {
+        const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
+        if (weekEmp && weekEmp.surveyTotal) {
+            const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
+            if (DEBUG) console.log(`${current.name} week ${wk}: surveyTotal = ${weekSurvey}`);
+            ytdSurveyTotal += weekSurvey;
         }
-        if (DEBUG) console.log(`${current.name} YTD total surveys: ${ytdSurveyTotal}`);
     }
+    if (DEBUG) console.log(`${current.name} YTD total surveys (recalculated): ${ytdSurveyTotal}`);
 
     
     
