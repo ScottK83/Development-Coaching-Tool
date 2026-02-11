@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.18'; // Version: YYYY.MM.DD.NN
-const DEBUG = true; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.19'; // Version: YYYY.MM.DD.NN
+const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -4762,47 +4762,46 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // For WEEK views: use only that week's surveyTotal
-    // For ALL views: calculate ytdSurveyTotal as cumulative through current period
+    // WEEK views: show only current week's surveyTotal (no YTD column)
+    // MONTH/YTD views: show both current period and cumulative total
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
-    const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
-    const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
-    
-    if (DEBUG) {
-        console.log(`=== SURVEY CALCULATION (${current.name}) ===`);
-        console.log(`Current period: ${currentEndDate}, periodType: ${metadata.periodType}`);
-        console.log(`Current surveyTotal: ${surveyTotal}`);
-    }
-    
-    // Calculate YTD as cumulative through current period
-    // Sum all weeks that end on or BEFORE the current period's end date, in same calendar year
-    for (const wk in weeklyData) {
-        const weekMeta = weeklyData[wk]?.metadata || {};
-        const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
-        const weekYear = weekEndDate.substring(0, 4);
-        
-        // Only include weeks from same calendar year AND that end on or before current period
-        if (weekYear === currentYear && weekEndDate <= currentEndDate) {
-            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
-            if (weekEmp && weekEmp.surveyTotal) {
-                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-                ytdSurveyTotal += weekSurvey;
-                if (DEBUG) console.log(`  + ${wk}: ${weekSurvey} (total now: ${ytdSurveyTotal})`);
-            }
-        } else if (DEBUG && weekYear === currentYear) {
-            console.log(`  - ${wk}: skipped (${weekEndDate} > ${currentEndDate})`);
-        }
-    }
-    
-    // For MONTH/YTD views, also update surveyTotal to show aggregated value
+    // For MONTH and YTD views, calculate cumulative total through current period
     if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
+        const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
+        const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
+        
+        if (DEBUG) {
+            console.log(`=== CUMULATIVE SURVEY CALCULATION (${current.name}) for ${metadata.periodType} ===`);
+            console.log(`Current period: ${currentEndDate}, year: ${currentYear}`);
+        }
+        
+        // Sum all weeks that end on or BEFORE the current period's end date, in same calendar year
+        for (const wk in weeklyData) {
+            const weekMeta = weeklyData[wk]?.metadata || {};
+            const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
+            const weekYear = weekEndDate.substring(0, 4);
+            
+            // Only include weeks from same calendar year AND that end on or before current period
+            if (weekYear === currentYear && weekEndDate <= currentEndDate) {
+                const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
+                if (weekEmp && weekEmp.surveyTotal) {
+                    const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
+                    ytdSurveyTotal += weekSurvey;
+                    if (DEBUG) console.log(`  + ${wk}: ${weekSurvey}`);
+                }
+            }
+        }
+        
+        // For month/YTD views, also update surveyTotal to show aggregated value
         surveyTotal = ytdSurveyTotal;
-        if (DEBUG) console.log(`${metadata.periodType} view: surveyTotal updated to ${surveyTotal}`);
+        
+        if (DEBUG) console.log(`${metadata.periodType} cumulative surveys: ${surveyTotal}`);
     }
+    // For WEEK views: ytdSurveyTotal stays 0 (not displayed, not calculated)
     
-    if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}`);
+    if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
 
     
     
@@ -4947,7 +4946,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             else if (group === 'Sentiment') groupEmoji = '💬';
             else if (group === 'Reliability') groupEmoji = '⏰';
             
-            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)` : `${groupEmoji} ${group}`;
+            // For weekly summaries, omit the YTD column. For month/ytd, show it.
+            const ytdDisplay = metadata.periodType === 'week' ? '' : ` | ${ytdSurveyTotal} YTD`;
+            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} ${periodLabel.toLowerCase()}${ytdDisplay})` : `${groupEmoji} ${group}`;
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
