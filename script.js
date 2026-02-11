@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.31'; // Version: YYYY.MM.DD.NN
-const DEBUG = true; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.32'; // Version: YYYY.MM.DD.NN
+const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
