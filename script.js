@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.34'; // Version: YYYY.MM.DD.NN
-const DEBUG = false; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.35'; // Version: YYYY.MM.DD.NN
+const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -1139,6 +1139,10 @@ function parsePastedData(pastedText, startDate, endDate) {
         headers.forEach((h, idx) => console.log(`[${idx}] ${h}`));
         console.log('=== COLUMN MAPPING ===');
         console.log(`surveyTotal index: ${colMap.surveyTotal}, header: "${headers[colMap.surveyTotal]}"`);
+        console.log(`sentiment: ${colMap.sentiment}, header: "${headers[colMap.sentiment]}"`);
+        console.log(`emotions: ${colMap.emotions}, header: "${headers[colMap.emotions]}"`);
+        console.log(`negativeWord: ${colMap.negativeWord}, header: "${headers[colMap.negativeWord]}"`);
+        console.log(`positiveWord: ${colMap.positiveWord}, header: "${headers[colMap.positiveWord]}"`);
     }
     // DEBUG: Log column mapping
     if (DEBUG) {
