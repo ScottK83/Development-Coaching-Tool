@@ -95,6 +95,14 @@ const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
 
+// Sentiment Analysis Constants
+const SENTIMENT_TOP_WINS_COUNT = 5;
+const SENTIMENT_BOTTOM_COUNT = 5;
+const SENTIMENT_UNUSED_SUGGESTIONS = 3;
+const SENTIMENT_MIN_PHRASES_FOR_BOTTOM = 5;
+const SENTIMENT_CUSTOMER_CONTEXT_COUNT = 3;
+const SENTIMENT_EMOTION_LOW_THRESHOLD = 5;
+
 // ============================================
 // TARGET METRICS
 // ============================================
@@ -1111,7 +1119,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         };
         
         // Parse critical numeric fields with validation (using column positions)
-        const surveyTotalRaw = getCell(18); // OE Survey Total at position 18
+        const surveyTotalRaw = getCell(17); // OE Survey Total at position 17
         const totalCallsRaw = getCell(1);   // TotalCallsAnswered at position 1
         
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
