@@ -35,6 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
+const APP_VERSION = '2026.02.11.01'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7843,11 +7844,21 @@ function initApp() {
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+        // Display version number
+        const versionEl = document.getElementById('appVersion');
+        if (versionEl) {
+            versionEl.textContent = `Version: ${APP_VERSION}`;
+        }
         
         initApp();
     });
 } else {
     // DOM already loaded (if script runs late)
+    // Display version number
+    const versionEl = document.getElementById('appVersion');
+    if (versionEl) {
+        versionEl.textContent = `Version: ${APP_VERSION}`;
+    }
     
     initApp();
 }
