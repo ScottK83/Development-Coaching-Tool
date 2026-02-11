@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.11'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.12'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4762,11 +4762,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // When displaying YTD, NEVER use current.surveyTotal (from cached ytdData which may be wrong)
-    // Always recalculate from weekly data
-    let surveyTotal = 0;
+    // When displaying YTD, sum from all weekly data
+    // When displaying a week, just use current week's surveyTotal
+    let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
+    // Always calculate YTD total by summing from weekly data (never trust cached ytdData value)
     for (const wk in weeklyData) {
         const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
         if (weekEmp && weekEmp.surveyTotal) {
@@ -4776,11 +4777,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         }
     }
     
-    // For current period, use surveyTotal from current object if NOT YTD, otherwise use ytdSurveyTotal
-    if (metadata.periodType !== 'ytd') {
-        surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
-    } else {
-        surveyTotal = ytdSurveyTotal; // When viewing YTD, current period = YTD total
+    // For YTD view, current period surveys = YTD total (not the cached value)
+    if (metadata.periodType === 'ytd') {
+        surveyTotal = ytdSurveyTotal;
     }
     
     if (DEBUG) console.log(`${current.name} survey display - surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
