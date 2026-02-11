@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.42'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.43'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4667,6 +4667,9 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
     
     if (!current) return '';
     
+    // Extract period metadata
+    const periodType = period?.metadata?.periodType || 'week';
+    
     // Extract metrics data
     const metricOrder = getMetricOrder();
     const metrics = {};
@@ -4725,9 +4728,13 @@ function buildMetricTableHTML(empName, period, current, previous, centerAvg, ytd
             const isSurveyGroupNoSurveys = group === 'Survey' && !hasSurveys;
             const headerBgColor = isSurveyGroupNoSurveys ? '#ffffff' : '#e3f2fd';
             const headerTextColor = isSurveyGroupNoSurveys ? '#999999' : '#0056B3';
+            let headerText = group;
+            if (group === 'Survey') {
+                headerText = `Survey (${surveyTotal} this ${periodType === 'week' ? 'week' : periodType === 'month' ? 'month' : 'period'}${ytdSurveyTotal > 0 ? `, ${ytdSurveyTotal} YTD` : ''})`;
+            }
             html += `<tr style="background-color: ${headerBgColor}; border: 1px solid #ddd;">
                 <td colspan="7" style="padding: 12px; font-weight: bold; color: ${headerTextColor}; font-size: 15px;">
-                    ${group}
+                    ${headerText}
                 </td>
             </tr>`;
         }
