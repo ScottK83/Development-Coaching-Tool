@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.22'; // Version: YYYY.MM.DD.NN
-const DEBUG = true; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.23'; // Version: YYYY.MM.DD.NN
+const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -1088,9 +1088,9 @@ function parsePastedData(pastedText, startDate, endDate) {
         positiveWord: findColumnIndex(['positive word']),
         sentiment: findColumnIndex(['overall sentiment']),
         fcr: findColumnIndex(['fcr', 'first call resolution']),
-        cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat']),
-        overallExperience: findColumnIndex(['overall experience']),
-        surveyTotal: findColumnIndex(['survey total', 'oe survey'])
+        cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat', 'repsat']),
+        overallExperience: findColumnIndex(['overall experience', 'overallexperience']),
+        surveyTotal: findColumnIndex(['oe survey', 'survey total']) // Note: order matters - check oe survey first!
     };
     
     // DEBUG: Log column mapping
