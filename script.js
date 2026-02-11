@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.25'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.26'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1067,9 +1067,21 @@ function parsePastedData(pastedText, startDate, endDate) {
     
     const findColumnIndex = (keywords) => {
         if (Array.isArray(keywords)) {
-            return headers.findIndex(h => keywords.some(k => h.includes(k.toLowerCase())));
+            return headers.findIndex(h => keywords.some(k => {
+                const hLower = h.toLowerCase();
+                const kLower = k.toLowerCase();
+                // Match complete words separated by spaces, hyphens, underscores, or as exact match
+                // This prevents "survey total" from matching "total in office shrink"
+                const wordBoundary = /[\s\-_]|^|$/;
+                return hLower.split(wordBoundary).some(word => word === kLower) || hLower === kLower;
+            }));
         }
-        return headers.findIndex(h => h.includes(keywords.toLowerCase()));
+        const kLower = keywords.toLowerCase();
+        return headers.findIndex(h => {
+            const hLower = h.toLowerCase();
+            const wordBoundary = /[\s\-_]|^|$/;
+            return hLower.split(wordBoundary).some(word => word === kLower) || hLower === kLower;
+        });
     };
     
     // Map all column indices by searching headers
