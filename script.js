@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.48'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.49'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4631,16 +4631,32 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     }
     
     // YTD value - always render for all view types
+    // CRITICAL: YTD display is INDEPENDENT of weekly survey count
     let formattedYtd = '';
     const ytdValueNum = parseFloat(ytdValue);
     const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-    // Only show N/A if it's a survey metric AND there's no data anywhere (no current surveys AND no YTD surveys)
-    const noDataAnywhere = isSurveyMetric && surveyTotal === 0 && ytdSurveyTotal === 0;
-    if (ytdHasValue && !noDataAnywhere) {
-        formattedYtd = formatMetricValue(metric.key, ytdValueNum);
-    } else if (noDataAnywhere) {
-        formattedYtd = 'N/A';
+    
+    // For survey metrics: Show YTD value if it exists, regardless of weekly count
+    // Only show N/A if ytdSurveyTotal is 0 (no YTD surveys at all)
+    if (isSurveyMetric) {
+        // Check if there's any YTD survey data
+        if (ytdSurveyTotal > 0 && ytdHasValue) {
+            // YTD surveys exist, show the metric value
+            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+        } else if (ytdSurveyTotal === 0) {
+            // No YTD surveys at all
+            formattedYtd = 'N/A';
+        } else {
+            // Edge case: ytdSurveyTotal > 0 but no ytdValue
+            formattedYtd = 'N/A';
+        }
+    } else {
+        // Non-survey metrics: show value if available
+        if (ytdHasValue) {
+            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+        }
     }
+    
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
     ctx.fillText(formattedYtd, x + 720, y + 24);
@@ -4684,13 +4700,26 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // WEEK views: show only current week's surveyTotal (no YTD column)
+    // WEEK views: surveyTotal = current week only, ytdSurveyTotal = YTD from ytdEmployee
     // MONTH/YTD views: show both current period and cumulative total
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
+    // For WEEK views: Get YTD survey total from ytdEmployee (independent of weekly)
+    if (metadata.periodType === 'week') {
+        // Weekly count stays as current.surveyTotal
+        // YTD count comes from ytdEmployee data (separate dimension)
+        if (ytdEmployee && ytdEmployee.surveyTotal !== undefined) {
+            ytdSurveyTotal = parseInt(ytdEmployee.surveyTotal, 10) || 0;
+        }
+        if (DEBUG) {
+            console.log(`=== WEEK VIEW SURVEY TOTALS (${current.name}) ===`);
+            console.log(`Weekly surveys: ${surveyTotal}`);
+            console.log(`YTD surveys: ${ytdSurveyTotal}`);
+        }
+    }
     // For MONTH and YTD views, calculate cumulative total through current period
-    if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
+    else if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
         const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
         const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
         
@@ -4721,7 +4750,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         
         if (DEBUG) console.log(`${metadata.periodType} cumulative surveys: ${surveyTotal}`);
     }
-    // For WEEK views: ytdSurveyTotal stays 0 (not displayed, not calculated)
     
     if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
 
@@ -4886,9 +4914,20 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             else if (group === 'Sentiment') groupEmoji = '💬';
             else if (group === 'Reliability') groupEmoji = '⏰';
             
-            // Always show YTD count for survey metrics
-            const ytdDisplay = ytdSurveyTotal > 0 ? ` | ${ytdSurveyTotal} YTD` : '';
-            const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} ${periodLabel.toLowerCase()}${ytdDisplay})` : `${groupEmoji} ${group}`;
+            // Always show weekly and YTD counts for survey metrics (independently)
+            let groupLabel;
+            if (group === 'Survey') {
+                // Format depends on period type
+                if (metadata.periodType === 'week') {
+                    // Week view: "Survey (X this week | Y YTD)"
+                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this week | ${ytdSurveyTotal} YTD)`;
+                } else {
+                    // Month/YTD view: "Survey (X this period | Y YTD)"
+                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)`;
+                }
+            } else {
+                groupLabel = `${groupEmoji} ${group}`;
+            }
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
             rowIdx = 0;
