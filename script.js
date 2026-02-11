@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.06'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.07'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1124,9 +1124,14 @@ function parsePastedData(pastedText, startDate, endDate) {
             return (value === null || value === undefined) ? '' : value;
         };
         
-        // Parse critical numeric fields with validation (using column positions)
-        const surveyTotalRaw = getCell(19); // OE Survey Total at position 19
-        const totalCallsRaw = getCell(1);   // TotalCallsAnswered at position 1
+        // Parse critical numeric fields with validation
+        // Find column index by header name for robustness
+        const headers = lines[0].split('\t');
+        const surveyTotalColIndex = headers.findIndex(h => h.toLowerCase().includes('survey'));
+        const totalCallsColIndex = headers.findIndex(h => h.toLowerCase().includes('totalcalls') || h.toLowerCase().includes('answered'));
+        
+        const surveyTotalRaw = surveyTotalColIndex >= 0 ? getCell(surveyTotalColIndex) : '';
+        const totalCallsRaw = totalCallsColIndex >= 0 ? getCell(totalCallsColIndex) : getCell(1);
         
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
         const parsedTotalCalls = parseInt(totalCallsRaw, 10);
@@ -4738,9 +4743,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         for (const wk in weeklyData) {
             const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
             if (weekEmp && weekEmp.surveyTotal) {
-                ytdSurveyTotal += parseInt(weekEmp.surveyTotal, 10);
+                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
+                if (DEBUG) console.log(`${current.name} week ${wk}: surveyTotal = ${weekSurvey}`);
+                ytdSurveyTotal += weekSurvey;
             }
         }
+        if (DEBUG) console.log(`${current.name} YTD total surveys: ${ytdSurveyTotal}`);
     }
 
     
