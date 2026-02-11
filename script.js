@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.13'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.14'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4762,18 +4762,29 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // When displaying YTD, sum from all weekly data
+    // When displaying YTD, sum from all weekly data IN THE SAME CALENDAR YEAR
     // When displaying a week, just use current week's surveyTotal
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
-    // Always calculate YTD total by summing from weekly data (never trust cached ytdData value)
+    // Get the year from current period to only sum weeks in same year
+    const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
+    const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
+    
+    // Calculate YTD total by summing from weekly data IN THE SAME YEAR (never trust cached ytdData value)
     for (const wk in weeklyData) {
-        const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
-        if (weekEmp && weekEmp.surveyTotal) {
-            const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-            if (DEBUG) console.log(`${current.name} week ${wk}: surveyTotal = ${weekSurvey}`);
-            ytdSurveyTotal += weekSurvey;
+        const weekMeta = weeklyData[wk]?.metadata || {};
+        const weekEndDate = weekMeta.endDate || wk.split('|')[1] || ''; // Get end date or try parsing key
+        const weekYear = weekEndDate.substring(0, 4); // Extract YYYY
+        
+        // Only sum weeks from the same calendar year
+        if (weekYear === currentYear) {
+            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
+            if (weekEmp && weekEmp.surveyTotal) {
+                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
+                if (DEBUG) console.log(`${current.name} week ${wk}: surveyTotal = ${weekSurvey}`);
+                ytdSurveyTotal += weekSurvey;
+            }
         }
     }
     
