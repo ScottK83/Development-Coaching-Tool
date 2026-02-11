@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.55'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.56'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2829,18 +2829,19 @@ function initializeEventHandlers() {
         }
         
         // Show issues found
-        let html = `<strong style="color: #ff9800;">⚠️ Found ${issues.length} suspicious survey total(s):</strong><br><br>`;
+        let html = `<strong style="color: #ff9800;">⚠️ Found ${issues.length} corrupted survey value(s):</strong><br><br>`;
         html += '<div style="max-height: 300px; overflow-y: auto; margin: 10px 0;">';
         issues.forEach(issue => {
             html += `<div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 4px;">` +
                     `📅 <strong>${issue.weekLabel}</strong><br>` +
                     `👤 ${issue.employeeName}: Survey Total = <span style="color: #dc3545; font-weight: bold;">${issue.currentValue}</span><br>` +
-                    `<span style="font-size: 0.85em; color: #666;">(Unusually high - likely a percentage/score instead of count)</span>` +
+                    `<span style="font-size: 0.85em; color: #666;\">(Likely a percentage/score instead of actual survey count)</span>` +
                     `</div>`;
         });
         html += '</div>';
+        html += `<p style="color: #856404; margin: 10px 0;"><strong>These weeks will be deleted so you can re-upload with correct data.</strong></p>`;
         html += `<button type="button" id="fixSurveyDataBtn" class="btn-secondary" style="background: #ff9800; color: white; margin-top: 10px;">` +
-                `🛠️ Fix All (Set to 0)</button> `;
+                `🗑️ Delete Affected Weeks & Re-upload</button> `;
         html += `<button type="button" id="cancelCleanupBtn" class="btn-secondary" style="background: #6c757d; color: white; margin-top: 10px;">` +
                 `Cancel</button>`;
         
@@ -2851,12 +2852,13 @@ function initializeEventHandlers() {
         
         // Add fix button handler
         document.getElementById('fixSurveyDataBtn')?.addEventListener('click', () => {
-            if (confirm(`This will set ${issues.length} suspicious survey total(s) to 0.\n\nYou can re-upload the correct data for these weeks later.\n\nContinue?`)) {
+            const weeksSet = new Set(issues.map(i => i.weekKey));
+            if (confirm(`This will DELETE ${weeksSet.size} week(s) with corrupted survey data:\n\n${Array.from(weeksSet).map(wk => issues.find(i => i.weekKey === wk).weekLabel).join('\\n')}\n\nYou can re-upload these weeks with correct data.\n\nContinue?`)) {
                 fixSurveyDataIssues(issues);
                 resultsDiv.style.background = '#d4edda';
                 resultsDiv.style.border = '2px solid #28a745';
-                resultsDiv.innerHTML = `<strong style="color: #28a745;">✅ Fixed ${issues.length} issue(s)!</strong><br>` +
-                                       `Survey totals have been reset to 0. You can now re-upload the correct data for those weeks.`;
+                resultsDiv.innerHTML = `<strong style="color: #28a745;">✅ Deleted corrupted week(s)!</strong><br>` +
+                                       `You can now re-upload the correct data for those weeks.`;
             }
         });
         
@@ -2901,14 +2903,26 @@ function scanSurveyDataIssues() {
     return issues;
 }
 
-// Fix survey data issues
+// Fix survey data issues by deleting corrupted weeks
 function fixSurveyDataIssues(issues) {
+    // Collect unique week keys to delete
+    const weeksToDelete = new Set();
     issues.forEach(issue => {
-        issue.employee.surveyTotal = 0;
+        weeksToDelete.add(issue.weekKey);
+    });
+    
+    // Delete the weeks
+    weeksToDelete.forEach(weekKey => {
+        delete weeklyData[weekKey];
+        delete myTeamMembers[weekKey];
     });
     
     saveWeeklyData();
-    showToast('✅ Survey data cleaned up successfully');
+    saveTeamMembers();
+    populateDeleteWeekDropdown();
+    populateTeamMemberSelector();
+    
+    showToast(`✅ Deleted ${weeksToDelete.size} week(s) with corrupted data. Re-upload with correct survey counts.`);
 }
 
 // ============================================
