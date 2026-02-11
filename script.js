@@ -35,8 +35,8 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.08'; // Version: YYYY.MM.DD.NN
-const DEBUG = false; // Set to true to enable console logging
+const APP_VERSION = '2026.02.11.09'; // Version: YYYY.MM.DD.NN
+const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 if (!DEBUG) {
@@ -1093,6 +1093,19 @@ function parsePastedData(pastedText, startDate, endDate) {
         surveyTotal: findColumnIndex(['survey total', 'oe survey'])
     };
     
+    // DEBUG: Log column mapping
+    if (DEBUG) {
+        console.log('====== PASTED DATA DEBUG ======');
+        console.log('Raw headers:', headerLine);
+        console.log('Lowercased headers array:', headers);
+        console.log('Column indices detected:');
+        for (const [key, index] of Object.entries(colMap)) {
+            const headerName = index >= 0 ? headers[index] : 'NOT FOUND';
+            console.log(`  ${key}: index=${index}, header="${headerName}"`);
+        }
+        console.log('================================');
+    }
+    
     // Helper to safely get cell value
     const getCell = (cells, colIndex) => {
         if (colIndex < 0) return '';
@@ -1145,6 +1158,7 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
+        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}`);
         let totalCalls = parsedTotalCalls;
         
         const employeeData = {
@@ -1171,7 +1185,13 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         // Data integrity check: surveyTotal cannot exceed totalCalls
         if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
-            console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). Survey metrics may be inaccurate.`);
+            console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). This suggests the wrong column was detected for survey data.`);
+            if (DEBUG) {
+                console.log(`  Raw data for this employee:`, cells);
+                console.log(`  totalCalls col ${colMap.totalCalls}: "${getCell(cells, colMap.totalCalls)}"`);
+                console.log(`  surveyTotal col ${colMap.surveyTotal}: "${getCell(cells, colMap.surveyTotal)}"`);
+                console.log(`  aht col ${colMap.aht}: "${getCell(cells, colMap.aht)}"`);
+            }
         }
         
         if (i <= 3) {
