@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.45'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.46'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4549,18 +4549,10 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const targetDisplay = formatMetricDisplay(metric.key, target);
     ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
     
-    // If no surveys, show "N/A - No Surveys" for the value and skip other columns
-    if (noSurveys) {
-        ctx.fillStyle = '#999999';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('N/A - No Surveys', x + 230, y + 24);
-        return;
-    }
-    
-    // Associate value - always display the metric value
-    ctx.fillStyle = '#333333';
-    ctx.font = 'bold 14px Arial';
-    const formattedValue = formatMetricValue(metric.key, associateValue);
+    // Associate value - show N/A if no surveys, otherwise display the metric value
+    ctx.fillStyle = noSurveys ? '#999999' : '#333333';
+    ctx.font = noSurveys ? 'bold 14px Arial' : 'bold 14px Arial';
+    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
     ctx.fillText(formattedValue, x + 230, y + 24);
     
     // Center average - use formatMetricValue
@@ -4865,9 +4857,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     
     metricOrder.forEach(({ key, group }) => {
         if (metrics[key] === undefined) return;
-        
-        // Skip survey metrics if no surveys exist
-        if (!hasSurveys && SURVEY_METRICS.includes(key)) return;
         
         const metric = METRICS_REGISTRY[key];
         if (!metric) return;
