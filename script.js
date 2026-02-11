@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.05'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.06'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4728,10 +4728,21 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
     // Extract survey total for survey metrics
     const surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
-    const ytdSurveyTotal = ytdEmployee?.surveyTotal ? parseInt(ytdEmployee.surveyTotal, 10) : 0;
+    
+    // Calculate YTD survey total: either from ytdData or by summing all weeks
+    let ytdSurveyTotal = 0;
+    if (ytdEmployee?.surveyTotal) {
+        ytdSurveyTotal = parseInt(ytdEmployee.surveyTotal, 10);
+    } else {
+        // Sum all weekly survey totals for this employee across all periods
+        for (const wk in weeklyData) {
+            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
+            if (weekEmp && weekEmp.surveyTotal) {
+                ytdSurveyTotal += parseInt(weekEmp.surveyTotal, 10);
+            }
+        }
+    }
 
-    
-    
     
     
     // SUMMARY STATISTICS (used by both canvas and HTML)
