@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.10'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.11'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4734,6 +4734,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         showToast('ℹ️ Employee data is missing', 5000);
         return;
     }
+    
+    // Extract metadata early (needed for survey total calculation)
+    const metadata = period?.metadata || {};
 
     // SINGLE LOAD - Use for all calculations
     const metricOrder = getMetricOrder();
@@ -4759,11 +4762,11 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    const surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
-    
-    // Calculate YTD survey total: ALWAYS sum from weekly data, never trust cached ytdData.surveyTotal
-    // (cached value can be wrong if column detection was incorrect during paste)
+    // When displaying YTD, NEVER use current.surveyTotal (from cached ytdData which may be wrong)
+    // Always recalculate from weekly data
+    let surveyTotal = 0;
     let ytdSurveyTotal = 0;
+    
     for (const wk in weeklyData) {
         const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
         if (weekEmp && weekEmp.surveyTotal) {
@@ -4772,7 +4775,15 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             ytdSurveyTotal += weekSurvey;
         }
     }
-    if (DEBUG) console.log(`${current.name} YTD total surveys (recalculated): ${ytdSurveyTotal}`);
+    
+    // For current period, use surveyTotal from current object if NOT YTD, otherwise use ytdSurveyTotal
+    if (metadata.periodType !== 'ytd') {
+        surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
+    } else {
+        surveyTotal = ytdSurveyTotal; // When viewing YTD, current period = YTD total
+    }
+    
+    if (DEBUG) console.log(`${current.name} survey display - surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
 
     
     
@@ -4808,7 +4819,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const totalMetrics = Object.keys(metrics).length;
     const successRate = Math.round(meetingGoals / totalMetrics * 100);
     const improvedText = previous ? improved.toString() : 'N/A';
-    const metadata = period.metadata || {};
+    // metadata already extracted at function start
     const periodTypeText = metadata.periodType === 'week' ? 'week' : metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
     const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
 
