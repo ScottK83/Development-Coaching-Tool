@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.47'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.48'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4630,22 +4630,20 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         ctx.fillText('N/A', x + 570, y + 24);
     }
     
-    // YTD value (only for month/ytd views, not for week views) - ALWAYS SHOW EVEN IF NO SURVEYS
-    if (periodType !== 'week') {
-        let formattedYtd = '';
-        const ytdValueNum = parseFloat(ytdValue);
-        const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-        // Only show N/A if it's a survey metric AND there's no data anywhere (no current surveys AND no YTD surveys)
-        const noDataAnywhere = isSurveyMetric && surveyTotal === 0 && ytdSurveyTotal === 0;
-        if (ytdHasValue && !noDataAnywhere) {
-            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
-        } else if (noDataAnywhere) {
-            formattedYtd = 'N/A';
-        }
-        ctx.fillStyle = '#333333';
-        ctx.font = '14px Arial';
-        ctx.fillText(formattedYtd, x + 720, y + 24);
+    // YTD value - always render for all view types
+    let formattedYtd = '';
+    const ytdValueNum = parseFloat(ytdValue);
+    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
+    // Only show N/A if it's a survey metric AND there's no data anywhere (no current surveys AND no YTD surveys)
+    const noDataAnywhere = isSurveyMetric && surveyTotal === 0 && ytdSurveyTotal === 0;
+    if (ytdHasValue && !noDataAnywhere) {
+        formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+    } else if (noDataAnywhere) {
+        formattedYtd = 'N/A';
     }
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.fillText(formattedYtd, x + 720, y + 24);
 }
 
 function createTrendEmailImage(empName, weekKey, period, current, previous, onClipboardReady) {
@@ -4845,10 +4843,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     ctx.fillText('Center Avg', 330, y + 28);
     ctx.fillText('vs. Center Avg', 450, y + 28);
     ctx.fillText(`Change vs last ${periodLabel}`, 570, y + 28);
-    // Only show YTD column for month/ytd views, not for week views
-    if (metadata.periodType !== 'week') {
-        ctx.fillText('YTD', 720, y + 28);
-    }
+    ctx.fillText('YTD', 720, y + 28);
     
     y += 45;
 
@@ -4891,8 +4886,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             else if (group === 'Sentiment') groupEmoji = '💬';
             else if (group === 'Reliability') groupEmoji = '⏰';
             
-            // For weekly summaries, omit the YTD column. For month/ytd, show it.
-            const ytdDisplay = metadata.periodType === 'week' ? '' : ` | ${ytdSurveyTotal} YTD`;
+            // Always show YTD count for survey metrics
+            const ytdDisplay = ytdSurveyTotal > 0 ? ` | ${ytdSurveyTotal} YTD` : '';
             const groupLabel = group === 'Survey' ? `${groupEmoji} ${group} (${surveyTotal} ${periodLabel.toLowerCase()}${ytdDisplay})` : `${groupEmoji} ${group}`;
             ctx.fillText(groupLabel, 50, y + 26);
             y += 45;
