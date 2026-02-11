@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.28'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.29'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1108,6 +1108,13 @@ function parsePastedData(pastedText, startDate, endDate) {
         reliability: findColumnIndex(['reliability', 'reliability hours'])
     };
     
+    // DEBUG: Log headers and column mapping
+    if (DEBUG) {
+        console.log('=== HEADERS ===');
+        headers.forEach((h, idx) => console.log(`[${idx}] ${h}`));
+        console.log('=== COLUMN MAPPING ===');
+        console.log(`surveyTotal index: ${colMap.surveyTotal}, header: "${headers[colMap.surveyTotal]}"`);
+    }
     // DEBUG: Log column mapping
     if (DEBUG) {
         console.log('====== PASTED DATA DEBUG ======');
