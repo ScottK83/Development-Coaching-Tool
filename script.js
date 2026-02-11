@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.35'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.36'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1135,14 +1135,15 @@ function parsePastedData(pastedText, startDate, endDate) {
     
     // DEBUG: Log headers and column mapping
     if (DEBUG) {
+        console.error('=== COLUMN MAPPING ===');
+        console.error(`sentiment: ${colMap.sentiment}, header: "${headers[colMap.sentiment]}"`);
+        console.error(`emotions: ${colMap.emotions}, header: "${headers[colMap.emotions]}"`);
+        console.error(`negativeWord: ${colMap.negativeWord}, header: "${headers[colMap.negativeWord]}"`);
+        console.error(`positiveWord: ${colMap.positiveWord}, header: "${headers[colMap.positiveWord]}"`);
         console.log('=== HEADERS ===');
         headers.forEach((h, idx) => console.log(`[${idx}] ${h}`));
-        console.log('=== COLUMN MAPPING ===');
+        console.log('=== COLUMN MAPPING (details) ===');
         console.log(`surveyTotal index: ${colMap.surveyTotal}, header: "${headers[colMap.surveyTotal]}"`);
-        console.log(`sentiment: ${colMap.sentiment}, header: "${headers[colMap.sentiment]}"`);
-        console.log(`emotions: ${colMap.emotions}, header: "${headers[colMap.emotions]}"`);
-        console.log(`negativeWord: ${colMap.negativeWord}, header: "${headers[colMap.negativeWord]}"`);
-        console.log(`positiveWord: ${colMap.positiveWord}, header: "${headers[colMap.positiveWord]}"`);
     }
     // DEBUG: Log column mapping
     if (DEBUG) {
