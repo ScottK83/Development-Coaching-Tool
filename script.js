@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.38'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.39'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5443,8 +5443,15 @@ function getYtdPeriodForWeekKey(weekKey) {
     const endDate = parts[1] || '';
     if (!endDate) return null;
     const matchingKey = Object.keys(ytdData).find(key => key.split('|')[1] === endDate);
-    return matchingKey ? ytdData[matchingKey] : null;
+    
+    // If no YTD data found, fall back to current week's data (better than showing nothing)
+    if (!matchingKey) {
+        return weeklyData[weekKey] || null;
+    }
+    
+    return ytdData[matchingKey];
 }
+
 
 function isMetricMeetingTarget(metric, value, target) {
     // PHASE 3 - Use METRICS_REGISTRY target type
