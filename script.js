@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.51'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.52'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4546,22 +4546,26 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     // Metric name with target
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
+    ctx.textAlign = 'left';
     const targetDisplay = formatMetricDisplay(metric.key, target);
     ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
     
     // Associate value - show N/A if no surveys, otherwise display the metric value
     ctx.fillStyle = noSurveys ? '#999999' : '#333333';
     ctx.font = noSurveys ? 'bold 14px Arial' : 'bold 14px Arial';
+    ctx.textAlign = 'center';
     const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
-    ctx.fillText(formattedValue, x + 230, y + 24);
+    ctx.fillText(formattedValue, x + 240, y + 24);
     
-    // If no surveys, skip the other calculations but continue to YTD
+    // Center average - ALWAYS show if available (independent of weekly surveys)
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
+    ctx.fillText(formattedCenter, x + 340, y + 24);
+    
+    // VS CENTER and TRENDING - only calculate if employee has survey data this period
     if (!noSurveys) {
-        // Center average - use formatMetricValue
-        ctx.font = '14px Arial';
-        const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-        ctx.fillText(formattedCenter, x + 330, y + 24);
-        
         // VS CENTER CELL - show raw difference
         let vsCenterColor;
         let vsCenterText;
@@ -4586,7 +4590,8 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         
         ctx.fillStyle = vsCenterColor;
         ctx.font = 'bold 14px Arial';
-        ctx.fillText(vsCenterText, x + 450, y + 24);
+        ctx.textAlign = 'center';
+        ctx.fillText(vsCenterText, x + 460, y + 24);
         
         // Trending (if previous data exists) - show emoji + change value
         let trendingColor = '#666666';
@@ -4620,13 +4625,15 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         
         ctx.fillStyle = trendingColor;
         ctx.font = '13px Arial'; // Smaller font to fit change description
+        ctx.textAlign = 'left';
         ctx.fillText(trendingText, x + 570, y + 24);
     } else {
-        // If no surveys, show N/A for center and trend columns
+        // If no surveys, show N/A for vs center and trend (but center avg already shown above)
         ctx.fillStyle = '#999999';
         ctx.font = '14px Arial';
-        ctx.fillText('N/A', x + 330, y + 24);
-        ctx.fillText('N/A', x + 450, y + 24);
+        ctx.textAlign = 'center';
+        ctx.fillText('N/A', x + 460, y + 24);
+        ctx.textAlign = 'left';
         ctx.fillText('N/A', x + 570, y + 24);
     }
     
@@ -4659,7 +4666,9 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
-    ctx.fillText(formattedYtd, x + 720, y + 24);
+    ctx.textAlign = 'center';
+    ctx.fillText(formattedYtd, x + 730, y + 24);
+    ctx.textAlign = 'left'; // Reset to default
 }
 
 function createTrendEmailImage(empName, weekKey, period, current, previous, onClipboardReady) {
@@ -4856,12 +4865,17 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     ctx.fillRect(40, y, 820, 45);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
     ctx.fillText('Metric', 50, y + 28);
-    ctx.fillText('Your Metric', 230, y + 28);
-    ctx.fillText('Center Avg', 330, y + 28);
-    ctx.fillText('vs. Center Avg', 450, y + 28);
+    ctx.textAlign = 'center';
+    ctx.fillText('Your Metric', 280, y + 28);
+    ctx.fillText('Center Avg', 380, y + 28);
+    ctx.fillText('vs. Center Avg', 500, y + 28);
+    ctx.textAlign = 'left';
     ctx.fillText(`Change vs last ${periodLabel}`, 570, y + 28);
-    ctx.fillText('YTD', 720, y + 28);
+    ctx.textAlign = 'center';
+    ctx.fillText('YTD', 770, y + 28);
+    ctx.textAlign = 'left';
     
     y += 45;
 
