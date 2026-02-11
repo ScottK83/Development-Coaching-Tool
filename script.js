@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.46'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.47'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4555,48 +4555,50 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
     ctx.fillText(formattedValue, x + 230, y + 24);
     
-    // Center average - use formatMetricValue
-    ctx.font = '14px Arial';
-    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 330, y + 24);
-    
-    // VS CENTER CELL - show raw difference
-    let vsCenterColor;
-    let vsCenterText;
-    
-    if (!centerExists) {
-        vsCenterColor = '#999999'; // Gray - no data
-        vsCenterText = 'N/A';
-    } else {
-        const difference = associateValue - centerAvg;
+    // If no surveys, skip the other calculations but continue to YTD
+    if (!noSurveys) {
+        // Center average - use formatMetricValue
+        ctx.font = '14px Arial';
+        const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
+        ctx.fillText(formattedCenter, x + 330, y + 24);
         
-        // Always show raw difference
-        vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
-        if (difference > 0) vsCenterText = `+${vsCenterText}`;
-        else if (difference < 0) vsCenterText = `-${vsCenterText}`;
+        // VS CENTER CELL - show raw difference
+        let vsCenterColor;
+        let vsCenterText;
         
-        if (isAboveCenter) {
-            vsCenterColor = '#0056B3'; // Blue - above center
+        if (!centerExists) {
+            vsCenterColor = '#999999'; // Gray - no data
+            vsCenterText = 'N/A';
         } else {
-            vsCenterColor = '#DAA520'; // Dark yellow - below center
+            const difference = associateValue - centerAvg;
+            
+            // Always show raw difference
+            vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
+            if (difference > 0) vsCenterText = `+${vsCenterText}`;
+            else if (difference < 0) vsCenterText = `-${vsCenterText}`;
+            
+            if (isAboveCenter) {
+                vsCenterColor = '#0056B3'; // Blue - above center
+            } else {
+                vsCenterColor = '#DAA520'; // Dark yellow - below center
+            }
         }
-    }
-    
-    ctx.fillStyle = vsCenterColor;
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText(vsCenterText, x + 450, y + 24);
-    
-    // Trending (if previous data exists) - show emoji + change value
-    let trendingColor = '#666666';
-    let trendingText = 'N/A';
-    let trendingEmoji = '';
-    
-    // Only show trending if previous value exists AND is a valid number
-    const prevNum = previousValue !== undefined && previousValue !== null ? parseFloat(previousValue) : null;
-    const prevIsValid = prevNum !== null && !isNaN(prevNum);
-    
-    if (prevIsValid) {
-        const trendDiff = associateValue - prevNum;
+        
+        ctx.fillStyle = vsCenterColor;
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(vsCenterText, x + 450, y + 24);
+        
+        // Trending (if previous data exists) - show emoji + change value
+        let trendingColor = '#666666';
+        let trendingText = 'N/A';
+        let trendingEmoji = '';
+        
+        // Only show trending if previous value exists AND is a valid number
+        const prevNum = previousValue !== undefined && previousValue !== null ? parseFloat(previousValue) : null;
+        const prevIsValid = prevNum !== null && !isNaN(prevNum);
+        
+        if (prevIsValid) {
+            const trendDiff = associateValue - prevNum;
         const absDiff = Math.abs(trendDiff);
         
         // Determine improvement based on metric type
@@ -4614,13 +4616,21 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
             trendingColor = isImprovement ? '#28a745' : '#dc3545';
             trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
         }
+        }
+        
+        ctx.fillStyle = trendingColor;
+        ctx.font = '13px Arial'; // Smaller font to fit change description
+        ctx.fillText(trendingText, x + 570, y + 24);
+    } else {
+        // If no surveys, show N/A for center and trend columns
+        ctx.fillStyle = '#999999';
+        ctx.font = '14px Arial';
+        ctx.fillText('N/A', x + 330, y + 24);
+        ctx.fillText('N/A', x + 450, y + 24);
+        ctx.fillText('N/A', x + 570, y + 24);
     }
     
-    ctx.fillStyle = trendingColor;
-    ctx.font = '13px Arial'; // Smaller font to fit change description
-    ctx.fillText(trendingText, x + 570, y + 24);
-    
-    // YTD value (only for month/ytd views, not for week views)
+    // YTD value (only for month/ytd views, not for week views) - ALWAYS SHOW EVEN IF NO SURVEYS
     if (periodType !== 'week') {
         let formattedYtd = '';
         const ytdValueNum = parseFloat(ytdValue);
