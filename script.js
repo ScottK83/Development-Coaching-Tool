@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.07'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.08'; // Version: YYYY.MM.DD.NN
 const DEBUG = false; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1055,9 +1055,6 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('Data appears incomplete. Please paste header row and data rows.');
     }
     
-    
-    // Skip the header line - we don't need to parse it since we use positional logic
-    // We just validate that the first row looks like a header
     const headerLine = lines[0];
     const hasNameHeader = headerLine.toLowerCase().includes('name');
     
@@ -1065,6 +1062,43 @@ function parsePastedData(pastedText, startDate, endDate) {
         throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
     }
     
+    // Build header index map for flexible column detection
+    const headers = headerLine.split('\t').map(h => h.toLowerCase());
+    
+    const findColumnIndex = (keywords) => {
+        if (Array.isArray(keywords)) {
+            return headers.findIndex(h => keywords.some(k => h.includes(k.toLowerCase())));
+        }
+        return headers.findIndex(h => h.includes(keywords.toLowerCase()));
+    };
+    
+    // Map all column indices by searching headers
+    const colMap = {
+        name: findColumnIndex('name'),
+        totalCalls: findColumnIndex(['totalcalls', 'answered']),
+        transfers: findColumnIndex(['transfers', 'transfer %']),
+        transfersCount: findColumnIndex(['number of transfers']),
+        aht: findColumnIndex(['aht', 'average handle']),
+        talkTime: findColumnIndex(['talk']),
+        holdTime: findColumnIndex(['hold']),
+        acw: findColumnIndex(['acw', 'after call']),
+        adherence: findColumnIndex(['adherence', 'schedule']),
+        emotions: findColumnIndex(['managing emotions', 'emotion']),
+        negativeWord: findColumnIndex(['avoid negative', 'negative word']),
+        positiveWord: findColumnIndex(['positive word']),
+        sentiment: findColumnIndex(['overall sentiment']),
+        fcr: findColumnIndex(['fcr', 'first call resolution']),
+        cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat']),
+        overallExperience: findColumnIndex(['overall experience']),
+        surveyTotal: findColumnIndex(['survey total', 'oe survey'])
+    };
+    
+    // Helper to safely get cell value
+    const getCell = (cells, colIndex) => {
+        if (colIndex < 0) return '';
+        const value = cells[colIndex];
+        return (value === null || value === undefined) ? '' : value;
+    };
     
     // Parse employee data
     const employees = [];
@@ -1072,40 +1106,25 @@ function parsePastedData(pastedText, startDate, endDate) {
     for (let i = 1; i < lines.length; i++) {
         const rawRow = lines[i];
         
-        if (!rawRow.trim()) continue; // Skip empty lines
+        if (!rawRow.trim()) continue;
         
         let cells;
         try {
-            // Use the smart PowerBI row parser
             const parsed = parsePowerBIRow(rawRow);
             cells = parsed;
         } catch (error) {
-            
             continue;
         }
         
-        // Validate we have 22 cells
-        if (cells.length !== 22) {
-            if (cells.length < 22) {
-                while (cells.length < 22) {
-                    cells.push(null);
-                }
-            } else {
-                cells = cells.slice(0, 22);
-            }
-        }
-        
-        // Extract name parts for display
-        const nameField = cells[0];
+        // Extract name
+        const nameField = getCell(cells, colMap.name);
         let firstName = '', lastName = '';
         
-        // Try parsing "LastName, FirstName" format
         const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
         if (lastFirstMatch) {
             lastName = lastFirstMatch[1].trim();
             firstName = lastFirstMatch[2].trim();
         } else {
-            // Fallback: "FirstName LastName" format
             const parts = nameField.trim().split(/\s+/);
             if (parts.length >= 2) {
                 firstName = parts[0];
@@ -1117,47 +1136,35 @@ function parsePastedData(pastedText, startDate, endDate) {
         
         const displayName = `${firstName} ${lastName}`.trim();
         
-        
-        // Direct positional access using COLUMN_MAPPING
-        const getCell = (colIndex) => {
-            const value = cells[colIndex];
-            return (value === null || value === undefined) ? '' : value;
-        };
-        
-        // Parse critical numeric fields with validation
-        // Find column index by header name for robustness
-        const headers = lines[0].split('\t');
-        const surveyTotalColIndex = headers.findIndex(h => h.toLowerCase().includes('survey'));
-        const totalCallsColIndex = headers.findIndex(h => h.toLowerCase().includes('totalcalls') || h.toLowerCase().includes('answered'));
-        
-        const surveyTotalRaw = surveyTotalColIndex >= 0 ? getCell(surveyTotalColIndex) : '';
-        const totalCallsRaw = totalCallsColIndex >= 0 ? getCell(totalCallsColIndex) : getCell(1);
-        
-        const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
+        // Parse all metrics using flexible column mapping
+        const totalCallsRaw = getCell(cells, colMap.totalCalls);
         const parsedTotalCalls = parseInt(totalCallsRaw, 10);
         if (!Number.isInteger(parsedTotalCalls)) {
-            continue; // skip rows without numeric total calls (absent employees)
+            continue;
         }
+        
+        const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
+        const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
         let totalCalls = parsedTotalCalls;
         
         const employeeData = {
             name: displayName,
             firstName: firstName,
-            scheduleAdherence: parsePercentage(getCell(METRICS_REGISTRY.scheduleAdherence.columnIndex)) || 0,
-            cxRepOverall: parseSurveyPercentage(getCell(METRICS_REGISTRY.cxRepOverall.columnIndex)),
-            fcr: parseSurveyPercentage(getCell(METRICS_REGISTRY.fcr.columnIndex)),
-            overallExperience: parseSurveyPercentage(getCell(METRICS_REGISTRY.overallExperience.columnIndex)),
-            transfers: parsePercentage(getCell(METRICS_REGISTRY.transfers.columnIndex)) || 0,
-            transfersCount: parseInt(getCell(METRICS_REGISTRY.transfersCount.columnIndex)) || 0,
-            aht: parseSeconds(getCell(METRICS_REGISTRY.aht.columnIndex)) || '',
-            talkTime: parseSeconds(getCell(5)) || '',
-            acw: parseSeconds(getCell(METRICS_REGISTRY.acw.columnIndex)),
-            holdTime: parseSeconds(getCell(METRICS_REGISTRY.holdTime.columnIndex)),
-            reliability: parseHours(getCell(METRICS_REGISTRY.reliability.columnIndex)) || 0,
-            overallSentiment: parsePercentage(getCell(METRICS_REGISTRY.overallSentiment.columnIndex)) || '',
-            positiveWord: parsePercentage(getCell(METRICS_REGISTRY.positiveWord.columnIndex)) || '',
-            negativeWord: parsePercentage(getCell(METRICS_REGISTRY.negativeWord.columnIndex)) || '',
-            managingEmotions: parsePercentage(getCell(METRICS_REGISTRY.managingEmotions.columnIndex)) || '',
+            scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
+            cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
+            fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
+            overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
+            transfers: parsePercentage(getCell(cells, colMap.transfers)) || 0,
+            transfersCount: parseInt(getCell(cells, colMap.transfersCount)) || 0,
+            aht: parseSeconds(getCell(cells, colMap.aht)) || '',
+            talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
+            acw: parseSeconds(getCell(cells, colMap.acw)),
+            holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
+            reliability: parseHours(getCell(cells, colMap.reliability)) || 0,
+            overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
+            positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
+            negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
+            managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
             surveyTotal: surveyTotal,
             totalCalls: totalCalls
         };
