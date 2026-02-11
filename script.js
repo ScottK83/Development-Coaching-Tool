@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.11.30'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.11.31'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1079,10 +1079,15 @@ function parsePastedData(pastedText, startDate, endDate) {
             // Exact match
             if (hLower === kLower) return true;
             
-            // Word-boundary match: keyword must appear as complete words
-            // e.g., "oe survey" matches "OE Survey" but not "survey total"
-            const wordBoundaryRegex = new RegExp(`(^|\\s|\\-|_)${kLower.replace(/\s+/g, '\\s')}(\\s|\\-|_|$)`, 'i');
-            return wordBoundaryRegex.test(hLower);
+            // Normalize both header and keyword - replace spaces/hyphens/underscores with pipes for easier matching
+            const normalize = (str) => str.replace(/[\s\-_]+/g, '|');
+            const normalizedHeader = normalize(hLower);
+            const normalizedKeyword = normalize(kLower);
+            
+            // Check if normalized keyword appears as complete words in normalized header
+            // e.g., "oe|survey" matches "oe|survey|total" and "oe survey" matches "oe_survey_total"
+            // but "survey|total" does NOT match "totalin|officeshrink"
+            return normalizedHeader.includes(normalizedKeyword);
         };
         
         if (Array.isArray(keywords)) {
