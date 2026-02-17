@@ -76,3 +76,18 @@ Notes:
 - By default, only tracked file changes are committed.
 - To include new files too, use `-IncludeUntracked`.
 - Every run auto-bumps `APP_VERSION` in `script.js` using `YYYY.MM.DD.N` (N = push number for that day).
+
+## Git Hook Enforcement (Manual Pushes)
+
+To enforce version bumping on regular `git push` too, this repo includes a managed pre-push hook in `.githooks`.
+
+One-time setup:
+
+```powershell
+cd "c:\Users\Scott\Development-Coaching-Tool"
+git config core.hooksPath .githooks
+```
+
+Behavior:
+- On every `git push`, the hook updates `APP_VERSION` to `YYYY.MM.DD.N`.
+- It amends the latest commit automatically before push so the pushed commit carries the new version.
