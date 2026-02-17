@@ -77,6 +77,37 @@ Notes:
 - To include new files too, use `-IncludeUntracked`.
 - Every run auto-bumps `APP_VERSION` in `script.js` using `YYYY.MM.DD.N` (N = push number for that day).
 
+## Post-Deploy Smoke Test
+
+Use this checklist after each deploy:
+
+- [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md)
+
+It covers app load, upload flow, coaching generation, metric trends, backup/restore, and executive/dashboard sanity checks.
+
+## One-Command Rollback Deploy
+
+If you need to redeploy an older version quickly:
+
+PowerShell:
+
+```powershell
+cd "c:\Users\Scott\Development-Coaching-Tool"
+.\rollback-and-deploy.ps1 -Ref "backup-pre-cleanup-20260217-093927"
+```
+
+Batch launcher:
+
+```powershell
+cd "c:\Users\Scott\Development-Coaching-Tool"
+.\rollback-and-deploy.bat -Ref "backup-pre-cleanup-20260217-093927"
+```
+
+Notes:
+- `-Ref` accepts a tag, branch, or commit SHA.
+- The script creates a rollback branch from that ref and deploys it to Cloudflare.
+- Working tree must be clean before running rollback.
+
 ## Git Hook Enforcement (Manual Pushes)
 
 To enforce version bumping on regular `git push` too, this repo includes a managed pre-push hook in `.githooks`.
