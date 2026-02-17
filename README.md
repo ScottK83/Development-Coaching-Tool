@@ -75,3 +75,4 @@ Notes:
 - Default Cloudflare Pages project is `supervisor-dashboard`.
 - By default, only tracked file changes are committed.
 - To include new files too, use `-IncludeUntracked`.
+- Every run auto-bumps `APP_VERSION` in `script.js` using `YYYY.MM.DD.N` (N = push number for that day).
