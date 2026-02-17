@@ -3800,6 +3800,9 @@ function initializeMetricTrends() {
     // Show the metrics form immediately
     const avgMetricsForm = document.getElementById('avgMetricsForm');
     if (avgMetricsForm) avgMetricsForm.style.display = 'block';
+
+    // Show target hints on Call Center Averages metric inputs
+    renderCallCenterAverageTargets();
     
 
     
@@ -3816,6 +3819,83 @@ function initializeMetricTrends() {
     
     // Set up event listeners
     setupMetricTrendsListeners();
+}
+
+function renderCallCenterAverageTargets() {
+    const avgToMetricMap = {
+        avgAdherence: 'scheduleAdherence',
+        avgOverallExperience: 'overallExperience',
+        avgRepSatisfaction: 'cxRepOverall',
+        avgFCR: 'fcr',
+        avgTransfers: 'transfers',
+        avgSentiment: 'overallSentiment',
+        avgPositiveWord: 'positiveWord',
+        avgNegativeWord: 'negativeWord',
+        avgManagingEmotions: 'managingEmotions',
+        avgAHT: 'aht',
+        avgACW: 'acw',
+        avgHoldTime: 'holdTime',
+        avgReliability: 'reliability'
+    };
+
+    const formatTargetLabel = (metricKey) => {
+        const metric = METRICS_REGISTRY[metricKey];
+        if (!metric || !metric.target) return null;
+
+        const operator = metric.target.type === 'min' ? '≥' : '≤';
+        const unit = metric.unit === 'sec'
+            ? 's'
+            : metric.unit === 'hrs'
+                ? ' hrs'
+                : (metric.unit || '');
+
+        return `Target: ${operator}${metric.target.value}${unit}`;
+    };
+
+    const formatTargetSuffix = (metricKey) => {
+        const metric = METRICS_REGISTRY[metricKey];
+        if (!metric || !metric.target) return null;
+
+        const operator = metric.target.type === 'min' ? '≥' : '≤';
+        const unit = metric.unit === 'sec'
+            ? 's'
+            : metric.unit === 'hrs'
+                ? ' hrs'
+                : (metric.unit || '');
+
+        return `(${operator}${metric.target.value}${unit})`;
+    };
+
+    Object.entries(avgToMetricMap).forEach(([inputId, metricKey]) => {
+        const input = document.getElementById(inputId);
+        if (!input || !input.parentElement) return;
+
+        const hintId = `${inputId}TargetHint`;
+        let hint = document.getElementById(hintId);
+        const targetText = formatTargetLabel(metricKey);
+        const targetSuffix = formatTargetSuffix(metricKey);
+        const label = input.parentElement.querySelector('label');
+
+        if (label && targetSuffix) {
+            if (!label.dataset.baseLabel) {
+                label.dataset.baseLabel = label.textContent.replace(/\s*\(.*\)\s*:\s*$/, '').trim();
+            }
+            label.textContent = `${label.dataset.baseLabel} ${targetSuffix}:`;
+        }
+
+        if (!targetText) return;
+
+        if (!hint) {
+            hint = document.createElement('div');
+            hint.id = hintId;
+            hint.style.fontSize = '0.8em';
+            hint.style.color = '#666';
+            hint.style.marginTop = '4px';
+            input.insertAdjacentElement('afterend', hint);
+        }
+
+        hint.textContent = targetText;
+    });
 }
 
 function populateTrendPeriodDropdown() {
