@@ -52,3 +52,26 @@ Pop-Location
 ```
 
 The app loads `script.min.js` in `index.html` when present.
+
+## One-Command Publish (Git + Cloudflare)
+
+Use the included script to commit, push, and deploy in one step.
+
+PowerShell:
+
+```powershell
+cd "c:\Users\Scott\Development-Coaching-Tool"
+.\deploy-and-publish.ps1 -Message "your commit message"
+```
+
+Batch launcher:
+
+```powershell
+cd "c:\Users\Scott\Development-Coaching-Tool"
+.\deploy-and-publish.bat -Message "your commit message"
+```
+
+Notes:
+- Default Cloudflare Pages project is `supervisor-dashboard`.
+- By default, only tracked file changes are committed.
+- To include new files too, use `-IncludeUntracked`.

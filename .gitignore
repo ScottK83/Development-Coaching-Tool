@@ -20,3 +20,8 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+
+# Local deployment/debug artifacts
+.wrangler/
+*.local
+*.local.*
