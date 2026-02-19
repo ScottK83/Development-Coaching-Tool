@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.13'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.14'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2409,6 +2409,7 @@ async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
 
 async function fetchCloudSyncPayload({ token, gistId, repoConfig }) {
     if (repoConfig?.isConfigured) {
+        console.log('[fetchCloudSyncPayload] Using repo mode');
         const repoFile = await readCloudSyncRepoFile({
             token,
             owner: repoConfig.owner,
@@ -2428,6 +2429,7 @@ async function fetchCloudSyncPayload({ token, gistId, repoConfig }) {
         throw new Error('Gist ID is required to load.');
     }
 
+    console.log('[fetchCloudSyncPayload] Using gist mode. GistId:', gistId);
     const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
         method: 'GET',
         headers: {
@@ -2435,6 +2437,8 @@ async function fetchCloudSyncPayload({ token, gistId, repoConfig }) {
             'Authorization': `Bearer ${token}`
         }
     });
+
+    console.log('[fetchCloudSyncPayload] Gist fetch response:', response.status);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -2461,6 +2465,7 @@ async function fetchCloudSyncPayload({ token, gistId, repoConfig }) {
     }
 
     const payload = JSON.parse(content);
+    console.log('[fetchCloudSyncPayload] ✅ Successfully fetched gist payload');
     return { payload, source: 'gist' };
 }
 
@@ -2472,6 +2477,8 @@ async function syncCloudNowSmart() {
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
     const repoConfig = getCloudSyncRepoConfig();
+
+    console.log('[Cloud Sync Smart] Starting sync. RepoConfigured:', !!repoConfig.isConfigured, 'GistId:', gistId ? 'present' : 'missing');
 
     if (!token) {
         setCloudSyncStatus('GitHub token is required to sync.', 'error');
@@ -2489,16 +2496,22 @@ async function syncCloudNowSmart() {
         const localHasData = hasLocalManagedData();
         const lastSyncedAt = parseCloudPayloadTimestamp(settings.lastSyncedExportedAt);
 
+        console.log('[Cloud Sync Smart] LocalHasData:', localHasData, 'LastSyncedAt:', new Date(lastSyncedAt));
+
         let remote;
         try {
+            console.log('[Cloud Sync Smart] Attempting to fetch cloud payload...');
             remote = await fetchCloudSyncPayload({ token, gistId, repoConfig });
+            console.log('[Cloud Sync Smart] ✅ Fetched cloud payload. ExportedAt:', remote.payload?.exportedAt);
         } catch (error) {
+            console.error('[Cloud Sync Smart] ❌ Fetch failed:', error.message);
             const message = String(error?.message || '');
             const missingCloudTarget =
                 message.includes('No sync file found in configured repository path')
                 || message.includes('No sync file found in gist');
 
             if (missingCloudTarget) {
+                console.log('[Cloud Sync Smart] Cloud target missing. Uploading local data...');
                 setCloudSyncStatus('No cloud file found yet. Uploading local data now...', 'info');
                 await saveDataToCloudSync();
                 return;
@@ -2510,7 +2523,10 @@ async function syncCloudNowSmart() {
         const remoteExportedAt = parseCloudPayloadTimestamp(remote?.payload?.exportedAt);
         const shouldPull = remoteExportedAt > 0 && (lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000));
 
+        console.log('[Cloud Sync Smart] Decision: RemoteExportedAt:', new Date(remoteExportedAt), 'ShouldPull:', shouldPull);
+
         if (shouldPull) {
+            console.log('[Cloud Sync Smart] Pulling from cloud...');
             if (lastSyncedAt === 0 && localHasData) {
                 const proceed = confirm('First one-click sync on this browser will load cloud data and replace local data. Continue?');
                 if (!proceed) {
@@ -2547,9 +2563,10 @@ async function syncCloudNowSmart() {
         }
 
         setCloudSyncStatus('Sync complete: local copy is newer (or equal). Uploading...', 'info');
+        console.log('[Cloud Sync Smart] Pushing local data to cloud...');
         await saveDataToCloudSync();
     } catch (error) {
-        console.error('Smart sync failed:', error);
+        console.error('[Cloud Sync Smart] ❌ Error:', error);
         setCloudSyncStatus(`Sync failed: ${error.message}`, 'error');
         showToast('⚠️ Sync failed', 3000);
     }
