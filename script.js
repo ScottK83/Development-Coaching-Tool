@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.11'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.12'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1972,6 +1972,26 @@ function getCloudSyncRepoConfig() {
     };
 }
 
+function parseCloudPayloadTimestamp(value) {
+    const parsed = Date.parse(String(value || '').trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hasLocalManagedData() {
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (key === CLOUD_SYNC_SETTINGS_KEY || key === CLOUD_SYNC_SHARED_KEY) continue;
+        if (key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY) {
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined && raw !== '') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function isCloudSyncReadyForAutoSave() {
     const { token } = getCloudSyncCredentials();
     return !!token;
@@ -2368,6 +2388,154 @@ async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
     return data?.id || gistId;
 }
 
+async function fetchCloudSyncPayload({ token, gistId, repoConfig }) {
+    if (repoConfig?.isConfigured) {
+        const repoFile = await readCloudSyncRepoFile({
+            token,
+            owner: repoConfig.owner,
+            repo: repoConfig.repo,
+            branch: repoConfig.branch,
+            path: repoConfig.path
+        });
+
+        if (!repoFile?.payload) {
+            throw new Error('No sync file found in configured repository path.');
+        }
+
+        return { payload: repoFile.payload, source: 'repo' };
+    }
+
+    if (!gistId) {
+        throw new Error('Gist ID is required to load.');
+    }
+
+    const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
+    }
+
+    const gistData = await response.json();
+    const fileMeta = gistData?.files?.[CLOUD_SYNC_FILENAME]
+        || Object.values(gistData?.files || {})[0];
+
+    if (!fileMeta) {
+        throw new Error('No sync file found in gist.');
+    }
+
+    let content = fileMeta.content;
+    if (!content && fileMeta.raw_url) {
+        const rawResponse = await fetch(fileMeta.raw_url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!rawResponse.ok) {
+            throw new Error('Unable to download sync payload from gist raw URL.');
+        }
+        content = await rawResponse.text();
+    }
+
+    const payload = JSON.parse(content);
+    return { payload, source: 'gist' };
+}
+
+async function syncCloudNowSmart() {
+    const tokenInput = document.getElementById('cloudSyncToken');
+    const gistInput = document.getElementById('cloudSyncGistId');
+    if (!tokenInput || !gistInput) return;
+
+    const token = tokenInput.value.trim();
+    const gistId = gistInput.value.trim();
+    const repoConfig = getCloudSyncRepoConfig();
+
+    if (!token) {
+        setCloudSyncStatus('GitHub token is required to sync.', 'error');
+        return;
+    }
+    if (!repoConfig.isConfigured && !gistId) {
+        setCloudSyncStatus('Gist ID is required to sync.', 'error');
+        return;
+    }
+
+    setCloudSyncStatus('Syncing... checking cloud state.', 'info');
+
+    try {
+        const settings = loadCloudSyncSettings();
+        const localHasData = hasLocalManagedData();
+        const lastSyncedAt = parseCloudPayloadTimestamp(settings.lastSyncedExportedAt);
+
+        let remote;
+        try {
+            remote = await fetchCloudSyncPayload({ token, gistId, repoConfig });
+        } catch (error) {
+            const message = String(error?.message || '');
+            const missingCloudTarget =
+                message.includes('No sync file found in configured repository path')
+                || message.includes('No sync file found in gist');
+
+            if (missingCloudTarget) {
+                setCloudSyncStatus('No cloud file found yet. Uploading local data now...', 'info');
+                await saveDataToCloudSync();
+                return;
+            }
+
+            throw error;
+        }
+
+        const remoteExportedAt = parseCloudPayloadTimestamp(remote?.payload?.exportedAt);
+        const shouldPull = remoteExportedAt > 0 && (lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000));
+
+        if (shouldPull) {
+            if (lastSyncedAt === 0 && localHasData) {
+                const proceed = confirm('First one-click sync on this browser will load cloud data and replace local data. Continue?');
+                if (!proceed) {
+                    setCloudSyncStatus('Sync canceled.', 'warning');
+                    return;
+                }
+            }
+
+            applyCloudSyncPayload(remote.payload);
+
+            saveCloudSyncSettings({
+                ...settings,
+                githubToken: token,
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path,
+                lastSyncedExportedAt: remote.payload?.exportedAt || new Date().toISOString()
+            });
+            saveCloudSyncSharedInfo({
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+
+            setCloudSyncStatus(`Sync complete: downloaded latest ${remote.source} data. Reloading app...`, 'success');
+            updateCloudSyncModeBadge();
+            showToast('✅ Synced from cloud', 3000);
+            setTimeout(() => location.reload(), 700);
+            return;
+        }
+
+        setCloudSyncStatus('Sync complete: local copy is newer (or equal). Uploading...', 'info');
+        await saveDataToCloudSync();
+    } catch (error) {
+        console.error('Smart sync failed:', error);
+        setCloudSyncStatus(`Sync failed: ${error.message}`, 'error');
+        showToast('⚠️ Sync failed', 3000);
+    }
+}
+
 async function saveDataToCloudSync() {
     const tokenInput = document.getElementById('cloudSyncToken');
     const gistInput = document.getElementById('cloudSyncGistId');
@@ -2403,7 +2571,8 @@ async function saveDataToCloudSync() {
                 repoOwner: repoConfig.owner,
                 repoName: repoConfig.repo,
                 repoBranch: repoConfig.branch,
-                repoPath: repoConfig.path
+                repoPath: repoConfig.path,
+                lastSyncedExportedAt: payload.exportedAt
             });
             saveCloudSyncSharedInfo({
                 gistId,
@@ -2426,7 +2595,8 @@ async function saveDataToCloudSync() {
                 repoOwner: repoConfig.owner,
                 repoName: repoConfig.repo,
                 repoBranch: repoConfig.branch,
-                repoPath: repoConfig.path
+                repoPath: repoConfig.path,
+                lastSyncedExportedAt: payload.exportedAt
             });
             saveCloudSyncSharedInfo({
                 gistId: resolvedGistId || gistId,
@@ -2472,56 +2642,8 @@ async function loadDataFromCloudSync() {
     setCloudSyncStatus('Loading from cloud...', 'info');
 
     try {
-        let payload;
-
-        if (repoConfig.isConfigured) {
-            const repoFile = await readCloudSyncRepoFile({
-                token,
-                owner: repoConfig.owner,
-                repo: repoConfig.repo,
-                branch: repoConfig.branch,
-                path: repoConfig.path
-            });
-
-            if (!repoFile?.payload) {
-                throw new Error('No sync file found in configured repository path.');
-            }
-            payload = repoFile.payload;
-        } else {
-            const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/vnd.github+json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
-            }
-
-            const gistData = await response.json();
-            const fileMeta = gistData?.files?.[CLOUD_SYNC_FILENAME]
-                || Object.values(gistData?.files || {})[0];
-
-            if (!fileMeta) {
-                throw new Error('No sync file found in gist.');
-            }
-
-            let content = fileMeta.content;
-            if (!content && fileMeta.raw_url) {
-                const rawResponse = await fetch(fileMeta.raw_url, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!rawResponse.ok) {
-                    throw new Error('Unable to download sync payload from gist raw URL.');
-                }
-                content = await rawResponse.text();
-            }
-
-            payload = JSON.parse(content);
-        }
+        const remote = await fetchCloudSyncPayload({ token, gistId, repoConfig });
+        const payload = remote.payload;
 
         applyCloudSyncPayload(payload);
 
@@ -2531,7 +2653,8 @@ async function loadDataFromCloudSync() {
             repoOwner: repoConfig.owner,
             repoName: repoConfig.repo,
             repoBranch: repoConfig.branch,
-            repoPath: repoConfig.path
+            repoPath: repoConfig.path,
+            lastSyncedExportedAt: payload.exportedAt || new Date().toISOString()
         });
         saveCloudSyncSharedInfo({
             gistId,
@@ -3592,6 +3715,10 @@ function initializeEventHandlers() {
     // Cloud sync (cross-browser/computer)
     document.getElementById('saveCloudSyncBtn')?.addEventListener('click', () => {
         saveDataToCloudSync();
+    });
+
+    document.getElementById('syncCloudNowBtn')?.addEventListener('click', () => {
+        syncCloudNowSmart();
     });
 
     document.getElementById('loadCloudSyncBtn')?.addEventListener('click', () => {
