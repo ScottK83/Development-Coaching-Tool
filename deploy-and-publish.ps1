@@ -2,7 +2,7 @@ param(
     [string]$Message = "chore: update",
     [string]$Branch = "main",
     [string]$Remote = "origin",
-    [string]$ProjectName = "development-coaching-tool",
+    [string]$ProjectName = "supervisor-dashboard",
     [switch]$IncludeUntracked,
     [switch]$SkipSmokeChecks
 )

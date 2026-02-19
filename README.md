@@ -3,6 +3,7 @@
 A personalized employee development coaching application that identifies performance gaps and provides targeted coaching scripts and learning resources.
 
 ## Features
+
 - Input employee metrics and identify struggling areas
 - Generate personalized coaching scripts
 - Metric-specific best practices and development resources
@@ -11,6 +12,7 @@ A personalized employee development coaching application that identifies perform
 - Optional cloud sync across browsers/computers (single-user via private GitHub Gist)
 
 ## Metrics Tracked
+
 - Schedule Adherence
 - Customer Experience (CX Rep Overall)
 - First Call Resolution (FCR)
@@ -25,17 +27,19 @@ A personalized employee development coaching application that identifies perform
 - Reliability Hours
 
 ## Tech Stack
+
 - HTML5
 - CSS3
 - JavaScript (Vanilla)
 
 ## Build / Minify
+
 To generate a minified JavaScript for production:
 
 PowerShell (may require execution policy allowing npm):
 
 ```powershell
-Push-Location "c:\Users\Scott\OneDrive\Desktop\Development-Coaching-Tool";
+Push-Location "c:\Users\Scott\Development-Coaching-Tool";
 npm init -y;
 npm install terser --save-dev;
 npx terser script.js -o script.min.js --compress --mangle;
@@ -45,7 +49,7 @@ Pop-Location
 If PowerShell blocks `npm.ps1`, run via CMD fallback:
 
 ```powershell
-Push-Location "c:\Users\Scott\OneDrive\Desktop\Development-Coaching-Tool";
+Push-Location "c:\Users\Scott\Development-Coaching-Tool";
 cmd /c "npm init -y";
 cmd /c "npm install terser --save-dev";
 cmd /c "npx terser script.js -o script.min.js --compress --mangle";
@@ -95,7 +99,8 @@ cd "c:\Users\Scott\Development-Coaching-Tool"
 ```
 
 Notes:
-- Default Cloudflare Pages project is `development-coaching-tool`.
+
+- Default Cloudflare Pages project is `supervisor-dashboard`.
 - Publish now auto-runs smoke checks before commit/push/deploy.
 - If smoke checks fail, deploy is blocked.
 - By default, only tracked file changes are committed.
@@ -130,6 +135,7 @@ cd "c:\Users\Scott\Development-Coaching-Tool"
 ```
 
 Notes:
+
 - `-Ref` accepts a tag, branch, or commit SHA.
 - The script creates a rollback branch from that ref and deploys it to Cloudflare.
 - Working tree must be clean before running rollback.
@@ -146,5 +152,6 @@ git config core.hooksPath .githooks
 ```
 
 Behavior:
+
 - On every `git push`, the hook updates `APP_VERSION` to `YYYY.MM.DD.N`.
 - It amends the latest commit automatically before push so the pushed commit carries the new version.

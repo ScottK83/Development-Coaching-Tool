@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Ref,
-    [string]$ProjectName = "development-coaching-tool",
+    [string]$ProjectName = "supervisor-dashboard",
     [string]$BranchName = ""
 )
 
