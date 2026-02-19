@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.21'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.22'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2050,6 +2050,26 @@ function shouldAutoSyncStorageKey(key) {
     return key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY;
 }
 
+// === AUTO-SYNC ON PAGE LOAD ===
+function triggerAutoSyncOnLoadIfConfigured() {
+    const { token, gistId } = getCloudSyncCredentials();
+    const repoConfig = getCloudSyncRepoConfig();
+    
+    // Only auto-sync if cloud is configured with a token
+    if (!token || (!repoConfig.isConfigured && !gistId)) {
+        console.log('[Cloud Sync] Skipping auto-sync on load: cloud not configured');
+        return;
+    }
+    
+    console.log('[Cloud Sync] Initiating auto-sync on page load...');
+    console.log('[Cloud Sync] Have token:', !!token);
+    console.log('[Cloud Sync] Repo configured:', repoConfig.isConfigured);
+    console.log('[Cloud Sync] Gist ID:', gistId ? 'yes' : 'no');
+    
+    // Trigger smart sync
+    syncCloudNowSmart();
+}
+
 function scheduleAutoCloudSync(delayMs = 1400) {
     if (suppressAutoCloudSync) return;
     if (!isCloudSyncReadyForAutoSave()) return;
@@ -2183,6 +2203,25 @@ function installCloudSyncAutoSaveHooks() {
     };
 
     isCloudSyncStorageHookInstalled = true;
+    
+    // === FALLBACK: Periodic auto-save to localStorage every 15 seconds ===
+    setInterval(() => {
+        if (!suppressAutoCloudSync && Object.keys(weeklyData).length > 0) {
+            // Always ensure weeklyData is saved to localStorage
+            try {
+                const lastSavedStr = localStorage.getItem('devCoachingTool_weeklyData_lastHash');
+                const currentHash = JSON.stringify(Object.keys(weeklyData).sort());
+                
+                if (lastSavedStr !== currentHash) {
+                    console.log('[Auto-Save] Periodic save: weeklyData changed');
+                    saveWeeklyData();
+                    localStorage.setItem('devCoachingTool_weeklyData_lastHash', currentHash);
+                }
+            } catch (e) {
+                console.error('[Auto-Save] Failed to periodic save:', e);
+            }
+        }
+    }, 15000); // Every 15 seconds
 }
 
 function initializeCloudSyncPanel() {
@@ -10006,6 +10045,11 @@ function initApp() {
         saveCoachingHistory();
         
     });
+    
+    // AUTO-SYNC: Trigger cloud sync on page load if configured
+    setTimeout(() => {
+        triggerAutoSyncOnLoadIfConfigured();
+    }, 2000);
     
     
 }
