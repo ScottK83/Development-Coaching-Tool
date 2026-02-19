@@ -600,6 +600,16 @@
                                 <input type="text" id="cloudSyncGistId" placeholder="Auto-created on first save" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                         </div>
+                        <details style="margin-bottom: 12px; padding: 12px; background: #f5f7ff; border: 1px solid #d7ddff; border-radius: 6px;">
+                            <summary style="cursor: pointer; font-weight: bold; color: #283593;">Advanced: Repo Sync (recommended for fine-grained tokens)</summary>
+                            <p style="margin: 8px 0 10px 0; color: #555; font-size: 0.85em;">Use a private repo file instead of a gist. This works better with fine-grained PATs.</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 10px;">
+                                <input type="text" id="cloudSyncRepoOwner" placeholder="Owner (e.g., yourusername)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoName" placeholder="Repo (e.g., coaching-sync)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoBranch" placeholder="Branch (default: main)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoPath" placeholder="File path (default: sync/development-coaching-tool-sync.json)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </details>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                             <button type="button" id="syncCloudNowBtn" class="btn-secondary" style="background: #1e88e5; color: white; font-weight: bold;">🔄 Sync Now</button>
                         </div>
