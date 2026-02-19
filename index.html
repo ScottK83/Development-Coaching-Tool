@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.github.com;">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
     <script src="lib-chart.js"></script>
@@ -86,6 +86,7 @@
                     <!-- Sub-navigation -->
                     <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #E91E63; padding-bottom: 15px;">
                         <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
+                        <button type="button" id="subNavYearEnd" class="btn-secondary" style="background: #5e35b1; color: white;">🗓️ Year-End Comments</button>
                         <button type="button" id="subNavSentiment" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
                         <button type="button" id="subNavMetricTrends" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
                         <button type="button" id="subNavTrendIntelligence" class="btn-secondary" style="background: #ff9800; color: white;">📊 Trend Intelligence</button>
@@ -156,6 +157,88 @@
                     </div>
                     </div>
                     <!-- End Coaching Email Sub-section -->
+
+                    <!-- Year-End Comments Sub-section -->
+                    <div id="subSectionYearEnd" style="display: none;">
+                        <p style="color: #4a148c; margin-bottom: 20px;">Generate year-end comments with strengths, improvement focus areas, and a Copilot-ready prompt.</p>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🗓️ Year-End Setup</h3>
+                            <div id="yearEndStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #f3e5f5; border-left: 4px solid #7b1fa2; border-radius: 4px; color: #4a148c;"></div>
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="yearEndEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Select Associate:</label>
+                                    <select id="yearEndEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Choose an associate --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="yearEndReviewYear" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Review Year:</label>
+                                    <input type="number" id="yearEndReviewYear" min="2020" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                </div>
+                                <div>
+                                    <label for="yearEndTrackSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Year-End Status:</label>
+                                    <select id="yearEndTrackSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Select --</option>
+                                        <option value="on-track">✅ On Track</option>
+                                        <option value="off-track">⚠️ Off Track</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="yearEndSnapshotPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">📊 Year-End Snapshot</h3>
+                            <div id="yearEndFactsSummary" style="color: #666; margin-bottom: 15px; font-size: 0.95em;"></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div style="background: #e8f5e9; border-radius: 6px; padding: 12px; border: 1px solid #4caf50;">
+                                    <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Positive Highlights</h4>
+                                    <ul id="yearEndWinsList" style="margin: 0; padding-left: 18px; color: #2e7d32;"></ul>
+                                </div>
+                                <div style="background: #ffebee; border-radius: 6px; padding: 12px; border: 1px solid #f44336;">
+                                    <h4 style="margin: 0 0 10px 0; color: #b71c1c;">⚠️ Improvement Areas</h4>
+                                    <ul id="yearEndImprovementList" style="margin: 0; padding-left: 18px; color: #b71c1c;"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">✍️ Year-End Notes Input</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="yearEndPositivesInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Positives to Highlight:</label>
+                                    <textarea id="yearEndPositivesInput" placeholder="Example: Strong ownership, consistent customer tone, improved schedule adherence..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="yearEndImprovementsInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Improvement Areas Needed:</label>
+                                    <textarea id="yearEndImprovementsInput" placeholder="Example: Improve FCR consistency, reduce AHT, tighten after-call work discipline..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <label for="yearEndManagerContext" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Additional Context (optional):</label>
+                                <textarea id="yearEndManagerContext" placeholder="Add any context you want included in the final year-end note..." style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🤖 Year-End Copilot Prompt</h3>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Generate and open in Copilot, then paste the response below for one-click copy into notes.</p>
+                            <textarea id="yearEndPromptArea" readonly style="width: 100%; height: 200px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
+                            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                                <button type="button" id="generateYearEndPromptBtn" style="background: #5e35b1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 220px;">🤖 Generate Year-End Copilot Prompt</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #7b1fa2;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📋 Final Notes Output</h3>
+                            <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Paste Copilot's result here, then click copy to paste directly into employee notes.</p>
+                            <textarea id="yearEndCopilotResponse" placeholder="Paste Copilot year-end comment output here..." style="width: 100%; height: 160px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
+                            <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                                <button type="button" id="copyYearEndResponseBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Year-End Notes</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Year-End Comments Sub-section -->
 
                     <!-- Sentiment Sub-section -->
                     <div id="subSectionSentiment" style="display: none;">
@@ -486,6 +569,26 @@
                             <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
                             <input type="file" id="dataFileInput" accept=".json" style="display: none;">
                         </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #3949ab;">
+                        <h3 style="color: #283593; margin-top: 0;">☁️ Cloud Sync (Single User)</h3>
+                        <p style="color: #666; margin-bottom: 15px;">Sync all app data across browsers/computers using your own private GitHub Gist.</p>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div>
+                                <label for="cloudSyncToken" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">GitHub Token (gist scope):</label>
+                                <input type="password" id="cloudSyncToken" placeholder="ghp_... or github_pat_..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="cloudSyncGistId" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Gist ID:</label>
+                                <input type="text" id="cloudSyncGistId" placeholder="Auto-created on first save" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+                            <button type="button" id="saveCloudSyncBtn" class="btn-secondary" style="background: #3949ab; color: white;">☁️ Save to Cloud</button>
+                            <button type="button" id="loadCloudSyncBtn" class="btn-secondary" style="background: #00897b; color: white;">☁️ Load from Cloud</button>
+                        </div>
+                        <div id="cloudSyncStatus" style="display: none; padding: 10px; border-radius: 4px; font-size: 0.9em;"></div>
                     </div>
                     
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">

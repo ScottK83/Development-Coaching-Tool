@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.17.7'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.2'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -84,7 +84,13 @@ let lastError = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
 let coachingHistory = {};
+let yearEndDraftContext = null;
 let debugState = { entries: [] };
+let cloudSyncAutoSaveTimer = null;
+let cloudSyncSaveInProgress = false;
+let cloudSyncSaveQueued = false;
+let suppressAutoCloudSync = false;
+let isCloudSyncStorageHookInstalled = false;
 
 // ============================================
 // CONSTANTS
@@ -95,6 +101,8 @@ const LOCALSTORAGE_MAX_SIZE_MB = 4;
 const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
+const CLOUD_SYNC_FILENAME = 'development-coaching-tool-sync.json';
+const CLOUD_SYNC_SETTINGS_KEY = STORAGE_PREFIX + 'cloudSyncSettings';
 
 // Sentiment Analysis Constants
 const SENTIMENT_TOP_WINS_COUNT = 5;
@@ -434,7 +442,7 @@ function showOnlySection(sectionId) {
  */
 function showSubSection(subSectionId) {
     // Hide all sub-sections
-    const subSections = ['subSectionCoachingEmail', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
+    const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
     subSections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -447,7 +455,7 @@ function showSubSection(subSectionId) {
     }
     
     // Update sub-nav button active states
-    const subNavButtons = ['subNavCoachingEmail', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
+    const subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
     subNavButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
@@ -1673,6 +1681,384 @@ function saveCallCenterAverages(averages) {
     }
 }
 
+// ============================================
+// CLOUD SYNC (GITHUB GIST)
+// ============================================
+
+function loadCloudSyncSettings() {
+    try {
+        const raw = localStorage.getItem(CLOUD_SYNC_SETTINGS_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        console.error('Error loading cloud sync settings:', error);
+        return {};
+    }
+}
+
+function saveCloudSyncSettings(settings) {
+    try {
+        localStorage.setItem(CLOUD_SYNC_SETTINGS_KEY, JSON.stringify(settings || {}));
+    } catch (error) {
+        console.error('Error saving cloud sync settings:', error);
+    }
+}
+
+function setCloudSyncStatus(message, type = 'info') {
+    const statusEl = document.getElementById('cloudSyncStatus');
+    if (!statusEl) return;
+
+    const styleMap = {
+        info: { bg: '#e8eaf6', border: '#5c6bc0', color: '#283593' },
+        success: { bg: '#e8f5e9', border: '#43a047', color: '#1b5e20' },
+        warning: { bg: '#fff8e1', border: '#ffb300', color: '#8d6e00' },
+        error: { bg: '#ffebee', border: '#e53935', color: '#b71c1c' }
+    };
+
+    const style = styleMap[type] || styleMap.info;
+    statusEl.style.display = 'block';
+    statusEl.style.background = style.bg;
+    statusEl.style.border = `1px solid ${style.border}`;
+    statusEl.style.color = style.color;
+    statusEl.textContent = message;
+}
+
+function getCloudSyncCredentials() {
+    const tokenInput = document.getElementById('cloudSyncToken');
+    const gistInput = document.getElementById('cloudSyncGistId');
+    const settings = loadCloudSyncSettings();
+
+    const token = (tokenInput?.value || settings.githubToken || '').trim();
+    const gistId = (gistInput?.value || settings.gistId || '').trim();
+
+    return { token, gistId };
+}
+
+function isCloudSyncReadyForAutoSave() {
+    const { token } = getCloudSyncCredentials();
+    return !!token;
+}
+
+function shouldAutoSyncStorageKey(key) {
+    if (!key) return false;
+    if (key === CLOUD_SYNC_SETTINGS_KEY) return false;
+    return key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY;
+}
+
+function scheduleAutoCloudSync(delayMs = 1400) {
+    if (suppressAutoCloudSync) return;
+    if (!isCloudSyncReadyForAutoSave()) return;
+
+    if (cloudSyncAutoSaveTimer) {
+        clearTimeout(cloudSyncAutoSaveTimer);
+    }
+
+    cloudSyncAutoSaveTimer = setTimeout(() => {
+        cloudSyncAutoSaveTimer = null;
+        runAutoCloudSyncNow();
+    }, delayMs);
+}
+
+async function runAutoCloudSyncNow() {
+    if (suppressAutoCloudSync) return;
+    if (!isCloudSyncReadyForAutoSave()) return;
+
+    if (cloudSyncSaveInProgress) {
+        cloudSyncSaveQueued = true;
+        return;
+    }
+
+    cloudSyncSaveInProgress = true;
+
+    try {
+        const { token, gistId } = getCloudSyncCredentials();
+        const payload = collectCloudSyncPayload();
+        const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
+
+        const gistInput = document.getElementById('cloudSyncGistId');
+        if (gistInput && resolvedGistId && gistInput.value.trim() !== resolvedGistId) {
+            gistInput.value = resolvedGistId;
+        }
+
+        saveCloudSyncSettings({
+            githubToken: token,
+            gistId: resolvedGistId || gistId
+        });
+
+        setCloudSyncStatus('Auto-save complete. Cloud copy is up to date.', 'success');
+    } catch (error) {
+        console.error('Auto cloud sync failed:', error);
+        setCloudSyncStatus(`Auto-save failed: ${error.message}`, 'error');
+    } finally {
+        cloudSyncSaveInProgress = false;
+        if (cloudSyncSaveQueued) {
+            cloudSyncSaveQueued = false;
+            scheduleAutoCloudSync(1200);
+        }
+    }
+}
+
+function installCloudSyncAutoSaveHooks() {
+    if (isCloudSyncStorageHookInstalled) return;
+
+    const storageProto = Storage.prototype;
+    const originalSetItem = storageProto.setItem;
+    const originalRemoveItem = storageProto.removeItem;
+
+    storageProto.setItem = function(key, value) {
+        originalSetItem.call(this, key, value);
+        if (this === localStorage && shouldAutoSyncStorageKey(String(key))) {
+            scheduleAutoCloudSync();
+        }
+    };
+
+    storageProto.removeItem = function(key) {
+        originalRemoveItem.call(this, key);
+        if (this === localStorage && shouldAutoSyncStorageKey(String(key))) {
+            scheduleAutoCloudSync();
+        }
+    };
+
+    isCloudSyncStorageHookInstalled = true;
+}
+
+function initializeCloudSyncPanel() {
+    const tokenInput = document.getElementById('cloudSyncToken');
+    const gistInput = document.getElementById('cloudSyncGistId');
+    if (!tokenInput || !gistInput) return;
+
+    const settings = loadCloudSyncSettings();
+    tokenInput.value = settings.githubToken || '';
+    gistInput.value = settings.gistId || '';
+
+    if (settings.gistId) {
+        setCloudSyncStatus('Cloud sync is configured. Auto-save is enabled whenever data changes.', 'info');
+    } else {
+        setCloudSyncStatus('Enter your GitHub token. First auto-save will create a private gist automatically.', 'warning');
+    }
+
+    if (!tokenInput.dataset.cloudSyncBound) {
+        const persistSettings = () => {
+            const current = {
+                githubToken: tokenInput.value.trim(),
+                gistId: gistInput.value.trim()
+            };
+            saveCloudSyncSettings(current);
+            if (current.githubToken) {
+                setCloudSyncStatus('Cloud sync credentials saved. Auto-save is active.', 'info');
+                scheduleAutoCloudSync(900);
+            } else {
+                setCloudSyncStatus('Add GitHub token to enable auto-save.', 'warning');
+            }
+        };
+
+        tokenInput.addEventListener('change', persistSettings);
+        gistInput.addEventListener('change', persistSettings);
+        tokenInput.dataset.cloudSyncBound = 'true';
+    }
+}
+
+function collectCloudSyncPayload() {
+    const storageData = {};
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (key === CLOUD_SYNC_SETTINGS_KEY) continue;
+
+        if (key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY) {
+            storageData[key] = localStorage.getItem(key);
+        }
+    }
+
+    return {
+        app: 'Development Coaching Tool',
+        version: APP_VERSION,
+        exportedAt: new Date().toISOString(),
+        storageData
+    };
+}
+
+function applyCloudSyncPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        throw new Error('Invalid cloud payload format.');
+    }
+    if (!payload.storageData || typeof payload.storageData !== 'object') {
+        throw new Error('Cloud payload missing storage data.');
+    }
+
+    suppressAutoCloudSync = true;
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key === CLOUD_SYNC_SETTINGS_KEY) continue;
+            if (key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        Object.entries(payload.storageData).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+                localStorage.setItem(key, value);
+            } else if (value !== undefined && value !== null) {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        });
+    } finally {
+        suppressAutoCloudSync = false;
+    }
+}
+
+async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
+    const isUpdate = !!gistId;
+    const endpoint = isUpdate
+        ? `https://api.github.com/gists/${encodeURIComponent(gistId)}`
+        : 'https://api.github.com/gists';
+
+    const body = isUpdate
+        ? {
+            files: {
+                [CLOUD_SYNC_FILENAME]: {
+                    content: JSON.stringify(payload, null, 2)
+                }
+            }
+        }
+        : {
+            description: 'Development Coaching Tool cloud sync',
+            public: false,
+            files: {
+                [CLOUD_SYNC_FILENAME]: {
+                    content: JSON.stringify(payload, null, 2)
+                }
+            }
+        };
+
+    const response = await fetch(endpoint, {
+        method: isUpdate ? 'PATCH' : 'POST',
+        headers: {
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
+    }
+
+    const data = await response.json();
+    return data?.id || gistId;
+}
+
+async function saveDataToCloudSync() {
+    const tokenInput = document.getElementById('cloudSyncToken');
+    const gistInput = document.getElementById('cloudSyncGistId');
+    if (!tokenInput || !gistInput) return;
+
+    const token = tokenInput.value.trim();
+    const gistId = gistInput.value.trim();
+
+    if (!token) {
+        setCloudSyncStatus('GitHub token is required to save.', 'error');
+        return;
+    }
+
+    setCloudSyncStatus('Saving to cloud...', 'info');
+
+    try {
+        const payload = collectCloudSyncPayload();
+        const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
+
+        gistInput.value = resolvedGistId || gistId;
+        saveCloudSyncSettings({
+            githubToken: token,
+            gistId: resolvedGistId || gistId
+        });
+
+        setCloudSyncStatus('Cloud save complete. Your data is now available on other devices.', 'success');
+        showToast('✅ Cloud sync saved', 3000);
+    } catch (error) {
+        console.error('Cloud save failed:', error);
+        setCloudSyncStatus(`Cloud save failed: ${error.message}`, 'error');
+        showToast('⚠️ Cloud save failed', 3000);
+    }
+}
+
+async function loadDataFromCloudSync() {
+    const tokenInput = document.getElementById('cloudSyncToken');
+    const gistInput = document.getElementById('cloudSyncGistId');
+    if (!tokenInput || !gistInput) return;
+
+    const token = tokenInput.value.trim();
+    const gistId = gistInput.value.trim();
+
+    if (!token) {
+        setCloudSyncStatus('GitHub token is required to load.', 'error');
+        return;
+    }
+    if (!gistId) {
+        setCloudSyncStatus('Gist ID is required to load.', 'error');
+        return;
+    }
+
+    if (!confirm('Load from cloud and replace local data on this browser?')) {
+        return;
+    }
+
+    setCloudSyncStatus('Loading from cloud...', 'info');
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
+        }
+
+        const gistData = await response.json();
+        const fileMeta = gistData?.files?.[CLOUD_SYNC_FILENAME]
+            || Object.values(gistData?.files || {})[0];
+
+        if (!fileMeta) {
+            throw new Error('No sync file found in gist.');
+        }
+
+        let content = fileMeta.content;
+        if (!content && fileMeta.raw_url) {
+            const rawResponse = await fetch(fileMeta.raw_url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!rawResponse.ok) {
+                throw new Error('Unable to download sync payload from gist raw URL.');
+            }
+            content = await rawResponse.text();
+        }
+
+        const payload = JSON.parse(content);
+        applyCloudSyncPayload(payload);
+
+        saveCloudSyncSettings({ githubToken: token, gistId });
+
+        setCloudSyncStatus('Cloud load complete. Reloading app with synced data...', 'success');
+        showToast('✅ Cloud sync loaded', 3000);
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        console.error('Cloud load failed:', error);
+        setCloudSyncStatus(`Cloud load failed: ${error.message}`, 'error');
+        showToast('⚠️ Cloud load failed', 3000);
+    }
+}
+
 function calculateAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
@@ -2123,14 +2509,18 @@ function initializeEventHandlers() {
     });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showSubSection('subSectionCoachingEmail');
-        initializeCoachingEmail();
+        showSubSection('subSectionYearEnd');
+        initializeYearEndComments();
     });
     
     // Sub-navigation for Coaching & Analysis section
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
         showSubSection('subSectionCoachingEmail');
         initializeCoachingEmail();
+    });
+    document.getElementById('subNavYearEnd')?.addEventListener('click', () => {
+        showSubSection('subSectionYearEnd');
+        initializeYearEndComments();
     });
     // Track if sentiment listeners are attached to prevent duplicates
     let sentimentListenersAttached = false;
@@ -2698,6 +3088,15 @@ function initializeEventHandlers() {
             }
         };
         reader.readAsText(file);
+    });
+
+    // Cloud sync (cross-browser/computer)
+    document.getElementById('saveCloudSyncBtn')?.addEventListener('click', () => {
+        saveDataToCloudSync();
+    });
+
+    document.getElementById('loadCloudSyncBtn')?.addEventListener('click', () => {
+        loadDataFromCloudSync();
     });
     
     // Delete selected week
@@ -8131,6 +8530,7 @@ function deleteEmployee(employeeName) {
 function initApp() {
     
     installDebugListeners();
+    installCloudSyncAutoSaveHooks();
     
     // Load data from localStorage
     weeklyData = loadWeeklyData();
@@ -8151,6 +8551,7 @@ function initApp() {
     // Initialize event handlers
     initializeEventHandlers();
     initializeKeyboardShortcuts();
+    initializeCloudSyncPanel();
     
     // Always show Upload Data page on refresh
     showOnlySection('coachingForm');
@@ -8906,6 +9307,338 @@ function initializeCoachingEmail() {
     }
 
     
+}
+
+function getYearEndEmployees() {
+    const employees = new Set();
+
+    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => {
+        (period?.employees || []).forEach(emp => {
+            if (!emp?.name) return;
+            if (isTeamMember(periodKey, emp.name)) {
+                employees.add(emp.name);
+            }
+        });
+    });
+
+    Object.values(ytdData || {}).forEach(period => {
+        (period?.employees || []).forEach(emp => {
+            if (emp?.name) employees.add(emp.name);
+        });
+    });
+
+    return Array.from(employees).sort();
+}
+
+function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
+    const yearNum = parseInt(reviewYear, 10);
+    if (!employeeName || !Number.isInteger(yearNum)) return null;
+
+    const candidates = [];
+
+    const pushCandidate = (sourceName, periodKey, period) => {
+        const employeeRecord = (period?.employees || []).find(emp => emp?.name === employeeName);
+        if (!employeeRecord) return;
+
+        const metadata = period?.metadata || {};
+        const endDateText = metadata.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
+        const endDate = endDateText ? new Date(endDateText) : new Date(NaN);
+        if (isNaN(endDate.getTime()) || endDate.getFullYear() !== yearNum) return;
+
+        const priority = (sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1;
+        candidates.push({
+            sourceName,
+            periodKey,
+            period,
+            employeeRecord,
+            endDate,
+            priority,
+            label: metadata.label || `${metadata.periodType || 'period'} ending ${formatDateMMDDYYYY(endDateText) || endDateText}`
+        });
+    };
+
+    Object.entries(ytdData || {}).forEach(([periodKey, period]) => pushCandidate('ytdData', periodKey, period));
+    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => pushCandidate('weeklyData', periodKey, period));
+
+    if (!candidates.length) return null;
+
+    candidates.sort((a, b) => {
+        if (a.endDate.getTime() !== b.endDate.getTime()) {
+            return b.endDate.getTime() - a.endDate.getTime();
+        }
+        return b.priority - a.priority;
+    });
+
+    return candidates[0];
+}
+
+function buildYearEndMetricSnapshot(employeeRecord) {
+    const wins = [];
+    const opportunities = [];
+
+    getMetricOrder().forEach(({ key }) => {
+        const metricConfig = METRICS_REGISTRY[key];
+        const rawValue = employeeRecord?.[key];
+        if (!metricConfig || rawValue === null || rawValue === undefined || rawValue === '' || rawValue === 'N/A') return;
+
+        const value = parseFloat(rawValue);
+        if (isNaN(value)) return;
+
+        const target = metricConfig.target?.value;
+        if (target === undefined || target === null) return;
+
+        const entry = {
+            key,
+            label: metricConfig.label,
+            value: formatMetricDisplay(key, value),
+            target: formatMetricDisplay(key, target),
+            meetsTarget: isMetricMeetingTarget(key, value, target)
+        };
+
+        if (entry.meetsTarget) {
+            wins.push(entry);
+        } else {
+            opportunities.push(entry);
+        }
+    });
+
+    return { wins, opportunities };
+}
+
+function initializeYearEndComments() {
+    const employeeSelect = document.getElementById('yearEndEmployeeSelect');
+    const reviewYearInput = document.getElementById('yearEndReviewYear');
+    const status = document.getElementById('yearEndStatus');
+    const snapshotPanel = document.getElementById('yearEndSnapshotPanel');
+    const promptArea = document.getElementById('yearEndPromptArea');
+    const generateBtn = document.getElementById('generateYearEndPromptBtn');
+    const copyBtn = document.getElementById('copyYearEndResponseBtn');
+
+    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !generateBtn || !copyBtn) return;
+
+    yearEndDraftContext = null;
+    promptArea.value = '';
+    snapshotPanel.style.display = 'none';
+
+    if (!reviewYearInput.value) {
+        reviewYearInput.value = String(new Date().getFullYear());
+    }
+
+    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
+    const employees = getYearEndEmployees();
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    });
+
+    if (!employees.length) {
+        status.textContent = 'No employee data found yet. Upload yearly metrics first.';
+        status.style.display = 'block';
+        return;
+    }
+
+    status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
+    status.style.display = 'block';
+
+    if (!employeeSelect.dataset.bound) {
+        employeeSelect.addEventListener('change', updateYearEndSnapshotDisplay);
+        employeeSelect.dataset.bound = 'true';
+    }
+    if (!reviewYearInput.dataset.bound) {
+        reviewYearInput.addEventListener('input', updateYearEndSnapshotDisplay);
+        reviewYearInput.dataset.bound = 'true';
+    }
+    if (!generateBtn.dataset.bound) {
+        generateBtn.addEventListener('click', generateYearEndPromptAndCopy);
+        generateBtn.dataset.bound = 'true';
+    }
+    if (!copyBtn.dataset.bound) {
+        copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
+        copyBtn.dataset.bound = 'true';
+    }
+
+    setTimeout(() => {
+        if (document.getElementById('subSectionYearEnd')?.style.display !== 'none') {
+            employeeSelect.focus();
+            if (typeof employeeSelect.showPicker === 'function') {
+                try {
+                    employeeSelect.showPicker();
+                } catch (error) {
+                    // Ignore if browser disallows programmatic picker
+                }
+            }
+        }
+    }, 0);
+}
+
+function updateYearEndSnapshotDisplay() {
+    const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
+    const reviewYear = document.getElementById('yearEndReviewYear')?.value;
+    const status = document.getElementById('yearEndStatus');
+    const snapshotPanel = document.getElementById('yearEndSnapshotPanel');
+    const summary = document.getElementById('yearEndFactsSummary');
+    const winsList = document.getElementById('yearEndWinsList');
+    const improvementList = document.getElementById('yearEndImprovementList');
+    const positivesInput = document.getElementById('yearEndPositivesInput');
+    const improvementsInput = document.getElementById('yearEndImprovementsInput');
+    const promptArea = document.getElementById('yearEndPromptArea');
+
+    if (!status || !snapshotPanel || !summary || !winsList || !improvementList || !promptArea) return;
+
+    promptArea.value = '';
+    winsList.innerHTML = '';
+    improvementList.innerHTML = '';
+    yearEndDraftContext = null;
+
+    if (!employeeName || !reviewYear) {
+        snapshotPanel.style.display = 'none';
+        status.textContent = 'Select associate and review year to load year-end facts.';
+        status.style.display = 'block';
+        return;
+    }
+
+    const latestPeriod = getLatestYearPeriodForEmployee(employeeName, reviewYear);
+    if (!latestPeriod) {
+        snapshotPanel.style.display = 'none';
+        status.textContent = `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`;
+        status.style.display = 'block';
+        return;
+    }
+
+    const { wins, opportunities } = buildYearEndMetricSnapshot(latestPeriod.employeeRecord);
+    const endDateText = latestPeriod.period?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
+        : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
+
+    summary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • ${wins.length} positives • ${opportunities.length} improvement areas`;
+
+    winsList.innerHTML = wins.length
+        ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
+        : '<li>No metrics currently at goal in this period.</li>';
+
+    improvementList.innerHTML = opportunities.length
+        ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
+        : '<li>No below-target metrics detected in this period.</li>';
+
+    if (positivesInput && !positivesInput.value.trim()) {
+        positivesInput.value = wins.length
+            ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).join('\n')
+            : 'Consistent effort and willingness to grow throughout the year.';
+    }
+
+    if (improvementsInput && !improvementsInput.value.trim()) {
+        improvementsInput.value = opportunities.length
+            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).join('\n')
+            : 'Continue building consistency and sustaining current performance levels.';
+    }
+
+    yearEndDraftContext = {
+        employeeName,
+        reviewYear,
+        periodLabel: latestPeriod.label,
+        sourceLabel: latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'latest uploaded period',
+        endDateText,
+        wins,
+        opportunities
+    };
+
+    status.textContent = `Year-end facts loaded for ${employeeName} (${reviewYear}).`;
+    status.style.display = 'block';
+    snapshotPanel.style.display = 'block';
+}
+
+function generateYearEndPromptAndCopy() {
+    const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
+    const reviewYear = document.getElementById('yearEndReviewYear')?.value;
+    const trackStatus = document.getElementById('yearEndTrackSelect')?.value;
+    const positivesText = document.getElementById('yearEndPositivesInput')?.value.trim() || '';
+    const improvementsText = document.getElementById('yearEndImprovementsInput')?.value.trim() || '';
+    const managerContext = document.getElementById('yearEndManagerContext')?.value.trim() || '';
+    const promptArea = document.getElementById('yearEndPromptArea');
+    const button = document.getElementById('generateYearEndPromptBtn');
+
+    if (!employeeName) {
+        alert('⚠️ Please select an associate first.');
+        return;
+    }
+    if (!reviewYear) {
+        alert('⚠️ Please enter a review year.');
+        return;
+    }
+    if (!trackStatus) {
+        alert('⚠️ Please mark whether the associate is on track or off track.');
+        return;
+    }
+    if (!promptArea) return;
+
+    if (!yearEndDraftContext || yearEndDraftContext.employeeName !== employeeName || yearEndDraftContext.reviewYear !== reviewYear) {
+        updateYearEndSnapshotDisplay();
+    }
+
+    const fallbackPositives = (yearEndDraftContext?.wins || [])
+        .map(w => `${w.label}: ${w.value} vs target ${w.target}`)
+        .join('\n');
+    const fallbackImprovements = (yearEndDraftContext?.opportunities || [])
+        .map(o => `${o.label}: ${o.value} vs target ${o.target}`)
+        .join('\n');
+
+    const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
+    const trackLabel = trackStatus === 'on-track' ? 'On Track' : 'Off Track';
+    const periodLabel = yearEndDraftContext?.periodLabel || `${reviewYear} year-end period`;
+    const sourceLabel = yearEndDraftContext?.sourceLabel || 'uploaded metrics';
+
+    const prompt = `I'm a supervisor preparing year-end comments for ${preferredName} (${employeeName}) for ${reviewYear}.
+
+Use this data source: ${sourceLabel} (${periodLabel}).
+Performance classification: ${trackLabel}.
+
+Positives to highlight:
+${positivesText || fallbackPositives || '- Positive impact and steady contribution to the team.'}
+
+Improvement areas needed:
+${improvementsText || fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
+
+Additional manager context:
+${managerContext || '- None provided.'}
+
+Write a polished year-end comment ready to paste into employee notes.
+
+Requirements:
+- Professional, warm, and human - not robotic and not overly corporate
+- Balance recognition with clear growth expectations
+- Mention whether performance is on track or off track naturally
+- Highlight positives first, then improvement areas
+- Include a future-focused line similar to: "I feel with added focus on these areas, ${preferredName} can improve by ..."
+- Include a positive confidence close similar to: "${preferredName} has been a wonderful addition to the team and is poised for success"
+- Keep it concise: 2 short paragraphs plus 3-5 bullet points maximum
+- Do NOT use em dashes (—)
+- Return ONLY the final year-end comment text, nothing else.`;
+
+    promptArea.value = prompt;
+
+    if (button) {
+        const originalText = button.textContent;
+        button.textContent = '✅ Opening Copilot';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 1200);
+    }
+
+    openCopilotWithPrompt(prompt, 'Year-End Comments');
+}
+
+function copyYearEndResponseToClipboard() {
+    const responseText = document.getElementById('yearEndCopilotResponse')?.value.trim();
+    if (!responseText) {
+        alert('⚠️ Paste the Copilot year-end comments first.');
+        return;
+    }
+
+    navigator.clipboard.writeText(responseText)
+        .then(() => showToast('✅ Year-end notes copied to clipboard!', 3000))
+        .catch(() => showToast('⚠️ Unable to copy year-end notes.', 3000));
 }
 
 function deleteLatestCoachingEntry() {
