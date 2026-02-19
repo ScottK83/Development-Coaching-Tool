@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.23'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.24'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2637,10 +2637,40 @@ async function syncCloudNowSmart() {
         }
 
         const remoteExportedAt = parseCloudPayloadTimestamp(remote?.payload?.exportedAt);
-        const shouldPull = remoteExportedAt > 0 && (!localHasData || lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000));
+        let localWeekCount = 0;
+        let remoteWeekCount = 0;
+
+        try {
+            const localWeeklyData = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'weeklyData') || '{}');
+            localWeekCount = Object.keys(localWeeklyData).length;
+        } catch (error) {
+            console.warn('[Cloud Sync Smart] Unable to parse local weeklyData:', error);
+        }
+
+        try {
+            const remoteWeeklyRaw = remote?.payload?.storageData?.[STORAGE_PREFIX + 'weeklyData'];
+            if (remoteWeeklyRaw) {
+                const remoteWeeklyData = JSON.parse(remoteWeeklyRaw);
+                remoteWeekCount = Object.keys(remoteWeeklyData).length;
+            }
+        } catch (error) {
+            console.warn('[Cloud Sync Smart] Unable to parse remote weeklyData:', error);
+        }
+
+        const remoteHasMoreWeeks = remoteWeekCount > localWeekCount;
+        const localHasMoreWeeks = localWeekCount > remoteWeekCount;
+        const shouldPull = remoteExportedAt > 0 && (
+            remoteHasMoreWeeks
+            || !localHasData
+            || (!localHasMoreWeeks && (lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000)))
+        );
 
         console.log('[Cloud Sync Smart] Decision analysis:');
         console.log('  LocalHasData:', localHasData);
+        console.log('  LocalWeekCount:', localWeekCount);
+        console.log('  RemoteWeekCount:', remoteWeekCount);
+        console.log('  RemoteHasMoreWeeks:', remoteHasMoreWeeks);
+        console.log('  LocalHasMoreWeeks:', localHasMoreWeeks);
         console.log('  RemoteExportedAt:', remoteExportedAt, '(' + new Date(remoteExportedAt).toISOString() + ')');
         console.log('  LastSyncedAt:', lastSyncedAt, lastSyncedAt ? ('(' + new Date(lastSyncedAt).toISOString() + ')') : '(never synced)');
         console.log('  RemoteExportedAt > 0:', remoteExportedAt > 0);
