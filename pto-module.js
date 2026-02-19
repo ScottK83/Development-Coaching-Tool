@@ -8,13 +8,13 @@ function loadPtoTracker() {
     try {
         const saved = localStorage.getItem(PTO_STORAGE_KEY);
         return saved ? JSON.parse(saved) : {
-            availableHours: 0,
-            thresholds: { warning: 8, policy: 16 },
+            availableHours: 100,
+            thresholds: { warning: 20, policy: 40 },
             entries: []
         };
     } catch (error) {
         console.error('Error loading PTO tracker:', error);
-        return { availableHours: 0, thresholds: { warning: 8, policy: 16 }, entries: [] };
+        return { availableHours: 100, thresholds: { warning: 20, policy: 40 }, entries: [] };
     }
 }
 
@@ -36,8 +36,8 @@ function initializePtoTracker() {
     const copyBtn = document.getElementById('ptoCopyEmailBtn');
 
     if (availableInput) availableInput.value = data.availableHours ?? 0;
-    if (warningInput) warningInput.value = data.thresholds?.warning ?? 8;
-    if (policyInput) policyInput.value = data.thresholds?.policy ?? 16;
+    if (warningInput) warningInput.value = data.thresholds?.warning ?? 20;
+    if (policyInput) policyInput.value = data.thresholds?.policy ?? 40;
 
     renderPtoSummary(data);
     renderPtoEntries(data);
@@ -45,7 +45,8 @@ function initializePtoTracker() {
     if (availableInput && !availableInput.dataset.bound) {
         availableInput.addEventListener('input', () => {
             const updated = loadPtoTracker();
-            updated.availableHours = parseFloat(availableInput.value) || 0;
+            updated.availableHours = Math.min(100, Math.max(0, parseFloat(availableInput.value) || 0));
+            availableInput.value = updated.availableHours;
             savePtoTracker(updated);
             renderPtoSummary(updated);
         });
@@ -55,8 +56,9 @@ function initializePtoTracker() {
     if (warningInput && !warningInput.dataset.bound) {
         warningInput.addEventListener('input', () => {
             const updated = loadPtoTracker();
-            updated.thresholds = updated.thresholds || { warning: 8, policy: 16 };
-            updated.thresholds.warning = parseFloat(warningInput.value) || 0;
+            updated.thresholds = updated.thresholds || { warning: 20, policy: 40 };
+            updated.thresholds.warning = Math.min(100, Math.max(0, parseFloat(warningInput.value) || 0));
+            warningInput.value = updated.thresholds.warning;
             savePtoTracker(updated);
             renderPtoSummary(updated);
         });
@@ -66,8 +68,9 @@ function initializePtoTracker() {
     if (policyInput && !policyInput.dataset.bound) {
         policyInput.addEventListener('input', () => {
             const updated = loadPtoTracker();
-            updated.thresholds = updated.thresholds || { warning: 8, policy: 16 };
-            updated.thresholds.policy = parseFloat(policyInput.value) || 0;
+            updated.thresholds = updated.thresholds || { warning: 20, policy: 40 };
+            updated.thresholds.policy = Math.min(100, Math.max(0, parseFloat(policyInput.value) || 0));
+            policyInput.value = updated.thresholds.policy;
             savePtoTracker(updated);
             renderPtoSummary(updated);
         });
@@ -92,17 +95,17 @@ function initializePtoTracker() {
 
 function addPtoEntry() {
     const date = document.getElementById('ptoMissedDate')?.value;
-    const hoursValue = document.getElementById('ptoMissedHours')?.value;
+    const percentValue = document.getElementById('ptoMissedHours')?.value;
     const reason = document.getElementById('ptoMissedReason')?.value?.trim() || '';
 
-    if (!date || !hoursValue) {
-        showToast('Enter date and hours missed', 3000);
+    if (!date || !percentValue) {
+        showToast('Enter date and unavailable percentage', 3000);
         return;
     }
 
-    const hours = parseFloat(hoursValue);
-    if (!Number.isFinite(hours) || hours <= 0) {
-        showToast('Enter a valid hours value', 3000);
+    const percent = parseFloat(percentValue);
+    if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+        showToast('Enter a valid percentage from 0 to 100', 3000);
         return;
     }
 
@@ -110,7 +113,7 @@ function addPtoEntry() {
     data.entries.push({
         id: `${Date.now()}`,
         date,
-        hours,
+        hours: percent,
         reason
     });
     savePtoTracker(data);
@@ -149,8 +152,8 @@ function renderPtoSummary(data) {
             : '🟢 Below thresholds';
 
     summary.innerHTML = `
-        <strong>Total Missed:</strong> ${totalMissed.toFixed(2)} hrs<br>
-        <strong>PTO Remaining:</strong> ${remaining.toFixed(2)} hrs<br>
+        <strong>Total Unavailable:</strong> ${totalMissed.toFixed(2)}%<br>
+        <strong>Remaining Availability:</strong> ${remaining.toFixed(2)}%<br>
         <strong>Status:</strong> ${status}
     `;
 }
@@ -172,7 +175,7 @@ function renderPtoEntries(data) {
             return `
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid #e5f3f0; border-radius: 6px; background: #f9fffd;">
                     <div>
-                        <strong>${entry.date}</strong> — ${parseFloat(entry.hours).toFixed(2)} hrs${reasonText}
+                        <strong>${entry.date}</strong> — ${parseFloat(entry.hours).toFixed(2)}%${reasonText}
                     </div>
                     <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
                 </div>
@@ -196,19 +199,19 @@ function generatePtoEmail() {
     const policy = data.thresholds?.policy ?? 0;
 
     let thresholdText = 'Below thresholds';
-    if (totalMissed >= policy) thresholdText = `Reached policy threshold (${policy} hrs)`;
-    else if (totalMissed >= warning) thresholdText = `Reached warning threshold (${warning} hrs)`;
+    if (totalMissed >= policy) thresholdText = `Reached policy threshold (${policy}%)`;
+    else if (totalMissed >= warning) thresholdText = `Reached warning threshold (${warning}%)`;
 
     const entryLines = data.entries
         .slice()
         .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-        .map(entry => `- ${entry.date}: ${parseFloat(entry.hours).toFixed(2)} hrs${entry.reason ? ` (${entry.reason})` : ''}`)
+        .map(entry => `- ${entry.date}: ${parseFloat(entry.hours).toFixed(2)}%${entry.reason ? ` (${entry.reason})` : ''}`)
         .join('\n');
 
     output.value = `Hello,\n\n` +
         `This is a time-off/attendance check-in based on recent missed time.\n\n` +
-        `Total missed time: ${totalMissed.toFixed(2)} hrs\n` +
-        `PTO available: ${(parseFloat(data.availableHours) || 0).toFixed(2)} hrs\n` +
+        `Total unavailable: ${totalMissed.toFixed(2)}%\n` +
+        `Max availability: ${(parseFloat(data.availableHours) || 0).toFixed(2)}%\n` +
         `Status: ${thresholdText}\n\n` +
         `Missed time details:\n${entryLines || '- No entries recorded'}\n\n` +
         `If any of the missed time should be covered by PTO or needs correction, please let me know.\n\n` +
