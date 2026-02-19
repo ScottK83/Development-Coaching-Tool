@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.33'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.34'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4657,6 +4657,78 @@ function saveMetricsPreviewEdits() {
  * Build the HTML email for a trend email
  * Can be used for both single and bulk email generation
  */
+function analyzeTrendMetrics(employeeData, centerAverages) {
+    /**
+     * Analyze which metrics are trending downward (below center average)
+     * Returns array of { metricKey, label, employeeValue, centerAvg, gap }
+     * sorted by gap descending (worst first)
+     */
+    const downwardMetrics = [];
+    
+    const metricMappings = {
+        scheduleAdherence: 'scheduleAdherence',
+        overallExperience: 'overallExperience',
+        cxRepOverall: 'repSatisfaction',
+        fcr: 'fcr',
+        transfers: 'transfers',
+        overallSentiment: 'sentiment',
+        positiveWord: 'positiveWord',
+        negativeWord: 'negativeWord',
+        managingEmotions: 'managingEmotions',
+        aht: 'aht',
+        acw: 'acw',
+        holdTime: 'holdTime',
+        reliability: 'reliability'
+    };
+    
+    Object.entries(metricMappings).forEach(([registryKey, csvKey]) => {
+        const employeeValue = parseFloat(employeeData[registryKey]) || 0;
+        const centerValue = parseFloat(centerAverages[csvKey]) || 0;
+        
+        if (centerValue <= 0) return; // Skip if no center average
+        
+        const metric = METRICS_REGISTRY[registryKey];
+        if (!metric) return;
+        
+        const isReverse = ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].includes(registryKey);
+        const isBelowAverage = isReverse ? employeeValue > centerValue : employeeValue < centerValue;
+        
+        if (isBelowAverage) {
+            const gap = Math.abs(employeeValue - centerValue);
+            downwardMetrics.push({
+                metricKey: registryKey,
+                label: metric.label,
+                employeeValue,
+                centerValue,
+                gap,
+                isReverse
+            });
+        }
+    });
+    
+    // Sort by gap descending (worst first)
+    return downwardMetrics.sort((a, b) => b.gap - a.gap);
+}
+
+function getRandomTipsForMetric(metricKey, count = 2) {
+    /**
+     * Get random tips for a specific metric
+     * Handles both server-side hints and user tips
+     */
+    // Use the getMetricTips function from tips-module.js if available
+    if (typeof getMetricTips === 'function') {
+        const allTips = getMetricTips(metricKey);
+        if (!allTips || allTips.length === 0) {
+            return [];
+        }
+        
+        const shuffled = [...allTips].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, count);
+    }
+    
+    return [];
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
@@ -4700,26 +4772,153 @@ function generateTrendEmail() {
     
     // Build email image FIRST (while page has focus)
     showToast('ℹ️ Creating email image...', 3000);
+    
+    // Get center averages for trend analysis
+    const centerAgvs = getCallCenterAverageForPeriod(weekKey) || {};
+    
+    // Analyze downward trends
+    const downwardTrends = analyzeTrendMetrics(employee, centerAgvs);
+    
+    // Get tips for the worst metric that's trending down
+    let tipsForTrend = [];
+    if (downwardTrends.length > 0) {
+        tipsForTrend = getRandomTipsForMetric(downwardTrends[0].metricKey, 2);
+    }
+    
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
-        // AFTER image is copied to clipboard, THEN open Outlook
+        // AFTER image is copied to clipboard, show tips panel if there are downward trends
         const periodMeta = period.metadata || {};
         const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
         const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
         const mailEndDate = periodMeta.endDate || 'unknown';
         const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
         
-            if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
+        if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
         
-        // Open mailto AFTER clipboard is ready
-        try {
-            const mailtoLink = document.createElement('a');
-            mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
-            document.body.appendChild(mailtoLink);
-            mailtoLink.click();
-            document.body.removeChild(mailtoLink);
-            console.log('Mailto link clicked');
-        } catch(e) {
-            console.error('Error opening mailto:', e);
+        // If there are downward trends, show tips panel before opening email
+        if (downwardTrends.length > 0 && tipsForTrend.length > 0) {
+            showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tipsForTrend, weekKey, periodMeta);
+        } else {
+            // No trends or tips - just open email directly
+            openTrendEmailOutlook(emailSubject);
+        }
+    });
+}
+
+function openTrendEmailOutlook(emailSubject) {
+    /**
+     * Open Outlook/mail client with trend email
+     */
+    try {
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+        console.log('Mailto link clicked');
+    } catch(e) {
+        console.error('Error opening mailto:', e);
+    }
+}
+
+function showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tips, weekKey, periodMeta) {
+    /**
+     * Show a modal/panel with trend info and coaching tips
+     * Allow user to review and log as coaching entry
+     */
+    const modal = document.createElement('div');
+    modal.id = 'trendTipsModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    const worstTrend = downwardTrends[0];
+    const trendTitle = `📉 ${worstTrend.label} - Trending Below Average`;
+    const trendDesc = `${displayName} is at ${worstTrend.employeeValue.toFixed(1)} vs center average of ${worstTrend.centerValue.toFixed(1)}`;
+    
+    const tipsHtml = tips.map((tip, i) => `
+        <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 12px; border-left: 4px solid #9c27b0;">
+            <strong>Tip ${i + 1}:</strong> ${tip}
+        </div>
+    `).join('');
+    
+    const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
+    
+    panel.innerHTML = `
+        <h3 style="color: #9c27b0; margin-top: 0;">${trendTitle}</h3>
+        <p style="color: #666; margin: 10px 0;">${trendDesc}</p>
+        
+        <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 4px;">
+            <h4 style="color: #1976d2; margin-top: 0;">💡 Coaching Tips</h4>
+            ${tipsHtml}
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Add to Coaching Log:</label>
+            <textarea id="trendCoachingNotes" style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Optional notes about this coaching discussion..."></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                📝 Log as Coaching
+            </button>
+            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #bbb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                Skip
+            </button>
+        </div>
+    `;
+    
+    modal.appendChild(panel);
+    document.body.appendChild(modal);
+    
+    document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
+        // Log as coaching entry
+        recordCoachingEvent({
+            employeeId: employeeName,
+            weekEnding: periodLabel,
+            metricsCoached: [worstTrend.metricKey],
+            aiAssisted: false
+        });
+        
+        showToast('✅ Coaching entry logged', 3000);
+        document.body.removeChild(modal);
+        
+        // Now open email
+        const emailSubject = `Trending Metrics - ${worstTrend.label} - ${displayName}`;
+        openTrendEmailOutlook(emailSubject);
+    });
+    
+    document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
+        document.body.removeChild(modal);
+        // Just open email
+        const emailSubject = `Trending Metrics - ${worstTrend.label} - ${displayName}`;
+        openTrendEmailOutlook(emailSubject);
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
         }
     });
 }
