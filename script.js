@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.20'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.21'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2067,6 +2067,22 @@ function scheduleAutoCloudSync(delayMs = 1400) {
 async function runAutoCloudSyncNow() {
     if (suppressAutoCloudSync) return;
     if (!isCloudSyncReadyForAutoSave()) return;
+
+    // Don't auto-save if there's no meaningful data (prevents uploading empty payloads)
+    const weeklyDataRaw = localStorage.getItem('devCoachingTool_weeklyData');
+    let hasWeeklyData = false;
+    if (weeklyDataRaw) {
+        try {
+            const weeklyData = JSON.parse(weeklyDataRaw);
+            hasWeeklyData = Object.keys(weeklyData).length > 0;
+        } catch (e) {
+            // ignore parse errors
+        }
+    }
+    if (!hasWeeklyData) {
+        console.log('[Cloud Sync] Skipping auto-save: no weekly data to upload');
+        return;
+    }
 
     if (cloudSyncSaveInProgress) {
         cloudSyncSaveQueued = true;
