@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.15'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.16'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2521,12 +2521,14 @@ async function syncCloudNowSmart() {
         }
 
         const remoteExportedAt = parseCloudPayloadTimestamp(remote?.payload?.exportedAt);
-        const shouldPull = remoteExportedAt > 0 && (lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000));
+        const shouldPull = remoteExportedAt > 0 && (!localHasData || lastSyncedAt === 0 || remoteExportedAt > (lastSyncedAt + 1000));
 
         console.log('[Cloud Sync Smart] Decision analysis:');
+        console.log('  LocalHasData:', localHasData);
         console.log('  RemoteExportedAt:', remoteExportedAt, '(' + new Date(remoteExportedAt).toISOString() + ')');
         console.log('  LastSyncedAt:', lastSyncedAt, lastSyncedAt ? ('(' + new Date(lastSyncedAt).toISOString() + ')') : '(never synced)');
         console.log('  RemoteExportedAt > 0:', remoteExportedAt > 0);
+        console.log('  !LocalHasData:', !localHasData);
         console.log('  LastSyncedAt === 0:', lastSyncedAt === 0);
         console.log('  RemoteExportedAt > LastSyncedAt+1000:', remoteExportedAt > (lastSyncedAt + 1000));
         console.log('  → ShouldPull:', shouldPull);
