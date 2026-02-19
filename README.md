@@ -95,9 +95,12 @@ cd "c:\Users\Scott\Development-Coaching-Tool"
 ```
 
 Notes:
-- Default Cloudflare Pages project is `supervisor-dashboard`.
+- Default Cloudflare Pages project is `development-coaching-tool`.
+- Publish now auto-runs smoke checks before commit/push/deploy.
+- If smoke checks fail, deploy is blocked.
 - By default, only tracked file changes are committed.
 - To include new files too, use `-IncludeUntracked`.
+- To bypass smoke checks intentionally, use `-SkipSmokeChecks`.
 - Every run auto-bumps `APP_VERSION` in `script.js` using `YYYY.MM.DD.N` (N = push number for that day).
 
 ## Post-Deploy Smoke Test

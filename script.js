@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.3'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.4'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2868,6 +2868,10 @@ function initializeEventHandlers() {
                     uploadedAt: new Date().toISOString()
                 }
             };
+
+            if (periodType !== 'ytd') {
+                upsertAutoYtdForYear(endDateObj.getFullYear(), endDate);
+            }
             
 
             
@@ -6064,6 +6068,156 @@ function getCenterAverageForMetric(centerAvg, metricKey) {
     return parseFloat(centerAvg[lookupKey]) || 0;
 }
 
+function parseIsoDateSafe(dateText) {
+    if (!dateText || typeof dateText !== 'string') return null;
+    const parts = dateText.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+    const [year, month, day] = parts;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+}
+
+function buildYtdAggregateForYear(year, uptoEndDateText) {
+    const yearNum = parseInt(year, 10);
+    const uptoEndDate = parseIsoDateSafe(uptoEndDateText);
+    if (!Number.isInteger(yearNum) || !uptoEndDate) return null;
+
+    const sourcePeriods = Object.entries(weeklyData || {})
+        .map(([periodKey, period]) => {
+            const metadata = period?.metadata || {};
+            const periodType = metadata.periodType || 'week';
+            const endDateText = metadata.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
+            const endDate = parseIsoDateSafe(endDateText);
+            return { periodKey, period, metadata, periodType, endDateText, endDate };
+        })
+        .filter(item => {
+            if (!item.endDate) return false;
+            if (!['week', 'month', 'quarter'].includes(item.periodType)) return false;
+            if (item.endDate.getFullYear() !== yearNum) return false;
+            return item.endDate <= uptoEndDate;
+        })
+        .sort((a, b) => a.endDate - b.endDate);
+
+    if (!sourcePeriods.length) return null;
+
+    const sourceType = sourcePeriods.some(item => item.periodType === 'week')
+        ? 'week'
+        : (sourcePeriods.some(item => item.periodType === 'month') ? 'month' : 'quarter');
+    const selectedPeriods = sourcePeriods.filter(item => item.periodType === sourceType);
+    if (!selectedPeriods.length) return null;
+
+    const metricKeysToAverage = [
+        'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
+        'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
+        'negativeWord', 'positiveWord'
+    ];
+    const surveyWeightedMetrics = new Set(['cxRepOverall', 'fcr', 'overallExperience']);
+
+    const aggregatedEmployees = {};
+
+    selectedPeriods.forEach(({ period }) => {
+        (period?.employees || []).forEach(emp => {
+            if (!emp?.name) return;
+
+            if (!aggregatedEmployees[emp.name]) {
+                aggregatedEmployees[emp.name] = {
+                    name: emp.name,
+                    firstName: emp.firstName,
+                    transfersCount: 0,
+                    surveyTotal: 0,
+                    reliability: 0,
+                    totalCalls: 0,
+                    weightedSums: {},
+                    weightedCounts: {}
+                };
+            }
+
+            const agg = aggregatedEmployees[emp.name];
+            const surveyTotal = parseInt(emp.surveyTotal, 10);
+            const totalCalls = parseInt(emp.totalCalls, 10);
+
+            agg.transfersCount += Number.isFinite(parseFloat(emp.transfersCount)) ? parseFloat(emp.transfersCount) : 0;
+            agg.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
+            agg.reliability += Number.isFinite(parseFloat(emp.reliability)) ? parseFloat(emp.reliability) : 0;
+            agg.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
+
+            metricKeysToAverage.forEach(metricKey => {
+                const metricValue = parseFloat(emp[metricKey]);
+                if (!Number.isFinite(metricValue)) return;
+
+                let weight = 1;
+                if (surveyWeightedMetrics.has(metricKey)) {
+                    weight = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                } else {
+                    weight = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
+                }
+                if (weight <= 0) return;
+
+                agg.weightedSums[metricKey] = (agg.weightedSums[metricKey] || 0) + (metricValue * weight);
+                agg.weightedCounts[metricKey] = (agg.weightedCounts[metricKey] || 0) + weight;
+            });
+        });
+    });
+
+    Object.keys(aggregatedEmployees).forEach(name => {
+        const agg = aggregatedEmployees[name];
+        metricKeysToAverage.forEach(metricKey => {
+            const totalWeight = agg.weightedCounts[metricKey] || 0;
+            if (totalWeight > 0) {
+                agg[metricKey] = agg.weightedSums[metricKey] / totalWeight;
+            }
+        });
+        delete agg.weightedSums;
+        delete agg.weightedCounts;
+    });
+
+    const ytdStartText = `${yearNum}-01-01`;
+    const ytdKey = `${ytdStartText}|${uptoEndDateText}`;
+    const endDateObj = parseIsoDateSafe(uptoEndDateText);
+    const ytdLabel = endDateObj
+        ? `YTD through ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+        : `YTD through ${uptoEndDateText}`;
+
+    return {
+        key: ytdKey,
+        entry: {
+            employees: Object.values(aggregatedEmployees),
+            metadata: {
+                startDate: ytdStartText,
+                endDate: uptoEndDateText,
+                label: ytdLabel,
+                periodType: 'ytd',
+                autoGeneratedYtd: true,
+                sourcePeriodType: sourceType,
+                yearEndTargetProfile: 'auto',
+                yearEndReviewYear: String(yearNum),
+                uploadedAt: new Date().toISOString()
+            }
+        }
+    };
+}
+
+function upsertAutoYtdForYear(year, uptoEndDateText) {
+    const aggregate = buildYtdAggregateForYear(year, uptoEndDateText);
+    if (!aggregate) return;
+
+    const yearNum = parseInt(year, 10);
+    Object.keys(ytdData || {}).forEach(existingKey => {
+        const existing = ytdData[existingKey];
+        const metadata = existing?.metadata || {};
+        if (!metadata.autoGeneratedYtd) return;
+        const existingEndDateText = metadata.endDate || (existingKey.includes('|') ? existingKey.split('|')[1] : '');
+        const existingEndDate = parseIsoDateSafe(existingEndDateText);
+        if (!existingEndDate) return;
+        if (existingEndDate.getFullYear() === yearNum) {
+            delete ytdData[existingKey];
+        }
+    });
+
+    ytdData[aggregate.key] = aggregate.entry;
+}
+
 function getYtdPeriodForWeekKey(weekKey) {
     if (!weekKey) return null;
     const parts = weekKey.split('|');
@@ -6071,94 +6225,19 @@ function getYtdPeriodForWeekKey(weekKey) {
     if (!endDate) return null;
     
     // First, try to find explicit YTD data
-    const matchingKey = Object.keys(ytdData).find(key => key.split('|')[1] === endDate);
+    const matchingKey = Object.keys(ytdData).find(key => {
+        const metadataEndDate = ytdData[key]?.metadata?.endDate;
+        return (metadataEndDate && metadataEndDate === endDate) || key.split('|')[1] === endDate;
+    });
     if (matchingKey) {
         return ytdData[matchingKey];
     }
-    
-    // If no explicit YTD data, calculate YTD by aggregating all weeks up to endDate
-    const endDateObj = new Date(endDate);
-    const yearStart = new Date(endDateObj.getFullYear(), 0, 1); // Jan 1 of same year
-    
-    // Find all weeks that end on or before endDate and are in same year
-    const weekKeysToAggregate = Object.keys(weeklyData).filter(wk => {
-        const wkParts = wk.split('|');
-        const wkEndDate = new Date(wkParts[1]);
-        return wkEndDate >= yearStart && wkEndDate <= endDateObj;
-    }).sort();
-    
-    if (weekKeysToAggregate.length === 0) {
-        return null;
-    }
-    
-    // Aggregate all matching weeks
-    const aggregatedEmployees = {};
-    
-    weekKeysToAggregate.forEach(wk => {
-        const week = weeklyData[wk];
-        if (week?.employees) {
-            week.employees.forEach(emp => {
-                if (!aggregatedEmployees[emp.name]) {
-                    aggregatedEmployees[emp.name] = {
-                        name: emp.name,
-                        firstName: emp.firstName,
-                        // Metrics that should be summed
-                        transfersCount: 0,
-                        surveyTotal: 0,
-                        reliability: 0,
-                        // Metrics that should be averaged
-                        counts: {},
-                        sums: {}
-                    };
-                }
-                
-                const agg = aggregatedEmployees[emp.name];
-                
-                // Sum these metrics
-                agg.transfersCount += emp.transfersCount || 0;
-                agg.surveyTotal += emp.surveyTotal || 0;
-                agg.reliability += emp.reliability || 0;
-                
-                // Track for averaging later
-                const metricsToAverage = [
-                    'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
-                    'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
-                    'negativeWord', 'positiveWord'
-                ];
-                
-                metricsToAverage.forEach(metric => {
-                    if (emp[metric] !== undefined && emp[metric] !== null && emp[metric] !== '') {
-                        agg.counts[metric] = (agg.counts[metric] || 0) + 1;
-                        agg.sums[metric] = (agg.sums[metric] || 0) + parseFloat(emp[metric]);
-                    }
-                });
-            });
-        }
-    });
-    
-    // Calculate averages and clean up
-    Object.keys(aggregatedEmployees).forEach(empName => {
-        const agg = aggregatedEmployees[empName];
-        const metricsToAverage = [
-            'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
-            'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
-            'negativeWord', 'positiveWord'
-        ];
-        
-        metricsToAverage.forEach(metric => {
-            if (agg.counts[metric] && agg.counts[metric] > 0) {
-                agg[metric] = agg.sums[metric] / agg.counts[metric];
-            }
-        });
-        
-        delete agg.counts;
-        delete agg.sums;
-    });
-    
-    return {
-        metadata: { periodType: 'ytd', startDate: yearStart.toISOString().split('T')[0], endDate: endDate },
-        employees: Object.values(aggregatedEmployees)
-    };
+
+    // If no explicit YTD data, calculate from uploaded periods up to this end date
+    const yearNum = parseInt(endDate.split('-')[0], 10);
+    if (!Number.isInteger(yearNum)) return null;
+    const aggregate = buildYtdAggregateForYear(yearNum, endDate);
+    return aggregate ? aggregate.entry : null;
 }
 
 

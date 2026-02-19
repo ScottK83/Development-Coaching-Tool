@@ -2,8 +2,9 @@ param(
     [string]$Message = "chore: update",
     [string]$Branch = "main",
     [string]$Remote = "origin",
-    [string]$ProjectName = "supervisor-dashboard",
-    [switch]$IncludeUntracked
+    [string]$ProjectName = "development-coaching-tool",
+    [switch]$IncludeUntracked,
+    [switch]$SkipSmokeChecks
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,10 +66,58 @@ function Update-AppVersion {
     Set-Content -Path $FilePath -Value $lines
 }
 
+function Assert-RequiredFiles {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoPath
+    )
+
+    $requiredFiles = @("index.html", "script.js", "styles.css")
+    foreach ($file in $requiredFiles) {
+        $fullPath = Join-Path $RepoPath $file
+        if (!(Test-Path $fullPath)) {
+            throw "Required file is missing: $file"
+        }
+    }
+}
+
+function Invoke-SmokeChecks {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoPath
+    )
+
+    Write-Host "`n==> Running smoke checks" -ForegroundColor Cyan
+
+    Assert-RequiredFiles -RepoPath $RepoPath
+
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        throw "Node.js is required for smoke checks. Install Node.js or run with -SkipSmokeChecks."
+    }
+
+    Invoke-Step "node --check script.js" "Smoke check: JavaScript syntax"
+
+    $indexPath = Join-Path $RepoPath "index.html"
+    $indexContent = Get-Content $indexPath -Raw
+    if ($indexContent -match 'script\.min\.js') {
+        $minPath = Join-Path $RepoPath "script.min.js"
+        if (!(Test-Path $minPath)) {
+            throw "index.html references script.min.js, but script.min.js is missing."
+        }
+    }
+
+    Write-Host "Smoke checks passed." -ForegroundColor Green
+}
+
 Write-Host "Starting publish workflow (git push + Cloudflare deploy)..." -ForegroundColor Green
 
 # 1) Validate repo
 Invoke-Step "git rev-parse --is-inside-work-tree" "Checking git repository"
+
+# 1.2) Run smoke checks before commit/push/deploy
+if (-not $SkipSmokeChecks) {
+    Invoke-SmokeChecks -RepoPath $repoRoot
+} else {
+    Write-Host "Skipping smoke checks (requested with -SkipSmokeChecks)." -ForegroundColor Yellow
+}
 
 # 1.5) Always bump app version for this push
 $newVersion = Get-NextAppVersion
