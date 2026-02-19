@@ -589,10 +589,10 @@
 
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #3949ab;">
                         <h3 style="color: #283593; margin-top: 0;">☁️ Cloud Sync (Single User)</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Sync all app data across browsers/computers using your own private GitHub Gist.</p>
+                        <p style="color: #666; margin-bottom: 15px;">Sync all app data across browsers/computers using GitHub (repo file preferred, gist fallback).</p>
                         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div>
-                                <label for="cloudSyncToken" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">GitHub Token (gist scope):</label>
+                                <label for="cloudSyncToken" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">GitHub Token (repo scope for repo sync, gist scope for gist sync):</label>
                                 <input type="password" id="cloudSyncToken" placeholder="ghp_... or github_pat_..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                             <div>
@@ -600,10 +600,23 @@
                                 <input type="text" id="cloudSyncGistId" placeholder="Auto-created on first save" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                         </div>
+                        <div style="margin-bottom: 12px; padding: 12px; background: #f5f7ff; border: 1px solid #d7ddff; border-radius: 6px;">
+                            <div style="font-weight: bold; color: #283593; margin-bottom: 8px;">Repo Sync (No Gist Required)</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 10px;">
+                                <input type="text" id="cloudSyncRepoOwner" placeholder="Owner (e.g., yourusername)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoName" placeholder="Repo (e.g., coaching-sync)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoBranch" placeholder="Branch (default: main)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="text" id="cloudSyncRepoPath" placeholder="File path (default: sync/development-coaching-tool-sync.json)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                             <button type="button" id="saveCloudSyncBtn" class="btn-secondary" style="background: #3949ab; color: white;">☁️ Save to Cloud</button>
                             <button type="button" id="loadCloudSyncBtn" class="btn-secondary" style="background: #00897b; color: white;">☁️ Load from Cloud</button>
+                            <button type="button" id="copyCloudSetupBtn" class="btn-secondary" style="background: #5e35b1; color: white;">📋 Copy Setup</button>
+                            <button type="button" id="pasteCloudSetupBtn" class="btn-secondary" style="background: #6d4c41; color: white;">📥 Paste Setup</button>
                         </div>
+                        <div id="cloudSyncModeBadge" style="display: inline-block; margin: 0 0 10px 0; padding: 6px 10px; border-radius: 999px; font-size: 0.8em; font-weight: bold; background: #eceff1; color: #455a64;">Mode: Not Configured</div>
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 0.85em;">Setup copy includes target config (repo/gist) only, never token. Keep your GitHub token in your password manager.</p>
                         <div id="cloudSyncStatus" style="display: none; padding: 10px; border-radius: 4px; font-size: 0.9em;"></div>
                     </div>
                     
@@ -823,6 +836,11 @@
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">📌 Weekly Priority Queue</h4>
+                            <div id="coachingPriorityQueueOutput" style="display: grid; gap: 10px;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
                             <h4 style="margin-top: 0; color: #3c78c8;">📝 Prep for 1:1 (Supervisor Only)</h4>
                             <div style="display: grid; grid-template-columns: minmax(220px, 1fr); gap: 10px; margin-bottom: 10px;">
                                 <div>
@@ -897,6 +915,8 @@
         
         <footer style="text-align: center; padding: 20px; color: #999; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 40px;">
             <span id="appVersion">Version: Loading...</span>
+            <span style="margin: 0 8px; color: #ccc;">•</span>
+            <span id="systemStatus">System: Loading...</span>
         </footer>
     </div>
 

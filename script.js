@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.10'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.11'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -102,7 +102,10 @@ const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
 const CLOUD_SYNC_FILENAME = 'development-coaching-tool-sync.json';
+const CLOUD_SYNC_DEFAULT_REPO_BRANCH = 'main';
+const CLOUD_SYNC_DEFAULT_REPO_PATH = 'sync/development-coaching-tool-sync.json';
 const CLOUD_SYNC_SETTINGS_KEY = STORAGE_PREFIX + 'cloudSyncSettings';
+const CLOUD_SYNC_SHARED_KEY = STORAGE_PREFIX + 'cloudSyncShared';
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 
 const YEAR_END_TARGETS_BY_YEAR = {
@@ -1735,6 +1738,150 @@ function saveCloudSyncSettings(settings) {
     }
 }
 
+function loadCloudSyncSharedInfo() {
+    try {
+        const raw = localStorage.getItem(CLOUD_SYNC_SHARED_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        console.error('Error loading cloud sync shared info:', error);
+        return {};
+    }
+}
+
+function saveCloudSyncSharedInfo(sharedInfo) {
+    try {
+        const current = loadCloudSyncSharedInfo();
+        const merged = {
+            ...current,
+            ...(sharedInfo || {}),
+            updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(CLOUD_SYNC_SHARED_KEY, JSON.stringify(merged));
+    } catch (error) {
+        console.error('Error saving cloud sync shared info:', error);
+    }
+}
+
+function hydrateCloudSyncSettingsFromShared() {
+    const settings = loadCloudSyncSettings();
+    const shared = loadCloudSyncSharedInfo();
+    const updates = {};
+
+    if (!settings.gistId && shared.gistId) updates.gistId = shared.gistId;
+    if (!settings.repoOwner && shared.repoOwner) updates.repoOwner = shared.repoOwner;
+    if (!settings.repoName && shared.repoName) updates.repoName = shared.repoName;
+    if (!settings.repoBranch && shared.repoBranch) updates.repoBranch = shared.repoBranch;
+    if (!settings.repoPath && shared.repoPath) updates.repoPath = shared.repoPath;
+
+    if (Object.keys(updates).length) {
+        saveCloudSyncSettings({ ...settings, ...updates });
+    }
+}
+
+function buildCloudSetupExport() {
+    const settings = loadCloudSyncSettings();
+    const gistId = (document.getElementById('cloudSyncGistId')?.value || settings.gistId || '').trim();
+    const repoOwner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
+    const repoName = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
+    const repoBranch = (document.getElementById('cloudSyncRepoBranch')?.value || settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim();
+    const repoPath = (document.getElementById('cloudSyncRepoPath')?.value || settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH).trim();
+
+    const mode = repoOwner && repoName ? 'repo' : 'gist';
+
+    return {
+        app: 'Development Coaching Tool',
+        version: APP_VERSION,
+        mode,
+        gistId,
+        repoOwner,
+        repoName,
+        repoBranch,
+        repoPath,
+        exportedAt: new Date().toISOString(),
+        note: 'Token intentionally excluded. Store token separately.'
+    };
+}
+
+function copyCloudSetup() {
+    const payload = buildCloudSetupExport();
+    if (!payload.gistId && !(payload.repoOwner && payload.repoName)) {
+        setCloudSyncStatus('No sync target to copy yet. Save to cloud first.', 'warning');
+        return;
+    }
+
+    navigator.clipboard.writeText(JSON.stringify(payload)).then(() => {
+        setCloudSyncStatus('Cloud setup copied (Gist ID only). Paste this on another computer.', 'success');
+        showToast('✅ Cloud setup copied', 3000);
+    }).catch(() => {
+        setCloudSyncStatus('Unable to copy setup automatically. Copy Gist ID manually.', 'warning');
+    });
+}
+
+function pasteCloudSetup() {
+    const raw = prompt('Paste Cloud Setup JSON, Gist ID, or owner/repo');
+    if (!raw || !raw.trim()) return;
+
+    let gistId = '';
+    let repoOwner = '';
+    let repoName = '';
+    let repoBranch = CLOUD_SYNC_DEFAULT_REPO_BRANCH;
+    let repoPath = CLOUD_SYNC_DEFAULT_REPO_PATH;
+
+    try {
+        const parsed = JSON.parse(raw);
+        gistId = (parsed?.gistId || '').trim();
+        repoOwner = (parsed?.repoOwner || '').trim();
+        repoName = (parsed?.repoName || '').trim();
+        repoBranch = (parsed?.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim();
+        repoPath = (parsed?.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH).trim();
+    } catch {
+        const text = raw.trim();
+        if (text.includes('/') && !text.includes('{')) {
+            const [owner, repo] = text.split('/').map(s => s.trim());
+            repoOwner = owner || '';
+            repoName = repo || '';
+        } else {
+            gistId = text;
+        }
+    }
+
+    if (!gistId && !(repoOwner && repoName)) {
+        setCloudSyncStatus('Could not find a valid sync target in pasted setup.', 'error');
+        return;
+    }
+
+    const gistInput = document.getElementById('cloudSyncGistId');
+    const repoOwnerInput = document.getElementById('cloudSyncRepoOwner');
+    const repoNameInput = document.getElementById('cloudSyncRepoName');
+    const repoBranchInput = document.getElementById('cloudSyncRepoBranch');
+    const repoPathInput = document.getElementById('cloudSyncRepoPath');
+
+    if (gistInput) gistInput.value = gistId;
+    if (repoOwnerInput) repoOwnerInput.value = repoOwner;
+    if (repoNameInput) repoNameInput.value = repoName;
+    if (repoBranchInput) repoBranchInput.value = repoBranch;
+    if (repoPathInput) repoPathInput.value = repoPath;
+
+    const settings = loadCloudSyncSettings();
+    saveCloudSyncSettings({
+        ...settings,
+        gistId,
+        repoOwner,
+        repoName,
+        repoBranch,
+        repoPath
+    });
+    saveCloudSyncSharedInfo({ gistId, repoOwner, repoName, repoBranch, repoPath });
+
+    if (repoOwner && repoName) {
+        setCloudSyncStatus('Repo sync setup applied. Add token, then click Load from Cloud.', 'success');
+    } else {
+        setCloudSyncStatus('Gist setup applied. Add token, then click Load from Cloud.', 'success');
+    }
+    updateCloudSyncModeBadge();
+    showToast('✅ Cloud setup applied', 3000);
+}
+
 function setCloudSyncStatus(message, type = 'info') {
     const statusEl = document.getElementById('cloudSyncStatus');
     if (!statusEl) return;
@@ -1754,6 +1901,50 @@ function setCloudSyncStatus(message, type = 'info') {
     statusEl.textContent = message;
 }
 
+function updateCloudSyncModeBadge() {
+    const badge = document.getElementById('cloudSyncModeBadge');
+    if (!badge) return;
+
+    const settings = loadCloudSyncSettings();
+    const repoOwner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
+    const repoName = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
+    const gistId = (document.getElementById('cloudSyncGistId')?.value || settings.gistId || '').trim();
+
+    if (repoOwner && repoName) {
+        badge.textContent = `Mode: Repo Sync (${repoOwner}/${repoName})`;
+        badge.style.background = '#e8f5e9';
+        badge.style.color = '#1b5e20';
+    } else if (gistId) {
+        badge.textContent = 'Mode: Gist Sync';
+        badge.style.background = '#e8eaf6';
+        badge.style.color = '#283593';
+    } else {
+        badge.textContent = 'Mode: Not Configured';
+        badge.style.background = '#eceff1';
+        badge.style.color = '#455a64';
+    }
+
+    updateSystemStatusLabel();
+}
+
+function getCloudSyncModeLabel() {
+    const settings = loadCloudSyncSettings();
+    const repoOwner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
+    const repoName = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
+    const gistId = (document.getElementById('cloudSyncGistId')?.value || settings.gistId || '').trim();
+
+    if (repoOwner && repoName) return 'Repo Sync';
+    if (gistId) return 'Gist Sync';
+    return 'Not Configured';
+}
+
+function updateSystemStatusLabel() {
+    const statusEl = document.getElementById('systemStatus');
+    if (!statusEl) return;
+
+    statusEl.textContent = `System: ${APP_VERSION} • ${getCloudSyncModeLabel()}`;
+}
+
 function getCloudSyncCredentials() {
     const tokenInput = document.getElementById('cloudSyncToken');
     const gistInput = document.getElementById('cloudSyncGistId');
@@ -1765,6 +1956,22 @@ function getCloudSyncCredentials() {
     return { token, gistId };
 }
 
+function getCloudSyncRepoConfig() {
+    const settings = loadCloudSyncSettings();
+    const owner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
+    const repo = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
+    const branch = (document.getElementById('cloudSyncRepoBranch')?.value || settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim() || CLOUD_SYNC_DEFAULT_REPO_BRANCH;
+    const path = (document.getElementById('cloudSyncRepoPath')?.value || settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH).trim() || CLOUD_SYNC_DEFAULT_REPO_PATH;
+
+    return {
+        owner,
+        repo,
+        branch,
+        path,
+        isConfigured: !!(owner && repo)
+    };
+}
+
 function isCloudSyncReadyForAutoSave() {
     const { token } = getCloudSyncCredentials();
     return !!token;
@@ -1773,6 +1980,7 @@ function isCloudSyncReadyForAutoSave() {
 function shouldAutoSyncStorageKey(key) {
     if (!key) return false;
     if (key === CLOUD_SYNC_SETTINGS_KEY) return false;
+    if (key === CLOUD_SYNC_SHARED_KEY) return false;
     return key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY;
 }
 
@@ -1803,20 +2011,62 @@ async function runAutoCloudSyncNow() {
 
     try {
         const { token, gistId } = getCloudSyncCredentials();
+        const repoConfig = getCloudSyncRepoConfig();
         const payload = collectCloudSyncPayload();
-        const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
 
-        const gistInput = document.getElementById('cloudSyncGistId');
-        if (gistInput && resolvedGistId && gistInput.value.trim() !== resolvedGistId) {
-            gistInput.value = resolvedGistId;
+        if (repoConfig.isConfigured) {
+            await createOrUpdateCloudSyncRepoFile({
+                token,
+                owner: repoConfig.owner,
+                repo: repoConfig.repo,
+                branch: repoConfig.branch,
+                path: repoConfig.path,
+                payload
+            });
+
+            saveCloudSyncSettings({
+                githubToken: token,
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+            saveCloudSyncSharedInfo({
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+
+            setCloudSyncStatus('Auto-save complete via repo sync.', 'success');
+        } else {
+            const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
+
+            const gistInput = document.getElementById('cloudSyncGistId');
+            if (gistInput && resolvedGistId && gistInput.value.trim() !== resolvedGistId) {
+                gistInput.value = resolvedGistId;
+            }
+
+            saveCloudSyncSettings({
+                githubToken: token,
+                gistId: resolvedGistId || gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+            saveCloudSyncSharedInfo({
+                gistId: resolvedGistId || gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+
+            setCloudSyncStatus('Auto-save complete via gist sync.', 'success');
         }
-
-        saveCloudSyncSettings({
-            githubToken: token,
-            gistId: resolvedGistId || gistId
-        });
-
-        setCloudSyncStatus('Auto-save complete. Cloud copy is up to date.', 'success');
     } catch (error) {
         console.error('Auto cloud sync failed:', error);
         setCloudSyncStatus(`Auto-save failed: ${error.message}`, 'error');
@@ -1856,35 +2106,68 @@ function installCloudSyncAutoSaveHooks() {
 function initializeCloudSyncPanel() {
     const tokenInput = document.getElementById('cloudSyncToken');
     const gistInput = document.getElementById('cloudSyncGistId');
-    if (!tokenInput || !gistInput) return;
+    const repoOwnerInput = document.getElementById('cloudSyncRepoOwner');
+    const repoNameInput = document.getElementById('cloudSyncRepoName');
+    const repoBranchInput = document.getElementById('cloudSyncRepoBranch');
+    const repoPathInput = document.getElementById('cloudSyncRepoPath');
+    if (!tokenInput || !gistInput || !repoOwnerInput || !repoNameInput || !repoBranchInput || !repoPathInput) return;
+
+    hydrateCloudSyncSettingsFromShared();
 
     const settings = loadCloudSyncSettings();
     tokenInput.value = settings.githubToken || '';
     gistInput.value = settings.gistId || '';
+    repoOwnerInput.value = settings.repoOwner || '';
+    repoNameInput.value = settings.repoName || '';
+    repoBranchInput.value = settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH;
+    repoPathInput.value = settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH;
 
-    if (settings.gistId) {
-        setCloudSyncStatus('Cloud sync is configured. Auto-save is enabled whenever data changes.', 'info');
+    if (settings.repoOwner && settings.repoName) {
+        setCloudSyncStatus('Repo sync is configured. Auto-save will use repository file sync.', 'info');
+    } else if (settings.gistId) {
+        setCloudSyncStatus('Gist sync is configured. Auto-save is enabled whenever data changes.', 'info');
     } else {
-        setCloudSyncStatus('Enter your GitHub token. First auto-save will create a private gist automatically.', 'warning');
+        setCloudSyncStatus('Enter token and configure repo sync (preferred) or gist sync.', 'warning');
     }
+
+    updateCloudSyncModeBadge();
 
     if (!tokenInput.dataset.cloudSyncBound) {
         const persistSettings = () => {
             const current = {
                 githubToken: tokenInput.value.trim(),
-                gistId: gistInput.value.trim()
+                gistId: gistInput.value.trim(),
+                repoOwner: repoOwnerInput.value.trim(),
+                repoName: repoNameInput.value.trim(),
+                repoBranch: (repoBranchInput.value || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim(),
+                repoPath: (repoPathInput.value || CLOUD_SYNC_DEFAULT_REPO_PATH).trim()
             };
             saveCloudSyncSettings(current);
+            if (current.gistId || (current.repoOwner && current.repoName)) {
+                saveCloudSyncSharedInfo({
+                    gistId: current.gistId,
+                    repoOwner: current.repoOwner,
+                    repoName: current.repoName,
+                    repoBranch: current.repoBranch,
+                    repoPath: current.repoPath
+                });
+            }
             if (current.githubToken) {
                 setCloudSyncStatus('Cloud sync credentials saved. Auto-save is active.', 'info');
                 scheduleAutoCloudSync(900);
             } else {
                 setCloudSyncStatus('Add GitHub token to enable auto-save.', 'warning');
             }
+
+            updateCloudSyncModeBadge();
         };
 
         tokenInput.addEventListener('change', persistSettings);
         gistInput.addEventListener('change', persistSettings);
+        repoOwnerInput.addEventListener('change', persistSettings);
+        repoNameInput.addEventListener('change', persistSettings);
+        repoBranchInput.addEventListener('change', persistSettings);
+        repoPathInput.addEventListener('change', persistSettings);
         tokenInput.dataset.cloudSyncBound = 'true';
     }
 }
@@ -1943,6 +2226,105 @@ function applyCloudSyncPayload(payload) {
     }
 }
 
+function encodeUtf8ToBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+}
+
+function decodeBase64ToUtf8(base64Text) {
+    const binary = atob(base64Text);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+}
+
+function buildRepoContentApiUrl({ owner, repo, path, ref }) {
+    const normalizedPath = String(path || CLOUD_SYNC_DEFAULT_REPO_PATH)
+        .split('/')
+        .filter(Boolean)
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+
+    const baseUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${normalizedPath}`;
+    if (ref) {
+        return `${baseUrl}?ref=${encodeURIComponent(ref)}`;
+    }
+    return baseUrl;
+}
+
+async function readCloudSyncRepoFile({ token, owner, repo, branch, path }) {
+    const url = buildRepoContentApiUrl({ owner, repo, path, ref: branch });
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub repo API error (${response.status}): ${errorText.slice(0, 220)}`);
+    }
+
+    const file = await response.json();
+    const encodedContent = String(file.content || '').replace(/\n/g, '');
+    if (!encodedContent) {
+        throw new Error('Repo sync file is empty.');
+    }
+
+    const content = decodeBase64ToUtf8(encodedContent);
+    const payload = JSON.parse(content);
+    return { payload, sha: file.sha || null };
+}
+
+async function createOrUpdateCloudSyncRepoFile({ token, owner, repo, branch, path, payload }) {
+    const existing = await readCloudSyncRepoFile({ token, owner, repo, branch, path }).catch(error => {
+        if (String(error?.message || '').includes('404')) return null;
+        throw error;
+    });
+
+    const putUrl = buildRepoContentApiUrl({ owner, repo, path });
+    const body = {
+        message: `Update Development Coaching Tool sync (${new Date().toISOString()})`,
+        content: encodeUtf8ToBase64(JSON.stringify(payload, null, 2)),
+        branch
+    };
+
+    if (existing?.sha) {
+        body.sha = existing.sha;
+    }
+
+    const response = await fetch(putUrl, {
+        method: 'PUT',
+        headers: {
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub repo API error (${response.status}): ${errorText.slice(0, 220)}`);
+    }
+
+    return response.json();
+}
+
 async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
     const isUpdate = !!gistId;
     const endpoint = isUpdate
@@ -1993,6 +2375,7 @@ async function saveDataToCloudSync() {
 
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
+    const repoConfig = getCloudSyncRepoConfig();
 
     if (!token) {
         setCloudSyncStatus('GitHub token is required to save.', 'error');
@@ -2003,16 +2386,60 @@ async function saveDataToCloudSync() {
 
     try {
         const payload = collectCloudSyncPayload();
-        const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
 
-        gistInput.value = resolvedGistId || gistId;
-        saveCloudSyncSettings({
-            githubToken: token,
-            gistId: resolvedGistId || gistId
-        });
+        if (repoConfig.isConfigured) {
+            await createOrUpdateCloudSyncRepoFile({
+                token,
+                owner: repoConfig.owner,
+                repo: repoConfig.repo,
+                branch: repoConfig.branch,
+                path: repoConfig.path,
+                payload
+            });
 
-        setCloudSyncStatus('Cloud save complete. Your data is now available on other devices.', 'success');
-        showToast('✅ Cloud sync saved', 3000);
+            saveCloudSyncSettings({
+                githubToken: token,
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+            saveCloudSyncSharedInfo({
+                gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+
+            setCloudSyncStatus('Cloud save complete via repo sync.', 'success');
+            updateCloudSyncModeBadge();
+            showToast('✅ Repo sync saved', 3000);
+        } else {
+            const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
+
+            gistInput.value = resolvedGistId || gistId;
+            saveCloudSyncSettings({
+                githubToken: token,
+                gistId: resolvedGistId || gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+            saveCloudSyncSharedInfo({
+                gistId: resolvedGistId || gistId,
+                repoOwner: repoConfig.owner,
+                repoName: repoConfig.repo,
+                repoBranch: repoConfig.branch,
+                repoPath: repoConfig.path
+            });
+
+            setCloudSyncStatus('Cloud save complete via gist sync.', 'success');
+            updateCloudSyncModeBadge();
+            showToast('✅ Gist sync saved', 3000);
+        }
     } catch (error) {
         console.error('Cloud save failed:', error);
         setCloudSyncStatus(`Cloud save failed: ${error.message}`, 'error');
@@ -2027,12 +2454,13 @@ async function loadDataFromCloudSync() {
 
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
+    const repoConfig = getCloudSyncRepoConfig();
 
     if (!token) {
         setCloudSyncStatus('GitHub token is required to load.', 'error');
         return;
     }
-    if (!gistId) {
+    if (!repoConfig.isConfigured && !gistId) {
         setCloudSyncStatus('Gist ID is required to load.', 'error');
         return;
     }
@@ -2044,44 +2472,77 @@ async function loadDataFromCloudSync() {
     setCloudSyncStatus('Loading from cloud...', 'info');
 
     try {
-        const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/vnd.github+json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        let payload;
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
-        }
-
-        const gistData = await response.json();
-        const fileMeta = gistData?.files?.[CLOUD_SYNC_FILENAME]
-            || Object.values(gistData?.files || {})[0];
-
-        if (!fileMeta) {
-            throw new Error('No sync file found in gist.');
-        }
-
-        let content = fileMeta.content;
-        if (!content && fileMeta.raw_url) {
-            const rawResponse = await fetch(fileMeta.raw_url, {
-                headers: { 'Authorization': `Bearer ${token}` }
+        if (repoConfig.isConfigured) {
+            const repoFile = await readCloudSyncRepoFile({
+                token,
+                owner: repoConfig.owner,
+                repo: repoConfig.repo,
+                branch: repoConfig.branch,
+                path: repoConfig.path
             });
-            if (!rawResponse.ok) {
-                throw new Error('Unable to download sync payload from gist raw URL.');
+
+            if (!repoFile?.payload) {
+                throw new Error('No sync file found in configured repository path.');
             }
-            content = await rawResponse.text();
+            payload = repoFile.payload;
+        } else {
+            const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`GitHub API error (${response.status}): ${errorText.slice(0, 220)}`);
+            }
+
+            const gistData = await response.json();
+            const fileMeta = gistData?.files?.[CLOUD_SYNC_FILENAME]
+                || Object.values(gistData?.files || {})[0];
+
+            if (!fileMeta) {
+                throw new Error('No sync file found in gist.');
+            }
+
+            let content = fileMeta.content;
+            if (!content && fileMeta.raw_url) {
+                const rawResponse = await fetch(fileMeta.raw_url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!rawResponse.ok) {
+                    throw new Error('Unable to download sync payload from gist raw URL.');
+                }
+                content = await rawResponse.text();
+            }
+
+            payload = JSON.parse(content);
         }
 
-        const payload = JSON.parse(content);
         applyCloudSyncPayload(payload);
 
-        saveCloudSyncSettings({ githubToken: token, gistId });
+        saveCloudSyncSettings({
+            githubToken: token,
+            gistId,
+            repoOwner: repoConfig.owner,
+            repoName: repoConfig.repo,
+            repoBranch: repoConfig.branch,
+            repoPath: repoConfig.path
+        });
+        saveCloudSyncSharedInfo({
+            gistId,
+            repoOwner: repoConfig.owner,
+            repoName: repoConfig.repo,
+            repoBranch: repoConfig.branch,
+            repoPath: repoConfig.path
+        });
 
-        setCloudSyncStatus('Cloud load complete. Reloading app with synced data...', 'success');
+        setCloudSyncStatus(`Cloud load complete via ${repoConfig.isConfigured ? 'repo' : 'gist'} sync. Reloading app...`, 'success');
+        updateCloudSyncModeBadge();
         showToast('✅ Cloud sync loaded', 3000);
         setTimeout(() => location.reload(), 700);
     } catch (error) {
@@ -3135,6 +3596,14 @@ function initializeEventHandlers() {
 
     document.getElementById('loadCloudSyncBtn')?.addEventListener('click', () => {
         loadDataFromCloudSync();
+    });
+
+    document.getElementById('copyCloudSetupBtn')?.addEventListener('click', () => {
+        copyCloudSetup();
+    });
+
+    document.getElementById('pasteCloudSetupBtn')?.addEventListener('click', () => {
+        pasteCloudSetup();
     });
     
     // Delete selected week
@@ -6943,6 +7412,432 @@ function getPreviousWeeklyKey(latestKey) {
     return null;
 }
 
+function getTrendPeriodDescriptor(periodType) {
+    if (periodType === 'mom') {
+        return { label: 'Month over Month', shortLabel: 'MoM', compareLabel: 'month' };
+    }
+    if (periodType === 'ytd') {
+        return { label: 'Year to Date', shortLabel: 'YTD', compareLabel: 'year' };
+    }
+    return { label: 'Week over Week', shortLabel: 'WoW', compareLabel: 'week' };
+}
+
+function getTrendComparisonBuckets(keys, periodType) {
+    const descriptor = getTrendPeriodDescriptor(periodType);
+    if (!Array.isArray(keys) || keys.length === 0) {
+        return {
+            descriptor,
+            currentKeys: [],
+            previousKeys: [],
+            thirdKeys: []
+        };
+    }
+
+    if (periodType === 'mom') {
+        return {
+            descriptor,
+            currentKeys: keys.slice(-4),
+            previousKeys: keys.slice(-8, -4),
+            thirdKeys: keys.slice(-12, -8)
+        };
+    }
+
+    if (periodType === 'ytd') {
+        const yearBuckets = {};
+        keys.forEach(weekKey => {
+            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
+            if (!parsed) return;
+            const year = new Date(parsed).getFullYear();
+            if (!yearBuckets[year]) yearBuckets[year] = [];
+            yearBuckets[year].push(weekKey);
+        });
+
+        const years = Object.keys(yearBuckets).map(y => parseInt(y, 10)).sort((a, b) => a - b);
+        const currentYear = years.length ? years[years.length - 1] : null;
+
+        return {
+            descriptor,
+            currentKeys: currentYear ? (yearBuckets[currentYear] || []) : [],
+            previousKeys: currentYear ? (yearBuckets[currentYear - 1] || []) : [],
+            thirdKeys: currentYear ? (yearBuckets[currentYear - 2] || []) : []
+        };
+    }
+
+    return {
+        descriptor,
+        currentKeys: keys.slice(-1),
+        previousKeys: keys.slice(-2, -1),
+        thirdKeys: keys.slice(-3, -2)
+    };
+}
+
+function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
+    if (!employeeName || !Array.isArray(periodKeys) || periodKeys.length === 0) return null;
+
+    const sums = {};
+    const counts = {};
+    let periodsIncluded = 0;
+
+    periodKeys.forEach(weekKey => {
+        const week = weeklyData[weekKey];
+        const employee = week?.employees?.find(emp => emp.name === employeeName);
+        if (!employee) return;
+
+        periodsIncluded += 1;
+        Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+            const value = parseFloat(employee[metricKey]);
+            if (Number.isNaN(value)) return;
+            sums[metricKey] = (sums[metricKey] || 0) + value;
+            counts[metricKey] = (counts[metricKey] || 0) + 1;
+        });
+    });
+
+    if (periodsIncluded === 0) return null;
+
+    const aggregate = {
+        name: employeeName,
+        periodsIncluded,
+        periodKeys: [...periodKeys]
+    };
+
+    Object.keys(sums).forEach(metricKey => {
+        aggregate[metricKey] = sums[metricKey] / counts[metricKey];
+    });
+
+    return aggregate;
+}
+
+function getEmployeeNamesForPeriod(periodKeys) {
+    const names = new Set();
+    if (!Array.isArray(periodKeys)) return names;
+
+    periodKeys.forEach(weekKey => {
+        const employees = weeklyData[weekKey]?.employees || [];
+        employees.forEach(emp => {
+            if (emp?.name) names.add(emp.name);
+        });
+    });
+
+    return names;
+}
+
+function getTrendDeltaThreshold(metricKey) {
+    const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
+    if (unit === 'sec') return { value: 20, unit };
+    if (unit === 'hrs') return { value: 2, unit };
+    return { value: 4, unit };
+}
+
+function calculateCoachingImpact(employeeName, currentSnapshot) {
+    if (!employeeName || !currentSnapshot) return null;
+
+    const history = getCoachingHistoryForEmployee(employeeName);
+    if (!history.length) return null;
+
+    const latestSession = history[0];
+    const coachedMetrics = (latestSession.metricsCoached || []).filter(Boolean);
+    if (!coachedMetrics.length) return null;
+
+    const impacts = [];
+    coachedMetrics.forEach(metricKey => {
+        const baseline = getEmployeeMetricForWeek(employeeName, latestSession.weekEnding, metricKey);
+        const currentValue = currentSnapshot[metricKey];
+        if (baseline === undefined || baseline === null || currentValue === undefined || currentValue === null) return;
+
+        const parsedBaseline = parseFloat(baseline);
+        const parsedCurrent = parseFloat(currentValue);
+        if (Number.isNaN(parsedBaseline) || Number.isNaN(parsedCurrent)) return;
+
+        const delta = metricDelta(metricKey, parsedCurrent, parsedBaseline);
+        const threshold = getTrendDeltaThreshold(metricKey).value;
+        const normalized = Math.max(-1, Math.min(1, delta / threshold));
+
+        impacts.push({
+            metricKey,
+            delta,
+            unit: METRICS_REGISTRY[metricKey]?.unit || '%',
+            normalized
+        });
+    });
+
+    if (!impacts.length) return null;
+
+    const avgNormalized = impacts.reduce((sum, item) => sum + item.normalized, 0) / impacts.length;
+    const score = Math.round(50 + (avgNormalized * 50));
+    const status = score >= 65 ? 'positive' : score <= 35 ? 'negative' : 'mixed';
+
+    return {
+        score,
+        status,
+        metricCount: impacts.length,
+        generatedAt: latestSession.generatedAt,
+        details: impacts
+            .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+            .slice(0, 2)
+            .map(item => {
+                const direction = item.delta > 0 ? 'improved' : item.delta < 0 ? 'declined' : 'held steady';
+                const amount = Math.abs(item.delta);
+                const formatted = item.unit === 'sec'
+                    ? `${Math.round(amount)}${item.unit}`
+                    : item.unit === 'hrs'
+                    ? `${amount.toFixed(1)} ${item.unit}`
+                    : `${amount.toFixed(1)}${item.unit}`;
+                return `${METRICS_REGISTRY[item.metricKey]?.label || item.metricKey} ${direction} by ${formatted}`;
+            })
+    };
+}
+
+function renderCoachingPriorityQueue() {
+    const container = document.getElementById('coachingPriorityQueueOutput');
+    if (!container) return;
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 periods of data to generate a priority queue.</div>';
+        return;
+    }
+
+    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
+    const buckets = getTrendComparisonBuckets(keys, periodType);
+
+    if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
+        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} queue generation.</div>`;
+        return;
+    }
+
+    const employeeNames = Array.from(getEmployeeNamesForPeriod(buckets.currentKeys)).sort();
+    if (!employeeNames.length) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No employees found in the current window.</div>';
+        return;
+    }
+
+    const coreMetrics = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+    const queue = {
+        coachNow: [],
+        recognizeNow: [],
+        watchlist: []
+    };
+
+    employeeNames.forEach(employeeName => {
+        const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
+        const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
+        if (!currentEmp || !prevEmp) return;
+
+        let coachScore = 0;
+        let recognizeScore = 0;
+        let watchScore = 0;
+        const coachReasons = [];
+        const recognizeReasons = [];
+        const watchReasons = [];
+
+        coreMetrics.forEach(metricKey => {
+            const current = currentEmp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || current === null) return;
+
+            const meets = metricMeetsTarget(metricKey, current);
+            const delta = prev === undefined || prev === null ? 0 : metricDelta(metricKey, current, prev);
+            const thresholdData = getTrendDeltaThreshold(metricKey);
+
+            if (!meets) {
+                coachScore += 14;
+                const severity = getMetricSeverity(metricKey, current);
+                if (severity === 'high') coachScore += 10;
+                else if (severity === 'medium') coachScore += 6;
+                else coachScore += 3;
+
+                if (coachReasons.length < 2) {
+                    coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} below target`);
+                }
+            } else {
+                recognizeScore += 9;
+            }
+
+            if (delta > 5) {
+                recognizeScore += 8;
+                if (recognizeReasons.length < 2) {
+                    recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving (+${delta.toFixed(1)})`);
+                }
+            }
+
+            if (delta < -thresholdData.value) {
+                coachScore += 12;
+                if (coachReasons.length < 2) {
+                    coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} dropped ${delta.toFixed(1)}${thresholdData.unit}`);
+                }
+            }
+
+            if (Math.abs(delta) <= 1.5) {
+                watchScore += 2;
+            }
+        });
+
+        const meetsAllCore = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+            metricMeetsTarget(metricKey, currentEmp[metricKey])
+        );
+
+        if (meetsAllCore) {
+            recognizeScore += 15;
+            if (recognizeReasons.length < 2) recognizeReasons.push('All core metrics at/above target');
+        }
+
+        const impact = calculateCoachingImpact(employeeName, currentEmp);
+        if (impact?.status === 'positive') {
+            recognizeScore += 10;
+            if (recognizeReasons.length < 2) recognizeReasons.push(`Coaching impact ${impact.score}/100`);
+        } else if (impact?.status === 'negative') {
+            coachScore += 12;
+            if (coachReasons.length < 2) coachReasons.push(`Coaching impact ${impact.score}/100 (needs reset)`);
+        } else if (impact?.status === 'mixed') {
+            watchScore += 6;
+        }
+
+        const history = getCoachingHistoryForEmployee(employeeName);
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const hasRecentCoaching = history.some(h => new Date(h.generatedAt).getTime() >= thirtyDaysAgo);
+        if (!hasRecentCoaching) {
+            watchScore += 8;
+            if (watchReasons.length < 2) watchReasons.push('No coaching touch in 30+ days');
+        }
+
+        if (coachScore < 35 && recognizeScore < 35) {
+            watchScore += 8;
+            if (watchReasons.length < 2) watchReasons.push('Mixed/flat trend signals');
+        }
+
+        const topCategory = [
+            { key: 'coachNow', score: coachScore },
+            { key: 'recognizeNow', score: recognizeScore },
+            { key: 'watchlist', score: watchScore }
+        ].sort((a, b) => b.score - a.score)[0];
+
+        if (topCategory.score <= 0) return;
+
+        const reason = topCategory.key === 'coachNow'
+            ? (coachReasons[0] || 'Performance signals need intervention')
+            : topCategory.key === 'recognizeNow'
+            ? (recognizeReasons[0] || 'Strong and improving performance')
+            : (watchReasons[0] || 'Monitor for next period shifts');
+
+        queue[topCategory.key].push({
+            name: employeeName,
+            score: topCategory.score,
+            reason
+        });
+    });
+
+    queue.coachNow.sort((a, b) => b.score - a.score);
+    queue.recognizeNow.sort((a, b) => b.score - a.score);
+    queue.watchlist.sort((a, b) => b.score - a.score);
+
+    const renderBucket = (title, entries, bg, border, emptyText) => {
+        let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
+        html += `<strong>${title}</strong>`;
+        if (!entries.length) {
+            html += `<div style="margin-top: 6px; color: #666; font-size: 0.9em;">${emptyText}</div>`;
+        } else {
+            html += '<div style="margin-top: 6px; display: grid; gap: 6px;">';
+            entries.slice(0, 5).forEach(entry => {
+                html += `<div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    };
+
+    let html = `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">`;
+    html += `<strong>Mode:</strong> ${buckets.descriptor.label} • <strong>Team Members Scored:</strong> ${employeeNames.length}`;
+    html += `</div>`;
+
+    html += renderBucket(
+        '🎯 Coach Now',
+        queue.coachNow,
+        '#ffebee',
+        '#f5c6cb',
+        'No urgent coaching interventions this cycle.'
+    );
+    html += renderBucket(
+        '🏆 Recognize Now',
+        queue.recognizeNow,
+        '#e8f5e9',
+        '#c8e6c9',
+        'No standout recognition callouts this cycle.'
+    );
+    html += renderBucket(
+        '👀 Watchlist',
+        queue.watchlist,
+        '#fff8e1',
+        '#ffe0b2',
+        'No watchlist candidates right now.'
+    );
+
+    container.innerHTML = html;
+}
+
+function buildTrendSeriesData(metricKey, employeeName, keys, periodType) {
+    const toMetricValue = (weekKey) => {
+        const employee = weeklyData[weekKey]?.employees?.find(e => e.name === employeeName);
+        const value = parseFloat(employee?.[metricKey]);
+        return Number.isNaN(value) ? null : value;
+    };
+
+    if (periodType === 'mom') {
+        const monthBuckets = {};
+        keys.forEach(weekKey => {
+            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
+            if (!parsed) return;
+            const date = new Date(parsed);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthBuckets[monthKey]) {
+                monthBuckets[monthKey] = { label: date.toLocaleString('en-US', { month: 'short', year: '2-digit' }), values: [] };
+            }
+            const value = toMetricValue(weekKey);
+            if (value !== null) monthBuckets[monthKey].values.push(value);
+        });
+
+        return Object.keys(monthBuckets)
+            .sort()
+            .map(key => ({
+                label: monthBuckets[key].label,
+                value: monthBuckets[key].values.length
+                    ? monthBuckets[key].values.reduce((a, b) => a + b, 0) / monthBuckets[key].values.length
+                    : null
+            }))
+            .filter(item => item.value !== null)
+            .slice(-6);
+    }
+
+    if (periodType === 'ytd') {
+        const yearBuckets = {};
+        keys.forEach(weekKey => {
+            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
+            if (!parsed) return;
+            const year = new Date(parsed).getFullYear();
+            if (!yearBuckets[year]) yearBuckets[year] = [];
+            const value = toMetricValue(weekKey);
+            if (value !== null) yearBuckets[year].push(value);
+        });
+
+        return Object.keys(yearBuckets)
+            .map(year => parseInt(year, 10))
+            .sort((a, b) => a - b)
+            .map(year => ({
+                label: `${year}`,
+                value: yearBuckets[year].length
+                    ? yearBuckets[year].reduce((a, b) => a + b, 0) / yearBuckets[year].length
+                    : null
+            }))
+            .filter(item => item.value !== null)
+            .slice(-5);
+    }
+
+    return keys
+        .slice(-8)
+        .map(weekKey => ({ label: formatWeekLabel(weekKey), value: toMetricValue(weekKey) }))
+        .filter(item => item.value !== null);
+}
+
 function metricMeetsTarget(metricKey, value) {
     const def = METRICS_REGISTRY[metricKey];
     if (!def || value === undefined || value === null || value === '') return false;
@@ -7110,8 +8005,11 @@ function renderSupervisorIntelligence() {
     renderTrendIntelligence();
     renderRecognitionIntelligence();
     renderCoachingLoadAwareness();
+    renderCoachingPriorityQueue();
     renderComplianceAlerts();
 }
+
+let trendIntelligenceListenersAttached = false;
 
 function initializeTrendIntelligence() {
     // Populate employee selector
@@ -7146,23 +8044,26 @@ function initializeTrendIntelligence() {
         }
     }
 
-    // Attach event listeners
-    document.getElementById('refreshTrendsBtn')?.addEventListener('click', () => {
-        renderTrendIntelligence();
-        renderTrendVisualizations();
-    });
+    // Attach event listeners once
+    if (!trendIntelligenceListenersAttached) {
+        document.getElementById('refreshTrendsBtn')?.addEventListener('click', () => {
+            renderTrendIntelligence();
+            renderTrendVisualizations();
+        });
 
-    document.getElementById('trendPeriodSelector')?.addEventListener('change', () => {
-        renderTrendIntelligence();
-        renderTrendVisualizations();
-    });
+        document.getElementById('trendPeriodSelector')?.addEventListener('change', () => {
+            renderTrendIntelligence();
+            renderTrendVisualizations();
+        });
 
-    document.getElementById('trendEmployeeSelector')?.addEventListener('change', () => {
-        renderTrendIntelligence();
-        renderTrendVisualizations();
-    });
+        document.getElementById('trendEmployeeSelector')?.addEventListener('change', () => {
+            renderTrendIntelligence();
+            renderTrendVisualizations();
+        });
 
-    document.getElementById('generateTrendCoachingBtn')?.addEventListener('click', generateTrendCoachingEmail);
+        document.getElementById('generateTrendCoachingBtn')?.addEventListener('click', generateTrendCoachingEmail);
+        trendIntelligenceListenersAttached = true;
+    }
 
     // Initial render of visualizations
     renderTrendVisualizations();
@@ -7374,6 +8275,8 @@ function renderTrendIntelligence() {
     if (!container) return;
 
     const selectedEmployee = document.getElementById('trendEmployeeSelector')?.value;
+    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
+    const periodDescriptor = getTrendPeriodDescriptor(periodType);
     const keys = getWeeklyKeysSorted();
     
     if (keys.length < 2) {
@@ -7387,22 +8290,24 @@ function renderTrendIntelligence() {
         if (selectedEmployee) {
             modeIndicator.style.display = 'block';
             modeIndicator.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-            modeText.textContent = `👤 Individual Coaching Mode: ${selectedEmployee}`;
+            modeText.textContent = `👤 Individual Coaching Mode (${periodDescriptor.shortLabel}): ${selectedEmployee}`;
             emailBtnText.textContent = '🤖 Generate Individual Coaching Email';
         } else {
             modeIndicator.style.display = 'block';
             modeIndicator.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            modeText.textContent = '📊 Team-Wide Analysis Mode';
+            modeText.textContent = `📊 Team-Wide Analysis Mode (${periodDescriptor.shortLabel})`;
             emailBtnText.textContent = '📧 Generate Group Email';
         }
     }
 
     // Render based on mode
     if (selectedEmployee) {
-        renderIndividualTrendAnalysis(container, selectedEmployee, keys);
+        renderIndividualTrendAnalysis(container, selectedEmployee, keys, periodType);
     } else {
-        renderGroupTrendAnalysis(container, keys);
+        renderGroupTrendAnalysis(container, keys, periodType);
     }
+
+    renderCoachingPriorityQueue();
 }
 
 function renderTrendVisualizations() {
@@ -7431,18 +8336,7 @@ function renderTrendVisualizations() {
     const trendData = {};
 
     metricsToShow.forEach(metricKey => {
-        trendData[metricKey] = [];
-        keys.forEach(weekKey => {
-            const week = weeklyData[weekKey];
-            const emp = week?.employees?.find(e => e.name === employeeName);
-            if (emp && emp[metricKey] !== undefined && emp[metricKey] !== null && emp[metricKey] !== '') {
-                trendData[metricKey].push({
-                    weekKey: weekKey,
-                    value: parseFloat(emp[metricKey]),
-                    label: formatWeekLabel(weekKey)
-                });
-            }
-        });
+        trendData[metricKey] = buildTrendSeriesData(metricKey, employeeName, keys, periodType);
     });
 
     // Create bar charts for each metric
@@ -8382,64 +9276,60 @@ function generateVerintSummary() {
     }
 }
 
-function renderIndividualTrendAnalysis(container, employeeName, keys) {
-    const latestKey = keys[keys.length - 1];
-    const previousKey = keys[keys.length - 2];
-    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
+function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow') {
+    const buckets = getTrendComparisonBuckets(keys, periodType);
+    const periodLabel = buckets.descriptor.compareLabel;
+    const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
+    const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
+    const thirdEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys);
 
-    const latestWeek = weeklyData[latestKey];
-    const previousWeek = weeklyData[previousKey];
-    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
-
-    if (!latestWeek?.employees || !previousWeek?.employees) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
+    if (!currentEmp) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee has no data in the selected comparison window.</div>';
         return;
     }
 
-    const currentEmp = latestWeek.employees.find(emp => emp.name === employeeName);
-    const prevEmp = previousWeek.employees.find(e => e.name === employeeName);
-    
-    if (!currentEmp) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee not found in current data.</div>';
+    if (!prevEmp) {
+        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} analysis. Add more historical data.</div>`;
         return;
     }
 
     const warnings = [];
     const wins = [];
+    const rationale = [];
 
     // Check for 3-period decline if we have enough data
-    if (thirdWeek?.employees && prevEmp) {
-        const thirdEmp = thirdWeek.employees.find(e => e.name === employeeName);
-        if (thirdEmp) {
-            ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
-                const a = currentEmp[metricKey];
-                const b = prevEmp[metricKey];
-                const c = thirdEmp[metricKey];
-                if (a === undefined || b === undefined || c === undefined) return;
-                const worse1 = metricDelta(metricKey, a, b) < 0;
-                const worse2 = metricDelta(metricKey, b, c) < 0;
-                if (worse1 && worse2) {
-                    warnings.push(`📉 3-week decline in ${METRICS_REGISTRY[metricKey]?.label || metricKey}. This needs immediate attention.`);
-                }
-            });
-        }
+    if (thirdEmp) {
+        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
+            const a = currentEmp[metricKey];
+            const b = prevEmp[metricKey];
+            const c = thirdEmp[metricKey];
+            if (a === undefined || b === undefined || c === undefined) return;
+            const worse1 = metricDelta(metricKey, a, b) < 0;
+            const worse2 = metricDelta(metricKey, b, c) < 0;
+            if (worse1 && worse2) {
+                warnings.push(`📉 3-${periodLabel} decline in ${METRICS_REGISTRY[metricKey]?.label || metricKey}. This needs immediate attention.`);
+                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: negative deltas in two consecutive ${periodLabel}-to-${periodLabel} comparisons.`);
+            }
+        });
     }
 
-    // Check for sudden drops (week over week)
+    // Check for sudden drops based on selected period
     if (prevEmp) {
         ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].forEach(metricKey => {
             const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return;
             const delta = metricDelta(metricKey, current, prev);
-            const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
-            const threshold = unit === 'sec' ? 20 : unit === 'hrs' ? 2 : 4;
+            const thresholdData = getTrendDeltaThreshold(metricKey);
+            const unit = thresholdData.unit;
+            const threshold = thresholdData.value;
             if (delta < -threshold) {
-                warnings.push(`⚠️ Sudden drop in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (${delta.toFixed(1)}${unit}). Needs supportive conversation.`);
-    }
+                warnings.push(`⚠️ Sudden ${periodLabel}-over-${periodLabel} drop in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (${delta.toFixed(1)}${unit}). Needs supportive conversation.`);
+                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: delta ${delta.toFixed(1)}${unit} crossed alert threshold (-${threshold}${unit}).`);
+            }
         });
     }
-    const copilotEmail = document.getElementById('copilotOutputText')?.value.trim();
+
     // Check for consistency and wins
     const meetsAllTargets = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
         metricMeetsTarget(metricKey, currentEmp[metricKey])
@@ -8447,6 +9337,7 @@ function renderIndividualTrendAnalysis(container, employeeName, keys) {
     
     if (meetsAllTargets) {
         wins.push(`✅ ${employeeName} is meeting all key targets. Consider recognition!`);
+        rationale.push('Target consistency rule: all core target metrics are currently at or above goal.');
     }
 
     // Check for improvement trends
@@ -8457,14 +9348,21 @@ function renderIndividualTrendAnalysis(container, employeeName, keys) {
             if (current === undefined || prev === undefined) return;
             const delta = metricDelta(metricKey, current, prev);
             if (delta > 5) {
-                wins.push(`🎉 Strong improvement in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (+${delta.toFixed(1)})`);
+                wins.push(`🎉 Strong ${periodLabel}-over-${periodLabel} improvement in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (+${delta.toFixed(1)})`);
+                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: improvement delta ${delta.toFixed(1)} exceeded +5 threshold.`);
             }
         });
 
     }
+
+    const coachingImpact = calculateCoachingImpact(employeeName, currentEmp);
+
     // Build output
     let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
-    html += `<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName}</h5>`;
+    html += `<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName} (${buckets.descriptor.shortLabel})</h5>`;
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
+    html += `<strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}`;
+    html += `</div>`;
     
     if (warnings.length > 0) {
         html += `<div style="margin-bottom: 15px;">`;
@@ -8484,6 +9382,30 @@ function renderIndividualTrendAnalysis(container, employeeName, keys) {
         html += `</div>`;
     }
 
+    if (coachingImpact) {
+        const impactColor = coachingImpact.status === 'positive' ? '#2e7d32' : coachingImpact.status === 'negative' ? '#c62828' : '#ef6c00';
+        const impactBg = coachingImpact.status === 'positive' ? '#e8f5e9' : coachingImpact.status === 'negative' ? '#ffebee' : '#fff3e0';
+        const impactLabel = coachingImpact.status === 'positive' ? 'Coaching approach is working' : coachingImpact.status === 'negative' ? 'Coaching approach may need adjustment' : 'Mixed coaching impact';
+
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: ${impactColor}; margin-bottom: 8px;">📌 Coaching Impact Score</div>`;
+        html += `<div style="padding: 10px; border-left: 3px solid ${impactColor}; background: ${impactBg}; margin-bottom: 6px; border-radius: 4px;">`;
+        html += `<strong>${coachingImpact.score}/100</strong> • ${impactLabel} (based on ${coachingImpact.metricCount} coached metrics since ${new Date(coachingImpact.generatedAt).toLocaleDateString()})`;
+        if (coachingImpact.details.length) {
+            html += `<div style="margin-top: 6px;">${coachingImpact.details.join(' • ')}</div>`;
+        }
+        html += `</div></div>`;
+    }
+
+    if (rationale.length > 0) {
+        html += `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: #455a64; margin-bottom: 8px;">🧩 Why these insights fired</div>`;
+        rationale.slice(0, 3).forEach(item => {
+            html += `<div style="padding: 10px; border-left: 3px solid #607d8b; background: #eceff1; margin-bottom: 6px; border-radius: 4px;">${item}</div>`;
+        });
+        html += `</div>`;
+    }
+
     if (warnings.length === 0 && wins.length === 0) {
         html += `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;">`;
         html += `<p style="margin: 0;">📊 No significant trends detected this period. ${employeeName} is performing steadily.</p>`;
@@ -8498,17 +9420,11 @@ function renderIndividualTrendAnalysis(container, employeeName, keys) {
     container.innerHTML = html;
 }
 
-function renderGroupTrendAnalysis(container, keys) {
-    const latestKey = keys[keys.length - 1];
-    const previousKey = keys[keys.length - 2];
-    const thirdKey = keys.length >= 3 ? keys[keys.length - 3] : null;
+function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
+    const buckets = getTrendComparisonBuckets(keys, periodType);
 
-    const latestWeek = weeklyData[latestKey];
-    const previousWeek = weeklyData[previousKey];
-    const thirdWeek = thirdKey ? weeklyData[thirdKey] : null;
-
-    if (!latestWeek?.employees || !previousWeek?.employees) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough employee data to analyze trends.</div>';
+    if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
+        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} group analysis.</div>`;
         return;
     }
 
@@ -8519,16 +9435,19 @@ function renderGroupTrendAnalysis(container, keys) {
         consistent: []
     };
 
-    latestWeek.employees.forEach(emp => {
-        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
+    const employeeNames = Array.from(getEmployeeNamesForPeriod(buckets.currentKeys));
+
+    employeeNames.forEach(employeeName => {
+        const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
+        const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
         if (!prevEmp) return;
 
         // Check for 3-period decline
-        if (thirdWeek?.employees) {
-            const thirdEmp = thirdWeek.employees.find(e => e.name === emp.name);
+        if (buckets.thirdKeys.length) {
+            const thirdEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys);
             if (thirdEmp) {
                 const hasDecline = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-                    const a = emp[metricKey];
+                    const a = currentEmp[metricKey];
                     const b = prevEmp[metricKey];
                     const c = thirdEmp[metricKey];
                     if (a === undefined || b === undefined || c === undefined) return false;
@@ -8538,7 +9457,7 @@ function renderGroupTrendAnalysis(container, keys) {
                 });
 
                 if (hasDecline) {
-                    teamInsights.atRisk.push(emp.name);
+                    teamInsights.atRisk.push(employeeName);
                     return;
                 }
             }
@@ -8546,7 +9465,7 @@ function renderGroupTrendAnalysis(container, keys) {
 
         // Check for sudden drops
         const hasSuddenDrop = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
-            const current = emp[metricKey];
+            const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return false;
             const delta = metricDelta(metricKey, current, prev);
@@ -8554,13 +9473,13 @@ function renderGroupTrendAnalysis(container, keys) {
         });
 
         if (hasSuddenDrop) {
-            teamInsights.declining.push(emp.name);
+            teamInsights.declining.push(employeeName);
             return;
         }
 
         // Check for improvements
         const hasImprovement = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-            const current = emp[metricKey];
+            const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return false;
             const delta = metricDelta(metricKey, current, prev);
@@ -8568,30 +9487,33 @@ function renderGroupTrendAnalysis(container, keys) {
         });
 
         if (hasImprovement) {
-            teamInsights.improving.push(emp.name);
+            teamInsights.improving.push(employeeName);
             return;
         }
 
         // Check for consistency
         const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
-            metricMeetsTarget(metricKey, emp[metricKey])
+            metricMeetsTarget(metricKey, currentEmp[metricKey])
         );
         
         if (consistent) {
-            teamInsights.consistent.push(emp.name);
+            teamInsights.consistent.push(employeeName);
         }
     });
 
     // Build team overview
     let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
-    html += `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis</h5>`;
+    html += `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
+    html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
+    html += `</div>`;
     
     // Summary cards
     html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
     
     html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
     html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-week decline)</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
     html += `</div>`;
     
     html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
@@ -8798,6 +9720,7 @@ function setAppVersionLabel(statusSuffix = '') {
     const versionEl = document.getElementById('appVersion');
     if (!versionEl) return;
     versionEl.textContent = `Version: ${APP_VERSION}${statusSuffix}`;
+    updateSystemStatusLabel();
 }
 
 function bootAppSafely() {

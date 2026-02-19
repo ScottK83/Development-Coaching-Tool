@@ -9,7 +9,7 @@ A personalized employee development coaching application that identifies perform
 - Metric-specific best practices and development resources
 - Responsive design with APS blue color scheme
 - Clean, professional interface
-- Optional cloud sync across browsers/computers (single-user via private GitHub Gist)
+- Optional cloud sync across browsers/computers (single-user via GitHub repo file or private gist)
 
 ## Metrics Tracked
 
@@ -62,23 +62,29 @@ The app loads `script.min.js` in `index.html` when present.
 
 You can sync all app data across your own browsers/computers using the **Cloud Sync** panel in **Manage Data**.
 
-One-time setup:
+One-time setup (Repo Sync - recommended):
 
-1. Create a GitHub Personal Access Token with Gist access.
+1. Create a GitHub Personal Access Token with repository contents write/read access.
 2. In the app, go to **Manage Data → Cloud Sync**.
 3. Paste token into **GitHub Token**.
-4. Click **Save to Cloud**.
-   - On first save, the app auto-creates a private gist and fills in **Gist ID**.
+4. Fill in **Repo Owner**, **Repo Name**, optional **Branch** (default `main`), and optional **File Path**.
+5. Click **Save to Cloud**.
+
+Gist fallback setup:
+
+1. Create a GitHub PAT with Gist access.
+2. Enter token and use **Gist ID** (or let first save auto-create one).
 
 Daily use:
 
 - On device A: click **Save to Cloud** after updates.
-- On device B: paste same token + gist ID, then click **Load from Cloud**.
+- On device B: use same token and same sync target (repo fields or gist ID), then click **Load from Cloud**.
 
 Notes:
 
 - Sync replaces local app data on load (you’ll be prompted first).
-- Token and gist ID are saved locally in your browser.
+- Token is saved locally in your browser only.
+- Setup copy/paste shares sync target config (repo/gist) but never the token.
 
 ## One-Command Publish (Git + Cloudflare)
 
