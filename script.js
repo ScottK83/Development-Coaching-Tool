@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.25'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.26'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2236,17 +2236,17 @@ function initializeCloudSyncPanel() {
     const repoBranchInput = document.getElementById('cloudSyncRepoBranch');
     const repoPathInput = document.getElementById('cloudSyncRepoPath');
     const directionInput = document.getElementById('cloudSyncDirection');
-    if (!tokenInput || !gistInput || !repoOwnerInput || !repoNameInput || !repoBranchInput || !repoPathInput || !directionInput) return;
+    if (!tokenInput || !gistInput || !directionInput) return;
 
     hydrateCloudSyncSettingsFromShared();
 
     const settings = loadCloudSyncSettings();
     tokenInput.value = settings.githubToken || '';
     gistInput.value = settings.gistId || '';
-    repoOwnerInput.value = settings.repoOwner || '';
-    repoNameInput.value = settings.repoName || '';
-    repoBranchInput.value = settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH;
-    repoPathInput.value = settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH;
+    if (repoOwnerInput) repoOwnerInput.value = settings.repoOwner || '';
+    if (repoNameInput) repoNameInput.value = settings.repoName || '';
+    if (repoBranchInput) repoBranchInput.value = settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH;
+    if (repoPathInput) repoPathInput.value = settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH;
     directionInput.value = settings.syncDirection || 'bidirectional';
 
     if (settings.repoOwner && settings.repoName) {
@@ -2264,10 +2264,10 @@ function initializeCloudSyncPanel() {
             const current = {
                 githubToken: tokenInput.value.trim(),
                 gistId: gistInput.value.trim(),
-                repoOwner: repoOwnerInput.value.trim(),
-                repoName: repoNameInput.value.trim(),
-                repoBranch: (repoBranchInput.value || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim(),
-                repoPath: (repoPathInput.value || CLOUD_SYNC_DEFAULT_REPO_PATH).trim(),
+                repoOwner: (repoOwnerInput?.value || settings.repoOwner || '').trim(),
+                repoName: (repoNameInput?.value || settings.repoName || '').trim(),
+                repoBranch: (repoBranchInput?.value || settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim(),
+                repoPath: (repoPathInput?.value || settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH).trim(),
                 syncDirection: (directionInput.value || 'bidirectional').trim()
             };
             saveCloudSyncSettings(current);
@@ -2292,10 +2292,10 @@ function initializeCloudSyncPanel() {
 
         tokenInput.addEventListener('change', persistSettings);
         gistInput.addEventListener('change', persistSettings);
-        repoOwnerInput.addEventListener('change', persistSettings);
-        repoNameInput.addEventListener('change', persistSettings);
-        repoBranchInput.addEventListener('change', persistSettings);
-        repoPathInput.addEventListener('change', persistSettings);
+        repoOwnerInput?.addEventListener('change', persistSettings);
+        repoNameInput?.addEventListener('change', persistSettings);
+        repoBranchInput?.addEventListener('change', persistSettings);
+        repoPathInput?.addEventListener('change', persistSettings);
         directionInput.addEventListener('change', persistSettings);
         tokenInput.dataset.cloudSyncBound = 'true';
     }
