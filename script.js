@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.5'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.6'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1304,6 +1304,7 @@ function parsePastedData(pastedText, startDate, endDate) {
 
 
 
+/*
 // ============================================
 // TIPS MANAGEMENT
 // ============================================
@@ -1539,6 +1540,8 @@ function saveCustomMetrics(metrics) {
 function normalizeMetricKey(name) {
     return name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 }
+
+*/
 
 
 // ============================================
@@ -2508,12 +2511,8 @@ function copyToClipboard() {
 function initializeEventHandlers() {
     
     // Upload period type buttons
-    let selectedUploadPeriod = 'week'; // default
     document.querySelectorAll('.upload-period-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Update selection
-            selectedUploadPeriod = btn.dataset.period;
-            
             // Update button styles
             document.querySelectorAll('.upload-period-btn').forEach(b => {
                 if (b === btn) {
@@ -3496,6 +3495,7 @@ function fixSurveyDataIssues(issues) {
     showToast(`✅ Deleted ${weeksToDelete.size} week(s) with corrupted data. Re-upload with correct survey counts.`);
 }
 
+/*
 // ============================================
 // PTO / TIME-OFF TRACKER
 // ============================================
@@ -3724,10 +3724,12 @@ function copyPtoEmail() {
     });
 }
 
+*/
+
 function populateDeleteWeekDropdown() {
     const dropdown = document.getElementById('deleteWeekSelect');
     if (!dropdown) return;
-    
+
     dropdown.innerHTML = '<option value="">-- Choose a week --</option>';
     
     const weeks = Object.keys(weeklyData).map(weekKey => {
@@ -3863,6 +3865,7 @@ function initializeKeyboardShortcuts() {
     });
 }
 
+/*
 // ============================================
 // TIPS MANAGEMENT UI
 // ============================================
@@ -3870,9 +3873,7 @@ function initializeKeyboardShortcuts() {
 async function renderTipsManagement() {
     const container = document.getElementById('tipsContainer');
     if (!container) return;
-    
-    const userTips = loadUserTips();
-    const serverTips = await loadServerTips();
+
     const customMetrics = loadCustomMetrics();
     
     // Build metricNames from METRICS_REGISTRY + customMetrics
@@ -4013,9 +4014,8 @@ async function renderTipsManagement() {
         document.getElementById('createMetricSection').style.display = 'none';
         
         displayArea.style.display = 'block';
-        const currentServerTips = await loadServerTips();
+        await loadServerTips();
         const currentUserTips = loadUserTips();
-        const serverTipsForMetric = currentServerTips[metricKey] || [];
         const serverTipsWithIndex = (window._serverTipsWithIndex && window._serverTipsWithIndex[metricKey]) || [];
         const userTipsForMetric = currentUserTips[metricKey] || [];
         const metricName = metricNames[metricKey];
@@ -4039,9 +4039,9 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editServerTip_${metricKey}_${originalIndex}" style="flex: 1; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: white;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateServerTip('${metricKey}', ${originalIndex})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
                                 <button class="updateServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button class="deleteServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}
+                                <button class="deleteServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -4056,9 +4056,9 @@ async function renderTipsManagement() {
                         <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                             <textarea id="editTip_${metricKey}_${index}" style="flex: 1; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button onclick="updateTip('${metricKey}', ${index})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
                                 <button class="updateTipBtn" data-metric="${metricKey}" data-index="${index}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button class="deleteTipBtn" data-metric="${metricKey}" data-index="${index}
+                                <button class="deleteTipBtn" data-metric="${metricKey}" data-index="${index}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -4081,30 +4081,47 @@ async function renderTipsManagement() {
         tipsHtml += '</div>';
         displayArea.innerHTML = tipsHtml;
         
-        // Add event delegation for tip management buttons
+        // Event delegation is bound once below (outside category-change handler)
+    });
+
+    // Add event delegation for tip management buttons (bind once)
+    if (!displayArea.dataset.bound) {
         displayArea.addEventListener('click', (e) => {
-            if (e.target.classList.contains('updateServerTipBtn')) {
-                const metric = e.target.dataset.metric;
-                const index = parseInt(e.target.dataset.index);
+            const actionButton = e.target.closest('button');
+            if (!actionButton) return;
+
+            if (actionButton.classList.contains('updateServerTipBtn')) {
+                const metric = actionButton.dataset.metric;
+                const index = parseInt(actionButton.dataset.index, 10);
                 updateServerTip(metric, index);
-            } else if (e.target.classList.contains('deleteServerTipBtn')) {
-                const metric = e.target.dataset.metric;
-                const index = parseInt(e.target.dataset.index);
+            } else if (actionButton.classList.contains('deleteServerTipBtn')) {
+                const metric = actionButton.dataset.metric;
+                const index = parseInt(actionButton.dataset.index, 10);
                 deleteServerTip(metric, index);
-            } else if (e.target.classList.contains('updateTipBtn')) {
-                const metric = e.target.dataset.metric;
-                const index = parseInt(e.target.dataset.index);
+            } else if (actionButton.classList.contains('updateTipBtn')) {
+                const metric = actionButton.dataset.metric;
+                const index = parseInt(actionButton.dataset.index, 10);
                 updateTip(metric, index);
-            } else if (e.target.classList.contains('deleteTipBtn')) {
-                const metric = e.target.dataset.metric;
-                const index = parseInt(e.target.dataset.index);
+            } else if (actionButton.classList.contains('deleteTipBtn')) {
+                const metric = actionButton.dataset.metric;
+                const index = parseInt(actionButton.dataset.index, 10);
                 deleteTip(metric, index);
-            } else if (e.target.classList.contains('addTipBtn')) {
-                const metric = e.target.dataset.metric;
+            } else if (actionButton.classList.contains('addTipBtn')) {
+                const metric = actionButton.dataset.metric;
                 addTip(metric);
             }
         });
-    });
+        displayArea.dataset.bound = 'true';
+    }
+}
+
+async function rerenderTipsManagementAndRestoreSelection(metricKey) {
+    await renderTipsManagement();
+    const selector = document.getElementById('categoriesSelector');
+    if (selector && metricKey) {
+        selector.value = metricKey;
+        selector.dispatchEvent(new Event('change'));
+    }
 }
 
 window.addTip = async function(metricKey) {
@@ -4137,19 +4154,8 @@ window.addTip = async function(metricKey) {
     
     textarea.value = '';
     showToast('✅ Tip added successfully!');
-    
-    // Save current selection before re-rendering
-    const currentSelection = metricKey;
-    
-    // Re-render the entire tips management section
-    await renderTipsManagement();
-    
-    // Restore the selection and trigger display
-    const selector = document.getElementById('categoriesSelector');
-    if (selector && currentSelection) {
-        selector.value = currentSelection;
-        selector.dispatchEvent(new Event('change'));
-    }
+
+    await rerenderTipsManagementAndRestoreSelection(metricKey);
 };
 
 window.updateTip = async function(metricKey, index) {
@@ -4172,19 +4178,8 @@ window.updateTip = async function(metricKey, index) {
         saveUserTips(userTips);
         
         showToast('✅ Tip updated successfully!');
-        
-        // Save current selection before re-rendering
-        const currentSelection = metricKey;
-        
-        // Re-render the entire tips management section
-        await renderTipsManagement();
-        
-        // Restore the selection and trigger display
-        const selector = document.getElementById('categoriesSelector');
-        if (selector && currentSelection) {
-            selector.value = currentSelection;
-            selector.dispatchEvent(new Event('change'));
-        }
+
+        await rerenderTipsManagementAndRestoreSelection(metricKey);
     } else {
         
         showToast('⚠️ Could not update tip - please refresh the page');
@@ -4224,19 +4219,8 @@ window.updateServerTip = async function(metricKey, index) {
     localStorage.setItem(STORAGE_PREFIX + 'modifiedServerTips', JSON.stringify(modifiedServerTips));
     
     showToast('✅ Server tip updated!');
-    
-    // Save current selection before re-rendering
-    const currentSelection = metricKey;
-    
-    // Re-render the entire tips management section
-    await renderTipsManagement();
-    
-    // Restore the selection and trigger display
-    const selector = document.getElementById('categoriesSelector');
-    if (selector && currentSelection) {
-        selector.value = currentSelection;
-        selector.dispatchEvent(new Event('change'));
-    }
+
+    await rerenderTipsManagementAndRestoreSelection(metricKey);
 };
 
 window.deleteServerTip = async function(metricKey, index) {
@@ -4259,19 +4243,8 @@ window.deleteServerTip = async function(metricKey, index) {
     localStorage.setItem(STORAGE_PREFIX + 'deletedServerTips', JSON.stringify(deletedServerTips));
     
     showToast('\u{1F5D1}\u{FE0F} Server tip deleted');
-    
-    // Save current selection before re-rendering
-    const currentSelection = metricKey;
-    
-    // Re-render the entire tips management section
-    await renderTipsManagement();
-    
-    // Restore the selection and trigger display
-    const selector = document.getElementById('categoriesSelector');
-    if (selector && currentSelection) {
-        selector.value = currentSelection;
-        selector.dispatchEvent(new Event('change'));
-    }
+
+    await rerenderTipsManagementAndRestoreSelection(metricKey);
 };
 
 window.deleteTip = async function(metricKey, index) {
@@ -4300,20 +4273,11 @@ window.deleteTip = async function(metricKey, index) {
         showToast('⚠️ Could not delete tip - please refresh the page');
         return;
     }
-    
-    // Save current selection before re-rendering
-    const currentSelection = metricKey;
-    
-    // Re-render the entire tips management section
-    await renderTipsManagement();
-    
-    // Restore the selection and trigger display
-    const selector = document.getElementById('categoriesSelector');
-    if (selector && currentSelection) {
-        selector.value = currentSelection;
-        selector.dispatchEvent(new Event('change'));
-    }
+
+    await rerenderTipsManagementAndRestoreSelection(metricKey);
 };
+
+*/
 
 // ============================================
 // METRIC TREND EMAIL GENERATOR
@@ -6429,7 +6393,6 @@ function getYearlyAverageForEmployee(employeeName, metricKey) {
      * Returns: { value: number, count: number } or null if no data
      */
     const currentYear = new Date().getFullYear();
-    const yearStartStr = `${currentYear}-01-01`;
     
     const sums = {};
     const counts = {};
@@ -10500,8 +10463,6 @@ function initializeDefaultTips() {
 }
 
 function getMetricTips(metricName) {
-    const normalizedMetric = metricName.toLowerCase();
-    
     // First check the new user tips system
     const userTips = loadUserTips();
     const userTipsForMetric = userTips[metricName] || [];
@@ -11004,6 +10965,7 @@ Keep it under 200 words. Real tone, no corporate speak. Be direct but supportive
     });
 }
 
+/*
 // ============================================
 // RED FLAG COACHING FUNCTIONALITY
 // ============================================
@@ -11155,6 +11117,8 @@ function clearRedFlagEmail() {
     
     
 }
+
+*/
 
 
 
