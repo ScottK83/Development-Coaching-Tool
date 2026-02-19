@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.19'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.20'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2259,9 +2259,15 @@ function collectCloudSyncPayload() {
     };
 
     console.log('[Cloud Sync] Collecting payload. Keys included:', Object.keys(payload.storageData));
+    addCloudSyncDebugLog('Collected ' + Object.keys(payload.storageData).length + ' keys for upload');
+    
     if (payload.storageData['devCoachingTool_weeklyData']) {
         const weeklyDataObj = JSON.parse(payload.storageData['devCoachingTool_weeklyData']);
         console.log('[Cloud Sync] Weekly data has', Object.keys(weeklyDataObj).length, 'weeks');
+        addCloudSyncDebugLog('Weekly data: ' + Object.keys(weeklyDataObj).length + ' weeks');
+    } else {
+        console.log('[Cloud Sync] ⚠️ No weekly data found to upload');
+        addCloudSyncDebugLog('⚠️ No weekly data in localStorage!');
     }
 
     return payload;
@@ -2615,7 +2621,30 @@ async function syncCloudNowSmart() {
                 }
             }
 
+            // Log what we're about to apply
+            console.log('[Cloud Sync Smart] Remote payload has', Object.keys(remote.payload?.storageData || {}).length, 'keys');
+            if (remote.payload?.storageData?.['devCoachingTool_weeklyData']) {
+                const weeklyData = JSON.parse(remote.payload.storageData['devCoachingTool_weeklyData']);
+                console.log('[Cloud Sync Smart] Remote has', Object.keys(weeklyData).length, 'weeks of data');
+            } else {
+                console.log('[Cloud Sync Smart] ⚠️ Remote payload missing devCoachingTool_weeklyData!');
+                addCloudSyncDebugLog('⚠️ ERROR: Remote payload missing devCoachingTool_weeklyData!');
+            }
+
             applyCloudSyncPayload(remote.payload);
+
+            // Verify data was actually applied
+            const verifyWeeklyData = localStorage.getItem('devCoachingTool_weeklyData');
+            if (verifyWeeklyData) {
+                const verifyWeeks = JSON.parse(verifyWeeklyData);
+                console.log('[Cloud Sync Smart] ✅ Verified: localStorage now has', Object.keys(verifyWeeks).length, 'weeks');
+                addCloudSyncDebugLog('✅ Verified: localStorage restored with ' + Object.keys(verifyWeeks).length + ' weeks');
+            } else {
+                console.log('[Cloud Sync Smart] ❌ CRITICAL: Weekly data NOT in localStorage after apply!');
+                addCloudSyncDebugLog('❌ CRITICAL: Weekly data NOT in localStorage after apply!');
+                setCloudSyncStatus('Sync Failed: Data was not properly restored to device. Try again.', 'error');
+                return;
+            }
 
             saveCloudSyncSettings({
                 ...settings,
@@ -2635,10 +2664,15 @@ async function syncCloudNowSmart() {
                 repoPath: repoConfig.path
             });
 
-            setCloudSyncStatus(`Sync complete: downloaded latest ${remote.source} data. Reloading app...`, 'success');
+            setCloudSyncStatus(`Sync complete: downloaded ${Object.keys(JSON.parse(verifyWeeklyData)).length} weeks from cloud. Reloading app...`, 'success');
             updateCloudSyncModeBadge();
             showToast('✅ Synced from cloud', 3000);
-            setTimeout(() => location.reload(), 700);
+            addCloudSyncDebugLog('Starting reload in 1 second...');
+            setTimeout(() => {
+                console.log('[Cloud Sync Smart] NOW RELOADING PAGE');
+                addCloudSyncDebugLog('Page reload at ' + new Date().toISOString());
+                location.reload();
+            }, 1000);
             return;
         }
 
@@ -2647,6 +2681,7 @@ async function syncCloudNowSmart() {
         await saveDataToCloudSync();
     } catch (error) {
         console.error('[Cloud Sync Smart] ❌ Error:', error);
+        addCloudSyncDebugLog('❌ Sync error: ' + error.message);
         setCloudSyncStatus(`Sync failed: ${error.message}`, 'error');
         showToast('⚠️ Sync failed', 3000);
     }
