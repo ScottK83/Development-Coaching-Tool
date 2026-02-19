@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.34'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.35'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4659,11 +4659,11 @@ function saveMetricsPreviewEdits() {
  */
 function analyzeTrendMetrics(employeeData, centerAverages) {
     /**
-     * Analyze which metrics are trending downward (below center average)
-     * Returns array of { metricKey, label, employeeValue, centerAvg, gap }
-     * sorted by gap descending (worst first)
+     * Analyze metrics and return:
+     * 1. Weakest metric = furthest below their target
+     * 2. Trending down = first metric below center average (if different from weakest)
      */
-    const downwardMetrics = [];
+    const allMetrics = [];
     
     const metricMappings = {
         scheduleAdherence: 'scheduleAdherence',
@@ -4681,33 +4681,53 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
         reliability: 'reliability'
     };
     
+    const isReverseMetric = (key) => ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].includes(key);
+    
     Object.entries(metricMappings).forEach(([registryKey, csvKey]) => {
         const employeeValue = parseFloat(employeeData[registryKey]) || 0;
         const centerValue = parseFloat(centerAverages[csvKey]) || 0;
-        
-        if (centerValue <= 0) return; // Skip if no center average
-        
         const metric = METRICS_REGISTRY[registryKey];
+        
         if (!metric) return;
         
-        const isReverse = ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].includes(registryKey);
-        const isBelowAverage = isReverse ? employeeValue > centerValue : employeeValue < centerValue;
+        const target = metric.target?.value || 0;
+        const isReverse = isReverseMetric(registryKey);
         
-        if (isBelowAverage) {
-            const gap = Math.abs(employeeValue - centerValue);
-            downwardMetrics.push({
-                metricKey: registryKey,
-                label: metric.label,
-                employeeValue,
-                centerValue,
-                gap,
-                isReverse
-            });
-        }
+        // Calculate % of target achievement
+        const achievementPct = target > 0 
+            ? (isReverse ? (target / employeeValue) : (employeeValue / target)) * 100
+            : 0;
+        
+        // Check if below center
+        const isBelowCenter = centerValue > 0 
+            ? (isReverse ? employeeValue > centerValue : employeeValue < centerValue)
+            : false;
+        
+        allMetrics.push({
+            metricKey: registryKey,
+            label: metric.label,
+            employeeValue,
+            centerValue,
+            target,
+            achievementPct,
+            isReverse,
+            isBelowCenter,
+            gap: Math.abs(employeeValue - centerValue)
+        });
     });
     
-    // Sort by gap descending (worst first)
-    return downwardMetrics.sort((a, b) => b.gap - a.gap);
+    // Find weakest (lowest achievement %)
+    const weakest = allMetrics.reduce((prev, curr) => 
+        curr.achievementPct < prev.achievementPct ? curr : prev
+    );
+    
+    // Find trending down (below center)
+    const trendingDown = allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest.metricKey);
+    
+    return {
+        weakest: weakest.achievementPct > 0 ? weakest : null,
+        trendingDown: trendingDown || (allMetrics.find(m => m.isBelowCenter) !== weakest ? allMetrics.find(m => m.isBelowCenter) : null)
+    };
 }
 
 function getRandomTipsForMetric(metricKey, count = 2) {
@@ -4776,17 +4796,19 @@ function generateTrendEmail() {
     // Get center averages for trend analysis
     const centerAgvs = getCallCenterAverageForPeriod(weekKey) || {};
     
-    // Analyze downward trends
-    const downwardTrends = analyzeTrendMetrics(employee, centerAgvs);
+    // Analyze metrics: find weakest + trending down
+    const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs);
+    const weakestMetric = trendAnalysis.weakest;
+    const trendingMetric = trendAnalysis.trendingDown;
     
-    // Get tips for the worst metric that's trending down
+    // Get tips for the trending metric
     let tipsForTrend = [];
-    if (downwardTrends.length > 0) {
-        tipsForTrend = getRandomTipsForMetric(downwardTrends[0].metricKey, 2);
+    if (trendingMetric) {
+        tipsForTrend = getRandomTipsForMetric(trendingMetric.metricKey, 2);
     }
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
-        // AFTER image is copied to clipboard, show tips panel if there are downward trends
+        // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
         const periodMeta = period.metadata || {};
         const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
         const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
@@ -4795,9 +4817,9 @@ function generateTrendEmail() {
         
         if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
         
-        // If there are downward trends, show tips panel before opening email
-        if (downwardTrends.length > 0 && tipsForTrend.length > 0) {
-            showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tipsForTrend, weekKey, periodMeta);
+        // If there's a trending metric with tips, show coaching panel and open Copilot
+        if (trendingMetric && tipsForTrend.length > 0) {
+            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForTrend, weekKey, periodMeta, emailSubject);
         } else {
             // No trends or tips - just open email directly
             openTrendEmailOutlook(emailSubject);
@@ -4821,10 +4843,12 @@ function openTrendEmailOutlook(emailSubject) {
     }
 }
 
-function showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tips, weekKey, periodMeta) {
+function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tips, weekKey, periodMeta, emailSubject) {
     /**
-     * Show a modal/panel with trend info and coaching tips
-     * Allow user to review and log as coaching entry
+     * Show a modal/panel with:
+     * - Praise for strongest metric
+     * - Focus area (trending down metric) with 2 coaching tips
+     * - Open Copilot with coaching prompt
      */
     const modal = document.createElement('div');
     modal.id = 'trendTipsModal';
@@ -4846,43 +4870,68 @@ function showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tips
         background: white;
         border-radius: 8px;
         padding: 24px;
-        max-width: 600px;
-        max-height: 80vh;
+        max-width: 650px;
+        max-height: 85vh;
         overflow-y: auto;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
-    const worstTrend = downwardTrends[0];
-    const trendTitle = `📉 ${worstTrend.label} - Trending Below Average`;
-    const trendDesc = `${displayName} is at ${worstTrend.employeeValue.toFixed(1)} vs center average of ${worstTrend.centerValue.toFixed(1)}`;
+    const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
+    
+    // Build praise section for what they're doing well
+    let praiseHtml = '';
+    if (weakestMetric && weakestMetric.achievementPct >= 75) {
+        // If weakest is still >75% of target, praise it
+        praiseHtml = `
+            <div style="margin-bottom: 20px; padding: 15px; background: #d4edda; border-radius: 4px; border-left: 4px solid #28a745;">
+                <h4 style="color: #28a745; margin-top: 0;">🌟 Great Work!</h4>
+                <p style="margin: 0; color: #333;">
+                    ${displayName}'s <strong>${weakestMetric.label}</strong> is at <strong>${weakestMetric.employeeValue.toFixed(1)}</strong> 
+                    (${weakestMetric.achievementPct.toFixed(0)}% of target)
+                </p>
+            </div>
+        `;
+    }
+    
+    // Trending metric section
+    const trendingHtml = `
+        <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ff9800;">
+            <h4 style="color: #ff9800; margin-top: 0;">📉 Focus Area</h4>
+            <p style="margin: 5px 0 15px 0; color: #333;">
+                <strong>${trendingMetric.label}</strong> is at <strong>${trendingMetric.employeeValue.toFixed(1)}</strong> 
+                vs team average <strong>${trendingMetric.centerValue.toFixed(1)}</strong>
+            </p>
+        </div>
+    `;
     
     const tipsHtml = tips.map((tip, i) => `
-        <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 12px; border-left: 4px solid #9c27b0;">
-            <strong>Tip ${i + 1}:</strong> ${tip}
+        <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
+            <strong>💡 Tip ${i + 1}:</strong> ${tip}
         </div>
     `).join('');
     
-    const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
-    
     panel.innerHTML = `
-        <h3 style="color: #9c27b0; margin-top: 0;">${trendTitle}</h3>
-        <p style="color: #666; margin: 10px 0;">${trendDesc}</p>
+        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary</h3>
+        <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
+        
+        ${praiseHtml}
+        ${trendingHtml}
         
         <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 4px;">
-            <h4 style="color: #1976d2; margin-top: 0;">💡 Coaching Tips</h4>
+            <h4 style="color: #1976d2; margin-top: 0;">💡 Coaching Tips for ${trendingMetric.label}</h4>
             ${tipsHtml}
         </div>
         
         <div style="margin: 20px 0;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Add to Coaching Log:</label>
-            <textarea id="trendCoachingNotes" style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Optional notes about this coaching discussion..."></textarea>
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
+            <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
         </div>
         
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                📝 Log as Coaching
+            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
+                📝 Log & Open CoPilot
             </button>
-            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #bbb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
                 Skip
             </button>
         </div>
@@ -4892,27 +4941,36 @@ function showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tips
     document.body.appendChild(modal);
     
     document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
+        const userNotes = document.getElementById('trendCoachingNotes').value.trim();
+        
+        // Build Copilot prompt
+        const prompt = buildTrendCoachingPrompt(
+            displayName, 
+            weakestMetric, 
+            trendingMetric, 
+            tips, 
+            userNotes
+        );
+        
         // Log as coaching entry
         recordCoachingEvent({
             employeeId: employeeName,
             weekEnding: periodLabel,
-            metricsCoached: [worstTrend.metricKey],
-            aiAssisted: false
+            metricsCoached: [trendingMetric.metricKey],
+            aiAssisted: true
         });
         
-        showToast('✅ Coaching entry logged', 3000);
+        showToast('✅ Coaching logged, opening CoPilot...', 3000);
         document.body.removeChild(modal);
         
-        // Now open email
-        const emailSubject = `Trending Metrics - ${worstTrend.label} - ${displayName}`;
-        openTrendEmailOutlook(emailSubject);
+        // Open Copilot with prompt
+        const encodedPrompt = encodeURIComponent(prompt);
+        const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
+        window.open(copilotUrl, '_blank');
     });
     
     document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
         document.body.removeChild(modal);
-        // Just open email
-        const emailSubject = `Trending Metrics - ${worstTrend.label} - ${displayName}`;
-        openTrendEmailOutlook(emailSubject);
     });
     
     // Close on background click
@@ -4922,6 +4980,34 @@ function showTrendsWithTipsPanel(employeeName, displayName, downwardTrends, tips
         }
     });
 }
+
+function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes) {
+    /**
+     * Build a CoPilot prompt for trend coaching email
+     */
+    let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
+    
+    if (weakestMetric && weakestMetric.achievementPct >= 75) {
+        prompt += `Start by acknowledging their strength in ${weakestMetric.label.toLowerCase()} (${weakestMetric.employeeValue.toFixed(1)}).\n\n`;
+    }
+    
+    prompt += `Then focus on helping them improve ${trendingMetric.label.toLowerCase()}, which is currently at ${trendingMetric.employeeValue.toFixed(1)} compared to the team average of ${trendingMetric.centerValue.toFixed(1)}.\n\n`;
+    
+    prompt += `Include these two coaching tips:\n`;
+    tips.forEach((tip, i) => {
+        prompt += `${i + 1}. ${tip}\n`;
+    });
+    
+    if (userNotes) {
+        prompt += `\nAlso incorporate this note: ${userNotes}\n`;
+    }
+    
+    prompt += `\nKeep the tone encouraging and specific. Focus on actionable steps they can take.`;
+    
+    return prompt;
+}
+
+
 
 function formatMetricName(camelCase) {
     // Map camelCase property names to display names
