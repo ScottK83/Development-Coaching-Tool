@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.24'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.25'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1954,17 +1954,18 @@ function updateCloudSyncModeBadge() {
     const repoOwner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
     const repoName = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
     const gistId = (document.getElementById('cloudSyncGistId')?.value || settings.gistId || '').trim();
+    const directionLabel = getCloudSyncDirectionLabel();
 
     if (repoOwner && repoName) {
-        badge.textContent = `Mode: Repo Sync (${repoOwner}/${repoName})`;
+        badge.textContent = `Mode: Repo Sync (${repoOwner}/${repoName}) • ${directionLabel}`;
         badge.style.background = '#e8f5e9';
         badge.style.color = '#1b5e20';
     } else if (gistId) {
-        badge.textContent = 'Mode: Gist Sync';
+        badge.textContent = `Mode: Gist Sync • ${directionLabel}`;
         badge.style.background = '#e8eaf6';
         badge.style.color = '#283593';
     } else {
-        badge.textContent = 'Mode: Not Configured';
+        badge.textContent = `Mode: Not Configured • ${directionLabel}`;
         badge.style.background = '#eceff1';
         badge.style.color = '#455a64';
     }
@@ -1977,10 +1978,11 @@ function getCloudSyncModeLabel() {
     const repoOwner = (document.getElementById('cloudSyncRepoOwner')?.value || settings.repoOwner || '').trim();
     const repoName = (document.getElementById('cloudSyncRepoName')?.value || settings.repoName || '').trim();
     const gistId = (document.getElementById('cloudSyncGistId')?.value || settings.gistId || '').trim();
+    const directionLabel = getCloudSyncDirectionLabel();
 
-    if (repoOwner && repoName) return 'Repo Sync';
-    if (gistId) return 'Gist Sync';
-    return 'Not Configured';
+    if (repoOwner && repoName) return `Repo Sync • ${directionLabel}`;
+    if (gistId) return `Gist Sync • ${directionLabel}`;
+    return `Not Configured • ${directionLabel}`;
 }
 
 function updateSystemStatusLabel() {
@@ -2015,6 +2017,20 @@ function getCloudSyncRepoConfig() {
         path,
         isConfigured: !!(owner && repo)
     };
+}
+
+function getCloudSyncDirection() {
+    const settings = loadCloudSyncSettings();
+    const directionInput = document.getElementById('cloudSyncDirection');
+    const direction = (directionInput?.value || settings.syncDirection || 'bidirectional').trim();
+    return ['bidirectional', 'upload', 'download'].includes(direction) ? direction : 'bidirectional';
+}
+
+function getCloudSyncDirectionLabel() {
+    const direction = getCloudSyncDirection();
+    if (direction === 'upload') return 'Upload-only';
+    if (direction === 'download') return 'Download-only';
+    return 'Two-way';
 }
 
 function parseCloudPayloadTimestamp(value) {
@@ -2087,6 +2103,11 @@ function scheduleAutoCloudSync(delayMs = 1400) {
 async function runAutoCloudSyncNow() {
     if (suppressAutoCloudSync) return;
     if (!isCloudSyncReadyForAutoSave()) return;
+
+    const direction = getCloudSyncDirection();
+    if (direction === 'download') {
+        return;
+    }
 
     // Don't auto-save if there's no meaningful data (prevents uploading empty payloads)
     const weeklyDataRaw = localStorage.getItem('devCoachingTool_weeklyData');
@@ -2214,7 +2235,8 @@ function initializeCloudSyncPanel() {
     const repoNameInput = document.getElementById('cloudSyncRepoName');
     const repoBranchInput = document.getElementById('cloudSyncRepoBranch');
     const repoPathInput = document.getElementById('cloudSyncRepoPath');
-    if (!tokenInput || !gistInput || !repoOwnerInput || !repoNameInput || !repoBranchInput || !repoPathInput) return;
+    const directionInput = document.getElementById('cloudSyncDirection');
+    if (!tokenInput || !gistInput || !repoOwnerInput || !repoNameInput || !repoBranchInput || !repoPathInput || !directionInput) return;
 
     hydrateCloudSyncSettingsFromShared();
 
@@ -2225,6 +2247,7 @@ function initializeCloudSyncPanel() {
     repoNameInput.value = settings.repoName || '';
     repoBranchInput.value = settings.repoBranch || CLOUD_SYNC_DEFAULT_REPO_BRANCH;
     repoPathInput.value = settings.repoPath || CLOUD_SYNC_DEFAULT_REPO_PATH;
+    directionInput.value = settings.syncDirection || 'bidirectional';
 
     if (settings.repoOwner && settings.repoName) {
         setCloudSyncStatus('Repo sync is configured. Auto-save will use repository file sync.', 'info');
@@ -2244,7 +2267,8 @@ function initializeCloudSyncPanel() {
                 repoOwner: repoOwnerInput.value.trim(),
                 repoName: repoNameInput.value.trim(),
                 repoBranch: (repoBranchInput.value || CLOUD_SYNC_DEFAULT_REPO_BRANCH).trim(),
-                repoPath: (repoPathInput.value || CLOUD_SYNC_DEFAULT_REPO_PATH).trim()
+                repoPath: (repoPathInput.value || CLOUD_SYNC_DEFAULT_REPO_PATH).trim(),
+                syncDirection: (directionInput.value || 'bidirectional').trim()
             };
             saveCloudSyncSettings(current);
             if (current.gistId || (current.repoOwner && current.repoName)) {
@@ -2272,6 +2296,7 @@ function initializeCloudSyncPanel() {
         repoNameInput.addEventListener('change', persistSettings);
         repoBranchInput.addEventListener('change', persistSettings);
         repoPathInput.addEventListener('change', persistSettings);
+        directionInput.addEventListener('change', persistSettings);
         tokenInput.dataset.cloudSyncBound = 'true';
     }
 }
@@ -2593,6 +2618,7 @@ async function syncCloudNowSmart() {
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
     const repoConfig = getCloudSyncRepoConfig();
+    const direction = getCloudSyncDirection();
 
     console.log('[Cloud Sync Smart] Starting sync. RepoConfigured:', !!repoConfig.isConfigured, 'GistId:', gistId ? 'present' : 'missing');
 
@@ -2602,6 +2628,18 @@ async function syncCloudNowSmart() {
     }
     if (!repoConfig.isConfigured && !gistId) {
         setCloudSyncStatus('Gist ID is required to sync.', 'error');
+        return;
+    }
+
+    if (direction === 'upload') {
+        setCloudSyncStatus('Upload-only device: pushing local data to cloud...', 'info');
+        await saveDataToCloudSync();
+        return;
+    }
+
+    if (direction === 'download') {
+        setCloudSyncStatus('Download-only device: pulling from cloud...', 'info');
+        await loadDataFromCloudSync();
         return;
     }
 
@@ -2760,6 +2798,12 @@ async function saveDataToCloudSync() {
     const gistInput = document.getElementById('cloudSyncGistId');
     if (!tokenInput || !gistInput) return;
 
+    const direction = getCloudSyncDirection();
+    if (direction === 'download') {
+        setCloudSyncStatus('This device is set to Download-only. Upload is disabled.', 'warning');
+        return;
+    }
+
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
     const repoConfig = getCloudSyncRepoConfig();
@@ -2840,6 +2884,12 @@ async function loadDataFromCloudSync() {
     const tokenInput = document.getElementById('cloudSyncToken');
     const gistInput = document.getElementById('cloudSyncGistId');
     if (!tokenInput || !gistInput) return;
+
+    const direction = getCloudSyncDirection();
+    if (direction === 'upload') {
+        setCloudSyncStatus('This device is set to Upload-only. Download is disabled.', 'warning');
+        return;
+    }
 
     const token = tokenInput.value.trim();
     const gistId = gistInput.value.trim();
