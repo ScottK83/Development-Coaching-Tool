@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.35'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.36'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -579,6 +579,67 @@ function showToast(message, duration = 5000) {
         toast.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+/**
+ * Displays detailed error messages with specific troubleshooting guidance.
+ * Maps error codes to user-friendly explanations with next steps.
+ * 
+ * @param {string} code - Error type (e.g., 'NO_DATA', 'MISSING_METRICS', 'NO_TIPS')
+ * @param {Object} context - Additional context for error message formatting
+ * @param {string} [source] - Function/source where error occurred (for logging)
+ */
+function showDetailedError(code, context = {}, source = '') {
+    const errorMessages = {
+        'NO_DATA': {
+            title: '📊 No Data Found',
+            message: `No data available for the selected ${context.period || 'period'}. Try uploading metrics or selecting a different employee.`,
+            action: 'Check your data upload and try again'
+        },
+        'MISSING_METRICS': {
+            title: '⚠️ Missing Metrics',
+            message: `Some metrics are incomplete. ${context.count || '?'} metrics have missing values.`,
+            action: 'Review and fill in missing metric values in the data upload'
+        },
+        'NO_TIPS': {
+            title: '📚 No Tips Available',
+            message: `No coaching tips are available for this metric. Consider adding tips in the Manage Tips section.`,
+            action: 'Go to Manage Tips → Coaching Tips to add content'
+        },
+        'NO_COACHING_LOG': {
+            title: '📝 No Coaching History',
+            message: `You haven't recorded any coaching sessions yet. Start by generating a coaching email.`,
+            action: 'Use the Coaching Email section to create your first entry'
+        },
+        'STORAGE_FULL': {
+            title: '💾 Storage Nearly Full',
+            message: `Browser storage is almost full (${context.usage || '?'}/4MB). Export and clear old data.`,
+            action: 'Use the Data Management section to export and clear history'
+        },
+        'MISSING_EMPLOYEE': {
+            title: '👤 Employee Not Found',
+            message: `Unable to identify the employee. Make sure an employee is selected.`,
+            action: 'Select an employee from the dropdown and try again'
+        },
+        'MISSING_PERIOD': {
+            title: '📅 Period Not Selected',
+            message: `Please select a time period (week, month, or year-to-date).`,
+            action: 'Choose a period from the period selector'
+        }
+    };
+    
+    const error = errorMessages[code] || {
+        title: '⚠️ Error Occurred',
+        message: `An unexpected error occurred: ${code}`,
+        action: 'Check the Debug panel for more information'
+    };
+    
+    const toastMsg = `${error.title}\n${error.message}`;
+    showToast(toastMsg, 5000);
+    
+    if (source) {
+        console.warn(`[${source}] ${code}:`, error.message, context);
+    }
 }
 
 function showLoadingSpinner(message = 'Processing...') {
@@ -1646,6 +1707,57 @@ function getCoachingHistoryForEmployee(employeeId) {
         .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
 }
 
+/**
+ * Exports the entire coaching history to CSV format
+ * @returns {string} CSV string with headers and all coaching entries
+ */
+function exportCoachingHistoryToCSV() {
+    let csv = 'Employee,Week Ending,Metrics Coached,AI Assisted,Generated At\n';
+    
+    Object.entries(coachingHistory).forEach(([employeeId, entries]) => {
+        entries.forEach(entry => {
+            const metricsStr = (entry.metricsCoached || []).join(';');
+            const aiStr = entry.aiAssisted ? 'Yes' : 'No';
+            const timestamp = entry.generatedAt ? new Date(entry.generatedAt).toLocaleString() : '';
+            
+            // Escape commas in metric list
+            const escapedMetrics = metricsStr.includes(',') ? `"${metricsStr}"` : metricsStr;
+            
+            csv += `${employeeId},${entry.weekEnding || ''},${escapedMetrics},${aiStr},${timestamp}\n`;
+        });
+    });
+    
+    return csv;
+}
+
+/**
+ * Downloads the coaching history as a CSV file to the user's computer
+ * @function
+ */
+function downloadCoachingHistoryCSV() {
+    const csv = exportCoachingHistoryToCSV();
+    
+    if (csv.split('\n').length <= 1) {
+        showDetailedError('NO_COACHING_LOG', { count: 0 });
+        return;
+    }
+    
+    const filename = `coaching_history_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast(`✅ Downloaded ${filename}`, 3000);
+}
+
 // ============================================
 // TEAM MEMBER MANAGEMENT
 // ============================================
@@ -1904,8 +2016,30 @@ function evaluateMetricsForCoaching(employeeData) {
     return { celebrate, needsCoaching, coachedMetricKeys };
 }
 
+/**
+ * Records a coaching session in the coaching history log.
+ * Used to track coaching interactions for compliance and follow-up purposes.
+ * 
+ * @param {Object} params - Coaching event details
+ * @param {string} params.employeeId - Employee identifier (display name)
+ * @param {string} params.weekEnding - Week/period label for the coaching (e.g., "Week of 2/19")
+ * @param {string[]} params.metricsCoached - Array of metric keys addressed in coaching (e.g., ['aht', 'fcr'])
+ * @param {boolean} [params.aiAssisted=false] - Whether Copilot/AI was used to generate content
+ * @returns {void} Entry is saved to localStorage via saveCoachingHistory()
+ * 
+ * @example
+ * recordCoachingEvent({
+ *   employeeId: 'John Doe',
+ *   weekEnding: 'Week of 2/19/2026',
+ *   metricsCoached: ['aht'],
+ *   aiAssisted: true
+ * });
+ */
 function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted }) {
-    if (!employeeId) return;
+    if (!employeeId) {
+        console.warn('recordCoachingEvent: Missing employeeId');
+        return;
+    }
     appendCoachingLogEntry({
         employeeId,
         weekEnding,
@@ -2695,6 +2829,11 @@ function initializeEventHandlers() {
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
         
         exportToExcel();
+    });
+    
+    // Export coaching history as CSV
+    document.getElementById('exportCoachingHistoryBtn')?.addEventListener('click', () => {
+        downloadCoachingHistoryCSV();
     });
     
     // Upload more data button
@@ -4654,8 +4793,20 @@ function saveMetricsPreviewEdits() {
 }
 
 /**
- * Build the HTML email for a trend email
- * Can be used for both single and bulk email generation
+ * Analyzes employee metrics to identify performance gaps and trends.
+ * Compares individual achievements against targets and team center averages.
+ * 
+ * @param {Object} employeeData - Employee's current metric values
+ *   Keys: scheduleAdherence, overallExperience, fcr, transfers, aht, acw, etc.
+ * @param {Object} centerAverages - Team's center average values for comparison
+ * @returns {Object} Analysis result with structure:
+ *   {weakest: Metric, trendingDown: Metric | null}
+ *   Each metric has: metricKey, label, achievementPct, employeeValue, target, centerValue
+ *
+ * @example
+ * const analysis = analyzeTrendMetrics(empData, centerAvgs);
+ * if (analysis.weakest) console.log(`Weakest: ${analysis.weakest.label}`);
+ * if (analysis.trendingDown) console.log(`Trending: ${analysis.trendingDown.label}`);
  */
 function analyzeTrendMetrics(employeeData, centerAverages) {
     /**
@@ -4843,6 +4994,25 @@ function openTrendEmailOutlook(emailSubject) {
     }
 }
 
+/**
+ * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
+ * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
+ * 
+ * @param {string} employeeName - Employee identifier (display name)
+ * @param {string} displayName - Formatted name for display in modal
+ * @param {Object} weakestMetric - Employee's lowest-performing metric
+ *   Properties: {metricKey, label, achievementPct, employeeValue, target}
+ * @param {Object} trendingMetric - Metric below team center average
+ *   Properties: {metricKey, label, employeeValue, centerValue}
+ * @param {string[]} tips - Array of coaching tips for trending metric
+ * @param {string} weekKey - Period identifier for logging
+ * @param {Object} periodMeta - Period metadata with label and dates
+ * @param {string} emailSubject - Subject line for potential email
+ * @returns {void} Creates modal in DOM, handles clicks and coaching logging
+ * 
+ * @example
+ * showTrendsWithTipsPanel('john', 'John Doe', weakest, trending, ['Tip 1', 'Tip 2'], 'key', {...}, 'Subject');
+ */
 function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tips, weekKey, periodMeta, emailSubject) {
     /**
      * Show a modal/panel with:
@@ -4981,6 +5151,23 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     });
 }
 
+/**
+ * Builds a natural language prompt for Microsoft Copilot to draft a coaching email.
+ * Incorporates performance data, tips, and optional notes into guidance for AI.
+ * 
+ * @param {string} displayName - Employee's name for personalization
+ * @param {Object} weakestMetric - Employee's lowest-performing metric
+ *   Properties: {label, achievementPct, employeeValue, target}
+ * @param {Object} trendingMetric - Metric showing downward trend from team average
+ *   Properties: {label, employeeValue, centerValue}
+ * @param {string[]} tips - Array of coaching tips for the focus metric
+ * @param {string} userNotes - Optional additional context from hiring manager
+ * @returns {string} Formatted prompt text for Copilot to generate coaching email
+ *
+ * @example
+ * const prompt = buildTrendCoachingPrompt('John', weakest, trending, ['Tip 1', 'Tip 2'], '');
+ * window.open(`https://copilot.microsoft.com/?q=${encodeURIComponent(prompt)}`);
+ */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes) {
     /**
      * Build a CoPilot prompt for trend coaching email
