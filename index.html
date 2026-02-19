@@ -587,44 +587,6 @@
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #3949ab;">
-                        <h3 style="color: #283593; margin-top: 0;">☁️ Cloud Sync (Single User)</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Sync all app data across browsers/computers using GitHub (repo file preferred, gist fallback).</p>
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
-                            <div>
-                                <label for="cloudSyncToken" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">GitHub Token (repo scope for repo sync, gist scope for gist sync):</label>
-                                <input type="password" id="cloudSyncToken" placeholder="ghp_... or github_pat_..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                            <div>
-                                <label for="cloudSyncGistId" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Gist ID:</label>
-                                <input type="text" id="cloudSyncGistId" placeholder="Auto-created on first save" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                        </div>
-                        <details style="margin-bottom: 12px; padding: 12px; background: #f5f7ff; border: 1px solid #d7ddff; border-radius: 6px;">
-                            <summary style="cursor: pointer; font-weight: bold; color: #283593;">Advanced: Repo Sync (recommended for fine-grained tokens)</summary>
-                            <p style="margin: 8px 0 10px 0; color: #555; font-size: 0.85em;">Use a private repo file instead of a gist. This works better with fine-grained PATs.</p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 10px;">
-                                <input type="text" id="cloudSyncRepoOwner" placeholder="Owner (e.g., yourusername)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                <input type="text" id="cloudSyncRepoName" placeholder="Repo (e.g., coaching-sync)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                <input type="text" id="cloudSyncRepoBranch" placeholder="Branch (default: main)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                <input type="text" id="cloudSyncRepoPath" placeholder="File path (default: sync/development-coaching-tool-sync.json)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                        </details>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                            <button type="button" id="syncCloudNowBtn" class="btn-secondary" style="background: #1e88e5; color: white; font-weight: bold;">🔄 Sync Now</button>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                            <label for="cloudSyncDirection" style="font-weight: bold; color: #333;">Device Role:</label>
-                            <select id="cloudSyncDirection" style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <option value="bidirectional">Two-way (Upload + Download)</option>
-                                <option value="upload">Upload-only (work computer)</option>
-                                <option value="download">Download-only (personal computer)</option>
-                            </select>
-                            <span style="color: #666; font-size: 0.85em;">Choose once per device.</span>
-                        </div>
-                        <div id="cloudSyncStatus" style="display: none; padding: 10px; border-radius: 4px; font-size: 0.9em;"></div>
-                    </div>
-                    
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
                         <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
                         <div style="margin-bottom: 15px;">
