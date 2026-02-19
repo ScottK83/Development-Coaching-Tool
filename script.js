@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.29'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.30'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2152,8 +2152,8 @@ function initializeEventHandlers() {
     });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showSubSection('subSectionYearEnd');
-        initializeYearEndComments();
+        showSubSection('subSectionCoachingEmail');
+        initializeCoachingEmail();
     });
     
     // Sub-navigation for Coaching & Analysis section
@@ -9768,19 +9768,6 @@ function initializeYearEndComments() {
     }
 
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
-
-    setTimeout(() => {
-        if (document.getElementById('subSectionYearEnd')?.style.display !== 'none') {
-            employeeSelect.focus();
-            if (typeof employeeSelect.showPicker === 'function') {
-                try {
-                    employeeSelect.showPicker();
-                } catch (error) {
-                    // Ignore if browser disallows programmatic picker
-                }
-            }
-        }
-    }, 0);
 }
 
 function updateYearEndSnapshotDisplay() {
