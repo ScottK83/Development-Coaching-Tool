@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.2'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.3'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -103,6 +103,35 @@ const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
 const CLOUD_SYNC_FILENAME = 'development-coaching-tool-sync.json';
 const CLOUD_SYNC_SETTINGS_KEY = STORAGE_PREFIX + 'cloudSyncSettings';
+const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
+
+const YEAR_END_TARGETS_BY_YEAR = {
+    2025: {
+        scheduleAdherence: { type: 'min', value: 93 },
+        cxRepOverall: { type: 'min', value: 80 },
+        fcr: { type: 'min', value: 70 },
+        transfers: { type: 'max', value: 6 },
+        overallSentiment: { type: 'min', value: 88 },
+        positiveWord: { type: 'min', value: 86 },
+        negativeWord: { type: 'min', value: 83 },
+        managingEmotions: { type: 'min', value: 95 },
+        aht: { type: 'max', value: 440 },
+        acw: { type: 'max', value: 60 },
+        holdTime: { type: 'max', value: 30 },
+        reliability: { type: 'max', value: 16 }
+    }
+};
+
+const YEAR_END_ANNUAL_GOALS = [
+    { key: 'safetyGoalAps', label: 'Safety Goal at APS', expectation: 'Meeting' },
+    { key: 'emergencySafetyHazardCalls', label: 'Emergency Safety Hazard Calls', expectation: '100% accuracy (No infractions)' },
+    { key: 'accSubstantiatedComplaints', label: 'ACC Substantiated Complaints', expectation: '0 complaints' },
+    { key: 'phishingClicks', label: 'Clicks on Phishing Emails', expectation: '0 clicks' },
+    { key: 'redFlagViolations', label: 'Red Flag Violations', expectation: '0 violations' },
+    { key: 'depositWaiverAccuracy', label: 'Deposit Waiver Accuracy', expectation: '100% accuracy' },
+    { key: 'trainingCompletion', label: 'Completion of all training', expectation: 'Timely completion' },
+    { key: 'timeEntryCompliance', label: 'Time entries completed each payday', expectation: 'On time each payday' }
+];
 
 // Sentiment Analysis Constants
 const SENTIMENT_TOP_WINS_COUNT = 5;
@@ -2802,12 +2831,16 @@ function initializeEventHandlers() {
             
             // Store data with period type
             const weekKey = `${startDate}|${endDate}`;
+            const yearEndProfileSelect = document.getElementById('uploadYearEndProfile');
+            const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
             
             // Parse dates safely (avoid timezone issues)
             const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
             const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
             const endDateObj = new Date(endYear, endMonth - 1, endDay);
             const startDateObj = new Date(startYear, startMonth - 1, startDay);
+            const autoReviewYear = String(endDateObj.getFullYear());
+            const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
             
             // Create label based on period type
             let label;
@@ -2830,6 +2863,8 @@ function initializeEventHandlers() {
                     endDate: endDate,
                     label: label,
                     periodType: periodType,
+                    yearEndTargetProfile: selectedYearEndProfile,
+                    yearEndReviewYear: yearEndReviewYear,
                     uploadedAt: new Date().toISOString()
                 }
             };
@@ -3272,6 +3307,139 @@ function initializeEventHandlers() {
     
     // Initialize red flag handlers
     initializeRedFlag();
+}
+
+function loadYearEndAnnualGoalsStore() {
+    try {
+        const raw = localStorage.getItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        console.error('Error loading year-end annual goals store:', error);
+        return {};
+    }
+}
+
+function saveYearEndAnnualGoalsStore(store) {
+    try {
+        localStorage.setItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY, JSON.stringify(store || {}));
+    } catch (error) {
+        console.error('Error saving year-end annual goals store:', error);
+    }
+}
+
+function buildDefaultYearEndAnnualGoalsState() {
+    const defaults = {};
+    YEAR_END_ANNUAL_GOALS.forEach(goal => {
+        defaults[goal.key] = { status: 'met', note: '' };
+    });
+    return defaults;
+}
+
+function getYearEndAnnualGoalsState(employeeName, reviewYear) {
+    const defaults = buildDefaultYearEndAnnualGoalsState();
+    if (!employeeName || !reviewYear) return defaults;
+
+    const store = loadYearEndAnnualGoalsStore();
+    const stateKey = `${String(reviewYear)}::${employeeName}`;
+    const saved = store[stateKey] || {};
+
+    YEAR_END_ANNUAL_GOALS.forEach(goal => {
+        const savedGoal = saved[goal.key] || {};
+        defaults[goal.key] = {
+            status: savedGoal.status === 'not-met' ? 'not-met' : 'met',
+            note: (savedGoal.note || '').trim()
+        };
+    });
+
+    return defaults;
+}
+
+function persistYearEndAnnualGoalsState(employeeName, reviewYear) {
+    if (!employeeName || !reviewYear) return;
+    const container = document.getElementById('yearEndAnnualGoalsContainer');
+    if (!container) return;
+
+    const nextState = buildDefaultYearEndAnnualGoalsState();
+    YEAR_END_ANNUAL_GOALS.forEach(goal => {
+        const statusEl = container.querySelector(`[data-goal-status="${goal.key}"]`);
+        const noteEl = container.querySelector(`[data-goal-note="${goal.key}"]`);
+        nextState[goal.key] = {
+            status: statusEl?.value === 'not-met' ? 'not-met' : 'met',
+            note: (noteEl?.value || '').trim()
+        };
+    });
+
+    const store = loadYearEndAnnualGoalsStore();
+    store[`${String(reviewYear)}::${employeeName}`] = nextState;
+    saveYearEndAnnualGoalsStore(store);
+}
+
+function renderYearEndAnnualGoalsInputs(employeeName, reviewYear) {
+    const container = document.getElementById('yearEndAnnualGoalsContainer');
+    if (!container) return;
+
+    const state = getYearEndAnnualGoalsState(employeeName, reviewYear);
+    container.innerHTML = YEAR_END_ANNUAL_GOALS.map(goal => {
+        const current = state[goal.key] || { status: 'met', note: '' };
+        const safeNote = escapeHtml(current.note).replace(/"/g, '&quot;');
+        return `
+            <div style="display: grid; grid-template-columns: minmax(260px, 2fr) 140px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e6dcfa; border-radius: 6px; background: #faf7ff;">
+                <div>
+                    <div style="font-weight: bold; color: #4a148c;">${escapeHtml(goal.label)}</div>
+                    <div style="font-size: 0.85em; color: #666;">Goal: ${escapeHtml(goal.expectation)}</div>
+                </div>
+                <select data-goal-status="${goal.key}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                    <option value="met"${current.status === 'met' ? ' selected' : ''}>✅ Meeting</option>
+                    <option value="not-met"${current.status === 'not-met' ? ' selected' : ''}>⚠️ Not Met</option>
+                </select>
+                <input type="text" data-goal-note="${goal.key}" value="${safeNote}" placeholder="Optional note/details" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('[data-goal-status], [data-goal-note]').forEach(el => {
+        const eventName = el.matches('select') ? 'change' : 'input';
+        el.addEventListener(eventName, () => {
+            persistYearEndAnnualGoalsState(employeeName, reviewYear);
+        });
+    });
+}
+
+function collectYearEndAnnualGoals(employeeName, reviewYear) {
+    const state = getYearEndAnnualGoalsState(employeeName, reviewYear);
+    const metGoals = [];
+    const notMetGoals = [];
+
+    YEAR_END_ANNUAL_GOALS.forEach(goal => {
+        const goalState = state[goal.key] || { status: 'met', note: '' };
+        const noteSuffix = goalState.note ? ` (${goalState.note})` : '';
+        const text = `${goal.label}: ${goal.expectation}${noteSuffix}`;
+        if (goalState.status === 'not-met') {
+            notMetGoals.push(text);
+        } else {
+            metGoals.push(text);
+        }
+    });
+
+    return { metGoals, notMetGoals };
+}
+
+function getYearEndTargetConfig(metricKey, reviewYear, periodMetadata) {
+    const parsedYear = parseInt(reviewYear, 10);
+    const customTargets = Number.isInteger(parsedYear) ? YEAR_END_TARGETS_BY_YEAR[parsedYear] : null;
+    const metadataProfile = periodMetadata?.yearEndTargetProfile;
+    const metadataYear = parseInt(periodMetadata?.yearEndReviewYear, 10);
+    const profileYear = Number.isInteger(parsedYear)
+        ? parsedYear
+        : (metadataProfile === 'auto' ? metadataYear : parseInt(metadataProfile, 10));
+    const profileTargets = Number.isInteger(profileYear) ? YEAR_END_TARGETS_BY_YEAR[profileYear] : null;
+
+    if (customTargets && customTargets[metricKey]) return { ...customTargets[metricKey], profileYear: parsedYear };
+    if (profileTargets && profileTargets[metricKey]) return { ...profileTargets[metricKey], profileYear: profileYear };
+
+    const fallback = METRICS_REGISTRY[metricKey]?.target;
+    if (!fallback) return null;
+    return { ...fallback, profileYear: null };
 }
 
 // Scan for unrealistic survey totals
@@ -9341,11 +9509,15 @@ function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
         if (!employeeRecord) return;
 
         const metadata = period?.metadata || {};
+        const explicitReviewYear = parseInt(metadata.yearEndReviewYear, 10);
         const endDateText = metadata.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
         const endDate = endDateText ? new Date(endDateText) : new Date(NaN);
-        if (isNaN(endDate.getTime()) || endDate.getFullYear() !== yearNum) return;
+        const matchesReviewYear = (Number.isInteger(explicitReviewYear) && explicitReviewYear === yearNum)
+            || (!isNaN(endDate.getTime()) && endDate.getFullYear() === yearNum);
+        if (!matchesReviewYear) return;
 
-        const priority = (sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1;
+        const priority = ((sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1)
+            + (Number.isInteger(explicitReviewYear) && explicitReviewYear === yearNum ? 2 : 0);
         candidates.push({
             sourceName,
             periodKey,
@@ -9372,9 +9544,10 @@ function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
     return candidates[0];
 }
 
-function buildYearEndMetricSnapshot(employeeRecord) {
+function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata = null) {
     const wins = [];
     const opportunities = [];
+    const profileYears = new Set();
 
     getMetricOrder().forEach(({ key }) => {
         const metricConfig = METRICS_REGISTRY[key];
@@ -9384,15 +9557,20 @@ function buildYearEndMetricSnapshot(employeeRecord) {
         const value = parseFloat(rawValue);
         if (isNaN(value)) return;
 
-        const target = metricConfig.target?.value;
-        if (target === undefined || target === null) return;
+        const targetConfig = getYearEndTargetConfig(key, reviewYear, periodMetadata);
+        if (!targetConfig || targetConfig.value === undefined || targetConfig.value === null) return;
+        if (targetConfig.profileYear) profileYears.add(targetConfig.profileYear);
+
+        const meetsTarget = targetConfig.type === 'min'
+            ? value >= targetConfig.value
+            : value <= targetConfig.value;
 
         const entry = {
             key,
             label: metricConfig.label,
             value: formatMetricDisplay(key, value),
-            target: formatMetricDisplay(key, target),
-            meetsTarget: isMetricMeetingTarget(key, value, target)
+            target: formatMetricDisplay(key, targetConfig.value),
+            meetsTarget: meetsTarget
         };
 
         if (entry.meetsTarget) {
@@ -9402,7 +9580,11 @@ function buildYearEndMetricSnapshot(employeeRecord) {
         }
     });
 
-    return { wins, opportunities };
+    return {
+        wins,
+        opportunities,
+        targetProfileYear: profileYears.size ? Array.from(profileYears)[0] : null
+    };
 }
 
 function initializeYearEndComments() {
@@ -9436,6 +9618,7 @@ function initializeYearEndComments() {
     if (!employees.length) {
         status.textContent = 'No employee data found yet. Upload yearly metrics first.';
         status.style.display = 'block';
+        renderYearEndAnnualGoalsInputs('', reviewYearInput.value || String(new Date().getFullYear()));
         return;
     }
 
@@ -9458,6 +9641,8 @@ function initializeYearEndComments() {
         copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
         copyBtn.dataset.bound = 'true';
     }
+
+    renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 
     setTimeout(() => {
         if (document.getElementById('subSectionYearEnd')?.style.display !== 'none') {
@@ -9507,12 +9692,19 @@ function updateYearEndSnapshotDisplay() {
         return;
     }
 
-    const { wins, opportunities } = buildYearEndMetricSnapshot(latestPeriod.employeeRecord);
+    renderYearEndAnnualGoalsInputs(employeeName, reviewYear);
+    const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
+    const { wins, opportunities, targetProfileYear } = buildYearEndMetricSnapshot(
+        latestPeriod.employeeRecord,
+        reviewYear,
+        latestPeriod.period?.metadata
+    );
     const endDateText = latestPeriod.period?.metadata?.endDate
         ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
         : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
 
-    summary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • ${wins.length} positives • ${opportunities.length} improvement areas`;
+    const profileLabel = targetProfileYear ? `${targetProfileYear} goals` : 'current goals';
+    summary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • Targets: ${profileLabel} • ${wins.length} positives • ${opportunities.length} improvement areas`;
 
     winsList.innerHTML = wins.length
         ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
@@ -9523,15 +9715,19 @@ function updateYearEndSnapshotDisplay() {
         : '<li>No below-target metrics detected in this period.</li>';
 
     if (positivesInput && !positivesInput.value.trim()) {
+        const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
         positivesInput.value = wins.length
-            ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).join('\n')
-            : 'Consistent effort and willingness to grow throughout the year.';
+            ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).concat(metGoalLines).join('\n')
+            : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
     }
 
     if (improvementsInput && !improvementsInput.value.trim()) {
+        const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
         improvementsInput.value = opportunities.length
-            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).join('\n')
-            : 'Continue building consistency and sustaining current performance levels.';
+            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
+            : annualFollowUps.length
+                ? annualFollowUps.join('\n')
+                : 'Continue building consistency and sustaining current performance levels.';
     }
 
     yearEndDraftContext = {
@@ -9541,7 +9737,9 @@ function updateYearEndSnapshotDisplay() {
         sourceLabel: latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'latest uploaded period',
         endDateText,
         wins,
-        opportunities
+        opportunities,
+        targetProfileYear,
+        annualGoals
     };
 
     status.textContent = `Year-end facts loaded for ${employeeName} (${reviewYear}).`;
@@ -9583,16 +9781,27 @@ function generateYearEndPromptAndCopy() {
     const fallbackImprovements = (yearEndDraftContext?.opportunities || [])
         .map(o => `${o.label}: ${o.value} vs target ${o.target}`)
         .join('\n');
+    const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
+    const annualMetText = annualGoals.metGoals.length
+        ? annualGoals.metGoals.map(line => `- ${line}`).join('\n')
+        : '- None recorded';
+    const annualNotMetText = annualGoals.notMetGoals.length
+        ? annualGoals.notMetGoals.map(line => `- ${line}`).join('\n')
+        : '- None';
 
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
     const trackLabel = trackStatus === 'on-track' ? 'On Track' : 'Off Track';
     const periodLabel = yearEndDraftContext?.periodLabel || `${reviewYear} year-end period`;
     const sourceLabel = yearEndDraftContext?.sourceLabel || 'uploaded metrics';
+    const targetProfileLabel = yearEndDraftContext?.targetProfileYear
+        ? `${yearEndDraftContext.targetProfileYear} year-end goals`
+        : 'current metric goals';
 
     const prompt = `I'm a supervisor preparing year-end comments for ${preferredName} (${employeeName}) for ${reviewYear}.
 
 Use this data source: ${sourceLabel} (${periodLabel}).
 Performance classification: ${trackLabel}.
+Metric targets to apply: ${targetProfileLabel}.
 
 Positives to highlight:
 ${positivesText || fallbackPositives || '- Positive impact and steady contribution to the team.'}
@@ -9602,6 +9811,13 @@ ${improvementsText || fallbackImprovements || '- Continue improving consistency 
 
 Additional manager context:
 ${managerContext || '- None provided.'}
+
+Annual APS goals status (not part of weekly report):
+Met goals:
+${annualMetText}
+
+Goals needing follow-up:
+${annualNotMetText}
 
 Write a polished year-end comment ready to paste into employee notes.
 

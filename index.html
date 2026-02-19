@@ -51,6 +51,16 @@
                                 <button type="button" class="upload-period-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
                             </div>
                         </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label for="uploadYearEndProfile" style="font-weight: bold; display: block; margin-bottom: 5px;">Year-End Target Profile:</label>
+                            <select id="uploadYearEndProfile" style="width: 100%; max-width: 320px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; cursor: pointer;">
+                                <option value="auto">Auto from end date</option>
+                                <option value="2025">2025 goals</option>
+                                <option value="2026">2026 goals</option>
+                            </select>
+                            <div style="margin-top: 6px; color: #666; font-size: 0.85em;">Use this when uploading year-end data that should follow 2025 targets.</div>
+                        </div>
                         
                         <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 150px;">
@@ -200,6 +210,12 @@
                                     <ul id="yearEndImprovementList" style="margin: 0; padding-left: 18px; color: #b71c1c;"></ul>
                                 </div>
                             </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🎯 Annual APS Goals</h3>
+                            <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Defaults are set to Meeting. Mark any yearly goal that was not met and add details when needed.</p>
+                            <div id="yearEndAnnualGoalsContainer" style="display: grid; gap: 10px;"></div>
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
