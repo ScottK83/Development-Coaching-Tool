@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.18'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.19'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2416,23 +2416,25 @@ async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
         ? `https://api.github.com/gists/${encodeURIComponent(gistId)}`
         : 'https://api.github.com/gists';
 
-    const body = isUpdate
-        ? {
-            files: {
-                [CLOUD_SYNC_FILENAME]: {
-                    content: JSON.stringify(payload, null, 2)
-                }
+    const updateBody = {
+        files: {
+            [CLOUD_SYNC_FILENAME]: {
+                content: JSON.stringify(payload, null, 2)
             }
         }
-        : {
-            description: 'Development Coaching Tool cloud sync',
-            public: false,
-            files: {
-                [CLOUD_SYNC_FILENAME]: {
-                    content: JSON.stringify(payload, null, 2)
-                }
+    };
+
+    const createBody = {
+        description: 'Development Coaching Tool cloud sync',
+        public: false,
+        files: {
+            [CLOUD_SYNC_FILENAME]: {
+                content: JSON.stringify(payload, null, 2)
             }
-        };
+        }
+    };
+
+    const body = isUpdate ? updateBody : createBody;
 
     const response = await fetch(endpoint, {
         method: isUpdate ? 'PATCH' : 'POST',
@@ -2443,6 +2445,30 @@ async function createOrUpdateCloudSyncGist({ token, gistId, payload }) {
         },
         body: JSON.stringify(body)
     });
+
+    // If PATCH fails with 409 (gist not found), create a new gist instead
+    if (isUpdate && response.status === 409) {
+        console.log('[Cloud Sync] Gist update failed (409), creating new gist instead');
+        const createResponse = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(createBody)
+        });
+
+        if (!createResponse.ok) {
+            const errorText = await createResponse.text();
+            throw new Error(`GitHub API error creating new gist (${createResponse.status}): ${errorText.slice(0, 220)}`);
+        }
+
+        const data = await createResponse.json();
+        const newGistId = data?.id;
+        console.log('[Cloud Sync] Created new gist:', newGistId);
+        return newGistId;
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
