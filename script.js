@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.12'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.13'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2205,12 +2205,20 @@ function collectCloudSyncPayload() {
         }
     }
 
-    return {
+    const payload = {
         app: 'Development Coaching Tool',
         version: APP_VERSION,
         exportedAt: new Date().toISOString(),
         storageData
     };
+
+    console.log('[Cloud Sync] Collecting payload. Keys included:', Object.keys(payload.storageData));
+    if (payload.storageData['devCoachingTool_weeklyData']) {
+        const weeklyDataObj = JSON.parse(payload.storageData['devCoachingTool_weeklyData']);
+        console.log('[Cloud Sync] Weekly data has', Object.keys(weeklyDataObj).length, 'weeks');
+    }
+
+    return payload;
 }
 
 function applyCloudSyncPayload(payload) {
@@ -2223,6 +2231,8 @@ function applyCloudSyncPayload(payload) {
 
     suppressAutoCloudSync = true;
     try {
+        console.log('[Cloud Sync] Applying payload with', Object.keys(payload.storageData).length, 'keys');
+
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -2232,6 +2242,7 @@ function applyCloudSyncPayload(payload) {
                 keysToRemove.push(key);
             }
         }
+        console.log('[Cloud Sync] Removing', keysToRemove.length, 'old local keys');
         keysToRemove.forEach(key => localStorage.removeItem(key));
 
         Object.entries(payload.storageData).forEach(([key, value]) => {
@@ -2241,6 +2252,14 @@ function applyCloudSyncPayload(payload) {
                 localStorage.setItem(key, JSON.stringify(value));
             }
         });
+
+        console.log('[Cloud Sync] Applied payload. Checking restored data...');
+        if (localStorage.getItem('devCoachingTool_weeklyData')) {
+            const restored = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData'));
+            console.log('[Cloud Sync] ✅ Weekly data restored with', Object.keys(restored).length, 'weeks');
+        } else {
+            console.log('[Cloud Sync] ⚠️ Weekly data NOT found after apply!');
+        }
     } finally {
         suppressAutoCloudSync = false;
     }
