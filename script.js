@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.27'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.28'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2451,29 +2451,41 @@ async function createOrUpdateCloudSyncRepoFile({ token, owner, repo, branch, pat
     });
 
     const putUrl = buildRepoContentApiUrl({ owner, repo, path });
-    const body = {
+    const baseBody = {
         message: `Update Development Coaching Tool sync (${new Date().toISOString()})`,
         content: encodeUtf8ToBase64(JSON.stringify(payload, null, 2)),
         branch
     };
 
-    if (existing?.sha) {
-        body.sha = existing.sha;
-    }
+    const attemptPut = async (shaOverride) => {
+        const body = { ...baseBody };
+        if (shaOverride) body.sha = shaOverride;
+        const response = await fetch(putUrl, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+        return response;
+    };
 
-    const response = await fetch(putUrl, {
-        method: 'PUT',
-        headers: {
-            'Accept': 'application/vnd.github+json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-    });
+    let response = await attemptPut(existing?.sha || null);
+
+    if (response.status === 409) {
+        console.warn('[Cloud Sync] Repo sync conflict (409). Retrying with latest SHA...');
+        const latest = await readCloudSyncRepoFile({ token, owner, repo, branch, path }).catch(() => null);
+        response = await attemptPut(latest?.sha || null);
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`GitHub repo API error (${response.status}): ${errorText.slice(0, 220)}`);
+        const hint = response.status === 409
+            ? ' (Repo conflict: check branch/path or try a new file name.)'
+            : '';
+        throw new Error(`GitHub repo API error (${response.status}): ${errorText.slice(0, 220)}${hint}`);
     }
 
     return response.json();
