@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.16'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.17'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1978,18 +1978,19 @@ function parseCloudPayloadTimestamp(value) {
 }
 
 function hasLocalManagedData() {
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key) continue;
-        if (key === CLOUD_SYNC_SETTINGS_KEY || key === CLOUD_SYNC_SHARED_KEY) continue;
-        if (key.startsWith(STORAGE_PREFIX) || key === PTO_STORAGE_KEY) {
-            const raw = localStorage.getItem(key);
-            if (raw !== null && raw !== undefined && raw !== '') {
-                return true;
-            }
-        }
+    // Check specifically for weekly data with actual weeks
+    const weeklyDataRaw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
+    if (!weeklyDataRaw) return false;
+    
+    try {
+        const weeklyDataObj = JSON.parse(weeklyDataRaw);
+        const weekCount = Object.keys(weeklyDataObj).length;
+        console.log('[hasLocalManagedData] Found', weekCount, 'weeks in local storage');
+        return weekCount > 0;
+    } catch (error) {
+        console.error('[hasLocalManagedData] Error parsing weeklyData:', error);
+        return false;
     }
-    return false;
 }
 
 function isCloudSyncReadyForAutoSave() {
