@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.30'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.31'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3938,9 +3938,19 @@ function initializeMetricTrends() {
         }
     });
     
-    // Show the metrics form immediately
+    // Toggle metrics form visibility
     const avgMetricsForm = document.getElementById('avgMetricsForm');
-    if (avgMetricsForm) avgMetricsForm.style.display = 'block';
+    const toggleAvgMetricsBtn = document.getElementById('toggleAvgMetricsBtn');
+    
+    if (toggleAvgMetricsBtn) {
+        toggleAvgMetricsBtn.addEventListener('click', () => {
+            if (avgMetricsForm) {
+                const isVisible = avgMetricsForm.style.display !== 'none';
+                avgMetricsForm.style.display = isVisible ? 'none' : 'block';
+                toggleAvgMetricsBtn.textContent = isVisible ? '✏️ Edit Averages' : '✏️ Hide Averages';
+            }
+        });
+    }
 
     // Show target hints on Call Center Averages metric inputs
     renderCallCenterAverageTargets();
