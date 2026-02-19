@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.22'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.23'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2142,7 +2142,7 @@ async function runAutoCloudSyncNow() {
                 repoPath: repoConfig.path
             });
 
-            setCloudSyncStatus('Auto-save complete via repo sync.', 'success');
+            // Silent auto-save (no status message)
         } else {
             const resolvedGistId = await createOrUpdateCloudSyncGist({ token, gistId, payload });
 
@@ -2167,7 +2167,7 @@ async function runAutoCloudSyncNow() {
                 repoPath: repoConfig.path
             });
 
-            setCloudSyncStatus('Auto-save complete via gist sync.', 'success');
+            // Silent auto-save (no status message)
         }
     } catch (error) {
         console.error('Auto cloud sync failed:', error);
@@ -2204,24 +2204,7 @@ function installCloudSyncAutoSaveHooks() {
 
     isCloudSyncStorageHookInstalled = true;
     
-    // === FALLBACK: Periodic auto-save to localStorage every 15 seconds ===
-    setInterval(() => {
-        if (!suppressAutoCloudSync && Object.keys(weeklyData).length > 0) {
-            // Always ensure weeklyData is saved to localStorage
-            try {
-                const lastSavedStr = localStorage.getItem('devCoachingTool_weeklyData_lastHash');
-                const currentHash = JSON.stringify(Object.keys(weeklyData).sort());
-                
-                if (lastSavedStr !== currentHash) {
-                    console.log('[Auto-Save] Periodic save: weeklyData changed');
-                    saveWeeklyData();
-                    localStorage.setItem('devCoachingTool_weeklyData_lastHash', currentHash);
-                }
-            } catch (e) {
-                console.error('[Auto-Save] Failed to periodic save:', e);
-            }
-        }
-    }, 15000); // Every 15 seconds
+    // Periodic auto-save disabled to prevent sync spam
 }
 
 function initializeCloudSyncPanel() {
@@ -10046,10 +10029,7 @@ function initApp() {
         
     });
     
-    // AUTO-SYNC: Trigger cloud sync on page load if configured
-    setTimeout(() => {
-        triggerAutoSyncOnLoadIfConfigured();
-    }, 2000);
+    // Auto-sync on page load disabled (user will click Sync Now manually)
     
     
 }
