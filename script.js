@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.17'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.18'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1880,6 +1880,51 @@ function pasteCloudSetup() {
     }
     updateCloudSyncModeBadge();
     showToast('✅ Cloud setup applied', 3000);
+}
+
+// === Persistent Debug Logging for Cloud Sync ===
+function addCloudSyncDebugLog(message) {
+    const logs = JSON.parse(localStorage.getItem('devCoachingTool_debugLogs') || '[]');
+    logs.push({
+        timestamp: new Date().toISOString(),
+        message
+    });
+    // Keep only last 50 logs
+    if (logs.length > 50) logs.shift();
+    localStorage.setItem('devCoachingTool_debugLogs', JSON.stringify(logs));
+    
+    // Update visible debug panel
+    displayCloudSyncDebugLogs();
+}
+
+function displayCloudSyncDebugLogs() {
+    const debugPanel = document.getElementById('cloudSyncDebugPanel');
+    if (!debugPanel) return;
+    
+    const logs = JSON.parse(localStorage.getItem('devCoachingTool_debugLogs') || '[]');
+    const logText = logs.map(log => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        return `[${time}] ${log.message}`;
+    }).join('\n');
+    
+    debugPanel.textContent = logText || '(no logs yet)';
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+}
+
+// Intercept console.log for Cloud Sync messages
+const originalConsoleLog = console.log;
+console.log = function(...args) {
+    originalConsoleLog.apply(console, args);
+    const message = args.join(' ');
+    if (message.includes('[Cloud Sync') || message.includes('[fetchCloudSyncPayload') || message.includes('[hasLocalManagedData')) {
+        addCloudSyncDebugLog(message);
+    }
+};
+
+function clearCloudSyncDebugLogs() {
+    localStorage.removeItem('devCoachingTool_debugLogs');
+    const debugPanel = document.getElementById('cloudSyncDebugPanel');
+    if (debugPanel) debugPanel.textContent = '(logs cleared)';
 }
 
 function setCloudSyncStatus(message, type = 'info') {
@@ -9899,6 +9944,7 @@ function bootAppSafely() {
     setAppVersionLabel();
     try {
         initApp();
+        displayCloudSyncDebugLogs();
         window.__appBootOk = true;
     } catch (error) {
         window.__appBootOk = false;
