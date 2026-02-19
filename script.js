@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.31'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.32'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3902,25 +3902,9 @@ function initializeMetricTrends() {
         if (statusDiv) statusDiv.style.display = 'none';
     }
     
-    // Set default dates to current week (Monday-Sunday)
+    // Don't auto-set dates - let user select a period first
     const avgWeekMonday = document.getElementById('avgWeekMonday');
     const avgWeekSunday = document.getElementById('avgWeekSunday');
-    
-    if (avgWeekMonday && !avgWeekMonday.value) {
-        // Get this Monday
-        const today = new Date();
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
-        const monday = new Date(today.setDate(diff));
-        avgWeekMonday.value = monday.toISOString().split('T')[0];
-        
-        // Auto-set Sunday (6 days after Monday)
-        if (avgWeekSunday) {
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            avgWeekSunday.value = sunday.toISOString().split('T')[0];
-        }
-    }
     
     // Auto-calculate Sunday when Monday changes (safe date parsing)
     avgWeekMonday?.addEventListener('change', (e) => {
@@ -3961,9 +3945,9 @@ function initializeMetricTrends() {
     populateUploadedDataDropdown();
     setupUploadedDataListener();
     
-    // Populate trend generation dropdowns
+    // Populate trend generation dropdowns (starts with blank selections)
     populateTrendPeriodDropdown();
-    populateEmployeeDropdown();
+    initializeEmployeeDropdown();
     
     // Load existing averages when date/type changes
     setupAveragesLoader();
@@ -4089,73 +4073,40 @@ function populateTrendPeriodDropdown() {
     
     trendPeriodSelect.innerHTML = options;
     
-    const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
-    if (avgUploadedDataSelect?.value) {
-        trendPeriodSelect.value = avgUploadedDataSelect.value;
-        trendPeriodSelect.dispatchEvent(new Event('change'));
-    }
-    
     // Add change listener to filter employees by selected period
-    trendPeriodSelect.addEventListener('change', (e) => {
-        populateEmployeeDropdownForPeriod(e.target.value);
-    });
+    if (!trendPeriodSelect.dataset.bound) {
+        trendPeriodSelect.addEventListener('change', (e) => {
+            populateEmployeeDropdownForPeriod(e.target.value);
+        });
+        trendPeriodSelect.dataset.bound = 'true';
+    }
     
     
 }
 
-function populateEmployeeDropdown() {
+function initializeEmployeeDropdown() {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
-    
-    if (!trendEmployeeSelect) {
-        
-        return;
+    if (trendEmployeeSelect) {
+        trendEmployeeSelect.innerHTML = '<option value="">-- Choose an employee --</option>';
     }
-    
-    // Get all unique employees (for initial load)
-    const employeeSet = new Set();
-    Object.values(weeklyData).forEach(week => {
-        if (week && week.employees) {
-            week.employees.forEach(emp => {
-                employeeSet.add(emp.name);
-            });
-        }
-    });
-    Object.values(ytdData).forEach(period => {
-        if (period && period.employees) {
-            period.employees.forEach(emp => {
-                employeeSet.add(emp.name);
-            });
-        }
-    });
-    
-    if (employeeSet.size === 0) {
-        trendEmployeeSelect.innerHTML = '<option value="">No employees available</option>';
-        return;
-    }
-    
-    // Build options
-    let options = '<option value="">Select Employee...</option>';
-    options += '<option value="ALL">All Associates</option>';
-    Array.from(employeeSet).sort().forEach(name => {
-        options += `<option value="${name}">${name}</option>`;
-    });
-    
-    trendEmployeeSelect.innerHTML = options;
+}
 
-    updateTrendButtonsVisibility();
+function populateEmployeeDropdown() {
+    // Legacy function - now just calls initializeEmployeeDropdown
+    initializeEmployeeDropdown();
 }
 
 function populateEmployeeDropdownForPeriod(weekKey) {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     
     if (!trendEmployeeSelect) {
-        
         return;
     }
     
     if (!weekKey) {
-        // No period selected, show all employees
-        populateEmployeeDropdown();
+        // No period selected, show blank option only
+        trendEmployeeSelect.innerHTML = '<option value="">-- Choose an employee --</option>';
+        updateTrendButtonsVisibility();
         return;
     }
     
