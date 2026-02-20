@@ -4940,6 +4940,11 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
         
         if (!metric) return;
         
+        // DEBUG: Log negativeWord specifically for diagnosis
+        if (registryKey === 'negativeWord') {
+            console.log(`DEBUG: negativeWord loaded - employee: ${employeeData.name}, rawValue: "${employeeData[registryKey]}", parsed: ${employeeValue}, from field: "${registryKey}"`);
+        }
+        
         const target = metric.target?.value || 0;
         const targetType = metric.target?.type || 'min';
         const isReverse = isReverseMetric(registryKey);
@@ -5369,6 +5374,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
             // For negativeWord metric: show both using % and avoiding %
             let displayValue = `${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})`;
             if (metric.metricKey === 'negativeWord') {
+                console.log(`DEBUG buildTrendCoachingPrompt: negativeWord detected - employeeValue: ${metric.employeeValue}, target: ${metric.target}`);
                 const usingNegative = (100 - metric.employeeValue).toFixed(1);
                 const usingNegativeTarget = (100 - metric.target).toFixed(1);
                 displayValue = `${metric.employeeValue.toFixed(1)}% avoiding, ${usingNegative}% using negative words (target: avoid ${metric.target.toFixed(1)}%, use ${usingNegativeTarget}%)`;
