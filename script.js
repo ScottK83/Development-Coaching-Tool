@@ -5001,7 +5001,12 @@ function getRandomTipsForMetric(metricKey, count = 2) {
             return [];
         }
         
-        const shuffled = [...allTips].sort(() => Math.random() - 0.5);
+        // Fisher-Yates shuffle for proper randomization
+        const shuffled = [...allTips];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
         return shuffled.slice(0, count);
     }
     
@@ -5377,10 +5382,16 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     if (opportunities.length > 0) {
         prompt += `HOW TO IMPROVE:\n`;
         opportunities.slice(0, 3).forEach(metric => {
-            // Add 1 random tip for this metric
+            // Add 1 random tip for this metric using Fisher-Yates for proper randomization
             const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
             if (metricTips && metricTips.length > 0) {
-                const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
+                // Shuffle tips and pick first one for true randomization
+                const shuffled = [...metricTips];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                const randomTip = shuffled[0];
                 prompt += `- ${metric.label}: ${randomTip}\n`;
             }
         });
