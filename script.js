@@ -4621,9 +4621,20 @@ function populateTrendSentimentDropdown(employeeName) {
     // Build options
     sortedSnapshots.forEach((snapshot, index) => {
         const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
-        const negScore = snapshot.scores?.negativeWord || 0;
-        const posScore = snapshot.scores?.positiveWord || 0;
-        const emoScore = snapshot.scores?.managingEmotions || 0;
+        
+        // Get percentages from weekly metrics for this timeframe, not from sentiment data
+        let negScore = 0, posScore = 0, emoScore = 0;
+        
+        // Look for weekly data that matches this timeframe
+        if (weeklyData[employeeName]) {
+            Object.values(weeklyData[employeeName]).forEach(week => {
+                if (week.startDate === snapshot.timeframeStart || week.endDate === snapshot.timeframeEnd) {
+                    negScore = week.negativeWord || 0;
+                    posScore = week.positiveWord || 0;
+                    emoScore = week.managingEmotions || 0;
+                }
+            });
+        }
         
         const label = `${timeframe} (${negScore}% avoiding negative, ${posScore}% using positive, ${emoScore}% managing emotions)`;
         const value = `${snapshot.timeframeStart}|${snapshot.timeframeEnd}`; // Use timeframe as value
@@ -12691,18 +12702,13 @@ function handleSentimentUploadSubmit() {
             results.forEach(({ type, report }) => {
                 const typeKey = type.toLowerCase();
                 console.log(`📊 SAVING ${type}:`);
-                console.log(`   - percentage from parser: ${report.percentage}`);
-                console.log(`   - totalCalls: ${report.totalCalls}`);
-                console.log(`   - callsDetected: ${report.callsDetected}`);
                 console.log(`   - phrases found: ${report.phrases.length}`);
                 
+                // Only save phrases - percentages come from weekly metrics, not sentiment files
                 associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
-                    totalCalls: report.totalCalls,
-                    callsDetected: report.callsDetected,
-                    percentage: report.percentage,
                     phrases: report.phrases
                 };
-                console.log(`📊 ${type} saved to memory:`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
+                console.log(`📊 ${type} saved to memory (phrases only):`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
             });
             
             // Save to localStorage
