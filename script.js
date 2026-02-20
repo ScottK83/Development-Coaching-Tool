@@ -11967,17 +11967,21 @@ function openSentimentPasteModal(fileType) {
     backdrop.appendChild(modal);
     document.body.appendChild(backdrop);
     
+    // Get button references from the modal
+    const textarea = modal.querySelector('#pasteArea');
+    const cancelBtn = modal.querySelector('#pasteCancelBtn');
+    const submitBtn = modal.querySelector('#pasteSubmitBtn');
+    
     // Focus textarea
-    const textarea = document.getElementById('pasteArea');
     textarea.focus();
     
     // Cancel button
-    document.getElementById('pasteCancelBtn').addEventListener('click', () => {
+    cancelBtn.addEventListener('click', () => {
         backdrop.remove();
     });
     
     // Submit button
-    document.getElementById('pasteSubmitBtn').addEventListener('click', () => {
+    submitBtn.addEventListener('click', () => {
         const pastedText = textarea.value.trim();
         if (!pastedText) {
             alert('Please paste some data');
