@@ -5353,9 +5353,9 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
     prompt += `Start with this tone: ${randomChoice(starters)}\n\n`;
     
-    // SUCCESSES SECTION
+    // SUCCESSES SECTION - Only metrics meeting or exceeding target (100%+)
     const successes = allTrendMetrics 
-        ? allTrendMetrics.filter(m => m.achievementPct >= 95) 
+        ? allTrendMetrics.filter(m => m.achievementPct >= 100) 
         : [];
     
     if (successes.length > 0) {
@@ -5367,9 +5367,9 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         prompt += `\n`;
     }
     
-    // OPPORTUNITIES SECTION - extract from allTrendMetrics or use legacy weakest/trending
+    // OPPORTUNITIES SECTION - Metrics below target (less than 100%)
     const opportunities = allTrendMetrics 
-        ? allTrendMetrics.filter(m => m.achievementPct < 95 && m.achievementPct < 100)
+        ? allTrendMetrics.filter(m => m.achievementPct < 100)
         : [];
     
     if (opportunities.length > 0) {
