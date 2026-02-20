@@ -2043,16 +2043,28 @@ function evaluateMetricsForCoaching(employeeData) {
 
         const meetsTarget = metricDef.target.type === 'min' ? val >= metricDef.target.value : val <= metricDef.target.value;
         const unit = promptUnit[key] || '';
-        const displayValue = `${val}${unit}`;
-        const targetDisplay = `${metricDef.target.value}${unit}`;
+        
+        // For negativeWord metric: show both using % and avoiding %
+        let displayValue = `${val}${unit}`;
+        let targetDisplay = `${metricDef.target.value}${unit}`;
+        let fullLabel = metricDef.label;
+        
+        if (key === 'negativeWord') {
+            const usingNegative = 100 - val;
+            const avoidingTarget = metricDef.target.value;
+            const usingNegativeTarget = 100 - avoidingTarget;
+            displayValue = `${val}% avoiding (${usingNegative}% using negative words)`;
+            targetDisplay = `${avoidingTarget}% avoiding (${usingNegativeTarget}% using)`;
+            fullLabel = 'Avoid Negative Words';
+        }
 
         if (meetsTarget) {
-            celebrate.push(`- ${metricDef.label}: ${displayValue} (Target: ${targetDisplay})`);
+            celebrate.push(`- ${fullLabel}: ${displayValue} (Target: ${targetDisplay})`);
         } else {
             const gap = metricDef.target.type === 'min'
                 ? `${(metricDef.target.value - val).toFixed(1)}${unit} below target`
                 : `${(val - metricDef.target.value).toFixed(1)}${unit} above target`;
-            needsCoaching.push(`- ${metricDef.label}: ${displayValue} (Target: ${targetDisplay}, ${gap})`);
+            needsCoaching.push(`- ${fullLabel}: ${displayValue} (Target: ${targetDisplay}, ${gap})`);
             coachedMetricKeys.push(key);
         }
     });
@@ -5334,7 +5346,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     let prompt = `Draft a coaching email for ${displayName}.\n\n`;
     
     if (successes.length > 0) {
-        prompt += `SUCCESSES:\n`;
+        prompt += `WINS:\n`;
         successes.slice(0, 3).forEach(metric => {
             prompt += `- ${metric.label}: ${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})\n`;
         });
@@ -5347,15 +5359,29 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         : [];
     
     if (opportunities.length > 0) {
-        prompt += `AREAS TO IMPROVE:\n`;
+        prompt += `OPPORTUNITIES:\n`;
         opportunities.slice(0, 3).forEach(metric => {
-            prompt += `- ${metric.label}: ${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})\n`;
+            // For negativeWord metric: show both using % and avoiding %
+            let displayValue = `${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})`;
+            if (metric.metricKey === 'negativeWord') {
+                const usingNegative = (100 - metric.employeeValue).toFixed(1);
+                const usingNegativeTarget = (100 - metric.target).toFixed(1);
+                displayValue = `${metric.employeeValue.toFixed(1)}% avoiding, ${usingNegative}% using negative words (target: avoid ${metric.target.toFixed(1)}%, use ${usingNegativeTarget}%)`;
+            }
             
+            prompt += `- ${metric.label}: ${displayValue}\n`;
+        });
+        prompt += `\n`;
+    }
+    
+    if (opportunities.length > 0) {
+        prompt += `HOW TO IMPROVE:\n`;
+        opportunities.slice(0, 3).forEach(metric => {
             // Add 1 random tip for this metric
             const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
             if (metricTips && metricTips.length > 0) {
                 const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
-                prompt += `  Tip: ${randomTip}\n`;
+                prompt += `- ${metric.label}: ${randomTip}\n`;
             }
         });
         prompt += `\n`;
@@ -8222,29 +8248,33 @@ async function generateIndividualCoachingEmail(employeeName) {
     // Build prompt
     let winsText = '';
     if (wins.length > 0) {
-        winsText = 'WINS (What They Achieved):\\n';
+        winsText = 'WINS:\n';
         wins.forEach(w => {
-            winsText += `- ${w.metric}: ${w.value}\\n`;
+            winsText += `- ${w.metric}: ${w.value}\n`;
         });
-    } else {
-        winsText = 'WINS: No metrics currently meeting target\\n';
+        winsText += '\n';
     }
 
     let opportunitiesText = '';
+    let improvementTipsText = '';
     if (opportunities.length > 0) {
-        opportunitiesText = 'OPPORTUNITIES (Areas to Improve):\\n';
-        opportunities.forEach(opp => {
-            opportunitiesText += `- ${opp.metric}: Currently ${opp.value}, Target ${opp.target}`;
+        opportunitiesText = 'OPPORTUNITIES:\n';
+        opportunitiesText += opportunities.map(opp => {
+            let text = `- ${opp.metric}: Currently ${opp.value}, Target ${opp.target}`;
             if (opp.trend !== 0) {
-                opportunitiesText += ` (${opp.trend > 0 ? 'improving' : 'declining'})`;
+                text += ` (${opp.trend > 0 ? 'improving' : 'declining'})`;
             }
-            opportunitiesText += '\\n';
+            return text;
+        }).join('\n');
+        opportunitiesText += '\n\n';
+        
+        improvementTipsText = 'HOW TO IMPROVE:\n';
+        opportunities.forEach(opp => {
             if (opp.tip) {
-                opportunitiesText += `  TIP: ${opp.tip}\\n`;
+                improvementTipsText += `- ${opp.metric}: ${opp.tip}\n`;
             }
         });
-    } else {
-        opportunitiesText = 'OPPORTUNITIES: All metrics meeting targets!\\n';
+        improvementTipsText += '\n';
     }
 
     const preferredName = getEmployeeNickname(employeeName) || currentEmp.firstName || employeeName.split(' ')[0];
@@ -8253,8 +8283,8 @@ async function generateIndividualCoachingEmail(employeeName) {
 
 ${winsText}
 ${opportunitiesText}
-
-Keep it to 2-3 sentences + two bullet-point lists. Be direct and encouraging.`;
+${improvementTipsText}
+Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`;
 
     openCopilotWithPrompt(copilotPrompt, 'Individual Coaching Email');
 }
@@ -11520,23 +11550,27 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
     const focusLines = [];
 
     if ((snapshot.scores?.negativeWord || 0) < negativeTarget) {
+        const negScore = snapshot.scores.negativeWord;
+        const usingNegative = 100 - negScore;
+        const usingNegativeTarget = 100 - negativeTarget;
         const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
             .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
             .join(', ') || 'none listed';
         const replacements = (snapshot.suggestions?.negativeAlternatives || []).slice(0, 3).join(', ') || 'solution-focused alternatives';
         focusLines.push(
-            `Focus Area - Negative words is at ${snapshot.scores.negativeWord}, we want you at ${negativeTarget}. ` +
-            `Most said words/phrases: ${topNeg}. Try saying this instead: ${replacements}.`
+            `Focus Area - Avoiding Negative Words: ${negScore}% (Using Negative Words: ${usingNegative}%). Target: ${negativeTarget}% (Using Negative Words: ${usingNegativeTarget}%). ` +
+            `Most said negative phrases: ${topNeg}. Try saying this instead: ${replacements}.`
         );
     }
 
     if ((snapshot.scores?.positiveWord || 0) < positiveTarget) {
+        const posScore = snapshot.scores.positiveWord;
         const topPos = (snapshot.topPhrases?.positiveA || []).slice(0, 3)
             .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
             .join(', ') || 'none listed';
         const additions = (snapshot.suggestions?.positiveAdditions || []).slice(0, 3).join(', ') || 'positive ownership phrases';
         focusLines.push(
-            `Focus Area - Positive words is at ${snapshot.scores.positiveWord}, we want you at ${positiveTarget}. ` +
+            `Focus Area - Using Positive Words: ${posScore}% (Target: ${positiveTarget}%). ` +
             `During timeframe ${snapshot.timeframeStart} to ${snapshot.timeframeEnd}, you said these on ${snapshot.calls.positiveDetected} out of ${snapshot.calls.positiveTotal} calls. ` +
             `Most used phrases: ${topPos}. Add these phrases to every call: ${additions}.`
         );
