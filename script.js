@@ -542,6 +542,7 @@ function initializeSection(sectionId) {
             break;
         case 'manageDataSection':
             populateDeleteWeekDropdown();
+            populateDeleteSentimentDropdown();
             renderEmployeesList();
             break;
         case 'executiveSummarySection':
@@ -2968,6 +2969,7 @@ function initializeEventHandlers() {
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
+                populateDeleteSentimentDropdown();
             } catch (error) {
                 console.error('Error importing data:', error);
                 alert('ℹ️ Error importing data: ' + error.message);
@@ -3000,6 +3002,7 @@ function initializeEventHandlers() {
         saveTeamMembers();
         
         populateDeleteWeekDropdown();
+        populateDeleteSentimentDropdown();
         populateTeamMemberSelector();
         showToast('✅ Week deleted successfully');
         
@@ -3033,8 +3036,47 @@ function initializeEventHandlers() {
         populateTeamMemberSelector();
     });
     
+    // Populate and handle sentiment data deletion
+    populateDeleteSentimentDropdown();
+    
+    document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', () => {
+        
+        const sentimentSelect = document.getElementById('deleteSentimentSelect');
+        const selectedKey = sentimentSelect.value;
+        
+        if (!selectedKey) {
+            alert('⚠️ Please select sentiment data to delete');
+            return;
+        }
+        
+        const sentimentLabel = sentimentSelect.options[sentimentSelect.selectedIndex].text;
+        
+        if (!confirm(`Are you sure you want to delete:\n\n${sentimentLabel}\n\nThis action cannot be undone.`)) {
+            return;
+        }
+        
+        // Parse the selected key (format: "employeeId|timeframe")
+        const [employeeId, timeframe] = selectedKey.split('|');
+        
+        if (associateSentimentSnapshots[employeeId]) {
+            // Remove the specific sentiment snapshot
+            associateSentimentSnapshots[employeeId] = associateSentimentSnapshots[employeeId].filter(
+                snapshot => snapshot.timeframe !== timeframe
+            );
+            
+            // If no more snapshots for this employee, remove the employee entry
+            if (associateSentimentSnapshots[employeeId].length === 0) {
+                delete associateSentimentSnapshots[employeeId];
+            }
+            
+            saveAssociateSentimentSnapshots();
+            populateDeleteSentimentDropdown();
+            showToast('✅ Sentiment data deleted successfully');
+        }
+    });
     
     // Delete all data
+
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
         
         const weekCount = Object.keys(weeklyData).length;
@@ -3595,6 +3637,38 @@ function populateDeleteWeekDropdown() {
         const option = document.createElement('option');
         option.value = week.weekKey;
         option.textContent = week.label;
+        dropdown.appendChild(option);
+    });
+}
+
+function populateDeleteSentimentDropdown() {
+    const dropdown = document.getElementById('deleteSentimentSelect');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '<option value="">-- Choose sentiment data --</option>';
+    
+    const sentimentEntries = [];
+    
+    // Iterate through all employees and their sentiment snapshots
+    Object.entries(associateSentimentSnapshots || {}).forEach(([employeeId, snapshots]) => {
+        if (Array.isArray(snapshots)) {
+            snapshots.forEach(snapshot => {
+                sentimentEntries.push({
+                    key: `${employeeId}|${snapshot.timeframe}`,
+                    label: `${snapshot.employeeName || employeeId} - ${snapshot.timeframe}`,
+                    date: new Date(snapshot.uploadDate || snapshot.timeframe)
+                });
+            });
+        }
+    });
+    
+    // Sort by date descending (most recent first)
+    sentimentEntries.sort((a, b) => b.date - a.date);
+    
+    sentimentEntries.forEach(entry => {
+        const option = document.createElement('option');
+        option.value = entry.key;
+        option.textContent = entry.label;
         dropdown.appendChild(option);
     });
 }
@@ -11448,6 +11522,7 @@ function saveAssociateSentimentSnapshotFromCurrentReports() {
         .slice(0, 200);
 
     saveAssociateSentimentSnapshots();
+    populateDeleteSentimentDropdown();
     renderSentimentDatabasePanel();
     showToast(`✅ Saved sentiment snapshot for ${associateName} (${startDate} to ${endDate})`, 3000);
 }
