@@ -11874,6 +11874,9 @@ function generateSentimentSummary() {
 
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
+    console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
+    console.log(`📊 PARSE START - First 10 lines:`, lines.slice(0, 10));
+    
     const report = {
         associateName: '',
         startDate: '',
@@ -11881,11 +11884,13 @@ function parseSentimentFile(fileType, lines) {
         totalCalls: 0,
         callsDetected: 0,
         percentage: 0,
-        phrases: []
+        phrases: [],
+        inKeywordsSection: false  // Track which Interactions line we used
     };
     
     let inKeywordsSection = false;
     let pendingPhrase = null; // For handling phrase/value on separate lines
+    let allInteractionsMatches = []; // Track ALL Interactions lines found
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -11929,25 +11934,36 @@ function parseSentimentFile(fileType, lines) {
         
         // Extract total calls and calls with category detected
         // Format in Excel CSV: "Interactions:,165 (76% out of 218 matching data filter),,"
+        console.log(`📊 PARSE DEBUG [fileType=${fileType}] - Line ${i}: "${line}"`);
         const interactionsMatch = line.match(/Interactions:?,?\s*(\d+)\s*\(.*?(\d+)%.*?out\s+of\s+(\d+)/i);
         if (interactionsMatch) {
-            report.callsDetected = parseInt(interactionsMatch[1]);
-            report.percentage = parseInt(interactionsMatch[2]);
-            report.totalCalls = parseInt(interactionsMatch[3]);
-            console.log(`📊 PARSE DEBUG - Interactions line: "${line}"`);
-            console.log(`✅ Found interactions: ${report.callsDetected} detected, ${report.totalCalls} total, ${report.percentage}%`);
-            console.log(`📊 PARSE DEBUG - report object after parsing:`, {
-                callsDetected: report.callsDetected,
-                percentage: report.percentage,
-                totalCalls: report.totalCalls
+            console.log(`📊 PARSE DEBUG - FOUND Interactions at line ${i}! Regex groups: [1]=${interactionsMatch[1]}, [2]=${interactionsMatch[2]}, [3]=${interactionsMatch[3]}, inKeywordsSection=${inKeywordsSection}`);
+            allInteractionsMatches.push({
+                lineIndex: i,
+                lineContent: line,
+                callsDetected: parseInt(interactionsMatch[1]),
+                percentage: parseInt(interactionsMatch[2]),
+                totalCalls: parseInt(interactionsMatch[3]),
+                inKeywordsSection: inKeywordsSection
             });
+            console.log(`📊 PARSE DEBUG - Total Interactions found so far: ${allInteractionsMatches.length}`);
+            
+            // CRITICAL FIX: Use the FIRST Interactions line found AFTER keywords section starts
+            // If no keywords section found, use the FIRST Interactions line overall
+            if (!report.percentage || (inKeywordsSection && !report.inKeywordsSection)) {
+                report.callsDetected = parseInt(interactionsMatch[1]);
+                report.percentage = parseInt(interactionsMatch[2]);
+                report.totalCalls = parseInt(interactionsMatch[3]);
+                report.inKeywordsSection = inKeywordsSection;
+                console.log(`✅ Set report metrics: ${report.callsDetected} detected, ${report.totalCalls} total, ${report.percentage}%`);
+            }
             continue;
         }
         
         // Detect keywords section
         if (line.toLowerCase().includes('keywords') || line.toLowerCase().includes('query result metrics')) {
             inKeywordsSection = true;
-            console.log(`✅ Found keywords section at line: "${line}"`);
+            console.log(`✅ Found keywords section at line ${i}: "${line}"`);
             continue;
         }
         
@@ -12018,6 +12034,10 @@ function parseSentimentFile(fileType, lines) {
             }
         }
     }
+    
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - All Interactions matches found:`, allInteractionsMatches);
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Final report:`, report);
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%`);
     
     return report;
 }
@@ -12393,6 +12413,7 @@ function processUploadedSentimentFile(file, type, associate, timeframeKey) {
     return new Promise((resolve, reject) => {
         const fileName = file.name.toLowerCase();
         const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        console.log(`📊 PROCESS START - File: ${file.name}, Type: ${type}, Associate: ${associate}, TimeframeKey: ${timeframeKey}`);
         
         const reader = new FileReader();
         
@@ -12413,6 +12434,7 @@ function processUploadedSentimentFile(file, type, associate, timeframeKey) {
                 
                 // Parse file
                 const report = parseSentimentFile(type, lines);
+                console.log(`📊 PROCESS PARSED - Type: ${type}, Report percentage: ${report.percentage}%, callsDetected: ${report.callsDetected}, totalCalls: ${report.totalCalls}`);
                 resolve({ type, report });
                 
             } catch (error) {
