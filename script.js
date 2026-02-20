@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.20.4'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.20.5'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2366,6 +2366,12 @@ function initializeEventHandlers() {
             document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
             document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
             document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
+            
+            // NEW: Add paste button handlers
+            document.getElementById('sentimentPositivePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Positive'); });
+            document.getElementById('sentimentNegativePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Negative'); });
+            document.getElementById('sentimentEmotionsPasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Emotions'); });
+            
             document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
             document.getElementById('saveAssociateSentimentSnapshotBtn')?.addEventListener('click', saveAssociateSentimentSnapshotFromCurrentReports);
             sentimentListenersAttached = true;
@@ -11937,6 +11943,80 @@ function extractSentimentSpeakerAndPhrase(rawPhrase) {
     }
 
     return null;
+}
+
+function openSentimentPasteModal(fileType) {
+    // Create modal backdrop
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+    
+    // Create modal dialog
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background: white; border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+    
+    modal.innerHTML = `
+        <h2 style="margin-top: 0; color: #333;">Paste ${fileType} Sentiment Data</h2>
+        <p style="color: #666; margin-bottom: 15px;">Paste your CSV or Excel data below. Format: one entry per line, with columns for Speaker (A/C) and Phrase.</p>
+        <textarea id="pasteArea" style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px; resize: vertical;" placeholder="Paste data here..."></textarea>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="pasteCancelBtn" style="padding: 10px 20px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+            <button id="pasteSubmitBtn" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Parse & Import</button>
+        </div>
+    `;
+    
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    
+    // Focus textarea
+    const textarea = document.getElementById('pasteArea');
+    textarea.focus();
+    
+    // Cancel button
+    document.getElementById('pasteCancelBtn').addEventListener('click', () => {
+        backdrop.remove();
+    });
+    
+    // Submit button
+    document.getElementById('pasteSubmitBtn').addEventListener('click', () => {
+        const pastedText = textarea.value.trim();
+        if (!pastedText) {
+            alert('Please paste some data');
+            return;
+        }
+        
+        const lines = pastedText.split('\n').filter(line => line.trim());
+        const statusDiv = document.getElementById(`sentiment${fileType}Status`);
+        
+        statusDiv.textContent = `⏳ Processing pasted ${fileType.toLowerCase()} data...`;
+        statusDiv.style.color = '#ff9800';
+        
+        try {
+            // Parse pasted data using existing parser
+            const report = parseSentimentFile(fileType, lines);
+            sentimentReports[fileType.toLowerCase()] = report;
+            
+            // Update UI
+            syncSentimentSnapshotDateInputsFromReports();
+            
+            // Show success status
+            statusDiv.textContent = `✅ Parsed ${report.phrases.length} sentiment phrase(s) from ${report.speakers.size} speaker(s)`;
+            statusDiv.style.color = '#4CAF50';
+            
+            // Close modal
+            backdrop.remove();
+        } catch (error) {
+            console.error('Error parsing pasted data:', error);
+            statusDiv.textContent = `❌ Error: ${error.message}`;
+            statusDiv.style.color = '#f44336';
+        }
+    });
+    
+    // Close on backdrop click
+    backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+            backdrop.remove();
+        }
+    });
 }
 
 function handleSentimentFileChange(fileType) {
