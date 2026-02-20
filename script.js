@@ -11459,6 +11459,9 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
 
     const snapshots = associateSentimentSnapshots[associateName];
     
+    console.log(`📊 GET SNAPSHOT DEBUG - Looking for sentiment data for ${associateName}, periodMeta:`, periodMeta);
+    console.log(`📊 GET SNAPSHOT DEBUG - associateSentimentSnapshots[${associateName}]:`, snapshots);
+    
     // NEW FORMAT: Object with timeframeKeys (startDate_endDate)
     if (!Array.isArray(snapshots)) {
         // Build timeframeKey from period metadata
@@ -11466,7 +11469,10 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
             ? `${periodMeta.startDate}_${periodMeta.endDate}` 
             : null;
         
+        console.log(`📊 GET SNAPSHOT DEBUG - Computed timeframeKey: ${timeframeKey}`);
+        
         if (!timeframeKey || !snapshots[timeframeKey]) {
+            console.log(`📊 GET SNAPSHOT DEBUG - No exact match, searching for overlapping timeframes`);
             // No exact match - try to find overlapping timeframe
             const periodStart = parseDateForComparison(periodMeta?.startDate);
             const periodEnd = parseDateForComparison(periodMeta?.endDate);
@@ -11478,15 +11484,24 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
                     const snapStart = parseDateForComparison(snapStartStr);
                     const snapEnd = parseDateForComparison(snapEndStr);
                     if (snapStart && snapEnd && snapStart <= periodEnd && snapEnd >= periodStart) {
-                        return formatSentimentSnapshotForPrompt(snapshots[key], snapStartStr, snapEndStr);
+                        console.log(`📊 GET SNAPSHOT DEBUG - Found overlapping snapshot with key: ${key}`);
+                        const formattedSnapshot = formatSentimentSnapshotForPrompt(snapshots[key], snapStartStr, snapEndStr);
+                        console.log(`📊 GET SNAPSHOT DEBUG - Returning formatted snapshot:`, formattedSnapshot);
+                        return formattedSnapshot;
                     }
                 }
             }
+            console.log(`📊 GET SNAPSHOT DEBUG - No snapshot found`);
             return null;
         }
         
         // Exact match found
-        return formatSentimentSnapshotForPrompt(snapshots[timeframeKey], periodMeta.startDate, periodMeta.endDate);
+        console.log(`📊 GET SNAPSHOT DEBUG - Exact match found for key: ${timeframeKey}`);
+        const exactSnapshot = snapshots[timeframeKey];
+        console.log(`📊 GET SNAPSHOT DEBUG - Raw snapshot data:`, exactSnapshot);
+        const formattedSnapshot = formatSentimentSnapshotForPrompt(exactSnapshot, periodMeta.startDate, periodMeta.endDate);
+        console.log(`📊 GET SNAPSHOT DEBUG - Formatted snapshot after formatSentimentSnapshotForPrompt:`, formattedSnapshot);
+        return formattedSnapshot;
     }
     
     // LEGACY FORMAT: Array of snapshots
@@ -11530,7 +11545,9 @@ function formatSentimentSnapshotForPrompt(snapshotData, startDate, endDate) {
      */
     if (!snapshotData) return null;
     
-    return {
+    console.log(`📊 FORMAT DEBUG - Input snapshotData:`, snapshotData);
+    
+    const formatted = {
         timeframeStart: startDate,
         timeframeEnd: endDate,
         scores: {
@@ -11554,6 +11571,9 @@ function formatSentimentSnapshotForPrompt(snapshotData, startDate, endDate) {
             positiveAdditions: ['I appreciate', 'happy to help', 'glad to assist']
         }
     };
+    
+    console.log(`📊 FORMAT DEBUG - Output formatted.scores.negativeWord:`, formatted.scores.negativeWord);
+    return formatted;
 }
 
 function buildSentimentFocusAreasForPrompt(snapshot) {
@@ -11565,8 +11585,12 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
 
     const focusLines = [];
 
+    console.log(`📊 BUILD DEBUG - snapshot.scores:`, snapshot.scores);
+    console.log(`📊 BUILD DEBUG - negativeWord score: ${snapshot.scores?.negativeWord}, target: ${negativeTarget}`);
+
     if ((snapshot.scores?.negativeWord || 0) < negativeTarget) {
         const negScore = snapshot.scores.negativeWord;
+        console.log(`📊 BUILD DEBUG - negativeWord < target, negScore = ${negScore}`);
         const usingNegative = 100 - negScore;
         const usingNegativeTarget = 100 - negativeTarget;
         const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
@@ -11910,7 +11934,13 @@ function parseSentimentFile(fileType, lines) {
             report.callsDetected = parseInt(interactionsMatch[1]);
             report.percentage = parseInt(interactionsMatch[2]);
             report.totalCalls = parseInt(interactionsMatch[3]);
+            console.log(`📊 PARSE DEBUG - Interactions line: "${line}"`);
             console.log(`✅ Found interactions: ${report.callsDetected} detected, ${report.totalCalls} total, ${report.percentage}%`);
+            console.log(`📊 PARSE DEBUG - report object after parsing:`, {
+                callsDetected: report.callsDetected,
+                percentage: report.percentage,
+                totalCalls: report.totalCalls
+            });
             continue;
         }
         
@@ -12328,12 +12358,14 @@ function handleSentimentUploadSubmit() {
             // Save all processed data
             results.forEach(({ type, report }) => {
                 const typeKey = type.toLowerCase();
+                console.log(`📊 SENTIMENT SAVE DEBUG - ${type}: percentage from report = ${report.percentage}, totalCalls = ${report.totalCalls}, callsDetected = ${report.callsDetected}`);
                 associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
                     totalCalls: report.totalCalls,
                     callsDetected: report.callsDetected,
                     percentage: report.percentage,
                     phrases: report.phrases
                 };
+                console.log(`📊 SENTIMENT SAVE DEBUG - ${type} stored to memory:`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
             });
             
             // Save to localStorage
