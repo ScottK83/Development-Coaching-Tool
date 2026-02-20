@@ -541,6 +541,7 @@ function initializeSection(sectionId) {
             initializeMetricTrends();
             break;
         case 'manageDataSection':
+            console.log('🔧 Initializing Manage Data section');
             populateDeleteWeekDropdown();
             populateDeleteSentimentDropdown();
             renderEmployeesList();
@@ -1715,7 +1716,9 @@ function saveSentimentPhraseDatabase() {
 function loadAssociateSentimentSnapshots() {
     try {
         const saved = localStorage.getItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
+        const loaded = saved ? JSON.parse(saved) : {};
+        console.log('📥 Loaded sentiment snapshots from localStorage:', loaded);
+        return loaded;
     } catch (error) {
         console.error('Error loading associate sentiment snapshots:', error);
         return {};
@@ -3649,10 +3652,13 @@ function populateDeleteSentimentDropdown() {
 
     dropdown.innerHTML = '<option value="">-- Choose sentiment data --</option>';
     
+    console.log('🔍 Populating sentiment dropdown. Current data:', associateSentimentSnapshots);
+    
     const sentimentEntries = [];
     
     // Iterate through all employees and their sentiment snapshots
     Object.entries(associateSentimentSnapshots || {}).forEach(([employeeId, snapshots]) => {
+        console.log(`  Employee: ${employeeId}, Snapshots:`, snapshots);
         if (Array.isArray(snapshots)) {
             snapshots.forEach(snapshot => {
                 const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
@@ -3664,6 +3670,8 @@ function populateDeleteSentimentDropdown() {
             });
         }
     });
+    
+    console.log(`📊 Found ${sentimentEntries.length} sentiment entries to display`);
     
     // Sort by date descending (most recent first)
     sentimentEntries.sort((a, b) => b.date - a.date);
@@ -11524,6 +11532,9 @@ function saveAssociateSentimentSnapshotFromCurrentReports() {
         .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
         .slice(0, 200);
 
+    console.log('💾 Saving sentiment snapshot:', { associateName, startDate, endDate, snapshot });
+    console.log('📦 All snapshots after save:', associateSentimentSnapshots);
+    
     saveAssociateSentimentSnapshots();
     populateDeleteSentimentDropdown();
     renderSentimentDatabasePanel();
