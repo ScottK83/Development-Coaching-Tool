@@ -2599,8 +2599,7 @@ function initializeEventHandlers() {
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
         
         const pastedData = document.getElementById('pasteDataTextarea').value;
-        const startDate = document.getElementById('pasteStartDate').value;
-        const endDate = document.getElementById('pasteEndDate').value;
+        const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
         
         // Validate data first
         const validation = validatePastedData(pastedData);
@@ -2609,10 +2608,16 @@ function initializeEventHandlers() {
             return;
         }
         
-        if (!startDate || !endDate) {
-            alert('⚠️ Please select both start and end dates');
+        if (!weekEndingDate) {
+            alert('⚠️ Please select the week ending date (Saturday)');
             return;
         }
+        
+        // Calculate week range (Sunday - Saturday)
+        const endDate = weekEndingDate;
+        const endDateObj = new Date(weekEndingDate);
+        endDateObj.setDate(endDateObj.getDate() - 6); // Go back 6 days to get Sunday
+        const startDate = endDateObj.toISOString().split('T')[0];
         
         // Auto-detect period type from date range
         const start = new Date(startDate);
@@ -2774,8 +2779,7 @@ function initializeEventHandlers() {
         }
     });
 
-    enableDatePickerOpen(document.getElementById('pasteStartDate'));
-    enableDatePickerOpen(document.getElementById('pasteEndDate'));
+    enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
     
     // Excel file selection
 
@@ -2926,8 +2930,7 @@ function initializeEventHandlers() {
         // Hide success message and clear form
         document.getElementById('uploadSuccessMessage').style.display = 'none';
         document.getElementById('pasteDataTextarea').value = '';
-        document.getElementById('pasteStartDate').value = '';
-        document.getElementById('pasteEndDate').value = '';
+        document.getElementById('pasteWeekEndingDate').value = '';
         
         // Switch back to upload tab
         showOnlySection('uploadSection');
