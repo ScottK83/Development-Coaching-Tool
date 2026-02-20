@@ -4929,12 +4929,13 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
         if (!metric) return;
         
         const target = metric.target?.value || 0;
+        const targetType = metric.target?.type || 'min';
         const isReverse = isReverseMetric(registryKey);
         
-        // Calculate % of target achievement
-        const achievementPct = target > 0 
-            ? (isReverse ? (target / employeeValue) : (employeeValue / target)) * 100
-            : 0;
+        // Check if meets target based on target type
+        const meetsTarget = targetType === 'min' 
+            ? employeeValue >= target 
+            : employeeValue <= target;
         
         // Check if below center
         const isBelowCenter = centerValue > 0 
@@ -4947,23 +4948,30 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
             employeeValue,
             centerValue,
             target,
-            achievementPct,
+            targetType,
+            meetsTarget,
             isReverse,
             isBelowCenter,
-            gap: Math.abs(employeeValue - centerValue)
+            gap: Math.abs(employeeValue - centerValue),
+            gapFromTarget: targetType === 'min' 
+                ? Math.max(0, target - employeeValue)  // How far below target
+                : Math.max(0, employeeValue - target)  // How far above target
         });
     });
     
-    // Find weakest (lowest achievement %)
-    const weakest = allMetrics.reduce((prev, curr) => 
-        curr.achievementPct < prev.achievementPct ? curr : prev
-    );
+    // Find weakest (largest gap from target among those not meeting target)
+    const notMeetingTarget = allMetrics.filter(m => !m.meetsTarget);
+    const weakest = notMeetingTarget.length > 0
+        ? notMeetingTarget.reduce((prev, curr) => 
+            curr.gapFromTarget > prev.gapFromTarget ? curr : prev
+          )
+        : null;
     
     // Find trending down (below center)
-    const trendingDown = allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest.metricKey);
+    const trendingDown = allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest?.metricKey);
     
     return {
-        weakest: weakest.achievementPct > 0 ? weakest : null,
+        weakest: weakest,
         trendingDown: trendingDown || (allMetrics.find(m => m.isBelowCenter) !== weakest ? allMetrics.find(m => m.isBelowCenter) : null),
         allMetrics: allMetrics  // NEW: include all metrics for comprehensive prompt building
     };
@@ -5093,7 +5101,7 @@ function openTrendEmailOutlook(emailSubject) {
  * @param {string} employeeName - Employee identifier (display name)
  * @param {string} displayName - Formatted name for display in modal
  * @param {Object} weakestMetric - Employee's lowest-performing metric
- *   Properties: {metricKey, label, achievementPct, employeeValue, target}
+ *   Properties: {metricKey, label, meetsTarget, employeeValue, target, targetType}
  * @param {Object} trendingMetric - Metric below team center average
  *   Properties: {metricKey, label, employeeValue, centerValue}
  * @param {string[]} tips - Array of coaching tips for trending metric
@@ -5140,16 +5148,16 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
     
-    // Build praise section for what they're doing well
+    // Build praise section for what they're doing well (weakest metric is close to target)
     let praiseHtml = '';
-    if (weakestMetric && weakestMetric.achievementPct >= 75) {
-        // If weakest is still >75% of target, praise it
+    if (weakestMetric && weakestMetric.gapFromTarget <= (weakestMetric.target * 0.25)) {
+        // If weakest is within 25% of target, praise their overall performance
         praiseHtml = `
             <div style="margin-bottom: 20px; padding: 15px; background: #d4edda; border-radius: 4px; border-left: 4px solid #28a745;">
                 <h4 style="color: #28a745; margin-top: 0;">🌟 Great Work!</h4>
                 <p style="margin: 0; color: #333;">
                     ${displayName}'s <strong>${weakestMetric.label}</strong> is at <strong>${weakestMetric.employeeValue.toFixed(1)}</strong> 
-                    (${weakestMetric.achievementPct.toFixed(0)}% of target)
+                    (target: ${weakestMetric.target.toFixed(1)})
                 </p>
             </div>
         `;
@@ -5298,7 +5306,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * 
  * @param {string} displayName - Employee's name for personalization
  * @param {Object} weakestMetric - Employee's lowest-performing metric
- *   Properties: {label, achievementPct, employeeValue, target}
+ *   Properties: {label, meetsTarget, employeeValue, target, targetType}
  * @param {Object} trendingMetric - Metric showing downward trend from team average
  *   Properties: {label, employeeValue, centerValue}
  * @param {string[]} tips - Array of coaching tips for the focus metric
@@ -5353,31 +5361,30 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
     prompt += `Start with this tone: ${randomChoice(starters)}\n\n`;
     
-    // SUCCESSES SECTION - Only metrics meeting or exceeding target (100%+)
+    // SUCCESSES SECTION - Only metrics meeting target
     const successes = allTrendMetrics 
-        ? allTrendMetrics.filter(m => m.achievementPct >= 100) 
+        ? allTrendMetrics.filter(m => m.meetsTarget) 
         : [];
     
     if (successes.length > 0) {
         prompt += `**ACKNOWLEDGE SUCCESSES:**\n`;
         successes.slice(0, 3).forEach(metric => {
             const phrase = randomChoice(praisePhrases);
-            prompt += `- ${displayName} ${phrase} ${metric.label.toLowerCase()} (${metric.employeeValue.toFixed(1)}, ${metric.achievementPct.toFixed(0)}% of target).\n`;
+            prompt += `- ${displayName} ${phrase} ${metric.label.toLowerCase()} (${metric.employeeValue.toFixed(1)} vs target ${metric.target.toFixed(1)}).\n`;
         });
         prompt += `\n`;
     }
     
-    // OPPORTUNITIES SECTION - Metrics below target (less than 100%)
+    // OPPORTUNITIES SECTION - Metrics not meeting target
     const opportunities = allTrendMetrics 
-        ? allTrendMetrics.filter(m => m.achievementPct < 100)
+        ? allTrendMetrics.filter(m => !m.meetsTarget)
         : [];
     
     if (opportunities.length > 0) {
         prompt += `**AREAS TO DEVELOP:**\n`;
         opportunities.slice(0, 3).forEach(metric => {
             const intro = randomChoice(opportunityIntros);
-            const gap = (100 - metric.achievementPct).toFixed(0);
-            prompt += `- ${intro} ${metric.label.toLowerCase()}. Currently at ${metric.employeeValue.toFixed(1)} (${metric.achievementPct.toFixed(0)}% of target, ${gap}% gap).\n`;
+            prompt += `- ${intro} ${metric.label.toLowerCase()}. Currently at ${metric.employeeValue.toFixed(1)}, target is ${metric.target.toFixed(1)}.\n`;
             
             // Add 1 random tip for this metric
             const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
