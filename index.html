@@ -31,9 +31,15 @@
                 <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
                     <h2>📊 Get Started</h2>
                     
-                    <!-- Upload Data -->
-                    <div id="pasteDataContainer" style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
-                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload New Data</h3>
+                    <!-- Upload Type Selection -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" id="showUploadMetricsBtn" style="flex: 1; min-width: 200px; max-width: 300px; padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">📊 Upload Metrics</button>
+                        <button type="button" id="showUploadSentimentBtn" style="flex: 1; min-width: 200px; max-width: 300px; padding: 20px; background: linear-gradient(135deg, #00acc1 0%, #00897b 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">💬 Upload Sentiment</button>
+                    </div>
+                    
+                    <!-- Upload Metrics Container -->
+                    <div id="pasteDataContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
+                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload Metrics Data</h3>
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy/Paste the data from PowerBI into the box below. Enter date range. You'll manage your team in the Manage Data section.</p>
                         
                         <div style="margin-bottom: 15px;">
@@ -86,6 +92,56 @@
                     </div>
                 </section>
             </form>
+
+            <!-- Upload Sentiment Modal (hidden by default) -->
+            <div id="uploadSentimentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+                    <h2 style="margin-top: 0; color: #00796b;">💬 Upload Sentiment Data</h2>
+                    <p style="color: #666; margin-bottom: 20px;">Upload sentiment analysis reports for ONE associate.</p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="sentimentUploadAssociate" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Associate:</label>
+                        <select id="sentimentUploadAssociate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                            <option value="">-- Select an associate --</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="sentimentUploadType" style="font-weight: bold; display: block; margin-bottom: 5px;">Sentiment Type:</label>
+                        <select id="sentimentUploadType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                            <option value="">-- Select type --</option>
+                            <option value="Positive">➕ Positive Language</option>
+                            <option value="Negative">➖ Avoiding Negative Language</option>
+                            <option value="Emotions">🎭 Managing Emotions</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label for="sentimentUploadStartDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Start Date:</label>
+                            <input type="date" id="sentimentUploadStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="sentimentUploadEndDate" style="font-weight: bold; display: block; margin-bottom: 5px;">End Date:</label>
+                            <input type="date" id="sentimentUploadEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 4px; border: 1px solid #00acc1;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">Upload File (CSV or Excel):</label>
+                        <input type="file" id="sentimentUploadFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                        <div style="text-align: center; color: #666; margin: 10px 0; font-weight: bold;">- OR -</div>
+                        <button type="button" id="sentimentUploadPasteBtn" style="width: 100%; padding: 10px; background: #00acc1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📋 Paste Data</button>
+                    </div>
+                    
+                    <div id="sentimentUploadStatus" style="font-size: 0.9em; color: #666; margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px; display: none;"></div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" id="sentimentUploadCancelBtn" style="padding: 10px 20px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: bold;">Cancel</button>
+                        <button type="button" id="sentimentUploadSubmitBtn" style="padding: 10px 20px; background: #00796b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">💾 Save Sentiment Data</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Generate Coaching Section -->
 
@@ -507,42 +563,13 @@
             <section id="sentimentSection" style="display: none;">
                 <div class="form-section" style="background: #e0f2f1; border-left: 4px solid #00acc1;">
                     <h2>💬 Sentiment & Language Summary</h2>
-                    <p style="color: #004d40; margin-bottom: 20px;">Upload 3 speech analytics files and generate a factual coaching summary.</p>
+                    <p style="color: #004d40; margin-bottom: 20px;">Generate sentiment coaching summaries for associates with uploaded sentiment data.</p>
                     
-                    <!-- File Upload Area -->
+                    <!-- Generate Summary Button -->
                     <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #00acc1;">
-                        <h3 style="color: #00796b; margin-top: 0;">📄 Upload or Paste 3 Reports (ONE Associate)</h3>
-                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Upload files OR paste data for ONE associate (CSV or Excel format)</p>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <!-- Positive Language -->
-                            <div style="padding: 15px; background: #e8f5e9; border-radius: 4px; border: 1px solid #4caf50;">
-                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #1b5e20;">➕ Positive Language</label>
-                                <input type="file" id="sentimentPositiveFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; margin-bottom: 8px;">
-                                <button type="button" id="sentimentPositivePasteBtn" style="width: 100%; padding: 8px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em;">📋 Or Paste Data</button>
-                                <div id="sentimentPositiveStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;">No data loaded</div>
-                            </div>
-                            
-                            <!-- Avoiding Negative Language -->
-                            <div style="padding: 15px; background: #ffebee; border-radius: 4px; border: 1px solid #f44336;">
-                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #b71c1c;">➖ Avoiding Negative Language</label>
-                                <input type="file" id="sentimentNegativeFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; margin-bottom: 8px;">
-                                <button type="button" id="sentimentNegativePasteBtn" style="width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em;">📋 Or Paste Data</button>
-                                <div id="sentimentNegativeStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;">No data loaded</div>
-                            </div>
-                            
-                            <!-- Managing Emotions -->
-                            <div style="padding: 15px; background: #f3e5f5; border-radius: 4px; border: 1px solid #9c27b0;">
-                                <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #4a148c;">🎭 Managing Emotions</label>
-                                <input type="file" id="sentimentEmotionsFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; margin-bottom: 8px;">
-                                <button type="button" id="sentimentEmotionsPasteBtn" style="width: 100%; padding: 8px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em;">📋 Or Paste Data</button>
-                                <div id="sentimentEmotionsStatus" style="font-size: 0.8em; color: #666; margin-top: 5px;">No data loaded</div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 15px;">
-                            <button type="button" id="generateSentimentSummaryBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; width: 100%;">📊 Generate Summary</button>
-                        </div>
+                        <h3 style="color: #00796b; margin-top: 0;">📊 Generate Sentiment Summary</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Generate a coaching summary from uploaded sentiment data. Use the <strong>"💬 Upload Sentiment"</strong> button on the Home page to upload new data.</p>
+                        <button type="button" id="generateSentimentSummaryBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; width: 100%;">📊 Generate Summary</button>
                     </div>
                     
                     <!-- Summary Output Area -->
@@ -552,56 +579,6 @@
                         <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
                             <button type="button" id="copySentimentSummaryBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Summary</button>
                             <button type="button" id="generateCoPilotPromptBtn" style="background: #4CAF50; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🤖 Generate CoPilot Email</button>
-                        </div>
-                    </div>
-
-                    <!-- Sentiment Database -->
-                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #26a69a;">
-                        <h3 style="color: #00695c; margin-top: 0;">🗄️ Sentiment Phrase Database</h3>
-                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Save your approved phrase banks, then save each associate's uploaded sentiment results by timeframe for coaching emails.</p>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                            <div>
-                                <label for="phraseDbPositiveA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1b5e20;">Positive Phrases (A = Associate)</label>
-                                <textarea id="phraseDbPositiveA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
-                            </div>
-                            <div>
-                                <label for="phraseDbPositiveC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #2e7d32;">Positive Phrases (C = Customer)</label>
-                                <textarea id="phraseDbPositiveC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
-                            </div>
-                            <div>
-                                <label for="phraseDbNegativeA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #b71c1c;">Negative Phrases (A = Associate)</label>
-                                <textarea id="phraseDbNegativeA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
-                            </div>
-                            <div>
-                                <label for="phraseDbNegativeC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #c62828;">Negative Phrases (C = Customer)</label>
-                                <textarea id="phraseDbNegativeC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 12px;">
-                            <label for="phraseDbEmotionsC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #4a148c;">Managing Emotions Phrases (Customer Heightened Cues)</label>
-                            <textarea id="phraseDbEmotionsC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
-                        </div>
-
-                        <button type="button" id="savePhraseDatabaseBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-bottom: 12px;">💾 Save Phrase Database</button>
-                        <div id="phraseDbStatus" style="font-size: 0.85em; color: #555; margin-bottom: 14px;">No phrase database saved yet.</div>
-
-                        <div style="padding-top: 12px; border-top: 1px solid #ddd;">
-                            <h4 style="margin: 0 0 10px 0; color: #00695c;">👤 Save Associate Sentiment Snapshot</h4>
-                            <p style="color: #666; margin-bottom: 10px; font-size: 0.85em;">After uploading the 3 reports for one associate, save their personal phrase usage for this timeframe.</p>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                                <div style="flex: 1; min-width: 160px;">
-                                    <label for="sentimentSnapshotStart" style="font-weight: bold; display: block; margin-bottom: 5px;">Timeframe Start</label>
-                                    <input type="date" id="sentimentSnapshotStart" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div style="flex: 1; min-width: 160px;">
-                                    <label for="sentimentSnapshotEnd" style="font-weight: bold; display: block; margin-bottom: 5px;">Timeframe End</label>
-                                    <input type="date" id="sentimentSnapshotEnd" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                            </div>
-                            <button type="button" id="saveAssociateSentimentSnapshotBtn" style="background: #00acc1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">📥 Save Associate Snapshot</button>
-                            <div id="associateSnapshotStatus" style="font-size: 0.85em; color: #555; margin-top: 8px;">No associate snapshot saved yet.</div>
                         </div>
                     </div>
                 </div>
@@ -617,6 +594,7 @@
                     <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                         <button type="button" id="subNavTeamData" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Data</button>
                         <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                        <button type="button" id="subNavSentimentKeywords" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💬 Sentiment Keywords</button>
                     </div>
                     
                     <!-- Team Data Sub-section -->
@@ -671,6 +649,49 @@
                     <!-- Coaching Tips Sub-section -->
                     <div id="subSectionCoachingTips" style="display: none;">
                         <p style="color: #666; font-style: italic; margin-bottom: 20px;">Coaching tips content will appear here when you click the Coaching Tips button above.</p>
+                    </div>
+                    
+                    <!-- Sentiment Keywords Sub-section -->
+                    <div id="subSectionSentimentKeywords" style="display: none;">
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #26a69a;">
+                            <h3 style="color: #00695c; margin-top: 0;">🗄️ Sentiment Phrase Database</h3>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Manage your approved phrase banks for sentiment analysis. Edit phrases and save changes.</p>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label for="phraseDbPositiveA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1b5e20;">Positive Phrases (A = Associate)</label>
+                                    <textarea id="phraseDbPositiveA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbPositiveC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #2e7d32;">Positive Phrases (C = Customer)</label>
+                                    <textarea id="phraseDbPositiveC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbNegativeA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #b71c1c;">Negative Phrases (A = Associate)</label>
+                                    <textarea id="phraseDbNegativeA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbNegativeC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #c62828;">Negative Phrases (C = Customer)</label>
+                                    <textarea id="phraseDbNegativeC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 12px;">
+                                <label for="phraseDbEmotionsC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #4a148c;">Managing Emotions Phrases (Customer Heightened Cues)</label>
+                                <textarea id="phraseDbEmotionsC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+
+                            <button type="button" id="savePhraseDatabaseBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-bottom: 12px;">💾 Save Phrase Database</button>
+                            <div id="phraseDbStatus" style="font-size: 0.85em; color: #555; margin-bottom: 14px;">No phrase database saved yet.</div>
+
+                            <div style="padding-top: 12px; border-top: 1px solid #ddd;">
+                                <h4 style="margin: 0 0 10px 0; color: #00695c;">👤 Associate Sentiment Snapshots</h4>
+                                <p style="color: #666; margin-bottom: 15px; font-size: 0.85em;">View saved sentiment snapshots for each associate by timeframe. These are automatically saved when you upload sentiment data.</p>
+                                <div id="sentimentSnapshotsView" style="padding: 15px; background: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+                                    <p style="color: #999; font-style: italic;">No sentiment snapshots saved yet. Upload sentiment data to create snapshots.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                 </div>

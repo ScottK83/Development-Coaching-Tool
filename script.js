@@ -501,7 +501,7 @@ function showSubSection(subSectionId) {
  */
 function showManageDataSubSection(subSectionId) {
     // Hide all sub-sections
-    const subSections = ['subSectionTeamData', 'subSectionCoachingTips'];
+    const subSections = ['subSectionTeamData', 'subSectionCoachingTips', 'subSectionSentimentKeywords'];
     subSections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -514,7 +514,7 @@ function showManageDataSubSection(subSectionId) {
     }
     
     // Update sub-nav button active states
-    const subNavButtons = ['subNavTeamData', 'subNavCoachingTips'];
+    const subNavButtons = ['subNavTeamData', 'subNavCoachingTips', 'subNavSentimentKeywords'];
     subNavButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
@@ -2321,6 +2321,32 @@ function initializeEventHandlers() {
         });
     });
     
+    // Upload Data section - show/hide upload types
+    document.getElementById('showUploadMetricsBtn')?.addEventListener('click', () => {
+        const container = document.getElementById('pasteDataContainer');
+        if (container) {
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        }
+    });
+    
+    document.getElementById('showUploadSentimentBtn')?.addEventListener('click', () => {
+        openUploadSentimentModal();
+    });
+    
+    // Upload Sentiment Modal handlers
+    document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
+    document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
+    document.getElementById('sentimentUploadFile')?.addEventListener('change', handleSentimentUploadFileChange);
+    document.getElementById('sentimentUploadPasteBtn')?.addEventListener('click', () => {
+        const associate = document.getElementById('sentimentUploadAssociate').value;
+        const type = document.getElementById('sentimentUploadType').value;
+        if (!associate || !type) {
+            alert('Please select an associate and sentiment type first');
+            return;
+        }
+        openSentimentPasteModal(type, true); // true flag indicates from upload modal
+    });
+    
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
     document.getElementById('manageTips')?.addEventListener('click', () => {
@@ -2446,6 +2472,11 @@ function initializeEventHandlers() {
             }
         }
         renderTipsManagement();
+    });
+    
+    document.getElementById('subNavSentimentKeywords')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionSentimentKeywords');
+        renderSentimentDatabasePanel();
     });
     
     document.getElementById('debugBtn')?.addEventListener('click', () => {
@@ -12111,6 +12142,189 @@ function handleSentimentFileChange(fileType) {
         statusDiv.style.color = '#f44336';
         hideLoadingSpinner();
         showToast('❌ Failed to read file', 5000);
+    };
+    
+    if (isExcel) {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsText(file);
+    }
+}
+
+// ===== UPLOAD SENTIMENT MODAL FUNCTIONS =====
+
+function openUploadSentimentModal() {
+    const modal = document.getElementById('uploadSentimentModal');
+    if (!modal) return;
+    
+    // Populate associate dropdown
+    populateSentimentAssociateDropdown();
+    
+    // Reset form
+    document.getElementById('sentimentUploadAssociate').value = '';
+    document.getElementById('sentimentUploadType').value = '';
+    document.getElementById('sentimentUploadStartDate').value = '';
+    document.getElementById('sentimentUploadEndDate').value = '';
+    document.getElementById('sentimentUploadFile').value = '';
+    const statusDiv = document.getElementById('sentimentUploadStatus');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.textContent = '';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeUploadSentimentModal() {
+    const modal = document.getElementById('uploadSentimentModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function populateSentimentAssociateDropdown() {
+    const select = document.getElementById('sentimentUploadAssociate');
+    if (!select) return;
+    
+    const allEmployees = new Set();
+    
+    // Collect all unique employee names from weeklyData
+    for (const weekKey in weeklyData) {
+        const week = weeklyData[weekKey];
+        if (week.employees && Array.isArray(week.employees)) {
+            week.employees.forEach(emp => {
+                if (emp.name && isTeamMember(weekKey, emp.name)) {
+                    allEmployees.add(emp.name);
+                }
+            });
+        }
+    }
+    
+    // Sort and populate dropdown
+    const sortedEmployees = Array.from(allEmployees).sort();
+    select.innerHTML = '<option value="">-- Select an associate --</option>';
+    sortedEmployees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+}
+
+function handleSentimentUploadFileChange() {
+    const fileInput = document.getElementById('sentimentUploadFile');
+    const statusDiv = document.getElementById('sentimentUploadStatus');
+    
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    statusDiv.textContent = `✅ File selected: ${file.name}`;
+    statusDiv.style.color = '#4CAF50';
+    statusDiv.style.display = 'block';
+}
+
+function handleSentimentUploadSubmit() {
+    const associate = document.getElementById('sentimentUploadAssociate').value;
+    const type = document.getElementById('sentimentUploadType').value;
+    const startDate = document.getElementById('sentimentUploadStartDate').value;
+    const endDate = document.getElementById('sentimentUploadEndDate').value;
+    const fileInput = document.getElementById('sentimentUploadFile');
+    const statusDiv = document.getElementById('sentimentUploadStatus');
+    
+    // Validation
+    if (!associate) {
+        alert('Please select an associate');
+        return;
+    }
+    if (!type) {
+        alert('Please select a sentiment type');
+        return;
+    }
+    if (!startDate || !endDate) {
+        alert('Please enter both start and end dates');
+        return;
+    }
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a file or use the Paste Data option');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    
+    statusDiv.textContent = `⏳ Processing ${file.name}...`;
+    statusDiv.style.color = '#ff9800';
+    statusDiv.style.display = 'block';
+    
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            let lines = [];
+            
+            if (isExcel) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                lines = csvContent.split('\\n').filter(line => line.trim());
+            } else {
+                const content = e.target.result;
+                lines = content.split('\\n').filter(line => line.trim());
+            }
+            
+            // Parse file
+            const report = parseSentimentFile(type, lines);
+            
+            // Save snapshot to associateSentimentSnapshots
+            if (!associateSentimentSnapshots[associate]) {
+                associateSentimentSnapshots[associate] = {};
+            }
+            
+            const timeframeKey = `${startDate}_${endDate}`;
+            if (!associateSentimentSnapshots[associate][timeframeKey]) {
+                associateSentimentSnapshots[associate][timeframeKey] = {
+                    startDate,
+                    endDate,
+                    positive: null,
+                    negative: null,
+                    emotions: null
+                };
+            }
+            
+            // Save report data
+            const typeKey = type.toLowerCase();
+            associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
+                totalCalls: report.totalCalls,
+                callsDetected: report.callsDetected,
+                percentage: report.percentage,
+                phrases: report.phrases
+            };
+            
+            // Save to localStorage
+            saveAssociateSentimentSnapshots();
+            
+            statusDiv.textContent = `✅ Saved ${type} sentiment for ${associate} (${startDate} to ${endDate})`;
+            statusDiv.style.color = '#4CAF50';
+            
+            showToast(`✅ ${type} sentiment data saved for ${associate}`, 3000);
+            
+            // Close modal after short delay
+            setTimeout(() => {
+                closeUploadSentimentModal();
+            }, 1500);
+            
+        } catch (error) {
+            statusDiv.textContent = `❌ Error: ${error.message}`;
+            statusDiv.style.color = '#f44336';
+            console.error('Upload sentiment error:', error);
+        }
+    };
+    
+    reader.onerror = () => {
+        statusDiv.textContent = '❌ Failed to read file';
+        statusDiv.style.color = '#f44336';
     };
     
     if (isExcel) {
