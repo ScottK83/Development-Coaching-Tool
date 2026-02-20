@@ -3055,13 +3055,15 @@ function initializeEventHandlers() {
             return;
         }
         
-        // Parse the selected key (format: "employeeId|timeframe")
-        const [employeeId, timeframe] = selectedKey.split('|');
+        // Parse the selected key (format: "employeeId|timeframeStart to timeframeEnd")
+        const pipeIndex = selectedKey.indexOf('|');
+        const employeeId = selectedKey.substring(0, pipeIndex);
+        const timeframe = selectedKey.substring(pipeIndex + 1);
         
         if (associateSentimentSnapshots[employeeId]) {
-            // Remove the specific sentiment snapshot
+            // Remove the specific sentiment snapshot by comparing reconstructed timeframe
             associateSentimentSnapshots[employeeId] = associateSentimentSnapshots[employeeId].filter(
-                snapshot => snapshot.timeframe !== timeframe
+                snapshot => `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}` !== timeframe
             );
             
             // If no more snapshots for this employee, remove the employee entry
@@ -3653,10 +3655,11 @@ function populateDeleteSentimentDropdown() {
     Object.entries(associateSentimentSnapshots || {}).forEach(([employeeId, snapshots]) => {
         if (Array.isArray(snapshots)) {
             snapshots.forEach(snapshot => {
+                const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
                 sentimentEntries.push({
-                    key: `${employeeId}|${snapshot.timeframe}`,
-                    label: `${snapshot.employeeName || employeeId} - ${snapshot.timeframe}`,
-                    date: new Date(snapshot.uploadDate || snapshot.timeframe)
+                    key: `${employeeId}|${timeframe}`,
+                    label: `${snapshot.associateName || employeeId} - ${timeframe}`,
+                    date: new Date(snapshot.savedAt || snapshot.timeframeEnd)
                 });
             });
         }
