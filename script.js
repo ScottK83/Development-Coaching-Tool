@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.36'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.37'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10871,6 +10871,20 @@ function generateSentimentSummary() {
     const endDate = positive.endDate || negative.endDate || emotions.endDate || 'N/A';
     const dateRange = `${startDate} – ${endDate}`;
     
+    // Calculate percentages based on TOP phrase count / total calls
+    const calculateTopPhrasePercentage = (report) => {
+        if (!report || !report.phrases || report.phrases.length === 0 || report.totalCalls === 0) {
+            return 0;
+        }
+        const topPhrase = report.phrases.reduce((max, p) => p.value > (max?.value || 0) ? p : max, null);
+        return topPhrase ? Math.round((topPhrase.value / report.totalCalls) * 100) : 0;
+    };
+    
+    // Get percentages for each category based on top phrase
+    const positivePercentage = calculateTopPhrasePercentage(positive);
+    const negativePercentage = calculateTopPhrasePercentage(negative);
+    const emotionsPercentage = calculateTopPhrasePercentage(emotions);
+    
     // Build summary according to specification
     let summary = '';
     summary += `Associate: ${escapeHtml(associateName)}\n`;
@@ -10878,7 +10892,7 @@ function generateSentimentSummary() {
     
     // POSITIVE LANGUAGE Section
     summary += `POSITIVE LANGUAGE\n`;
-    summary += `- Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positive.percentage}%)\n`;
+    summary += `- Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positivePercentage}% using top positive phrase)\n`;
     summary += `- Doing well:\n`;
     const posTopPhrases = positive.phrases
         .filter(p => p.value > 0)
@@ -10899,7 +10913,7 @@ function generateSentimentSummary() {
     
     // AVOIDING NEGATIVE LANGUAGE Section
     summary += `AVOIDING NEGATIVE LANGUAGE\n`;
-    summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n`;
+    summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negativePercentage}% using top negative phrase)\n`;
     
     // Separate associate negative from customer negative
     const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0);
@@ -10923,13 +10937,13 @@ function generateSentimentSummary() {
     }
     summary += `\n`;
     
-    // MANAGING EMOTIONS Section (Lower % is GOOD)
+    // MANAGING EMOTIONS Section
     summary += `MANAGING EMOTIONS\n`;
-    summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
+    summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotionsPercentage}% using Top emotional phrase)\n`;
     const emotionPhrases = emotions.phrases.filter(p => p.value > 0);
-    if (emotionPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
+    if (emotionPhrases.length === 0 || emotionsPercentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
         summary += `- Customer emotion indicators:\n`;
-        summary += `  • Low detection (${emotions.percentage}%) - Associate managing emotions effectively\n`;
+        summary += `  • Low detection (${emotionsPercentage}%) - Associate managing emotions effectively\n`;
     } else {
         summary += `- Customer emotion indicators detected:\n`;
         emotionPhrases.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
