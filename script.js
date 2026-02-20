@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.38'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.39'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10877,70 +10877,118 @@ function generateSentimentSummary() {
     summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
     
     // POSITIVE LANGUAGE Section
+    summary += `═══════════════════════════════════\n`;
     summary += `POSITIVE LANGUAGE\n`;
-    summary += `- Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positive.percentage}%)\n`;
-    summary += `- Doing well:\n`;
-    const posTopPhrases = positive.phrases
+    summary += `═══════════════════════════════════\n`;
+    summary += `Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positive.percentage}%)\n\n`;
+    
+    // Phrases they DID use well
+    const posUsedPhrases = positive.phrases
         .filter(p => p.value > 0)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, SENTIMENT_TOP_WINS_COUNT);
-    posTopPhrases.forEach(p => {
-        summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
-    });
-    summary += `- Could increase score by using more:\n`;
-    const posLowPhrases = positive.phrases
-        .filter(p => p.value === 0 || p.value < 10)
-        .sort((a, b) => a.value - b.value)
-        .slice(0, SENTIMENT_BOTTOM_COUNT);
-    posLowPhrases.forEach(p => {
-        summary += `  • "${p.phrase}" - used in ${p.value} calls\n`;
-    });
+        .sort((a, b) => b.value - a.value);
+    if (posUsedPhrases.length > 0) {
+        summary += `✓ DOING WELL - You used these positive words/phrases:\n`;
+        posUsedPhrases.slice(0, SENTIMENT_TOP_WINS_COUNT).forEach(p => {
+            summary += `  • "${p.phrase}" - ${p.value} calls\n`;
+        });
+        if (posUsedPhrases.length > SENTIMENT_TOP_WINS_COUNT) {
+            summary += `  [... and ${posUsedPhrases.length - SENTIMENT_TOP_WINS_COUNT} more positive phrases]\n`;
+        }
+    } else {
+        summary += `✓ DOING WELL:\n`;
+        summary += `  • No strong positive phrases detected in this period\n`;
+    }
     summary += `\n`;
     
+    // Phrases they COULD use more
+    const posUnusedPhrases = positive.phrases
+        .filter(p => p.value === 0)
+        .sort((a, b) => a.value - b.value);
+    if (posUnusedPhrases.length > 0) {
+        summary += `⬆ INCREASE YOUR SCORE - Try using these phrases more often:\n`;
+        posUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            summary += `  • "${p.phrase}"\n`;
+        });
+    }
+    summary += `\n`;
+    
+    // Scripted Opening with Positive Language
+    summary += `📝 SCRIPTED OPENING (with positive language):\n`;
+    summary += `  "Hello! Thank you for calling. My name is ${escapeHtml(associateName)}. I'm here to\n`;
+    summary += `   help you and I appreciate the opportunity to assist you today."\n\n`;
+    
+    // Scripted Ownership Statement
+    summary += `📝 OWNERSHIP STATEMENT (take responsibility):\n`;
+    summary += `  "I understand this is important to you. I'm going to take ownership of\n`;
+    summary += `   this and personally ensure we get this resolved for you."\n\n`;
+    
+    // Scripted Closing with Positive Language
+    summary += `📝 SCRIPTED CLOSING (with positive language):\n`;
+    summary += `  "I truly appreciate you taking the time to work with me on this. We've\n`;
+    summary += `   accomplished great things together today, and I'm delighted we could help."\n\n`;
+    
     // AVOIDING NEGATIVE LANGUAGE Section
+    summary += `═══════════════════════════════════\n`;
     summary += `AVOIDING NEGATIVE LANGUAGE\n`;
-    summary += `- Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n`;
+    summary += `═══════════════════════════════════\n`;
+    summary += `Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n\n`;
     
     // Separate associate negative from customer negative
     const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0);
     const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0);
     
     if (assocNegative.length === 0) {
-        summary += `- Doing well:\n`;
-        summary += `  • Minimal negative language detected - excellent avoidance\n`;
+        summary += `✓ EXCELLENT - Minimal negative language in your calls\n`;
+        summary += `  • You're avoiding negative words effectively (${negative.percentage}% clean)\n`;
     } else {
-        summary += `- Associate stop using:\n`;
+        summary += `⚠ PHRASES TO AVOID - You used these, stop using them:\n`;
         assocNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - said ${p.value} times, avoid this\n`;
-        });
-    }
-    
-    if (custNegative.length > 0) {
-        summary += `- Customer said (context):\n`;
-        custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
+            summary += `  • "${p.phrase}" - used ${p.value} times\n`;
         });
     }
     summary += `\n`;
     
+    if (custNegative.length > 0) {
+        summary += `📌 CUSTOMER CONTEXT - Customers said (helps you understand their state):\n`;
+        custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
+            summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
+        });
+        summary += `  → Respond to their negative emotion with empathy and solutions.\n`;
+    }
+    summary += `\n`;
+    
     // MANAGING EMOTIONS Section
+    summary += `═══════════════════════════════════\n`;
     summary += `MANAGING EMOTIONS\n`;
-    summary += `- Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
-    const emotionPhrases = emotions.phrases.filter(p => p.value > 0);
-    if (emotionPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
-        summary += `- Customer emotion indicators:\n`;
-        summary += `  • Low detection (${emotions.percentage}%) - Associate managing emotions effectively\n`;
+    summary += `═══════════════════════════════════\n`;
+    summary += `Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n\n`;
+    
+    const emotionUsedPhrases = emotions.phrases.filter(p => p.value > 0);
+    const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0);
+    
+    if (emotionUsedPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
+        summary += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
+        summary += `  • Low emotion escalation (${emotions.percentage}%) - Calming presence detected\n`;
     } else {
-        summary += `- Customer emotion indicators detected:\n`;
-        emotionPhrases.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+        summary += `📌 EMOTION INDICATORS - Customer emotional phrases detected:\n`;
+        emotionUsedPhrases.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
             summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
         });
     }
-    summary += `- Opportunity:\n`;
-    summary += `  • Avoid interrupting or talking over the customer\n`;
-    summary += `  • Allow customers time to express concerns fully\n`;
-    summary += `  • Use sincere apologies and acknowledgment\n`;
-    summary += `  • Validate customer emotions before offering solutions\n`;
+    summary += `\n`;
+    
+    summary += `⬆ TECHNIQUES TO USE - Build rapport and validate emotions:\n`;
+    if (emotionUnusedPhrases.length > 0) {
+        summary += `  Phrases to try more often:\n`;
+        emotionUnusedPhrases.slice(0, 3).forEach(p => {
+            summary += `  • "${p.phrase}"\n`;
+        });
+    }
+    summary += `  • Actively listen without interrupting\n`;
+    summary += `  • Acknowledge their feelings: "I understand that's frustrating"\n`;
+    summary += `  • Show empathy before jumping to solutions\n`;
+    summary += `  • Let them fully express their concern\n`;
+    summary += `\n`;
     
     // Display the summary
     document.getElementById('sentimentSummaryText').textContent = summary;
