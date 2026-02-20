@@ -12232,17 +12232,21 @@ function parseSentimentFile(fileType, lines) {
                 inKeywordsSection: inKeywordsSection
             });
             
-            // CRITICAL FIX: ONLY accept Interactions lines that appear AFTER keywords section starts
-            // This ensures we use the actual keyword detection stats, not report summary stats
-            if (inKeywordsSection) {
+            // UPDATED LOGIC: Accept Interactions lines that appear AFTER keywords section
+            // BUT also accept the LAST Interactions line found even if no Keywords section (fallback)
+            if (inKeywordsSection && !report.inKeywordsSection) {
+                // Keywords section found - use this data
                 report.callsDetected = callsDetected;
                 report.percentage = percentage;
                 report.totalCalls = totalCalls;
                 report.inKeywordsSection = true;
                 console.log(`✅ SET METRICS (in keywords section): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
-            } else if (!report.percentage) {
-                // Only use pre-keywords line if we haven't found one in keywords yet (shouldn't happen normally)
-                console.log(`⚠️ IGNORING pre-keywords Interactions line (${percentage}%) - waiting for keywords section`);
+            } else if (!inKeywordsSection && !report.inKeywordsSection) {
+                // No keywords section found yet - tentatively use this (will be overwritten if keywords section appears later)
+                report.callsDetected = callsDetected;
+                report.percentage = percentage;
+                report.totalCalls = totalCalls;
+                console.log(`⚠️ TENTATIVE METRICS (no keywords section yet): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
             }
             continue;
         }
