@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.41'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.20.2'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -86,6 +86,8 @@ let coachingLatestWeekKey = null;
 let coachingHistory = {};
 let yearEndDraftContext = null;
 let debugState = { entries: [] };
+let sentimentPhraseDatabase = null;
+let associateSentimentSnapshots = {};
 
 // ============================================
 // CONSTANTS
@@ -133,6 +135,8 @@ const SENTIMENT_UNUSED_SUGGESTIONS = 3;
 const SENTIMENT_MIN_PHRASES_FOR_BOTTOM = 5;
 const SENTIMENT_CUSTOMER_CONTEXT_COUNT = 3;
 const SENTIMENT_EMOTION_LOW_THRESHOLD = 5;
+const SENTIMENT_PHRASE_DB_STORAGE_KEY = 'sentimentPhraseDatabase';
+const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = 'associateSentimentSnapshots';
 
 // ============================================
 // TARGET METRICS
@@ -1687,6 +1691,46 @@ function saveCoachingHistory() {
     }
 }
 
+function loadSentimentPhraseDatabase() {
+    try {
+        const saved = localStorage.getItem(STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+        console.error('Error loading sentiment phrase database:', error);
+        return null;
+    }
+}
+
+function saveSentimentPhraseDatabase() {
+    try {
+        if (!saveWithSizeCheck(SENTIMENT_PHRASE_DB_STORAGE_KEY, sentimentPhraseDatabase || {})) {
+            console.error('Failed to save sentiment phrase database due to size');
+        }
+    } catch (error) {
+        console.error('Error saving sentiment phrase database:', error);
+    }
+}
+
+function loadAssociateSentimentSnapshots() {
+    try {
+        const saved = localStorage.getItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error loading associate sentiment snapshots:', error);
+        return {};
+    }
+}
+
+function saveAssociateSentimentSnapshots() {
+    try {
+        if (!saveWithSizeCheck(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, associateSentimentSnapshots || {})) {
+            console.error('Failed to save associate sentiment snapshots due to size');
+        }
+    } catch (error) {
+        console.error('Error saving associate sentiment snapshots:', error);
+    }
+}
+
 function appendCoachingLogEntry(entry) {
     if (!entry || !entry.employeeId) return;
     if (!coachingHistory[entry.employeeId]) {
@@ -2322,8 +2366,12 @@ function initializeEventHandlers() {
             document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
             document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
             document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
+            document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
+            document.getElementById('saveAssociateSentimentSnapshotBtn')?.addEventListener('click', saveAssociateSentimentSnapshotFromCurrentReports);
             sentimentListenersAttached = true;
         }
+
+        renderSentimentDatabasePanel();
     });
     document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
         showSubSection('subSectionMetricTrends');
@@ -2867,9 +2915,13 @@ function initializeEventHandlers() {
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
                 if (data.ytdData) ytdData = data.ytdData;
+                if (data.sentimentPhraseDatabase) sentimentPhraseDatabase = data.sentimentPhraseDatabase;
+                if (data.associateSentimentSnapshots) associateSentimentSnapshots = data.associateSentimentSnapshots;
                 
                 saveWeeklyData();
                 saveYtdData();
+                saveSentimentPhraseDatabase();
+                saveAssociateSentimentSnapshots();
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
@@ -2979,6 +3031,11 @@ function initializeEventHandlers() {
         localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
         localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
         localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
+        localStorage.removeItem(STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY);
+        localStorage.removeItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
+
+        sentimentPhraseDatabase = null;
+        associateSentimentSnapshots = {};
         
         saveWeeklyData();
         saveYtdData();
@@ -4877,7 +4934,8 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
     
     return {
         weakest: weakest.achievementPct > 0 ? weakest : null,
-        trendingDown: trendingDown || (allMetrics.find(m => m.isBelowCenter) !== weakest ? allMetrics.find(m => m.isBelowCenter) : null)
+        trendingDown: trendingDown || (allMetrics.find(m => m.isBelowCenter) !== weakest ? allMetrics.find(m => m.isBelowCenter) : null),
+        allMetrics: allMetrics  // NEW: include all metrics for comprehensive prompt building
     };
 }
 
@@ -4951,16 +5009,19 @@ function generateTrendEmail() {
     const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs);
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
+    const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
     
     // Get tips for the trending metric
     let tipsForTrend = [];
     if (trendingMetric) {
         tipsForTrend = getRandomTipsForMetric(trendingMetric.metricKey, 2);
     }
+
+    const periodMeta = period.metadata || {};
+    const sentimentSnapshot = getAssociateSentimentSnapshotForPeriod(employeeName, periodMeta);
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
         // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
-        const periodMeta = period.metadata || {};
         const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
         const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
         const mailEndDate = periodMeta.endDate || 'unknown';
@@ -4970,7 +5031,7 @@ function generateTrendEmail() {
         
         // If there's a trending metric with tips, show coaching panel and open Copilot
         if (trendingMetric && tipsForTrend.length > 0) {
-            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForTrend, weekKey, periodMeta, emailSubject);
+            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForTrend, weekKey, periodMeta, emailSubject, sentimentSnapshot, allMetrics);
         } else {
             // No trends or tips - just open email directly
             openTrendEmailOutlook(emailSubject);
@@ -5013,7 +5074,7 @@ function openTrendEmailOutlook(emailSubject) {
  * @example
  * showTrendsWithTipsPanel('john', 'John Doe', weakest, trending, ['Tip 1', 'Tip 2'], 'key', {...}, 'Subject');
  */
-function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tips, weekKey, periodMeta, emailSubject) {
+function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tips, weekKey, periodMeta, emailSubject, sentimentSnapshot = null, allMetrics = null) {
     /**
      * Show a modal/panel with:
      * - Praise for strongest metric
@@ -5079,9 +5140,31 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
             <strong>💡 Tip ${i + 1}:</strong> ${tip}
         </div>
     `).join('');
+
+    const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
+    const sentimentHtml = sentimentSnapshot
+        ? `
+        <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
+            <h4 style="color: #8d6e00; margin-top: 0;">💬 Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
+            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
+        </div>
+        `
+        : '';
+    
+    // Build the comprehensive Copilot prompt (NEW)
+    const userNotes = ''; // Will be filled by user in textarea
+    const copilotPrompt = buildTrendCoachingPrompt(
+        displayName, 
+        weakestMetric, 
+        trendingMetric, 
+        tips, 
+        userNotes,
+        sentimentSnapshot,
+        allMetrics
+    );
     
     panel.innerHTML = `
-        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary</h3>
+        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
         <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
         
         ${praiseHtml}
@@ -5091,15 +5174,28 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
             <h4 style="color: #1976d2; margin-top: 0;">💡 Coaching Tips for ${trendingMetric.label}</h4>
             ${tipsHtml}
         </div>
+
+        ${sentimentHtml}
         
         <div style="margin: 20px 0;">
             <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
             <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
         </div>
         
+        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+            <h4 style="color: #333; margin-top: 0;">🤖 CoPilot Prompt</h4>
+            <p style="color: #666; font-size: 0.9em; margin: 0 0 10px 0;">
+                Copy this prompt and paste it into <strong><a href="https://copilot.microsoft.com" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
+            </p>
+            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${copilotPrompt}</textarea>
+            <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                📋 Copy Prompt
+            </button>
+        </div>
+        
         <div style="display: flex; gap: 10px; margin-top: 20px;">
             <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
-                📝 Log & Open CoPilot
+                ✅ Log Coaching
             </button>
             <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
                 Skip
@@ -5110,17 +5206,29 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     modal.appendChild(panel);
     document.body.appendChild(modal);
     
+    // Copy prompt button handler
+    document.getElementById('copyPromptBtn').addEventListener('click', () => {
+        const textarea = document.getElementById('copilotPromptDisplay');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ Prompt copied to clipboard!', 2000);
+    });
+    
     document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
-        const userNotes = document.getElementById('trendCoachingNotes').value.trim();
+        const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
         
-        // Build Copilot prompt
-        const prompt = buildTrendCoachingPrompt(
-            displayName, 
-            weakestMetric, 
-            trendingMetric, 
-            tips, 
-            userNotes
-        );
+        // Rebuild prompt with user notes if provided
+        const finalPrompt = userNotesText 
+            ? buildTrendCoachingPrompt(
+                displayName, 
+                weakestMetric, 
+                trendingMetric, 
+                tips, 
+                userNotesText,
+                sentimentSnapshot,
+                allMetrics
+            )
+            : copilotPrompt;
         
         // Log as coaching entry
         recordCoachingEvent({
@@ -5130,13 +5238,12 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
             aiAssisted: true
         });
         
-        showToast('✅ Coaching logged, opening CoPilot...', 3000);
-        document.body.removeChild(modal);
+        showToast('✅ Coaching logged', 2000);
         
-        // Open Copilot with prompt
-        const encodedPrompt = encodeURIComponent(prompt);
-        const copilotUrl = `https://copilot.microsoft.com/?showconv=1&sendquery=1&q=${encodedPrompt}`;
-        window.open(copilotUrl, '_blank');
+        // Update textarea with final prompt and offer to copy
+        document.getElementById('copilotPromptDisplay').value = finalPrompt;
+        showToast('💡 Updated prompt above with your notes. Copy and paste into CoPilot!', 3000);
+        document.getElementById('copilotPromptDisplay').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     
     document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
@@ -5168,28 +5275,150 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * const prompt = buildTrendCoachingPrompt('John', weakest, trending, ['Tip 1', 'Tip 2'], '');
  * window.open(`https://copilot.microsoft.com/?q=${encodeURIComponent(prompt)}`);
  */
-function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes) {
+function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
     /**
-     * Build a CoPilot prompt for trend coaching email
+     * Build a comprehensive CoPilot prompt for trend coaching email
+     * NEW REDESIGN:
+     * - Extract successes (meeting/exceeding targets) and opportunities (below targets)
+     * - Praise successes by name
+     * - Flag opportunities with 1 random tip per area
+     * - Pull and praise top positive phrases from sentiment data
+     * - Suggest alternatives for top negative phrases
+     * - Use conversational, randomized tone
      */
-    let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
     
-    if (weakestMetric && weakestMetric.achievementPct >= 75) {
-        prompt += `Start by acknowledging their strength in ${weakestMetric.label.toLowerCase()} (${weakestMetric.employeeValue.toFixed(1)}).\n\n`;
+    // Conversation starters (randomly selected)
+    const starters = [
+        `I'd like to help ${displayName} build on their momentum this period.`,
+        `${displayName} has some great wins this period, and a couple of areas to focus on.`,
+        `Here's what I'm seeing with ${displayName}'s performance this period.`,
+        `${displayName} is doing well in some areas and has opportunities in others.`
+    ];
+    
+    // Success praise phrases (randomly selected)
+    const praisePhrases = [
+        "is excelling in",
+        "is crushing it with",
+        "is shining in",
+        "has strong performance in",
+        "is nailing",
+        "shows great strength in"
+    ];
+    
+    // Opportunity intro phrases (randomly selected)
+    const opportunityIntros = [
+        "let's focus on improving",
+        "there's an opportunity to strengthen",
+        "we can work together to boost",
+        "let's build some momentum in",
+        "an area to develop is"
+    ];
+    
+    const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    
+    let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
+    prompt += `Start with this tone: ${randomChoice(starters)}\n\n`;
+    
+    // SUCCESSES SECTION
+    const successes = allTrendMetrics 
+        ? allTrendMetrics.filter(m => m.achievementPct >= 95) 
+        : [];
+    
+    if (successes.length > 0) {
+        prompt += `**ACKNOWLEDGE SUCCESSES:**\n`;
+        successes.slice(0, 3).forEach(metric => {
+            const phrase = randomChoice(praisePhrases);
+            prompt += `- ${displayName} ${phrase} ${metric.label.toLowerCase()} (${metric.employeeValue.toFixed(1)}, ${metric.achievementPct.toFixed(0)}% of target).\n`;
+        });
+        prompt += `\n`;
     }
     
-    prompt += `Then focus on helping them improve ${trendingMetric.label.toLowerCase()}, which is currently at ${trendingMetric.employeeValue.toFixed(1)} compared to the team average of ${trendingMetric.centerValue.toFixed(1)}.\n\n`;
+    // OPPORTUNITIES SECTION - extract from allTrendMetrics or use legacy weakest/trending
+    const opportunities = allTrendMetrics 
+        ? allTrendMetrics.filter(m => m.achievementPct < 95 && m.achievementPct < 100)
+        : [];
     
-    prompt += `Include these two coaching tips:\n`;
-    tips.forEach((tip, i) => {
-        prompt += `${i + 1}. ${tip}\n`;
-    });
+    if (opportunities.length > 0) {
+        prompt += `**AREAS TO DEVELOP:**\n`;
+        opportunities.slice(0, 3).forEach(metric => {
+            const intro = randomChoice(opportunityIntros);
+            const gap = (100 - metric.achievementPct).toFixed(0);
+            prompt += `- ${intro} ${metric.label.toLowerCase()}. Currently at ${metric.employeeValue.toFixed(1)} (${metric.achievementPct.toFixed(0)}% of target, ${gap}% gap).\n`;
+            
+            // Add 1 random tip for this metric
+            const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
+            if (metricTips && metricTips.length > 0) {
+                const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
+                prompt += `  💡 Tip: ${randomTip}\n`;
+            }
+        });
+        prompt += `\n`;
+    }
+    
+    // SENTIMENT SECTION - if snapshot exists
+    if (sentimentSnapshot) {
+        const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
+        if (sentimentFocusText) {
+            prompt += `**SENTIMENT COACHING DATA** (${sentimentSnapshot?.timeframeStart || ''} to ${sentimentSnapshot?.timeframeEnd || ''}):\n`;
+            prompt += `${sentimentFocusText}\n\n`;
+        }
+        
+        // POSITIVE PHRASE PRAISE
+        const topPosA = (sentimentSnapshot.topPhrases?.positiveA || []).slice(0, 3);
+        if (topPosA.length > 0) {
+            const positivePraiseVariants = [
+                `I love that you're using these positive phrases:`,
+                `Here are the positive words you're using most:`,
+                `Your strength phrases this period:`,
+                `Keep up the great use of these positive words:`,
+                `These phrases are showing your strength:`
+            ];
+            prompt += `${randomChoice(positivePraiseVariants)}\n`;
+            topPosA.forEach(item => {
+                prompt += `- "${formatKeywordPhraseForDisplay(item.phrase)}" (used ${item.value} times)\n`;
+            });
+            prompt += `\n`;
+        }
+        
+        // NEGATIVE PHRASE ALTERNATIVES
+        const topNegA = (sentimentSnapshot.topPhrases?.negativeA || []).slice(0, 3);
+        if (topNegA.length > 0) {
+            const negativeAlternatives = (sentimentSnapshot.suggestions?.negativeAlternatives || []).slice(0, 3);
+            const negativeVariants = [
+                `Instead of these phrases, try:`,
+                `Swap these negative words for:`,
+                `More solution-focused alternatives:`,
+                `Consider using these instead:`,
+                `Let's replace these with:`
+            ];
+            prompt += `${randomChoice(negativeVariants)}\n`;
+            topNegA.forEach((item, idx) => {
+                const alt = negativeAlternatives.length > idx ? negativeAlternatives[idx] : 'a more positive phrase';
+                prompt += `- "${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value} times) → "${alt}"\n`;
+            });
+            prompt += `\n`;
+        }
+    }
     
     if (userNotes) {
-        prompt += `\nAlso incorporate this note: ${userNotes}\n`;
+        const noteVariants = [
+            `Also keep this in mind:`,
+            `One more thing to focus on:`,
+            `And don't forget:`,
+            `Plus, focus on:`
+        ];
+        prompt += `${randomChoice(noteVariants)} ${userNotes}\n\n`;
     }
     
-    prompt += `\nKeep the tone encouraging and specific. Focus on actionable steps they can take.`;
+    const closingVariants = [
+        `I believe you've got this. Let's make next period even stronger.`,
+        `You've got the tools to improve in these areas. Let's go!`,
+        `I'm confident you'll nail these improvements. Let's build momentum together.`,
+        `These are achievable targets. Let's refocus and crush next period.`,
+        `You're capable of great things. Let's work on these areas together.`
+    ];
+    
+    prompt += `\n${randomChoice(closingVariants)}`;
     
     return prompt;
 }
@@ -9237,6 +9466,9 @@ function initApp() {
     weeklyData = loadWeeklyData();
     ytdData = loadYtdData();
     coachingHistory = loadCoachingHistory();
+    sentimentPhraseDatabase = loadSentimentPhraseDatabase();
+    associateSentimentSnapshots = loadAssociateSentimentSnapshots();
+    ensureSentimentPhraseDatabaseDefaults();
     loadTeamMembers();
     
 
@@ -9278,6 +9510,8 @@ function initApp() {
         saveWeeklyData();
         saveYtdData();
         saveCoachingHistory();
+        saveSentimentPhraseDatabase();
+        saveAssociateSentimentSnapshots();
         
     });
     
@@ -10848,6 +11082,457 @@ function generateCoachingPromptAndCopy() {
 // SENTIMENT & LANGUAGE SUMMARY ENGINE
 // ============================================
 
+const DEFAULT_SENTIMENT_PHRASE_DATABASE = {
+    positive: {
+        A: [
+            'have wonderful', 'anything else', 'I can help', 'anything else help', 'happy to', 'anything else you',
+            'of course', 'happy help', 'absolutely', 'what can', 'how help', 'do for you', 'taken care',
+            'what I can do', 'anything else do', 'work you', 'enjoy', 'what we can do', 'you got it',
+            'take time', 'no problem', 'can definitely', 'here help', "let's get", 'perfectly',
+            "don't worry", 'glad to', 'take care for you', "let's make sure", 'wish best',
+            'answered questions', 'lovely', 'being customer', 'you bet', 'thank you part', 'took care',
+            'happy assist', 'my pleasure', 'a pleasure', 'appreciate business', 'congratulations', 'certainly',
+            'thank you being', 'questions or concerns'
+        ],
+        C: [
+            'really appreciate', "you've been", 'very helpful'
+        ]
+    },
+    negative: {
+        A: [
+            'not sure', 'an error', "we can't", 'no way', 'yes but', 'unfortunately', "I can't give",
+            'trying help', 'sorry but', 'I understand but', "we don't have", 'not my problem', 'any notes',
+            "can't provide", "I can't do", "I can't see", 'you need to go', 'no notes', "I can't find",
+            'sorry feel', 'our policy', 'nothing do', "I can't tell", "don't do that", 'unable help',
+            'like I said'
+        ],
+        C: [
+            'you understand', "i don't care", 'not helping', 'not helping', "you don't care", 'let finish',
+            'not listening'
+        ]
+    },
+    emotions: {
+        C: [
+            'frustrated',
+            'your company',
+            'frustrating',
+            'ridiculous',
+            'really upset',
+            'you people',
+            'what NEAR hell',
+            'fuck you',
+            'not my fault',
+            'horrible',
+            'wasting NEAR "my time"',
+            'this NEAR "B\'S"',
+            'screwed',
+            "you don't care",
+            'our fault',
+            'stupid',
+            'complaint',
+            'totally unacceptable',
+            "can't NEAR believe",
+            'very unhappy',
+            'your fault NOTIN "not your fault"',
+            'not NEAR "good enough"',
+            'cannot NEAR believe',
+            'not happy',
+            'seriously',
+            'pissed off',
+            'unacceptable',
+            'fucking',
+            'kill myself',
+            'Monopoly',
+            'bull shit',
+            "i'm NEAR angry"
+        ]
+    }
+};
+
+function normalizePhraseList(textValue) {
+    if (!textValue) return [];
+    const unique = new Set();
+
+    const parseManualPhraseLine = (line) => {
+        if (!line) return '';
+        let cleaned = String(line).trim();
+
+        if (!/[a-z0-9]/i.test(cleaned)) {
+            return '';
+        }
+
+        const taggedInParens = cleaned.match(/^[+\-#]?\s*\(([AC]):\s*(.+)\)$/i);
+        if (taggedInParens) {
+            cleaned = taggedInParens[2].trim();
+        } else {
+            const taggedDirect = cleaned.match(/^[+\-#]?\s*([AC]):\s*(.+)$/i);
+            if (taggedDirect) {
+                cleaned = taggedDirect[2].trim();
+            } else {
+                cleaned = cleaned.replace(/^[+\-#]+\s*/, '').trim();
+            }
+        }
+
+        cleaned = cleaned.replace(/^"|"$/g, '').trim();
+
+        if (!/[a-z0-9]/i.test(cleaned)) {
+            return '';
+        }
+
+        return cleaned;
+    };
+
+    textValue
+        .split('\n')
+        .map(parseManualPhraseLine)
+        .filter(Boolean)
+        .forEach(item => unique.add(item));
+    return Array.from(unique);
+}
+
+function normalizePhraseForMatch(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function formatKeywordPhraseForDisplay(value) {
+    let phrase = String(value || '').trim();
+    if (!phrase) return '';
+
+    phrase = phrase
+        .replace(/\bNOTIN\b\s*"[^"]*"/gi, '')
+        .replace(/\bNOTIN\b\s*'[^']*'/gi, '')
+        .replace(/\bNOTIN\b\s*[^\s]+/gi, '')
+        .replace(/\bNEAR\b/gi, ' ... ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return phrase;
+}
+
+function normalizeDateStringForStorage(dateString) {
+    if (!dateString) return '';
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+    }
+
+    const slashMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (slashMatch) {
+        const month = slashMatch[1].padStart(2, '0');
+        const day = slashMatch[2].padStart(2, '0');
+        let year = slashMatch[3];
+        if (year.length === 2) {
+            year = year >= '70' ? `19${year}` : `20${year}`;
+        }
+        return `${year}-${month}-${day}`;
+    }
+
+    const parsed = new Date(dateString);
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+    }
+
+    return '';
+}
+
+function parseDateForComparison(dateString) {
+    const normalized = normalizeDateStringForStorage(dateString);
+    if (!normalized) return null;
+    const parsed = new Date(`${normalized}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function ensureSentimentPhraseDatabaseDefaults() {
+    if (!sentimentPhraseDatabase || typeof sentimentPhraseDatabase !== 'object') {
+        sentimentPhraseDatabase = JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
+        saveSentimentPhraseDatabase();
+        return;
+    }
+
+    sentimentPhraseDatabase.positive = sentimentPhraseDatabase.positive || { A: [], C: [] };
+    sentimentPhraseDatabase.negative = sentimentPhraseDatabase.negative || { A: [], C: [] };
+    sentimentPhraseDatabase.emotions = sentimentPhraseDatabase.emotions || { C: [] };
+    sentimentPhraseDatabase.positive.A = Array.isArray(sentimentPhraseDatabase.positive.A) ? sentimentPhraseDatabase.positive.A : [];
+    sentimentPhraseDatabase.positive.C = Array.isArray(sentimentPhraseDatabase.positive.C) ? sentimentPhraseDatabase.positive.C : [];
+    sentimentPhraseDatabase.negative.A = Array.isArray(sentimentPhraseDatabase.negative.A) ? sentimentPhraseDatabase.negative.A : [];
+    sentimentPhraseDatabase.negative.C = Array.isArray(sentimentPhraseDatabase.negative.C) ? sentimentPhraseDatabase.negative.C : [];
+    sentimentPhraseDatabase.emotions.C = Array.isArray(sentimentPhraseDatabase.emotions.C) ? sentimentPhraseDatabase.emotions.C : [];
+}
+
+function renderSentimentDatabasePanel() {
+    ensureSentimentPhraseDatabaseDefaults();
+
+    const positiveA = document.getElementById('phraseDbPositiveA');
+    const positiveC = document.getElementById('phraseDbPositiveC');
+    const negativeA = document.getElementById('phraseDbNegativeA');
+    const negativeC = document.getElementById('phraseDbNegativeC');
+    const emotionsC = document.getElementById('phraseDbEmotionsC');
+    const status = document.getElementById('phraseDbStatus');
+    const snapshotStatus = document.getElementById('associateSnapshotStatus');
+
+    if (!positiveA || !positiveC || !negativeA || !negativeC || !emotionsC) {
+        return;
+    }
+
+    positiveA.value = (sentimentPhraseDatabase.positive?.A || []).join('\n');
+    positiveC.value = (sentimentPhraseDatabase.positive?.C || []).join('\n');
+    negativeA.value = (sentimentPhraseDatabase.negative?.A || []).join('\n');
+    negativeC.value = (sentimentPhraseDatabase.negative?.C || []).join('\n');
+    emotionsC.value = (sentimentPhraseDatabase.emotions?.C || []).join('\n');
+
+    const totalCount =
+        (sentimentPhraseDatabase.positive?.A?.length || 0) +
+        (sentimentPhraseDatabase.positive?.C?.length || 0) +
+        (sentimentPhraseDatabase.negative?.A?.length || 0) +
+        (sentimentPhraseDatabase.negative?.C?.length || 0) +
+        (sentimentPhraseDatabase.emotions?.C?.length || 0);
+
+    if (status) {
+        status.textContent = `Saved phrase database: ${totalCount} phrases total.`;
+    }
+
+    if (snapshotStatus) {
+        const totalSnapshots = Object.values(associateSentimentSnapshots || {}).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+        snapshotStatus.textContent = totalSnapshots > 0
+            ? `Saved associate snapshots: ${totalSnapshots}`
+            : 'No associate snapshot saved yet.';
+    }
+}
+
+function saveSentimentPhraseDatabaseFromForm() {
+    const positiveA = document.getElementById('phraseDbPositiveA');
+    const positiveC = document.getElementById('phraseDbPositiveC');
+    const negativeA = document.getElementById('phraseDbNegativeA');
+    const negativeC = document.getElementById('phraseDbNegativeC');
+    const emotionsC = document.getElementById('phraseDbEmotionsC');
+
+    if (!positiveA || !positiveC || !negativeA || !negativeC || !emotionsC) {
+        return;
+    }
+
+    sentimentPhraseDatabase = {
+        positive: {
+            A: normalizePhraseList(positiveA.value),
+            C: normalizePhraseList(positiveC.value)
+        },
+        negative: {
+            A: normalizePhraseList(negativeA.value),
+            C: normalizePhraseList(negativeC.value)
+        },
+        emotions: {
+            C: normalizePhraseList(emotionsC.value)
+        },
+        updatedAt: new Date().toISOString()
+    };
+
+    saveSentimentPhraseDatabase();
+    renderSentimentDatabasePanel();
+    showToast('✅ Sentiment phrase database saved', 2500);
+}
+
+function syncSentimentSnapshotDateInputsFromReports() {
+    const startInput = document.getElementById('sentimentSnapshotStart');
+    const endInput = document.getElementById('sentimentSnapshotEnd');
+    if (!startInput || !endInput) return;
+
+    const positive = sentimentReports.positive;
+    if (!positive) return;
+
+    const start = normalizeDateStringForStorage(positive.startDate);
+    const end = normalizeDateStringForStorage(positive.endDate);
+
+    if (start && !startInput.value) startInput.value = start;
+    if (end && !endInput.value) endInput.value = end;
+}
+
+function saveAssociateSentimentSnapshotFromCurrentReports() {
+    const { positive, negative, emotions } = sentimentReports;
+    if (!positive || !negative || !emotions) {
+        showToast('⚠️ Upload all 3 sentiment reports before saving a snapshot', 4000);
+        return;
+    }
+
+    ensureSentimentPhraseDatabaseDefaults();
+
+    const associateName = (positive.associateName || negative.associateName || emotions.associateName || '').trim();
+    if (!associateName) {
+        showToast('⚠️ Associate name not found in uploaded reports', 4000);
+        return;
+    }
+
+    const startInput = document.getElementById('sentimentSnapshotStart');
+    const endInput = document.getElementById('sentimentSnapshotEnd');
+    const startDate = normalizeDateStringForStorage(startInput?.value || positive.startDate || negative.startDate || emotions.startDate);
+    const endDate = normalizeDateStringForStorage(endInput?.value || positive.endDate || negative.endDate || emotions.endDate);
+
+    if (!startDate || !endDate) {
+        showToast('⚠️ Timeframe start and end are required', 4000);
+        return;
+    }
+
+    const sortByValue = (a, b) => b.value - a.value;
+    const toTopRows = (items, totalCalls) => items.slice(0, 5).map(item => ({
+        phrase: item.phrase,
+        value: item.value,
+        speaker: item.speaker || 'A',
+        callsPct: totalCalls > 0 ? Number(((item.value / totalCalls) * 100).toFixed(1)) : 0
+    }));
+
+    const positiveUsed = positive.phrases.filter(p => p.value > 0 && (p.speaker || 'A') === 'A').sort(sortByValue);
+    const negativeUsedA = negative.phrases.filter(p => p.value > 0 && p.speaker === 'A').sort(sortByValue);
+    const negativeUsedC = negative.phrases.filter(p => p.value > 0 && p.speaker === 'C').sort(sortByValue);
+    const emotionsUsed = emotions.phrases.filter(p => p.value > 0).sort(sortByValue);
+
+    const usedPositiveSet = new Set(positiveUsed.map(p => normalizePhraseForMatch(p.phrase)));
+    const positiveUnusedFromDb = (sentimentPhraseDatabase.positive?.A || [])
+        .filter(phrase => !usedPositiveSet.has(normalizePhraseForMatch(phrase)))
+        .slice(0, 8);
+
+    const snapshot = {
+        associateName,
+        timeframeStart: startDate,
+        timeframeEnd: endDate,
+        savedAt: new Date().toISOString(),
+        scores: {
+            positiveWord: Number(positive.percentage || 0),
+            negativeWord: Number(negative.percentage || 0),
+            managingEmotions: Number(emotions.percentage || 0)
+        },
+        calls: {
+            positiveTotal: Number(positive.totalCalls || 0),
+            positiveDetected: Number(positive.callsDetected || 0),
+            negativeTotal: Number(negative.totalCalls || 0),
+            negativeDetected: Number(negative.callsDetected || 0),
+            emotionsTotal: Number(emotions.totalCalls || 0),
+            emotionsDetected: Number(emotions.callsDetected || 0)
+        },
+        topPhrases: {
+            positiveA: toTopRows(positiveUsed, Number(positive.totalCalls || 0)),
+            negativeA: toTopRows(negativeUsedA, Number(negative.totalCalls || 0)),
+            negativeC: toTopRows(negativeUsedC, Number(negative.totalCalls || 0)),
+            emotions: toTopRows(emotionsUsed, Number(emotions.totalCalls || 0))
+        },
+        suggestions: {
+            positiveAdditions: positiveUnusedFromDb,
+            negativeAlternatives: (sentimentPhraseDatabase.positive?.A || []).slice(0, 8),
+            emotionCustomerCues: (sentimentPhraseDatabase.emotions?.C || []).slice(0, 8)
+        }
+    };
+
+    if (!associateSentimentSnapshots[associateName]) {
+        associateSentimentSnapshots[associateName] = [];
+    }
+
+    const existingIndex = associateSentimentSnapshots[associateName].findIndex(entry =>
+        entry.timeframeStart === startDate && entry.timeframeEnd === endDate
+    );
+
+    if (existingIndex >= 0) {
+        associateSentimentSnapshots[associateName][existingIndex] = snapshot;
+    } else {
+        associateSentimentSnapshots[associateName].push(snapshot);
+    }
+
+    associateSentimentSnapshots[associateName] = associateSentimentSnapshots[associateName]
+        .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+        .slice(0, 200);
+
+    saveAssociateSentimentSnapshots();
+    renderSentimentDatabasePanel();
+    showToast(`✅ Saved sentiment snapshot for ${associateName} (${startDate} to ${endDate})`, 3000);
+}
+
+function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
+    if (!associateName || !associateSentimentSnapshots[associateName]) {
+        return null;
+    }
+
+    const snapshots = associateSentimentSnapshots[associateName];
+    if (!Array.isArray(snapshots) || snapshots.length === 0) {
+        return null;
+    }
+
+    const periodStart = parseDateForComparison(periodMeta?.startDate);
+    const periodEnd = parseDateForComparison(periodMeta?.endDate);
+
+    if (!periodStart || !periodEnd) {
+        return snapshots[0] || null;
+    }
+
+    const overlapping = snapshots
+        .map(snapshot => {
+            const snapStart = parseDateForComparison(snapshot.timeframeStart);
+            const snapEnd = parseDateForComparison(snapshot.timeframeEnd);
+            if (!snapStart || !snapEnd) return null;
+            const overlaps = snapStart <= periodEnd && snapEnd >= periodStart;
+            if (!overlaps) return null;
+            const overlapStart = snapStart > periodStart ? snapStart : periodStart;
+            const overlapEnd = snapEnd < periodEnd ? snapEnd : periodEnd;
+            const overlapMs = Math.max(0, overlapEnd.getTime() - overlapStart.getTime());
+            return { snapshot, overlapMs };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            if (b.overlapMs !== a.overlapMs) return b.overlapMs - a.overlapMs;
+            return new Date(b.snapshot.savedAt).getTime() - new Date(a.snapshot.savedAt).getTime();
+        });
+
+    return overlapping.length > 0 ? overlapping[0].snapshot : snapshots[0] || null;
+}
+
+function buildSentimentFocusAreasForPrompt(snapshot) {
+    if (!snapshot) return '';
+
+    const negativeTarget = METRICS_REGISTRY.negativeWord?.target?.value || 83;
+    const positiveTarget = METRICS_REGISTRY.positiveWord?.target?.value || 86;
+    const emotionsTarget = METRICS_REGISTRY.managingEmotions?.target?.value || 95;
+
+    const focusLines = [];
+
+    if ((snapshot.scores?.negativeWord || 0) < negativeTarget) {
+        const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ') || 'none listed';
+        const replacements = (snapshot.suggestions?.negativeAlternatives || []).slice(0, 3).join(', ') || 'solution-focused alternatives';
+        focusLines.push(
+            `Focus Area - Negative words is at ${snapshot.scores.negativeWord}, we want you at ${negativeTarget}. ` +
+            `Most said words/phrases: ${topNeg}. Try saying this instead: ${replacements}.`
+        );
+    }
+
+    if ((snapshot.scores?.positiveWord || 0) < positiveTarget) {
+        const topPos = (snapshot.topPhrases?.positiveA || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ') || 'none listed';
+        const additions = (snapshot.suggestions?.positiveAdditions || []).slice(0, 3).join(', ') || 'positive ownership phrases';
+        focusLines.push(
+            `Focus Area - Positive words is at ${snapshot.scores.positiveWord}, we want you at ${positiveTarget}. ` +
+            `During timeframe ${snapshot.timeframeStart} to ${snapshot.timeframeEnd}, you said these on ${snapshot.calls.positiveDetected} out of ${snapshot.calls.positiveTotal} calls. ` +
+            `Most used phrases: ${topPos}. Add these phrases to every call: ${additions}.`
+        );
+    }
+
+    if ((snapshot.scores?.managingEmotions || 0) < emotionsTarget) {
+        const cues = (snapshot.topPhrases?.emotions || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ') || 'no frequent cues captured';
+        focusLines.push(
+            `Focus Area - Managing emotions is at ${snapshot.scores.managingEmotions}, we want you at ${emotionsTarget}. ` +
+            `Heightened customer phrases detected: ${cues}. Use de-escalation acknowledgment before solving.`
+        );
+    }
+
+    if (focusLines.length === 0) {
+        return `Sentiment snapshot (${snapshot.timeframeStart} to ${snapshot.timeframeEnd}) is meeting sentiment goals. Reinforce consistency and continue current phrasing habits.`;
+    }
+
+    return focusLines.join('\n');
+}
+
 // Curse word filter for sentiment analysis
 const CURSE_WORDS = [
     'damn', 'hell', 'crap', 'piss', 'ass', 'bastard', 'bitch', 'fuck', 'shit',
@@ -11175,11 +11860,9 @@ function parseSentimentFile(fileType, lines) {
                 const value = parseInt(csvQuotedMatch[2]);
                 
                 // Extract speaker (A or C) and phrase
-                const phraseMatch = rawPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
-                if (phraseMatch) {
-                    const speaker = phraseMatch[1].toUpperCase();
-                    const cleanPhrase = phraseMatch[2].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
+                const extracted = extractSentimentSpeakerAndPhrase(rawPhrase);
+                if (extracted) {
+                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
                 }
                 continue;
             }
@@ -11190,11 +11873,9 @@ function parseSentimentFile(fileType, lines) {
                 const value = parseInt(csvMatch[2]);
                 
                 // Extract speaker and phrase
-                const phraseMatch = rawPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
-                if (phraseMatch) {
-                    const speaker = phraseMatch[1].toUpperCase();
-                    const cleanPhrase = phraseMatch[2].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
+                const extracted = extractSentimentSpeakerAndPhrase(rawPhrase);
+                if (extracted) {
+                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
                 } else {
                     const cleanPhrase = rawPhrase.replace(/^"(.*)"$/, '$1');
                     report.phrases.push({ phrase: cleanPhrase, value, speaker: 'A' });
@@ -11214,11 +11895,9 @@ function parseSentimentFile(fileType, lines) {
                 const value = parseInt(line.trim());
                 
                 // Extract speaker and phrase
-                const phraseMatch = pendingPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^"]+)"?\)/i);
-                if (phraseMatch) {
-                    const speaker = phraseMatch[1].toUpperCase();
-                    const cleanPhrase = phraseMatch[2].trim();
-                    report.phrases.push({ phrase: cleanPhrase, value, speaker });
+                const extracted = extractSentimentSpeakerAndPhrase(pendingPhrase);
+                if (extracted) {
+                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
                 } else {
                     // Fallback: try simpler extraction
                     const simpleMatch = pendingPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^")]+)"?\)/i);
@@ -11235,6 +11914,28 @@ function parseSentimentFile(fileType, lines) {
     }
     
     return report;
+}
+
+function extractSentimentSpeakerAndPhrase(rawPhrase) {
+    if (!rawPhrase) return null;
+    const compact = String(rawPhrase).trim();
+    const tagged = compact.match(/[+\-#]?\s*\(([AC]):\s*(.+)\)$/i);
+    if (tagged) {
+        return {
+            speaker: tagged[1].toUpperCase(),
+            phrase: tagged[2].trim().replace(/^"|"$/g, '')
+        };
+    }
+
+    const direct = compact.match(/^([AC]):\s*(.+)$/i);
+    if (direct) {
+        return {
+            speaker: direct[1].toUpperCase(),
+            phrase: direct[2].trim().replace(/^"|"$/g, '')
+        };
+    }
+
+    return null;
 }
 
 function handleSentimentFileChange(fileType) {
@@ -11306,6 +12007,7 @@ function handleSentimentFileChange(fileType) {
             
             statusDiv.textContent = `✅ ${escapeHtml(report.associateName || 'Loaded')} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
             statusDiv.style.color = '#4caf50';
+            syncSentimentSnapshotDateInputsFromReports();
             hideLoadingSpinner();
         } catch (error) {
             statusDiv.textContent = `❌ Error parsing file`;

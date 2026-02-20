@@ -554,6 +554,56 @@
                             <button type="button" id="generateCoPilotPromptBtn" style="background: #4CAF50; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🤖 Generate CoPilot Email</button>
                         </div>
                     </div>
+
+                    <!-- Sentiment Database -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #26a69a;">
+                        <h3 style="color: #00695c; margin-top: 0;">🗄️ Sentiment Phrase Database</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Save your approved phrase banks, then save each associate's uploaded sentiment results by timeframe for coaching emails.</p>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div>
+                                <label for="phraseDbPositiveA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1b5e20;">Positive Phrases (A = Associate)</label>
+                                <textarea id="phraseDbPositiveA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                            <div>
+                                <label for="phraseDbPositiveC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #2e7d32;">Positive Phrases (C = Customer)</label>
+                                <textarea id="phraseDbPositiveC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                            <div>
+                                <label for="phraseDbNegativeA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #b71c1c;">Negative Phrases (A = Associate)</label>
+                                <textarea id="phraseDbNegativeA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                            <div>
+                                <label for="phraseDbNegativeC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #c62828;">Negative Phrases (C = Customer)</label>
+                                <textarea id="phraseDbNegativeC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label for="phraseDbEmotionsC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #4a148c;">Managing Emotions Phrases (Customer Heightened Cues)</label>
+                            <textarea id="phraseDbEmotionsC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                        </div>
+
+                        <button type="button" id="savePhraseDatabaseBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-bottom: 12px;">💾 Save Phrase Database</button>
+                        <div id="phraseDbStatus" style="font-size: 0.85em; color: #555; margin-bottom: 14px;">No phrase database saved yet.</div>
+
+                        <div style="padding-top: 12px; border-top: 1px solid #ddd;">
+                            <h4 style="margin: 0 0 10px 0; color: #00695c;">👤 Save Associate Sentiment Snapshot</h4>
+                            <p style="color: #666; margin-bottom: 10px; font-size: 0.85em;">After uploading the 3 reports for one associate, save their personal phrase usage for this timeframe.</p>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                                <div style="flex: 1; min-width: 160px;">
+                                    <label for="sentimentSnapshotStart" style="font-weight: bold; display: block; margin-bottom: 5px;">Timeframe Start</label>
+                                    <input type="date" id="sentimentSnapshotStart" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div style="flex: 1; min-width: 160px;">
+                                    <label for="sentimentSnapshotEnd" style="font-weight: bold; display: block; margin-bottom: 5px;">Timeframe End</label>
+                                    <input type="date" id="sentimentSnapshotEnd" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                            <button type="button" id="saveAssociateSentimentSnapshotBtn" style="background: #00acc1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">📥 Save Associate Snapshot</button>
+                            <div id="associateSnapshotStatus" style="font-size: 0.85em; color: #555; margin-top: 8px;">No associate snapshot saved yet.</div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
