@@ -12324,7 +12324,15 @@ function parseSentimentFile(fileType, lines) {
     
     console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - All Interactions matches found:`, allInteractionsMatches);
     console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Final report:`, report);
-    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%`);
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%, inKeywordsSection=${report.inKeywordsSection}`);
+    
+    if (report.percentage === 0) {
+        console.error(`⚠️ WARNING: ${fileType} percentage is 0. This might mean:`);
+        console.error(`   - No Interactions line was found in the file`);
+        console.error(`   - The regex didn't match the email format`);
+        console.error(`   - The Keywords section was never detected (inKeywordsSection=${report.inKeywordsSection})`);
+        console.error(`   - All ${allInteractionsMatches.length} Interactions matches were before keywords section`);
+    }
     
     return report;
 }
@@ -12665,14 +12673,19 @@ function handleSentimentUploadSubmit() {
             // Save all processed data
             results.forEach(({ type, report }) => {
                 const typeKey = type.toLowerCase();
-                console.log(`📊 SENTIMENT SAVE DEBUG - ${type}: percentage from report = ${report.percentage}, totalCalls = ${report.totalCalls}, callsDetected = ${report.callsDetected}`);
+                console.log(`📊 SAVING ${type}:`);
+                console.log(`   - percentage from parser: ${report.percentage}`);
+                console.log(`   - totalCalls: ${report.totalCalls}`);
+                console.log(`   - callsDetected: ${report.callsDetected}`);
+                console.log(`   - phrases found: ${report.phrases.length}`);
+                
                 associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
                     totalCalls: report.totalCalls,
                     callsDetected: report.callsDetected,
                     percentage: report.percentage,
                     phrases: report.phrases
                 };
-                console.log(`📊 SENTIMENT SAVE DEBUG - ${type} stored to memory:`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
+                console.log(`📊 ${type} saved to memory:`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
             });
             
             // Save to localStorage
