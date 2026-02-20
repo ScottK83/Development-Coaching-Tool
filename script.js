@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.40'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.41'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10848,6 +10848,44 @@ function generateCoachingPromptAndCopy() {
 // SENTIMENT & LANGUAGE SUMMARY ENGINE
 // ============================================
 
+// Curse word filter for sentiment analysis
+const CURSE_WORDS = [
+    'damn', 'hell', 'crap', 'piss', 'ass', 'bastard', 'bitch', 'fuck', 'shit',
+    'dick', 'pussy', 'whore', 'slut', 'cock', 'asshole', 'motherfucker', 'goddamn',
+    'dammit', 'bloody', 'arsehole', 'bollocks', 'bugger', 'cunt', 'fart', 'git',
+    'prat', 'sod', 'twat', 'wanker', 'crappy', 'shitty', 'frickin', 'freakin',
+    'jackass', 'douchebag', 'douche', 'schmuck', 'turd', 'ass hat', 'dipshit'
+];
+
+/**
+ * Check if a phrase contains curse words
+ * @param {string} phrase - Phrase to check
+ * @returns {boolean} - True if phrase contains curse words
+ */
+function containsCurseWords(phrase) {
+    if (!phrase) return false;
+    const lowerPhrase = phrase.toLowerCase();
+    return CURSE_WORDS.some(word => lowerPhrase.includes(word));
+}
+
+/**
+ * Censor curse words in a phrase
+ * @param {string} phrase - Phrase to censor
+ * @returns {string} - Phrase with curse words replaced with [censored]
+ */
+function censorCurseWords(phrase) {
+    if (!phrase) return phrase;
+    let censored = phrase;
+    const lowerPhrase = phrase.toLowerCase();
+    CURSE_WORDS.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        if (lowerPhrase.includes(word)) {
+            censored = censored.replace(regex, '[censored]');
+        }
+    });
+    return censored;
+}
+
 let sentimentReports = {
     positive: null,
     negative: null,
@@ -10884,12 +10922,12 @@ function generateSentimentSummary() {
     
     // Phrases they DID use well
     const posUsedPhrases = positive.phrases
-        .filter(p => p.value > 0)
+        .filter(p => p.value > 0 && !containsCurseWords(p.phrase))
         .sort((a, b) => b.value - a.value);
     if (posUsedPhrases.length > 0) {
         summary += `✓ DOING WELL - You used these positive words/phrases:\n`;
         posUsedPhrases.slice(0, SENTIMENT_TOP_WINS_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - ${p.value} calls\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - ${p.value} calls\n`;
         });
         if (posUsedPhrases.length > SENTIMENT_TOP_WINS_COUNT) {
             summary += `  [... and ${posUsedPhrases.length - SENTIMENT_TOP_WINS_COUNT} more positive phrases]\n`;
@@ -10902,12 +10940,12 @@ function generateSentimentSummary() {
     
     // Phrases they COULD use more
     const posUnusedPhrases = positive.phrases
-        .filter(p => p.value === 0)
+        .filter(p => p.value === 0 && !containsCurseWords(p.phrase))
         .sort((a, b) => a.value - b.value);
     if (posUnusedPhrases.length > 0) {
         summary += `⬆ INCREASE YOUR SCORE - Try using these phrases more often:\n`;
         posUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}"\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}"\n`;
         });
     }
     summary += `\n`;
@@ -10934,9 +10972,9 @@ function generateSentimentSummary() {
     summary += `Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n\n`;
     
     // Separate associate negative from customer negative
-    const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0);
-    const assocNegativeUnused = negative.phrases.filter(p => p.speaker === 'A' && p.value === 0);
-    const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0);
+    const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0 && !containsCurseWords(p.phrase));
+    const assocNegativeUnused = negative.phrases.filter(p => p.speaker === 'A' && p.value === 0 && !containsCurseWords(p.phrase));
+    const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0 && !containsCurseWords(p.phrase));
     
     if (assocNegative.length === 0) {
         summary += `✓ EXCELLENT - Minimal negative language in your calls\n`;
@@ -10944,7 +10982,7 @@ function generateSentimentSummary() {
     } else {
         summary += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
         assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
-            summary += `  • "${p.phrase}" - used ${p.value} times\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - used ${p.value} times\n`;
         });
     }
     summary += `\n`;
@@ -10952,7 +10990,7 @@ function generateSentimentSummary() {
     if (assocNegativeUnused.length > 0) {
         summary += `🛡 WATCH OUT - Database phrases you haven't used yet (prevent bad habits):\n`;
         assocNegativeUnused.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - Don't let this slip in\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - Don't let this slip in\n`;
         });
     }
     summary += `\n`;
@@ -10978,7 +11016,7 @@ function generateSentimentSummary() {
             const phrase = p.phrase.toLowerCase().replace(/[^a-z0-9\s]/g, '');
             const replacement = Object.entries(negativeReplacements).find(([key]) => phrase.includes(key))?.[1];
             if (replacement) {
-                summary += `  • Instead of "${p.phrase}" → "${replacement}"\n`;
+                summary += `  • Instead of "${censorCurseWords(p.phrase)}" → "${replacement}"\n`;
             }
         });
     } else {
@@ -10991,7 +11029,7 @@ function generateSentimentSummary() {
     if (custNegative.length > 0) {
         summary += `📌 CUSTOMER CONTEXT - They said (understand their frustration):\n`;
         custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - detected ${p.value} times\n`;
         });
         summary += `  → Acknowledge their concern, don't make excuses\n`;
     }
@@ -11007,8 +11045,8 @@ function generateSentimentSummary() {
     summary += `═══════════════════════════════════\n`;
     summary += `Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n\n`;
     
-    const emotionUsedPhrases = emotions.phrases.filter(p => p.value > 0);
-    const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0);
+    const emotionUsedPhrases = emotions.phrases.filter(p => p.value > 0 && !containsCurseWords(p.phrase));
+    const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0 && !containsCurseWords(p.phrase));
     
     if (emotionUsedPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
         summary += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
@@ -11016,7 +11054,7 @@ function generateSentimentSummary() {
     } else {
         summary += `📌 EMOTION INDICATORS DETECTED - Customer emotional phrases in calls:\n`;
         emotionUsedPhrases.sort((a, b) => b.value - a.value).forEach(p => {
-            summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - detected in ${p.value} calls\n`;
         });
     }
     summary += `\n`;
@@ -11024,7 +11062,7 @@ function generateSentimentSummary() {
     if (emotionUnusedPhrases.length > 0) {
         summary += `🛡 WATCH OUT - Emotion phrases to prevent (haven't shown up yet):\n`;
         emotionUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${p.phrase}" - Avoid letting this develop\n`;
+            summary += `  • "${censorCurseWords(p.phrase)}" - Avoid letting this develop\n`;
         });
     }
     summary += `\n`;
