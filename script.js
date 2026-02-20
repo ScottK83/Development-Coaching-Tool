@@ -5374,7 +5374,6 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
             // For negativeWord metric: show both using % and avoiding %
             let displayValue = `${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})`;
             if (metric.metricKey === 'negativeWord') {
-                console.log(`DEBUG buildTrendCoachingPrompt: negativeWord detected - employeeValue: ${metric.employeeValue}, target: ${metric.target}`);
                 const usingNegative = (100 - metric.employeeValue).toFixed(1);
                 const usingNegativeTarget = (100 - metric.target).toFixed(1);
                 displayValue = `${metric.employeeValue.toFixed(1)}% avoiding, ${usingNegative}% using negative words (target: avoid ${metric.target.toFixed(1)}%, use ${usingNegativeTarget}%)`;
@@ -5408,7 +5407,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     if (sentimentSnapshot) {
         const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
         if (sentimentFocusText) {
-            prompt += `SENTIMENT DATA (${sentimentSnapshot?.timeframeStart || ''} to ${sentimentSnapshot?.timeframeEnd || ''}):\n`;
+            prompt += `SENTIMENT DATA:\n`;
             prompt += `${sentimentFocusText}\n\n`;
         }
     }
@@ -11576,7 +11575,7 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
         const replacements = (snapshot.suggestions?.negativeAlternatives || []).slice(0, 3).join(', ') || 'solution-focused alternatives';
         focusLines.push(
             `Focus Area - Avoiding Negative Words: ${negScore}% (Using Negative Words: ${usingNegative}%). Target: ${negativeTarget}% (Using Negative Words: ${usingNegativeTarget}%). ` +
-            `Most said negative phrases: ${topNeg}. Try saying this instead: ${replacements}.`
+            `In a recent report pulled for negative language, most said phrases: ${topNeg}. Try saying this instead: ${replacements}.`
         );
     }
 
@@ -11588,7 +11587,7 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
         const additions = (snapshot.suggestions?.positiveAdditions || []).slice(0, 3).join(', ') || 'positive ownership phrases';
         focusLines.push(
             `Focus Area - Using Positive Words: ${posScore}% (Target: ${positiveTarget}%). ` +
-            `During timeframe ${snapshot.timeframeStart} to ${snapshot.timeframeEnd}, you said these on ${snapshot.calls.positiveDetected} out of ${snapshot.calls.positiveTotal} calls. ` +
+            `In a recent report pulled for positive language, you said these on ${snapshot.calls.positiveDetected} out of ${snapshot.calls.positiveTotal} calls. ` +
             `Most used phrases: ${topPos}. Add these phrases to every call: ${additions}.`
         );
     }
@@ -11604,7 +11603,7 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
     }
 
     if (focusLines.length === 0) {
-        return `Sentiment snapshot (${snapshot.timeframeStart} to ${snapshot.timeframeEnd}) is meeting sentiment goals. Reinforce consistency and continue current phrasing habits.`;
+        return `In a recent report pulled for sentiment data, you're meeting sentiment goals. Reinforce consistency and continue current phrasing habits.`;
     }
 
     return focusLines.join('\n');
