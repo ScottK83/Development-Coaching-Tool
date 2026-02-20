@@ -11521,7 +11521,39 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
     }
 
     const snapshots = associateSentimentSnapshots[associateName];
-    if (!Array.isArray(snapshots) || snapshots.length === 0) {
+    
+    // NEW FORMAT: Object with timeframeKeys (startDate_endDate)
+    if (!Array.isArray(snapshots)) {
+        // Build timeframeKey from period metadata
+        const timeframeKey = periodMeta?.startDate && periodMeta?.endDate 
+            ? `${periodMeta.startDate}_${periodMeta.endDate}` 
+            : null;
+        
+        if (!timeframeKey || !snapshots[timeframeKey]) {
+            // No exact match - try to find overlapping timeframe
+            const periodStart = parseDateForComparison(periodMeta?.startDate);
+            const periodEnd = parseDateForComparison(periodMeta?.endDate);
+            
+            if (periodStart && periodEnd) {
+                const allKeys = Object.keys(snapshots);
+                for (const key of allKeys) {
+                    const [snapStartStr, snapEndStr] = key.split('_');
+                    const snapStart = parseDateForComparison(snapStartStr);
+                    const snapEnd = parseDateForComparison(snapEndStr);
+                    if (snapStart && snapEnd && snapStart <= periodEnd && snapEnd >= periodStart) {
+                        return formatSentimentSnapshotForPrompt(snapshots[key], snapStartStr, snapEndStr);
+                    }
+                }
+            }
+            return null;
+        }
+        
+        // Exact match found
+        return formatSentimentSnapshotForPrompt(snapshots[timeframeKey], periodMeta.startDate, periodMeta.endDate);
+    }
+    
+    // LEGACY FORMAT: Array of snapshots
+    if (snapshots.length === 0) {
         return null;
     }
 
@@ -11551,6 +11583,40 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
         });
 
     return overlapping.length > 0 ? overlapping[0].snapshot : snapshots[0] || null;
+}
+
+function formatSentimentSnapshotForPrompt(snapshotData, startDate, endDate) {
+    /**
+     * Convert new sentiment format to prompt-compatible format
+     * New format: { positive: {...}, negative: {...}, emotions: {...} }
+     * Prompt format: { topPhrases: { positiveA, negativeA, emotions }, timeframeStart, timeframeEnd, ... }
+     */
+    if (!snapshotData) return null;
+    
+    return {
+        timeframeStart: startDate,
+        timeframeEnd: endDate,
+        scores: {
+            positiveWord: snapshotData.positive?.percentage || 0,
+            negativeWord: snapshotData.negative?.percentage || 0,
+            managingEmotions: snapshotData.emotions?.percentage || 0
+        },
+        calls: {
+            positiveTotal: snapshotData.positive?.totalCalls || 0,
+            positiveDetected: snapshotData.positive?.callsDetected || 0,
+            negativeTotal: snapshotData.negative?.totalCalls || 0,
+            negativeDetected: snapshotData.negative?.callsDetected || 0
+        },
+        topPhrases: {
+            positiveA: (snapshotData.positive?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value })),
+            negativeA: (snapshotData.negative?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value })),
+            emotions: (snapshotData.emotions?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value }))
+        },
+        suggestions: {
+            negativeAlternatives: ['solution-focused language', 'collaborative phrasing', 'positive ownership'],
+            positiveAdditions: ['I appreciate', 'happy to help', 'glad to assist']
+        }
+    };
 }
 
 function buildSentimentFocusAreasForPrompt(snapshot) {
