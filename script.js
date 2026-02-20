@@ -4583,11 +4583,17 @@ function populateTrendSentimentDropdown(employeeName) {
     
     if (!sentimentDropdown) return;
     
+    console.log(`🎯 populateTrendSentimentDropdown called for: "${employeeName}"`);
+    console.log(`🎯 Current associateSentimentSnapshots:`, associateSentimentSnapshots);
+    console.log(`🎯 Data for ${employeeName}:`, associateSentimentSnapshots[employeeName]);
+    console.log(`🎯 Is array?`, Array.isArray(associateSentimentSnapshots[employeeName]));
+    
     // Reset to default
     sentimentDropdown.innerHTML = '<option value="">-- No sentiment data --</option>';
     
     // If no employee or "ALL" selected, just show default
     if (!employeeName || employeeName === 'ALL') {
+        console.log(`🎯 No employee selected or ALL selected`);
         return;
     }
     
@@ -4595,8 +4601,15 @@ function populateTrendSentimentDropdown(employeeName) {
     const snapshots = associateSentimentSnapshots[employeeName];
     
     if (!snapshots || !Array.isArray(snapshots) || snapshots.length === 0) {
+        console.log(`🎯 No snapshots found (or not an array): `, { hasData: !!snapshots, isArray: Array.isArray(snapshots), length: snapshots?.length });
+        if (snapshots && !Array.isArray(snapshots)) {
+            console.warn(`⚠️ PROBLEM: Data is not an array! It's a ${typeof snapshots}. This might be old format data that wasn't migrated.`);
+            console.log(`📋 Old format data structure:`, snapshots);
+        }
         return;
     }
+    
+    console.log(`🎯 Found ${snapshots.length} sentiment snapshots for ${employeeName}`);
     
     // Sort by date (most recent first)
     const sortedSnapshots = [...snapshots].sort((a, b) => {
@@ -12694,6 +12707,20 @@ function handleSentimentUploadSubmit() {
             
             // Save to localStorage
             saveAssociateSentimentSnapshots();
+            
+            // IMPORTANT: Convert from old format to new array format immediately
+            console.log(`🔄 Running migration on newly uploaded data for ${associate}...`);
+            loadAssociateSentimentSnapshots();  // This migrates old format to new array format
+            console.log(`✅ Migration complete. Data is now in array format:`, associateSentimentSnapshots[associate]);
+            
+            // Repopulate dropdown with migrated data
+            if (window.setupMetricTrendsListeners && typeof setupMetricTrendsListeners === 'function') {
+                const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
+                if (trendEmployeeSelect && trendEmployeeSelect.value === associate) {
+                    console.log(`🎯 Refreshing sentiment dropdown for ${associate}...`);
+                    populateTrendSentimentDropdown(associate);
+                }
+            }
             
             const uploadedTypes = results.map(r => r.type).join(', ');
             statusDiv.textContent = `✅ Saved ${uploadedTypes} for ${associate} (pulled ${pullDate})`;
