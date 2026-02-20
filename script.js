@@ -5029,12 +5029,13 @@ function generateTrendEmail() {
         
         if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
         
-        // If there's a trending metric with tips, show coaching panel and open Copilot
+        // ALWAYS open Outlook first so user can paste the image
+        openTrendEmailOutlook(emailSubject);
+        showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
+        
+        // If there's a trending metric with tips, ALSO show coaching panel for Copilot prompt
         if (trendingMetric && tipsForTrend.length > 0) {
             showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForTrend, weekKey, periodMeta, emailSubject, sentimentSnapshot, allMetrics);
-        } else {
-            // No trends or tips - just open email directly
-            openTrendEmailOutlook(emailSubject);
         }
     });
 }
