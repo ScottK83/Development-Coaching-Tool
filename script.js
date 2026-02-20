@@ -167,7 +167,7 @@ const METRICS_REGISTRY = {
         columnIndex: 15,
         chartType: 'line',
         chartColor: '#4CAF50',
-        defaultTip: "CX Rep Overall: Customers appreciate your service! Keep building those strong relationships through empathy and professionalism."
+        defaultTip: "Focus on building stronger connections with customers through empathy and professionalism. Listen actively and show genuine care for their concerns."
     },
     fcr: {
         key: 'fcr',
@@ -178,7 +178,7 @@ const METRICS_REGISTRY = {
         columnIndex: 13,
         chartType: 'line',
         chartColor: '#FF5722',
-        defaultTip: "First Call Resolution: You're doing well! Continue focusing on resolving issues on the first contact whenever possible."
+        defaultTip: "Work on resolving more issues on the first contact. Take time to fully understand the problem before offering solutions."
     },
     overallExperience: {
         key: 'overallExperience',
@@ -189,7 +189,7 @@ const METRICS_REGISTRY = {
         columnIndex: 17,
         chartType: null,
         chartColor: null,
-        defaultTip: "Overall Experience: Great job creating positive experiences! Continue to personalize your interactions."
+        defaultTip: "Focus on creating more positive customer experiences. Personalize your interactions and ensure each customer feels valued."
     },
     transfers: {
         key: 'transfers',
@@ -222,7 +222,7 @@ const METRICS_REGISTRY = {
         columnIndex: 12,
         chartType: 'line',
         chartColor: '#E91E63',
-        defaultTip: "Overall Sentiment: Keep up the positive tone in your interactions. It makes a big difference!"
+        defaultTip: "Work on maintaining a more positive tone throughout your interactions. Your words and attitude significantly impact customer experience."
     },
     positiveWord: {
         key: 'positiveWord',
@@ -233,7 +233,7 @@ const METRICS_REGISTRY = {
         columnIndex: 11,
         chartType: 'line',
         chartColor: '#4CAF50',
-        defaultTip: "Positive Word Usage: Your positive language is appreciated! Continue using encouraging and supportive words."
+        defaultTip: "Increase your use of positive language. Use encouraging and supportive words on EVERY call to reach 100% usage."
     },
     negativeWord: {
         key: 'negativeWord',
@@ -244,7 +244,7 @@ const METRICS_REGISTRY = {
         columnIndex: 10,
         chartType: 'line',
         chartColor: '#F44336',
-        defaultTip: "Avoiding Negative Words: You're doing great at keeping conversations positive. Keep it up!"
+        defaultTip: "Work on eliminating negative words from your conversations. Replace negative phrases with positive alternatives."
     },
     managingEmotions: {
         key: 'managingEmotions',
@@ -255,7 +255,7 @@ const METRICS_REGISTRY = {
         columnIndex: 9,
         chartType: 'line',
         chartColor: '#00BCD4',
-        defaultTip: "Managing Emotions: You're doing great here! Keep maintaining composure even during challenging interactions."
+        defaultTip: "Focus on maintaining composure during challenging interactions. Stay calm and professional even when customers are upset."
     },
     aht: {
         key: 'aht',
@@ -8840,6 +8840,11 @@ async function generateCopilotPrompt() {
     const { periodLabel, timeReference } = getActivePeriodContext();
     const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
     
+    // Get metadata for sentiment phrase lookup
+    const metadataSource = currentPeriodType === 'ytd' ? ytdData : weeklyData;
+    const metadata = currentPeriod && metadataSource[currentPeriod]?.metadata ? metadataSource[currentPeriod].metadata : null;
+    const timeframeKey = metadata ? `${metadata.startDate}_${metadata.endDate}` : null;
+    
     // Load tips from CSV
     const allTips = await loadServerTips();
     
@@ -8894,6 +8899,39 @@ async function generateCopilotPrompt() {
                     if (smartTip) {
                         opportunitiesSection += `  TIP: ${smartTip}\n`;
                     }
+                    
+                    // Add uploaded sentiment phrases if available
+                    if (timeframeKey && associateSentimentSnapshots[selectedEmployeeId]?.[timeframeKey]) {
+                        const sentimentData = associateSentimentSnapshots[selectedEmployeeId][timeframeKey];
+                        
+                        // For Positive Word: reference positive phrases
+                        if (metricKey === 'positiveWord' && sentimentData.positive?.phrases?.length > 0) {
+                            const topPhrases = sentimentData.positive.phrases
+                                .slice(0, 5)
+                                .map(p => `"${p.phrase}" (${p.value}x)`)
+                                .join(', ');
+                            opportunitiesSection += `  YOUR POSITIVE PHRASES: ${topPhrases}. Use these on EVERY call to reach 100%!\n`;
+                        }
+                        
+                        // For Negative Word: reference negative phrases to eliminate
+                        if (metricKey === 'negativeWord' && sentimentData.negative?.phrases?.length > 0) {
+                            const topPhrases = sentimentData.negative.phrases
+                                .slice(0, 5)
+                                .map(p => `"${p.phrase}" (${p.value}x)`)
+                                .join(', ');
+                            opportunitiesSection += `  NEGATIVE PHRASES TO ELIMINATE: ${topPhrases}. Avoid using these.\n`;
+                        }
+                        
+                        // For Managing Emotions: reference emotion phrases
+                        if (metricKey === 'managingEmotions' && sentimentData.emotions?.phrases?.length > 0) {
+                            const topPhrases = sentimentData.emotions.phrases
+                                .slice(0, 5)
+                                .map(p => `"${p.phrase}" (${p.value}x)`)
+                                .join(', ');
+                            opportunitiesSection += `  EMOTION INDICATORS: ${topPhrases}. Focus on staying composed when these arise.\n`;
+                        }
+                    }
+                    
                     const contextLine = getCoachingContext(selectedEmployeeId, metricKey, metricValue);
                     if (contextLine) coachingContextLines.push(contextLine);
                 }
