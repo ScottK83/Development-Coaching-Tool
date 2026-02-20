@@ -4565,6 +4565,50 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     updateTrendButtonsVisibility();
 }
 
+function populateTrendSentimentDropdown(employeeName) {
+    const sentimentDropdown = document.getElementById('trendSentimentSelect');
+    
+    if (!sentimentDropdown) return;
+    
+    // Reset to default
+    sentimentDropdown.innerHTML = '<option value="">-- No sentiment data --</option>';
+    
+    // If no employee or "ALL" selected, just show default
+    if (!employeeName || employeeName === 'ALL') {
+        return;
+    }
+    
+    // Get sentiment snapshots for this employee
+    const snapshots = associateSentimentSnapshots[employeeName];
+    
+    if (!snapshots || !Array.isArray(snapshots) || snapshots.length === 0) {
+        return;
+    }
+    
+    // Sort by date (most recent first)
+    const sortedSnapshots = [...snapshots].sort((a, b) => {
+        const dateA = new Date(a.savedAt || a.timeframeEnd);
+        const dateB = new Date(b.savedAt || b.timeframeEnd);
+        return dateB - dateA;
+    });
+    
+    // Build options
+    sortedSnapshots.forEach((snapshot, index) => {
+        const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
+        const negScore = snapshot.scores?.negativeWord || 0;
+        const posScore = snapshot.scores?.positiveWord || 0;
+        const emoScore = snapshot.scores?.managingEmotions || 0;
+        
+        const label = `${timeframe} (${negScore}% avoiding negative, ${posScore}% using positive, ${emoScore}% managing emotions)`;
+        const value = `${snapshot.timeframeStart}|${snapshot.timeframeEnd}`; // Use timeframe as value
+        
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        sentimentDropdown.appendChild(option);
+    });
+}
+
 function setupAveragesLoader() {
     const avgPeriodType = document.getElementById('avgPeriodType');
     const avgWeekMonday = document.getElementById('avgWeekMonday');
@@ -4908,6 +4952,9 @@ function setupMetricTrendsListeners() {
             const employeeName = e.target.value;
             const weekKey = document.getElementById('trendPeriodSelect')?.value;
             const nicknameInput = document.getElementById('trendNickname');
+            
+            // Populate sentiment dropdown for selected employee
+            populateTrendSentimentDropdown(employeeName);
             
             if (nicknameInput) {
                 if (!employeeName || employeeName === 'ALL') {
@@ -5270,7 +5317,29 @@ function generateTrendEmail() {
     }
 
     const periodMeta = period.metadata || {};
-    const sentimentSnapshot = getAssociateSentimentSnapshotForPeriod(employeeName, periodMeta);
+    
+    // Get sentiment snapshot from dropdown selection (instead of automatic lookup)
+    let sentimentSnapshot = null;
+    const sentimentSelect = document.getElementById('trendSentimentSelect');
+    const selectedSentiment = sentimentSelect?.value;
+    
+    if (selectedSentiment) {
+        // User selected a specific sentiment snapshot
+        const [startDate, endDate] = selectedSentiment.split('|');
+        const snapshots = associateSentimentSnapshots[employeeName];
+        
+        if (snapshots && Array.isArray(snapshots)) {
+            const matchingSnapshot = snapshots.find(s => 
+                s.timeframeStart === startDate && s.timeframeEnd === endDate
+            );
+            
+            if (matchingSnapshot) {
+                sentimentSnapshot = matchingSnapshot;
+                console.log('📊 Using selected sentiment snapshot:', sentimentSnapshot);
+            }
+        }
+    }
+    // If no sentiment selected, sentimentSnapshot remains null (no sentiment in email)
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
         // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
