@@ -12163,8 +12163,7 @@ function openUploadSentimentModal() {
     // Reset form
     document.getElementById('sentimentUploadAssociate').value = '';
     document.getElementById('sentimentUploadType').value = '';
-    document.getElementById('sentimentUploadStartDate').value = '';
-    document.getElementById('sentimentUploadEndDate').value = '';
+    document.getElementById('sentimentUploadPullDate').value = '';
     document.getElementById('sentimentUploadFile').value = '';
     const statusDiv = document.getElementById('sentimentUploadStatus');
     if (statusDiv) {
@@ -12226,8 +12225,7 @@ function handleSentimentUploadFileChange() {
 function handleSentimentUploadSubmit() {
     const associate = document.getElementById('sentimentUploadAssociate').value;
     const type = document.getElementById('sentimentUploadType').value;
-    const startDate = document.getElementById('sentimentUploadStartDate').value;
-    const endDate = document.getElementById('sentimentUploadEndDate').value;
+    const pullDate = document.getElementById('sentimentUploadPullDate').value;
     const fileInput = document.getElementById('sentimentUploadFile');
     const statusDiv = document.getElementById('sentimentUploadStatus');
     
@@ -12240,8 +12238,8 @@ function handleSentimentUploadSubmit() {
         alert('Please select a sentiment type');
         return;
     }
-    if (!startDate || !endDate) {
-        alert('Please enter both start and end dates');
+    if (!pullDate) {
+        alert('Please enter the pull date');
         return;
     }
     if (!fileInput.files || fileInput.files.length === 0) {
@@ -12277,6 +12275,12 @@ function handleSentimentUploadSubmit() {
             // Parse file
             const report = parseSentimentFile(type, lines);
             
+            // Calculate date range (14 days prior to pull date)
+            const endDate = pullDate;
+            const pullDateObj = new Date(pullDate);
+            pullDateObj.setDate(pullDateObj.getDate() - 14);
+            const startDate = pullDateObj.toISOString().split('T')[0];
+            
             // Save snapshot to associateSentimentSnapshots
             if (!associateSentimentSnapshots[associate]) {
                 associateSentimentSnapshots[associate] = {};
@@ -12287,6 +12291,7 @@ function handleSentimentUploadSubmit() {
                 associateSentimentSnapshots[associate][timeframeKey] = {
                     startDate,
                     endDate,
+                    pullDate,
                     positive: null,
                     negative: null,
                     emotions: null
@@ -12305,7 +12310,7 @@ function handleSentimentUploadSubmit() {
             // Save to localStorage
             saveAssociateSentimentSnapshots();
             
-            statusDiv.textContent = `✅ Saved ${type} sentiment for ${associate} (${startDate} to ${endDate})`;
+            statusDiv.textContent = `✅ Saved ${type} sentiment for ${associate} (pulled ${pullDate})`;
             statusDiv.style.color = '#4CAF50';
             
             showToast(`✅ ${type} sentiment data saved for ${associate}`, 3000);
