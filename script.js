@@ -1724,25 +1724,14 @@ function loadAssociateSentimentSnapshots() {
             
             // Check if it's in old format (object with timeframe keys instead of array)
             if (employeeData && typeof employeeData === 'object' && !Array.isArray(employeeData)) {
-                console.log(`🔄 Migrating sentiment data for ${employeeName} from old format to array`);
-                
                 const migratedArray = [];
                 Object.entries(employeeData).forEach(([timeframeKey, snapshot]) => {
                     // timeframeKey format: "2026-02-06_2026-02-20"
                     const [start, end] = timeframeKey.split('_');
                     
-                    console.log(`  📋 Snapshot for timeframe ${timeframeKey}:`, snapshot);
-                    console.log(`  🔍 Checking structure - has 'positive'?`, !!snapshot.positive, 'has scores?', !!snapshot.scores);
-                    
                     // Check if snapshot is in OLD data structure (positive/negative/emotions)
                     // vs NEW structure (scores/calls/topPhrases)
                     if (snapshot.positive || snapshot.negative || snapshot.emotions) {
-                        console.log(`  🔄 Converting snapshot data structure from old to new format`);
-                        console.log(`  📊 Old snapshot structure:`, snapshot);
-                        console.log(`  📊 positive.percentage:`, snapshot.positive?.percentage);
-                        console.log(`  📊 negative.percentage:`, snapshot.negative?.percentage);
-                        console.log(`  📊 emotions.percentage:`, snapshot.emotions?.percentage);
-                        
                         // Convert old format to new format
                         snapshot = {
                             associateName: employeeName,
@@ -1770,28 +1759,20 @@ function loadAssociateSentimentSnapshots() {
                             },
                             suggestions: snapshot.suggestions || {}
                         };
-                        console.log(`  ✅ Converted to new structure:`, snapshot);
-                        console.log(`  ✅ New scores:`, snapshot.scores);
                     } else {
-                        console.log(`  ℹ️ Already in new format (has scores: ${!!snapshot.scores}), checking properties`);
                         // Already in new format, just ensure required properties
                         if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
                         if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
                         if (!snapshot.associateName) snapshot.associateName = employeeName;
                         if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
-                        console.log(`  ✅ Snapshot scores:`, snapshot.scores);
-                        console.log(`  ✅ Snapshot timeframe: ${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`);
                     }
                     
                     migratedArray.push(snapshot);
                 });
                 
                 loaded[employeeName] = migratedArray;
-                console.log(`✅ Migrated ${migratedArray.length} snapshots for ${employeeName}`);
             }
         });
-        
-        console.log('📥 Loaded sentiment snapshots from localStorage:', loaded);
         
         // Save migrated data back to localStorage if migration occurred
         const needsSave = Object.values(loaded).some(data => Array.isArray(data));
@@ -4583,17 +4564,11 @@ function populateTrendSentimentDropdown(employeeName) {
     
     if (!sentimentDropdown) return;
     
-    console.log(`🎯 populateTrendSentimentDropdown called for: "${employeeName}"`);
-    console.log(`🎯 Current associateSentimentSnapshots:`, associateSentimentSnapshots);
-    console.log(`🎯 Data for ${employeeName}:`, associateSentimentSnapshots[employeeName]);
-    console.log(`🎯 Is array?`, Array.isArray(associateSentimentSnapshots[employeeName]));
-    
     // Reset to default
     sentimentDropdown.innerHTML = '<option value="">-- No sentiment data --</option>';
     
     // If no employee or "ALL" selected, just show default
     if (!employeeName || employeeName === 'ALL') {
-        console.log(`🎯 No employee selected or ALL selected`);
         return;
     }
     
@@ -4601,15 +4576,20 @@ function populateTrendSentimentDropdown(employeeName) {
     const snapshots = associateSentimentSnapshots[employeeName];
     
     if (!snapshots || !Array.isArray(snapshots) || snapshots.length === 0) {
-        console.log(`🎯 No snapshots found (or not an array): `, { hasData: !!snapshots, isArray: Array.isArray(snapshots), length: snapshots?.length });
-        if (snapshots && !Array.isArray(snapshots)) {
-            console.warn(`⚠️ PROBLEM: Data is not an array! It's a ${typeof snapshots}. This might be old format data that wasn't migrated.`);
-            console.log(`📋 Old format data structure:`, snapshots);
-        }
         return;
     }
     
-    console.log(`🎯 Found ${snapshots.length} sentiment snapshots for ${employeeName}`);
+    // Get the currently selected period/week so we can pull percentages from that week
+    const selectedWeekKey = document.getElementById('trendPeriodSelect')?.value;
+    const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
+    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const selectedWeek = selectedWeekKey ? (sourceData[selectedWeekKey] || {}) : {};
+    
+    // Get the employee's data from the selected week
+    let empDataInSelectedWeek = null;
+    if (selectedWeek.employees) {
+        empDataInSelectedWeek = selectedWeek.employees.find(e => e.name === employeeName);
+    }
     
     // Sort by date (most recent first)
     const sortedSnapshots = [...snapshots].sort((a, b) => {
@@ -4622,19 +4602,10 @@ function populateTrendSentimentDropdown(employeeName) {
     sortedSnapshots.forEach((snapshot, index) => {
         const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
         
-        // Get percentages from weekly metrics for this timeframe, not from sentiment data
-        let negScore = 0, posScore = 0, emoScore = 0;
-        
-        // Look for weekly data that matches this timeframe
-        if (weeklyData[employeeName]) {
-            Object.values(weeklyData[employeeName]).forEach(week => {
-                if (week.startDate === snapshot.timeframeStart || week.endDate === snapshot.timeframeEnd) {
-                    negScore = week.negativeWord || 0;
-                    posScore = week.positiveWord || 0;
-                    emoScore = week.managingEmotions || 0;
-                }
-            });
-        }
+        // Use percentages from the selected week if available, otherwise 0
+        const negScore = empDataInSelectedWeek?.negativeWord || 0;
+        const posScore = empDataInSelectedWeek?.positiveWord || 0;
+        const emoScore = empDataInSelectedWeek?.managingEmotions || 0;
         
         const label = `${timeframe} (${negScore}% avoiding negative, ${posScore}% using positive, ${emoScore}% managing emotions)`;
         const value = `${snapshot.timeframeStart}|${snapshot.timeframeEnd}`; // Use timeframe as value
@@ -5503,7 +5474,16 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         </div>
     `).join('');
 
-    const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
+    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    const periodEmployee = periodData?.employees?.find(emp => emp.name === employeeName) || null;
+    const sentimentMetrics = periodEmployee
+        ? {
+            negativeWord: periodEmployee.negativeWord,
+            positiveWord: periodEmployee.positiveWord,
+            managingEmotions: periodEmployee.managingEmotions
+        }
+        : null;
+    const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
     const sentimentHtml = sentimentSnapshot
         ? `
         <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
@@ -5706,7 +5686,14 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     
     // SENTIMENT SECTION - if snapshot exists
     if (sentimentSnapshot) {
-        const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
+        const sentimentMetrics = allTrendMetrics
+            ? {
+                negativeWord: allTrendMetrics.find(m => m.metricKey === 'negativeWord')?.employeeValue,
+                positiveWord: allTrendMetrics.find(m => m.metricKey === 'positiveWord')?.employeeValue,
+                managingEmotions: allTrendMetrics.find(m => m.metricKey === 'managingEmotions')?.employeeValue
+            }
+            : null;
+        const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
         if (sentimentFocusText) {
             prompt += `SENTIMENT DATA:\n`;
             prompt += `${sentimentFocusText}\n\n`;
@@ -11682,11 +11669,10 @@ function saveAssociateSentimentSnapshotFromCurrentReports() {
     }
 
     const sortByValue = (a, b) => b.value - a.value;
-    const toTopRows = (items, totalCalls) => items.slice(0, 5).map(item => ({
+    const toTopRows = (items) => items.slice(0, 5).map(item => ({
         phrase: item.phrase,
         value: item.value,
-        speaker: item.speaker || 'A',
-        callsPct: totalCalls > 0 ? Number(((item.value / totalCalls) * 100).toFixed(1)) : 0
+        speaker: item.speaker || 'A'
     }));
 
     const positiveUsed = positive.phrases.filter(p => p.value > 0 && (p.speaker || 'A') === 'A').sort(sortByValue);
@@ -11704,24 +11690,11 @@ function saveAssociateSentimentSnapshotFromCurrentReports() {
         timeframeStart: startDate,
         timeframeEnd: endDate,
         savedAt: new Date().toISOString(),
-        scores: {
-            positiveWord: Number(positive.percentage || 0),
-            negativeWord: Number(negative.percentage || 0),
-            managingEmotions: Number(emotions.percentage || 0)
-        },
-        calls: {
-            positiveTotal: Number(positive.totalCalls || 0),
-            positiveDetected: Number(positive.callsDetected || 0),
-            negativeTotal: Number(negative.totalCalls || 0),
-            negativeDetected: Number(negative.callsDetected || 0),
-            emotionsTotal: Number(emotions.totalCalls || 0),
-            emotionsDetected: Number(emotions.callsDetected || 0)
-        },
         topPhrases: {
-            positiveA: toTopRows(positiveUsed, Number(positive.totalCalls || 0)),
-            negativeA: toTopRows(negativeUsedA, Number(negative.totalCalls || 0)),
-            negativeC: toTopRows(negativeUsedC, Number(negative.totalCalls || 0)),
-            emotions: toTopRows(emotionsUsed, Number(emotions.totalCalls || 0))
+            positiveA: toTopRows(positiveUsed),
+            negativeA: toTopRows(negativeUsedA),
+            negativeC: toTopRows(negativeUsedC),
+            emotions: toTopRows(emotionsUsed)
         },
         suggestions: {
             positiveAdditions: positiveUnusedFromDb,
@@ -11844,58 +11817,82 @@ function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
 
 function formatSentimentSnapshotForPrompt(snapshotData, startDate, endDate) {
     /**
-     * Convert new sentiment format to prompt-compatible format
-     * New format: { positive: {...}, negative: {...}, emotions: {...} }
-     * Prompt format: { topPhrases: { positiveA, negativeA, emotions }, timeframeStart, timeframeEnd, ... }
+     * Convert sentiment snapshot data to prompt-compatible format.
+     * Supports phrases-only uploads (no percentages/calls) and legacy data.
      */
     if (!snapshotData) return null;
     
-    console.log(`📊 FORMAT DEBUG - Input snapshotData:`, snapshotData);
-    
+    const existingScores = snapshotData.scores || null;
+    const fallbackScores = {
+        positiveWord: snapshotData.positive?.percentage || 0,
+        negativeWord: snapshotData.negative?.percentage || 0,
+        managingEmotions: snapshotData.emotions?.percentage || 0
+    };
+
     const formatted = {
         timeframeStart: startDate,
         timeframeEnd: endDate,
-        scores: {
-            positiveWord: snapshotData.positive?.percentage || 0,
-            negativeWord: snapshotData.negative?.percentage || 0,
-            managingEmotions: snapshotData.emotions?.percentage || 0
-        },
-        calls: {
+        scores: existingScores || fallbackScores,
+        calls: snapshotData.calls || {
             positiveTotal: snapshotData.positive?.totalCalls || 0,
             positiveDetected: snapshotData.positive?.callsDetected || 0,
             negativeTotal: snapshotData.negative?.totalCalls || 0,
-            negativeDetected: snapshotData.negative?.callsDetected || 0
+            negativeDetected: snapshotData.negative?.callsDetected || 0,
+            emotionsTotal: snapshotData.emotions?.totalCalls || 0,
+            emotionsDetected: snapshotData.emotions?.callsDetected || 0
         },
-        topPhrases: {
-            positiveA: (snapshotData.positive?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value })),
-            negativeA: (snapshotData.negative?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value })),
-            emotions: (snapshotData.emotions?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value }))
+        topPhrases: snapshotData.topPhrases || {
+            positiveA: (snapshotData.positive?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value, speaker: p.speaker || 'A' })),
+            negativeA: (snapshotData.negative?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value, speaker: p.speaker || 'A' })),
+            negativeC: (snapshotData.negative?.phrases || []).filter(p => p.speaker === 'C').map(p => ({ phrase: p.phrase, value: p.value, speaker: 'C' })),
+            emotions: (snapshotData.emotions?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value, speaker: p.speaker || 'C' }))
         },
-        suggestions: {
+        suggestions: snapshotData.suggestions || {
             negativeAlternatives: ['solution-focused language', 'collaborative phrasing', 'positive ownership'],
             positiveAdditions: ['I appreciate', 'happy to help', 'glad to assist']
         }
     };
     
-    console.log(`📊 FORMAT DEBUG - Output formatted.scores.negativeWord:`, formatted.scores.negativeWord);
     return formatted;
 }
 
-function buildSentimentFocusAreasForPrompt(snapshot) {
+function buildSentimentFocusAreasForPrompt(snapshot, weeklyMetrics = null) {
     if (!snapshot) return '';
 
     const negativeTarget = METRICS_REGISTRY.negativeWord?.target?.value || 83;
     const positiveTarget = METRICS_REGISTRY.positiveWord?.target?.value || 86;
     const emotionsTarget = METRICS_REGISTRY.managingEmotions?.target?.value || 95;
 
+    const hasScoreData = snapshot.scores && Object.values(snapshot.scores).some(value => Number(value) > 0);
+    const scoreSource = weeklyMetrics || (hasScoreData ? snapshot.scores : null);
+
     const focusLines = [];
 
-    console.log(`📊 BUILD DEBUG - snapshot.scores:`, snapshot.scores);
-    console.log(`📊 BUILD DEBUG - negativeWord score: ${snapshot.scores?.negativeWord}, target: ${negativeTarget}`);
+    if (!scoreSource) {
+        const topPos = (snapshot.topPhrases?.positiveA || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ');
+        const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ');
+        const cues = (snapshot.topPhrases?.emotions || []).slice(0, 3)
+            .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
+            .join(', ');
 
-    if ((snapshot.scores?.negativeWord || 0) < negativeTarget) {
-        const negScore = snapshot.scores.negativeWord;
-        console.log(`📊 BUILD DEBUG - negativeWord < target, negScore = ${negScore}`);
+        if (topPos) focusLines.push(`Positive keywords used: ${topPos}.`);
+        if (topNeg) focusLines.push(`Negative keywords used: ${topNeg}.`);
+        if (cues) focusLines.push(`Customer emotion cues heard: ${cues}.`);
+
+        return focusLines.length > 0
+            ? focusLines.join('\n')
+            : 'Sentiment keyword report available, but no frequent phrases were captured.';
+    }
+
+    const negScore = Number(scoreSource.negativeWord || 0);
+    const posScore = Number(scoreSource.positiveWord || 0);
+    const emoScore = Number(scoreSource.managingEmotions || 0);
+
+    if (negScore < negativeTarget) {
         const usingNegative = 100 - negScore;
         const usingNegativeTarget = 100 - negativeTarget;
         const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
@@ -11904,35 +11901,33 @@ function buildSentimentFocusAreasForPrompt(snapshot) {
         const replacements = (snapshot.suggestions?.negativeAlternatives || []).slice(0, 3).join(', ') || 'solution-focused alternatives';
         focusLines.push(
             `Focus Area - Avoiding Negative Words: ${negScore}% (Using Negative Words: ${usingNegative}%). Target: ${negativeTarget}% (Using Negative Words: ${usingNegativeTarget}%). ` +
-            `In a recent report pulled for negative language, most said phrases: ${topNeg}. Try saying this instead: ${replacements}.`
+            `Most used phrases: ${topNeg}. Try saying this instead: ${replacements}.`
         );
     }
 
-    if ((snapshot.scores?.positiveWord || 0) < positiveTarget) {
-        const posScore = snapshot.scores.positiveWord;
+    if (posScore < positiveTarget) {
         const topPos = (snapshot.topPhrases?.positiveA || []).slice(0, 3)
             .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
             .join(', ') || 'none listed';
         const additions = (snapshot.suggestions?.positiveAdditions || []).slice(0, 3).join(', ') || 'positive ownership phrases';
         focusLines.push(
             `Focus Area - Using Positive Words: ${posScore}% (Target: ${positiveTarget}%). ` +
-            `In a recent report pulled for positive language, you said these on ${snapshot.calls.positiveDetected} out of ${snapshot.calls.positiveTotal} calls. ` +
             `Most used phrases: ${topPos}. Add these phrases to every call: ${additions}.`
         );
     }
 
-    if ((snapshot.scores?.managingEmotions || 0) < emotionsTarget) {
+    if (emoScore < emotionsTarget) {
         const cues = (snapshot.topPhrases?.emotions || []).slice(0, 3)
             .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
             .join(', ') || 'no frequent cues captured';
         focusLines.push(
-            `Focus Area - Managing emotions is at ${snapshot.scores.managingEmotions}, we want you at ${emotionsTarget}. ` +
+            `Focus Area - Managing emotions is at ${emoScore}%, target is ${emotionsTarget}%. ` +
             `Heightened customer phrases detected: ${cues}. Use de-escalation acknowledgment before solving.`
         );
     }
 
     if (focusLines.length === 0) {
-        return `In a recent report pulled for sentiment data, you're meeting sentiment goals. Reinforce consistency and continue current phrasing habits.`;
+        return 'In the latest report, sentiment metrics are meeting targets. Reinforce consistency and continue current phrasing habits.';
     }
 
     return focusLines.join('\n');
@@ -12008,7 +12003,7 @@ function generateSentimentSummary() {
     summary += `═══════════════════════════════════\n`;
     summary += `POSITIVE LANGUAGE\n`;
     summary += `═══════════════════════════════════\n`;
-    summary += `Coverage: ${positive.callsDetected} / ${positive.totalCalls} calls (${positive.percentage}%)\n\n`;
+    summary += `Keywords Summary (phrases used)\n\n`;
     
     // Phrases they DID use well
     const posUsedPhrases = positive.phrases
@@ -12059,7 +12054,7 @@ function generateSentimentSummary() {
     summary += `═══════════════════════════════════\n`;
     summary += `AVOIDING NEGATIVE LANGUAGE\n`;
     summary += `═══════════════════════════════════\n`;
-    summary += `Coverage: ${negative.callsDetected} / ${negative.totalCalls} calls (${negative.percentage}%)\n\n`;
+    summary += `Keywords Summary (phrases used)\n\n`;
     
     // Separate associate negative from customer negative
     const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0 && !containsCurseWords(p.phrase));
@@ -12068,7 +12063,7 @@ function generateSentimentSummary() {
     
     if (assocNegative.length === 0) {
         summary += `✓ EXCELLENT - Minimal negative language in your calls\n`;
-        summary += `  • You're avoiding negative words effectively (${negative.percentage}% clean)\n`;
+        summary += `  • You're avoiding negative words effectively\n`;
     } else {
         summary += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
         assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
@@ -12701,29 +12696,22 @@ function handleSentimentUploadSubmit() {
             // Save all processed data
             results.forEach(({ type, report }) => {
                 const typeKey = type.toLowerCase();
-                console.log(`📊 SAVING ${type}:`);
-                console.log(`   - phrases found: ${report.phrases.length}`);
-                
                 // Only save phrases - percentages come from weekly metrics, not sentiment files
                 associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
                     phrases: report.phrases
                 };
-                console.log(`📊 ${type} saved to memory (phrases only):`, associateSentimentSnapshots[associate][timeframeKey][typeKey]);
             });
             
             // Save to localStorage
             saveAssociateSentimentSnapshots();
             
             // IMPORTANT: Convert from old format to new array format immediately
-            console.log(`🔄 Running migration on newly uploaded data for ${associate}...`);
             loadAssociateSentimentSnapshots();  // This migrates old format to new array format
-            console.log(`✅ Migration complete. Data is now in array format:`, associateSentimentSnapshots[associate]);
             
             // Repopulate dropdown with migrated data
             if (window.setupMetricTrendsListeners && typeof setupMetricTrendsListeners === 'function') {
                 const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
                 if (trendEmployeeSelect && trendEmployeeSelect.value === associate) {
-                    console.log(`🎯 Refreshing sentiment dropdown for ${associate}...`);
                     populateTrendSentimentDropdown(associate);
                 }
             }
