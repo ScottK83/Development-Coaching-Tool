@@ -1716,8 +1716,44 @@ function saveSentimentPhraseDatabase() {
 function loadAssociateSentimentSnapshots() {
     try {
         const saved = localStorage.getItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
-        const loaded = saved ? JSON.parse(saved) : {};
+        let loaded = saved ? JSON.parse(saved) : {};
+        
+        // Migrate old format (object with timeframe keys) to new format (array)
+        Object.keys(loaded).forEach(employeeName => {
+            const employeeData = loaded[employeeName];
+            
+            // Check if it's in old format (object with timeframe keys instead of array)
+            if (employeeData && typeof employeeData === 'object' && !Array.isArray(employeeData)) {
+                console.log(`🔄 Migrating sentiment data for ${employeeName} from old format to array`);
+                
+                const migratedArray = [];
+                Object.entries(employeeData).forEach(([timeframeKey, snapshot]) => {
+                    // timeframeKey format: "2026-02-06_2026-02-20"
+                    const [start, end] = timeframeKey.split('_');
+                    
+                    // Ensure snapshot has required properties
+                    if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
+                    if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
+                    if (!snapshot.associateName) snapshot.associateName = employeeName;
+                    if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
+                    
+                    migratedArray.push(snapshot);
+                });
+                
+                loaded[employeeName] = migratedArray;
+                console.log(`✅ Migrated ${migratedArray.length} snapshots for ${employeeName}`);
+            }
+        });
+        
         console.log('📥 Loaded sentiment snapshots from localStorage:', loaded);
+        
+        // Save migrated data back to localStorage if migration occurred
+        const needsSave = Object.values(loaded).some(data => Array.isArray(data));
+        if (needsSave) {
+            localStorage.setItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, JSON.stringify(loaded));
+            console.log('💾 Saved migrated sentiment data to localStorage');
+        }
+        
         return loaded;
     } catch (error) {
         console.error('Error loading associate sentiment snapshots:', error);
