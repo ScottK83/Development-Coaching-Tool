@@ -1731,11 +1731,44 @@ function loadAssociateSentimentSnapshots() {
                     // timeframeKey format: "2026-02-06_2026-02-20"
                     const [start, end] = timeframeKey.split('_');
                     
-                    // Ensure snapshot has required properties
-                    if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
-                    if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
-                    if (!snapshot.associateName) snapshot.associateName = employeeName;
-                    if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
+                    // Check if snapshot is in OLD data structure (positive/negative/emotions)
+                    // vs NEW structure (scores/calls/topPhrases)
+                    if (snapshot.positive || snapshot.negative || snapshot.emotions) {
+                        console.log(`  🔄 Converting snapshot data structure from old to new format`);
+                        // Convert old format to new format
+                        snapshot = {
+                            associateName: employeeName,
+                            timeframeStart: start,
+                            timeframeEnd: end,
+                            savedAt: snapshot.savedAt || new Date().toISOString(),
+                            scores: {
+                                positiveWord: snapshot.positive?.percentage || 0,
+                                negativeWord: snapshot.negative?.percentage || 0,
+                                managingEmotions: snapshot.emotions?.percentage || 0
+                            },
+                            calls: {
+                                positiveTotal: snapshot.positive?.totalCalls || 0,
+                                positiveDetected: snapshot.positive?.callsDetected || 0,
+                                negativeTotal: snapshot.negative?.totalCalls || 0,
+                                negativeDetected: snapshot.negative?.callsDetected || 0,
+                                emotionsTotal: snapshot.emotions?.totalCalls || 0,
+                                emotionsDetected: snapshot.emotions?.callsDetected || 0
+                            },
+                            topPhrases: {
+                                positiveA: snapshot.positive?.phrases || [],
+                                negativeA: snapshot.negative?.phrases?.filter(p => p.speaker === 'A') || [],
+                                negativeC: snapshot.negative?.phrases?.filter(p => p.speaker === 'C') || [],
+                                emotions: snapshot.emotions?.phrases || []
+                            },
+                            suggestions: snapshot.suggestions || {}
+                        };
+                    } else {
+                        // Already in new format, just ensure required properties
+                        if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
+                        if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
+                        if (!snapshot.associateName) snapshot.associateName = employeeName;
+                        if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
+                    }
                     
                     migratedArray.push(snapshot);
                 });
@@ -4318,7 +4351,12 @@ function initializeMetricTrends() {
     const avgMetricsForm = document.getElementById('avgMetricsForm');
     const toggleAvgMetricsBtn = document.getElementById('toggleAvgMetricsBtn');
     
+    // Ensure form starts collapsed
+    if (avgMetricsForm) {
+        avgMetricsForm.style.display = 'none';
+    }
     if (toggleAvgMetricsBtn) {
+        toggleAvgMetricsBtn.textContent = '✏️ Edit Averages';
         toggleAvgMetricsBtn.addEventListener('click', () => {
             if (avgMetricsForm) {
                 const isVisible = avgMetricsForm.style.display !== 'none';
