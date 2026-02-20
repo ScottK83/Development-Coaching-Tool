@@ -5242,7 +5242,10 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         const textarea = document.getElementById('copilotPromptDisplay');
         textarea.select();
         document.execCommand('copy');
-        showToast('✅ Prompt copied to clipboard!', 2000);
+        showToast('✅ Prompt copied! Opening Copilot...', 2000);
+        
+        // Open Copilot in new tab
+        window.open('https://copilot.microsoft.com', '_blank');
     });
     
     document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
@@ -8627,7 +8630,7 @@ Please generate the coaching email now with HIGH ENERGY celebrating our top perf
         alert('✅ Group email prompt copied!\n\nCtrl+V and Enter to paste into Copilot.');
         
         // Open Copilot
-        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+        window.open('https://copilot.microsoft.com', '_blank');
         
         showToast('Prompt copied! Paste into CoPilot to generate the email.', 3000);
     }).catch(err => {
@@ -9029,7 +9032,7 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
         
         // Open Copilot
-        window.open('https://m365.cloud.microsoft.com/chat', '_blank');
+        window.open('https://copilot.microsoft.com', '_blank');
         
         // Show the paste section
         document.getElementById('copilotOutputSection').style.display = 'block';
