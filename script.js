@@ -5738,12 +5738,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdAvailable = !!ytdEmployee;
 
     // Extract survey total for survey metrics
-    // WEEK views: surveyTotal = current week only, ytdSurveyTotal = cumulative sum of all weeks YTD
-    // MONTH/YTD views: surveyTotal = aggregated for period, ytdSurveyTotal = cumulative sum YTD
+    // WEEK views: surveyTotal = current week only, ytdSurveyTotal = SUM of all weeks YTD
+    // MONTH/YTD views: surveyTotal = aggregated for period, ytdSurveyTotal = SUM of all weeks YTD
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
     
-    // Get YTD survey total from the MOST RECENT week (surveyTotal is already cumulative in CSV)
+    // Calculate YTD survey total by SUMMING all weeks in the year (not using most recent value)
     const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
     const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
     
@@ -5752,10 +5752,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         console.log(`Current period: ${currentEndDate}, year: ${currentYear}`);
     }
     
-    // Find the most recent week with survey data (surveyTotal is cumulative YTD in source)
-    // Do NOT sum - the column already contains cumulative total
-    let mostRecentWeekEnd = '';
-    let mostRecentSurveyTotal = 0;
+    // SUM all weekly survey totals from this year up to the current period
+    // Each week's surveyTotal is just that week's count, not cumulative
+    let aggregatedYtdSurveys = 0;
     
     for (const wk in weeklyData) {
         const weekMeta = weeklyData[wk]?.metadata || {};
@@ -5763,22 +5762,18 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         const weekYear = weekEndDate.substring(0, 4);
         const weekPeriodType = weekMeta.periodType || 'week';
         
-        // Only consider WEEKLY records from same calendar year that end on or before current period
+        // Sum WEEKLY records from same calendar year that end on or before current period
         if (weekPeriodType === 'week' && weekYear === currentYear && weekEndDate <= currentEndDate) {
             const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
             if (weekEmp && weekEmp.surveyTotal) {
                 const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-                // Keep the most recent week's value (it's already cumulative)
-                if (weekEndDate >= mostRecentWeekEnd) {
-                    mostRecentWeekEnd = weekEndDate;
-                    mostRecentSurveyTotal = weekSurvey;
-                    if (DEBUG) console.log(`  Most recent as of ${wk}: ${weekSurvey} YTD`);
-                }
+                aggregatedYtdSurveys += weekSurvey;
+                if (DEBUG) console.log(`  Adding ${wk}: +${weekSurvey} surveys (running total: ${aggregatedYtdSurveys})`);
             }
         }
     }
     
-    ytdSurveyTotal = mostRecentSurveyTotal;
+    ytdSurveyTotal = aggregatedYtdSurveys;
     
     // For MONTH/YTD views: also update surveyTotal to show aggregated value for the period
     if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
