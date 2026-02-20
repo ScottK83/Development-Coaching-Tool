@@ -1735,6 +1735,11 @@ function loadAssociateSentimentSnapshots() {
                     // vs NEW structure (scores/calls/topPhrases)
                     if (snapshot.positive || snapshot.negative || snapshot.emotions) {
                         console.log(`  🔄 Converting snapshot data structure from old to new format`);
+                        console.log(`  📊 Old snapshot structure:`, snapshot);
+                        console.log(`  📊 positive.percentage:`, snapshot.positive?.percentage);
+                        console.log(`  📊 negative.percentage:`, snapshot.negative?.percentage);
+                        console.log(`  📊 emotions.percentage:`, snapshot.emotions?.percentage);
+                        
                         // Convert old format to new format
                         snapshot = {
                             associateName: employeeName,
@@ -1762,6 +1767,8 @@ function loadAssociateSentimentSnapshots() {
                             },
                             suggestions: snapshot.suggestions || {}
                         };
+                        console.log(`  ✅ Converted to new structure:`, snapshot);
+                        console.log(`  ✅ New scores:`, snapshot.scores);
                     } else {
                         // Already in new format, just ensure required properties
                         if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
@@ -4781,7 +4788,12 @@ function displayCallCenterAverages(weekKey) {
     
     const periodData = weeklyData[weekKey] || ytdData[weekKey];
     if (!weekKey || !periodData) {
-        avgMetricsForm.style.display = 'none';
+        // Keep form hidden when no period selected
+        if (avgMetricsForm && avgMetricsForm.style.display !== 'none') {
+            // Don't hide if it was already visible - user might have it open
+        } else {
+            if (avgMetricsForm) avgMetricsForm.style.display = 'none';
+        }
         periodTypeField.value = '';
         mondayField.value = '';
         sundayField.value = '';
@@ -4791,10 +4803,7 @@ function displayCallCenterAverages(weekKey) {
     const week = periodData;
     const metadata = week.metadata || {};
     
-    // Display period info - use label for better display
-    const periodLabel = metadata.label || `${metadata.startDate} to ${metadata.endDate}`;
-    showToast(`Editing averages for: ${periodLabel}`, 5000);
-    
+    // Load period info into hidden fields (don't show toast)
     periodTypeField.value = metadata.periodType || 'week';
     mondayField.value = metadata.startDate || '';
     sundayField.value = metadata.endDate || '';
@@ -4832,7 +4841,8 @@ function displayCallCenterAverages(weekKey) {
         }
     });
     
-    avgMetricsForm.style.display = 'block';
+    // Don't auto-expand the form - let user click "Edit Averages" button
+    // Form expansion is controlled by toggleAvgMetricsBtn only
 }
 
     // Save Call Center Averages button
