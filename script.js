@@ -1806,6 +1806,39 @@ function downloadCoachingHistoryCSV() {
     showToast(`✅ Downloaded ${filename}`, 3000);
 }
 
+/**
+ * Exports all app data (including sentiment snapshots) to JSON file
+ */
+function exportToExcel() {
+    const exportData = {
+        weeklyData: weeklyData || {},
+        ytdData: ytdData || {},
+        sentimentPhraseDatabase: sentimentPhraseDatabase || null,
+        associateSentimentSnapshots: associateSentimentSnapshots || {},
+        exportDate: new Date().toISOString(),
+        appVersion: APP_VERSION
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const exportFileDefaultName = `coaching_tool_backup_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const downloadLink = document.createElement('a');
+    downloadLink.setAttribute('href', URL.createObjectURL(dataBlob));
+    downloadLink.setAttribute('download', exportFileDefaultName);
+    downloadLink.style.visibility = 'hidden';
+    
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
+    const weekCount = Object.keys(weeklyData || {}).length;
+    const sentimentCount = Object.keys(associateSentimentSnapshots || {}).reduce((sum, emp) => sum + (associateSentimentSnapshots[emp]?.length || 0), 0);
+    
+    showToast(`✅ Exported ${weekCount} weeks + ${sentimentCount} sentiment snapshots to ${exportFileDefaultName}`, 5000);
+}
+
 // ============================================
 // TEAM MEMBER MANAGEMENT
 // ============================================
