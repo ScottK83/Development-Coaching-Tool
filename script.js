@@ -2336,16 +2336,6 @@ function initializeEventHandlers() {
     // Upload Sentiment Modal handlers
     document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
     document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
-    document.getElementById('sentimentUploadFile')?.addEventListener('change', handleSentimentUploadFileChange);
-    document.getElementById('sentimentUploadPasteBtn')?.addEventListener('click', () => {
-        const associate = document.getElementById('sentimentUploadAssociate').value;
-        const type = document.getElementById('sentimentUploadType').value;
-        if (!associate || !type) {
-            alert('Please select an associate and sentiment type first');
-            return;
-        }
-        openSentimentPasteModal(type, true); // true flag indicates from upload modal
-    });
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
@@ -12165,9 +12155,10 @@ function openUploadSentimentModal() {
     
     // Reset form
     document.getElementById('sentimentUploadAssociate').value = '';
-    document.getElementById('sentimentUploadType').value = '';
     document.getElementById('sentimentUploadPullDate').value = '';
-    document.getElementById('sentimentUploadFile').value = '';
+    document.getElementById('sentimentUploadPositiveFile').value = '';
+    document.getElementById('sentimentUploadNegativeFile').value = '';
+    document.getElementById('sentimentUploadEmotionsFile').value = '';
     const statusDiv = document.getElementById('sentimentUploadStatus');
     if (statusDiv) {
         statusDiv.style.display = 'none';
@@ -12211,25 +12202,12 @@ function populateSentimentAssociateDropdown() {
     });
 }
 
-function handleSentimentUploadFileChange() {
-    const fileInput = document.getElementById('sentimentUploadFile');
-    const statusDiv = document.getElementById('sentimentUploadStatus');
-    
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        return;
-    }
-    
-    const file = fileInput.files[0];
-    statusDiv.textContent = `✅ File selected: ${file.name}`;
-    statusDiv.style.color = '#4CAF50';
-    statusDiv.style.display = 'block';
-}
-
 function handleSentimentUploadSubmit() {
     const associate = document.getElementById('sentimentUploadAssociate').value;
-    const type = document.getElementById('sentimentUploadType').value;
     const pullDate = document.getElementById('sentimentUploadPullDate').value;
-    const fileInput = document.getElementById('sentimentUploadFile');
+    const positiveFileInput = document.getElementById('sentimentUploadPositiveFile');
+    const negativeFileInput = document.getElementById('sentimentUploadNegativeFile');
+    const emotionsFileInput = document.getElementById('sentimentUploadEmotionsFile');
     const statusDiv = document.getElementById('sentimentUploadStatus');
     
     // Validation
@@ -12237,109 +12215,144 @@ function handleSentimentUploadSubmit() {
         alert('Please select an associate');
         return;
     }
-    if (!type) {
-        alert('Please select a sentiment type');
-        return;
-    }
     if (!pullDate) {
         alert('Please enter the pull date');
         return;
     }
-    if (!fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a file or use the Paste Data option');
+    
+    // Check if at least one file is selected
+    const hasPositive = positiveFileInput.files && positiveFileInput.files.length > 0;
+    const hasNegative = negativeFileInput.files && negativeFileInput.files.length > 0;
+    const hasEmotions = emotionsFileInput.files && emotionsFileInput.files.length > 0;
+    
+    if (!hasPositive && !hasNegative && !hasEmotions) {
+        alert('Please select at least one sentiment file to upload');
         return;
     }
     
-    const file = fileInput.files[0];
-    const fileName = file.name.toLowerCase();
-    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    // Calculate date range (14 days prior to pull date)
+    const endDate = pullDate;
+    const pullDateObj = new Date(pullDate);
+    pullDateObj.setDate(pullDateObj.getDate() - 14);
+    const startDate = pullDateObj.toISOString().split('T')[0];
     
-    statusDiv.textContent = `⏳ Processing ${file.name}...`;
+    // Initialize snapshot storage
+    if (!associateSentimentSnapshots[associate]) {
+        associateSentimentSnapshots[associate] = {};
+    }
+    
+    const timeframeKey = `${startDate}_${endDate}`;
+    if (!associateSentimentSnapshots[associate][timeframeKey]) {
+        associateSentimentSnapshots[associate][timeframeKey] = {
+            startDate,
+            endDate,
+            pullDate,
+            positive: null,
+            negative: null,
+            emotions: null
+        };
+    }
+    
+    statusDiv.textContent = '⏳ Processing files...';
     statusDiv.style.color = '#ff9800';
     statusDiv.style.display = 'block';
     
-    const reader = new FileReader();
+    // Process files
+    const filePromises = [];
     
-    reader.onload = (e) => {
-        try {
-            let lines = [];
-            
-            if (isExcel) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
-                lines = csvContent.split('\\n').filter(line => line.trim());
-            } else {
-                const content = e.target.result;
-                lines = content.split('\\n').filter(line => line.trim());
-            }
-            
-            // Parse file
-            const report = parseSentimentFile(type, lines);
-            
-            // Calculate date range (14 days prior to pull date)
-            const endDate = pullDate;
-            const pullDateObj = new Date(pullDate);
-            pullDateObj.setDate(pullDateObj.getDate() - 14);
-            const startDate = pullDateObj.toISOString().split('T')[0];
-            
-            // Save snapshot to associateSentimentSnapshots
-            if (!associateSentimentSnapshots[associate]) {
-                associateSentimentSnapshots[associate] = {};
-            }
-            
-            const timeframeKey = `${startDate}_${endDate}`;
-            if (!associateSentimentSnapshots[associate][timeframeKey]) {
-                associateSentimentSnapshots[associate][timeframeKey] = {
-                    startDate,
-                    endDate,
-                    pullDate,
-                    positive: null,
-                    negative: null,
-                    emotions: null
+    if (hasPositive) {
+        filePromises.push(
+            processUploadedSentimentFile(positiveFileInput.files[0], 'Positive', associate, timeframeKey)
+        );
+    }
+    
+    if (hasNegative) {
+        filePromises.push(
+            processUploadedSentimentFile(negativeFileInput.files[0], 'Negative', associate, timeframeKey)
+        );
+    }
+    
+    if (hasEmotions) {
+        filePromises.push(
+            processUploadedSentimentFile(emotionsFileInput.files[0], 'Emotions', associate, timeframeKey)
+        );
+    }
+    
+    Promise.all(filePromises)
+        .then(results => {
+            // Save all processed data
+            results.forEach(({ type, report }) => {
+                const typeKey = type.toLowerCase();
+                associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
+                    totalCalls: report.totalCalls,
+                    callsDetected: report.callsDetected,
+                    percentage: report.percentage,
+                    phrases: report.phrases
                 };
-            }
-            
-            // Save report data
-            const typeKey = type.toLowerCase();
-            associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
-                totalCalls: report.totalCalls,
-                callsDetected: report.callsDetected,
-                percentage: report.percentage,
-                phrases: report.phrases
-            };
+            });
             
             // Save to localStorage
             saveAssociateSentimentSnapshots();
             
-            statusDiv.textContent = `✅ Saved ${type} sentiment for ${associate} (pulled ${pullDate})`;
+            const uploadedTypes = results.map(r => r.type).join(', ');
+            statusDiv.textContent = `✅ Saved ${uploadedTypes} for ${associate} (pulled ${pullDate})`;
             statusDiv.style.color = '#4CAF50';
             
-            showToast(`✅ ${type} sentiment data saved for ${associate}`, 3000);
+            showToast(`✅ Sentiment data saved for ${associate}`, 3000);
             
             // Close modal after short delay
             setTimeout(() => {
                 closeUploadSentimentModal();
             }, 1500);
-            
-        } catch (error) {
+        })
+        .catch(error => {
             statusDiv.textContent = `❌ Error: ${error.message}`;
             statusDiv.style.color = '#f44336';
             console.error('Upload sentiment error:', error);
+        });
+}
+
+function processUploadedSentimentFile(file, type, associate, timeframeKey) {
+    return new Promise((resolve, reject) => {
+        const fileName = file.name.toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                let lines = [];
+                
+                if (isExcel) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                    lines = csvContent.split('\n').filter(line => line.trim());
+                } else {
+                    const content = e.target.result;
+                    lines = content.split('\n').filter(line => line.trim());
+                }
+                
+                // Parse file
+                const report = parseSentimentFile(type, lines);
+                resolve({ type, report });
+                
+            } catch (error) {
+                reject(new Error(`Failed to parse ${type} file: ${error.message}`));
+            }
+        };
+        
+        reader.onerror = () => {
+            reject(new Error(`Failed to read ${type} file`));
+        };
+        
+        if (isExcel) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file);
         }
-    };
-    
-    reader.onerror = () => {
-        statusDiv.textContent = '❌ Failed to read file';
-        statusDiv.style.color = '#f44336';
-    };
-    
-    if (isExcel) {
-        reader.readAsArrayBuffer(file);
-    } else {
-        reader.readAsText(file);
-    }
+    });
 }
 
 function copySentimentSummary() {
