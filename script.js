@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.19.39'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.19.40'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10935,27 +10935,71 @@ function generateSentimentSummary() {
     
     // Separate associate negative from customer negative
     const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0);
+    const assocNegativeUnused = negative.phrases.filter(p => p.speaker === 'A' && p.value === 0);
     const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0);
     
     if (assocNegative.length === 0) {
         summary += `✓ EXCELLENT - Minimal negative language in your calls\n`;
         summary += `  • You're avoiding negative words effectively (${negative.percentage}% clean)\n`;
     } else {
-        summary += `⚠ PHRASES TO AVOID - You used these, stop using them:\n`;
-        assocNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+        summary += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
+        assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
             summary += `  • "${p.phrase}" - used ${p.value} times\n`;
         });
     }
     summary += `\n`;
     
+    if (assocNegativeUnused.length > 0) {
+        summary += `🛡 WATCH OUT - Database phrases you haven't used yet (prevent bad habits):\n`;
+        assocNegativeUnused.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            summary += `  • "${p.phrase}" - Don't let this slip in\n`;
+        });
+    }
+    summary += `\n`;
+    
+    // Map of negative phrases to positive replacements
+    const negativeReplacements = {
+        'not sure': 'I\'ll find out for you',
+        'an error': 'Let me correct that for you',
+        'we can\'t': 'Here\'s what we can do',
+        'can\'t': 'We can',
+        'no way': 'I understand, let\'s work on this',
+        'i can\'t': 'I can help you with',
+        'no': 'Yes, I can',
+        'unable': 'I\'m able to help you',
+        'don\'t': 'Do',
+        'sorry but': 'I apologize and here\'s how I\'ll fix this',
+        'unfortunately': 'Great news - here\'s what we can do'
+    };
+    
+    summary += `✅ POSITIVE ALTERNATIVES - Say these instead:\n`;
+    if (assocNegative.length > 0) {
+        assocNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
+            const phrase = p.phrase.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+            const replacement = Object.entries(negativeReplacements).find(([key]) => phrase.includes(key))?.[1];
+            if (replacement) {
+                summary += `  • Instead of "${p.phrase}" → "${replacement}"\n`;
+            }
+        });
+    } else {
+        summary += `  • "I understand your concern, here's how I can help"\n`;
+        summary += `  • "Let me find a solution for you"\n`;
+        summary += `  • "I appreciate you working with me on this"\n`;
+    }
+    summary += `\n`;
+    
     if (custNegative.length > 0) {
-        summary += `📌 CUSTOMER CONTEXT - Customers said (helps you understand their state):\n`;
+        summary += `📌 CUSTOMER CONTEXT - They said (understand their frustration):\n`;
         custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
             summary += `  • "${p.phrase}" - detected ${p.value} times\n`;
         });
-        summary += `  → Respond to their negative emotion with empathy and solutions.\n`;
+        summary += `  → Acknowledge their concern, don't make excuses\n`;
     }
     summary += `\n`;
+    
+    summary += `📝 SCRIPTED RESPONSE (when customer is frustrated):\n`;
+    summary += `  "I hear your frustration, and I completely understand. I'm committed to\n`;
+    summary += `   finding a solution for you right now. Let me see what I can do for you."\n\n`;
     
     // MANAGING EMOTIONS Section
     summary += `═══════════════════════════════════\n`;
@@ -10970,25 +11014,33 @@ function generateSentimentSummary() {
         summary += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
         summary += `  • Low emotion escalation (${emotions.percentage}%) - Calming presence detected\n`;
     } else {
-        summary += `📌 EMOTION INDICATORS - Customer emotional phrases detected:\n`;
-        emotionUsedPhrases.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+        summary += `📌 EMOTION INDICATORS DETECTED - Customer emotional phrases in calls:\n`;
+        emotionUsedPhrases.sort((a, b) => b.value - a.value).forEach(p => {
             summary += `  • "${p.phrase}" - detected in ${p.value} calls\n`;
         });
     }
     summary += `\n`;
     
-    summary += `⬆ TECHNIQUES TO USE - Build rapport and validate emotions:\n`;
     if (emotionUnusedPhrases.length > 0) {
-        summary += `  Phrases to try more often:\n`;
-        emotionUnusedPhrases.slice(0, 3).forEach(p => {
-            summary += `  • "${p.phrase}"\n`;
+        summary += `🛡 WATCH OUT - Emotion phrases to prevent (haven't shown up yet):\n`;
+        emotionUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            summary += `  • "${p.phrase}" - Avoid letting this develop\n`;
         });
     }
-    summary += `  • Actively listen without interrupting\n`;
-    summary += `  • Acknowledge their feelings: "I understand that's frustrating"\n`;
-    summary += `  • Show empathy before jumping to solutions\n`;
-    summary += `  • Let them fully express their concern\n`;
     summary += `\n`;
+    
+    summary += `✅ TECHNIQUES TO MASTER - How to manage emotions:\n`;
+    summary += `  • Acknowledge their feelings first: "I can hear the frustration in your voice"\n`;
+    summary += `  • Show you understand: "If I were in your position, I'd feel the same way"\n`;
+    summary += `  • Don't interrupt or talk over them - let them finish\n`;
+    summary += `  • Take action, not excuses: "Here's exactly what I'm going to do..."\n`;
+    summary += `  • Follow up: "I'll personally make sure this gets resolved for you"\n`;
+    summary += `\n`;
+    
+    summary += `📝 SCRIPTED RESPONSE (when emotion is high):\n`;
+    summary += `  "I completely understand your frustration. I'm listening to you, and I want\n`;
+    summary += `   you to know I'm going to take personal ownership of this. Let me get this\n`;
+    summary += `   resolved for you right now. Here's what I can do..."\n\n`;
     
     // Display the summary
     document.getElementById('sentimentSummaryText').textContent = summary;
