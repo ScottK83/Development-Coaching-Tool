@@ -1779,7 +1779,8 @@ function loadAssociateSentimentSnapshots() {
                         if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
                         if (!snapshot.associateName) snapshot.associateName = employeeName;
                         if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
-                        console.log(`  ✅ Snapshot after property check:`, snapshot);
+                        console.log(`  ✅ Snapshot scores:`, snapshot.scores);
+                        console.log(`  ✅ Snapshot timeframe: ${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`);
                     }
                     
                     migratedArray.push(snapshot);
