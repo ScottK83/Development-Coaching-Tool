@@ -1731,6 +1731,9 @@ function loadAssociateSentimentSnapshots() {
                     // timeframeKey format: "2026-02-06_2026-02-20"
                     const [start, end] = timeframeKey.split('_');
                     
+                    console.log(`  📋 Snapshot for timeframe ${timeframeKey}:`, snapshot);
+                    console.log(`  🔍 Checking structure - has 'positive'?`, !!snapshot.positive, 'has scores?', !!snapshot.scores);
+                    
                     // Check if snapshot is in OLD data structure (positive/negative/emotions)
                     // vs NEW structure (scores/calls/topPhrases)
                     if (snapshot.positive || snapshot.negative || snapshot.emotions) {
@@ -1770,11 +1773,13 @@ function loadAssociateSentimentSnapshots() {
                         console.log(`  ✅ Converted to new structure:`, snapshot);
                         console.log(`  ✅ New scores:`, snapshot.scores);
                     } else {
+                        console.log(`  ℹ️ Already in new format (has scores: ${!!snapshot.scores}), checking properties`);
                         // Already in new format, just ensure required properties
                         if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
                         if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
                         if (!snapshot.associateName) snapshot.associateName = employeeName;
                         if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
+                        console.log(`  ✅ Snapshot after property check:`, snapshot);
                     }
                     
                     migratedArray.push(snapshot);
