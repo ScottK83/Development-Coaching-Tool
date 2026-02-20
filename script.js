@@ -5319,58 +5319,24 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
     /**
-     * Build a comprehensive CoPilot prompt for trend coaching email
-     * NEW REDESIGN:
-     * - Extract successes (meeting/exceeding targets) and opportunities (below targets)
-     * - Praise successes by name
-     * - Flag opportunities with 1 random tip per area
-     * - Pull and praise top positive phrases from sentiment data
-     * - Suggest alternatives for top negative phrases
-     * - Use conversational, randomized tone
+     * Build a concise, factual CoPilot prompt for trend coaching email
+     * - List successes (meeting target)
+     * - List opportunities (below target) with tips
+     * - Include sentiment data if available
+     * - Keep it brief and factual, no fluff
      */
-    
-    // Conversation starters (randomly selected)
-    const starters = [
-        `I'd like to help ${displayName} build on their momentum this period.`,
-        `${displayName} has some great wins this period, and a couple of areas to focus on.`,
-        `Here's what I'm seeing with ${displayName}'s performance this period.`,
-        `${displayName} is doing well in some areas and has opportunities in others.`
-    ];
-    
-    // Success praise phrases (randomly selected)
-    const praisePhrases = [
-        "is excelling in",
-        "is crushing it with",
-        "is shining in",
-        "has strong performance in",
-        "is nailing",
-        "shows great strength in"
-    ];
-    
-    // Opportunity intro phrases (randomly selected)
-    const opportunityIntros = [
-        "let's focus on improving",
-        "there's an opportunity to strengthen",
-        "we can work together to boost",
-        "let's build some momentum in",
-        "an area to develop is"
-    ];
-    
-    const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    
-    let prompt = `Write a professional but personable coaching email for ${displayName}.\n\n`;
-    prompt += `Start with this tone: ${randomChoice(starters)}\n\n`;
     
     // SUCCESSES SECTION - Only metrics meeting target
     const successes = allTrendMetrics 
         ? allTrendMetrics.filter(m => m.meetsTarget) 
         : [];
     
+    let prompt = `Draft a coaching email for ${displayName}.\n\n`;
+    
     if (successes.length > 0) {
-        prompt += `**ACKNOWLEDGE SUCCESSES:**\n`;
+        prompt += `SUCCESSES:\n`;
         successes.slice(0, 3).forEach(metric => {
-            const phrase = randomChoice(praisePhrases);
-            prompt += `- ${displayName} ${phrase} ${metric.label.toLowerCase()} (${metric.employeeValue.toFixed(1)} vs target ${metric.target.toFixed(1)}).\n`;
+            prompt += `- ${metric.label}: ${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})\n`;
         });
         prompt += `\n`;
     }
@@ -5381,16 +5347,15 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         : [];
     
     if (opportunities.length > 0) {
-        prompt += `**AREAS TO DEVELOP:**\n`;
+        prompt += `AREAS TO IMPROVE:\n`;
         opportunities.slice(0, 3).forEach(metric => {
-            const intro = randomChoice(opportunityIntros);
-            prompt += `- ${intro} ${metric.label.toLowerCase()}. Currently at ${metric.employeeValue.toFixed(1)}, target is ${metric.target.toFixed(1)}.\n`;
+            prompt += `- ${metric.label}: ${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})\n`;
             
             // Add 1 random tip for this metric
             const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
             if (metricTips && metricTips.length > 0) {
                 const randomTip = metricTips[Math.floor(Math.random() * metricTips.length)];
-                prompt += `  💡 Tip: ${randomTip}\n`;
+                prompt += `  Tip: ${randomTip}\n`;
             }
         });
         prompt += `\n`;
@@ -5400,66 +5365,16 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     if (sentimentSnapshot) {
         const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot);
         if (sentimentFocusText) {
-            prompt += `**SENTIMENT COACHING DATA** (${sentimentSnapshot?.timeframeStart || ''} to ${sentimentSnapshot?.timeframeEnd || ''}):\n`;
+            prompt += `SENTIMENT DATA (${sentimentSnapshot?.timeframeStart || ''} to ${sentimentSnapshot?.timeframeEnd || ''}):\n`;
             prompt += `${sentimentFocusText}\n\n`;
-        }
-        
-        // POSITIVE PHRASE PRAISE
-        const topPosA = (sentimentSnapshot.topPhrases?.positiveA || []).slice(0, 3);
-        if (topPosA.length > 0) {
-            const positivePraiseVariants = [
-                `I love that you're using these positive phrases:`,
-                `Here are the positive words you're using most:`,
-                `Your strength phrases this period:`,
-                `Keep up the great use of these positive words:`,
-                `These phrases are showing your strength:`
-            ];
-            prompt += `${randomChoice(positivePraiseVariants)}\n`;
-            topPosA.forEach(item => {
-                prompt += `- "${formatKeywordPhraseForDisplay(item.phrase)}" (used ${item.value} times)\n`;
-            });
-            prompt += `\n`;
-        }
-        
-        // NEGATIVE PHRASE ALTERNATIVES
-        const topNegA = (sentimentSnapshot.topPhrases?.negativeA || []).slice(0, 3);
-        if (topNegA.length > 0) {
-            const negativeAlternatives = (sentimentSnapshot.suggestions?.negativeAlternatives || []).slice(0, 3);
-            const negativeVariants = [
-                `Instead of these phrases, try:`,
-                `Swap these negative words for:`,
-                `More solution-focused alternatives:`,
-                `Consider using these instead:`,
-                `Let's replace these with:`
-            ];
-            prompt += `${randomChoice(negativeVariants)}\n`;
-            topNegA.forEach((item, idx) => {
-                const alt = negativeAlternatives.length > idx ? negativeAlternatives[idx] : 'a more positive phrase';
-                prompt += `- "${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value} times) → "${alt}"\n`;
-            });
-            prompt += `\n`;
         }
     }
     
     if (userNotes) {
-        const noteVariants = [
-            `Also keep this in mind:`,
-            `One more thing to focus on:`,
-            `And don't forget:`,
-            `Plus, focus on:`
-        ];
-        prompt += `${randomChoice(noteVariants)} ${userNotes}\n\n`;
+        prompt += `ADDITIONAL NOTES:\n${userNotes}\n\n`;
     }
     
-    const closingVariants = [
-        `I believe you've got this. Let's make next period even stronger.`,
-        `You've got the tools to improve in these areas. Let's go!`,
-        `I'm confident you'll nail these improvements. Let's build momentum together.`,
-        `These are achievable targets. Let's refocus and crush next period.`,
-        `You're capable of great things. Let's work on these areas together.`
-    ];
-    
-    prompt += `\n${randomChoice(closingVariants)}`;
+    prompt += `Make it warm and encouraging while staying factual and concise.`;
     
     return prompt;
 }
@@ -8334,41 +8249,12 @@ async function generateIndividualCoachingEmail(employeeName) {
 
     const preferredName = getEmployeeNickname(employeeName) || currentEmp.firstName || employeeName.split(' ')[0];
 
-    const copilotPrompt = `I'm a supervisor preparing a coaching email for an employee named ${preferredName} for their week ending ${endDate} performance review. I need your help drafting this in a natural, warm tone - not corporate or template-like.
-
-Here's the performance data:
+    const copilotPrompt = `Draft a brief, factual coaching email for ${preferredName} (week ending ${endDate}).
 
 ${winsText}
 ${opportunitiesText}
 
-Can you help me write an email to ${preferredName} with this structure:
-
-1. Warm, conversational greeting
-
-2. WINS section:
-   - Brief intro line
-    - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
-   - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
-
-3. OPPORTUNITIES section:
-   - Brief supportive intro line
-    - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
-    - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
-   - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive.
-
-4. Warm close inviting them to discuss
-
-Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
-
-Vary your wording and sentence structure so it doesn't sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
-
-Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
-
-Do NOT use em dashes (—) anywhere in the email.
-
-Use the % symbol instead of writing out "percent" (e.g., "95%" not "95 percent").
-
-The email should be ready to send as-is. Just give me the complete email to ${preferredName}, nothing else.`;
+Keep it to 2-3 sentences + two bullet-point lists. Be direct and encouraging.`;
 
     openCopilotWithPrompt(copilotPrompt, 'Individual Coaching Email');
 }
