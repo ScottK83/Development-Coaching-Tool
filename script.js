@@ -5079,13 +5079,24 @@ function displayMetricsPreview(employeeName, weekKey) {
         { key: 'reliability', label: 'Reliability', unit: 'hrs' }
     ];
     
-    // Generate HTML for each metric
+    // Generate HTML for each metric with target values like call center averages
     let html = '';
     metricsToPreview.forEach(metric => {
         const value = employee[metric.key] !== undefined ? employee[metric.key] : '';
+        const registryMetric = METRICS_REGISTRY[metric.key];
+        const target = registryMetric?.target?.value;
+        const targetType = registryMetric?.target?.type;
+        
+        // Build target hint like call center averages do
+        let targetHint = '';
+        if (target !== undefined && targetType) {
+            const targetSymbol = targetType === 'min' ? '≥' : '≤';
+            targetHint = ` (Target: ${targetSymbol} ${target}${metric.unit})`;
+        }
+        
         html += `
             <div>
-                <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit}):</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit})${targetHint}:</label>
                 <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="0.01" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
         `;
@@ -5190,10 +5201,8 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
         
         if (!metric) return;
         
-        // DEBUG: Log negativeWord specifically for diagnosis
-        if (registryKey === 'negativeWord') {
-            console.log(`DEBUG: negativeWord loaded - employee: ${employeeData.name}, rawValue: "${employeeData[registryKey]}", parsed: ${employeeValue}, from field: "${registryKey}"`);
-        }
+        // Skip if employee value is 0 (not provided)
+        if (employeeValue === 0) return;
         
         const target = metric.target?.value || 0;
         const targetType = metric.target?.type || 'min';
@@ -5234,8 +5243,16 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
           )
         : null;
     
-    // Find trending down (below center)
-    const trendingDown = allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest?.metricKey);
+    // Find trending down (below center) - prioritize non-sentiment metrics
+    // Sentiment metrics (positiveWord, negativeWord, managingEmotions) should only be coached when sentiment data exists
+    const nonSentimentMetrics = allMetrics.filter(m => 
+        !['positiveWord', 'negativeWord', 'managingEmotions'].includes(m.metricKey) &&
+        m.isBelowCenter && 
+        m.metricKey !== weakest?.metricKey
+    );
+    const trendingDown = nonSentimentMetrics.length > 0 
+        ? nonSentimentMetrics[0] 
+        : allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest?.metricKey);
     
     return {
         weakest: weakest,
