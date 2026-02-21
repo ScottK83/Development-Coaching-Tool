@@ -5342,10 +5342,14 @@ function generateTrendEmail() {
     const trendingMetric = trendAnalysis.trendingDown;
     const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
     
-    // Get tips for the trending metric
-    let tipsForTrend = [];
+    // Get tips for BOTH weakest and trending metrics (2 tips each)
+    let tipsForWeakest = [];
+    let tipsForTrending = [];
+    if (weakestMetric) {
+        tipsForWeakest = getRandomTipsForMetric(weakestMetric.metricKey, 2);
+    }
     if (trendingMetric) {
-        tipsForTrend = getRandomTipsForMetric(trendingMetric.metricKey, 2);
+        tipsForTrending = getRandomTipsForMetric(trendingMetric.metricKey, 2);
     }
 
     const periodMeta = period.metadata || {};
@@ -5386,9 +5390,9 @@ function generateTrendEmail() {
         openTrendEmailOutlook(emailSubject);
         showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
         
-        // If there's a trending metric with tips, ALSO show coaching panel for Copilot prompt
-        if (trendingMetric && tipsForTrend.length > 0) {
-            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForTrend, weekKey, periodMeta, emailSubject, sentimentSnapshot, allMetrics);
+        // If there are metrics below target, show coaching panel for Copilot prompt
+        if (weakestMetric || trendingMetric) {
+            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, weekKey, periodMeta, emailSubject, sentimentSnapshot, allMetrics);
         }
     });
 }
@@ -5416,19 +5420,18 @@ function openTrendEmailOutlook(emailSubject) {
  * @param {string} employeeName - Employee identifier (display name)
  * @param {string} displayName - Formatted name for display in modal
  * @param {Object} weakestMetric - Employee's lowest-performing metric
- *   Properties: {metricKey, label, meetsTarget, employeeValue, target, targetType}
- * @param {Object} trendingMetric - Metric below team center average
- *   Properties: {metricKey, label, employeeValue, centerValue}
- * @param {string[]} tips - Array of coaching tips for trending metric
+ * @param {Object} trendingMetric - Second metric below target
+ * @param {string[]} tipsForWeakest - Array of coaching tips for weakest metric
+ * @param {string[]} tipsForTrending - Array of coaching tips for trending metric
  * @param {string} weekKey - Period identifier for logging
  * @param {Object} periodMeta - Period metadata with label and dates
  * @param {string} emailSubject - Subject line for potential email
  * @returns {void} Creates modal in DOM, handles clicks and coaching logging
  * 
  * @example
- * showTrendsWithTipsPanel('john', 'John Doe', weakest, trending, ['Tip 1', 'Tip 2'], 'key', {...}, 'Subject');
+ * showTrendsWithTipsPanel('john', 'John Doe', weakest, trending, ['Tip 1', 'Tip 2'], ['Tip 3', 'Tip 4'], 'key', {...}, 'Subject');
  */
-function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tips, weekKey, periodMeta, emailSubject, sentimentSnapshot = null, allMetrics = null) {
+function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, weekKey, periodMeta, emailSubject, sentimentSnapshot = null, allMetrics = null) {
     /**
      * Show a modal/panel with:
      * - Praise for strongest metric
@@ -5463,37 +5466,46 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
     
-    // Build praise section for what they're doing well (weakest metric is close to target)
-    let praiseHtml = '';
-    if (weakestMetric && weakestMetric.gapFromTarget <= (weakestMetric.target * 0.25)) {
-        // If weakest is within 25% of target, praise their overall performance
-        praiseHtml = `
-            <div style="margin-bottom: 20px; padding: 15px; background: #d4edda; border-radius: 4px; border-left: 4px solid #28a745;">
-                <h4 style="color: #28a745; margin-top: 0;">🌟 Great Work!</h4>
-                <p style="margin: 0; color: #333;">
-                    ${displayName}'s <strong>${weakestMetric.label}</strong> is at <strong>${weakestMetric.employeeValue.toFixed(1)}</strong> 
-                    (target: ${weakestMetric.target.toFixed(1)})
+    // Build focus areas HTML - show both weakest and trending metrics
+    let focusAreasHtml = '';
+    
+    if (weakestMetric && tipsForWeakest.length > 0) {
+        const weakestTipsHtml = tipsForWeakest.map((tip, i) => `
+            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
+                <strong>💡 Tip ${i + 1}:</strong> ${tip}
+            </div>
+        `).join('');
+        
+        focusAreasHtml += `
+            <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ff9800;">
+                <h4 style="color: #ff9800; margin-top: 0;">📉 Focus Area 1: ${weakestMetric.label}</h4>
+                <p style="margin: 5px 0 15px 0; color: #333;">
+                    Currently at <strong>${weakestMetric.employeeValue.toFixed(1)}</strong>, 
+                    target is <strong>${weakestMetric.targetType === 'min' ? '≥' : '≤'} ${weakestMetric.target.toFixed(1)}</strong>
                 </p>
+                ${weakestTipsHtml}
             </div>
         `;
     }
     
-    // Trending metric section
-    const trendingHtml = `
-        <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ff9800;">
-            <h4 style="color: #ff9800; margin-top: 0;">📉 Focus Area</h4>
-            <p style="margin: 5px 0 15px 0; color: #333;">
-                <strong>${trendingMetric.label}</strong> is at <strong>${trendingMetric.employeeValue.toFixed(1)}</strong> 
-                vs team average <strong>${trendingMetric.centerValue.toFixed(1)}</strong>
-            </p>
-        </div>
-    `;
-    
-    const tipsHtml = tips.map((tip, i) => `
-        <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-            <strong>💡 Tip ${i + 1}:</strong> ${tip}
-        </div>
-    `).join('');
+    if (trendingMetric && tipsForTrending.length > 0) {
+        const trendingTipsHtml = tipsForTrending.map((tip, i) => `
+            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
+                <strong>💡 Tip ${i + 1}:</strong> ${tip}
+            </div>
+        `).join('');
+        
+        focusAreasHtml += `
+            <div style="margin-bottom: 20px; padding: 15px; background: #ffe0b2; border-radius: 4px; border-left: 4px solid #f57c00;">
+                <h4 style="color: #f57c00; margin-top: 0;">📉 Focus Area 2: ${trendingMetric.label}</h4>
+                <p style="margin: 5px 0 15px 0; color: #333;">
+                    Currently at <strong>${trendingMetric.employeeValue.toFixed(1)}</strong>, 
+                    target is <strong>${trendingMetric.targetType === 'min' ? '≥' : '≤'} ${trendingMetric.target.toFixed(1)}</strong>
+                </p>
+                ${trendingTipsHtml}
+            </div>
+        `;
+    }
 
     const periodData = ytdData[weekKey] || weeklyData[weekKey];
     const periodEmployee = periodData?.employees?.find(emp => emp.name === employeeName) || null;
@@ -5520,7 +5532,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         displayName, 
         weakestMetric, 
         trendingMetric, 
-        tips, 
+        [...(tipsForWeakest || []), ...(tipsForTrending || [])], 
         userNotes,
         sentimentSnapshot,
         allMetrics
@@ -5530,13 +5542,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
         <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
         
-        ${praiseHtml}
-        ${trendingHtml}
-        
-        <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 4px;">
-            <h4 style="color: #1976d2; margin-top: 0;">💡 Coaching Tips for ${trendingMetric.label}</h4>
-            ${tipsHtml}
-        </div>
+        ${focusAreasHtml}
 
         ${sentimentHtml}
         
@@ -5584,23 +5590,28 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
         
         // Rebuild prompt with user notes if provided
+        const allTips = [...(tipsForWeakest || []), ...(tipsForTrending || [])];
         const finalPrompt = userNotesText 
             ? buildTrendCoachingPrompt(
                 displayName, 
                 weakestMetric, 
                 trendingMetric, 
-                tips, 
+                allTips, 
                 userNotesText,
                 sentimentSnapshot,
                 allMetrics
             )
             : copilotPrompt;
         
-        // Log as coaching entry
+        // Log as coaching entry - include all coached metrics
+        const metricsCoached = [];
+        if (weakestMetric) metricsCoached.push(weakestMetric.metricKey);
+        if (trendingMetric) metricsCoached.push(trendingMetric.metricKey);
+        
         recordCoachingEvent({
             employeeId: employeeName,
             weekEnding: periodLabel,
-            metricsCoached: [trendingMetric.metricKey],
+            metricsCoached: metricsCoached,
             aiAssisted: true
         });
         
