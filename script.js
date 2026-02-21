@@ -4351,11 +4351,14 @@ function initializeMetricTrends() {
     }
     if (toggleAvgMetricsBtn) {
         toggleAvgMetricsBtn.textContent = '✏️ Edit Averages';
-        toggleAvgMetricsBtn.addEventListener('click', () => {
+        // Remove any existing click handlers to prevent duplicates
+        const oldBtn = toggleAvgMetricsBtn.cloneNode(true);
+        toggleAvgMetricsBtn.parentNode.replaceChild(oldBtn, toggleAvgMetricsBtn);
+        oldBtn.addEventListener('click', () => {
             if (avgMetricsForm) {
                 const isVisible = avgMetricsForm.style.display !== 'none';
                 avgMetricsForm.style.display = isVisible ? 'none' : 'block';
-                toggleAvgMetricsBtn.textContent = isVisible ? '✏️ Edit Averages' : '✏️ Hide Averages';
+                oldBtn.textContent = isVisible ? '✏️ Edit Averages' : '✏️ Hide Averages';
             }
         });
     }
@@ -5243,16 +5246,17 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
           )
         : null;
     
-    // Find trending down (below center) - prioritize non-sentiment metrics
-    // Sentiment metrics (positiveWord, negativeWord, managingEmotions) should only be coached when sentiment data exists
-    const nonSentimentMetrics = allMetrics.filter(m => 
+    // Find second priority coaching metric (second worst below target, not based on center average)
+    // Prioritize non-sentiment metrics unless sentiment data is available
+    const nonSentimentNotMeetingTarget = notMeetingTarget.filter(m => 
         !['positiveWord', 'negativeWord', 'managingEmotions'].includes(m.metricKey) &&
-        m.isBelowCenter && 
         m.metricKey !== weakest?.metricKey
     );
-    const trendingDown = nonSentimentMetrics.length > 0 
-        ? nonSentimentMetrics[0] 
-        : allMetrics.find(m => m.isBelowCenter && m.metricKey !== weakest?.metricKey);
+    const trendingDown = nonSentimentNotMeetingTarget.length > 0
+        ? nonSentimentNotMeetingTarget.reduce((prev, curr) => 
+            curr.gapFromTarget > prev.gapFromTarget ? curr : prev
+          )
+        : notMeetingTarget.find(m => m.metricKey !== weakest?.metricKey);
     
     return {
         weakest: weakest,
