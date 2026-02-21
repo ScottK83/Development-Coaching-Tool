@@ -5532,7 +5532,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         displayName, 
         weakestMetric, 
         trendingMetric, 
-        [...(tipsForWeakest || []), ...(tipsForTrending || [])], 
+        tipsForWeakest,
+        tipsForTrending,
         userNotes,
         sentimentSnapshot,
         allMetrics
@@ -5590,13 +5591,13 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
         
         // Rebuild prompt with user notes if provided
-        const allTips = [...(tipsForWeakest || []), ...(tipsForTrending || [])];
         const finalPrompt = userNotesText 
             ? buildTrendCoachingPrompt(
                 displayName, 
                 weakestMetric, 
                 trendingMetric, 
-                allTips, 
+                tipsForWeakest,
+                tipsForTrending,
                 userNotesText,
                 sentimentSnapshot,
                 allMetrics
@@ -5641,18 +5642,16 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * 
  * @param {string} displayName - Employee's name for personalization
  * @param {Object} weakestMetric - Employee's lowest-performing metric
- *   Properties: {label, meetsTarget, employeeValue, target, targetType}
- * @param {Object} trendingMetric - Metric showing downward trend from team average
- *   Properties: {label, employeeValue, centerValue}
- * @param {string[]} tips - Array of coaching tips for the focus metric
+ * @param {Object} trendingMetric - Second metric below target
+ * @param {string[]} tipsForWeakest - 2 random tips for weakest metric
+ * @param {string[]} tipsForTrending - 2 random tips for trending metric
  * @param {string} userNotes - Optional additional context from hiring manager
  * @returns {string} Formatted prompt text for Copilot to generate coaching email
  *
  * @example
- * const prompt = buildTrendCoachingPrompt('John', weakest, trending, ['Tip 1', 'Tip 2'], '');
- * window.open(`https://copilot.microsoft.com/?q=${encodeURIComponent(prompt)}`);
+ * const prompt = buildTrendCoachingPrompt('John', weakest, trending, ['Tip 1', 'Tip 2'], ['Tip 3', 'Tip 4'], '');
  */
-function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tips, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
+function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
     /**
      * Build a concise, factual CoPilot prompt for trend coaching email
      * - List successes (meeting target)
@@ -5697,22 +5696,25 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         prompt += `\n`;
     }
     
-    if (opportunities.length > 0) {
+    // HOW TO IMPROVE - Use the pre-selected tips for focus areas
+    if ((weakestMetric && tipsForWeakest && tipsForWeakest.length > 0) || 
+        (trendingMetric && tipsForTrending && tipsForTrending.length > 0)) {
         prompt += `HOW TO IMPROVE:\n`;
-        opportunities.slice(0, 3).forEach(metric => {
-            // Add 1 random tip for this metric using Fisher-Yates for proper randomization
-            const metricTips = typeof getMetricTips === 'function' ? getMetricTips(metric.metricKey) : [];
-            if (metricTips && metricTips.length > 0) {
-                // Shuffle tips and pick first one for true randomization
-                const shuffled = [...metricTips];
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                }
-                const randomTip = shuffled[0];
-                prompt += `- ${metric.label}: ${randomTip}\n`;
-            }
-        });
+        
+        if (weakestMetric && tipsForWeakest && tipsForWeakest.length > 0) {
+            prompt += `\n${weakestMetric.label}:\n`;
+            tipsForWeakest.forEach((tip, i) => {
+                prompt += `  ${i + 1}. ${tip}\n`;
+            });
+        }
+        
+        if (trendingMetric && tipsForTrending && tipsForTrending.length > 0) {
+            prompt += `\n${trendingMetric.label}:\n`;
+            tipsForTrending.forEach((tip, i) => {
+                prompt += `  ${i + 1}. ${tip}\n`;
+            });
+        }
+        
         prompt += `\n`;
     }
     
