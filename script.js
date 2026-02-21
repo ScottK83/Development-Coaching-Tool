@@ -5163,19 +5163,20 @@ function saveMetricsPreviewEdits() {
  *   Keys: scheduleAdherence, overallExperience, fcr, transfers, aht, acw, etc.
  * @param {Object} centerAverages - Team's center average values for comparison
  * @returns {Object} Analysis result with structure:
- *   {weakest: Metric, trendingDown: Metric | null}
- *   Each metric has: metricKey, label, achievementPct, employeeValue, target, centerValue
+ *   {weakest: Metric, trendingDown: Metric | null, allMetrics: Array}
+ *   weakest = furthest from target
+ *   trendingDown = random metric not meeting target (for variety week-to-week)
  *
  * @example
  * const analysis = analyzeTrendMetrics(empData, centerAvgs);
  * if (analysis.weakest) console.log(`Weakest: ${analysis.weakest.label}`);
- * if (analysis.trendingDown) console.log(`Trending: ${analysis.trendingDown.label}`);
+ * if (analysis.trendingDown) console.log(`Random focus: ${analysis.trendingDown.label}`);
  */
 function analyzeTrendMetrics(employeeData, centerAverages) {
     /**
      * Analyze metrics and return:
      * 1. Weakest metric = furthest below their target
-     * 2. Trending down = first metric below center average (if different from weakest)
+     * 2. Random metric = randomly selected from those below target (provides variety)
      */
     const allMetrics = [];
     
@@ -5246,21 +5247,39 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
           )
         : null;
     
-    // Find second priority coaching metric (second worst below target, not based on center average)
+    // Find second coaching metric - RANDOM selection from those not meeting target (excluding weakest)
+    // This provides variety week-to-week if the same metric remains weakest
     // Prioritize non-sentiment metrics unless sentiment data is available
     const nonSentimentNotMeetingTarget = notMeetingTarget.filter(m => 
         !['positiveWord', 'negativeWord', 'managingEmotions'].includes(m.metricKey) &&
         m.metricKey !== weakest?.metricKey
     );
-    const trendingDown = nonSentimentNotMeetingTarget.length > 0
-        ? nonSentimentNotMeetingTarget.reduce((prev, curr) => 
-            curr.gapFromTarget > prev.gapFromTarget ? curr : prev
-          )
-        : notMeetingTarget.find(m => m.metricKey !== weakest?.metricKey);
+    
+    let randomMetric = null;
+    if (nonSentimentNotMeetingTarget.length > 0) {
+        // Use Fisher-Yates shuffle to randomly pick one non-sentiment metric
+        const shuffled = [...nonSentimentNotMeetingTarget];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        randomMetric = shuffled[0];
+    } else {
+        // If no non-sentiment metrics, pick randomly from remaining metrics not meeting target
+        const otherMetrics = notMeetingTarget.filter(m => m.metricKey !== weakest?.metricKey);
+        if (otherMetrics.length > 0) {
+            const shuffled = [...otherMetrics];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            randomMetric = shuffled[0];
+        }
+    }
     
     return {
         weakest: weakest,
-        trendingDown: trendingDown || (allMetrics.find(m => m.isBelowCenter) !== weakest ? allMetrics.find(m => m.isBelowCenter) : null),
+        trendingDown: randomMetric,
         allMetrics: allMetrics  // NEW: include all metrics for comprehensive prompt building
     };
 }
