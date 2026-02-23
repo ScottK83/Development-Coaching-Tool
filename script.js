@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.9'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.10'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10953,7 +10953,7 @@ function buildOnOffScoreTableHtml(result) {
         : statusText === 'On Track/Exceptional'
             ? 'background: #00b050; color: #fff;'
             : statusText === 'On Track/Successful'
-                ? 'background: #f0de87; color: #222;'
+                ? 'background: #c8f7c5; color: #1b5e20;'
                 : 'background: #ddd; color: #222;';
 
     return `
@@ -10961,6 +10961,7 @@ function buildOnOffScoreTableHtml(result) {
             <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid #d6c4f5; background: #f4effc;">
                 <div style="font-size: 0.8em; color: #4a148c;">Rating Average</div>
                 <div style="font-size: 1.4em; font-weight: bold; color: #4a148c;">${ratingText}</div>
+                <div style="font-size: 0.75em; color: #6a1b9a;">Goal: 2.80+ (On Track/Exceptional)</div>
             </div>
             <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid #d6c4f5; ${statusStyle} font-weight: bold;">
                 ${statusText}
