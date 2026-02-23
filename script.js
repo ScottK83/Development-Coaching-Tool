@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.2'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.3'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2398,18 +2398,6 @@ function applyMetricHighlights() {
     });
 }
 
-function copyToClipboard() {
-    const emailOutput = document.getElementById('emailOutput');
-    const text = emailOutput.innerText;
-    
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('✅ Email copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        showToast('✅ Failed to copy to clipboard');
-    });
-}
-
 // ============================================
 // EVENT HANDLERS
 // ============================================
@@ -4581,11 +4569,6 @@ function initializeEmployeeDropdown() {
     if (trendEmployeeSelect) {
         trendEmployeeSelect.innerHTML = '<option value="">-- Choose an employee --</option>';
     }
-}
-
-function populateEmployeeDropdown() {
-    // Legacy function - now just calls initializeEmployeeDropdown
-    initializeEmployeeDropdown();
 }
 
 function populateEmployeeDropdownForPeriod(weekKey) {
@@ -10683,19 +10666,19 @@ function initializeCoachingEmail() {
 
 function getYearEndEmployees() {
     const employees = new Set();
+    const normalizeName = (name) => String(name || '').trim();
 
-    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => {
+    Object.entries(weeklyData || {}).forEach(([, period]) => {
         (period?.employees || []).forEach(emp => {
-            if (!emp?.name) return;
-            if (isTeamMember(periodKey, emp.name)) {
-                employees.add(emp.name);
-            }
+            const normalizedName = normalizeName(emp?.name);
+            if (normalizedName) employees.add(normalizedName);
         });
     });
 
     Object.values(ytdData || {}).forEach(period => {
         (period?.employees || []).forEach(emp => {
-            if (emp?.name) employees.add(emp.name);
+            const normalizedName = normalizeName(emp?.name);
+            if (normalizedName) employees.add(normalizedName);
         });
     });
 
@@ -10705,11 +10688,15 @@ function getYearEndEmployees() {
 function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
     const yearNum = parseInt(reviewYear, 10);
     if (!employeeName || !Number.isInteger(yearNum)) return null;
+    const normalizedRequestedName = String(employeeName).trim().toLowerCase();
 
     const candidates = [];
 
     const pushCandidate = (sourceName, periodKey, period) => {
-        const employeeRecord = (period?.employees || []).find(emp => emp?.name === employeeName);
+        const employeeRecord = (period?.employees || []).find(emp => {
+            const candidateName = String(emp?.name || '').trim().toLowerCase();
+            return candidateName === normalizedRequestedName;
+        });
         if (!employeeRecord) return;
 
         const metadata = period?.metadata || {};
@@ -10789,6 +10776,122 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
         opportunities,
         targetProfileYear: profileYears.size ? Array.from(profileYears)[0] : null
     };
+}
+
+function calculateYearEndOnOffMirror(employeeRecord) {
+    const parseNumber = (value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A') return null;
+        const numeric = parseFloat(value);
+        return Number.isNaN(numeric) ? null : numeric;
+    };
+
+    const values = {
+        aht: parseNumber(employeeRecord?.aht),
+        adherence: parseNumber(employeeRecord?.scheduleAdherence),
+        sentiment: parseNumber(employeeRecord?.overallSentiment),
+        associateOverall: parseNumber(employeeRecord?.overallExperience ?? employeeRecord?.cxRepOverall),
+        reliability: parseNumber(employeeRecord?.reliability)
+    };
+
+    const scores = {
+        aht: values.aht === null ? null : (values.aht <= 419 ? 3 : (values.aht <= 460 ? 2 : 1)),
+        adherence: values.adherence === null ? null : (values.adherence >= 94.5 ? 3 : (values.adherence >= 92.5 ? 2 : 1)),
+        sentiment: values.sentiment === null ? null : (values.sentiment >= 90.1 ? 3 : (values.sentiment >= 87.5 ? 2 : 1)),
+        associateOverall: values.associateOverall === null ? null : (values.associateOverall > 82 ? 3 : (values.associateOverall >= 79.5 ? 2 : 1)),
+        reliability: values.reliability === null ? null : (values.reliability > 24.1 ? 1 : (values.reliability >= 16.1 ? 2 : 3))
+    };
+
+    const scoreValues = Object.values(scores);
+    const hasAllScores = scoreValues.every(score => score !== null);
+    if (!hasAllScores) {
+        return {
+            isComplete: false,
+            values,
+            scores,
+            ratingAverage: null,
+            trackLabel: 'Insufficient KPI data to calculate On/Off Track',
+            trackStatusValue: ''
+        };
+    }
+
+    const ratingAverage = scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length;
+    let trackLabel = 'On Track/Exceptional';
+    let trackStatusValue = 'on-track';
+
+    if (ratingAverage <= 1.79) {
+        trackLabel = 'Off Track';
+        trackStatusValue = 'off-track';
+    } else if (ratingAverage <= 2.79) {
+        trackLabel = 'On Track/Successful';
+        trackStatusValue = 'on-track';
+    }
+
+    return {
+        isComplete: true,
+        values,
+        scores,
+        ratingAverage,
+        trackLabel,
+        trackStatusValue
+    };
+}
+
+function renderYearEndOnOffMirror(employeeRecord) {
+    const summaryEl = document.getElementById('yearEndOnOffSummary');
+    const detailsEl = document.getElementById('yearEndOnOffDetails');
+    if (!summaryEl || !detailsEl) return null;
+
+    const result = calculateYearEndOnOffMirror(employeeRecord);
+
+    const detailRows = [
+        {
+            label: 'AHT',
+            value: result.values.aht,
+            valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
+            score: result.scores.aht,
+            thresholds: '3 if ≤419, 2 if 420-460, 1 if >460'
+        },
+        {
+            label: 'Adherence',
+            value: result.values.adherence,
+            valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
+            score: result.scores.adherence,
+            thresholds: '3 if ≥94.5%, 2 if 92.5%-94.49%, 1 if <92.5%'
+        },
+        {
+            label: 'Overall Sentiment',
+            value: result.values.sentiment,
+            valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
+            score: result.scores.sentiment,
+            thresholds: '3 if ≥90.1%, 2 if 87.5%-90.0%, 1 if <87.5%'
+        },
+        {
+            label: 'Associate Overall (Surveys)',
+            value: result.values.associateOverall,
+            valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
+            score: result.scores.associateOverall,
+            thresholds: '3 if >82%, 2 if 79.5%-82%, 1 if <79.5%'
+        },
+        {
+            label: 'Reliability',
+            value: result.values.reliability,
+            valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
+            score: result.scores.reliability,
+            thresholds: '3 if <16.1, 2 if 16.1-24.1, 1 if >24.1'
+        }
+    ];
+
+    detailsEl.innerHTML = detailRows
+        .map(item => `<li>${item.label}: ${item.valueText} → Score ${item.score === null ? 'N/A' : item.score} (${item.thresholds})</li>`)
+        .join('');
+
+    if (!result.isComplete) {
+        summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
+        return result;
+    }
+
+    summaryEl.textContent = `Rating Average: ${result.ratingAverage.toFixed(2)} • Calculated Status: ${result.trackLabel}`;
+    return result;
 }
 
 function initializeYearEndComments() {
@@ -10887,6 +10990,8 @@ function updateYearEndSnapshotDisplay() {
     const summary = document.getElementById('yearEndFactsSummary');
     const winsList = document.getElementById('yearEndWinsList');
     const improvementList = document.getElementById('yearEndImprovementList');
+    const onOffSummary = document.getElementById('yearEndOnOffSummary');
+    const onOffDetails = document.getElementById('yearEndOnOffDetails');
     const trackSelect = document.getElementById('yearEndTrackSelect');
     const positivesInput = document.getElementById('yearEndPositivesInput');
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
@@ -10905,6 +11010,8 @@ function updateYearEndSnapshotDisplay() {
         snapshotPanel.style.display = 'none';
         status.textContent = 'Select associate and review year to load year-end facts.';
         status.style.display = 'block';
+        if (onOffSummary) onOffSummary.textContent = '';
+        if (onOffDetails) onOffDetails.innerHTML = '';
         if (trackSelect) trackSelect.value = '';
         if (positivesInput) positivesInput.value = '';
         if (improvementsInput) improvementsInput.value = '';
@@ -10918,6 +11025,8 @@ function updateYearEndSnapshotDisplay() {
         snapshotPanel.style.display = 'none';
         status.textContent = `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`;
         status.style.display = 'block';
+        if (onOffSummary) onOffSummary.textContent = '';
+        if (onOffDetails) onOffDetails.innerHTML = '';
         return;
     }
 
@@ -10949,6 +11058,11 @@ function updateYearEndSnapshotDisplay() {
     improvementList.innerHTML = opportunities.length
         ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
         : '<li>No below-target metrics detected in this period.</li>';
+
+    const onOffMirror = renderYearEndOnOffMirror(latestPeriod.employeeRecord);
+    if (trackSelect && !trackSelect.value && onOffMirror?.trackStatusValue) {
+        trackSelect.value = onOffMirror.trackStatusValue;
+    }
 
     if (positivesInput && !positivesInput.value.trim()) {
         const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
@@ -11066,7 +11180,8 @@ Requirements:
 - Mention whether performance is on track or off track naturally
 - Highlight positives first, then improvement areas
 - Include a future-focused line similar to: "I feel with added focus on these areas, ${preferredName} can improve by ..."
-- Include a positive confidence close similar to: "${preferredName} has been a wonderful addition to the team and is poised for success"
+- Include a positive confidence close that explicitly mentions APS success, similar to: "${preferredName} has been a wonderful addition to the team and is poised for success at APS"
+- End with one final, encouraging sentence about confidence in their continued growth and strong future at APS
 - Keep it concise: 2 short paragraphs plus 3-5 bullet points maximum
 - Do NOT use em dashes (—)
 - Return ONLY the final year-end comment text, nothing else.`;
