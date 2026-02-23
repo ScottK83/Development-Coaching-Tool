@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.20.87'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.2'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -99,6 +99,7 @@ const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
+const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 
 const YEAR_END_TARGETS_BY_YEAR = {
     2025: {
@@ -3315,6 +3316,70 @@ function saveYearEndAnnualGoalsStore(store) {
     } catch (error) {
         console.error('Error saving year-end annual goals store:', error);
     }
+}
+
+function loadYearEndDraftStore() {
+    try {
+        const raw = localStorage.getItem(YEAR_END_DRAFT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        console.error('Error loading year-end draft store:', error);
+        return {};
+    }
+}
+
+function saveYearEndDraftStore(store) {
+    try {
+        localStorage.setItem(YEAR_END_DRAFT_STORAGE_KEY, JSON.stringify(store || {}));
+    } catch (error) {
+        console.error('Error saving year-end draft store:', error);
+    }
+}
+
+function getYearEndDraftState(employeeName, reviewYear) {
+    const defaults = {
+        trackStatus: '',
+        positivesText: '',
+        improvementsText: '',
+        managerContext: '',
+        copilotResponse: ''
+    };
+
+    if (!employeeName || !reviewYear) return defaults;
+
+    const store = loadYearEndDraftStore();
+    const stateKey = `${String(reviewYear)}::${employeeName}`;
+    const saved = store[stateKey] || {};
+
+    return {
+        trackStatus: saved.trackStatus === 'on-track' || saved.trackStatus === 'off-track' ? saved.trackStatus : '',
+        positivesText: typeof saved.positivesText === 'string' ? saved.positivesText : '',
+        improvementsText: typeof saved.improvementsText === 'string' ? saved.improvementsText : '',
+        managerContext: typeof saved.managerContext === 'string' ? saved.managerContext : '',
+        copilotResponse: typeof saved.copilotResponse === 'string' ? saved.copilotResponse : ''
+    };
+}
+
+function persistYearEndDraftState(employeeName, reviewYear) {
+    if (!employeeName || !reviewYear) return;
+
+    const trackSelect = document.getElementById('yearEndTrackSelect');
+    const positivesInput = document.getElementById('yearEndPositivesInput');
+    const improvementsInput = document.getElementById('yearEndImprovementsInput');
+    const managerContextInput = document.getElementById('yearEndManagerContext');
+    const responseInput = document.getElementById('yearEndCopilotResponse');
+
+    const nextState = {
+        trackStatus: trackSelect?.value || '',
+        positivesText: positivesInput?.value || '',
+        improvementsText: improvementsInput?.value || '',
+        managerContext: managerContextInput?.value || '',
+        copilotResponse: responseInput?.value || ''
+    };
+
+    const store = loadYearEndDraftStore();
+    store[`${String(reviewYear)}::${employeeName}`] = nextState;
+    saveYearEndDraftStore(store);
 }
 
 function buildDefaultYearEndAnnualGoalsState() {
@@ -10732,10 +10797,15 @@ function initializeYearEndComments() {
     const status = document.getElementById('yearEndStatus');
     const snapshotPanel = document.getElementById('yearEndSnapshotPanel');
     const promptArea = document.getElementById('yearEndPromptArea');
+    const trackSelect = document.getElementById('yearEndTrackSelect');
+    const positivesInput = document.getElementById('yearEndPositivesInput');
+    const improvementsInput = document.getElementById('yearEndImprovementsInput');
+    const managerContextInput = document.getElementById('yearEndManagerContext');
+    const responseInput = document.getElementById('yearEndCopilotResponse');
     const generateBtn = document.getElementById('generateYearEndPromptBtn');
     const copyBtn = document.getElementById('copyYearEndResponseBtn');
 
-    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !generateBtn || !copyBtn) return;
+    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !trackSelect || !positivesInput || !improvementsInput || !managerContextInput || !responseInput || !generateBtn || !copyBtn) return;
 
     yearEndDraftContext = null;
     promptArea.value = '';
@@ -10781,6 +10851,31 @@ function initializeYearEndComments() {
         copyBtn.dataset.bound = 'true';
     }
 
+    const persistDraft = () => {
+        persistYearEndDraftState(employeeSelect.value, reviewYearInput.value);
+    };
+
+    if (!trackSelect.dataset.bound) {
+        trackSelect.addEventListener('change', persistDraft);
+        trackSelect.dataset.bound = 'true';
+    }
+    if (!positivesInput.dataset.bound) {
+        positivesInput.addEventListener('input', persistDraft);
+        positivesInput.dataset.bound = 'true';
+    }
+    if (!improvementsInput.dataset.bound) {
+        improvementsInput.addEventListener('input', persistDraft);
+        improvementsInput.dataset.bound = 'true';
+    }
+    if (!managerContextInput.dataset.bound) {
+        managerContextInput.addEventListener('input', persistDraft);
+        managerContextInput.dataset.bound = 'true';
+    }
+    if (!responseInput.dataset.bound) {
+        responseInput.addEventListener('input', persistDraft);
+        responseInput.dataset.bound = 'true';
+    }
+
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 }
 
@@ -10792,8 +10887,11 @@ function updateYearEndSnapshotDisplay() {
     const summary = document.getElementById('yearEndFactsSummary');
     const winsList = document.getElementById('yearEndWinsList');
     const improvementList = document.getElementById('yearEndImprovementList');
+    const trackSelect = document.getElementById('yearEndTrackSelect');
     const positivesInput = document.getElementById('yearEndPositivesInput');
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
+    const managerContextInput = document.getElementById('yearEndManagerContext');
+    const responseInput = document.getElementById('yearEndCopilotResponse');
     const promptArea = document.getElementById('yearEndPromptArea');
 
     if (!status || !snapshotPanel || !summary || !winsList || !improvementList || !promptArea) return;
@@ -10807,6 +10905,11 @@ function updateYearEndSnapshotDisplay() {
         snapshotPanel.style.display = 'none';
         status.textContent = 'Select associate and review year to load year-end facts.';
         status.style.display = 'block';
+        if (trackSelect) trackSelect.value = '';
+        if (positivesInput) positivesInput.value = '';
+        if (improvementsInput) improvementsInput.value = '';
+        if (managerContextInput) managerContextInput.value = '';
+        if (responseInput) responseInput.value = '';
         return;
     }
 
@@ -10819,6 +10922,13 @@ function updateYearEndSnapshotDisplay() {
     }
 
     renderYearEndAnnualGoalsInputs(employeeName, reviewYear);
+    const savedDraft = getYearEndDraftState(employeeName, reviewYear);
+    if (trackSelect) trackSelect.value = savedDraft.trackStatus;
+    if (positivesInput) positivesInput.value = savedDraft.positivesText;
+    if (improvementsInput) improvementsInput.value = savedDraft.improvementsText;
+    if (managerContextInput) managerContextInput.value = savedDraft.managerContext;
+    if (responseInput) responseInput.value = savedDraft.copilotResponse;
+
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
     const { wins, opportunities, targetProfileYear } = buildYearEndMetricSnapshot(
         latestPeriod.employeeRecord,
@@ -10871,6 +10981,9 @@ function updateYearEndSnapshotDisplay() {
     status.textContent = `Year-end facts loaded for ${employeeName} (${reviewYear}).`;
     status.style.display = 'block';
     snapshotPanel.style.display = 'block';
+
+    // Persist defaults if we auto-populated empty fields
+    persistYearEndDraftState(employeeName, reviewYear);
 }
 
 function generateYearEndPromptAndCopy() {
@@ -10962,13 +11075,34 @@ Requirements:
 
     if (button) {
         const originalText = button.textContent;
-        button.textContent = '✅ Opening Copilot';
+        button.textContent = '✅ Copied + Opening Copilot';
         setTimeout(() => {
             button.textContent = originalText;
-        }, 1200);
+        }, 1500);
     }
 
-    openCopilotWithPrompt(prompt, 'Year-End Comments');
+    const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(prompt)
+            .then(() => {
+                showToast('✅ Year-end prompt copied. Paste into Copilot with Ctrl+V.', 4000);
+                if (!copilotWindow) {
+                    alert('✅ Year-end prompt copied to clipboard.\n\nOpen https://copilot.microsoft.com and paste with Ctrl+V.');
+                }
+            })
+            .catch(() => {
+                showToast('⚠️ Could not copy automatically. Prompt is in the box below for manual copy.', 4500);
+                if (!copilotWindow) {
+                    openCopilotWithPrompt(prompt, 'Year-End Comments');
+                }
+            });
+    } else {
+        showToast('⚠️ Clipboard not available. Copy the prompt from the box below.', 4500);
+        if (!copilotWindow) {
+            openCopilotWithPrompt(prompt, 'Year-End Comments');
+        }
+    }
 }
 
 function copyYearEndResponseToClipboard() {
