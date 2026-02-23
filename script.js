@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.11'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.12'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10607,6 +10607,7 @@ Requirements:
 - Balance recognition with clear growth expectations
 - Mention whether performance is on track or off track naturally
 - Highlight positives first, then improvement areas
+- When referencing a metric, include the metric value and its goal
 - Include a future-focused line similar to: "I feel with added focus on these areas, ${preferredName} can improve by ..."
 - Include a positive confidence close that explicitly mentions APS success, similar to: "${preferredName} has been a wonderful addition to the team and is poised for success at APS"
 - End with one final, encouraging sentence about confidence in their continued growth and strong future at APS
