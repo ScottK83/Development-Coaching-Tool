@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.5'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.6'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -467,7 +467,7 @@ function showOnlySection(sectionId) {
 /**
  * Show a specific sub-section within the Coaching & Analysis section
  */
-function showSubSection(subSectionId) {
+function showSubSection(subSectionId, activeButtonId = null) {
     // Hide all sub-sections
     const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
     subSections.forEach(id => {
@@ -482,11 +482,20 @@ function showSubSection(subSectionId) {
     }
     
     // Update sub-nav button active states
-    const subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
+    const subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
+    const selectedSubNavButton = activeButtonId || (
+        subSectionId === 'subSectionCoachingEmail' ? 'subNavCoachingEmail'
+            : subSectionId === 'subSectionYearEnd' ? 'subNavYearEnd'
+                : subSectionId === 'subSectionSentiment' ? 'subNavSentiment'
+                    : subSectionId === 'subSectionMetricTrends' ? 'subNavMetricTrends'
+                        : subSectionId === 'subSectionTrendIntelligence' ? 'subNavTrendIntelligence'
+                            : ''
+    );
+
     subNavButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
-            if (btnId.replace('subNav', 'subSection') === subSectionId) {
+            if (btnId === selectedSubNavButton) {
                 btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 btn.style.opacity = '1';
             } else {
@@ -2447,21 +2456,21 @@ function initializeEventHandlers() {
     });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showSubSection('subSectionCoachingEmail');
+        showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
     });
     
     // Sub-navigation for Coaching & Analysis section
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
-        showSubSection('subSectionCoachingEmail');
+        showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
     });
     document.getElementById('subNavYearEnd')?.addEventListener('click', () => {
-        showSubSection('subSectionYearEnd');
+        showSubSection('subSectionYearEnd', 'subNavYearEnd');
         initializeYearEndComments();
     });
     document.getElementById('subNavOnOffTracker')?.addEventListener('click', () => {
-        showSubSection('subSectionYearEnd');
+        showSubSection('subSectionYearEnd', 'subNavOnOffTracker');
         initializeYearEndComments();
         document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -2469,7 +2478,7 @@ function initializeEventHandlers() {
     let sentimentListenersAttached = false;
     
     document.getElementById('subNavSentiment')?.addEventListener('click', () => {
-        showSubSection('subSectionSentiment');
+        showSubSection('subSectionSentiment', 'subNavSentiment');
         // Move sentiment section content dynamically (only if not already moved)
         const sentimentSection = document.getElementById('sentimentSection');
         const subSectionSentiment = document.getElementById('subSectionSentiment');
@@ -2502,7 +2511,7 @@ function initializeEventHandlers() {
         renderSentimentDatabasePanel();
     });
     document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
-        showSubSection('subSectionMetricTrends');
+        showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
         // Move metric trends section content dynamically
         const metricTrendsSection = document.getElementById('metricTrendsSection');
         const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
@@ -2515,7 +2524,7 @@ function initializeEventHandlers() {
         initializeMetricTrends();
     });
     document.getElementById('subNavTrendIntelligence')?.addEventListener('click', () => {
-        showSubSection('subSectionTrendIntelligence');
+        showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
         // Move executive summary section content dynamically
         const executiveSummarySection = document.getElementById('executiveSummarySection');
         const subSectionTrendIntelligence = document.getElementById('subSectionTrendIntelligence');
