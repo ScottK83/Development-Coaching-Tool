@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.3'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.4'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2459,6 +2459,11 @@ function initializeEventHandlers() {
     document.getElementById('subNavYearEnd')?.addEventListener('click', () => {
         showSubSection('subSectionYearEnd');
         initializeYearEndComments();
+    });
+    document.getElementById('subNavOnOffTracker')?.addEventListener('click', () => {
+        showSubSection('subSectionYearEnd');
+        initializeYearEndComments();
+        document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     // Track if sentiment listeners are attached to prevent duplicates
     let sentimentListenersAttached = false;
@@ -10905,6 +10910,7 @@ function initializeYearEndComments() {
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
     const managerContextInput = document.getElementById('yearEndManagerContext');
     const responseInput = document.getElementById('yearEndCopilotResponse');
+    const calculateOnOffBtn = document.getElementById('calculateYearEndOnOffBtn');
     const generateBtn = document.getElementById('generateYearEndPromptBtn');
     const copyBtn = document.getElementById('copyYearEndResponseBtn');
 
@@ -10952,6 +10958,20 @@ function initializeYearEndComments() {
     if (!copyBtn.dataset.bound) {
         copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
         copyBtn.dataset.bound = 'true';
+    }
+    if (calculateOnOffBtn && !calculateOnOffBtn.dataset.bound) {
+        calculateOnOffBtn.addEventListener('click', () => {
+            const selectedEmployee = employeeSelect.value;
+            const selectedYear = reviewYearInput.value;
+            if (!selectedEmployee || !selectedYear) {
+                alert('⚠️ Select associate and review year first.');
+                return;
+            }
+            updateYearEndSnapshotDisplay();
+            document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showToast('✅ On/Off tracker calculated using Excel mirror logic.', 3000);
+        });
+        calculateOnOffBtn.dataset.bound = 'true';
     }
 
     const persistDraft = () => {
