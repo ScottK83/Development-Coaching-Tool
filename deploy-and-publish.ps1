@@ -119,12 +119,12 @@ if (-not $SkipSmokeChecks) {
     Write-Host "Skipping smoke checks (requested with -SkipSmokeChecks)." -ForegroundColor Yellow
 }
 
-# 1.5) Always bump app version for this push
+# 1.5) Always bump app version for this push (but don't commit separately)
 $newVersion = Get-NextAppVersion
 Update-AppVersion -Version $newVersion -FilePath $scriptJsPath
 Write-Host "Updated APP_VERSION to $newVersion" -ForegroundColor Green
 
-# 2) Stage files
+# 2) Stage files (including the version update)
 if ($IncludeUntracked) {
     Invoke-Step "git add -A" "Staging tracked + untracked changes"
 } else {
@@ -140,8 +140,9 @@ if ($IncludeUntracked) {
 git diff --cached --quiet
 $hasStaged = ($LASTEXITCODE -ne 0)
 if ($hasStaged) {
+    # Include version bump in the main commit message
     $safeMessage = $Message.Replace("'", "''")
-    Invoke-Step "git commit -m '$safeMessage'" "Creating commit"
+    Invoke-Step "git commit -m '$safeMessage'" "Creating commit (includes version $newVersion)"
 } else {
     Write-Host "`nNo staged changes to commit. Continuing with push + deploy..." -ForegroundColor Yellow
 }

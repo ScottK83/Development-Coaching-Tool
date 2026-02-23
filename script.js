@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.10'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.11'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -906,21 +906,6 @@ function getSavedNickname(employeeFullName) {
     }
 }
 
-function htmlToPlainText(html) {
-    if (!html) return '';
-    return html
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\s+\n/g, '\n')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-}
-
 // ============================================
 // DATA PARSING FUNCTIONS (FIXED)
 // ============================================
@@ -1138,30 +1123,6 @@ const COLUMN_MAPPING = {
     21: 'TotalShrinkage%',
     22: CANONICAL_SCHEMA.RELIABILITY_HOURS
 };
-
-// Map headers to canonical schema - validates we have exactly 23 columns
-function mapHeadersToSchema(headers) {
-    // Validate we have exactly 23 columns
-    if (headers.length !== 23) {
-        throw new Error(`Expected exactly 23 columns, found ${headers.length}. PowerBI data must have all 23 columns in order.`);
-    }
-    
-    const mapping = {};
-    
-    // Map by position
-    for (let i = 0; i < 23; i++) {
-        if (COLUMN_MAPPING[i]) {
-            mapping[COLUMN_MAPPING[i]] = i;
-        }
-    }
-    
-    
-    for (let i = 0; i < 23; i++) {
-        
-    }
-    
-    return mapping;
-}
 
 // ============================================
 // DATA LOADING - PASTED DATA
@@ -1590,70 +1551,6 @@ function saveUserTips(tips) {
     }
 }
 
-function loadCustomMetrics() {
-    try {
-        const saved = localStorage.getItem(STORAGE_PREFIX + 'customMetrics');
-        return saved ? JSON.parse(saved) : {};
-    } catch (error) {
-        console.error('Error loading custom metrics:', error);
-        return {};
-    }
-}
-
-function saveCustomMetrics(metrics) {
-    try {
-        localStorage.setItem(STORAGE_PREFIX + 'customMetrics', JSON.stringify(metrics));
-    } catch (error) {
-        console.error('Error saving custom metrics:', error);
-    }
-}
-
-function normalizeMetricKey(name) {
-    return name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-}
-
-*/
-
-
-// ============================================
-// STORAGE FUNCTIONS
-// ============================================
-
-function loadWeeklyData() {
-    try {
-        const saved = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
-        const data = saved ? JSON.parse(saved) : {};
-        return data;
-    } catch (error) {
-        console.error('Error loading weekly data:', error);
-        return {};
-    }
-}
-
-function saveWithSizeCheck(key, data) {
-    const str = JSON.stringify(data);
-    const sizeInMB = new Blob([str]).size / 1024 / 1024;
-    
-    if (sizeInMB > LOCALSTORAGE_MAX_SIZE_MB) {
-        showToast(`⚠️ Data too large (${sizeInMB.toFixed(1)}MB). Consider exporting old data.`, 5000);
-        return false;
-    }
-    
-    try {
-        localStorage.setItem(STORAGE_PREFIX + key, str);
-        return true;
-    } catch (e) {
-        if (e.name === 'QuotaExceededError') {
-            showToast('❌ Storage full! Please export/delete old data.', 5000);
-        } else {
-            console.error('Failed to save to localStorage:', e);
-        }
-        return false;
-    }
-}
-
-function saveWeeklyData() {
-    try {
         if (!saveWithSizeCheck('weeklyData', weeklyData)) {
             console.error('Failed to save weekly data due to size');
         }
@@ -1973,56 +1870,6 @@ function saveCallCenterAverages(averages) {
     }
 }
 
-function calculateAveragesFromEmployees(employees) {
-    if (!employees || employees.length === 0) return null;
-
-    
-    // Filter out employees with 0 calls answered
-    const activeEmployees = employees.filter(emp => {
-        const totalCalls = parseInt(emp.totalCalls);
-        return !isNaN(totalCalls) && totalCalls > 0;
-    });
-
-
-
-    if (activeEmployees.length === 0) return null;
-
-    const keyMapping = {
-        scheduleAdherence: 'adherence',
-        overallSentiment: 'sentiment',
-        cxRepOverall: 'repSatisfaction'
-    };
-
-    const sums = {};
-    const counts = {};
-
-    activeEmployees.forEach(emp => {
-        Object.keys(emp).forEach(key => {
-            if (key === 'name' || key === 'id' || key === 'firstName' || key === 'surveyTotal' || key === 'totalCalls' || key === 'talkTime') return;
-
-            const mappedKey = keyMapping[key] || key;
-            const value = parseFloat(emp[key]);
-
-            // Include any numeric value (including 0) - only skip if NaN (missing/blank)
-            if (!isNaN(value)) {
-                sums[mappedKey] = (sums[mappedKey] || 0) + value;
-                counts[mappedKey] = (counts[mappedKey] || 0) + 1;
-            }
-        });
-    });
-
-    const averages = {};
-    Object.keys(sums).forEach(key => {
-        averages[key] = parseFloat((sums[key] / counts[key]).toFixed(2));
-    });
-
-    
-    
-    averages.employeeCount = activeEmployees.length;
-
-    return Object.keys(averages).length > 0 ? averages : null;
-}
-
 function getCallCenterAverageForPeriod(periodKey) {
     const averages = loadCallCenterAverages();
     return averages[periodKey] || null;
@@ -2091,10 +1938,6 @@ function formatWeekLabel(weekKey) {
         return formatDateMMDDYYYY(endDate);
     }
     return weekKey;
-}
-
-function getTodayYYYYMMDD() {
-    return new Date().toISOString().slice(0, 10);
 }
 
 function getActivePeriodContext() {
@@ -2314,33 +2157,6 @@ function updatePeriodDropdown() {
 // ============================================
 // UI HELPER FUNCTIONS
 // ============================================
-
-function resetEmployeeSelection() {
-    const employeeSelect = document.getElementById('employeeSelect');
-    if (employeeSelect) {
-        employeeSelect.selectedIndex = 0; // Reset to "-- Choose an employee --"
-    }
-    
-    // Clear metrics from registry
-    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-        const input = document.getElementById(metricKey);
-        if (input) {
-            input.value = '';
-            input.style.background = '';
-            input.style.borderColor = '';
-        }
-    });
-    
-    // Clear employee name
-    const employeeNameInput = document.getElementById('employeeName');
-    if (employeeNameInput) employeeNameInput.value = '';
-    
-    // Hide sections
-    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-}
 
 function populateMetricInputs(employee) {
     // Populate metrics from registry
@@ -4758,76 +4574,6 @@ function populateUploadedDataDropdown() {
     
 }
 
-function loadUploadedDataPeriod(weekKey) {
-    const mondayInput = document.getElementById('avgWeekMonday');
-    const sundayInput = document.getElementById('avgWeekSunday');
-    
-    if (!weekKey) {
-        // Clear if no selection
-        document.getElementById('avgPeriodType').value = 'week';
-        mondayInput.value = '';
-        sundayInput.value = '';
-        // Enable date fields for manual entry
-        mondayInput.disabled = false;
-        sundayInput.disabled = false;
-        // Clear all metric fields
-        document.getElementById('avgAdherence').value = '';
-        document.getElementById('avgOverallExperience').value = '';
-        document.getElementById('avgRepSatisfaction').value = '';
-        document.getElementById('avgFCR').value = '';
-        document.getElementById('avgTransfers').value = '';
-        document.getElementById('avgSentiment').value = '';
-        document.getElementById('avgPositiveWord').value = '';
-        document.getElementById('avgNegativeWord').value = '';
-        document.getElementById('avgManagingEmotions').value = '';
-        document.getElementById('avgAHT').value = '';
-        document.getElementById('avgACW').value = '';
-        document.getElementById('avgHoldTime').value = '';
-        document.getElementById('avgReliability').value = '';
-        return;
-    }
-    
-    // Get the week data
-    const week = weeklyData[weekKey];
-    if (!week) return;
-    
-    // Parse the weekKey format: "startDate|endDate"
-    const [startDate, endDate] = weekKey.split('|');
-    
-    // Set period type to "week" since we're selecting from weekly data
-    document.getElementById('avgPeriodType').value = 'week';
-    
-    // Set the dates from the metadata
-    mondayInput.value = startDate;
-    sundayInput.value = endDate;
-    
-    // Enable date fields so user can edit if needed
-    mondayInput.disabled = false;
-    sundayInput.disabled = false;
-    
-    // Load saved call center averages for this period
-    const averages = getCallCenterAverageForPeriod(weekKey);
-    
-    if (averages) {
-        // Populate metric fields with saved values
-        document.getElementById('avgAdherence').value = averages.adherence || '';
-        document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
-        document.getElementById('avgRepSatisfaction').value = averages.repSatisfaction || '';
-        document.getElementById('avgFCR').value = averages.fcr || '';
-        document.getElementById('avgTransfers').value = averages.transfers || '';
-        document.getElementById('avgSentiment').value = averages.sentiment || '';
-        document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
-        document.getElementById('avgNegativeWord').value = averages.negativeWord || '';
-        document.getElementById('avgManagingEmotions').value = averages.managingEmotions || '';
-        document.getElementById('avgAHT').value = averages.aht || '';
-        document.getElementById('avgACW').value = averages.acw || '';
-        document.getElementById('avgHoldTime').value = averages.holdTime || '';
-        document.getElementById('avgReliability').value = averages.reliability || '';
-    }
-    
-    showToast(`Selected week of ${week.metadata?.label || startDate}`, 5000);
-}
-
 function setupUploadedDataListener() {
     const avgUploadedDataSelect = document.getElementById('avgUploadedDataSelect');
     avgUploadedDataSelect?.addEventListener('change', (e) => {
@@ -5825,26 +5571,6 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
 }
 
 
-
-function formatMetricName(camelCase) {
-    // Map camelCase property names to display names
-    const metricNameMap = {
-        'scheduleAdherence': 'Schedule Adherence',
-        'overallExperience': 'Overall Experience',
-        'cxRepOverall': 'Rep Satisfaction',
-        'fcr': 'FCR',
-        'overallSentiment': 'Sentiment Overall',
-        'positiveWord': 'Positive Word Usage',
-        'negativeWord': 'Avoiding Negative Words',
-        'managingEmotions': 'Managing Emotions',
-        'aht': 'AHT',
-        'acw': 'ACW',
-        'holdTime': 'Hold Time',
-        'reliability': 'Reliability'
-    };
-    
-    return metricNameMap[camelCase] || camelCase;
-}
 
 function getMetricOrder() {
     // PHASE 3 - LOCKED ORDER: Core Performance ? Survey ? Sentiment ? Reliability
@@ -6910,143 +6636,6 @@ function generateAllTrendEmails() {
     });
 }
 
-function compareToCenter(employeeValue, centerValue, lowerIsBetter) {
-    if (lowerIsBetter) {
-        // For AHT, ACW: lower is better
-        if (employeeValue <= centerValue) {
-            return { status: 'meets', icon: '✅' };
-        } else {
-            return { status: 'below', icon: '📉' };
-        }
-    } else {
-        // For all others: higher is better
-        if (employeeValue >= centerValue) {
-            return { status: 'meets', icon: '✅' };
-        } else {
-            return { status: 'below', icon: '📉' };
-        }
-    }
-}
-
-function getWeeklyStatisticsForEmployee(employeeName, metricKey, lowerIsBetter) {
-    /**
-     * Calculate how many weeks employee met target and beat center average
-     * Returns: { meetingTarget: number, aboveAverage: number, totalWeeks: number }
-     */
-    const metricRegistry = METRICS_REGISTRY[metricKey];
-    if (!metricRegistry) return { meetingTarget: 0, aboveAverage: 0, totalWeeks: 0 };
-    
-    const targetValue = metricRegistry.target.value;
-    const targetType = metricRegistry.target.type; // 'min' or 'max'
-    
-    let meetingTarget = 0;
-    let aboveAverage = 0;
-    let totalWeeks = 0;
-    
-    // Only count weeks with periodType === 'week'
-    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
-        if (weekData.metadata?.periodType !== 'week') return;
-        
-        const employee = weekData.employees?.find(emp => emp.name === employeeName);
-        if (!employee) return;
-        
-        const employeeValue = parseFloat(employee[metricKey]);
-        if (isNaN(employeeValue)) return;
-        
-        totalWeeks++;
-        
-        // Check if meeting target
-        if (targetType === 'min') {
-            if (employeeValue >= targetValue) meetingTarget++;
-        } else if (targetType === 'max') {
-            if (employeeValue <= targetValue) meetingTarget++;
-        }
-        
-        // Check if above center average
-        const centerAvg = getCallCenterAverageForPeriod(weekKey);
-        if (centerAvg) {
-            // Convert metric key to center key
-            const centerKeyMap = {
-                'scheduleAdherence': 'adherence',
-                'overallExperience': 'overallExperience',
-                'cxRepOverall': 'repSatisfaction',
-                'fcr': 'fcr',
-                'transfers': 'transfers',
-                'overallSentiment': 'sentiment',
-                'positiveWord': 'positiveWord',
-                'negativeWord': 'negativeWord',
-                'managingEmotions': 'managingEmotions',
-                'aht': 'aht',
-                'acw': 'acw',
-                'holdTime': 'holdTime',
-                'reliability': 'reliability'
-            };
-            
-            const centerKey = centerKeyMap[metricKey];
-            const centerValue = centerAvg[centerKey];
-            
-            if (centerValue !== undefined && centerValue !== null) {
-                if (lowerIsBetter) {
-                    if (employeeValue <= centerValue) aboveAverage++;
-                } else {
-                    if (employeeValue >= centerValue) aboveAverage++;
-                }
-            }
-        }
-    });
-    
-    return { meetingTarget, aboveAverage, totalWeeks };
-}
-
-function getTargetHitRate(employeeName, metricKey, periodType = 'week') {
-    /**
-     * Calculate how many times employee met the target goal
-     * Filtered by the specified period type (week, month, quarter, ytd)
-     * Returns: { hits: number, total: number }
-     */
-    const metricRegistry = METRICS_REGISTRY[metricKey];
-    if (!metricRegistry) return { hits: 0, total: 0 };
-    
-    const targetValue = metricRegistry.target.value;
-    const targetType = metricRegistry.target.type; // 'min' or 'max'
-    
-    let hits = 0;
-    let total = 0;
-    
-    // Count across periods matching the specified period type
-    Object.entries(weeklyData).forEach(([weekKey, weekData]) => {
-        // Filter by period type
-        if ((weekData.metadata?.periodType || 'week') !== periodType) return;
-        
-        const employee = weekData.employees?.find(emp => emp.name === employeeName);
-        if (!employee) return;
-        
-        const employeeValue = parseFloat(employee[metricKey]);
-        if (isNaN(employeeValue)) return;
-        
-        total++;
-        
-        // Check if meeting target
-        if (targetType === 'min') {
-            if (employeeValue >= targetValue) hits++;
-        } else if (targetType === 'max') {
-            if (employeeValue <= targetValue) hits++;
-        }
-    });
-    
-    return { hits, total };
-}
-
-function getPeriodUnit(periodType, count) {
-    /**
-     * Returns the correct period unit label (singular/plural)
-     */
-    if (periodType === 'week') return count === 1 ? 'week' : 'weeks';
-    if (periodType === 'month') return count === 1 ? 'month' : 'months';
-    if (periodType === 'quarter') return count === 1 ? 'quarter' : 'quarters';
-    return 'times'; // for ytd or unknown
-}
-
 // ============================================
 // YEARLY AVERAGE CALCULATIONS
 // ============================================
@@ -7130,50 +6719,6 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
     }
     
     return null;
-}
-
-function compareToYearlyAverage(employeeName, metricKey, currentValue, lowerIsBetter) {
-    /**
-     * Compare employee's current value to their yearly average
-     * Returns: { status: 'meets'|'below'|'first', icon: '✅'|'📉'|'📈', yearlyAvg: number }
-     */
-    const yearlyAvg = getYearlyAverageForEmployee(employeeName, metricKey);
-    
-    if (!yearlyAvg) {
-        return { status: 'first', icon: '📈', yearlyAvg: null };
-    }
-    
-    const isMeeting = lowerIsBetter ? currentValue <= yearlyAvg.value : currentValue >= yearlyAvg.value;
-    
-    if (isMeeting) {
-        return { status: 'meets', icon: '✅', yearlyAvg: yearlyAvg.value };
-    } else {
-        return { status: 'below', icon: '📉', yearlyAvg: yearlyAvg.value };
-    }
-}
-
-function compareWeekOverWeek(currentValue, previousValue, lowerIsBetter) {
-    const delta = currentValue - previousValue;
-    
-    if (delta === 0) {
-        return { status: 'nochange', icon: '➡️', delta: 0 };
-    }
-    
-    if (lowerIsBetter) {
-        // For AHT, ACW: decrease is improvement
-        if (delta < 0) {
-            return { status: 'improved', icon: '📈', delta: Math.round(delta * 100) / 100 };
-        } else {
-            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
-        }
-    } else {
-        // For others: increase is improvement
-        if (delta > 0) {
-            return { status: 'improved', icon: '📈', delta: Math.round(delta * 100) / 100 };
-        } else {
-            return { status: 'declined', icon: '📉', delta: Math.round(delta * 100) / 100 };
-        }
-    }
 }
 
 
@@ -7275,58 +6820,6 @@ function initializeYearlyIndividualSummary() {
     document.getElementById('generateExecutiveSummaryCopilotBtn')?.addEventListener('click', generateExecutiveSummaryCopilotEmail);
     
     
-}
-
-function generateExecutiveSummaryEmail() {
-    const associate = document.getElementById('summaryAssociateSelect')?.value;
-    if (!associate) {
-        showToast('Select an associate first', 3000);
-        return;
-    }
-
-    const latestKey = getLatestWeeklyKey();
-    const latestWeek = latestKey ? weeklyData[latestKey] : null;
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
-
-    const callouts = buildExecutiveSummaryCallouts(latestKey, latestWeek);
-    const calloutHtml = callouts.length
-        ? callouts.map(item => `
-            <li><strong>${item.name}</strong> — ${item.metric}: ${item.value} vs center ${item.center} (${item.diff})</li>
-        `).join('')
-        : '<li>No callouts available. Add call center averages to enable this section.</li>';
-
-    const subject = `Wins Spotlight - Week of ${endDate}`;
-
-    const htmlEmail = `
-        <div style="font-family: Arial, sans-serif; font-size: 11pt; color: #111;">
-            <p><strong>Subject:</strong> ${subject}</p>
-            <p>Team,</p>
-            <p>Here are this week’s wins vs the call center average. Huge shout-out to the teammates below who are absolutely crushing these metrics.</p>
-            <h3 style="margin: 16px 0 8px; color: #1b5e20;">🏆 Wins vs Call Center Average</h3>
-            <ul style="margin-top: 0;">
-                ${calloutHtml}
-            </ul>
-            <p>Thank you for the strong performance and the impact you’re making every day. Let’s keep this momentum going!</p>
-        </div>
-    `;
-
-    window.latestExecutiveSummaryHtml = htmlEmail;
-
-    const preview = document.getElementById('executiveSummaryEmailPreview');
-    const copyBtn = document.getElementById('copyExecutiveSummaryEmailBtn');
-    if (copyBtn) copyBtn.style.display = 'inline-block';
-
-    if (preview) {
-        preview.style.display = 'block';
-        const doc = preview.contentDocument || preview.contentWindow?.document;
-        if (doc) {
-            doc.open();
-            doc.write(htmlEmail);
-            doc.close();
-        }
-    }
 }
 
 function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
@@ -10153,177 +9646,6 @@ function saveExecutiveSummaryNotes(associate) {
     showToast(`? Notes saved for ${associate}`, 3000);
 }
 
-function displayExecutiveSummaryCharts(associate, periods, periodType) {
-    
-    const container = document.getElementById('summaryMetricsVisuals');
-    if (!container) {
-        console.error('ERROR: summaryMetricsVisuals container not found!');
-        return;
-    }
-    container.innerHTML = '';
-    
-    if (!periods || periods.length === 0) {
-        
-        container.innerHTML = '<p style="color: #999; padding: 20px;">No data available for this associate.</p>';
-        return;
-    }
-    
-    // Average across all periods for this associate
-    const surveyBasedMetrics = ['overallExperience', 'cxRepOverall', 'fcr'];
-    const metrics = [
-        { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%', lowerIsBetter: false, isSurveyBased: false },
-        { key: 'overallExperience', label: 'Overall Experience', unit: '', lowerIsBetter: false, isSurveyBased: true },
-        { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '', lowerIsBetter: false, isSurveyBased: true },
-        { key: 'fcr', label: 'First Call Resolution', unit: '%', lowerIsBetter: false, isSurveyBased: true },
-        { key: 'transfers', label: 'Transfers', unit: '%', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'overallSentiment', label: 'Sentiment', unit: '%', lowerIsBetter: false, isSurveyBased: false },
-        { key: 'positiveWord', label: 'Positive Words', unit: '', lowerIsBetter: false, isSurveyBased: false },
-        { key: 'negativeWord', label: 'Negative Words', unit: '', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'managingEmotions', label: 'Managing Emotions', unit: '%', lowerIsBetter: false, isSurveyBased: false },
-        { key: 'aht', label: 'Average Handle Time', unit: 's', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'acw', label: 'After Call Work', unit: 's', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'holdTime', label: 'Hold Time', unit: 's', lowerIsBetter: true, isSurveyBased: false },
-        { key: 'reliability', label: 'Reliability', unit: 'hrs', lowerIsBetter: true, isSurveyBased: false }
-    ];
-    
-    // First pass: Calculate summary statistics and store for rendering
-    const metricsData = [];
-    let metricsMetTarget = 0;
-    let metricsOutpacingPeers = 0;
-    
-    metrics.forEach(metric => {
-        // Calculate employee average
-        let employeeSum = 0, employeeCount = 0;
-        periods.forEach(period => {
-            if (period.employee && period.employee[metric.key] !== undefined && period.employee[metric.key] !== null && period.employee[metric.key] !== '') {
-                employeeSum += parseFloat(period.employee[metric.key]);
-                employeeCount++;
-            }
-        });
-        const employeeAvg = employeeCount > 0 ? employeeSum / employeeCount : 0;
-        
-        // Calculate center average
-        let centerSum = 0, centerCount = 0;
-        periods.forEach(period => {
-            const centerAverageData = period.centerAverage;
-            // Check if the value exists (0 is valid, only skip if undefined, null, or empty string)
-            // Must check for null/undefined FIRST before accessing properties
-            if (centerAverageData !== null && centerAverageData !== undefined && centerAverageData[metric.key] !== undefined && centerAverageData[metric.key] !== null && centerAverageData[metric.key] !== '') {
-                centerSum += parseFloat(centerAverageData[metric.key]);
-                centerCount++;
-            }
-        });
-        const centerAvg = centerCount > 0 ? centerSum / centerCount : null;
-        
-        // Get target from METRICS_REGISTRY
-        const targetObj = METRICS_REGISTRY[metric.key]?.target;
-        const targetValue = targetObj && typeof targetObj === 'object' && targetObj.value !== undefined ? targetObj.value : 'N/A';
-        
-        // Check if survey-based metric has no data
-        const hasNoSurveyData = metric.isSurveyBased && employeeCount === 0;
-        
-        // Check if meeting target
-        let isMeetingTarget = false;
-        if (typeof targetValue === 'number' && !hasNoSurveyData) {
-            isMeetingTarget = metric.lowerIsBetter ? (employeeAvg <= targetValue) : (employeeAvg >= targetValue);
-            if (isMeetingTarget) metricsMetTarget++;
-        }
-        
-        // Check if outpacing peers (center average)
-        let isOutpacingPeers = false;
-        if (centerAvg !== null && !hasNoSurveyData && typeof targetValue === 'number') {
-            isOutpacingPeers = metric.lowerIsBetter ? (employeeAvg <= centerAvg) : (employeeAvg >= centerAvg);
-            if (isOutpacingPeers) metricsOutpacingPeers++;
-        }
-        
-        // Store data for rendering
-        const maxValue = Math.max(
-            employeeAvg || 0,
-            centerAvg || 0,
-            typeof targetValue === 'number' ? targetValue : employeeAvg || 0
-        ) * 1.15;
-        
-        metricsData.push({
-            metric,
-            employeeAvg,
-            centerAvg,
-            targetValue,
-            hasNoSurveyData,
-            isMeetingTarget,
-            maxValue
-        });
-    });
-    
-    // Display summary cards at top
-    const summaryDiv = document.createElement('div');
-    summaryDiv.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;';
-    
-    const meetingTargetCard = document.createElement('div');
-    meetingTargetCard.style.cssText = 'background: linear-gradient(135deg, #4caf50 0%, #81c784 100%); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);';
-    meetingTargetCard.innerHTML = `
-        <div style="font-size: 0.9em; opacity: 0.95; margin-bottom: 8px;">Meeting Target Goals</div>
-        <div style="font-size: 2.2em; font-weight: bold;">${metricsMetTarget} <span style="font-size: 1.1em;">/ 13</span></div>
-        <div style="font-size: 0.85em; opacity: 0.9; margin-top: 8px;">metrics at or above goals</div>
-    `;
-    summaryDiv.appendChild(meetingTargetCard);
-    
-    const outpacingCard = document.createElement('div');
-    outpacingCard.style.cssText = 'background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);';
-    outpacingCard.innerHTML = `
-        <div style="font-size: 0.9em; opacity: 0.95; margin-bottom: 8px;">Outpacing Your Peers</div>
-        <div style="font-size: 2.2em; font-weight: bold;">${metricsOutpacingPeers} <span style="font-size: 1.1em;">/ 13</span></div>
-        <div style="font-size: 0.85em; opacity: 0.9; margin-top: 8px;">categories better than center avg</div>
-    `;
-    summaryDiv.appendChild(outpacingCard);
-    
-    container.appendChild(summaryDiv);
-    
-    // Render metrics using pre-calculated data (no recalculation needed)
-    metricsData.forEach(calc => {
-        const { metric, employeeAvg, centerAvg, targetValue, hasNoSurveyData, isMeetingTarget, maxValue } = calc;
-        
-        // Determine bar color based on target achievement
-        const barColor = isMeetingTarget ? 
-            'linear-gradient(90deg, #4caf50, #81c784)' :  // Green if meeting target
-            'linear-gradient(90deg, #ffc107, #ffb300)';    // Yellow if not meeting target
-        
-        // Create visual bar
-        const chartDiv = document.createElement('div');
-        chartDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
-        
-        chartDiv.innerHTML = `
-            <h5 style="margin: 0 0 12px 0; color: #ff9800;">${metric.label}</h5>
-            <div style="margin-bottom: 8px;">
-                <div style="display: flex; align-items: center; margin-bottom: 6px;">
-                    <span style="width: 100px; font-weight: bold;">You:</span>
-                    <div style="flex: 1; background: #e8f5e9; height: 24px; border-radius: 3px; position: relative;">
-                        <div style="background: ${barColor}; height: 100%; border-radius: 3px; width: ${maxValue > 0 ? (employeeAvg / maxValue) * 100 : 0}%;"></div>
-                    </div>
-                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${hasNoSurveyData ? 'No survey data' : employeeAvg.toFixed(1) + metric.unit}</span>
-                </div>
-                <div style="display: flex; align-items: center; margin-bottom: 6px;">
-                    <span style="width: 100px; font-weight: bold;">Center Avg:</span>
-                    <div style="flex: 1; background: #f3e5f5; height: 24px; border-radius: 3px; position: relative;">
-                        <div style="background: linear-gradient(90deg, #9c27b0, #ba68c8); height: 100%; border-radius: 3px; width: ${centerAvg !== null && maxValue > 0 ? (centerAvg / maxValue) * 100 : 0}%;"></div>
-                    </div>
-                    <span style="margin-left: 12px; font-weight: bold; min-width: 80px;">${centerAvg !== null ? centerAvg.toFixed(1) + metric.unit : 'No data'}</span>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <span style="width: 100px; font-weight: bold;">Target:</span>
-                    <span style="margin-left: 12px; font-weight: bold; color: #ff9800; font-size: 1.1em;">${typeof targetValue === 'number' ? targetValue.toFixed(1) + metric.unit : targetValue}</span>
-                </div>
-            </div>
-            <div style="font-size: 0.85em; color: #666; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                ${hasNoSurveyData ? '⏳ Awaiting customer survey data' : (centerAvg === null ? '⚠️ No center average data entered' : (metric.lowerIsBetter ? (employeeAvg <= centerAvg ? '✅ Meeting center average' : '📉 Below center average') : (employeeAvg >= centerAvg ? '✅ Meeting center average' : '📉 Below center average')))}
-            </div>
-        `;
-        
-        container.appendChild(chartDiv);
-    });
-    
-    
-}
-
 function renderYearlySummaryTrendCharts() {
     const chartsContainer = document.getElementById('summaryChartsContainer');
     if (!chartsContainer) return;
@@ -10453,110 +9775,6 @@ function getCenterAverageForWeek(weekKey) {
         holdTime: avg.holdTime,
         reliability: avg.reliability
     };
-}
-
-function generateComparisonChart(metricsData) {
-    return new Promise((resolve) => {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1000;
-            canvas.height = 400;
-            const ctx = canvas.getContext('2d');
-            
-            const padding = 60;
-            const chartWidth = canvas.width - padding * 2;
-            const chartHeight = canvas.height - padding * 2;
-            const barGroupWidth = chartWidth / metricsData.length;
-            const barWidth = barGroupWidth / 3 * 0.8;
-            const spacing = (barGroupWidth - barWidth * 3) / 2;
-            
-            const allValues = metricsData.flatMap(m => [m.employee, m.center, m.target || 0]);
-            const maxValue = Math.max(...allValues, 100);
-            const scale = chartHeight / maxValue;
-            
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = '#ddd';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
-            
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, canvas.height - padding);
-            ctx.lineTo(canvas.width - padding, canvas.height - padding);
-            ctx.stroke();
-            
-            metricsData.forEach((metric, i) => {
-                const baseX = padding + (i * barGroupWidth) + spacing;
-                
-                ctx.fillStyle = '#2196F3';
-                const empHeight = metric.employee * scale;
-                ctx.fillRect(baseX, canvas.height - padding - empHeight, barWidth, empHeight);
-                
-                ctx.fillStyle = '#4CAF50';
-                const centerHeight = metric.center * scale;
-                ctx.fillRect(baseX + barWidth, canvas.height - padding - centerHeight, barWidth, centerHeight);
-                
-                if (metric.target) {
-                    ctx.fillStyle = '#FF9800';
-                    const targetHeight = metric.target * scale;
-                    ctx.fillRect(baseX + barWidth * 2, canvas.height - padding - targetHeight, barWidth, targetHeight);
-                }
-                
-                ctx.save();
-                ctx.fillStyle = '#333';
-                ctx.font = '11px Arial';
-                ctx.textAlign = 'center';
-                ctx.translate(baseX + barWidth * 1.5, canvas.height - padding + 40);
-                ctx.rotate(-Math.PI / 8);
-                ctx.fillText(metric.name, 0, 0);
-                ctx.restore();
-            });
-            
-            ctx.fillStyle = '#666';
-            ctx.font = '11px Arial';
-            ctx.textAlign = 'right';
-            for (let i = 0; i <= 5; i++) {
-                const value = (maxValue / 5) * i;
-                const y = canvas.height - padding - (chartHeight / 5) * i;
-                ctx.fillText(Math.round(value * 10) / 10, padding - 10, y + 4);
-            }
-            
-            const legendY = 20;
-            const legendX = canvas.width - 200;
-            ctx.font = 'bold 12px Arial';
-            
-            ctx.fillStyle = '#2196F3';
-            ctx.fillRect(legendX, legendY, 15, 15);
-            ctx.fillStyle = '#333';
-            ctx.textAlign = 'left';
-            ctx.fillText('Employee', legendX + 20, legendY + 12);
-            
-            ctx.fillStyle = '#4CAF50';
-            ctx.fillRect(legendX, legendY + 20, 15, 15);
-            ctx.fillStyle = '#333';
-            ctx.fillText('Center Avg', legendX + 20, legendY + 32);
-            
-            ctx.fillStyle = '#FF9800';
-            ctx.fillRect(legendX, legendY + 40, 15, 15);
-            ctx.fillStyle = '#333';
-            ctx.fillText('Target', legendX + 20, legendY + 52);
-            
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Performance Comparison: Employee vs Center Average vs Target', canvas.width / 2, 35);
-            
-            const base64 = canvas.toDataURL('image/png');
-            resolve(base64);
-        } catch (error) {
-            console.error('Error generating chart:', error);
-            resolve('');
-        }
-    });
 }
 
 // -----------------------------------------------------------------------------
@@ -11568,66 +10786,6 @@ function updateCoachingEmailDisplay() {
     renderCoachingHistory(employeeName);
 }
 
-function generateOutlookEmailFromCoPilot() {
-    const outlookBody = document.getElementById('coachingOutlookBody');
-    if (!outlookBody) return;
-
-    const emailBody = outlookBody.value.trim();
-    if (!emailBody) {
-        alert('⚠️ Paste the CoPilot response first.');
-        return;
-    }
-
-    const summary = window.latestCoachingSummaryData || {};
-    const firstName = summary.firstName || '';
-    const periodLabel = summary.periodLabel || 'this period';
-    const subject = firstName
-        ? `Coaching Check-In - ${periodLabel} for ${firstName}`
-        : `Coaching Check-In - ${periodLabel}`;
-
-    const buildHtmlFromPlainText = (text) => {
-        const escaped = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        const paragraphs = escaped.split(/\n\n+/).map(block => {
-            const withBreaks = block.replace(/\n/g, '<br>');
-            return `<p style="margin: 0 0 12px 0;">${withBreaks}</p>`;
-        });
-        return `<div style="font-family: Arial, sans-serif; font-size: 11pt; color: #000;">${paragraphs.join('')}</div>`;
-    };
-
-    const htmlBody = buildHtmlFromPlainText(emailBody);
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}`;
-
-    if (navigator.clipboard?.write) {
-        const item = new ClipboardItem({
-            'text/plain': new Blob([emailBody], { type: 'text/plain' }),
-            'text/html': new Blob([htmlBody], { type: 'text/html' })
-        });
-        navigator.clipboard.write([item])
-            .then(() => {
-                showToast('✅ Email copied with formatting. Paste into Outlook.', 4000);
-                window.location.href = mailtoLink;
-            })
-            .catch(() => {
-                navigator.clipboard?.writeText?.(emailBody);
-                window.location.href = mailtoLink;
-            });
-    } else if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(emailBody)
-            .then(() => {
-                showToast('✅ Email copied. Paste into Outlook.', 4000);
-                window.location.href = mailtoLink;
-            })
-            .catch(() => {
-                window.location.href = mailtoLink;
-            });
-    } else {
-        window.location.href = mailtoLink;
-    }
-}
-
 function renderCoachingHistory(employeeName) {
     const panel = document.getElementById('coachingHistoryPanel');
     const summary = document.getElementById('coachingHistorySummary');
@@ -11636,7 +10794,9 @@ function renderCoachingHistory(employeeName) {
     if (!panel || !summary || !list) return;
 
     if (!employeeName) {
-        panel.style.display = 'none';
+        summary.textContent = 'Select an associate to view coaching history.';
+        list.innerHTML = '';
+        panel.style.display = 'block';
         return;
     }
 
@@ -12240,91 +11400,6 @@ function saveAssociateSentimentSnapshotFromCurrentReports() {
     populateDeleteSentimentDropdown();
     renderSentimentDatabasePanel();
     showToast(`✅ Saved sentiment snapshot for ${associateName} (${startDate} to ${endDate})`, 3000);
-}
-
-function getAssociateSentimentSnapshotForPeriod(associateName, periodMeta) {
-    if (!associateName || !associateSentimentSnapshots[associateName]) {
-        return null;
-    }
-
-    const snapshots = associateSentimentSnapshots[associateName];
-    
-    console.log(`📊 GET SNAPSHOT DEBUG - Looking for sentiment data for ${associateName}, periodMeta:`, periodMeta);
-    console.log(`📊 GET SNAPSHOT DEBUG - associateSentimentSnapshots[${associateName}]:`, snapshots);
-    
-    // NEW FORMAT: Object with timeframeKeys (startDate_endDate)
-    if (!Array.isArray(snapshots)) {
-        // Build timeframeKey from period metadata
-        const timeframeKey = periodMeta?.startDate && periodMeta?.endDate 
-            ? `${periodMeta.startDate}_${periodMeta.endDate}` 
-            : null;
-        
-        console.log(`📊 GET SNAPSHOT DEBUG - Computed timeframeKey: ${timeframeKey}`);
-        
-        if (!timeframeKey || !snapshots[timeframeKey]) {
-            console.log(`📊 GET SNAPSHOT DEBUG - No exact match, searching for overlapping timeframes`);
-            // No exact match - try to find overlapping timeframe
-            const periodStart = parseDateForComparison(periodMeta?.startDate);
-            const periodEnd = parseDateForComparison(periodMeta?.endDate);
-            
-            if (periodStart && periodEnd) {
-                const allKeys = Object.keys(snapshots);
-                for (const key of allKeys) {
-                    const [snapStartStr, snapEndStr] = key.split('_');
-                    const snapStart = parseDateForComparison(snapStartStr);
-                    const snapEnd = parseDateForComparison(snapEndStr);
-                    if (snapStart && snapEnd && snapStart <= periodEnd && snapEnd >= periodStart) {
-                        console.log(`📊 GET SNAPSHOT DEBUG - Found overlapping snapshot with key: ${key}`);
-                        const formattedSnapshot = formatSentimentSnapshotForPrompt(snapshots[key], snapStartStr, snapEndStr);
-                        console.log(`📊 GET SNAPSHOT DEBUG - Returning formatted snapshot:`, formattedSnapshot);
-                        return formattedSnapshot;
-                    }
-                }
-            }
-            console.log(`📊 GET SNAPSHOT DEBUG - No snapshot found`);
-            return null;
-        }
-        
-        // Exact match found
-        console.log(`📊 GET SNAPSHOT DEBUG - Exact match found for key: ${timeframeKey}`);
-        const exactSnapshot = snapshots[timeframeKey];
-        console.log(`📊 GET SNAPSHOT DEBUG - Raw snapshot data:`, exactSnapshot);
-        const formattedSnapshot = formatSentimentSnapshotForPrompt(exactSnapshot, periodMeta.startDate, periodMeta.endDate);
-        console.log(`📊 GET SNAPSHOT DEBUG - Formatted snapshot after formatSentimentSnapshotForPrompt:`, formattedSnapshot);
-        return formattedSnapshot;
-    }
-    
-    // LEGACY FORMAT: Array of snapshots
-    if (snapshots.length === 0) {
-        return null;
-    }
-
-    const periodStart = parseDateForComparison(periodMeta?.startDate);
-    const periodEnd = parseDateForComparison(periodMeta?.endDate);
-
-    if (!periodStart || !periodEnd) {
-        return snapshots[0] || null;
-    }
-
-    const overlapping = snapshots
-        .map(snapshot => {
-            const snapStart = parseDateForComparison(snapshot.timeframeStart);
-            const snapEnd = parseDateForComparison(snapshot.timeframeEnd);
-            if (!snapStart || !snapEnd) return null;
-            const overlaps = snapStart <= periodEnd && snapEnd >= periodStart;
-            if (!overlaps) return null;
-            const overlapStart = snapStart > periodStart ? snapStart : periodStart;
-            const overlapEnd = snapEnd < periodEnd ? snapEnd : periodEnd;
-            const overlapMs = Math.max(0, overlapEnd.getTime() - overlapStart.getTime());
-            return { snapshot, overlapMs };
-        })
-        .filter(Boolean)
-        .sort((a, b) => {
-            if (b.overlapMs !== a.overlapMs) return b.overlapMs - a.overlapMs;
-            return new Date(b.snapshot.savedAt).getTime() - new Date(a.snapshot.savedAt).getTime();
-        });
-
-    return overlapping.length > 0 ? overlapping[0].snapshot : snapshots[0] || null;
 }
 
 function formatSentimentSnapshotForPrompt(snapshotData, startDate, endDate) {
