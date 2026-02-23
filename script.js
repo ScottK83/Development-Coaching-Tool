@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.8'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.9'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10946,7 +10946,26 @@ function buildOnOffScoreTableHtml(result) {
         return 'background: #eee; color: #666; font-weight: bold;';
     };
 
+    const ratingText = result.ratingAverage === null ? 'N/A' : result.ratingAverage.toFixed(2);
+    const statusText = result.trackLabel || 'N/A';
+    const statusStyle = statusText === 'Off Track'
+        ? 'background: #ff1a1a; color: #fff;'
+        : statusText === 'On Track/Exceptional'
+            ? 'background: #00b050; color: #fff;'
+            : statusText === 'On Track/Successful'
+                ? 'background: #f0de87; color: #222;'
+                : 'background: #ddd; color: #222;';
+
     return `
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+            <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid #d6c4f5; background: #f4effc;">
+                <div style="font-size: 0.8em; color: #4a148c;">Rating Average</div>
+                <div style="font-size: 1.4em; font-weight: bold; color: #4a148c;">${ratingText}</div>
+            </div>
+            <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid #d6c4f5; ${statusStyle} font-weight: bold;">
+                ${statusText}
+            </div>
+        </div>
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
@@ -10964,6 +10983,14 @@ function buildOnOffScoreTableHtml(result) {
                             <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
                         </tr>
                     `).join('')}
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Rating Average</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="2">${ratingText}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Overall Status</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="2">${statusText}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
