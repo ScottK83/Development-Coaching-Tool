@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.6'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.7'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -469,7 +469,7 @@ function showOnlySection(sectionId) {
  */
 function showSubSection(subSectionId, activeButtonId = null) {
     // Hide all sub-sections
-    const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
+    const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
     subSections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -486,6 +486,7 @@ function showSubSection(subSectionId, activeButtonId = null) {
     const selectedSubNavButton = activeButtonId || (
         subSectionId === 'subSectionCoachingEmail' ? 'subNavCoachingEmail'
             : subSectionId === 'subSectionYearEnd' ? 'subNavYearEnd'
+                : subSectionId === 'subSectionOnOffTracker' ? 'subNavOnOffTracker'
                 : subSectionId === 'subSectionSentiment' ? 'subNavSentiment'
                     : subSectionId === 'subSectionMetricTrends' ? 'subNavMetricTrends'
                         : subSectionId === 'subSectionTrendIntelligence' ? 'subNavTrendIntelligence'
@@ -2470,9 +2471,8 @@ function initializeEventHandlers() {
         initializeYearEndComments();
     });
     document.getElementById('subNavOnOffTracker')?.addEventListener('click', () => {
-        showSubSection('subSectionYearEnd', 'subNavOnOffTracker');
-        initializeYearEndComments();
-        document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showSubSection('subSectionOnOffTracker', 'subNavOnOffTracker');
+        initializeOnOffTracker();
     });
     // Track if sentiment listeners are attached to prevent duplicates
     let sentimentListenersAttached = false;
@@ -10931,6 +10931,149 @@ function renderYearEndOnOffMirror(employeeRecord) {
 
     summaryEl.textContent = `Rating Average: ${result.ratingAverage.toFixed(2)} • Calculated Status: ${result.trackLabel}`;
     return result;
+}
+
+function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId) {
+    const summaryEl = document.getElementById(summaryElementId);
+    const detailsEl = document.getElementById(detailsElementId);
+    if (!summaryEl || !detailsEl) return null;
+
+    const result = calculateYearEndOnOffMirror(employeeRecord);
+    const detailRows = [
+        {
+            label: 'AHT',
+            valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
+            score: result.scores.aht,
+            thresholds: '3 if ≤419, 2 if 420-460, 1 if >460'
+        },
+        {
+            label: 'Adherence',
+            valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
+            score: result.scores.adherence,
+            thresholds: '3 if ≥94.5%, 2 if 92.5%-94.49%, 1 if <92.5%'
+        },
+        {
+            label: 'Overall Sentiment',
+            valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
+            score: result.scores.sentiment,
+            thresholds: '3 if ≥90.1%, 2 if 87.5%-90.0%, 1 if <87.5%'
+        },
+        {
+            label: 'Associate Overall (Surveys)',
+            valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
+            score: result.scores.associateOverall,
+            thresholds: `3 if >82%, 2 if 79.5%-82%, 1 if <79.5% (source: ${result.associateOverallSource || 'unknown'})`
+        },
+        {
+            label: 'Reliability',
+            valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
+            score: result.scores.reliability,
+            thresholds: '3 if <16.1, 2 if 16.1-24.1, 1 if >24.1'
+        }
+    ];
+
+    detailsEl.innerHTML = detailRows
+        .map(item => `<li>${item.label}: ${item.valueText} → Score ${item.score === null ? 'N/A' : item.score} (${item.thresholds})</li>`)
+        .join('');
+
+    if (!result.isComplete) {
+        summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
+        return result;
+    }
+
+    summaryEl.textContent = `Rating Average: ${result.ratingAverage.toFixed(2)} • Calculated Status: ${result.trackLabel}`;
+    return result;
+}
+
+function initializeOnOffTracker() {
+    const employeeSelect = document.getElementById('onOffTrackerEmployeeSelect');
+    const reviewYearInput = document.getElementById('onOffTrackerReviewYear');
+    const status = document.getElementById('onOffTrackerStatus');
+    const panel = document.getElementById('onOffTrackerPanel');
+    const factsSummary = document.getElementById('onOffTrackerFactsSummary');
+    const summary = document.getElementById('onOffTrackerSummary');
+    const details = document.getElementById('onOffTrackerDetails');
+    const calculateBtn = document.getElementById('onOffTrackerCalculateBtn');
+
+    if (!employeeSelect || !reviewYearInput || !status || !panel || !factsSummary || !summary || !details || !calculateBtn) return;
+
+    if (!reviewYearInput.value) {
+        reviewYearInput.value = String(new Date().getFullYear());
+    }
+
+    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
+    const employees = getYearEndEmployees();
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    });
+
+    if (!employees.length) {
+        status.textContent = 'No employee data found yet. Upload yearly metrics first.';
+        status.style.display = 'block';
+        panel.style.display = 'none';
+        return;
+    }
+
+    status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
+    status.style.display = 'block';
+
+    const calculate = () => updateOnOffTrackerDisplay();
+    if (!employeeSelect.dataset.bound) {
+        employeeSelect.addEventListener('change', calculate);
+        employeeSelect.dataset.bound = 'true';
+    }
+    if (!reviewYearInput.dataset.bound) {
+        reviewYearInput.addEventListener('input', calculate);
+        reviewYearInput.dataset.bound = 'true';
+    }
+    if (!calculateBtn.dataset.bound) {
+        calculateBtn.addEventListener('click', calculate);
+        calculateBtn.dataset.bound = 'true';
+    }
+
+    panel.style.display = 'none';
+    factsSummary.textContent = '';
+    summary.textContent = '';
+    details.innerHTML = '';
+}
+
+function updateOnOffTrackerDisplay() {
+    const employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
+    const reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
+    const status = document.getElementById('onOffTrackerStatus');
+    const panel = document.getElementById('onOffTrackerPanel');
+    const factsSummary = document.getElementById('onOffTrackerFactsSummary');
+
+    if (!status || !panel || !factsSummary) return;
+
+    if (!employeeName || !reviewYear) {
+        panel.style.display = 'none';
+        status.textContent = 'Select associate and review year to calculate On/Off Track.';
+        status.style.display = 'block';
+        return;
+    }
+
+    const latestPeriod = getLatestYearPeriodForEmployee(employeeName, reviewYear);
+    if (!latestPeriod) {
+        panel.style.display = 'none';
+        status.textContent = `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`;
+        status.style.display = 'block';
+        return;
+    }
+
+    const endDateText = latestPeriod.period?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
+        : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
+    factsSummary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • End date: ${endDateText}`;
+
+    renderOnOffMirrorForElementIds(latestPeriod.employeeRecord, 'onOffTrackerSummary', 'onOffTrackerDetails');
+
+    status.textContent = `On/Off tracker calculated for ${employeeName} (${reviewYear}).`;
+    status.style.display = 'block';
+    panel.style.display = 'block';
 }
 
 function initializeYearEndComments() {

@@ -319,6 +319,41 @@
                     </div>
                     <!-- End Year-End Comments Sub-section -->
 
+                    <!-- On/Off Tracker Sub-section -->
+                    <div id="subSectionOnOffTracker" style="display: none;">
+                        <p style="color: #4a148c; margin-bottom: 20px;">Calculate On/Off Track status using the Excel mirror KPI logic without opening Year-End comments.</p>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #6a1b9a;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📍 On/Off Tracker Setup</h3>
+                            <div id="onOffTrackerStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #f3e5f5; border-left: 4px solid #7b1fa2; border-radius: 4px; color: #4a148c;"></div>
+                            <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end;">
+                                <div>
+                                    <label for="onOffTrackerEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Select Associate:</label>
+                                    <select id="onOffTrackerEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Choose an associate --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="onOffTrackerReviewYear" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Review Year:</label>
+                                    <input type="number" id="onOffTrackerReviewYear" min="2020" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                </div>
+                                <div>
+                                    <button type="button" id="onOffTrackerCalculateBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold;">📍 Calculate</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="onOffTrackerPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #6a1b9a;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📊 On/Off Track Result</h3>
+                            <div id="onOffTrackerFactsSummary" style="color: #666; margin-bottom: 15px; font-size: 0.95em;"></div>
+                            <div style="margin-bottom: 15px; padding: 12px; border-radius: 6px; background: #f7f2ff; border: 1px solid #d6c4f5;">
+                                <div id="onOffTrackerSummary" style="color: #4a148c; font-weight: bold; margin-bottom: 8px;"></div>
+                                <ul id="onOffTrackerDetails" style="margin: 0; padding-left: 18px; color: #4a148c;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End On/Off Tracker Sub-section -->
+
                     <!-- Sentiment Sub-section -->
                     <div id="subSectionSentiment" style="display: none;">
                         <p style="color: #666; font-style: italic; margin-bottom: 20px;">Sentiment analysis content will appear here when you click the Sentiment button above.</p>
