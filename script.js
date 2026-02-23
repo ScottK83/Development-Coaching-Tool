@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.7'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.8'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10882,47 +10882,7 @@ function renderYearEndOnOffMirror(employeeRecord) {
 
     const result = calculateYearEndOnOffMirror(employeeRecord);
 
-    const detailRows = [
-        {
-            label: 'AHT',
-            value: result.values.aht,
-            valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
-            score: result.scores.aht,
-            thresholds: '3 if ≤419, 2 if 420-460, 1 if >460'
-        },
-        {
-            label: 'Adherence',
-            value: result.values.adherence,
-            valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
-            score: result.scores.adherence,
-            thresholds: '3 if ≥94.5%, 2 if 92.5%-94.49%, 1 if <92.5%'
-        },
-        {
-            label: 'Overall Sentiment',
-            value: result.values.sentiment,
-            valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            score: result.scores.sentiment,
-            thresholds: '3 if ≥90.1%, 2 if 87.5%-90.0%, 1 if <87.5%'
-        },
-        {
-            label: 'Associate Overall (Surveys)',
-            value: result.values.associateOverall,
-            valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
-            score: result.scores.associateOverall,
-            thresholds: `3 if >82%, 2 if 79.5%-82%, 1 if <79.5% (source: ${result.associateOverallSource || 'unknown'})`
-        },
-        {
-            label: 'Reliability',
-            value: result.values.reliability,
-            valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
-            score: result.scores.reliability,
-            thresholds: '3 if <16.1, 2 if 16.1-24.1, 1 if >24.1'
-        }
-    ];
-
-    detailsEl.innerHTML = detailRows
-        .map(item => `<li>${item.label}: ${item.valueText} → Score ${item.score === null ? 'N/A' : item.score} (${item.thresholds})</li>`)
-        .join('');
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10939,42 +10899,7 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord);
-    const detailRows = [
-        {
-            label: 'AHT',
-            valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
-            score: result.scores.aht,
-            thresholds: '3 if ≤419, 2 if 420-460, 1 if >460'
-        },
-        {
-            label: 'Adherence',
-            valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
-            score: result.scores.adherence,
-            thresholds: '3 if ≥94.5%, 2 if 92.5%-94.49%, 1 if <92.5%'
-        },
-        {
-            label: 'Overall Sentiment',
-            valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            score: result.scores.sentiment,
-            thresholds: '3 if ≥90.1%, 2 if 87.5%-90.0%, 1 if <87.5%'
-        },
-        {
-            label: 'Associate Overall (Surveys)',
-            valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
-            score: result.scores.associateOverall,
-            thresholds: `3 if >82%, 2 if 79.5%-82%, 1 if <79.5% (source: ${result.associateOverallSource || 'unknown'})`
-        },
-        {
-            label: 'Reliability',
-            valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
-            score: result.scores.reliability,
-            thresholds: '3 if <16.1, 2 if 16.1-24.1, 1 if >24.1'
-        }
-    ];
-
-    detailsEl.innerHTML = detailRows
-        .map(item => `<li>${item.label}: ${item.valueText} → Score ${item.score === null ? 'N/A' : item.score} (${item.thresholds})</li>`)
-        .join('');
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10983,6 +10908,66 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
 
     summaryEl.textContent = `Rating Average: ${result.ratingAverage.toFixed(2)} • Calculated Status: ${result.trackLabel}`;
     return result;
+}
+
+function buildOnOffScoreTableHtml(result) {
+    const rows = [
+        {
+            label: 'AHT',
+            valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
+            score: result.scores.aht
+        },
+        {
+            label: 'Adherence',
+            valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
+            score: result.scores.adherence
+        },
+        {
+            label: 'Overall Sentiment',
+            valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
+            score: result.scores.sentiment
+        },
+        {
+            label: 'Associate Overall (Surveys)',
+            valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
+            score: result.scores.associateOverall
+        },
+        {
+            label: 'Reliability',
+            valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
+            score: result.scores.reliability
+        }
+    ];
+
+    const getScoreCellStyle = (score) => {
+        if (score === 1) return 'background: #ff1a1a; color: #fff; font-weight: bold;';
+        if (score === 2) return 'background: #f0de87; color: #222; font-weight: bold;';
+        if (score === 3) return 'background: #00b050; color: #fff; font-weight: bold;';
+        return 'background: #eee; color: #666; font-weight: bold;';
+    };
+
+    return `
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Value</th>
+                        <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(row => `
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.label}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 function initializeOnOffTracker() {
