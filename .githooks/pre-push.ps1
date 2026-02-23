@@ -64,12 +64,12 @@ if ($LASTEXITCODE -eq 0) {
     exit 0
 }
 
-# Amend latest commit so the pushed commit always carries the new version.
-git commit --amend --no-edit | Out-Null
+# Create a new commit instead of amending.
+git commit -m "chore: bump app version to $nextVersion" | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to amend commit with updated APP_VERSION."
+    Write-Host "Failed to commit updated APP_VERSION."
     exit 1
 }
 
-Write-Host "Updated APP_VERSION to $nextVersion and amended HEAD before push."
-exit 0
+Write-Host "Updated APP_VERSION to $nextVersion and created a new commit. Re-run push."
+exit 1
