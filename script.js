@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.4'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.23.5'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10790,11 +10790,34 @@ function calculateYearEndOnOffMirror(employeeRecord) {
         return Number.isNaN(numeric) ? null : numeric;
     };
 
+    const pickAssociateOverallValue = () => {
+        const overallExperienceVal = parseNumber(employeeRecord?.overallExperience);
+        const cxRepOverallVal = parseNumber(employeeRecord?.cxRepOverall);
+        const isValidPercent = (val) => val !== null && val >= 0 && val <= 100;
+
+        if (isValidPercent(overallExperienceVal) && overallExperienceVal > 0) {
+            return { value: overallExperienceVal, source: 'overallExperience' };
+        }
+        if (isValidPercent(cxRepOverallVal) && cxRepOverallVal > 0) {
+            return { value: cxRepOverallVal, source: 'cxRepOverall' };
+        }
+        if (isValidPercent(overallExperienceVal)) {
+            return { value: overallExperienceVal, source: 'overallExperience' };
+        }
+        if (isValidPercent(cxRepOverallVal)) {
+            return { value: cxRepOverallVal, source: 'cxRepOverall' };
+        }
+
+        return { value: null, source: 'none' };
+    };
+
+    const associateOverallPick = pickAssociateOverallValue();
+
     const values = {
         aht: parseNumber(employeeRecord?.aht),
         adherence: parseNumber(employeeRecord?.scheduleAdherence),
         sentiment: parseNumber(employeeRecord?.overallSentiment),
-        associateOverall: parseNumber(employeeRecord?.overallExperience ?? employeeRecord?.cxRepOverall),
+        associateOverall: associateOverallPick.value,
         reliability: parseNumber(employeeRecord?.reliability)
     };
 
@@ -10815,7 +10838,8 @@ function calculateYearEndOnOffMirror(employeeRecord) {
             scores,
             ratingAverage: null,
             trackLabel: 'Insufficient KPI data to calculate On/Off Track',
-            trackStatusValue: ''
+            trackStatusValue: '',
+            associateOverallSource: associateOverallPick.source
         };
     }
 
@@ -10837,7 +10861,8 @@ function calculateYearEndOnOffMirror(employeeRecord) {
         scores,
         ratingAverage,
         trackLabel,
-        trackStatusValue
+        trackStatusValue,
+        associateOverallSource: associateOverallPick.source
     };
 }
 
@@ -10875,7 +10900,7 @@ function renderYearEndOnOffMirror(employeeRecord) {
             value: result.values.associateOverall,
             valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
             score: result.scores.associateOverall,
-            thresholds: '3 if >82%, 2 if 79.5%-82%, 1 if <79.5%'
+            thresholds: `3 if >82%, 2 if 79.5%-82%, 1 if <79.5% (source: ${result.associateOverallSource || 'unknown'})`
         },
         {
             label: 'Reliability',
