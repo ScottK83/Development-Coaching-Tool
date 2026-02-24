@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.24.10'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.24.8'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -48,34 +48,10 @@ if (!DEBUG) {
         lastError = { message: args.join(' '), timestamp: new Date().toISOString() };
         localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastError));
     };
-} else {
-    // Even in DEBUG mode, suppress source map warnings
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    console.error = (...args) => {
-        const msg = args.join(' ');
-        if ((msg.includes('JSON.parse') && msg.includes('.map')) || msg.includes('Source map error')) {
-            return; // Suppress source map errors
-        }
-        originalError.apply(console, args);
-    };
-    console.warn = (...args) => {
-        const msg = args.join(' ');
-        if ((msg.includes('JSON.parse') && msg.includes('.map')) || msg.includes('Source map error')) {
-            return; // Suppress source map warnings
-        }
-        originalWarn.apply(console, args);
-    };
 }
 
 // Global error handler
 window.addEventListener('error', (event) => {
-    // Suppress source map errors (cosmetic, don't need to surface)
-    if (event.message?.includes('JSON.parse') && event.filename?.includes('.map')) {
-        event.preventDefault();
-        return;
-    }
-    
     const errorInfo = {
         message: event.message,
         source: event.filename,
@@ -112,155 +88,6 @@ let yearEndDraftContext = null;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
-
-// ============================================
-// STORAGE HELPERS (defined early for guaranteed availability)
-// ============================================
-
-function saveWithSizeCheck(key, data) {
-    try {
-        const serialized = JSON.stringify(data ?? {});
-        const sizeMB = new Blob([serialized]).size / (1024 * 1024);
-
-        if (sizeMB > LOCALSTORAGE_MAX_SIZE_MB || false) { // LOCALSTORAGE_MAX_SIZE_MB defined below
-            return false;
-        }
-
-        localStorage.setItem(STORAGE_PREFIX + key, serialized);
-        return true;
-    } catch (error) {
-        if (error?.name === 'QuotaExceededError') {
-            return false;
-        }
-        console.error(`Error saving ${key}:`, error);
-        return false;
-    }
-}
-
-function loadWeeklyData() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'weeklyData';
-        const saved = localStorage.getItem(namespacedKey);
-        if (saved) {
-            const data = JSON.parse(saved);
-            return data && typeof data === 'object' ? data : {};
-        }
-
-        const legacySaved = localStorage.getItem('weeklyData');
-        if (legacySaved) {
-            const legacyData = JSON.parse(legacySaved);
-            const normalizedData = legacyData && typeof legacyData === 'object' ? legacyData : {};
-            localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
-            return normalizedData;
-        }
-
-        return {};
-    } catch (error) {
-        console.error('Error loading weekly data:', error);
-        return {};
-    }
-}
-
-function saveWeeklyData() {
-    try {
-        if (!saveWithSizeCheck('weeklyData', weeklyData)) {
-            console.error('Failed to save weekly data due to size');
-        }
-    } catch (error) {
-        console.error('Error saving weekly data:', error);
-    }
-}
-
-function loadYtdData() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'ytdData';
-        const saved = localStorage.getItem(namespacedKey);
-        if (saved) {
-            const data = JSON.parse(saved);
-            return data && typeof data === 'object' ? data : {};
-        }
-        return {};
-    } catch (error) {
-        console.error('Error loading YTD data:', error);
-        return {};
-    }
-}
-
-function saveYtdData() {
-    try {
-        if (!saveWithSizeCheck('ytdData', ytdData)) {
-            console.error('Failed to save YTD data due to size');
-        }
-    } catch (error) {
-        console.error('Error saving YTD data:', error);
-    }
-}
-
-function loadCoachingHistory() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'coachingHistory';
-        const saved = localStorage.getItem(namespacedKey);
-        const data = saved ? JSON.parse(saved) : {};
-        return data;
-    } catch (error) {
-        console.error('Error loading coaching history:', error);
-        return {};
-    }
-}
-
-function saveCoachingHistory() {
-    try {
-        if (!saveWithSizeCheck('coachingHistory', coachingHistory)) {
-            console.error('Failed to save coaching history due to size');
-        }
-    } catch (error) {
-        console.error('Error saving coaching history:', error);
-    }
-}
-
-function loadSentimentPhraseDatabase() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY;
-        const saved = localStorage.getItem(namespacedKey);
-        return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-        console.error('Error loading sentiment phrase database:', error);
-        return null;
-    }
-}
-
-function saveSentimentPhraseDatabase() {
-    try {
-        if (!saveWithSizeCheck(SENTIMENT_PHRASE_DB_STORAGE_KEY, sentimentPhraseDatabase || {})) {
-            console.error('Failed to save sentiment phrase database due to size');
-        }
-    } catch (error) {
-        console.error('Error saving sentiment phrase database:', error);
-    }
-}
-
-function loadAssociateSentimentSnapshots() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY;
-        const saved = localStorage.getItem(namespacedKey);
-        let loaded = saved ? JSON.parse(saved) : {};
-        // Minimal migration for older format if needed
-        return loaded;
-    } catch (error) {
-        console.error('Error loading associate sentiment snapshots:', error);
-        return {};
-    }
-}
-
-function saveAssociateSentimentSnapshots() {
-    try {
-        if (!saveWithSizeCheck(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, associateSentimentSnapshots || {})) {
-            console.error('Failed to save associate sentiment snapshots due to size');
-        }
-    } catch (error) {
-        console.error('Error saving associate sentiment snapshots:', error);
-    }
-}
 
 // ============================================
 // CONSTANTS
@@ -1808,7 +1635,87 @@ function saveUserTips(tips) {
     }
 }
 
+function saveWithSizeCheck(key, data) {
+    try {
+        const serialized = JSON.stringify(data ?? {});
+        const sizeMB = new Blob([serialized]).size / (1024 * 1024);
 
+        if (sizeMB > LOCALSTORAGE_MAX_SIZE_MB) {
+            showDetailedError('STORAGE_FULL', {
+                usage: `${sizeMB.toFixed(2)}MB`
+            }, 'saveWithSizeCheck');
+            return false;
+        }
+
+        localStorage.setItem(STORAGE_PREFIX + key, serialized);
+        return true;
+    } catch (error) {
+        if (error?.name === 'QuotaExceededError') {
+            showDetailedError('STORAGE_FULL', {
+                usage: `${LOCALSTORAGE_MAX_SIZE_MB}+MB`
+            }, 'saveWithSizeCheck');
+            return false;
+        }
+
+        console.error(`Error saving ${key}:`, error);
+        return false;
+    }
+}
+
+function loadWeeklyData() {
+    try {
+        const namespacedKey = STORAGE_PREFIX + 'weeklyData';
+        const saved = localStorage.getItem(namespacedKey);
+        if (saved) {
+            const data = JSON.parse(saved);
+            return data && typeof data === 'object' ? data : {};
+        }
+
+        const legacySaved = localStorage.getItem('weeklyData');
+        if (legacySaved) {
+            const legacyData = JSON.parse(legacySaved);
+            const normalizedData = legacyData && typeof legacyData === 'object' ? legacyData : {};
+            localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+            return normalizedData;
+        }
+
+        return {};
+    } catch (error) {
+        console.error('Error loading weekly data:', error);
+        return {};
+    }
+}
+
+function saveWeeklyData() {
+    try {
+        if (!saveWithSizeCheck('weeklyData', weeklyData)) {
+            console.error('Failed to save weekly data due to size');
+        }
+    } catch (error) {
+        console.error('Error saving weekly data:', error);
+    }
+}
+
+function loadYtdData() {
+    try {
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
+        const data = saved ? JSON.parse(saved) : {};
+        return data;
+    } catch (error) {
+        console.error('Error loading YTD data:', error);
+        return {};
+    }
+}
+
+function saveYtdData() {
+    try {
+        if (!saveWithSizeCheck('ytdData', ytdData)) {
+            console.error('Failed to save YTD data due to size');
+        }
+    } catch (error) {
+        console.error('Error saving YTD data:', error);
+    }
+}
 
 function loadCoachingHistory() {
     try {

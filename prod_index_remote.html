@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'">
+    <title>Development Coaching Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="lib-chart.js"></script>
+    <script src="lib-html2canvas.js"></script>
+    <script src="lib-xlsx.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Development Coaching Tool</h1>
+            <p class="subtitle">Personalized coaching with knowledge base guidance</p>
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" id="homeBtn" class="btn-secondary" aria-label="Home - Upload Data">🏠 Home (Upload Data)</button>
+                <button type="button" id="coachingEmailBtn" class="btn-secondary" style="background: #E91E63; color: white;" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
+                <button type="button" id="redFlagBtn" class="btn-secondary" style="background: #dc3545; color: white;" aria-label="Red Flag Coaching">🚩 RED FLAG COACHING</button>
+                <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;" aria-label="Manage Data">🗄️ Manage Data</button>
+                <button type="button" id="manageTips" class="btn-secondary" style="background: #26a69a; color: white;" aria-label="Manage Tips">💡 Manage Tips</button>
+                <button type="button" id="ptoBtn" class="btn-secondary" style="background: #2f7a6d; color: white;" aria-label="PTO Tracker">🕒 PTO Tracker</button>
+                <button type="button" id="debugBtn" class="btn-secondary" style="background: #6c757d; color: white;" aria-label="Debug Panel">🐞 Debug</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <form id="coachingForm">
+                <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
+                    <h2>📊 Get Started</h2>
+                    
+                    <!-- Upload Type Selection -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" id="showUploadMetricsBtn" style="flex: 1; min-width: 200px; max-width: 300px; padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">📊 Upload Metrics</button>
+                        <button type="button" id="showUploadSentimentBtn" style="flex: 1; min-width: 200px; max-width: 300px; padding: 20px; background: linear-gradient(135deg, #00acc1 0%, #00897b 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">💬 Upload Sentiment</button>
+                    </div>
+                    
+                    <!-- Upload Metrics Container -->
+                    <div id="pasteDataContainer" style="display: none; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 5px; border: 2px solid #28a745;">
+                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload Metrics Data</h3>
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy/Paste the data from PowerBI into the box below. Enter date range. You'll manage your team in the Manage Data section.</p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">PowerBI Data:</label>
+                            <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
+                            <div id="dataValidationPreview" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period Type:</label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" class="upload-period-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
+                                <button type="button" class="upload-period-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
+                                <button type="button" class="upload-period-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
+                                <button type="button" class="upload-period-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label for="uploadYearEndProfile" style="font-weight: bold; display: block; margin-bottom: 5px;">Year-End Target Profile:</label>
+                            <select id="uploadYearEndProfile" style="width: 100%; max-width: 320px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; cursor: pointer;">
+                                <option value="auto">Auto from end date</option>
+                                <option value="2025">2025 goals</option>
+                                <option value="2026">2026 goals</option>
+                            </select>
+                            <div style="margin-top: 6px; color: #666; font-size: 0.85em;">Use this when uploading year-end data that should follow 2025 targets.</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label for="pasteWeekEndingDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Week Ending (Saturday):</label>
+                                <input type="date" id="pasteWeekEndingDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;" onclick="this.click();">
+                                <div style="margin-top: 5px; color: #666; font-size: 0.85em;">Week runs Sunday - Saturday</div>
+                            </div>
+                            <div style="flex: 0 0 auto;">
+                                <button type="button" id="loadPastedDataBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 8px 20px; white-space: nowrap; font-weight: bold;">📊 Load Data</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Success message -->
+                    <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
+                        <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
+                        <p style="margin: 10px 0 0 0;">Click <strong>"📈 Metric Trends"</strong> at the top to generate trend emails.</p>
+                        <div style="margin-top: 15px;">
+                            <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+            <!-- Upload Sentiment Modal (hidden by default) -->
+            <div id="uploadSentimentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 8px; padding: 30px; max-width: 700px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+                    <h2 style="margin-top: 0; color: #00796b;">💬 Upload Sentiment Data</h2>
+                    <p style="color: #666; margin-bottom: 20px;">Upload sentiment analysis reports for ONE associate. You can upload all 3 files at once.</p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="sentimentUploadAssociate" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Associate:</label>
+                        <select id="sentimentUploadAssociate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                            <option value="">-- Select an associate --</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="sentimentUploadPullDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Pull Date:</label>
+                        <input type="date" id="sentimentUploadPullDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <div style="margin-top: 5px; color: #666; font-size: 0.85em;">Data represents the 14 days prior to this date</div>
+                    </div>
+                    
+                    <!-- Three file upload sections -->
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #00796b; font-size: 1em;">Upload Files (CSV or Excel):</h3>
+                        
+                        <!-- Positive Language -->
+                        <div style="margin-bottom: 12px; padding: 12px; background: #e8f5e9; border-radius: 4px; border: 1px solid #4caf50;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #1b5e20;">➕ Positive Language:</label>
+                            <input type="file" id="sentimentUploadPositiveFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                        </div>
+                        
+                        <!-- Negative Language -->
+                        <div style="margin-bottom: 12px; padding: 12px; background: #ffebee; border-radius: 4px; border: 1px solid #f44336;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #b71c1c;">➖ Avoiding Negative Language:</label>
+                            <input type="file" id="sentimentUploadNegativeFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                        </div>
+                        
+                        <!-- Managing Emotions -->
+                        <div style="padding: 12px; background: #f3e5f5; border-radius: 4px; border: 1px solid #9c27b0;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #4a148c;">🎭 Managing Emotions:</label>
+                            <input type="file" id="sentimentUploadEmotionsFile" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                        </div>
+                    </div>
+                    
+                    <div id="sentimentUploadStatus" style="font-size: 0.9em; color: #666; margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px; display: none;"></div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" id="sentimentUploadCancelBtn" style="padding: 10px 20px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: bold;">Cancel</button>
+                        <button type="button" id="sentimentUploadSubmitBtn" style="padding: 10px 20px; background: #00796b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">💾 Save Sentiment Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Coaching Section -->
+
+            <section id="coachingEmailSection" style="display: none;">
+                <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #E91E63;">
+                    <h2>💌 Coaching & Analysis</h2>
+                    
+                    <!-- Sub-navigation -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #E91E63; padding-bottom: 15px;">
+                        <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
+                        <button type="button" id="subNavYearEnd" class="btn-secondary" style="background: #5e35b1; color: white;">🗓️ Year-End Comments</button>
+                        <button type="button" id="subNavOnOffTracker" class="btn-secondary" style="background: #6a1b9a; color: white;">📍 On/Off Tracker</button>
+                        <button type="button" id="subNavSentiment" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
+                        <button type="button" id="subNavMetricTrends" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
+                        <button type="button" id="subNavTrendIntelligence" class="btn-secondary" style="background: #ff9800; color: white;">📊 Trend Intelligence</button>
+                    </div>
+
+                    <!-- Coaching Email Sub-section -->
+                    <div id="subSectionCoachingEmail" style="display: block;">
+                    <p style="color: #4a148c; margin-bottom: 20px;">Generate weekly coaching check-ins based on the latest uploaded data.</p>
+
+                    <div id="coachingEmailStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"></div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #E91E63;">
+                        <label for="coachingEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 10px; color: #333;">Select Associate:</label>
+                        <select id="coachingEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                            <option value="">-- Choose an associate --</option>
+                        </select>
+                    </div>
+
+                    <div id="coachingMetricsPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #E91E63;">
+                        <h3 style="color: #4a148c; margin-top: 0;">📊 Latest Performance Snapshot</h3>
+                        <div id="coachingMetricsSummary" style="color: #666; margin-bottom: 15px; font-size: 0.95em;"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="background: #e8f5e9; border-radius: 6px; padding: 12px; border: 1px solid #4caf50;">
+                                <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Exceeding / Meeting Goal</h4>
+                                <ul id="coachingWinsList" style="margin: 0; padding-left: 18px; color: #2e7d32;"></ul>
+                            </div>
+                            <div style="background: #ffebee; border-radius: 6px; padding: 12px; border: 1px solid #f44336;">
+                                <h4 style="margin: 0 0 10px 0; color: #b71c1c;">⚠️ Focus Areas</h4>
+                                <ul id="coachingOpportunitiesList" style="margin: 0; padding-left: 18px; color: #b71c1c;"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="coachingHistoryPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #E91E63;">
+                        <h3 style="color: #4a148c; margin-top: 0;">🗂️ Coaching History</h3>
+                        <div id="coachingHistorySummary" style="color: #666; margin-bottom: 12px; font-size: 0.9em;"></div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                            <button type="button" id="deleteLatestCoachingBtn" class="btn-secondary" style="background: #dc3545; color: white;">🗑️ Delete Latest</button>
+                            <button type="button" id="clearCoachingHistoryBtn" class="btn-secondary" style="background: #6c757d; color: white;">🧹 Clear All</button>
+                        </div>
+                        <ul id="coachingHistoryList" style="margin: 0; padding-left: 18px; color: #333;"></ul>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #E91E63;">
+                        <h3 style="color: #4a148c; margin-top: 0;">🤖 CoPilot Prompt</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Click below to generate and copy the prompt. Paste into CoPilot to draft the email.</p>
+                        <textarea id="coachingPromptArea" readonly style="width: 100%; height: 220px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                            <button type="button" id="generateCoachingPromptBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px;">🤖 Generate CoPilot Prompt</button>
+                            <button type="button" id="generateVerintSummaryBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px;">📝 Copy Verint Summary</button>
+                        </div>
+                    </div>
+
+                    <div id="verintSummarySection" style="display: none; margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #6a1b9a;">
+                        <h3 style="color: #6a1b9a; margin-top: 0;">📝 Verint Coaching Summary</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Quick summary format ready to paste into Verint coaching notes.</p>
+                        <textarea id="verintSummaryOutput" readonly style="width: 100%; height: 150px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
+                    </div>
+
+                    <div id="coachingOutlookSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff8e1; border-radius: 8px; border: 2px solid #ffb300;">
+                        <h3 style="color: #8d6e00; margin-top: 0;">📧 Generate Outlook Email</h3>
+                        <p style="color: #7a6a00; margin-bottom: 15px; font-size: 0.9em;">Paste the CoPilot response below, then generate the Outlook email.</p>
+                        <textarea id="coachingOutlookBody" placeholder="Paste the CoPilot-generated email here..." style="width: 100%; height: 220px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #fffdf7; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                            <button type="button" id="generateOutlookEmailBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px; opacity: 0.6;">📧 Generate Outlook Email</button>
+                        </div>
+                    </div>
+                    </div>
+                    <!-- End Coaching Email Sub-section -->
+
+                    <!-- Year-End Comments Sub-section -->
+                    <div id="subSectionYearEnd" style="display: none;">
+                        <p style="color: #4a148c; margin-bottom: 20px;">Generate year-end comments with strengths, improvement focus areas, and a Copilot-ready prompt.</p>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🗓️ Year-End Setup</h3>
+                            <div id="yearEndStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #f3e5f5; border-left: 4px solid #7b1fa2; border-radius: 4px; color: #4a148c;"></div>
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="yearEndEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Select Associate:</label>
+                                    <select id="yearEndEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Choose an associate --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="yearEndReviewYear" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Review Year:</label>
+                                    <input type="number" id="yearEndReviewYear" min="2020" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                </div>
+                                <div>
+                                    <label for="yearEndTrackSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Year-End Status:</label>
+                                    <select id="yearEndTrackSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Select --</option>
+                                        <option value="on-track">✅ On Track</option>
+                                        <option value="off-track">⚠️ Off Track</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <button type="button" id="calculateYearEndOnOffBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold;">📍 Calculate On/Off Tracker</button>
+                            </div>
+                        </div>
+
+                        <div id="yearEndSnapshotPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">📊 Year-End Snapshot</h3>
+                            <div id="yearEndFactsSummary" style="color: #666; margin-bottom: 15px; font-size: 0.95em;"></div>
+                            <div style="margin-bottom: 15px; padding: 12px; border-radius: 6px; background: #f7f2ff; border: 1px solid #d6c4f5;">
+                                <h4 style="margin: 0 0 8px 0; color: #4a148c;">📍 On/Off Track Mirror (Excel Logic)</h4>
+                                <div id="yearEndOnOffSummary" style="color: #4a148c; font-weight: bold; margin-bottom: 8px;"></div>
+                                <div id="yearEndOnOffDetails" style="margin: 0; color: #4a148c;"></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div style="background: #e8f5e9; border-radius: 6px; padding: 12px; border: 1px solid #4caf50;">
+                                    <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Positive Highlights</h4>
+                                    <ul id="yearEndWinsList" style="margin: 0; padding-left: 18px; color: #2e7d32;"></ul>
+                                </div>
+                                <div style="background: #ffebee; border-radius: 6px; padding: 12px; border: 1px solid #f44336;">
+                                    <h4 style="margin: 0 0 10px 0; color: #b71c1c;">⚠️ Improvement Areas</h4>
+                                    <ul id="yearEndImprovementList" style="margin: 0; padding-left: 18px; color: #b71c1c;"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🎯 Annual APS Goals</h3>
+                            <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Defaults are set to Meeting. Mark any yearly goal that was not met and add details when needed.</p>
+                            <div id="yearEndAnnualGoalsContainer" style="display: grid; gap: 10px;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">✍️ Year-End Notes Input</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="yearEndPositivesInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Positives to Highlight:</label>
+                                    <textarea id="yearEndPositivesInput" placeholder="Example: Strong ownership, consistent customer tone, improved schedule adherence..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="yearEndImprovementsInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Improvement Areas Needed:</label>
+                                    <textarea id="yearEndImprovementsInput" placeholder="Example: Improve FCR consistency, reduce AHT, tighten after-call work discipline..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <label for="yearEndManagerContext" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Additional Context (optional):</label>
+                                <textarea id="yearEndManagerContext" placeholder="Add any context you want included in the final year-end note..." style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🤖 Year-End Copilot Prompt</h3>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Generate and open in Copilot, then paste the response below for one-click copy into notes.</p>
+                            <textarea id="yearEndPromptArea" readonly style="width: 100%; height: 200px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #333; background: #f9f9f9; resize: vertical;"></textarea>
+                            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                                <button type="button" id="generateYearEndPromptBtn" style="background: #5e35b1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 220px;">🤖 Generate Year-End Copilot Prompt</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #7b1fa2;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📋 Final Notes Output</h3>
+                            <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Paste Copilot's result here, then click copy to paste directly into employee notes.</p>
+                            <textarea id="yearEndCopilotResponse" placeholder="Paste Copilot year-end comment output here..." style="width: 100%; height: 160px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
+                            <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                                <button type="button" id="copyYearEndResponseBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Year-End Notes</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Year-End Comments Sub-section -->
+
+                    <!-- On/Off Tracker Sub-section -->
+                    <div id="subSectionOnOffTracker" style="display: none;">
+                        <p style="color: #4a148c; margin-bottom: 20px;">Calculate On/Off Track status using the Excel mirror KPI logic without opening Year-End comments.</p>
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #6a1b9a;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📍 On/Off Tracker Setup</h3>
+                            <div id="onOffTrackerStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #f3e5f5; border-left: 4px solid #7b1fa2; border-radius: 4px; color: #4a148c;"></div>
+                            <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end;">
+                                <div>
+                                    <label for="onOffTrackerEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Select Associate:</label>
+                                    <select id="onOffTrackerEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="">-- Choose an associate --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="onOffTrackerReviewYear" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Review Year:</label>
+                                    <input type="number" id="onOffTrackerReviewYear" min="2020" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                </div>
+                                <div>
+                                    <button type="button" id="onOffTrackerCalculateBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold;">📍 Calculate</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="onOffTrackerPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #6a1b9a;">
+                            <h3 style="color: #6a1b9a; margin-top: 0;">📊 On/Off Track Result</h3>
+                            <div id="onOffTrackerFactsSummary" style="color: #666; margin-bottom: 15px; font-size: 0.95em;"></div>
+                            <div style="margin-bottom: 15px; padding: 12px; border-radius: 6px; background: #f7f2ff; border: 1px solid #d6c4f5;">
+                                <div id="onOffTrackerSummary" style="color: #4a148c; font-weight: bold; margin-bottom: 8px;"></div>
+                                <div id="onOffTrackerDetails" style="margin: 0; color: #4a148c;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End On/Off Tracker Sub-section -->
+
+                    <!-- Sentiment Sub-section -->
+                    <div id="subSectionSentiment" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Sentiment analysis content will appear here when you click the Sentiment button above.</p>
+                    </div>
+
+                    <!-- Metric Trends Sub-section -->
+                    <div id="subSectionMetricTrends" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Metric trends content will appear here when you click the Metric Trends button above.</p>
+                    </div>
+
+                    <!-- Trend Intelligence Sub-section -->
+                    <div id="subSectionTrendIntelligence" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Trend intelligence content will appear here when you click the Trend Intelligence button above.</p>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <!-- Employee Dashboard/History Section -->
+            <!-- Tips Management Section -->
+            <section id="tipsManagementSection" style="display: none;">
+                <div class="form-section" style="background: #e0f2f1; border-left: 4px solid #00796b;">
+                    <h2>💡 Manage Coaching Tips</h2>
+                    <p style="color: #004d40; margin-bottom: 20px;">Create and manage reusable coaching tips for your associates.</p>
+                    
+                    <!-- Add New Tip -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #00796b;">
+                        <h3 style="color: #004d40; margin-top: 0;">➕ Add New Tip</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="tipTitleInput" style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">Tip Title:</label>
+                            <input type="text" id="tipTitleInput" placeholder="e.g., Active Listening" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="tipContentInput" style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">Tip Content:</label>
+                            <textarea id="tipContentInput" placeholder="Write your coaching tip here..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+                        </div>
+                        <button type="button" id="addTipBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">➕ Add Tip</button>
+                    </div>
+                    
+                    <!-- Tips List -->
+                    <div style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #00796b;">
+                        <h3 style="color: #004d40; margin-top: 0;">📋 Your Tips</h3>
+                        <div id="tipsContainer" style="display: grid; gap: 15px;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Metric Trends Section -->
+            <section id="metricTrendsSection" style="display: none;">
+                <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #9c27b0;">
+                    <h2>📈 Metric Trend Reports</h2>
+                    <p style="margin-bottom: 20px;">Generate trend summary emails showing associate performance vs call center averages and week-over-week changes.</p>
+                    
+                    <!-- Status Message -->
+                    <div id="metricTrendsStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                        <strong>⚠️ No Data Available</strong>
+                        <p style="margin: 5px 0 0 0;">Please upload weekly data first using the <strong>📤 Upload Data</strong> tab to use this feature.</p>
+                    </div>
+                    
+                    <!-- Call Center Averages Management -->
+                    <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                        <h3 style="color: #9c27b0; margin-top: 0;">📊 Call Center Averages</h3>
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">View the call center average metrics for your selected period.</p>
+                        
+                        <!-- Period Type Selection -->
+                        <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196F3;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 10px;">Select Period Type:</label>
+                            <div style="display: flex; gap: 20px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="week" checked style="cursor: pointer;">
+                                    <span>📅 Week</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="month" style="cursor: pointer;">
+                                    <span>📆 Month</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="trendPeriodType" value="ytd" style="cursor: pointer;">
+                                    <span>📊 Year-to-Date</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Select Period to View -->
+                        <div style="margin-bottom: 20px; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;">
+                            <label for="avgUploadedDataSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">📋 Select Period:</label>
+                            <select id="avgUploadedDataSelect" style="width: 100%; padding: 10px; border: 2px solid #4caf50; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose a period from your data --</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label for="avgPeriodType" style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">Type:</label>
+                                <input type="text" id="avgPeriodType" readonly style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; background-color: #f9f9f9;">
+                            </div>
+                            <div>
+                                <label for="avgWeekMonday" style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">From:</label>
+                                <input type="date" id="avgWeekMonday" readonly style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; background-color: #f9f9f9;">
+                            </div>
+                            <div>
+                                <label for="avgWeekSunday" style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">To:</label>
+                                <input type="date" id="avgWeekSunday" readonly style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; background-color: #f9f9f9;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <button type="button" id="toggleAvgMetricsBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold;">✏️ Edit Averages</button>
+                        </div>
+                        
+                        <div id="avgMetricsForm" style="display: none; padding: 15px; background: #f3e5f5; border-radius: 4px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Adherence (%):</label>
+                                    <input type="number" id="avgAdherence" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Overall Experience (%):</label>
+                                    <input type="number" id="avgOverallExperience" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Rep Satisfaction (%):</label>
+                                    <input type="number" id="avgRepSatisfaction" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">FCR (%):</label>
+                                    <input type="number" id="avgFCR" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Transfers (%):</label>
+                                    <input type="number" id="avgTransfers" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Sentiment (%):</label>
+                                    <input type="number" id="avgSentiment" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Positive Word (%):</label>
+                                    <input type="number" id="avgPositiveWord" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Avoiding Negative Words (%):</label>
+                                    <input type="number" id="avgNegativeWord" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Managing Emotions (%):</label>
+                                    <input type="number" id="avgManagingEmotions" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">AHT (seconds):</label>
+                                    <input type="number" id="avgAHT" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">ACW (seconds):</label>
+                                    <input type="number" id="avgACW" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Hold Time (seconds):</label>
+                                    <input type="number" id="avgHoldTime" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Reliability (hours):</label>
+                                    <input type="number" id="avgReliability" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                                <button type="button" id="saveAvgBtn" class="btn-primary">💾 Save Averages</button>
+                                <button type="button" id="copyPreviousAvgBtn" class="btn-secondary" style="background: #2196F3; color: white;">📋 Copy from Previous</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Generate Trend Email -->
+                    <div style="padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                        <h3 style="color: #9c27b0; margin-top: 0;">✉️ Generate Trend Email</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Period:</label>
+                            <select id="trendPeriodSelect" disabled style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em; background-color: #f9f9f9;">
+                                <option value="">-- Choose a period --</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Employee:</label>
+                            <select id="trendEmployeeSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                                <option value="">-- Choose an employee --</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendNickname" style="font-weight: bold; display: block; margin-bottom: 5px;">3. Nickname (Optional):</label>
+                            <input type="text" id="trendNickname" placeholder="How to address them in the email (e.g., 'John')" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
+                            <small style="color: #666; font-size: 0.9em; display: block; margin-top: 5px;">Leave blank to use their full name</small>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="trendSentimentSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">4. Sentiment Data (Optional):</label>
+                            <select id="trendSentimentSelect" style="width: 100%; padding: 10px; border: 2px solid #26a69a; border-radius: 4px; font-size: 1em; background-color: #f9f9f9;">
+                                <option value="">-- No sentiment data --</option>
+                            </select>
+                            <small style="color: #666; font-size: 0.9em; display: block; margin-top: 5px;">Select a sentiment snapshot to include in coaching email</small>
+                        </div>
+                        
+                        <!-- Metrics Preview Section -->
+                        <div id="metricsPreviewSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9c27b0;">
+                            <h4 style="color: #9c27b0; margin-top: 0;">📊 Employee Metrics (Auto-populated - Edit if needed)</h4>
+                            <div id="metricsPreviewGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                                <!-- Metrics will be populated here -->
+                            </div>
+                            <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" id="saveMetricsPreviewBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">💾 Save Metrics</button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="generateTrendBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📈 Generate Trend Email</button>
+                            <button type="button" id="generateAllTrendBtn" style="background: #6f42c1; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📬 Generate All</button>
+                        </div>
+                        
+                    </div>
+                </div>
+            </section>
+
+            <!-- Debug Section -->
+            <section id="debugSection" style="display: none;">
+                <div class="form-section" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+                    <h2>🐞 Debug Panel</h2>
+                    <p style="color: #7a4f00; margin-bottom: 20px;">Use this panel to compare data, environment, and error logs between machines.</p>
+
+                    <div class="debug-actions">
+                        <button type="button" id="refreshDebugBtn" class="btn-secondary" style="background: #ff9800; color: white;">🔄 Refresh</button>
+                        <button type="button" id="copyDebugBtn" class="btn-secondary" style="background: #00796b; color: white;">📋 Copy Debug Info</button>
+                        <button type="button" id="clearDebugBtn" class="btn-secondary" style="background: #dc3545; color: white;">🧹 Clear Error Log</button>
+                    </div>
+
+                    <div class="debug-grid">
+                        <div class="debug-card">
+                            <h3>Environment</h3>
+                            <pre id="debugEnvironment" class="debug-pre"></pre>
+                        </div>
+                        <div class="debug-card">
+                            <h3>Data Snapshot</h3>
+                            <pre id="debugDataSnapshot" class="debug-pre"></pre>
+                        </div>
+                    </div>
+
+                    <div class="debug-card">
+                        <h3>Recent Errors</h3>
+                        <pre id="debugErrors" class="debug-pre"></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sentiment Section -->
+            <section id="sentimentSection" style="display: none;">
+                <div class="form-section" style="background: #e0f2f1; border-left: 4px solid #00acc1;">
+                    <h2>💬 Sentiment & Language Summary</h2>
+                    <p style="color: #004d40; margin-bottom: 20px;">Generate sentiment coaching summaries for associates with uploaded sentiment data.</p>
+                    
+                    <!-- Generate Summary Button -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #00acc1;">
+                        <h3 style="color: #00796b; margin-top: 0;">📊 Generate Sentiment Summary</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Generate a coaching summary from uploaded sentiment data. Use the <strong>"💬 Upload Sentiment"</strong> button on the Home page to upload new data.</p>
+                        <button type="button" id="generateSentimentSummaryBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; width: 100%;">📊 Generate Summary</button>
+                    </div>
+                    
+                    <!-- Summary Output Area -->
+                    <div id="sentimentSummaryOutput" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #00acc1;">
+                        <h3 style="color: #00796b; margin-top: 0;">📋 Coaching Summary</h3>
+                        <pre id="sentimentSummaryText" style="white-space: pre-wrap; font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.95em; line-height: 1.6; color: #333; background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; overflow-x: auto;"></pre>
+                        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                            <button type="button" id="copySentimentSummaryBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Summary</button>
+                            <button type="button" id="generateCoPilotPromptBtn" style="background: #4CAF50; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🤖 Generate CoPilot Email</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manage Data Section -->
+            <section id="manageDataSection" style="display: none;">
+                <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
+                    <h2>🗄️ Manage Data</h2>
+                    <p style="color: #856404; margin-bottom: 20px;">View employees, manage coaching tips, backup, restore, or delete your data.</p>
+                    
+                    <!-- Sub-navigation for Manage Data -->
+                    <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button type="button" id="subNavTeamData" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Data</button>
+                        <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                        <button type="button" id="subNavSentimentKeywords" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💬 Sentiment Keywords</button>
+                    </div>
+                    
+                    <!-- Team Data Sub-section -->
+                    <div id="subSectionTeamData" style="display: block;">
+                    <!-- Existing Employees List -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
+                        <h3 style="color: #6a1b9a; margin-top: 0;">👥 View Employees</h3>
+                        <p style="color: #666; margin-bottom: 15px;">View all employees from your uploaded weekly data.</p>
+                        <div id="employeesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white;">
+                            <div style="padding: 20px; text-align: center; color: #999;">No employees yet. Add one above!</div>
+                        </div>
+                    </div>
+
+                    <!-- Backup / Restore -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
+                        <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
+                        <p style="color: #666; margin-bottom: 15px;">Export your data to JSON backup file (includes sentiment data) or restore from a previous backup.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="exportDataBtn" class="btn-secondary" style="background: #28a745; color: white;">📊 Backup Data (JSON)</button>
+                            <button type="button" id="exportCoachingHistoryBtn" class="btn-secondary" style="background: #28a745; color: white;">📝 Download Coaching Log (CSV)</button>
+                            <button type="button" id="importDataBtn" class="btn-secondary">📥 Restore Data</button>
+                            <input type="file" id="dataFileInput" accept=".json" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
+                        <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Week to Delete:</label>
+                            <select id="deleteWeekSelect" style="width: 100%; padding: 12px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                <option value="">-- Choose a week --</option>
+                            </select>
+                        </div>
+                        <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Week</button>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #26a69a;">
+                        <h3 style="color: #26a69a; margin-top: 0;">🗑️ Delete Sentiment Data</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="deleteSentimentSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #00695c;">Select Employee/Date to Delete:</label>
+                            <select id="deleteSentimentSelect" style="width: 100%; padding: 12px; border: 2px solid #26a69a; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                <option value="">-- Choose sentiment data --</option>
+                            </select>
+                        </div>
+                        <button type="button" id="deleteSelectedSentimentBtn" class="btn-secondary" style="background: #26a69a; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Sentiment</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #2196F3;">
+                        <h3 style="color: #2196F3; margin-top: 0;">🔧 Data Cleanup</h3>
+                        <p style="color: #666; margin-bottom: 15px;">Scan for and fix unrealistic survey totals (e.g., 100 instead of actual count). This will review all weeks and identify suspicious values.</p>
+                        <button type="button" id="cleanupSurveyDataBtn" class="btn-secondary" style="background: #2196F3; color: white; font-size: 1.1em; padding: 12px 24px;">🔍 Scan & Fix Survey Data</button>
+                        <div id="cleanupResults" style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px; display: none;"></div>
+                    </div>
+                    
+                    <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
+                        <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
+                        <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data and coaching history. This action cannot be undone!</p>
+                        <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white; font-size: 1.1em; padding: 12px 24px;">⚠️ Delete All Data</button>
+                    </div>
+                    </div>
+                    <!-- End Team Data Sub-section -->
+                    
+                    <!-- Coaching Tips Sub-section -->
+                    <div id="subSectionCoachingTips" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Coaching tips content will appear here when you click the Coaching Tips button above.</p>
+                    </div>
+                    
+                    <!-- Sentiment Keywords Sub-section -->
+                    <div id="subSectionSentimentKeywords" style="display: none;">
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #26a69a;">
+                            <h3 style="color: #00695c; margin-top: 0;">🗄️ Sentiment Phrase Database</h3>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Manage your approved phrase banks for sentiment analysis. Edit phrases and save changes.</p>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label for="phraseDbPositiveA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1b5e20;">Positive Phrases (A = Associate)</label>
+                                    <textarea id="phraseDbPositiveA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbPositiveC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #2e7d32;">Positive Phrases (C = Customer)</label>
+                                    <textarea id="phraseDbPositiveC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbNegativeA" style="font-weight: bold; display: block; margin-bottom: 6px; color: #b71c1c;">Negative Phrases (A = Associate)</label>
+                                    <textarea id="phraseDbNegativeA" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label for="phraseDbNegativeC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #c62828;">Negative Phrases (C = Customer)</label>
+                                    <textarea id="phraseDbNegativeC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 12px;">
+                                <label for="phraseDbEmotionsC" style="font-weight: bold; display: block; margin-bottom: 6px; color: #4a148c;">Managing Emotions Phrases (Customer Heightened Cues)</label>
+                                <textarea id="phraseDbEmotionsC" placeholder="One phrase per line" style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            </div>
+
+                            <button type="button" id="savePhraseDatabaseBtn" style="background: #00796b; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-bottom: 12px;">💾 Save Phrase Database</button>
+                            <div id="phraseDbStatus" style="font-size: 0.85em; color: #555; margin-bottom: 14px;">No phrase database saved yet.</div>
+
+                            <div style="padding-top: 12px; border-top: 1px solid #ddd;">
+                                <h4 style="margin: 0 0 10px 0; color: #00695c;">👤 Associate Sentiment Snapshots</h4>
+                                <p style="color: #666; margin-bottom: 15px; font-size: 0.85em;">View saved sentiment snapshots for each associate by timeframe. These are automatically saved when you upload sentiment data.</p>
+                                <div id="sentimentSnapshotsView" style="padding: 15px; background: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+                                    <p style="color: #999; font-style: italic;">No sentiment snapshots saved yet. Upload sentiment data to create snapshots.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </section>
+
+            <!-- PTO Tracker Section -->
+            <section id="ptoSection" style="display: none;">
+                <div class="form-section" style="background: #e8f5f3; border-left: 4px solid #2f7a6d;">
+                    <h2>🕒 PTO / Time-Off Tracker</h2>
+                    <p style="color: #355; margin-bottom: 20px;">Track availability percentage, unavailable time entries, and generate threshold emails.</p>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                            <div>
+                                <label for="ptoAvailableHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Max Availability (%):</label>
+                                <input type="number" id="ptoAvailableHours" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ptoThresholdWarning" style="font-weight: bold; display: block; margin-bottom: 5px;">Warning Threshold (%):</label>
+                                <input type="number" id="ptoThresholdWarning" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ptoThresholdPolicy" style="font-weight: bold; display: block; margin-bottom: 5px;">Policy Threshold (%):</label>
+                                <input type="number" id="ptoThresholdPolicy" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Add Missed Time</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                            <div>
+                                <label for="ptoMissedDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Date:</label>
+                                <input type="date" id="ptoMissedDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ptoMissedHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Unavailable (%):</label>
+                                <input type="number" id="ptoMissedHours" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ptoMissedReason" style="font-weight: bold; display: block; margin-bottom: 5px;">Reason / Notes:</label>
+                                <input type="text" id="ptoMissedReason" placeholder="Optional note" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="ptoAddEntryBtn" class="btn-primary">➕ Add Missed Time</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Summary</h3>
+                        <div id="ptoSummary" style="font-size: 0.95em; color: #355;"></div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Missed Time Entries</h3>
+                        <div id="ptoEntries" style="display: grid; gap: 10px;"></div>
+                    </div>
+
+                    <div style="padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Threshold Email</h3>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                            <button type="button" id="ptoGenerateEmailBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">✉️ Generate Email</button>
+                            <button type="button" id="ptoCopyEmailBtn" class="btn-secondary" style="background: #0d6efd; color: white;">📋 Copy Email</button>
+                        </div>
+                        <textarea id="ptoEmailOutput" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Trend Intelligence Section -->
+            <section id="executiveSummarySection" style="display: none;">
+                <div class="form-section">
+                    <h2>📊 Trend Intelligence</h2>
+                    
+                    <!-- Yearly Individual Summary -->
+                    <div style="margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; border: 2px solid #ff9800;">
+                        <h3 style="color: #ff9800; margin-top: 0;">📈 Yearly Individual Summary</h3>
+                        
+                        <!-- Associate Selection -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <label for="summaryAssociateSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Associate:</label>
+                                <select id="summaryAssociateSelect" style="width: 100%; padding: 10px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em;">
+                                    <option value="">-- Choose an associate --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period: Year-to-Date (YTD)</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Data Table -->
+                        <div id="summaryDataContainer" style="display: none; overflow-x: auto; margin-bottom: 20px;">
+                            <table style="width: 100%; border-collapse: collapse; background: white;">
+                                <thead style="background: #ff9800; color: white;">
+                                    <tr>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Summary</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Adherence</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Experience</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">FCR</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Transfers</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Red Flags</th>
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Phishing</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summaryDataTable"></tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Metric Comparison Charts -->
+                        <div id="summaryChartsContainer" style="display: none;">
+                            <h4 style="color: #ff9800; margin-bottom: 20px;">Metric Comparison vs Center Average & Target</h4>
+                        <div id="summaryMetricsVisuals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;"></div>
+                        
+                        <!-- CoPilot Prompt Generation Section -->
+                        <div style="margin-top: 25px; padding: 20px; background: #fff3e0; border-radius: 8px; border: 2px solid #ff9800; display: none;" id="summaryEmailSection">
+                            <h4 style="color: #ff9800; margin-top: 0;">🤖 Generate CoPilot Email</h4>
+                            <button type="button" id="generateExecutiveSummaryCopilotBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-bottom: 15px;">
+                                🤖 Generate CoPilot Email
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="executiveSummaryContainer"></div>
+
+                    <div style="margin-top: 30px; padding: 20px; background: #eef5ff; border-radius: 8px; border: 2px solid #4a90e2;">
+                        <h3 style="color: #4a90e2; margin-top: 0;">🧠 Supervisor Intelligence</h3>
+
+
+
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <h4 style="margin-top: 0; margin-bottom: 8px; color: #3c78c8; font-size: 1.2em;">📈 Trend Intelligence & Coaching Hub</h4>
+                            <p style="color: #666; font-size: 0.9em; margin: 0 0 20px 0; line-height: 1.5;">Analyze trends across your team or for individual coaching. Select "All Team Members" for group insights, or choose a specific employee for personalized coaching.</p>
+                            
+                            <!-- Current Mode Indicator -->
+                            <div id="trendModeIndicator" style="padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; margin-bottom: 20px; font-weight: 600; display: none; text-align: center;">
+                                <span id="trendModeText">📊 Team-Wide Analysis Mode</span>
+                            </div>
+
+                            <!-- Period & Employee Selection -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                <div>
+                                    <label for="trendPeriodSelector" style="font-weight: 600; display: block; margin-bottom: 8px; color: #345a94; font-size: 0.95em;">Compare:</label>
+                                    <select id="trendPeriodSelector" style="width: 100%; padding: 10px 12px; border: 2px solid #e3f2fd; border-radius: 6px; font-size: 0.95em; background: white; transition: border-color 0.2s;">
+                                        <option value="wow">Week over Week</option>
+                                        <option value="mom">Month over Month</option>
+                                        <option value="ytd">Year to Date</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="trendEmployeeSelector" style="font-weight: 600; display: block; margin-bottom: 8px; color: #345a94; font-size: 0.95em;">Employee:</label>
+                                    <select id="trendEmployeeSelector" style="width: 100%; padding: 10px 12px; border: 2px solid #e3f2fd; border-radius: 6px; font-size: 0.95em; background: white; transition: border-color 0.2s;">
+                                        <option value="">🏢 All Team Members (Group Analysis)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                                <button type="button" id="refreshTrendsBtn" class="btn-secondary" style="background: linear-gradient(135deg, #3c78c8 0%, #2565b1 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">🔄 Refresh Analysis</button>
+                                <button type="button" id="generateTrendCoachingBtn" class="btn-secondary" style="background: linear-gradient(135deg, #6a1b9a 0%, #4a148c 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                                    <span id="trendEmailBtnText">🤖 Generate Coaching Email</span>
+                                </button>
+                            </div>
+
+                            <!-- Alerts/Insights -->
+                            <div id="trendIntelligenceOutput" style="margin-bottom: 20px;"></div>
+
+                            <!-- Bar Graph Visualizations -->
+                            <div id="trendVisualizationsContainer" style="display: none; margin-top: 20px;">
+                                <h5 style="color: #3c78c8; margin-bottom: 10px;">📊 Metric Trends</h5>
+                                <div id="trendChartsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;"></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">🎉 Recognition Intelligence</h4>
+                            <div id="recognitionIntelligenceOutput" style="display: grid; gap: 10px;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">🧭 Coaching Load Awareness</h4>
+                            <div id="coachingLoadOutput" style="display: grid; gap: 10px;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">📌 Weekly Priority Queue</h4>
+                            <div id="coachingPriorityQueueOutput" style="display: grid; gap: 10px;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">📝 Prep for 1:1 (Supervisor Only)</h4>
+                            <div style="display: grid; grid-template-columns: minmax(220px, 1fr); gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label for="oneOnOneAssociateSelect" style="font-weight: 600; display: block; margin-bottom: 6px; color: #345a94;">Select Associate:</label>
+                                    <select id="oneOnOneAssociateSelect" style="width: 100%; padding: 8px 10px; border: 1px solid #cfe1ff; border-radius: 4px; font-size: 0.95em;">
+                                        <option value="">-- Choose an associate --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                                <button type="button" id="generateOneOnOneBtn" class="btn-secondary" style="background: #3c78c8; color: white;">✨ Generate</button>
+                                <button type="button" id="copyOneOnOneBtn" class="btn-secondary" style="background: #0d6efd; color: white;">📋 Copy</button>
+                            </div>
+                            <textarea id="oneOnOnePrepOutput" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;"></textarea>
+                        </div>
+
+                        <div style="padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                            <h4 style="margin-top: 0; color: #3c78c8;">🛡️ Safety & Compliance Alerts</h4>
+                            <div id="complianceAlertsOutput" style="display: grid; gap: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Red Flag Coaching Section -->
+            <section id="redFlagSection" style="display: none;">
+                <div class="form-section" style="background: #ffebee; border-left: 4px solid #dc3545;">
+                    <h2>🚩 Red Flag Coaching</h2>
+                    <p style="color: #c62828; margin-bottom: 20px;">Generate coaching emails for compliance violations, such as not following Experian verification procedures.</p>
+                    
+                    <!-- Add New Red Flag Coaching -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
+                        <h3 style="color: #dc3545; margin-top: 0;">➕ Create Red Flag Coaching Email</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label for="redFlagAssociateName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Associate Name:</label>
+                                <input type="text" id="redFlagAssociateName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label for="redFlagCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                                <input type="text" id="redFlagCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label for="redFlagAccountNumber" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Account Number:</label>
+                                <input type="text" id="redFlagAccountNumber" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="redFlagReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Red Flag Reason/Details:</label>
+                            <textarea id="redFlagReason" placeholder="You can paste comments or describe what happened (e.g., 'Failed KIQ (JAH ADDED WITHOUT ID)' or 'Added authorized user before receiving required Picture ID from Experian verification')" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+                            <small style="color: #666; display: block; margin-top: 5px;">Examples: "Failed KIQ (JAH ADDED WITHOUT ID)", "Added user without Picture ID", "Completed order before Experian verification"</small>
+                        </div>
+                        
+                        <button type="button" id="generateRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Generate Red Flag Coaching Email</button>
+                    </div>
+                    
+                    <!-- Email Preview -->
+                    <div id="redFlagEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
+                        <h3 style="color: #dc3545; margin-top: 0;">📧 Email Preview</h3>
+                        <div style="background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif;" id="redFlagEmailPreviewText"></div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="copyRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
+                            <button type="button" id="clearRedFlagEmailBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer style="text-align: center; padding: 20px; color: #999; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 40px;">
+            <span id="appVersion">Version: Loading...</span>
+            <span style="margin: 0 8px; color: #ccc;">•</span>
+            <span id="systemStatus">System: Loading...</span>
+        </footer>
+    </div>
+
+    <script src="tips-module.js"></script>
+    <script src="pto-module.js"></script>
+    <script src="red-flag-module.js"></script>
+    <script src="modules/metric-profiles.module.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
