@@ -35,43 +35,58 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.24.14'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.24.12'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
+
+// ============================================
+// ERROR HANDLING & SUPPRESSION
+// ============================================
+// Suppress all source map and network-related warnings that clutter the console
+const SUPPRESSED_PATTERNS = [
+    /JSON\.parse.*\.map/i,
+    /source map error/i,
+    /failed to load source map/i,
+    /uncaught syntaxerror.*json/i,
+    /chart\.umd\.js\.map/i,
+    /lib-chart\.js\.map/i
+];
+
+const isSuppressed = (msg) => {
+    if (!msg) return false;
+    return SUPPRESSED_PATTERNS.some(pattern => pattern.test(msg));
+};
 
 if (!DEBUG) {
     const originalError = console.error;
     console.log = () => {};
     console.warn = () => {};
     console.error = (...args) => {
-        // Still capture errors even when DEBUG is off
-        lastError = { message: args.join(' '), timestamp: new Date().toISOString() };
+        const msg = args.join(' ');
+        if (isSuppressed(msg)) return;
+        lastError = { message: msg, timestamp: new Date().toISOString() };
         localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastError));
     };
 } else {
-    // Even in DEBUG mode, suppress source map warnings
+    // DEBUG mode: suppress annoyances, keep real errors
     const originalError = console.error;
     const originalWarn = console.warn;
     console.error = (...args) => {
         const msg = args.join(' ');
-        if ((msg.includes('JSON.parse') && msg.includes('.map')) || msg.includes('Source map error')) {
-            return; // Suppress source map errors
-        }
+        if (isSuppressed(msg)) return;
         originalError.apply(console, args);
     };
     console.warn = (...args) => {
         const msg = args.join(' ');
-        if ((msg.includes('JSON.parse') && msg.includes('.map')) || msg.includes('Source map error')) {
-            return; // Suppress source map warnings
-        }
+        if (isSuppressed(msg)) return;
         originalWarn.apply(console, args);
     };
 }
 
-// Global error handler
+// Global error handler - catches runtime errors
 window.addEventListener('error', (event) => {
-    // Suppress source map errors (cosmetic, don't need to surface)
-    if (event.message?.includes('JSON.parse') && event.filename?.includes('.map')) {
+    const msg = event.message || '';
+    if (isSuppressed(msg) || (event.filename && event.filename.includes('.map'))) {
         event.preventDefault();
         return;
     }
@@ -86,6 +101,16 @@ window.addEventListener('error', (event) => {
     localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(errorInfo));
     showToast('⚠️ An error occurred. Check Debug panel for details.', 5000);
     event.preventDefault();
+});
+
+// Suppress unhandled promise rejections from source map loading
+window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason || {};
+    const msg = (reason.message || String(reason)).toLowerCase();
+    if (isSuppressed(msg) || msg.includes('source map') || msg.includes('.map')) {
+        event.preventDefault();
+        return;
+    }
 });
 
 // Unsaved changes tracking
