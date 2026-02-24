@@ -1635,6 +1635,59 @@ function saveUserTips(tips) {
     }
 }
 
+function saveWithSizeCheck(key, data) {
+    try {
+        const serialized = JSON.stringify(data ?? {});
+        const sizeMB = new Blob([serialized]).size / (1024 * 1024);
+
+        if (sizeMB > LOCALSTORAGE_MAX_SIZE_MB) {
+            showDetailedError('STORAGE_FULL', {
+                usage: `${sizeMB.toFixed(2)}MB`
+            }, 'saveWithSizeCheck');
+            return false;
+        }
+
+        localStorage.setItem(STORAGE_PREFIX + key, serialized);
+        return true;
+    } catch (error) {
+        if (error?.name === 'QuotaExceededError') {
+            showDetailedError('STORAGE_FULL', {
+                usage: `${LOCALSTORAGE_MAX_SIZE_MB}+MB`
+            }, 'saveWithSizeCheck');
+            return false;
+        }
+
+        console.error(`Error saving ${key}:`, error);
+        return false;
+    }
+}
+
+function loadWeeklyData() {
+    try {
+        const namespacedKey = STORAGE_PREFIX + 'weeklyData';
+        const saved = localStorage.getItem(namespacedKey);
+        if (saved) {
+            const data = JSON.parse(saved);
+            return data && typeof data === 'object' ? data : {};
+        }
+
+        const legacySaved = localStorage.getItem('weeklyData');
+        if (legacySaved) {
+            const legacyData = JSON.parse(legacySaved);
+            const normalizedData = legacyData && typeof legacyData === 'object' ? legacyData : {};
+            localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+            return normalizedData;
+        }
+
+        return {};
+    } catch (error) {
+        console.error('Error loading weekly data:', error);
+        return {};
+    }
+}
+
+function saveWeeklyData() {
+    try {
         if (!saveWithSizeCheck('weeklyData', weeklyData)) {
             console.error('Failed to save weekly data due to size');
         }
