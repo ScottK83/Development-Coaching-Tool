@@ -2033,11 +2033,6 @@ function initializeEventHandlers() {
     
     // Tab navigation
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
-    document.getElementById('manageTips')?.addEventListener('click', () => {
-        showOnlySection('manageDataSection');
-        populateDeleteWeekDropdown();
-        renderEmployeesList();
-    });
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
         showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
