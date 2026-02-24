@@ -51,6 +51,15 @@ if ($versionLineIndex -lt 0) {
 
 $nextVersion = Get-NextAppVersion
 if ($currentVersion -eq $nextVersion) {
+    # Already at today's version, no bump needed
+    exit 0
+}
+
+# Check if HEAD commit message is a version bump commit from pre-push
+$headCommitMsg = git log -1 --pretty=%B
+if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
+    # The previous push already created a version bump commit, don't loop
+    Write-Host "HEAD is already a version bump commit from pre-push. Allowing push."
     exit 0
 }
 

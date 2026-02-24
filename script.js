@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.23.16'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.24.1'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -115,8 +115,82 @@ const YEAR_END_TARGETS_BY_YEAR = {
         acw: { type: 'max', value: 60 },
         holdTime: { type: 'max', value: 30 },
         reliability: { type: 'max', value: 16 }
+    },
+    2026: {
+        scheduleAdherence: { type: 'min', value: 93 },
+        cxRepOverall: { type: 'min', value: 82 },
+        transfers: { type: 'max', value: 6 },
+        overallSentiment: { type: 'min', value: 88 },
+        aht: { type: 'max', value: 414 },
+        reliability: { type: 'max', value: 18 }
     }
 };
+
+const METRIC_RATING_BANDS_BY_YEAR = {
+    2026: {
+        scheduleAdherence: {
+            type: 'min',
+            score3: { min: 94.5 },
+            score2: { min: 92.5 }
+        },
+        cxRepOverall: {
+            type: 'min',
+            score3: { min: 84 },
+            score2: { min: 81.5 }
+        },
+        overallSentiment: {
+            type: 'min',
+            score3: { min: 90 },
+            score2: { min: 87.5 }
+        },
+        reliability: {
+            type: 'max',
+            score3: { max: 18 },
+            score2: { max: 24 }
+        },
+        aht: {
+            type: 'max',
+            score3: { max: 414 },
+            score2: { max: 434 }
+        },
+        transfers: {
+            type: 'max',
+            score3: { max: 4 },
+            score2: { max: 6 }
+        }
+    }
+};
+
+function getMetricRatingScore(metricKey, value, year) {
+    const yearNum = parseInt(year, 10);
+    const numeric = parseFloat(value);
+    if (!Number.isInteger(yearNum) || Number.isNaN(numeric)) return null;
+
+    const config = METRIC_RATING_BANDS_BY_YEAR[yearNum]?.[metricKey];
+    if (!config) return null;
+
+    if (config.type === 'min') {
+        if (numeric >= config.score3.min) return 3;
+        if (numeric >= config.score2.min) return 2;
+        return 1;
+    }
+
+    if (config.type === 'max') {
+        if (numeric <= config.score3.max) return 3;
+        if (numeric <= config.score2.max) return 2;
+        return 1;
+    }
+
+    return null;
+}
+
+function getRatingBandRowColor(metricKey, value, year) {
+    const score = getMetricRatingScore(metricKey, value, year);
+    if (score === 3) return '#d4edda';
+    if (score === 2) return '#fff3cd';
+    if (score === 1) return '#f8d7da';
+    return null;
+}
 
 const YEAR_END_ANNUAL_GOALS = [
     { key: 'safetyGoalAps', label: 'Safety Goal at APS', expectation: 'Meeting' },
@@ -4980,7 +5054,7 @@ function saveMetricsPreviewEdits() {
  * if (analysis.weakest) console.log(`Weakest: ${analysis.weakest.label}`);
  * if (analysis.trendingDown) console.log(`Random focus: ${analysis.trendingDown.label}`);
  */
-function analyzeTrendMetrics(employeeData, centerAverages) {
+function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
     /**
      * Analyze metrics and return:
      * 1. Weakest metric = furthest below their target
@@ -5016,8 +5090,11 @@ function analyzeTrendMetrics(employeeData, centerAverages) {
         // Skip if employee value is 0 (not provided)
         if (employeeValue === 0) return;
         
-        const target = metric.target?.value || 0;
-        const targetType = metric.target?.type || 'min';
+        const target = getMetricTarget(registryKey, reviewYear);
+        const yearTargetConfig = Number.isInteger(parseInt(reviewYear, 10))
+            ? YEAR_END_TARGETS_BY_YEAR[parseInt(reviewYear, 10)]?.[registryKey]
+            : null;
+        const targetType = yearTargetConfig?.type || metric.target?.type || 'min';
         const isReverse = isReverseMetric(registryKey);
         
         // Check if meets target based on target type
@@ -5163,8 +5240,10 @@ function generateTrendEmail() {
     // Get center averages for trend analysis
     const centerAgvs = getCallCenterAverageForPeriod(weekKey) || {};
     
+    const reviewYear = parseInt((period?.metadata?.endDate || '').split('-')[0], 10) || null;
+
     // Analyze metrics: find weakest + trending down
-    const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs);
+    const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs, reviewYear);
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
     const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
@@ -5605,7 +5684,7 @@ function isReverseMetric(metricKey) {
     return reverseMetrics.includes(metricKey);
 }
 
-function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0) {
+function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0, reviewYear = null) {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
      * Renders a single metric row with full conditional logic
@@ -5641,8 +5720,14 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     // ROW BACKGROUND COLOR
     let rowBgColor;
+    const ratingBandColor = Number.isInteger(parseInt(reviewYear, 10))
+        ? getRatingBandRowColor(metricKey || metric.key, associateValue, reviewYear)
+        : null;
+
     if (noSurveys) {
         rowBgColor = '#ffffff'; // White - no surveys
+    } else if (ratingBandColor) {
+        rowBgColor = ratingBandColor;
     } else if (meetsGoal) {
         rowBgColor = '#d4edda'; // Green - meets goal
     } else {
@@ -5799,6 +5884,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     
     // Extract metadata early (needed for survey total calculation)
     const metadata = period?.metadata || {};
+    const reviewYear = parseInt((metadata.endDate || '').split('-')[0], 10) || null;
 
     // SINGLE LOAD - Use for all calculations
     const metricOrder = getMetricOrder();
@@ -5891,7 +5977,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         measuredMetricCount++;
         
         const curr = parseFloat(metrics[key]) || 0;
-        const target = getMetricTarget(key);
+        const target = getMetricTarget(key, reviewYear);
         const center = getCenterAverageForMetric(centerAvg, key);
         
         if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
@@ -6058,10 +6144,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         const curr = parseFloat(metrics[key]) || 0;
         const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTarget(key);
+        const target = getMetricTarget(key, reviewYear);
         const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
         
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal);
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal, reviewYear);
         y += 38;
         rowIdx++;
     });
@@ -6082,7 +6168,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         const curr = parseFloat(metrics[key]) || 0;
         const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTarget(key);
+        const target = getMetricTarget(key, reviewYear);
         const isReverse = isReverseMetric(key);
         
         // Check if improved from last week
@@ -6207,10 +6293,11 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     ctx.fillText('📋 Legend', 50, y + 30);
     
     const legendItems = [
-        { color: '#28a745', label: 'Meeting target' },
-        { color: '#dc3545', label: 'Below target' },
+        { color: '#28a745', label: 'Score 3 (green band)' },
+        { color: '#ffc107', label: 'Score 2 (yellow band)' },
+        { color: '#dc3545', label: 'Score 1 (red band)' },
         { color: '#6c757d', label: 'Better than center' },
-        { color: '#ffc107', label: 'Behind center' },
+        { color: '#DAA520', label: 'Behind center' },
         { color: '#28a745', symbol: '📈', label: `Improved from last ${periodTypeText}` },
         { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
         { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
@@ -6364,13 +6451,21 @@ function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, s
     ctx.textAlign = 'left';
 }
 
-function getMetricTarget(metric) {
-    // PHASE 3 - Use METRICS_REGISTRY as single source of truth
+function getMetricTarget(metric, reviewYear = null) {
+    const parsedYear = parseInt(reviewYear, 10);
+    if (Number.isInteger(parsedYear)) {
+        const yearTarget = YEAR_END_TARGETS_BY_YEAR[parsedYear]?.[metric];
+        if (yearTarget && yearTarget.value !== undefined && yearTarget.value !== null) {
+            return yearTarget.value;
+        }
+    }
+
+    // PHASE 3 - Use METRICS_REGISTRY as default source of truth
     const metricDef = METRICS_REGISTRY[metric];
     if (metricDef && metricDef.target) {
         return metricDef.target.value;
     }
-    
+
     return 90; // Safe fallback
 }
 
@@ -10010,7 +10105,7 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
     };
 }
 
-function calculateYearEndOnOffMirror(employeeRecord) {
+function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
     const parseNumber = (value) => {
         if (value === null || value === undefined || value === '' || value === 'N/A') return null;
         const numeric = parseFloat(value);
@@ -10048,12 +10143,24 @@ function calculateYearEndOnOffMirror(employeeRecord) {
         reliability: parseNumber(employeeRecord?.reliability)
     };
 
+    const scoreYear = parseInt(reviewYear, 10);
+
     const scores = {
-        aht: values.aht === null ? null : (values.aht <= 419 ? 3 : (values.aht <= 460 ? 2 : 1)),
-        adherence: values.adherence === null ? null : (values.adherence >= 94.5 ? 3 : (values.adherence >= 92.5 ? 2 : 1)),
-        sentiment: values.sentiment === null ? null : (values.sentiment >= 90.1 ? 3 : (values.sentiment >= 87.5 ? 2 : 1)),
-        associateOverall: values.associateOverall === null ? null : (values.associateOverall > 82 ? 3 : (values.associateOverall >= 79.5 ? 2 : 1)),
-        reliability: values.reliability === null ? null : (values.reliability > 24.1 ? 1 : (values.reliability >= 16.1 ? 2 : 3))
+        aht: values.aht === null
+            ? null
+            : (getMetricRatingScore('aht', values.aht, scoreYear) ?? (values.aht <= 419 ? 3 : (values.aht <= 460 ? 2 : 1))),
+        adherence: values.adherence === null
+            ? null
+            : (getMetricRatingScore('scheduleAdherence', values.adherence, scoreYear) ?? (values.adherence >= 94.5 ? 3 : (values.adherence >= 92.5 ? 2 : 1))),
+        sentiment: values.sentiment === null
+            ? null
+            : (getMetricRatingScore('overallSentiment', values.sentiment, scoreYear) ?? (values.sentiment >= 90.1 ? 3 : (values.sentiment >= 87.5 ? 2 : 1))),
+        associateOverall: values.associateOverall === null
+            ? null
+            : (getMetricRatingScore('cxRepOverall', values.associateOverall, scoreYear) ?? (values.associateOverall > 82 ? 3 : (values.associateOverall >= 79.5 ? 2 : 1))),
+        reliability: values.reliability === null
+            ? null
+            : (getMetricRatingScore('reliability', values.reliability, scoreYear) ?? (values.reliability > 24.1 ? 1 : (values.reliability >= 16.1 ? 2 : 3)))
     };
 
     const scoreValues = Object.values(scores);
@@ -10093,12 +10200,12 @@ function calculateYearEndOnOffMirror(employeeRecord) {
     };
 }
 
-function renderYearEndOnOffMirror(employeeRecord) {
+function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
     const summaryEl = document.getElementById('yearEndOnOffSummary');
     const detailsEl = document.getElementById('yearEndOnOffDetails');
     if (!summaryEl || !detailsEl) return null;
 
-    const result = calculateYearEndOnOffMirror(employeeRecord);
+    const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
 
     detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
 
@@ -10111,12 +10218,12 @@ function renderYearEndOnOffMirror(employeeRecord) {
     return result;
 }
 
-function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId) {
+function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId, reviewYear = new Date().getFullYear()) {
     const summaryEl = document.getElementById(summaryElementId);
     const detailsEl = document.getElementById(detailsElementId);
     if (!summaryEl || !detailsEl) return null;
 
-    const result = calculateYearEndOnOffMirror(employeeRecord);
+    const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
     detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
 
     if (!result.isComplete) {
@@ -10300,7 +10407,7 @@ function updateOnOffTrackerDisplay() {
         : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
     factsSummary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • End date: ${endDateText}`;
 
-    renderOnOffMirrorForElementIds(latestPeriod.employeeRecord, 'onOffTrackerSummary', 'onOffTrackerDetails');
+    renderOnOffMirrorForElementIds(latestPeriod.employeeRecord, 'onOffTrackerSummary', 'onOffTrackerDetails', reviewYear);
 
     status.textContent = `On/Off tracker calculated for ${employeeName} (${reviewYear}).`;
     status.style.display = 'block';
@@ -10487,7 +10594,7 @@ function updateYearEndSnapshotDisplay() {
         ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
         : '<li>No below-target metrics detected in this period.</li>';
 
-    const onOffMirror = renderYearEndOnOffMirror(latestPeriod.employeeRecord);
+    const onOffMirror = renderYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
     if (trackSelect && !trackSelect.value && onOffMirror?.trackStatusValue) {
         trackSelect.value = onOffMirror.trackStatusValue;
     }
