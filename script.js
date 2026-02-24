@@ -178,6 +178,13 @@ function saveAssociateSentimentSnapshots() {
 }
 
 // ============================================
+// STORAGE HELPER - Critical for Size Checking
+// ============================================
+function saveWithSizeCheck(key, data) {
+    return window.DevCoachModules?.storage?.saveWithSizeCheck?.(key, data) ?? false;
+}
+
+// ============================================
 // CONSTANTS
 // ============================================
 const TOP_PHRASES_COUNT = 5;

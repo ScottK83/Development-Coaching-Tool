@@ -2,28 +2,21 @@
 // PTO / TIME-OFF TRACKER
 // ============================================
 
-const PTO_STORAGE_KEY = 'ptoTracker';
+// Use centralized storage module to avoid data loss
+// PTO functions are delegated to window.DevCoachModules.storage
 
 function loadPtoTracker() {
-    try {
-        const saved = localStorage.getItem(PTO_STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {
-            availableHours: 100,
-            thresholds: { warning: 20, policy: 40 },
-            entries: []
-        };
-    } catch (error) {
-        console.error('Error loading PTO tracker:', error);
-        return { availableHours: 100, thresholds: { warning: 20, policy: 40 }, entries: [] };
-    }
+    // Delegate to storage module with fallback
+    return window.DevCoachModules?.storage?.loadPtoTracker?.() || {
+        availableHours: 100,
+        thresholds: { warning: 20, policy: 40 },
+        entries: []
+    };
 }
 
 function savePtoTracker(data) {
-    try {
-        localStorage.setItem(PTO_STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-        console.error('Error saving PTO tracker:', error);
-    }
+    // Delegate to storage module
+    return window.DevCoachModules?.storage?.savePtoTracker?.(data);
 }
 
 function initializePtoTracker() {
