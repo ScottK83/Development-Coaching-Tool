@@ -117,149 +117,39 @@ let associateSentimentSnapshots = {};
 // STORAGE HELPERS (defined early for guaranteed availability)
 // ============================================
 
-function saveWithSizeCheck(key, data) {
-    try {
-        const serialized = JSON.stringify(data ?? {});
-        const sizeMB = new Blob([serialized]).size / (1024 * 1024);
+// Storage functions are now in modules/storage.module.js
+// Use window.DevCoachModules.storage.* to access them
 
-        if (sizeMB > LOCALSTORAGE_MAX_SIZE_MB || false) { // LOCALSTORAGE_MAX_SIZE_MB defined below
-            return false;
-        }
-
-        localStorage.setItem(STORAGE_PREFIX + key, serialized);
-        return true;
-    } catch (error) {
-        if (error?.name === 'QuotaExceededError') {
-            return false;
-        }
-        console.error(`Error saving ${key}:`, error);
-        return false;
-    }
-}
-
+// Wrapper functions for backward compatibility
 function loadWeeklyData() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'weeklyData';
-        const saved = localStorage.getItem(namespacedKey);
-        if (saved) {
-            const data = JSON.parse(saved);
-            return data && typeof data === 'object' ? data : {};
-        }
-
-        const legacySaved = localStorage.getItem('weeklyData');
-        if (legacySaved) {
-            const legacyData = JSON.parse(legacySaved);
-            const normalizedData = legacyData && typeof legacyData === 'object' ? legacyData : {};
-            localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
-            return normalizedData;
-        }
-
-        return {};
-    } catch (error) {
-        console.error('Error loading weekly data:', error);
-        return {};
-    }
+    return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
 }
-
 function saveWeeklyData() {
-    try {
-        if (!saveWithSizeCheck('weeklyData', weeklyData)) {
-            console.error('Failed to save weekly data due to size');
-        }
-    } catch (error) {
-        console.error('Error saving weekly data:', error);
-    }
+    return window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
 }
-
 function loadYtdData() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'ytdData';
-        const saved = localStorage.getItem(namespacedKey);
-        if (saved) {
-            const data = JSON.parse(saved);
-            return data && typeof data === 'object' ? data : {};
-        }
-        return {};
-    } catch (error) {
-        console.error('Error loading YTD data:', error);
-        return {};
-    }
+    return window.DevCoachModules?.storage?.loadYtdData?.() || {};
 }
-
 function saveYtdData() {
-    try {
-        if (!saveWithSizeCheck('ytdData', ytdData)) {
-            console.error('Failed to save YTD data due to size');
-        }
-    } catch (error) {
-        console.error('Error saving YTD data:', error);
-    }
+    return window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
 }
-
 function loadCoachingHistory() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + 'coachingHistory';
-        const saved = localStorage.getItem(namespacedKey);
-        const data = saved ? JSON.parse(saved) : {};
-        return data;
-    } catch (error) {
-        console.error('Error loading coaching history:', error);
-        return {};
-    }
+    return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
 }
-
 function saveCoachingHistory() {
-    try {
-        if (!saveWithSizeCheck('coachingHistory', coachingHistory)) {
-            console.error('Failed to save coaching history due to size');
-        }
-    } catch (error) {
-        console.error('Error saving coaching history:', error);
-    }
+    return window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
 }
-
 function loadSentimentPhraseDatabase() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY;
-        const saved = localStorage.getItem(namespacedKey);
-        return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-        console.error('Error loading sentiment phrase database:', error);
-        return null;
-    }
+    return window.DevCoachModules?.storage?.loadSentimentPhraseDatabase?.();
 }
-
 function saveSentimentPhraseDatabase() {
-    try {
-        if (!saveWithSizeCheck(SENTIMENT_PHRASE_DB_STORAGE_KEY, sentimentPhraseDatabase || {})) {
-            console.error('Failed to save sentiment phrase database due to size');
-        }
-    } catch (error) {
-        console.error('Error saving sentiment phrase database:', error);
-    }
+    return window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
 }
-
 function loadAssociateSentimentSnapshots() {
-    try {
-        const namespacedKey = STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY;
-        const saved = localStorage.getItem(namespacedKey);
-        let loaded = saved ? JSON.parse(saved) : {};
-        // Minimal migration for older format if needed
-        return loaded;
-    } catch (error) {
-        console.error('Error loading associate sentiment snapshots:', error);
-        return {};
-    }
+    return window.DevCoachModules?.storage?.loadAssociateSentimentSnapshots?.() || {};
 }
-
 function saveAssociateSentimentSnapshots() {
-    try {
-        if (!saveWithSizeCheck(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, associateSentimentSnapshots || {})) {
-            console.error('Failed to save associate sentiment snapshots due to size');
-        }
-    } catch (error) {
-        console.error('Error saving associate sentiment snapshots:', error);
-    }
+    return window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
 }
 
 // ============================================
@@ -1167,425 +1057,40 @@ function getSavedNickname(employeeFullName) {
 // DATA PARSING FUNCTIONS (FIXED)
 // ============================================
 
-/**
- * Parse a PowerBI data row
- * Finds where the name ends (first digit/N/A/(Blank)) then extracts remaining metrics
- */
+// Data parsing functions are now in modules/data-parsing.module.js
+// Use window.DevCoachModules.dataParsing.* to access them
+
+// Wrapper functions for backward compatibility
 function parsePowerBIRow(row) {
-    // Normalize weird PowerBI spaces (including non-breaking spaces)
-    row = row.replace(/\u00A0/g, ' ').trim();
-    // Collapse cases like "95.2 %" -> "95.2%" so splitting stays aligned
-    row = row.replace(/(\d+(?:\.\d+)?)\s+%/g, '$1%');
-    
-    // Match: name (stops at first digit, N/A, or (Blank)) + start of first metric
-    const match = row.match(/^(.+?)\s+(?=(\(?\d|N\/A|\(Blank\)))/);
-    
-    if (!match) {
-        throw new Error(`Row does not match expected format: "${row.substring(0, 50)}..."`);
-    }
-    
-    const name = match[1].trim();
-    const rest = row.slice(match[0].length).trim();
-    
-    // Split the metrics by any whitespace (1+ spaces or tabs)
-    let metrics = rest.split(/\s+/);
-    
-    // Normalize values: handle (Blank), N/A, percentages, numbers
-    metrics = metrics.map(val => {
-        if (val === '(Blank)' || val === 'N/A') return null;
-        val = val.replace(/,/g, '');
-        if (val.endsWith('%')) return parseFloat(val);
-        if (!isNaN(val) && val !== '') return Number(val);
-        return val;
-    });
-    
-    return [name, ...metrics];
+    return window.DevCoachModules?.dataParsing?.parsePowerBIRow?.(row);
 }
-
-/**
- * Parse percentage values properly
- * Handles: "83%", "0.83", 83, null, "N/A"
- * Returns: 83 (as number) or 0
- */
 function parsePercentage(value) {
-    if (!value && value !== 0) return 0;
-    if (value === 'N/A' || value === 'n/a' || value === '') return 0;
-    
-    // Remove % sign if present
-    if (typeof value === 'string') {
-        value = value.replace('%', '').trim();
-    }
-    
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) return 0;
-    
-    // If value is between 0 and 1, it's a decimal representation (0.83 = 83%)
-    if (parsed > 0 && parsed < 1) {
-        return parseFloat((parsed * 100).toFixed(2));
-    }
-    
-    // If value is between 1 and 100, it's already a percentage
-    if (parsed >= 1 && parsed <= 100) {
-        return parseFloat(parsed.toFixed(2));
-    }
-    
-    // If value > 100, something is wrong - likely wrong column
-    // This catches the 424% transfers bug
-    if (parsed > 100) {
-        
-        console.trace('Called from:');
-        return 0;
-    }
-    
-    return parseFloat(parsed.toFixed(2));
+    return window.DevCoachModules?.dataParsing?.parsePercentage?.(value) ?? 0;
 }
-
-/**
- * Parse survey percentages (can be empty)
- * Returns: percentage or empty string
- */
 function parseSurveyPercentage(value) {
-    if (!value && value !== 0) return '';
-    if (value === 'N/A' || value === 'n/a' || value === '') return '';
-    
-    // Remove % sign if present
-    if (typeof value === 'string') {
-        value = value.replace('%', '').trim();
-    }
-    
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) return '';
-    
-    // If value is between 0 and 1, it's a decimal representation
-    if (parsed > 0 && parsed < 1) {
-        return parseFloat((parsed * 100).toFixed(2));
-    }
-    
-    // If value is between 1 and 100, it's already a percentage
-    if (parsed >= 1 && parsed <= 100) {
-        return parseFloat(parsed.toFixed(2));
-    }
-    
-    // If value > 100, something is wrong
-    if (parsed > 100) {
-        
-        return '';
-    }
-    
-    return parseFloat(parsed.toFixed(2));
+    return window.DevCoachModules?.dataParsing?.parseSurveyPercentage?.(value) ?? '';
 }
-
-/**
- * Parse time in seconds
- * Handles: "480", 480, "0", 0, null
- * Returns: integer seconds or empty string (keeps 0 as 0)
- */
 function parseSeconds(value) {
-    if (value === '' || value === null || value === undefined) return '';
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) return '';
-    return Math.round(parsed);
+    return window.DevCoachModules?.dataParsing?.parseSeconds?.(value) ?? '';
 }
-
-/**
- * Parse hours (for reliability)
- * Handles: "2.5", 2.5, 0, null
- * Returns: decimal hours
- */
 function parseHours(value) {
-    if (!value && value !== 0) return 0;
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) return 0;
-    return parseFloat(parsed.toFixed(2));
+    return window.DevCoachModules?.dataParsing?.parseHours?.(value) ?? 0;
 }
-
-// ============================================
-// CANONICAL SCHEMA & HEADER MAPPING
-// ============================================
-
-// POWERBI SCHEMA - EXACTLY 23 COLUMNS IN THIS ORDER
-// This is the ground truth for all data parsing
-const POWERBI_COLUMNS = [
-    'Name (Last, First)',
-    'TotalCallsAnswered',
-    'Transfers%',
-    'Number of Transfers',
-    'AHT',
-    'Talk',
-    'Hold',
-    'ACW',
-    'Adherence%',
-    'ManageEmotionsScore%',
-    'AvoidNegativeWordScore%',
-    'PositiveWordScore%',
-    'OverallSentimentScore%',
-    'FCR%',
-    'OverallFCRTotal',
-    'RepSat%',
-    'OverallRepTotal',
-    'OverallExperience%',
-    'OE Survey Total',
-    'TotalIn-OfficeShrink%',
-    'TotalOOOShrink%',
-    'TotalShrinkage%',
-    'ReliabilityHours'
-];
-
-// Map PowerBI columns to canonical schema
-const CANONICAL_SCHEMA = {
-    EMPLOYEE_NAME: 'employee_name',
-    ADHERENCE_PERCENT: 'adherence_percent',
-    CX_REP_OVERALL: 'cx_rep_overall_percent',
-    FCR_PERCENT: 'first_call_resolution_percent',
-    OVERALL_EXPERIENCE: 'overall_experience_percent',
-    TRANSFERS_PERCENT: 'transfer_percent',
-    TRANSFERS_COUNT: 'transfer_count',
-    AHT_SECONDS: 'average_handle_time_seconds',
-    TALK_SECONDS: 'talk_time_seconds',
-    ACW_SECONDS: 'after_call_work_seconds',
-    HOLD_SECONDS: 'hold_time_seconds',
-    RELIABILITY_HOURS: 'reliability_hours',
-    SENTIMENT_PERCENT: 'overall_sentiment_percent',
-    POSITIVE_WORD_PERCENT: 'positive_word_percent',
-    NEGATIVE_WORD_PERCENT: 'avoid_negative_word_percent',
-    EMOTIONS_PERCENT: 'manage_emotions_percent',
-    SURVEY_TOTAL: 'survey_total',
-    TOTAL_CALLS: 'total_calls_answered'
-};
-
-// Column mapping: PowerBI column position ? canonical schema
-// Using positional indexing (column 0 = Name, column 1 = TotalCalls, etc.)
-const COLUMN_MAPPING = {
-    0: CANONICAL_SCHEMA.EMPLOYEE_NAME,
-    1: CANONICAL_SCHEMA.TOTAL_CALLS,
-    2: CANONICAL_SCHEMA.TRANSFERS_PERCENT,
-    3: CANONICAL_SCHEMA.TRANSFERS_COUNT,
-    4: CANONICAL_SCHEMA.AHT_SECONDS,
-    5: CANONICAL_SCHEMA.TALK_SECONDS,
-    6: CANONICAL_SCHEMA.HOLD_SECONDS,
-    7: CANONICAL_SCHEMA.ACW_SECONDS,
-    8: CANONICAL_SCHEMA.ADHERENCE_PERCENT,
-    9: CANONICAL_SCHEMA.EMOTIONS_PERCENT,
-    10: CANONICAL_SCHEMA.NEGATIVE_WORD_PERCENT,
-    11: CANONICAL_SCHEMA.POSITIVE_WORD_PERCENT,
-    12: CANONICAL_SCHEMA.SENTIMENT_PERCENT,
-    13: CANONICAL_SCHEMA.FCR_PERCENT,
-    14: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallFCRTotal
-    15: CANONICAL_SCHEMA.CX_REP_OVERALL, // RepSat%
-    16: CANONICAL_SCHEMA.CX_REP_OVERALL, // OverallRepTotal
-    17: CANONICAL_SCHEMA.OVERALL_EXPERIENCE,
-    18: CANONICAL_SCHEMA.SURVEY_TOTAL,   // OE Survey Total
-    19: 'TotalIn-OfficeShrink%',
-    20: 'TotalOOOShrink%',
-    21: 'TotalShrinkage%',
-    22: CANONICAL_SCHEMA.RELIABILITY_HOURS
-};
-
-// ============================================
-// DATA LOADING - PASTED DATA
-// ============================================
-
+function validatePastedData(dataText) {
+    return window.DevCoachModules?.dataParsing?.validatePastedData?.(dataText) ?? { valid: false, issues: [] };
+}
 function parsePastedData(pastedText, startDate, endDate) {
-    const lines = pastedText.split('\n').map(line => line.trim()).filter(line => line);
-    
-    if (lines.length < 2) {
-        throw new Error('Data appears incomplete. Please paste header row and data rows.');
-    }
-    
-    const headerLine = lines[0];
-    const hasNameHeader = headerLine.toLowerCase().includes('name');
-    
-    if (!hasNameHeader) {
-        throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
-    }
-    
-    // Build header index map for flexible column detection
-    const headers = headerLine.split('\t').map(h => h.toLowerCase());
-    
-    const findColumnIndex = (keywords) => {
-        const matchesKeyword = (header, keyword) => {
-            const hLower = header.toLowerCase();
-            const kLower = keyword.toLowerCase();
-            
-            // Exact match
-            if (hLower === kLower) return true;
-            
-            // Normalize: replace separators with pipes, remove non-alphanumeric except pipes
-            const normalize = (str) => str.replace(/[\s\-_]+/g, '|').replace(/[^a-z0-9|]/g, '');
-            const normalizedHeader = normalize(hLower);
-            const normalizedKeyword = normalize(kLower);
-            
-            // Check if normalized keyword appears in normalized header
-            if (normalizedHeader.includes(normalizedKeyword)) return true;
-            
-            // Also check if all words from keyword appear in header in order (even if concatenated)
-            // e.g., "overall sentiment" should match "overallsentimentscore"
-            const keywordWords = kLower.split(/[\s\-_]+/).filter(w => w.length > 0);
-            let searchPos = 0;
-            for (const word of keywordWords) {
-                const foundPos = hLower.indexOf(word, searchPos);
-                if (foundPos === -1) return false;
-                searchPos = foundPos + word.length;
-            }
-            return true;
-        };
-        
-        if (Array.isArray(keywords)) {
-            return headers.findIndex(h => keywords.some(k => matchesKeyword(h, k)));
-        }
-        return headers.findIndex(h => matchesKeyword(h, keywords));
-    };
-
-    
-    // Map all column indices by searching headers
-    const colMap = {
-        name: findColumnIndex('name'),
-        totalCalls: findColumnIndex(['totalcalls', 'answered']),
-        transfers: findColumnIndex(['transfers', 'transfer %']),
-        transfersCount: findColumnIndex(['number of transfers']),
-        aht: findColumnIndex(['aht', 'average handle']),
-        talkTime: findColumnIndex(['talk']),
-        holdTime: findColumnIndex(['hold']),
-        acw: findColumnIndex(['acw', 'after call']),
-        adherence: findColumnIndex(['adherence', 'schedule']),
-        emotions: findColumnIndex(['managing emotions', 'emotion']),
-        negativeWord: findColumnIndex(['avoid negative', 'negative word']),
-        positiveWord: findColumnIndex(['positive word']),
-        sentiment: findColumnIndex(['overall sentiment']),
-        fcr: findColumnIndex(['fcr', 'first call resolution']),
-        cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat', 'repsat']),
-        overallExperience: findColumnIndex(['overall experience', 'overallexperience']),
-        surveyTotal: findColumnIndex(['oe survey', 'survey total']),
-        reliability: findColumnIndex(['reliability', 'reliability hours'])
-    };
-    
-    // DEBUG: Log headers and column mapping
-    if (DEBUG) {
-        console.error('=== COLUMN MAPPING ===');
-        console.error(`sentiment: ${colMap.sentiment}, header: "${headers[colMap.sentiment]}"`);
-        console.error(`emotions: ${colMap.emotions}, header: "${headers[colMap.emotions]}"`);
-        console.error(`negativeWord: ${colMap.negativeWord}, header: "${headers[colMap.negativeWord]}"`);
-        console.error(`positiveWord: ${colMap.positiveWord}, header: "${headers[colMap.positiveWord]}"`);
-        console.log('=== HEADERS ===');
-        headers.forEach((h, idx) => console.log(`[${idx}] ${h}`));
-        console.log('=== COLUMN MAPPING (details) ===');
-        console.log(`surveyTotal index: ${colMap.surveyTotal}, header: "${headers[colMap.surveyTotal]}"`);
-    }
-    // DEBUG: Log column mapping
-    if (DEBUG) {
-        console.log('====== PASTED DATA DEBUG ======');
-        console.log('Raw headers:', headerLine);
-        console.log('Lowercased headers array:', headers);
-        console.log('Column indices detected:');
-        for (const [key, index] of Object.entries(colMap)) {
-            const headerName = index >= 0 ? headers[index] : 'NOT FOUND';
-            console.log(`  ${key}: index=${index}, header="${headerName}"`);
-        }
-        console.log('================================');
-    }
-    
-    // Helper to safely get cell value
-    const getCell = (cells, colIndex) => {
-        if (colIndex < 0) return '';
-        const value = cells[colIndex];
-        return (value === null || value === undefined) ? '' : value;
-    };
-    
-    // Parse employee data
-    const employees = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        const rawRow = lines[i];
-        
-        if (!rawRow.trim()) continue;
-        
-        let cells;
-        try {
-            const parsed = parsePowerBIRow(rawRow);
-            cells = parsed;
-        } catch (error) {
-            continue;
-        }
-        
-        // Extract name
-        const nameField = getCell(cells, colMap.name);
-        let firstName = '', lastName = '';
-        
-        const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
-        if (lastFirstMatch) {
-            lastName = lastFirstMatch[1].trim();
-            firstName = lastFirstMatch[2].trim();
-        } else {
-            const parts = nameField.trim().split(/\s+/);
-            if (parts.length >= 2) {
-                firstName = parts[0];
-                lastName = parts.slice(1).join(' ');
-            } else if (parts.length === 1) {
-                firstName = parts[0];
-            }
-        }
-        
-        const displayName = `${firstName} ${lastName}`.trim();
-        
-        // Parse all metrics using flexible column mapping
-        const totalCallsRaw = getCell(cells, colMap.totalCalls);
-        const parsedTotalCalls = parseInt(totalCallsRaw, 10);
-        if (!Number.isInteger(parsedTotalCalls)) {
-            continue;
-        }
-        
-        const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
-        const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
-        let totalCalls = parsedTotalCalls;
-        if (DEBUG) console.log(`${displayName} - surveyTotalRaw="${surveyTotalRaw}", surveyTotal=${surveyTotal}, colMap.surveyTotal=${colMap.surveyTotal}, totalCalls=${totalCalls}`);
-        
-        const employeeData = {
-            name: displayName,
-            firstName: firstName,
-            scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
-            cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
-            fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
-            overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
-            transfers: parsePercentage(getCell(cells, colMap.transfers)) || 0,
-            transfersCount: parseInt(getCell(cells, colMap.transfersCount)) || 0,
-            aht: parseSeconds(getCell(cells, colMap.aht)) || '',
-            talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
-            acw: parseSeconds(getCell(cells, colMap.acw)),
-            holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
-            reliability: parseHours(getCell(cells, colMap.reliability)) || 0,
-            overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
-            positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
-            negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
-            managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
-            surveyTotal: surveyTotal,
-            totalCalls: totalCalls
-        };
-        
-        // Data integrity check: surveyTotal cannot exceed totalCalls
-        if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
-            console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}). This suggests the wrong column was detected for survey data.`);
-            if (DEBUG) {
-                console.log(`  Raw data for this employee:`, cells);
-                console.log(`  totalCalls col ${colMap.totalCalls}: "${getCell(cells, colMap.totalCalls)}"`);
-                console.log(`  surveyTotal col ${colMap.surveyTotal}: "${getCell(cells, colMap.surveyTotal)}"`);
-                console.log(`  aht col ${colMap.aht}: "${getCell(cells, colMap.aht)}"`);
-            }
-        }
-        
-        if (i <= 3 && DEBUG) {
-            console.log(`FIRST FEW ROWS DEBUG - ${displayName}:`);
-            console.log(`  All raw cells:`, cells);
-            for (let c = 0; c < cells.length; c++) {
-                console.log(`    [${c}] "${cells[c]}" -> header: "${headers[c]}"`);
-            }
-        }
-        
-        employees.push(employeeData);
-    }
-    
-    
-    return employees;
+    return window.DevCoachModules?.dataParsing?.parsePastedData?.(pastedText, startDate, endDate) ?? [];
 }
+
+// These constants are now in modules/data-parsing.module.js
+// Access them via: window.DevCoachModules.dataParsing.POWERBI_COLUMNS, etc.
+const POWERBI_COLUMNS = window.DevCoachModules?.dataParsing?.POWERBI_COLUMNS ?? [];
+const CANONICAL_SCHEMA = window.DevCoachModules?.dataParsing?.CANONICAL_SCHEMA ?? {};
+const COLUMN_MAPPING = window.DevCoachModules?.dataParsing?.COLUMN_MAPPING ?? {};
+
+// parsePastedData is now in modules/data-parsing.module.js
+// Use: window.DevCoachModules.dataParsing.parsePastedData(text, startDate, endDate)
 
 // ============================================
 // DATA LOADING - EXCEL FILES
