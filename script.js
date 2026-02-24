@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.24.2'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.24.3'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -161,7 +161,17 @@ const METRIC_RATING_BANDS_BY_YEAR = {
     }
 };
 
+function getMetricProfilesModule() {
+    return window?.DevCoachModules?.metricProfiles || null;
+}
+
 function getMetricRatingScore(metricKey, value, year) {
+    const profileModule = getMetricProfilesModule();
+    if (profileModule?.getRatingScore) {
+        const moduleScore = profileModule.getRatingScore(metricKey, value, year);
+        if (moduleScore !== null && moduleScore !== undefined) return moduleScore;
+    }
+
     const yearNum = parseInt(year, 10);
     const numeric = parseFloat(value);
     if (!Number.isInteger(yearNum) || Number.isNaN(numeric)) return null;
@@ -3372,14 +3382,17 @@ function collectYearEndAnnualGoals(employeeName, reviewYear) {
 }
 
 function getYearEndTargetConfig(metricKey, reviewYear, periodMetadata) {
+    const profileModule = getMetricProfilesModule();
+    const targetsByYear = profileModule?.TARGETS_BY_YEAR || YEAR_END_TARGETS_BY_YEAR;
+
     const parsedYear = parseInt(reviewYear, 10);
-    const customTargets = Number.isInteger(parsedYear) ? YEAR_END_TARGETS_BY_YEAR[parsedYear] : null;
+    const customTargets = Number.isInteger(parsedYear) ? targetsByYear[parsedYear] : null;
     const metadataProfile = periodMetadata?.yearEndTargetProfile;
     const metadataYear = parseInt(periodMetadata?.yearEndReviewYear, 10);
     const profileYear = Number.isInteger(parsedYear)
         ? parsedYear
         : (metadataProfile === 'auto' ? metadataYear : parseInt(metadataProfile, 10));
-    const profileTargets = Number.isInteger(profileYear) ? YEAR_END_TARGETS_BY_YEAR[profileYear] : null;
+    const profileTargets = Number.isInteger(profileYear) ? targetsByYear[profileYear] : null;
 
     if (customTargets && customTargets[metricKey]) return { ...customTargets[metricKey], profileYear: parsedYear };
     if (profileTargets && profileTargets[metricKey]) return { ...profileTargets[metricKey], profileYear: profileYear };
@@ -6452,9 +6465,13 @@ function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, s
 }
 
 function getMetricTarget(metric, reviewYear = null) {
+    const profileModule = getMetricProfilesModule();
+
     const parsedYear = parseInt(reviewYear, 10);
     if (Number.isInteger(parsedYear)) {
-        const yearTarget = YEAR_END_TARGETS_BY_YEAR[parsedYear]?.[metric];
+        const yearTarget = profileModule?.getYearTarget
+            ? profileModule.getYearTarget(metric, parsedYear)
+            : YEAR_END_TARGETS_BY_YEAR[parsedYear]?.[metric];
         if (yearTarget && yearTarget.value !== undefined && yearTarget.value !== null) {
             return yearTarget.value;
         }
