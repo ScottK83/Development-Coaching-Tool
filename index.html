@@ -6,6 +6,38 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // === AGGRESSIVE SOURCE MAP ERROR PREVENTION ===
+        // Block .map file requests at the network level before any libraries load
+        const originalFetch = window.fetch;
+        window.fetch = function(resource, config) {
+            if (typeof resource === 'string' && resource.endsWith('.map')) {
+                return Promise.reject(new Error('Source map requests blocked'));
+            }
+            return originalFetch.apply(this, arguments);
+        };
+
+        // Override XMLHttpRequest to block .map file requests
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url) {
+            if (typeof url === 'string' && url.endsWith('.map')) {
+                console.debug('[DevCoach] Blocked .map request:', url);
+                this.addEventListener('loadstart', function() {
+                    this.abort();
+                });
+            }
+            return originalOpen.apply(this, arguments);
+        };
+
+        // Prevent service workers from caching .map files
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => {
+                    reg.unregister();
+                });
+            }).catch(() => {}); // Silently fail if no service workers
+        }
+    </script>
     <script src="lib-chart.js"></script>
     <script src="lib-html2canvas.js"></script>
     <script src="lib-xlsx.js"></script>
