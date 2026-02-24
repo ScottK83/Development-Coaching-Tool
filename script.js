@@ -39,6 +39,9 @@ const APP_VERSION = '2026.02.24.31'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
+window.APP_VERSION = APP_VERSION;
+window.DEBUG = DEBUG;
+
 // ============================================
 // ERROR HANDLING & SUPPRESSION
 // ============================================
@@ -3517,13 +3520,15 @@ function initializeKeyboardShortcuts() {
         // Ctrl+H - Employee History
         if (e.ctrlKey && e.key === 'h') {
             e.preventDefault();
-            document.getElementById('employeeDashboard')?.click();
+            document.getElementById('coachingEmailBtn')?.click();
         }
         
         // Ctrl+T - Tips Management
         if (e.ctrlKey && e.key === 't') {
             e.preventDefault();
-            document.getElementById('manageTips')?.click();
+            showOnlySection('manageDataSection');
+            showManageDataSubSection('subSectionCoachingTips');
+            renderTipsManagement();
         }
         
         // Escape - Clear form
