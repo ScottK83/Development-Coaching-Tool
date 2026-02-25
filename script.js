@@ -10906,6 +10906,7 @@ function initializeYearEndComments() {
     const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
     const calculateOnOffBtn = document.getElementById('calculateYearEndOnOffBtn');
     const generateBtn = document.getElementById('generateYearEndPromptBtn');
+    const pasteResponseBtn = document.getElementById('pasteYearEndResponseBtn');
     const copyBtn = document.getElementById('copyYearEndResponseBtn');
     const copyBox1Btn = document.getElementById('copyYearEndBox1Btn');
     const copyBox2Btn = document.getElementById('copyYearEndBox2Btn');
@@ -10952,6 +10953,10 @@ function initializeYearEndComments() {
     if (!generateBtn.dataset.bound) {
         generateBtn.addEventListener('click', generateYearEndPromptAndCopy);
         generateBtn.dataset.bound = 'true';
+    }
+    if (pasteResponseBtn && !pasteResponseBtn.dataset.bound) {
+        pasteResponseBtn.addEventListener('click', pasteYearEndResponseFromClipboard);
+        pasteResponseBtn.dataset.bound = 'true';
     }
     if (!copyBtn.dataset.bound) {
         copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
@@ -11307,6 +11312,35 @@ function copyYearEndResponseToClipboard() {
     navigator.clipboard.writeText(responseText)
         .then(() => showToast('✅ Year-end notes copied to clipboard!', 3000))
         .catch(() => showToast('⚠️ Unable to copy year-end notes.', 3000));
+}
+
+async function pasteYearEndResponseFromClipboard() {
+    const responseInput = document.getElementById('yearEndCopilotResponse');
+    const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
+    const reviewYear = document.getElementById('yearEndReviewYear')?.value;
+    if (!responseInput) return;
+
+    try {
+        if (!navigator.clipboard?.readText) {
+            showToast('⚠️ Clipboard paste is not available in this browser. Use Ctrl+V in the box.', 4500);
+            responseInput.focus();
+            return;
+        }
+
+        const clipboardText = await navigator.clipboard.readText();
+        if (!clipboardText || !clipboardText.trim()) {
+            showToast('⚠️ Clipboard is empty.', 3000);
+            responseInput.focus();
+            return;
+        }
+
+        responseInput.value = clipboardText;
+        persistYearEndDraftState(employeeName, reviewYear);
+        showToast('✅ Final notes pasted from clipboard.', 3000);
+    } catch (error) {
+        showToast('⚠️ Could not read clipboard. Click in the box and use Ctrl+V.', 4500);
+        responseInput.focus();
+    }
 }
 
 function extractYearEndBoxText(responseText, boxNumber) {
