@@ -1201,6 +1201,13 @@ Box 2 - Future Improvement Areas:
     <script src="modules/coaching-analysis.module.js"></script>
     
     <!-- Main Application -->
-    <script src="script.js"></script>
+    <script>
+        (function loadAppScriptWithCacheBust() {
+            const appScript = document.createElement('script');
+            appScript.src = `script.js?v=${Date.now()}`;
+            appScript.async = false;
+            document.body.appendChild(appScript);
+        })();
+    </script>
 </body>
 </html>
