@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:28:01.337Z",
+  "generatedAt": "2026-02-25T20:38:57.782Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4326,6 +4326,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Caylie Chirumbolo": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4433,6 +4467,17 @@
       "meritDetails": "2% to 25.98",
       "bonusAmount": "3434.73",
       "verbalSummary": "Ang, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2% to 25.98.\nYour incentive/bonus amount is: 3434.73."
+    },
+    "2026::Caylie Chirumbolo": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 15s vs target 30s\nFirst Call Resolution: 87.5% vs target 73.0%\nOverall Sentiment: 92.5% vs target 88.0%\nPositive Word: 90.8% vs target 86.0%\nAvoid Negative Words: 89.7% vs target 83.0%\nManaging Emotions: 97.0% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 89.8% vs target 93.0%\nTransfers: 6.6% vs target 6.0%\nAverage Handle Time: 457s vs target 414s\nAfter Call Work: 127s vs target 60s\nOverall Experience: 50.0% vs target 84.0%\nRep Satisfaction: 62.5% vs target 82.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -4483,8 +4528,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 9,
-      "byteLength": 3793
+      "itemCount": 10,
+      "byteLength": 4215
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -4503,8 +4548,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 11,
-      "byteLength": 19342
+      "itemCount": 12,
+      "byteLength": 20272
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
