@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:46:59.700Z",
+  "generatedAt": "2026-02-25T20:47:05.100Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4456,7 +4456,7 @@
       "performanceRating": "Successful",
       "meritDetails": "3.14 to 26.27",
       "bonusAmount": "3816.37",
-      "verbalSummary": "Ronda, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 3.14 to 26.27.\nYour incentive/bonus amount is: 3816.37."
+      "verbalSummary": "Ronda, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 3.14 to 26.27.\nYour incentive/bonus amount is: 3816.37."
     },
     "2025::Marietta Bernal": {
       "trackStatus": "off-track",
@@ -4594,7 +4594,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 13,
-      "byteLength": 21158
+      "byteLength": 21318
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
