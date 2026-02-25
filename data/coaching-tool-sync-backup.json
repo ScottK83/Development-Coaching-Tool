@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T23:23:47.097Z",
+  "generatedAt": "2026-02-25T23:24:40.186Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
@@ -4675,7 +4675,7 @@
       "positivesText": "Schedule Adherence: 93.2% vs target 93.0%\nAverage Handle Time: 400s vs target 440s\nHold Time: 2s vs target 30s\nAfter Call Work: 23s vs target 60s\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Transfers: 23.0% vs target 6.0%\nOverall Experience: 73.8% vs target 84.0%\nRep Satisfaction: 75.4% vs target 80.0%\nFirst Call Resolution: 64.6% vs target 70.0%\nOverall Sentiment: 83.7% vs target 88.0%\nPositive Word: 83.6% vs target 86.0%\nAnnual Goal Follow-up: Red Flag Violations: 0 violations (4)",
       "managerContext": "Mariettas - 1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nI AM COME A LONG WAY WHEN IT COMES TO UNDERSTANDING BUDGET BILLING AND HOW I HANDLE ANGRY CUSTOMERS.\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nI FEEL I HAVE GROWN ON UNDERSTANDING HOW TO ASSIGN MY TO DO'S BETTER AND VERY COMFORTABLE REACHING OUT TO LEADERSHIP WHEN I NEED ASSISTANCE.",
-      "copilotResponse": "Box 1 - Significant Accomplishments:\nMarietta delivered several meaningful strengths this year, even with an overall performance rating of off track. She consistently exceeded key efficiency goals, including schedule adherence at 93.2% vs a 93.0% target, average handle time at 400s vs a 440s target, hold time at 2s vs a 30s target, and after call work at 23s vs a 60s target. Her commitment to safety and compliance was exceptional, meeting all APS annual safety goals, maintaining 100% accuracy on emergency safety hazard calls, achieving 0 ACC substantiated complaints, and recording 0 phishing email clicks. She also demonstrated growth in her development by becoming more confident in handling challenging customer interactions and proactively seeking support when needed. These accomplishments reflect steady progress in operational discipline and alignment with APS principles.\n\nBox 2 - Future Improvement Areas:\nTwo areas will have the greatest impact on Marietta’s overall performance next year. First, improving transfer rate performance is essential, as results of 23.0% vs a 6.0% target show a clear opportunity to strengthen ownership of calls and reduce unnecessary handoffs. Second, enhancing customer experience metrics, including overall experience at 73.8% vs an 84.0% target and first call resolution at 64.6% vs a 70.0% target, will help build stronger customer trust and elevate consistency across interactions.",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nMarietta delivered several meaningful strengths throughout the year, even with an overall performance rating of off track. She consistently exceeded key efficiency goals, including Schedule Adherence at 93.2% vs a 93.0% target, Average Handle Time at 400s vs a 440s target, Hold Time at 2s vs a 30s target, and After Call Work at 23s vs a 60s target. She also met all major APS annual goals, such as Safety Goal at APS, 100% accuracy on Emergency Safety Hazard Calls, 0 ACC Substantiated Complaints, and 0 clicks on phishing emails. Her growth in confidently handling budget billing conversations and navigating challenging customer interactions reflected her commitment to development and the APS Principles. She also demonstrated progress in organizing her work and seeking support when needed, which contributed positively to her overall performance.\n\nBox 2 - Future Improvement Areas:\nMarietta would benefit from strengthening her call quality and customer experience outcomes, particularly improving metrics such as Transfers at 23.0% vs a 6.0% target and Overall Experience at 73.8% vs an 84.0% target. She should also focus on enhancing First Call Resolution, which was 64.6% vs a 70.0% target, to reduce repeat contacts and improve customer satisfaction.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -4809,6 +4809,16 @@
       "itemCount": 1,
       "byteLength": 280
     },
+    "devCoachingTool_cloudSyncShared": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 203
+    },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 7,
+      "byteLength": 1957
+    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
@@ -4819,15 +4829,25 @@
       "itemCount": 2,
       "byteLength": 15016
     },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 7,
-      "byteLength": 1957
-    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
       "byteLength": 1730
+    },
+    "devCoachingTool_employeeNicknames": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 54
+    },
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 132
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -4839,6 +4859,11 @@
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 6957
+    },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
       "itemCount": 1,
@@ -4847,27 +4872,27 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 19,
-      "byteLength": 48856
+      "byteLength": 48722
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 8,
       "byteLength": 44431
     },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
+    },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 211
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 16
+      "byteLength": 212
     }
   }
 }
