@@ -15,19 +15,19 @@ if (!(Test-Path $scriptJsPath)) {
 }
 
 function Get-NextAppVersion {
+    param(
+        [string]$CurrentVersion
+    )
+
     $today = Get-Date
     $datePart = $today.ToString("yyyy.MM.dd")
-    $since = $today.ToString("yyyy-MM-dd") + " 00:00:00"
-    $until = $today.ToString("yyyy-MM-dd") + " 23:59:59"
 
-    $countOutput = git rev-list --count --since="$since" --until="$until" HEAD
-    $existingCount = 0
-    if ($countOutput) {
-        [void][int]::TryParse($countOutput.Trim(), [ref]$existingCount)
+    if ($CurrentVersion -match "^(?<date>\d{4}\.\d{2}\.\d{2})\.(?<count>\d+)$" -and $matches['date'] -eq $datePart) {
+        $nextCount = ([int]$matches['count']) + 1
+        return "$datePart.$nextCount"
     }
 
-    $nextCount = $existingCount + 1
-    return "$datePart.$nextCount"
+    return "$datePart.1"
 }
 
 $lines = Get-Content $scriptJsPath
@@ -49,7 +49,28 @@ if ($versionLineIndex -lt 0) {
     exit 0
 }
 
-$nextVersion = Get-NextAppVersion
+# If this branch is behind upstream, skip bump to avoid repeated bumps on failed pushes.
+$upstream = git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null
+if ($LASTEXITCODE -eq 0 -and $upstream) {
+    $counts = git rev-list --left-right --count "$upstream...HEAD" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $counts) {
+        $parts = $counts.Trim().Split("`t", [System.StringSplitOptions]::RemoveEmptyEntries)
+        if ($parts.Count -lt 2) {
+            $parts = $counts.Trim().Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+        }
+
+        if ($parts.Count -ge 2) {
+            $behind = 0
+            [void][int]::TryParse($parts[0], [ref]$behind)
+            if ($behind -gt 0) {
+                Write-Host "Branch is behind $upstream. Skipping APP_VERSION bump until branch is rebased/pulled."
+                exit 0
+            }
+        }
+    }
+}
+
+$nextVersion = Get-NextAppVersion -CurrentVersion $currentVersion
 if ($currentVersion -eq $nextVersion) {
     # Already at today's version, no bump needed
     exit 0
