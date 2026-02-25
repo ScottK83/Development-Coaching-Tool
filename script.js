@@ -10847,7 +10847,7 @@ function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFul
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
 
-    detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear);
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10864,7 +10864,7 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
-    detailsEl.innerHTML = buildOnOffScoreTableHtml(result);
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear);
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10875,31 +10875,48 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     return result;
 }
 
-function buildOnOffScoreTableHtml(result) {
+function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear()) {
+    const { bands } = getOnOffTrackerLegendBandsByYear(reviewYear);
+    const resolveGoalText = (bandKey, formatKey) => {
+        const config = bands?.[bandKey];
+        if (!config) return 'N/A';
+        if (config.type === 'min') {
+            const targetValue = config.score3?.min ?? config.score2?.min;
+            return targetValue === undefined ? 'N/A' : `≥ ${formatMetricDisplay(formatKey, targetValue)}`;
+        }
+        const targetValue = config.score3?.max ?? config.score2?.max;
+        return targetValue === undefined ? 'N/A' : `≤ ${formatMetricDisplay(formatKey, targetValue)}`;
+    };
+
     const rows = [
         {
             label: 'AHT',
             valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
+            goalText: resolveGoalText('aht', 'aht'),
             score: result.scores.aht
         },
         {
             label: 'Adherence',
             valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
+            goalText: resolveGoalText('scheduleAdherence', 'scheduleAdherence'),
             score: result.scores.adherence
         },
         {
             label: 'Overall Sentiment',
             valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
+            goalText: resolveGoalText('overallSentiment', 'overallSentiment'),
             score: result.scores.sentiment
         },
         {
             label: 'Associate Overall (Surveys)',
             valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
+            goalText: resolveGoalText('cxRepOverall', 'overallExperience'),
             score: result.scores.associateOverall
         },
         {
             label: 'Reliability',
             valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
+            goalText: resolveGoalText('reliability', 'reliability'),
             score: result.scores.reliability
         }
     ];
@@ -10937,7 +10954,8 @@ function buildOnOffScoreTableHtml(result) {
                 <thead>
                     <tr>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
-                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Value</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Goal</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
                     </tr>
                 </thead>
@@ -10946,16 +10964,17 @@ function buildOnOffScoreTableHtml(result) {
                         <tr>
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.label}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.goalText}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
                         </tr>
                     `).join('')}
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Rating Average</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="2">${ratingText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="3">${ratingText}</td>
                     </tr>
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Overall Status</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="2">${statusText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="3">${statusText}</td>
                     </tr>
                 </tbody>
             </table>
