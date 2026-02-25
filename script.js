@@ -10847,6 +10847,41 @@ function generateCoachingPromptAndCopy() {
     }, 500);
 }
 
+function generateOutlookEmailFromCoPilot() {
+    const outlookBody = document.getElementById('coachingOutlookBody');
+    const selectedEmployee = document.getElementById('coachingEmployeeSelect')?.value;
+    const bodyText = (outlookBody?.value || '').trim();
+
+    if (!bodyText) {
+        showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
+        return;
+    }
+
+    const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
+    const endDate = periodMeta.endDate
+        ? formatDateMMDDYYYY(periodMeta.endDate)
+        : (coachingLatestWeekKey?.split('|')[1]
+            ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1])
+            : 'current period');
+
+    const preferredName = selectedEmployee
+        ? (getEmployeeNickname(selectedEmployee) || selectedEmployee)
+        : 'Associate';
+    const subject = `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
+
+    try {
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+        showToast('📧 Outlook draft opened', 2500);
+    } catch (e) {
+        console.error('Error opening Outlook draft from coaching email:', e);
+        showToast('⚠️ Could not open Outlook draft.', 3000);
+    }
+}
+
 // ============================================
 // SENTIMENT & LANGUAGE SUMMARY ENGINE
 // ============================================
