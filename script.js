@@ -3197,13 +3197,25 @@ function initializeRepoSyncControls() {
 }
 
 function openRepoExcelFile(fileName) {
+    const githubUrl = `https://github.com/ScottK83/Development-Coaching-Tool/raw/main/data/${encodeURIComponent(fileName)}?t=${Date.now()}`;
     const baseUrl = window?.location?.origin;
-    if (!baseUrl || baseUrl === 'null') {
-        showToast('⚠️ Could not detect site URL to open Excel file.', 3500);
+    const localUrl = baseUrl && baseUrl !== 'null' ? `${baseUrl}/data/${fileName}` : '';
+    const fileUrl = githubUrl || localUrl;
+
+    if (!fileUrl) {
+        showToast('⚠️ Could not build Excel file URL.', 3500);
         return;
     }
 
-    const fileUrl = `${baseUrl}/data/${fileName}`;
+    if (fileName === 'call-listening-logs.xlsx') {
+        const totalCallLogs = Object.values(callListeningLogs || {}).reduce((count, entries) => {
+            return count + (Array.isArray(entries) ? entries.length : 0);
+        }, 0);
+        if (totalCallLogs === 0) {
+            showToast('ℹ️ Call Logs Excel will be blank until at least one call listening entry is saved.', 4500);
+        }
+    }
+
     window.open(fileUrl, '_blank');
 }
 
