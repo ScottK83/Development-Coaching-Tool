@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:47:39.255Z",
+  "generatedAt": "2026-02-25T21:50:15.722Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4530,6 +4530,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Ekiecha Brabham": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4703,6 +4737,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2026::Ekiecha Brabham": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 20s vs target 30s\nAvoid Negative Words: 86.1% vs target 83.0%\nManaging Emotions: 95.6% vs target 95.0%\nReliability: 6.3 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 91.8% vs target 93.0%\nTransfers: 7.3% vs target 6.0%\nAverage Handle Time: 433s vs target 414s\nAfter Call Work: 136s vs target 60s\nOverall Experience: 81.8% vs target 84.0%\nRep Satisfaction: 72.7% vs target 82.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -4753,8 +4798,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 15,
-      "byteLength": 6314
+      "itemCount": 16,
+      "byteLength": 6734
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -4773,8 +4818,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 17,
-      "byteLength": 41284
+      "itemCount": 18,
+      "byteLength": 42127
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
