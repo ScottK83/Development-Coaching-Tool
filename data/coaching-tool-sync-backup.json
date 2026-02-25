@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:51:44.798Z",
+  "generatedAt": "2026-02-25T21:58:37.832Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4570,9 +4570,13 @@
     "2026::Scoticia Osborne": {
       "trackStatus": "on-track",
       "positivesText": "Hold Time: 2s vs target 30s\nAfter Call Work: 46s vs target 60s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 75.0% vs target 73.0%\nOverall Sentiment: 91.2% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
-      "improvementsText": "Schedule Adherence: 92.3% vs target 93.0%\nTransfers: 7.1% vs target 6.0%\nAverage Handle Time: 450s vs target 432s",
+      "improvementsText": "Schedule Adherence: 92.3% vs target 93.0%\nTransfers: 7.1% vs target 6.0%\nAverage Handle Time: 450s vs target 432s\nAnnual Goal Follow-up: Clicks on Phishing Emails: 0 clicks (2)",
       "managerContext": "",
-      "copilotResponse": ""
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     },
     "2025::Scoticia Osborne": {
       "trackStatus": "on-track",
@@ -4819,7 +4823,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 18,
-      "byteLength": 42127
+      "byteLength": 42268
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
