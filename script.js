@@ -3516,6 +3516,9 @@ function renderYearEndAnnualGoalsInputs(employeeName, reviewYear) {
         el.addEventListener(eventName, () => {
             persistYearEndAnnualGoalsState(employeeName, reviewYear);
             appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
+            if (el.matches('select')) {
+                updateYearEndSnapshotDisplay();
+            }
         });
     });
 }
@@ -3524,10 +3527,11 @@ function appendMissingYearEndImprovementFollowUps(employeeName, reviewYear) {
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
     if (!improvementsInput || !employeeName || !reviewYear) return;
 
+    persistYearEndAnnualGoalsState(employeeName, reviewYear);
+
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
     const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
-    const redFlagFollowUps = getYearEndRedFlagFollowUpLines(employeeName);
-    const requiredLines = annualFollowUps.concat(redFlagFollowUps).filter(Boolean);
+    const requiredLines = annualFollowUps.filter(Boolean);
 
     if (!requiredLines.length) return;
 
@@ -11028,43 +11032,6 @@ function initializeYearEndComments() {
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 }
 
-function getYearEndRedFlagFollowUpLines(employeeName) {
-    if (!employeeName) return [];
-
-    try {
-        const raw = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes');
-        if (!raw) return [];
-
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return [];
-
-        const exactKey = Object.keys(parsed).find(key => key === employeeName)
-            || Object.keys(parsed).find(key => String(key).toLowerCase() === String(employeeName).toLowerCase());
-        if (!exactKey) return [];
-
-        const employeeNotes = parsed[exactKey];
-        if (!employeeNotes || typeof employeeNotes !== 'object') return [];
-
-        const lines = [];
-        Object.entries(employeeNotes).forEach(([periodKey, notes]) => {
-            const redFlagsRaw = String(notes?.redFlags || '').trim();
-            if (!redFlagsRaw) return;
-
-            const label = periodKey === 'ytd-summary' ? 'YTD Summary' : periodKey;
-            if (/^\d+$/.test(redFlagsRaw)) {
-                lines.push(`Red Flags (${label}): ${redFlagsRaw} logged`);
-            } else {
-                lines.push(`Red Flags (${label}): ${redFlagsRaw}`);
-            }
-        });
-
-        return lines;
-    } catch (error) {
-        console.error('Error loading red flags for year-end defaults:', error);
-        return [];
-    }
-}
-
 function updateYearEndSnapshotDisplay() {
     const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
     const reviewYear = document.getElementById('yearEndReviewYear')?.value;
@@ -11134,7 +11101,6 @@ function updateYearEndSnapshotDisplay() {
     if (verbalSummaryOutput) verbalSummaryOutput.value = savedDraft.verbalSummary;
 
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
-    const redFlagFollowUps = getYearEndRedFlagFollowUpLines(employeeName);
     const { wins, opportunities, targetProfileYear } = buildYearEndMetricSnapshot(
         latestPeriod.employeeRecord,
         reviewYear,
@@ -11167,16 +11133,16 @@ function updateYearEndSnapshotDisplay() {
             : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
     }
 
-    appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
-
     if (improvementsInput && !improvementsInput.value.trim()) {
         const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
         improvementsInput.value = opportunities.length
-            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps, redFlagFollowUps).join('\n')
-            : annualFollowUps.length || redFlagFollowUps.length
-                ? annualFollowUps.concat(redFlagFollowUps).join('\n')
+            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
+            : annualFollowUps.length
+                ? annualFollowUps.join('\n')
                 : 'Continue building consistency and sustaining current performance levels.';
     }
+
+    appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
     yearEndDraftContext = {
         employeeName,
@@ -11221,6 +11187,8 @@ function generateYearEndPromptAndCopy() {
         return;
     }
     if (!promptArea) return;
+
+    appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
     if (!yearEndDraftContext || yearEndDraftContext.employeeName !== employeeName || yearEndDraftContext.reviewYear !== reviewYear) {
         updateYearEndSnapshotDisplay();
