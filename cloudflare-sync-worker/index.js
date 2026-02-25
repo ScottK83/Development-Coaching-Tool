@@ -1,7 +1,17 @@
 export default {
   async fetch(request, env) {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders()
+      });
+    }
+
     if (request.method !== 'POST') {
-      return new Response('Method Not Allowed', { status: 405 });
+      return new Response('Method Not Allowed', {
+        status: 405,
+        headers: corsHeaders()
+      });
     }
 
     if (!env.GH_TOKEN || !env.GH_OWNER || !env.GH_REPO) {
@@ -106,10 +116,18 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      ...corsHeaders(),
+      'Content-Type': 'application/json'
     }
   });
+}
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
 }
 
 function hasMeaningfulBackupData(payload) {
