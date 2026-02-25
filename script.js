@@ -3165,10 +3165,9 @@ function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
     const syncNowBtn = document.getElementById('syncNowBtn');
-    const openCallExcelBtn = document.getElementById('openCallListeningExcelBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
 
-    if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openCallExcelBtn || !openFullExcelBtn) {
+    if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
         return;
     }
 
@@ -3182,10 +3181,6 @@ function initializeRepoSyncControls() {
     }
     renderCallListeningLastSync();
 
-    if (!openCallExcelBtn.dataset.bound) {
-        openCallExcelBtn.addEventListener('click', () => openRepoExcelFile('call-listening-logs.xlsx'));
-        openCallExcelBtn.dataset.bound = 'true';
-    }
     if (!syncNowBtn.dataset.bound) {
         syncNowBtn.addEventListener('click', async () => {
             const buttonOriginalText = syncNowBtn.textContent;
