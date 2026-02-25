@@ -38,25 +38,37 @@ jobs:
           workflow_path = pathlib.Path('.github/workflows/build-call-listening-xlsx.yml')
           text = workflow_path.read_text(encoding='utf-8')
           start_token = "python - <<'PY'"
-          start = text.find(start_token)
-          if start < 0:
-              raise SystemExit('Could not find embedded Python heredoc start token')
-          start = text.find('\n', start) + 1
-          end = text.find('\n          PY', start)
-          if end < 0:
-              raise SystemExit('Could not find embedded Python heredoc end token')
+          end_token = "\n          PY"
+          pos = 0
+          block_index = 0
 
-          block = text[start:end]
-          script_lines = []
-          for line in block.splitlines():
+          while True:
+            start = text.find(start_token, pos)
+            if start < 0:
+              break
+
+            block_index += 1
+            start = text.find('\n', start) + 1
+            end = text.find(end_token, start)
+            if end < 0:
+              raise SystemExit(f'Could not find embedded Python heredoc end token for block {block_index}')
+
+            block = text[start:end]
+            script_lines = []
+            for line in block.splitlines():
               if line.startswith('          '):
-                  script_lines.append(line[10:])
+                script_lines.append(line[10:])
               else:
-                  script_lines.append(line)
+                script_lines.append(line)
 
-          script = '\n'.join(script_lines)
-          compile(script, 'build-call-listening-xlsx.yml:heredoc', 'exec')
-          print('Embedded Python syntax OK')
+            script = '\n'.join(script_lines)
+            compile(script, f'build-call-listening-xlsx.yml:heredoc-{block_index}', 'exec')
+            pos = end + len(end_token)
+
+          if block_index == 0:
+            raise SystemExit('Could not find any embedded Python heredoc blocks')
+
+          print(f'Embedded Python syntax OK for {block_index} block(s)')
           PY
 
       - name: Build XLSX from CSV
@@ -248,17 +260,17 @@ jobs:
           wb.save(xlsx_path)
           print(f'Built {xlsx_path}')
 
-            full_json_path = 'data/coaching-tool-sync-backup.json'
-            full_xlsx_path = 'data/Development-Coaching-Tool.xlsx'
-            payload = None
-            if os.path.exists(full_json_path):
+          full_json_path = 'data/coaching-tool-sync-backup.json'
+          full_xlsx_path = 'data/Development-Coaching-Tool.xlsx'
+          payload = None
+          if os.path.exists(full_json_path):
               try:
-                with open(full_json_path, encoding='utf-8') as f:
-                  payload = json.load(f)
+                  with open(full_json_path, encoding='utf-8') as f:
+                      payload = json.load(f)
               except Exception as exc:
-                print(f'Skipping {full_xlsx_path}: unable to parse {full_json_path}: {exc}')
+                  print(f'Skipping {full_xlsx_path}: unable to parse {full_json_path}: {exc}')
 
-            if isinstance(payload, dict):
+          if isinstance(payload, dict):
 
               full_wb = Workbook()
               overview = full_wb.active
@@ -309,8 +321,8 @@ jobs:
               auto_size(overview, min_width=18, max_width=60)
               full_wb.save(full_xlsx_path)
               print(f'Built {full_xlsx_path}')
-              else:
-                print(f'Skipped {full_xlsx_path}: backup payload unavailable or invalid')
+          else:
+              print(f'Skipped {full_xlsx_path}: backup payload unavailable or invalid')
           PY
 
       - name: Commit XLSX if changed

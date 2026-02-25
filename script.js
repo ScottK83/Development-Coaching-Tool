@@ -11702,6 +11702,8 @@ function generateYearEndVerbalSummary() {
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
     const summary = `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
 
+As part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.
+
 Your overall performance rating is: ${performanceRating}.
 Your merit increase details are: ${meritDetails}.
 Your incentive/bonus amount is: ${bonusAmount}.`;
