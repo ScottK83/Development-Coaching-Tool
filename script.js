@@ -134,6 +134,7 @@ let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-2
 let coachingLatestWeekKey = null;
 let coachingHistory = {};
 let yearEndDraftContext = null;
+let callListeningLogs = {};
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
@@ -195,6 +196,7 @@ const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
+const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
 
 const YEAR_END_TARGETS_BY_YEAR = {
     2025: {
@@ -648,7 +650,7 @@ function showOnlySection(sectionId) {
  */
 function showSubSection(subSectionId, activeButtonId = null) {
     // Hide all sub-sections
-    const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence'];
+    const subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening'];
     subSections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -661,7 +663,7 @@ function showSubSection(subSectionId, activeButtonId = null) {
     }
     
     // Update sub-nav button active states
-    const subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence'];
+    const subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening'];
     const selectedSubNavButton = activeButtonId || (
         subSectionId === 'subSectionCoachingEmail' ? 'subNavCoachingEmail'
             : subSectionId === 'subSectionYearEnd' ? 'subNavYearEnd'
@@ -669,6 +671,7 @@ function showSubSection(subSectionId, activeButtonId = null) {
                 : subSectionId === 'subSectionSentiment' ? 'subNavSentiment'
                     : subSectionId === 'subSectionMetricTrends' ? 'subNavMetricTrends'
                         : subSectionId === 'subSectionTrendIntelligence' ? 'subNavTrendIntelligence'
+                            : subSectionId === 'subSectionCallListening' ? 'subNavCallListening'
                             : ''
     );
 
@@ -1551,6 +1554,7 @@ function exportToExcel() {
     const exportData = {
         weeklyData: weeklyData || {},
         ytdData: ytdData || {},
+        callListeningLogs: callListeningLogs || {},
         sentimentPhraseDatabase: sentimentPhraseDatabase || null,
         associateSentimentSnapshots: associateSentimentSnapshots || {},
         exportDate: new Date().toISOString(),
@@ -1573,8 +1577,9 @@ function exportToExcel() {
     
     const weekCount = Object.keys(weeklyData || {}).length;
     const sentimentCount = Object.keys(associateSentimentSnapshots || {}).reduce((sum, emp) => sum + (associateSentimentSnapshots[emp]?.length || 0), 0);
-    
-    showToast(`✅ Exported ${weekCount} weeks + ${sentimentCount} sentiment snapshots to ${exportFileDefaultName}`, 5000);
+    const callListeningCount = Object.values(callListeningLogs || {}).reduce((sum, entries) => sum + (Array.isArray(entries) ? entries.length : 0), 0);
+
+    showToast(`✅ Exported ${weekCount} weeks + ${sentimentCount} sentiment snapshots + ${callListeningCount} call logs to ${exportFileDefaultName}`, 5000);
 }
 
 // ============================================
@@ -2129,6 +2134,10 @@ function initializeEventHandlers() {
         if (chartsContainer) chartsContainer.innerHTML = '';
         if (emailSection) emailSection.style.display = 'none';
     });
+    document.getElementById('subNavCallListening')?.addEventListener('click', () => {
+        showSubSection('subSectionCallListening', 'subNavCallListening');
+        initializeCallListeningSection();
+    });
     
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
@@ -2638,11 +2647,13 @@ function initializeEventHandlers() {
                 
                 if (data.weeklyData) weeklyData = data.weeklyData;
                 if (data.ytdData) ytdData = data.ytdData;
+                if (data.callListeningLogs) callListeningLogs = data.callListeningLogs;
                 if (data.sentimentPhraseDatabase) sentimentPhraseDatabase = data.sentimentPhraseDatabase;
                 if (data.associateSentimentSnapshots) associateSentimentSnapshots = data.associateSentimentSnapshots;
                 
                 saveWeeklyData();
                 saveYtdData();
+                saveCallListeningLogs();
                 saveSentimentPhraseDatabase();
                 saveAssociateSentimentSnapshots();
                 
@@ -2785,6 +2796,7 @@ function initializeEventHandlers() {
         weeklyData = {};
         ytdData = {};
         myTeamMembers = {};
+        callListeningLogs = {};
         
         // Clear all localStorage data
         localStorage.removeItem(STORAGE_PREFIX + 'weeklyData');
@@ -2794,6 +2806,7 @@ function initializeEventHandlers() {
         localStorage.removeItem(STORAGE_PREFIX + 'employeeNicknames');
         localStorage.removeItem(STORAGE_PREFIX + 'employeePreferredNames');
         localStorage.removeItem(STORAGE_PREFIX + 'coachingHistory');
+        localStorage.removeItem(STORAGE_PREFIX + 'callListeningLogs');
         localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
         localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
         localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
@@ -2914,6 +2927,106 @@ function saveYearEndDraftStore(store) {
     } catch (error) {
         console.error('Error saving year-end draft store:', error);
     }
+}
+
+function loadCallListeningLogs() {
+    try {
+        const raw = localStorage.getItem(CALL_LISTENING_LOGS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+        console.error('Error loading call listening logs:', error);
+        return {};
+    }
+}
+
+function saveCallListeningLogs() {
+    try {
+        if (!saveWithSizeCheck('callListeningLogs', callListeningLogs || {})) {
+            console.error('Failed to save call listening logs due to size');
+        }
+    } catch (error) {
+        console.error('Error saving call listening logs:', error);
+    }
+}
+
+function getCallListeningEntriesForEmployee(employeeName) {
+    if (!employeeName) return [];
+    const entries = Array.isArray(callListeningLogs?.[employeeName]) ? callListeningLogs[employeeName] : [];
+    return entries.slice().sort((a, b) => {
+        const dateA = new Date(a.listenedOn || a.createdAt || 0).getTime();
+        const dateB = new Date(b.listenedOn || b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+}
+
+function findCallListeningEntryById(employeeName, entryId) {
+    if (!employeeName || !entryId) return null;
+    const entries = callListeningLogs?.[employeeName];
+    if (!Array.isArray(entries)) return null;
+    return entries.find(entry => entry?.id === entryId) || null;
+}
+
+function toCsvCell(value) {
+    const text = String(value ?? '');
+    if (!/[",\n]/.test(text)) return text;
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
+function exportCallListeningLogsToCSV() {
+    const headers = [
+        'Associate',
+        'Call Date',
+        'Call Reference',
+        'What Went Well',
+        'Improvement Areas',
+        'Oscar URL',
+        'Relevant Info',
+        'Manager Notes',
+        'Created At'
+    ];
+
+    const lines = [headers.join(',')];
+    Object.entries(callListeningLogs || {}).forEach(([employeeName, entries]) => {
+        (entries || []).forEach(entry => {
+            lines.push([
+                toCsvCell(employeeName),
+                toCsvCell(entry.listenedOn || ''),
+                toCsvCell(entry.callReference || ''),
+                toCsvCell(entry.whatWentWell || ''),
+                toCsvCell(entry.improvementAreas || ''),
+                toCsvCell(entry.oscarUrl || ''),
+                toCsvCell(entry.relevantInfo || ''),
+                toCsvCell(entry.managerNotes || ''),
+                toCsvCell(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')
+            ].join(','));
+        });
+    });
+
+    return lines.join('\n');
+}
+
+function downloadCallListeningLogsCSV() {
+    const csv = exportCallListeningLogsToCSV();
+    if (csv.split('\n').length <= 1) {
+        showToast('⚠️ No call listening logs to export yet.', 3500);
+        return;
+    }
+
+    const filename = `call_listening_logs_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast(`✅ Downloaded ${filename}`, 3000);
 }
 
 function getYearEndDraftState(employeeName, reviewYear) {
@@ -8930,6 +9043,7 @@ function initApp() {
     weeklyData = loadWeeklyData();
     ytdData = loadYtdData();
     coachingHistory = loadCoachingHistory();
+    callListeningLogs = loadCallListeningLogs();
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
@@ -8974,6 +9088,7 @@ function initApp() {
         saveWeeklyData();
         saveYtdData();
         saveCoachingHistory();
+        saveCallListeningLogs();
         saveSentimentPhraseDatabase();
         saveAssociateSentimentSnapshots();
         
@@ -9456,6 +9571,377 @@ function initializeCoachingEmail() {
     }
 
     
+}
+
+function getCallListeningEmployeeOptions() {
+    const dataEmployees = getYearEndEmployees();
+    const logEmployees = Object.keys(callListeningLogs || {});
+    return Array.from(new Set([...dataEmployees, ...logEmployees])).sort();
+}
+
+function getCallListeningDraftFromForm() {
+    return {
+        employeeName: (document.getElementById('callListeningEmployeeSelect')?.value || '').trim(),
+        listenedOn: (document.getElementById('callListeningDate')?.value || '').trim(),
+        callReference: (document.getElementById('callListeningReference')?.value || '').trim(),
+        whatWentWell: (document.getElementById('callListeningStrengths')?.value || '').trim(),
+        improvementAreas: (document.getElementById('callListeningImprovements')?.value || '').trim(),
+        oscarUrl: (document.getElementById('callListeningOscarUrl')?.value || '').trim(),
+        relevantInfo: (document.getElementById('callListeningRelevantInfo')?.value || '').trim(),
+        managerNotes: (document.getElementById('callListeningManagerNotes')?.value || '').trim()
+    };
+}
+
+function upsertCallListeningEntryFromForm(showSavedToast = false) {
+    const draft = getCallListeningDraftFromForm();
+    if (!draft.employeeName) {
+        alert('⚠️ Please select an associate first.');
+        return null;
+    }
+    if (!draft.listenedOn) {
+        alert('⚠️ Please select a call date.');
+        return null;
+    }
+    if (!draft.whatWentWell && !draft.improvementAreas) {
+        alert('⚠️ Add at least one note in what went well or improvement areas.');
+        return null;
+    }
+
+    const existing = Array.isArray(callListeningLogs[draft.employeeName]) ? callListeningLogs[draft.employeeName] : [];
+    const latest = existing[existing.length - 1] || null;
+    const isSameAsLatest = latest
+        && latest.listenedOn === draft.listenedOn
+        && (latest.callReference || '') === draft.callReference
+        && (latest.whatWentWell || '') === draft.whatWentWell
+        && (latest.improvementAreas || '') === draft.improvementAreas
+        && (latest.oscarUrl || '') === draft.oscarUrl
+        && (latest.relevantInfo || '') === draft.relevantInfo
+        && (latest.managerNotes || '') === draft.managerNotes;
+
+    if (isSameAsLatest) {
+        if (showSavedToast) showToast('✅ Call log already saved.', 2500);
+        return latest;
+    }
+
+    const entry = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        ...draft,
+        createdAt: new Date().toISOString()
+    };
+
+    if (!callListeningLogs[draft.employeeName]) {
+        callListeningLogs[draft.employeeName] = [];
+    }
+    callListeningLogs[draft.employeeName].push(entry);
+    if (callListeningLogs[draft.employeeName].length > 500) {
+        callListeningLogs[draft.employeeName] = callListeningLogs[draft.employeeName].slice(-500);
+    }
+
+    saveCallListeningLogs();
+    renderCallListeningHistoryForSelectedEmployee();
+
+    const status = document.getElementById('callListeningStatus');
+    if (status) {
+        status.textContent = `Saved call listening log for ${draft.employeeName} (${draft.listenedOn}).`;
+        status.style.display = 'block';
+    }
+
+    if (showSavedToast) showToast('✅ Call listening log saved.', 2500);
+    return entry;
+}
+
+function buildCallListeningVerintSummary(entry) {
+    if (!entry) return '';
+    return [
+        `Call Listening Date: ${entry.listenedOn || ''}`,
+        `Associate: ${entry.employeeName || ''}`,
+        `Call Reference: ${entry.callReference || 'N/A'}`,
+        '',
+        'What went well:',
+        entry.whatWentWell || 'N/A',
+        '',
+        'Improvement opportunities:',
+        entry.improvementAreas || 'N/A',
+        '',
+        'Relevant info shared:',
+        entry.relevantInfo || 'N/A',
+        '',
+        'Manager notes:',
+        entry.managerNotes || 'N/A'
+    ].join('\n');
+}
+
+function copyCallListeningVerintSummary(entryId = null) {
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    let entry = null;
+
+    if (entryId && employeeName) {
+        entry = findCallListeningEntryById(employeeName, entryId);
+    }
+    if (!entry) {
+        entry = upsertCallListeningEntryFromForm(false);
+    }
+    if (!entry) return;
+
+    const summaryText = buildCallListeningVerintSummary(entry);
+    navigator.clipboard.writeText(summaryText)
+        .then(() => showToast('✅ Verint call summary copied to clipboard!', 3000))
+        .catch(() => showToast('⚠️ Unable to copy Verint summary.', 3000));
+}
+
+function loadCallListeningEntryIntoForm(entryId) {
+    const employeeSelect = document.getElementById('callListeningEmployeeSelect');
+    const employeeName = (employeeSelect?.value || '').trim();
+    if (!employeeName) return;
+
+    const entry = findCallListeningEntryById(employeeName, entryId);
+    if (!entry) return;
+
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    };
+
+    setValue('callListeningDate', entry.listenedOn);
+    setValue('callListeningReference', entry.callReference);
+    setValue('callListeningStrengths', entry.whatWentWell);
+    setValue('callListeningImprovements', entry.improvementAreas);
+    setValue('callListeningOscarUrl', entry.oscarUrl);
+    setValue('callListeningRelevantInfo', entry.relevantInfo);
+    setValue('callListeningManagerNotes', entry.managerNotes);
+
+    showToast('✅ Loaded saved call log into form.', 2500);
+}
+
+function buildCallListeningPrompt(entry) {
+    const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
+    return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
+
+Call details:
+- Call date: ${entry.listenedOn}
+- Call reference: ${entry.callReference || 'Not provided'}
+
+Feedback notes:
+What went well:
+${entry.whatWentWell || '- None provided'}
+
+Improvement opportunities:
+${entry.improvementAreas || '- None provided'}
+
+Oscar / Knowledge Base URL:
+${entry.oscarUrl || '- Not provided'}
+
+Relevant guidance to include:
+${entry.relevantInfo || '- Not provided'}
+
+Manager context:
+${entry.managerNotes || '- Not provided'}
+
+Write an email-ready coaching message to the associate.
+
+Requirements:
+- Professional, supportive, and specific
+- Start with recognition of strengths
+- Include clear improvement actions with practical next steps
+- If Oscar URL or relevant guidance is provided, naturally reference it as a resource
+- Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
+- Do NOT use em dashes (—)
+- Return ONLY the final email body text.`;
+}
+
+function generateCallListeningPromptAndCopy() {
+    const entry = upsertCallListeningEntryFromForm(false);
+    if (!entry) return;
+
+    const promptArea = document.getElementById('callListeningPromptArea');
+    const button = document.getElementById('generateCallListeningPromptBtn');
+    const outlookSection = document.getElementById('callListeningOutlookSection');
+
+    if (!promptArea) return;
+    const prompt = buildCallListeningPrompt(entry);
+    promptArea.value = prompt;
+
+    if (button) {
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied + Opening Copilot';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 1500);
+    }
+
+    if (outlookSection) {
+        outlookSection.style.display = 'block';
+    }
+
+    const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(prompt)
+            .then(() => {
+                showToast('✅ Call listening prompt copied. Paste into Copilot with Ctrl+V.', 4000);
+                if (!copilotWindow) {
+                    alert('✅ Prompt copied to clipboard. Open https://copilot.microsoft.com and paste with Ctrl+V.');
+                }
+            })
+            .catch(() => {
+                showToast('⚠️ Could not copy automatically. Prompt is in the box below.', 4500);
+            });
+    }
+}
+
+function generateCallListeningOutlookEmail() {
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const callDate = (document.getElementById('callListeningDate')?.value || '').trim();
+    const bodyText = (document.getElementById('callListeningOutlookBody')?.value || '').trim();
+
+    if (!bodyText) {
+        showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
+        return;
+    }
+
+    const preferredName = employeeName ? (getEmployeeNickname(employeeName) || employeeName) : 'Associate';
+    const subject = `Call Listening Feedback - ${preferredName}${callDate ? ` - ${callDate}` : ''}`;
+
+    try {
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+        showToast('📧 Outlook draft opened', 2500);
+    } catch (error) {
+        console.error('Error opening Outlook draft from call listening:', error);
+        showToast('⚠️ Could not open Outlook draft.', 3000);
+    }
+}
+
+function renderCallListeningHistoryForSelectedEmployee() {
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const summary = document.getElementById('callListeningHistorySummary');
+    const list = document.getElementById('callListeningHistoryList');
+    if (!summary || !list) return;
+
+    if (!employeeName) {
+        summary.textContent = 'Select an associate to view call listening history.';
+        list.innerHTML = '';
+        return;
+    }
+
+    const entries = getCallListeningEntriesForEmployee(employeeName);
+    summary.textContent = `${entries.length} saved call listening log${entries.length === 1 ? '' : 's'} for ${employeeName}.`;
+
+    if (!entries.length) {
+        list.innerHTML = '<li>No call listening logs saved yet for this associate.</li>';
+        return;
+    }
+
+    list.innerHTML = entries.slice(0, 50).map(entry => {
+        const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
+        return `<li style="margin-bottom: 14px; line-height: 1.35;">
+            <div style="font-weight: bold; color: #37474f;">${escapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${escapeHtml(entry.callReference)}` : ''}</div>
+            <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${escapeHtml(entry.whatWentWell || 'N/A')}</div>
+            <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${escapeHtml(entry.improvementAreas || 'N/A')}</div>
+            <div style="font-size: 0.82em; color: #666; margin-top: 4px;">Saved: ${escapeHtml(createdAt)}</div>
+            <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                <button type="button" data-call-action="load" data-entry-id="${escapeHtml(entry.id)}" style="background: #607d8b; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Load</button>
+                <button type="button" data-call-action="copy-verint" data-entry-id="${escapeHtml(entry.id)}" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Copy Verint</button>
+            </div>
+        </li>`;
+    }).join('');
+}
+
+function initializeCallListeningSection() {
+    const employeeSelect = document.getElementById('callListeningEmployeeSelect');
+    const status = document.getElementById('callListeningStatus');
+    const dateInput = document.getElementById('callListeningDate');
+    const saveBtn = document.getElementById('saveCallListeningBtn');
+    const copyVerintBtn = document.getElementById('copyCallListeningVerintBtn');
+    const exportBtn = document.getElementById('exportCallListeningCsvBtn');
+    const generatePromptBtn = document.getElementById('generateCallListeningPromptBtn');
+    const historyList = document.getElementById('callListeningHistoryList');
+    const outlookBody = document.getElementById('callListeningOutlookBody');
+    const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
+
+    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn) {
+        return;
+    }
+
+    if (!dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    const currentSelection = employeeSelect.value;
+    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
+    const employees = getCallListeningEmployeeOptions();
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    });
+    if (currentSelection && employees.includes(currentSelection)) {
+        employeeSelect.value = currentSelection;
+    }
+
+    status.textContent = employees.length
+        ? `Loaded ${employees.length} associates. Save call notes to keep a permanent reference log.`
+        : 'No associates found yet. Upload data first, then log call listening notes.';
+    status.style.display = 'block';
+
+    if (!employeeSelect.dataset.callBound) {
+        employeeSelect.addEventListener('change', renderCallListeningHistoryForSelectedEmployee);
+        employeeSelect.dataset.callBound = 'true';
+    }
+    if (!saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', () => upsertCallListeningEntryFromForm(true));
+        saveBtn.dataset.bound = 'true';
+    }
+    if (!copyVerintBtn.dataset.bound) {
+        copyVerintBtn.addEventListener('click', () => copyCallListeningVerintSummary());
+        copyVerintBtn.dataset.bound = 'true';
+    }
+    if (!exportBtn.dataset.bound) {
+        exportBtn.addEventListener('click', downloadCallListeningLogsCSV);
+        exportBtn.dataset.bound = 'true';
+    }
+    if (!generatePromptBtn.dataset.bound) {
+        generatePromptBtn.addEventListener('click', generateCallListeningPromptAndCopy);
+        generatePromptBtn.dataset.bound = 'true';
+    }
+    if (!outlookBody.dataset.bound) {
+        outlookBody.addEventListener('input', (event) => {
+            const hasContent = event.target.value.trim().length > 0;
+            outlookBtn.disabled = !hasContent;
+            outlookBtn.style.opacity = hasContent ? '1' : '0.6';
+            outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+        });
+        outlookBody.dataset.bound = 'true';
+    }
+    if (!outlookBtn.dataset.bound) {
+        outlookBtn.addEventListener('click', generateCallListeningOutlookEmail);
+        outlookBtn.dataset.bound = 'true';
+    }
+    if (!historyList.dataset.bound) {
+        historyList.addEventListener('click', (event) => {
+            const button = event.target?.closest('button[data-call-action]');
+            if (!button) return;
+            const action = button.getAttribute('data-call-action');
+            const entryId = button.getAttribute('data-entry-id');
+            if (!entryId) return;
+            if (action === 'load') {
+                loadCallListeningEntryIntoForm(entryId);
+            } else if (action === 'copy-verint') {
+                copyCallListeningVerintSummary(entryId);
+            }
+        });
+        historyList.dataset.bound = 'true';
+    }
+
+    const hasOutlookBody = outlookBody.value.trim().length > 0;
+    outlookBtn.disabled = !hasOutlookBody;
+    outlookBtn.style.opacity = hasOutlookBody ? '1' : '0.6';
+    outlookBtn.style.cursor = hasOutlookBody ? 'pointer' : 'not-allowed';
+
+    renderCallListeningHistoryForSelectedEmployee();
 }
 
 function getYearEndEmployees() {
