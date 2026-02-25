@@ -9985,6 +9985,8 @@ function initializeYearEndComments() {
     const calculateOnOffBtn = document.getElementById('calculateYearEndOnOffBtn');
     const generateBtn = document.getElementById('generateYearEndPromptBtn');
     const copyBtn = document.getElementById('copyYearEndResponseBtn');
+    const copyBox1Btn = document.getElementById('copyYearEndBox1Btn');
+    const copyBox2Btn = document.getElementById('copyYearEndBox2Btn');
 
     if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !trackSelect || !positivesInput || !improvementsInput || !managerContextInput || !responseInput || !generateBtn || !copyBtn) return;
 
@@ -10030,6 +10032,14 @@ function initializeYearEndComments() {
     if (!copyBtn.dataset.bound) {
         copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
         copyBtn.dataset.bound = 'true';
+    }
+    if (copyBox1Btn && !copyBox1Btn.dataset.bound) {
+        copyBox1Btn.addEventListener('click', () => copyYearEndBoxResponseToClipboard(1));
+        copyBox1Btn.dataset.bound = 'true';
+    }
+    if (copyBox2Btn && !copyBox2Btn.dataset.bound) {
+        copyBox2Btn.addEventListener('click', () => copyYearEndBoxResponseToClipboard(2));
+        copyBox2Btn.dataset.bound = 'true';
     }
     if (calculateOnOffBtn && !calculateOnOffBtn.dataset.bound) {
         calculateOnOffBtn.addEventListener('click', () => {
@@ -10242,7 +10252,7 @@ function generateYearEndPromptAndCopy() {
         ? `${yearEndDraftContext.targetProfileYear} year-end goals`
         : 'current metric goals';
 
-    const prompt = `I'm a supervisor preparing year-end comments for ${preferredName} (${employeeName}) for ${reviewYear}.
+    const prompt = `I'm a supervisor preparing year-end review responses for ${preferredName} (${employeeName}) for ${reviewYear}.
 
 Use this data source: ${sourceLabel} (${periodLabel}).
 Performance classification: ${trackLabel}.
@@ -10254,7 +10264,7 @@ ${positivesText || fallbackPositives || '- Positive impact and steady contributi
 Improvement areas needed:
 ${improvementsText || fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
 
-Additional manager context:
+Additional manager context and/or associate self-review responses:
 ${managerContext || '- None provided.'}
 
 Annual APS goals status (not part of weekly report):
@@ -10264,20 +10274,27 @@ ${annualMetText}
 Goals needing follow-up:
 ${annualNotMetText}
 
-Write a polished year-end comment ready to paste into employee notes.
+Write polished text that I can paste into these two manager review boxes:
+
+1) Highlight significant accomplishments against your employee's goals for the year (business, development, APS principle)
+2) Identify 1-2 areas for future improvement, based on this year's performance
 
 Requirements:
 - Professional, warm, and human - not robotic and not overly corporate
-- Balance recognition with clear growth expectations
+- Align with goals in business, development, and APS principles
 - Mention whether performance is on track or off track naturally
-- Highlight positives first, then improvement areas
+- Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
-- Include a future-focused line similar to: "I feel with added focus on these areas, ${preferredName} can improve by ..."
-- Include a positive confidence close that explicitly mentions APS success, similar to: "${preferredName} has been a wonderful addition to the team and is poised for success at APS"
-- End with one final, encouraging sentence about confidence in their continued growth and strong future at APS
-- Keep it concise: 2 short paragraphs plus 3-5 bullet points maximum
+- Box 1 should emphasize meaningful accomplishments and impact
+- Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
+- Keep each box concise (about 3-6 sentences each)
 - Do NOT use em dashes (—)
-- Return ONLY the final year-end comment text, nothing else.`;
+- Return in this exact format only:
+Box 1 - Significant Accomplishments:
+[text]
+
+Box 2 - Future Improvement Areas:
+[text]`;
 
     promptArea.value = prompt;
 
@@ -10323,6 +10340,51 @@ function copyYearEndResponseToClipboard() {
     navigator.clipboard.writeText(responseText)
         .then(() => showToast('✅ Year-end notes copied to clipboard!', 3000))
         .catch(() => showToast('⚠️ Unable to copy year-end notes.', 3000));
+}
+
+function extractYearEndBoxText(responseText, boxNumber) {
+    if (!responseText || (boxNumber !== 1 && boxNumber !== 2)) return '';
+
+    const normalized = String(responseText).replace(/\r\n/g, '\n').trim();
+    if (!normalized) return '';
+
+    const box1Regex = /(?:^|\n)\s*box\s*1\b[^\n]*:\s*/i;
+    const box2Regex = /(?:^|\n)\s*box\s*2\b[^\n]*:\s*/i;
+    const box1Match = box1Regex.exec(normalized);
+    const box2Match = box2Regex.exec(normalized);
+
+    if (!box1Match && !box2Match) {
+        return boxNumber === 1 ? normalized : '';
+    }
+
+    if (boxNumber === 1) {
+        if (!box1Match) return '';
+        const start = box1Match.index + box1Match[0].length;
+        const end = box2Match && box2Match.index > start ? box2Match.index : normalized.length;
+        return normalized.slice(start, end).trim();
+    }
+
+    if (!box2Match) return '';
+    const start = box2Match.index + box2Match[0].length;
+    return normalized.slice(start).trim();
+}
+
+function copyYearEndBoxResponseToClipboard(boxNumber) {
+    const responseText = document.getElementById('yearEndCopilotResponse')?.value.trim();
+    if (!responseText) {
+        alert('⚠️ Paste the Copilot year-end comments first.');
+        return;
+    }
+
+    const boxText = extractYearEndBoxText(responseText, boxNumber);
+    if (!boxText) {
+        showToast(`⚠️ Could not find Box ${boxNumber} in the pasted response.`, 3500);
+        return;
+    }
+
+    navigator.clipboard.writeText(boxText)
+        .then(() => showToast(`✅ Box ${boxNumber} copied to clipboard!`, 3000))
+        .catch(() => showToast(`⚠️ Unable to copy Box ${boxNumber}.`, 3000));
 }
 
 function deleteLatestCoachingEntry() {

@@ -227,7 +227,7 @@
 
                     <!-- Year-End Comments Sub-section -->
                     <div id="subSectionYearEnd" style="display: none;">
-                        <p style="color: #4a148c; margin-bottom: 20px;">Generate year-end comments with strengths, improvement focus areas, and a Copilot-ready prompt.</p>
+                        <p style="color: #4a148c; margin-bottom: 20px;">Generate two year-end response boxes (accomplishments + future improvement), with a Copilot-ready prompt.</p>
 
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
                             <h3 style="color: #4527a0; margin-top: 0;">🗓️ Year-End Setup</h3>
@@ -296,8 +296,8 @@
                                 </div>
                             </div>
                             <div style="margin-top: 12px;">
-                                <label for="yearEndManagerContext" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Additional Context (optional):</label>
-                                <textarea id="yearEndManagerContext" placeholder="Add any context you want included in the final year-end note..." style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                <label for="yearEndManagerContext" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Additional Context / Associate Response (optional):</label>
+                                <textarea id="yearEndManagerContext" placeholder="Paste manager context and/or associate self-review responses (including Other box notes) to blend into the final two-box output..." style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
                             </div>
                         </div>
 
@@ -313,9 +313,16 @@
                         <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #7b1fa2;">
                             <h3 style="color: #6a1b9a; margin-top: 0;">📋 Final Notes Output</h3>
                             <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Paste Copilot's result here, then click copy to paste directly into employee notes.</p>
-                            <textarea id="yearEndCopilotResponse" placeholder="Paste Copilot year-end comment output here..." style="width: 100%; height: 160px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
+                            <textarea id="yearEndCopilotResponse" placeholder="Paste Copilot output in this format:
+Box 1 - Significant Accomplishments:
+[text]
+
+Box 2 - Future Improvement Areas:
+[text]" style="width: 100%; height: 160px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
                             <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
                                 <button type="button" id="copyYearEndResponseBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Year-End Notes</button>
+                                <button type="button" id="copyYearEndBox1Btn" style="background: #5e35b1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Box 1</button>
+                                <button type="button" id="copyYearEndBox2Btn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Box 2</button>
                             </div>
                         </div>
                     </div>
