@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:45:49.386Z",
+  "generatedAt": "2026-02-25T21:47:39.255Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4496,6 +4496,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Ekiecha Brabham": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4658,6 +4692,17 @@
       "meritDetails": "2% 25.98",
       "bonusAmount": "3434.73",
       "verbalSummary": "Jenifer, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2% 25.98.\nYour incentive/bonus amount is: 3434.73."
+    },
+    "2025::Ekiecha Brabham": {
+      "trackStatus": "off-track",
+      "positivesText": "Hold Time: 27s vs target 30s\nRep Satisfaction: 83.3% vs target 80.0%\nFirst Call Resolution: 76.7% vs target 70.0%\nAvoid Negative Words: 88.7% vs target 83.0%\nManaging Emotions: 95.8% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 17.9% vs target 6.0%\nAverage Handle Time: 458s vs target 440s\nAfter Call Work: 117s vs target 60s\nOverall Experience: 83.3% vs target 84.0%\nOverall Sentiment: 86.0% vs target 88.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -4708,8 +4753,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 14,
-      "byteLength": 5894
+      "itemCount": 15,
+      "byteLength": 6314
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -4728,8 +4773,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 16,
-      "byteLength": 40392
+      "itemCount": 17,
+      "byteLength": 41284
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
