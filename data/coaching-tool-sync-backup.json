@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:12:42.657Z",
+  "generatedAt": "2026-02-25T20:12:47.089Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.114",
   "weeklyData": {
@@ -4353,7 +4353,7 @@
       "copilotResponse": "Box 1 - Significant Accomplishments:\nRonda delivered an on track performance this year and made meaningful progress across her business goals, development, and APS principles. She exceeded nearly every customer experience metric, including Hold Time at 15s vs the 30s goal, Overall Experience at 95.7% vs 84.0%, Rep Satisfaction at 97.8% vs 80.0%, First Call Resolution at 87.2% vs 70.0%, and Overall Sentiment at 92.8% vs 88.0%. Her strong results in Positive Word at 96.2% vs 86.0% reflect her commitment to empathy and empowerment, which she also highlighted in her self-review. Ronda also met all annual APS goals, including 100% accuracy on Emergency Safety Hazard Calls, 0 ACC substantiated complaints, 0 phishing clicks, and timely completion of all required training. She demonstrated reliability and openness to feedback throughout her first year, contributing positively to her team and showing steady growth in managing emotions and customer connection.\n\nBox 2 - Future Improvement Areas:\nRonda would benefit from continued focus on reducing handle time, particularly Average Handle Time at 816s vs the 440s goal and After Call Work at 205s vs the 60s goal, by streamlining call flow and post-call processes. Strengthening reliability, with 60.2 hours of reliability impact vs the 16.0 hour goal, will also help reinforce consistency and support her overall performance trajectory.",
       "performanceRating": "Successful",
       "meritDetails": "3.14 to 26.27",
-      "bonusAmount": "",
+      "bonusAmount": "38",
       "verbalSummary": ""
     },
     "2025::Marietta Bernal": {
@@ -4459,7 +4459,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 10,
-      "byteLength": 17578
+      "byteLength": 17580
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
