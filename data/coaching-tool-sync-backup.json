@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T22:04:31.773Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-25T22:05:12.922Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4583,7 +4583,7 @@
       "positivesText": "Average Handle Time: 435s vs target 440s\nHold Time: 1s vs target 30s\nRep Satisfaction: 87.5% vs target 80.0%\nFirst Call Resolution: 71.0% vs target 70.0%\nOverall Sentiment: 91.2% vs target 88.0%\nPositive Word: 88.3% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 25.1% vs target 6.0%\nAfter Call Work: 110s vs target 60s\nOverall Experience: 76.7% vs target 84.0%\nReliability: 51.2 hrs vs target 16.0 hrs\nAnnual Goal Follow-up: Red Flag Violations: 0 violations (2)",
       "managerContext": "What Scoti put \n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nDelivering Consistent, High-Quality Member Support\nI maintained strong performance in handling member inquiries with accuracy, empathy, and professionalism. By applying APS principles such as member first and operating with integrity, I ensured every interaction was clear, timely, and solution focused. This helped build trust and reduce repeat contact.\n\nEnhancing Team Communication and Reducing Member Miscommunication\nI took initiative to communicate clearly with team leads, managers, and peers especially when members were waiting for escalations or guidance. Using the one APS principle, I made sure members never felt ignored by keeping them informed, setting expectations, and collaborating with teammates to deliver consistent and professional service. This helped prevent misunderstandings and supported smoother workflow across the team.\n\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nImproving Adherence and Schedule Alignment\nOne of the main areas of feedback I received was strengthening my adherence to scheduled breaks, lunches, and log-in times. Throughout 2024, I made a conscious effort to better manage my time and plans to stay aligned with schedule expectations. This helped support team coverage, reduce gaps in service, and ensured members experienced fewer delays during high-volume periods.\n\nReducing Call Handling Time While Maintaining Quality\nAnother focus area was improving my average handling time. With guidance from my leader and team leader, I worked on simplifying my call flow, staying more focused during interactions, and using resources more efficiently. I learned how to resolve issues faster without sacrificing accuracy or empathy, which improved both my productivity and the member experience.\n\n \nYear End Leader Discussion Topics and Feedback",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nScoticia’s performance was solidly on track for the year, with several areas where she exceeded expectations and delivered meaningful impact. She consistently demonstrated strong call quality, reflected in an Average Handle Time of 435 seconds against a goal of 440 seconds, Hold Time of 1 second against a goal of 30 seconds, and First Call Resolution at 71.0% against a goal of 70.0%. Member experience metrics were another standout, including Rep Satisfaction at 87.5% against a goal of 80.0%, Overall Sentiment at 91.2% against a goal of 88.0%, and Positive Word at 88.3% against a goal of 86.0%. She also met all major APS annual goals, including safety accuracy, emergency hazard handling, phishing avoidance, and maintaining zero substantiated complaints. Throughout the year, she demonstrated ownership of her development by improving her call flow efficiency and strengthening communication with partners, which supported smoother escalations and more consistent member experiences.\n\nBox 2 - Future Improvement Areas:\nA key opportunity for Scoticia is strengthening schedule alignment, as Schedule Adherence was 92.2% against a goal of 93.0%, and improving reliability, which ended at 51.2 hours against a goal of 16.0 hours. In addition, reducing operational friction by lowering Transfers from 25.1% against a goal of 6.0% and bringing After Call Work closer to the 60 second target will help improve overall experience, which finished at 76.7% against a goal of 84.0%.",
       "performanceRating": "Successful",
       "meritDetails": "2% 25.98",
       "bonusAmount": "3434.73",
@@ -4802,7 +4802,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -4827,7 +4827,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 18,
-      "byteLength": 44969
+      "byteLength": 46490
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
