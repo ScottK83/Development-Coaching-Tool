@@ -3385,7 +3385,11 @@ function getYearEndDraftState(employeeName, reviewYear) {
         positivesText: '',
         improvementsText: '',
         managerContext: '',
-        copilotResponse: ''
+        copilotResponse: '',
+        performanceRating: '',
+        meritDetails: '',
+        bonusAmount: '',
+        verbalSummary: ''
     };
 
     if (!employeeName || !reviewYear) return defaults;
@@ -3399,7 +3403,11 @@ function getYearEndDraftState(employeeName, reviewYear) {
         positivesText: typeof saved.positivesText === 'string' ? saved.positivesText : '',
         improvementsText: typeof saved.improvementsText === 'string' ? saved.improvementsText : '',
         managerContext: typeof saved.managerContext === 'string' ? saved.managerContext : '',
-        copilotResponse: typeof saved.copilotResponse === 'string' ? saved.copilotResponse : ''
+        copilotResponse: typeof saved.copilotResponse === 'string' ? saved.copilotResponse : '',
+        performanceRating: typeof saved.performanceRating === 'string' ? saved.performanceRating : '',
+        meritDetails: typeof saved.meritDetails === 'string' ? saved.meritDetails : '',
+        bonusAmount: typeof saved.bonusAmount === 'string' ? saved.bonusAmount : '',
+        verbalSummary: typeof saved.verbalSummary === 'string' ? saved.verbalSummary : ''
     };
 }
 
@@ -3411,13 +3419,21 @@ function persistYearEndDraftState(employeeName, reviewYear) {
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
     const managerContextInput = document.getElementById('yearEndManagerContext');
     const responseInput = document.getElementById('yearEndCopilotResponse');
+    const performanceRatingInput = document.getElementById('yearEndPerformanceRatingInput');
+    const meritDetailsInput = document.getElementById('yearEndMeritDetailsInput');
+    const bonusAmountInput = document.getElementById('yearEndBonusAmountInput');
+    const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
 
     const nextState = {
         trackStatus: trackSelect?.value || '',
         positivesText: positivesInput?.value || '',
         improvementsText: improvementsInput?.value || '',
         managerContext: managerContextInput?.value || '',
-        copilotResponse: responseInput?.value || ''
+        copilotResponse: responseInput?.value || '',
+        performanceRating: performanceRatingInput?.value || '',
+        meritDetails: meritDetailsInput?.value || '',
+        bonusAmount: bonusAmountInput?.value || '',
+        verbalSummary: verbalSummaryOutput?.value || ''
     };
 
     const store = loadYearEndDraftStore();
@@ -10846,13 +10862,19 @@ function initializeYearEndComments() {
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
     const managerContextInput = document.getElementById('yearEndManagerContext');
     const responseInput = document.getElementById('yearEndCopilotResponse');
+    const performanceRatingInput = document.getElementById('yearEndPerformanceRatingInput');
+    const meritDetailsInput = document.getElementById('yearEndMeritDetailsInput');
+    const bonusAmountInput = document.getElementById('yearEndBonusAmountInput');
+    const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
     const calculateOnOffBtn = document.getElementById('calculateYearEndOnOffBtn');
     const generateBtn = document.getElementById('generateYearEndPromptBtn');
     const copyBtn = document.getElementById('copyYearEndResponseBtn');
     const copyBox1Btn = document.getElementById('copyYearEndBox1Btn');
     const copyBox2Btn = document.getElementById('copyYearEndBox2Btn');
+    const generateVerbalSummaryBtn = document.getElementById('generateYearEndVerbalSummaryBtn');
+    const copyVerbalSummaryBtn = document.getElementById('copyYearEndVerbalSummaryBtn');
 
-    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !trackSelect || !positivesInput || !improvementsInput || !managerContextInput || !responseInput || !generateBtn || !copyBtn) return;
+    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !trackSelect || !positivesInput || !improvementsInput || !managerContextInput || !responseInput || !performanceRatingInput || !meritDetailsInput || !bonusAmountInput || !verbalSummaryOutput || !generateBtn || !copyBtn || !generateVerbalSummaryBtn || !copyVerbalSummaryBtn) return;
 
     yearEndDraftContext = null;
     promptArea.value = '';
@@ -10905,6 +10927,14 @@ function initializeYearEndComments() {
         copyBox2Btn.addEventListener('click', () => copyYearEndBoxResponseToClipboard(2));
         copyBox2Btn.dataset.bound = 'true';
     }
+    if (!generateVerbalSummaryBtn.dataset.bound) {
+        generateVerbalSummaryBtn.addEventListener('click', generateYearEndVerbalSummary);
+        generateVerbalSummaryBtn.dataset.bound = 'true';
+    }
+    if (!copyVerbalSummaryBtn.dataset.bound) {
+        copyVerbalSummaryBtn.addEventListener('click', copyYearEndVerbalSummary);
+        copyVerbalSummaryBtn.dataset.bound = 'true';
+    }
     if (calculateOnOffBtn && !calculateOnOffBtn.dataset.bound) {
         calculateOnOffBtn.addEventListener('click', () => {
             const selectedEmployee = employeeSelect.value;
@@ -10943,6 +10973,22 @@ function initializeYearEndComments() {
     if (!responseInput.dataset.bound) {
         responseInput.addEventListener('input', persistDraft);
         responseInput.dataset.bound = 'true';
+    }
+    if (!performanceRatingInput.dataset.bound) {
+        performanceRatingInput.addEventListener('input', persistDraft);
+        performanceRatingInput.dataset.bound = 'true';
+    }
+    if (!meritDetailsInput.dataset.bound) {
+        meritDetailsInput.addEventListener('input', persistDraft);
+        meritDetailsInput.dataset.bound = 'true';
+    }
+    if (!bonusAmountInput.dataset.bound) {
+        bonusAmountInput.addEventListener('input', persistDraft);
+        bonusAmountInput.dataset.bound = 'true';
+    }
+    if (!verbalSummaryOutput.dataset.bound) {
+        verbalSummaryOutput.addEventListener('input', persistDraft);
+        verbalSummaryOutput.dataset.bound = 'true';
     }
 
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
@@ -11000,6 +11046,10 @@ function updateYearEndSnapshotDisplay() {
     const improvementsInput = document.getElementById('yearEndImprovementsInput');
     const managerContextInput = document.getElementById('yearEndManagerContext');
     const responseInput = document.getElementById('yearEndCopilotResponse');
+    const performanceRatingInput = document.getElementById('yearEndPerformanceRatingInput');
+    const meritDetailsInput = document.getElementById('yearEndMeritDetailsInput');
+    const bonusAmountInput = document.getElementById('yearEndBonusAmountInput');
+    const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
     const promptArea = document.getElementById('yearEndPromptArea');
 
     if (!status || !snapshotPanel || !summary || !winsList || !improvementList || !promptArea) return;
@@ -11020,6 +11070,10 @@ function updateYearEndSnapshotDisplay() {
         if (improvementsInput) improvementsInput.value = '';
         if (managerContextInput) managerContextInput.value = '';
         if (responseInput) responseInput.value = '';
+        if (performanceRatingInput) performanceRatingInput.value = '';
+        if (meritDetailsInput) meritDetailsInput.value = '';
+        if (bonusAmountInput) bonusAmountInput.value = '';
+        if (verbalSummaryOutput) verbalSummaryOutput.value = '';
         return;
     }
 
@@ -11040,6 +11094,10 @@ function updateYearEndSnapshotDisplay() {
     if (improvementsInput) improvementsInput.value = savedDraft.improvementsText;
     if (managerContextInput) managerContextInput.value = savedDraft.managerContext;
     if (responseInput) responseInput.value = savedDraft.copilotResponse;
+    if (performanceRatingInput) performanceRatingInput.value = savedDraft.performanceRating;
+    if (meritDetailsInput) meritDetailsInput.value = savedDraft.meritDetails;
+    if (bonusAmountInput) bonusAmountInput.value = savedDraft.bonusAmount;
+    if (verbalSummaryOutput) verbalSummaryOutput.value = savedDraft.verbalSummary;
 
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
     const redFlagFollowUps = getYearEndRedFlagFollowUpLines(employeeName);
@@ -11318,6 +11376,48 @@ function copyYearEndBoxResponseToClipboard(boxNumber) {
     navigator.clipboard.writeText(boxText)
         .then(() => showToast(`✅ Box ${boxNumber} copied to clipboard!`, 3000))
         .catch(() => showToast(`⚠️ Unable to copy Box ${boxNumber}.`, 3000));
+}
+
+function generateYearEndVerbalSummary() {
+    const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
+    const reviewYear = document.getElementById('yearEndReviewYear')?.value;
+    const performanceRating = document.getElementById('yearEndPerformanceRatingInput')?.value.trim() || 'Not provided';
+    const meritDetails = document.getElementById('yearEndMeritDetailsInput')?.value.trim() || 'Not provided';
+    const bonusAmount = document.getElementById('yearEndBonusAmountInput')?.value.trim() || 'Not provided';
+    const output = document.getElementById('yearEndVerbalSummaryOutput');
+
+    if (!employeeName) {
+        alert('⚠️ Please select an associate first.');
+        return;
+    }
+    if (!reviewYear) {
+        alert('⚠️ Please enter a review year.');
+        return;
+    }
+    if (!output) return;
+
+    const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
+    const summary = `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
+
+Your overall performance rating is: ${performanceRating}.
+Your merit increase details are: ${meritDetails}.
+Your incentive/bonus amount is: ${bonusAmount}.`;
+
+    output.value = summary;
+    persistYearEndDraftState(employeeName, reviewYear);
+    showToast('✅ Verbal summary generated.', 3000);
+}
+
+function copyYearEndVerbalSummary() {
+    const outputText = document.getElementById('yearEndVerbalSummaryOutput')?.value.trim();
+    if (!outputText) {
+        alert('⚠️ Generate the verbal summary first.');
+        return;
+    }
+
+    navigator.clipboard.writeText(outputText)
+        .then(() => showToast('✅ Verbal summary copied to clipboard!', 3000))
+        .catch(() => showToast('⚠️ Unable to copy verbal summary.', 3000));
 }
 
 function deleteLatestCoachingEntry() {

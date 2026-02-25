@@ -302,6 +302,30 @@
                             </div>
                         </div>
 
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #5e35b1;">
+                            <h3 style="color: #4527a0; margin-top: 0;">🗣️ Verbal Review Summary</h3>
+                            <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">Fill in the three boxes, then generate a ready-to-read verbal summary.</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label for="yearEndPerformanceRatingInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Performance Rating (Successful/Unsuccessful):</label>
+                                    <input type="text" id="yearEndPerformanceRatingInput" placeholder="Successful or Unsuccessful" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label for="yearEndMeritDetailsInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Merit Increase (% and New Salary):</label>
+                                    <input type="text" id="yearEndMeritDetailsInput" placeholder="Example: 3.0% to $58,760" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                                <div>
+                                    <label for="yearEndBonusAmountInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Incentive/Bonus Amount:</label>
+                                    <input type="text" id="yearEndBonusAmountInput" placeholder="Example: $1,250" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                                <button type="button" id="generateYearEndVerbalSummaryBtn" style="background: #5e35b1; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">🗣️ Generate Verbal Summary</button>
+                                <button type="button" id="copyYearEndVerbalSummaryBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📋 Copy Verbal Summary</button>
+                            </div>
+                            <textarea id="yearEndVerbalSummaryOutput" readonly placeholder="Generated verbal summary will appear here..." style="margin-top: 12px; width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; color: #333; background: #fafafa; resize: vertical;"></textarea>
+                        </div>
+
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #5e35b1;">
                             <h3 style="color: #4527a0; margin-top: 0;">🤖 Year-End Copilot Prompt</h3>
                             <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Generate and open in Copilot, then paste the response below for one-click copy into notes.</p>
