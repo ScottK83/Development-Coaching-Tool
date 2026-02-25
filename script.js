@@ -3169,7 +3169,7 @@ function initializeRepoSyncControls() {
         syncNowBtn.dataset.bound = 'true';
     }
     if (!openFullExcelBtn.dataset.bound) {
-        openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('coaching-tool-sync-backup.xlsx'));
+        openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('Development-Coaching-Tool.xlsx'));
         openFullExcelBtn.dataset.bound = 'true';
     }
     if (!syncEndpointInput.dataset.bound) {

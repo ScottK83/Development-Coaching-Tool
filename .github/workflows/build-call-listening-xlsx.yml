@@ -1,4 +1,4 @@
-name: Build Call Listening XLSX
+name: Build Development Coaching Tool XLSX
 
 on:
   push:
@@ -245,7 +245,7 @@ jobs:
           print(f'Built {xlsx_path}')
 
           full_json_path = 'data/coaching-tool-sync-backup.json'
-          full_xlsx_path = 'data/coaching-tool-sync-backup.xlsx'
+          full_xlsx_path = 'data/Development-Coaching-Tool.xlsx'
           if os.path.exists(full_json_path):
               with open(full_json_path, encoding='utf-8') as f:
                   payload = json.load(f)
@@ -305,10 +305,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/call-listening-logs.xlsx data/coaching-tool-sync-backup.xlsx
+          rm -f data/coaching-tool-sync-backup.xlsx
+          git add data/call-listening-logs.xlsx data/Development-Coaching-Tool.xlsx
+          git add -u data/coaching-tool-sync-backup.xlsx
           if git diff --cached --quiet; then
             echo "No XLSX changes to commit"
           else
-            git commit -m "chore(data): regenerate call listening xlsx"
+            git commit -m "chore(data): regenerate development coaching xlsx"
             git push
           fi

@@ -11,7 +11,7 @@ This Worker receives app data from the browser and commits synced files to this 
 A GitHub Action then regenerates:
 
 - `data/call-listening-logs.xlsx`
-- `data/coaching-tool-sync-backup.xlsx`
+- `data/Development-Coaching-Tool.xlsx`
 
 ## 1) Configure Worker
 
