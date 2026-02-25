@@ -138,6 +138,7 @@ let callListeningLogs = {};
 let callListeningSyncTimer = null;
 let repoSyncStorageHookInstalled = false;
 let repoSyncSuppressCounter = 0;
+let repoSyncHydrationInProgress = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
@@ -3309,6 +3310,10 @@ function buildRepoSyncPayload(reason = 'updated') {
 }
 
 function queueRepoSync(reason = 'updated') {
+    if (repoSyncHydrationInProgress) {
+        return;
+    }
+
     const config = loadCallListeningSyncConfig();
     if (!config.autoSyncEnabled || !config.endpoint.trim()) {
         return;
@@ -3326,6 +3331,119 @@ function queueRepoSync(reason = 'updated') {
 
 function queueCallListeningRepoSync(reason = 'updated') {
     queueRepoSync(reason);
+}
+
+function hasMeaningfulLocalData() {
+    const hasEntries = (value) => {
+        if (!value || typeof value !== 'object') return false;
+        if (Array.isArray(value)) return value.length > 0;
+        return Object.keys(value).length > 0;
+    };
+
+    return [
+        weeklyData,
+        ytdData,
+        coachingHistory,
+        callListeningLogs,
+        associateSentimentSnapshots,
+        myTeamMembers,
+        loadCallCenterAverages(),
+        loadYearEndAnnualGoalsStore(),
+        loadYearEndDraftStore()
+    ].some(hasEntries);
+}
+
+function hasMeaningfulBackupData(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+
+    const hasEntries = (value) => {
+        if (!value || typeof value !== 'object') return false;
+        if (Array.isArray(value)) return value.length > 0;
+        return Object.keys(value).length > 0;
+    };
+
+    return [
+        payload.weeklyData,
+        payload.ytdData,
+        payload.coachingHistory,
+        payload.callListeningLogs,
+        payload.associateSentimentSnapshots,
+        payload.myTeamMembers,
+        payload.callCenterAverages,
+        payload.yearEndAnnualGoalsStore,
+        payload.yearEndDraftStore,
+        payload.appStorageSnapshot
+    ].some(hasEntries);
+}
+
+async function fetchRepoBackupPayload() {
+    const origin = window?.location?.origin;
+    const timestamp = Date.now();
+    const urls = [];
+
+    if (origin && origin !== 'null') {
+        urls.push(`${origin}/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
+    }
+
+    urls.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
+
+    for (const url of urls) {
+        try {
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) continue;
+
+            const payload = await response.json();
+            if (payload && typeof payload === 'object') {
+                return payload;
+            }
+        } catch (error) {
+            // Try next candidate URL
+        }
+    }
+
+    return null;
+}
+
+function applyRepoBackupPayload(payload) {
+    weeklyData = payload?.weeklyData && typeof payload.weeklyData === 'object' ? payload.weeklyData : {};
+    ytdData = payload?.ytdData && typeof payload.ytdData === 'object' ? payload.ytdData : {};
+    coachingHistory = payload?.coachingHistory && typeof payload.coachingHistory === 'object' ? payload.coachingHistory : {};
+    callListeningLogs = payload?.callListeningLogs && typeof payload.callListeningLogs === 'object' ? payload.callListeningLogs : {};
+    sentimentPhraseDatabase = payload?.sentimentPhraseDatabase && typeof payload.sentimentPhraseDatabase === 'object' ? payload.sentimentPhraseDatabase : null;
+    associateSentimentSnapshots = payload?.associateSentimentSnapshots && typeof payload.associateSentimentSnapshots === 'object' ? payload.associateSentimentSnapshots : {};
+    myTeamMembers = payload?.myTeamMembers && typeof payload.myTeamMembers === 'object' ? payload.myTeamMembers : {};
+
+    saveWeeklyData();
+    saveYtdData();
+    saveCoachingHistory();
+    saveCallListeningLogs(false, 'restored from repo backup');
+    saveSentimentPhraseDatabase();
+    saveAssociateSentimentSnapshots();
+    normalizeTeamMembersForExistingWeeks();
+    saveTeamMembers();
+    saveCallCenterAverages(payload?.callCenterAverages && typeof payload.callCenterAverages === 'object' ? payload.callCenterAverages : {});
+    saveYearEndAnnualGoalsStore(payload?.yearEndAnnualGoalsStore && typeof payload.yearEndAnnualGoalsStore === 'object' ? payload.yearEndAnnualGoalsStore : {});
+    saveYearEndDraftStore(payload?.yearEndDraftStore && typeof payload.yearEndDraftStore === 'object' ? payload.yearEndDraftStore : {});
+}
+
+async function tryAutoRestoreFromRepoBackupOnEmptyState() {
+    if (hasMeaningfulLocalData()) {
+        return false;
+    }
+
+    const payload = await fetchRepoBackupPayload();
+    if (!hasMeaningfulBackupData(payload)) {
+        return false;
+    }
+
+    repoSyncHydrationInProgress = true;
+    try {
+        applyRepoBackupPayload(payload);
+    } finally {
+        repoSyncHydrationInProgress = false;
+    }
+
+    return true;
 }
 
 async function syncRepoData(reason = 'updated', options = {}) {
@@ -9692,7 +9810,7 @@ function deleteEmployee(employeeName) {
 // INITIALIZATION
 // ============================================
 
-function initApp() {
+async function initApp() {
     
     installDebugListeners();
     
@@ -9705,6 +9823,11 @@ function initApp() {
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
     loadTeamMembers();
+
+    const restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
+    if (restoredFromRepo) {
+        showToast('✅ Restored synced data for this browser profile.', 4000);
+    }
     
 
     if (Object.keys(weeklyData).length > 0) {
@@ -9769,10 +9892,10 @@ function setAppVersionLabel(statusSuffix = '') {
     }
 }
 
-function bootAppSafely() {
+async function bootAppSafely() {
     setAppVersionLabel();
     try {
-        initApp();
+        await initApp();
         window.__appBootOk = true;
     } catch (error) {
         window.__appBootOk = false;
