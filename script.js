@@ -3218,7 +3218,33 @@ function getAllAppStorageSnapshot() {
     for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
-        snapshot[key] = localStorage.getItem(key);
+        const rawValue = localStorage.getItem(key);
+        let valueType = 'string';
+        let itemCount = '';
+
+        if (typeof rawValue === 'string') {
+            const trimmed = rawValue.trim();
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(rawValue);
+                    if (Array.isArray(parsed)) {
+                        valueType = 'array';
+                        itemCount = parsed.length;
+                    } else if (parsed && typeof parsed === 'object') {
+                        valueType = 'object';
+                        itemCount = Object.keys(parsed).length;
+                    }
+                } catch (error) {
+                    valueType = 'string';
+                }
+            }
+        }
+
+        snapshot[key] = {
+            valueType,
+            itemCount,
+            byteLength: typeof rawValue === 'string' ? rawValue.length : 0
+        };
     }
     return snapshot;
 }
@@ -3308,6 +3334,10 @@ async function syncRepoData(reason = 'updated', options = {}) {
 
             if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
                 throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
+            }
+
+            if (String(details || '').toLowerCase().includes('repository rule violation') || String(details || '').toLowerCase().includes('secret scanning')) {
+                throw new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
             }
 
             throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);

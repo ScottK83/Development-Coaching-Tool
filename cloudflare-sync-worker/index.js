@@ -32,29 +32,30 @@ export default {
       const jsonPath = `${dataDir}/call-listening-logs.json`;
       const csvPath = `${dataDir}/call-listening-logs.csv`;
       const fullBackupPath = `${dataDir}/coaching-tool-sync-backup.json`;
+      const sanitizedCallListeningLogs = sanitizeForRepo(callListeningLogs);
 
       const normalizedPayload = {
         generatedAt,
         reason,
         sourceAppVersion: body?.appVersion || null,
-        callListeningLogs
+        callListeningLogs: sanitizedCallListeningLogs
       };
 
       const fullBackupPayload = {
         generatedAt,
         reason,
         sourceAppVersion: body?.appVersion || null,
-        weeklyData: body?.weeklyData && typeof body.weeklyData === 'object' ? body.weeklyData : {},
-        ytdData: body?.ytdData && typeof body.ytdData === 'object' ? body.ytdData : {},
-        coachingHistory: body?.coachingHistory && typeof body.coachingHistory === 'object' ? body.coachingHistory : {},
-        callListeningLogs,
-        sentimentPhraseDatabase: body?.sentimentPhraseDatabase && typeof body.sentimentPhraseDatabase === 'object' ? body.sentimentPhraseDatabase : null,
-        associateSentimentSnapshots: body?.associateSentimentSnapshots && typeof body.associateSentimentSnapshots === 'object' ? body.associateSentimentSnapshots : {},
-        myTeamMembers: body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {},
-        callCenterAverages: body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {},
-        yearEndAnnualGoalsStore: body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {},
-        yearEndDraftStore: body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {},
-        appStorageSnapshot: body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {}
+        weeklyData: sanitizeForRepo(body?.weeklyData && typeof body.weeklyData === 'object' ? body.weeklyData : {}),
+        ytdData: sanitizeForRepo(body?.ytdData && typeof body.ytdData === 'object' ? body.ytdData : {}),
+        coachingHistory: sanitizeForRepo(body?.coachingHistory && typeof body.coachingHistory === 'object' ? body.coachingHistory : {}),
+        callListeningLogs: sanitizedCallListeningLogs,
+        sentimentPhraseDatabase: sanitizeForRepo(body?.sentimentPhraseDatabase && typeof body.sentimentPhraseDatabase === 'object' ? body.sentimentPhraseDatabase : null),
+        associateSentimentSnapshots: sanitizeForRepo(body?.associateSentimentSnapshots && typeof body.associateSentimentSnapshots === 'object' ? body.associateSentimentSnapshots : {}),
+        myTeamMembers: sanitizeForRepo(body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {}),
+        callCenterAverages: sanitizeForRepo(body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {}),
+        yearEndAnnualGoalsStore: sanitizeForRepo(body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {}),
+        yearEndDraftStore: sanitizeForRepo(body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {}),
+        appStorageSnapshot: sanitizeForRepo(body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {})
       };
 
       const incomingHasData = hasMeaningfulBackupData(fullBackupPayload);
@@ -69,7 +70,7 @@ export default {
         }, 409);
       }
 
-      const csvContent = csvFromClient || buildCsvFromLogs(callListeningLogs);
+      const csvContent = sanitizeCsvText(csvFromClient || buildCsvFromLogs(sanitizedCallListeningLogs));
 
       const jsonResult = await upsertRepoFile({
         env,
@@ -157,6 +158,46 @@ function buildCsvCell(value) {
   const text = String(value ?? '');
   if (!/[",\n]/.test(text)) return text;
   return `"${text.replace(/"/g, '""')}"`;
+}
+
+function sanitizeCsvText(text) {
+  return sanitizeText(String(text || ''));
+}
+
+function sanitizeText(text) {
+  return String(text || '')
+    .replace(/github_pat_[A-Za-z0-9_]{20,}/g, '[REDACTED_GH_PAT]')
+    .replace(/ghp_[A-Za-z0-9]{30,}/g, '[REDACTED_GH_TOKEN]')
+    .replace(/glpat-[A-Za-z0-9_\-]{20,}/g, '[REDACTED_GITLAB_PAT]')
+    .replace(/AIza[0-9A-Za-z\-_]{20,}/g, '[REDACTED_API_KEY]')
+    .replace(/sk-[A-Za-z0-9]{20,}/g, '[REDACTED_SECRET]');
+}
+
+function sanitizeForRepo(value, keyHint = '') {
+  if (value === null || value === undefined) return value;
+
+  const keyName = String(keyHint || '');
+  if (/(token|secret|password|api[_-]?key|authorization|cookie)/i.test(keyName)) {
+    return '[REDACTED]';
+  }
+
+  if (typeof value === 'string') {
+    return sanitizeText(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => sanitizeForRepo(item, keyHint));
+  }
+
+  if (typeof value === 'object') {
+    const result = {};
+    for (const [key, nested] of Object.entries(value)) {
+      result[key] = sanitizeForRepo(nested, key);
+    }
+    return result;
+  }
+
+  return value;
 }
 
 function buildCsvFromLogs(callListeningLogs) {
