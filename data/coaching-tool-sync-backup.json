@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T19:58:06.007Z",
-  "reason": "manual sync now",
+  "generatedAt": "2026-02-25T19:58:23.138Z",
+  "reason": "storage set: devCoachingTool_employeePreferredNames",
   "sourceAppVersion": "2026.02.25.112",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4423,6 +4423,11 @@
       "valueType": "object",
       "itemCount": 8,
       "byteLength": 44431
+    },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
     },
     "devCoachingTool_cloudSyncSettings": {
       "valueType": "object",
