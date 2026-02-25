@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:43:16.369Z",
+  "generatedAt": "2026-02-25T21:43:19.674Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4656,7 +4656,7 @@
       "copilotResponse": "",
       "performanceRating": "Successful",
       "meritDetails": "2% 25.98",
-      "bonusAmount": "",
+      "bonusAmount": "3434.73",
       "verbalSummary": ""
     }
   },
@@ -4729,7 +4729,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 16,
-      "byteLength": 37649
+      "byteLength": 37656
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
