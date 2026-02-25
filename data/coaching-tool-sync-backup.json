@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-25T21:58:37.832Z",
+  "generatedAt": "2026-02-25T22:02:20.194Z",
   "reason": "year-end draft updated",
-  "sourceAppVersion": "2026.02.25.115",
+  "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -4581,9 +4581,13 @@
     "2025::Scoticia Osborne": {
       "trackStatus": "on-track",
       "positivesText": "Average Handle Time: 435s vs target 440s\nHold Time: 1s vs target 30s\nRep Satisfaction: 87.5% vs target 80.0%\nFirst Call Resolution: 71.0% vs target 70.0%\nOverall Sentiment: 91.2% vs target 88.0%\nPositive Word: 88.3% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
-      "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 25.1% vs target 6.0%\nAfter Call Work: 110s vs target 60s\nOverall Experience: 76.7% vs target 84.0%\nReliability: 51.2 hrs vs target 16.0 hrs",
+      "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 25.1% vs target 6.0%\nAfter Call Work: 110s vs target 60s\nOverall Experience: 76.7% vs target 84.0%\nReliability: 51.2 hrs vs target 16.0 hrs\nAnnual Goal Follow-up: Red Flag Violations: 0 violations (2)",
       "managerContext": "",
-      "copilotResponse": ""
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     },
     "2025::Teena Pokorski": {
       "trackStatus": "on-track",
@@ -4823,7 +4827,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 18,
-      "byteLength": 42268
+      "byteLength": 42407
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
