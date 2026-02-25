@@ -43,7 +43,8 @@ export default {
         myTeamMembers: body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {},
         callCenterAverages: body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {},
         yearEndAnnualGoalsStore: body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {},
-        yearEndDraftStore: body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {}
+        yearEndDraftStore: body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {},
+        appStorageSnapshot: body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {}
       };
 
       const csvContent = csvFromClient || buildCsvFromLogs(callListeningLogs);

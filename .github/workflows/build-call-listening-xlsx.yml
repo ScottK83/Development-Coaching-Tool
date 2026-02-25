@@ -56,11 +56,11 @@ jobs:
           wb.save(xlsx_path)
           print(f'Built {xlsx_path}')
 
-            full_json_path = 'data/coaching-tool-sync-backup.json'
-            full_xlsx_path = 'data/coaching-tool-sync-backup.xlsx'
-            if os.path.exists(full_json_path):
+          full_json_path = 'data/coaching-tool-sync-backup.json'
+          full_xlsx_path = 'data/coaching-tool-sync-backup.xlsx'
+          if os.path.exists(full_json_path):
               with open(full_json_path, encoding='utf-8') as f:
-                payload = json.load(f)
+                  payload = json.load(f)
 
               full_wb = Workbook()
               overview = full_wb.active
@@ -71,23 +71,24 @@ jobs:
               overview.append(['sourceAppVersion', str(payload.get('sourceAppVersion', ''))])
 
               for key in [
-                'weeklyData',
-                'ytdData',
-                'coachingHistory',
-                'callListeningLogs',
-                'sentimentPhraseDatabase',
-                'associateSentimentSnapshots',
-                'myTeamMembers',
-                'callCenterAverages',
-                'yearEndAnnualGoalsStore',
-                'yearEndDraftStore'
+                  'weeklyData',
+                  'ytdData',
+                  'coachingHistory',
+                  'callListeningLogs',
+                  'sentimentPhraseDatabase',
+                  'associateSentimentSnapshots',
+                  'myTeamMembers',
+                  'callCenterAverages',
+                  'yearEndAnnualGoalsStore',
+                  'yearEndDraftStore',
+                  'appStorageSnapshot'
               ]:
-                sheet = full_wb.create_sheet(title=key[:31])
-                sheet.append(['JSON'])
-                raw = json.dumps(payload.get(key, {}), indent=2, ensure_ascii=False)
-                for line in raw.splitlines() or ['{}']:
-                  sheet.append([line])
-                sheet.column_dimensions['A'].width = 120
+                  sheet = full_wb.create_sheet(title=key[:31])
+                  sheet.append(['JSON'])
+                  raw = json.dumps(payload.get(key, {}), indent=2, ensure_ascii=False)
+                  for line in raw.splitlines() or ['{}']:
+                      sheet.append([line])
+                  sheet.column_dimensions['A'].width = 120
 
               overview.column_dimensions['A'].width = 28
               overview.column_dimensions['B'].width = 40

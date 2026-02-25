@@ -136,6 +136,8 @@ let coachingHistory = {};
 let yearEndDraftContext = null;
 let callListeningLogs = {};
 let callListeningSyncTimer = null;
+let repoSyncStorageHookInstalled = false;
+let repoSyncSuppressCounter = 0;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
@@ -209,6 +211,7 @@ const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
 const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
+const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
 
 const YEAR_END_TARGETS_BY_YEAR = {
     2025: {
@@ -2156,6 +2159,7 @@ function initializeEventHandlers() {
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
         showManageDataSubSection('subSectionTeamData');
+        initializeRepoSyncControls();
         populateDeleteWeekDropdown();
         renderEmployeesList();
     });
@@ -2163,6 +2167,7 @@ function initializeEventHandlers() {
     // Sub-navigation for Manage Data section
     document.getElementById('subNavTeamData')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionTeamData');
+        initializeRepoSyncControls();
         populateDeleteWeekDropdown();
         renderEmployeesList();
     });
@@ -2998,7 +3003,9 @@ function saveCallListeningSyncConfig(config) {
         autoSyncEnabled: Boolean(config?.autoSyncEnabled)
     };
     try {
-        localStorage.setItem(CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY, JSON.stringify(safeConfig));
+        withRepoSyncSuppressed(() => {
+            localStorage.setItem(CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY, JSON.stringify(safeConfig));
+        });
     } catch (error) {
         console.error('Error saving call listening sync config:', error);
     }
@@ -3013,10 +3020,175 @@ function setCallListeningSyncStatus(message, type = 'info') {
     statusEl.textContent = message;
 }
 
+function withRepoSyncSuppressed(action) {
+    repoSyncSuppressCounter += 1;
+    try {
+        return action();
+    } finally {
+        repoSyncSuppressCounter = Math.max(0, repoSyncSuppressCounter - 1);
+    }
+}
+
+function shouldSyncForStorageKey(key) {
+    const storageKey = String(key || '');
+    if (!storageKey || !storageKey.startsWith(STORAGE_PREFIX)) return false;
+
+    const ignoredKeys = new Set([
+        CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY,
+        REPO_SYNC_LAST_SUCCESS_STORAGE_KEY
+    ]);
+
+    return !ignoredKeys.has(storageKey);
+}
+
+function installRepoSyncStorageHooks() {
+    if (repoSyncStorageHookInstalled || !window?.Storage?.prototype) return;
+
+    const storageProto = window.Storage.prototype;
+    const originalSetItem = storageProto.setItem;
+    const originalRemoveItem = storageProto.removeItem;
+    const originalClear = storageProto.clear;
+
+    storageProto.setItem = function patchedSetItem(key, value) {
+        const result = originalSetItem.call(this, key, value);
+        if (repoSyncSuppressCounter === 0 && shouldSyncForStorageKey(key)) {
+            queueRepoSync(`storage set: ${key}`);
+        }
+        return result;
+    };
+
+    storageProto.removeItem = function patchedRemoveItem(key) {
+        const result = originalRemoveItem.call(this, key);
+        if (repoSyncSuppressCounter === 0 && shouldSyncForStorageKey(key)) {
+            queueRepoSync(`storage remove: ${key}`);
+        }
+        return result;
+    };
+
+    storageProto.clear = function patchedClear() {
+        const result = originalClear.call(this);
+        if (repoSyncSuppressCounter === 0) {
+            queueRepoSync('localStorage cleared');
+        }
+        return result;
+    };
+
+    repoSyncStorageHookInstalled = true;
+}
+
+function loadRepoSyncLastSuccess() {
+    try {
+        const raw = localStorage.getItem(REPO_SYNC_LAST_SUCCESS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+        console.error('Error loading last repo sync metadata:', error);
+        return null;
+    }
+}
+
+function saveRepoSyncLastSuccess(meta) {
+    try {
+        withRepoSyncSuppressed(() => {
+            localStorage.setItem(REPO_SYNC_LAST_SUCCESS_STORAGE_KEY, JSON.stringify(meta || {}));
+        });
+    } catch (error) {
+        console.error('Error saving last repo sync metadata:', error);
+    }
+}
+
+function renderCallListeningLastSync(meta = null) {
+    const el = document.getElementById('callListeningLastSync');
+    if (!el) return;
+
+    const data = meta || loadRepoSyncLastSuccess();
+    if (!data?.syncedAt) {
+        el.textContent = 'Last successful sync: none yet';
+        return;
+    }
+
+    const when = new Date(data.syncedAt).toLocaleString();
+    const details = [data.reason, data.commit].filter(Boolean).join(' • ');
+    el.textContent = `Last successful sync: ${when}${details ? ` (${details})` : ''}`;
+}
+
+function initializeRepoSyncControls() {
+    const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
+    const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
+    const openCallExcelBtn = document.getElementById('openCallListeningExcelBtn');
+    const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
+
+    if (!syncEndpointInput || !autoSyncCheckbox || !openCallExcelBtn || !openFullExcelBtn) {
+        return;
+    }
+
+    const syncConfig = loadCallListeningSyncConfig();
+    syncEndpointInput.value = syncConfig.endpoint || '';
+    autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
+    if (syncConfig.autoSyncEnabled && syncConfig.endpoint.trim()) {
+        setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+    } else {
+        setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+    }
+    renderCallListeningLastSync();
+
+    if (!openCallExcelBtn.dataset.bound) {
+        openCallExcelBtn.addEventListener('click', () => openRepoExcelFile('call-listening-logs.xlsx'));
+        openCallExcelBtn.dataset.bound = 'true';
+    }
+    if (!openFullExcelBtn.dataset.bound) {
+        openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('coaching-tool-sync-backup.xlsx'));
+        openFullExcelBtn.dataset.bound = 'true';
+    }
+    if (!syncEndpointInput.dataset.bound) {
+        syncEndpointInput.addEventListener('change', () => {
+            const nextConfig = getCallListeningSyncConfigFromUI();
+            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
+                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+            } else {
+                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+            }
+        });
+        syncEndpointInput.dataset.bound = 'true';
+    }
+    if (!autoSyncCheckbox.dataset.bound) {
+        autoSyncCheckbox.addEventListener('change', () => {
+            const nextConfig = getCallListeningSyncConfigFromUI();
+            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
+                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+            } else {
+                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+            }
+        });
+        autoSyncCheckbox.dataset.bound = 'true';
+    }
+}
+
+function openRepoExcelFile(fileName) {
+    const baseUrl = window?.location?.origin;
+    if (!baseUrl || baseUrl === 'null') {
+        showToast('⚠️ Could not detect site URL to open Excel file.', 3500);
+        return;
+    }
+
+    const fileUrl = `${baseUrl}/data/${fileName}`;
+    window.open(fileUrl, '_blank');
+}
+
 function getCallListeningSyncConfigFromUI() {
     const endpoint = document.getElementById('callListeningSyncEndpoint')?.value || '';
     const autoSyncEnabled = document.getElementById('callListeningAutoSyncEnabled')?.checked ?? true;
     return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled });
+}
+
+function getAllAppStorageSnapshot() {
+    const snapshot = {};
+    for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
+        snapshot[key] = localStorage.getItem(key);
+    }
+    return snapshot;
 }
 
 function buildRepoSyncPayload(reason = 'updated') {
@@ -3034,6 +3206,7 @@ function buildRepoSyncPayload(reason = 'updated') {
         callCenterAverages: loadCallCenterAverages() || {},
         yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
         yearEndDraftStore: loadYearEndDraftStore(),
+        appStorageSnapshot: getAllAppStorageSnapshot(),
         callListeningCsv: exportCallListeningLogsToCSV()
     };
 }
@@ -3087,6 +3260,21 @@ async function syncRepoData(reason = 'updated') {
             }
             throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
         }
+
+        let responseData = null;
+        try {
+            responseData = await response.json();
+        } catch (error) {
+            responseData = null;
+        }
+
+        const syncMeta = {
+            syncedAt: new Date().toISOString(),
+            reason,
+            commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || ''
+        };
+        saveRepoSyncLastSuccess(syncMeta);
+        renderCallListeningLastSync(syncMeta);
 
         setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
     } catch (error) {
@@ -9211,6 +9399,8 @@ function initApp() {
     // Initialize event handlers
     initializeEventHandlers();
     initializeKeyboardShortcuts();
+    initializeRepoSyncControls();
+    installRepoSyncStorageHooks();
     
     // Always show Upload Data page on refresh
     showOnlySection('coachingForm');
@@ -9239,7 +9429,7 @@ function initApp() {
         
     });
     
-    // Auto-sync on page load disabled (user will click Sync Now manually)
+    // Auto-sync remains event-driven via data saves/storage updates.
     
     
 }
@@ -10028,20 +10218,9 @@ function initializeCallListeningSection() {
     const historyList = document.getElementById('callListeningHistoryList');
     const outlookBody = document.getElementById('callListeningOutlookBody');
     const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
-    const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
-    const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
 
-    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn || !syncEndpointInput || !autoSyncCheckbox) {
+    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn) {
         return;
-    }
-
-    const syncConfig = loadCallListeningSyncConfig();
-    syncEndpointInput.value = syncConfig.endpoint || '';
-    autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
-    if (syncConfig.autoSyncEnabled && syncConfig.endpoint.trim()) {
-        setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-    } else {
-        setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
     }
 
     if (!dateInput.value) {
@@ -10085,28 +10264,6 @@ function initializeCallListeningSection() {
     if (!generatePromptBtn.dataset.bound) {
         generatePromptBtn.addEventListener('click', generateCallListeningPromptAndCopy);
         generatePromptBtn.dataset.bound = 'true';
-    }
-    if (!syncEndpointInput.dataset.bound) {
-        syncEndpointInput.addEventListener('change', () => {
-            const nextConfig = getCallListeningSyncConfigFromUI();
-            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
-                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-            } else {
-                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
-            }
-        });
-        syncEndpointInput.dataset.bound = 'true';
-    }
-    if (!autoSyncCheckbox.dataset.bound) {
-        autoSyncCheckbox.addEventListener('change', () => {
-            const nextConfig = getCallListeningSyncConfigFromUI();
-            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
-                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-            } else {
-                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
-            }
-        });
-        autoSyncCheckbox.dataset.bound = 'true';
     }
     if (!outlookBody.dataset.bound) {
         outlookBody.addEventListener('input', (event) => {

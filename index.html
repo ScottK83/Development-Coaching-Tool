@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.workers.dev; object-src 'none'">
     <title>Development Coaching Tool</title>
     <link rel="stylesheet" href="styles.css">
     <script src="bootstrap.js"></script>
@@ -403,19 +403,6 @@ Box 2 - Future Improvement Areas:
                                     <input type="text" id="callListeningReference" placeholder="Interaction ID / case #" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                                 </div>
                             </div>
-                            <div style="margin-top: 14px; padding: 12px; background: #f5f7f8; border: 1px solid #cfd8dc; border-radius: 6px;">
-                                <div style="display: grid; grid-template-columns: 2fr auto; gap: 10px; align-items: end;">
-                                    <div>
-                                        <label for="callListeningSyncEndpoint" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Auto-Sync Worker URL (optional):</label>
-                                        <input type="url" id="callListeningSyncEndpoint" placeholder="https://your-worker.your-subdomain.workers.dev" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
-                                    </div>
-                                    <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold; color: #333; white-space: nowrap; margin-bottom: 8px;">
-                                        <input type="checkbox" id="callListeningAutoSyncEnabled" checked>
-                                        Auto-sync on save
-                                    </label>
-                                </div>
-                                <div id="callListeningSyncStatus" style="margin-top: 8px; font-size: 0.85em; color: #546e7a;"></div>
-                            </div>
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #455a64;">
@@ -754,6 +741,27 @@ Box 2 - Future Improvement Areas:
                     
                     <!-- Team Data Sub-section -->
                     <div id="subSectionTeamData" style="display: block;">
+                    <div style="margin-bottom: 20px; padding: 20px; background: #eef3f5; border-radius: 8px; border: 2px solid #455a64;">
+                        <h3 style="color: #37474f; margin-top: 0;">🔄 Repo Auto-Sync & Excel Access</h3>
+                        <p style="color: #546e7a; margin-bottom: 12px;">Manage app-wide auto-sync to GitHub and open generated Excel files from one place.</p>
+                        <div style="display: grid; grid-template-columns: 2fr auto; gap: 10px; align-items: end;">
+                            <div>
+                                <label for="callListeningSyncEndpoint" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Auto-Sync Worker URL:</label>
+                                <input type="url" id="callListeningSyncEndpoint" placeholder="https://your-worker.your-subdomain.workers.dev" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                            </div>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold; color: #333; white-space: nowrap; margin-bottom: 8px;">
+                                <input type="checkbox" id="callListeningAutoSyncEnabled" checked>
+                                Auto-sync on save
+                            </label>
+                        </div>
+                        <div id="callListeningSyncStatus" style="margin-top: 8px; font-size: 0.85em; color: #546e7a;"></div>
+                        <div id="callListeningLastSync" style="margin-top: 4px; font-size: 0.82em; color: #37474f;"></div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                            <button type="button" id="openCallListeningExcelBtn" style="background: #546e7a; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 0.85em;">📊 Open Call Logs Excel</button>
+                            <button type="button" id="openFullBackupExcelBtn" style="background: #37474f; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 0.85em;">🗂️ Open Full Backup Excel</button>
+                        </div>
+                    </div>
+
                     <!-- Existing Employees List -->
                     <div style="margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
                         <h3 style="color: #6a1b9a; margin-top: 0;">👥 View Employees</h3>
