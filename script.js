@@ -3515,8 +3515,36 @@ function renderYearEndAnnualGoalsInputs(employeeName, reviewYear) {
         const eventName = el.matches('select') ? 'change' : 'input';
         el.addEventListener(eventName, () => {
             persistYearEndAnnualGoalsState(employeeName, reviewYear);
+            appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
         });
     });
+}
+
+function appendMissingYearEndImprovementFollowUps(employeeName, reviewYear) {
+    const improvementsInput = document.getElementById('yearEndImprovementsInput');
+    if (!improvementsInput || !employeeName || !reviewYear) return;
+
+    const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
+    const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
+    const redFlagFollowUps = getYearEndRedFlagFollowUpLines(employeeName);
+    const requiredLines = annualFollowUps.concat(redFlagFollowUps).filter(Boolean);
+
+    if (!requiredLines.length) return;
+
+    const existingLines = String(improvementsInput.value || '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+    const existingNormalized = new Set(existingLines.map(line => line.toLowerCase()));
+    const missingRequiredLines = requiredLines.filter(line => !existingNormalized.has(line.toLowerCase()));
+
+    if (missingRequiredLines.length) {
+        improvementsInput.value = existingLines.length
+            ? `${existingLines.join('\n')}\n${missingRequiredLines.join('\n')}`
+            : missingRequiredLines.join('\n');
+
+        persistYearEndDraftState(employeeName, reviewYear);
+    }
 }
 
 function collectYearEndAnnualGoals(employeeName, reviewYear) {
@@ -11139,20 +11167,7 @@ function updateYearEndSnapshotDisplay() {
             : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
     }
 
-    if (improvementsInput && redFlagFollowUps.length) {
-        const existingLines = String(improvementsInput.value || '')
-            .split('\n')
-            .map(line => line.trim())
-            .filter(Boolean);
-        const existingNormalized = new Set(existingLines.map(line => line.toLowerCase()));
-        const missingRedFlagLines = redFlagFollowUps.filter(line => !existingNormalized.has(line.toLowerCase()));
-
-        if (missingRedFlagLines.length) {
-            improvementsInput.value = existingLines.length
-                ? `${existingLines.join('\n')}\n${missingRedFlagLines.join('\n')}`
-                : missingRedFlagLines.join('\n');
-        }
-    }
+    appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
     if (improvementsInput && !improvementsInput.value.trim()) {
         const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
