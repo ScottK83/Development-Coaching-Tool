@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:01:09.993Z",
+  "generatedAt": "2026-02-25T20:01:19.401Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.112",
   "weeklyData": {
@@ -4301,8 +4301,8 @@
       "copilotResponse": "Box 1 - Significant Accomplishments:\nAlyssa delivered an overall on track performance in 2025 and made meaningful progress in several core areas. She consistently exceeded key quality and behavioral goals, including After Call Work at 27s against a 60s target, First Call Resolution at 76.0% against a 70.0% target, Avoid Negative Words at 86.7% against an 83.0% target, and Managing Emotions at 95.7% against a 95.0% target. Her reliability remained exceptional with only 0.1 hours of unscheduled time against a 16.0 hour target. She also met all annual APS goals, including 100% accuracy on Emergency Safety Hazard calls, 0 substantiated complaints, and 0 phishing clicks. Throughout the year she demonstrated strong alignment with the APS principle of Empower Each Other, especially as she navigated training phases and supported peers while handling more than 6,500 calls.\n\nBox 2 - Future Improvement Areas:\nA focused opportunity for Alyssa is improving efficiency on calls by reducing Average Handle Time, which is currently 563s against a 440s target, and lowering Hold Time from 119s toward the 30s goal. Strengthening Schedule Adherence from 91.7% toward the 93.0% target will also help reinforce consistency and support overall team performance.",
       "performanceRating": "Successful",
       "meritDetails": "2.0 to 25.98",
-      "bonusAmount": "",
-      "verbalSummary": ""
+      "bonusAmount": "3434.73",
+      "verbalSummary": "Alyssa, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2.0 to 25.98.\nYour incentive/bonus amount is: 3434.73."
     },
     "2026::Ronda Colis": {
       "trackStatus": "on-track",
@@ -4421,7 +4421,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 10,
-      "byteLength": 18401
+      "byteLength": 18731
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
