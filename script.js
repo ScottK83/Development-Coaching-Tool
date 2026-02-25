@@ -152,31 +152,41 @@ function loadWeeklyData() {
     return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
 }
 function saveWeeklyData() {
-    return window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
+    const result = window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
+    queueRepoSync('weekly data updated');
+    return result;
 }
 function loadYtdData() {
     return window.DevCoachModules?.storage?.loadYtdData?.() || {};
 }
 function saveYtdData() {
-    return window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
+    const result = window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
+    queueRepoSync('ytd data updated');
+    return result;
 }
 function loadCoachingHistory() {
     return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
 }
 function saveCoachingHistory() {
-    return window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
+    const result = window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
+    queueRepoSync('coaching history updated');
+    return result;
 }
 function loadSentimentPhraseDatabase() {
     return window.DevCoachModules?.storage?.loadSentimentPhraseDatabase?.();
 }
 function saveSentimentPhraseDatabase() {
-    return window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
+    const result = window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
+    queueRepoSync('sentiment phrase database updated');
+    return result;
 }
 function loadAssociateSentimentSnapshots() {
     return window.DevCoachModules?.storage?.loadAssociateSentimentSnapshots?.() || {};
 }
 function saveAssociateSentimentSnapshots() {
-    return window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
+    const result = window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
+    queueRepoSync('associate sentiment snapshots updated');
+    return result;
 }
 
 // ============================================
@@ -1603,6 +1613,7 @@ function saveTeamMembers() {
         if (!saveWithSizeCheck('myTeamMembers', myTeamMembers)) {
             console.error('Failed to save team members due to size');
         }
+        queueRepoSync('team members updated');
     } catch (error) {
         console.error('Error saving team members:', error);
     }
@@ -1639,6 +1650,7 @@ function loadCallCenterAverages() {
 function saveCallCenterAverages(averages) {
     try {
         localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
+        queueRepoSync('call center averages updated');
     } catch (error) {
         console.error('Error saving call center averages:', error);
     }
@@ -2909,6 +2921,7 @@ function loadYearEndAnnualGoalsStore() {
 function saveYearEndAnnualGoalsStore(store) {
     try {
         localStorage.setItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY, JSON.stringify(store || {}));
+        queueRepoSync('year-end annual goals updated');
     } catch (error) {
         console.error('Error saving year-end annual goals store:', error);
     }
@@ -2927,6 +2940,7 @@ function loadYearEndDraftStore() {
 function saveYearEndDraftStore(store) {
     try {
         localStorage.setItem(YEAR_END_DRAFT_STORAGE_KEY, JSON.stringify(store || {}));
+        queueRepoSync('year-end draft updated');
     } catch (error) {
         console.error('Error saving year-end draft store:', error);
     }
@@ -3005,7 +3019,26 @@ function getCallListeningSyncConfigFromUI() {
     return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled });
 }
 
-function queueCallListeningRepoSync(reason = 'updated') {
+function buildRepoSyncPayload(reason = 'updated') {
+    return {
+        appVersion: APP_VERSION,
+        reason,
+        generatedAt: new Date().toISOString(),
+        weeklyData: weeklyData || {},
+        ytdData: ytdData || {},
+        coachingHistory: coachingHistory || {},
+        callListeningLogs: callListeningLogs || {},
+        sentimentPhraseDatabase: sentimentPhraseDatabase || null,
+        associateSentimentSnapshots: associateSentimentSnapshots || {},
+        myTeamMembers: myTeamMembers || {},
+        callCenterAverages: loadCallCenterAverages() || {},
+        yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
+        yearEndDraftStore: loadYearEndDraftStore(),
+        callListeningCsv: exportCallListeningLogsToCSV()
+    };
+}
+
+function queueRepoSync(reason = 'updated') {
     const config = loadCallListeningSyncConfig();
     if (!config.autoSyncEnabled || !config.endpoint.trim()) {
         return;
@@ -3015,29 +3048,27 @@ function queueCallListeningRepoSync(reason = 'updated') {
         clearTimeout(callListeningSyncTimer);
     }
 
-    setCallListeningSyncStatus('Sync queued...', 'info');
+    setCallListeningSyncStatus('Sync queued (all app data)...', 'info');
     callListeningSyncTimer = setTimeout(() => {
-        syncCallListeningLogsToRepo(reason);
+        syncRepoData(reason);
     }, 1200);
 }
 
-async function syncCallListeningLogsToRepo(reason = 'updated') {
+function queueCallListeningRepoSync(reason = 'updated') {
+    queueRepoSync(reason);
+}
+
+async function syncRepoData(reason = 'updated') {
     const config = loadCallListeningSyncConfig();
     if (!config.autoSyncEnabled || !config.endpoint.trim()) {
         return;
     }
 
     const endpoint = config.endpoint.trim();
-    setCallListeningSyncStatus('Syncing call logs to repo...', 'info');
+    setCallListeningSyncStatus('Syncing all app data to repo...', 'info');
 
     try {
-        const payload = {
-            appVersion: APP_VERSION,
-            reason,
-            generatedAt: new Date().toISOString(),
-            callListeningLogs: callListeningLogs || {},
-            callListeningCsv: exportCallListeningLogsToCSV()
-        };
+        const payload = buildRepoSyncPayload(reason);
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -3057,9 +3088,9 @@ async function syncCallListeningLogsToRepo(reason = 'updated') {
             throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
         }
 
-        setCallListeningSyncStatus(`Last sync: ${new Date().toLocaleString()}`, 'success');
+        setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
     } catch (error) {
-        console.error('Call listening sync failed:', error);
+        console.error('Repo sync failed:', error);
         setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
     }
 }

@@ -21,12 +21,29 @@ export default {
 
       const jsonPath = `${dataDir}/call-listening-logs.json`;
       const csvPath = `${dataDir}/call-listening-logs.csv`;
+      const fullBackupPath = `${dataDir}/coaching-tool-sync-backup.json`;
 
       const normalizedPayload = {
         generatedAt,
         reason,
         sourceAppVersion: body?.appVersion || null,
         callListeningLogs
+      };
+
+      const fullBackupPayload = {
+        generatedAt,
+        reason,
+        sourceAppVersion: body?.appVersion || null,
+        weeklyData: body?.weeklyData && typeof body.weeklyData === 'object' ? body.weeklyData : {},
+        ytdData: body?.ytdData && typeof body.ytdData === 'object' ? body.ytdData : {},
+        coachingHistory: body?.coachingHistory && typeof body.coachingHistory === 'object' ? body.coachingHistory : {},
+        callListeningLogs,
+        sentimentPhraseDatabase: body?.sentimentPhraseDatabase && typeof body.sentimentPhraseDatabase === 'object' ? body.sentimentPhraseDatabase : null,
+        associateSentimentSnapshots: body?.associateSentimentSnapshots && typeof body.associateSentimentSnapshots === 'object' ? body.associateSentimentSnapshots : {},
+        myTeamMembers: body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {},
+        callCenterAverages: body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {},
+        yearEndAnnualGoalsStore: body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {},
+        yearEndDraftStore: body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {}
       };
 
       const csvContent = csvFromClient || buildCsvFromLogs(callListeningLogs);
@@ -47,13 +64,23 @@ export default {
         content: csvContent
       });
 
+      const fullBackupResult = await upsertRepoFile({
+        env,
+        branch,
+        path: fullBackupPath,
+        message: `chore(data): sync full coaching backup (${reason})`,
+        content: JSON.stringify(fullBackupPayload, null, 2)
+      });
+
       return json({
         ok: true,
         branch,
         jsonPath,
         csvPath,
+        fullBackupPath,
         jsonCommit: jsonResult.commitSha,
         csvCommit: csvResult.commitSha,
+        fullBackupCommit: fullBackupResult.commitSha,
         generatedAt
       });
     } catch (error) {

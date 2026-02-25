@@ -1,15 +1,17 @@
 # Call Listening Repo Sync Worker
 
-This Worker receives Call Listening logs from the app and commits them to this GitHub repo.
+This Worker receives app data from the browser and commits synced files to this GitHub repo.
 
 ## Files Updated in Repo
 
 - `data/call-listening-logs.json`
 - `data/call-listening-logs.csv`
+- `data/coaching-tool-sync-backup.json` (full app backup)
 
 A GitHub Action then regenerates:
 
 - `data/call-listening-logs.xlsx`
+- `data/coaching-tool-sync-backup.xlsx`
 
 ## 1) Configure Worker
 
@@ -31,7 +33,7 @@ The default owner/repo/branch are already set in `wrangler.toml`.
 2. Paste your deployed Worker URL into `Auto-Sync Worker URL`
 3. Keep `Auto-sync on save` checked
 
-Every add/update/delete save in Call Listening will now sync to repo.
+Every save/update/delete in the app that writes tracked data now syncs to repo.
 
 ## Notes
 
