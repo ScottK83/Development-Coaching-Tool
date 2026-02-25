@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T16:54:05.362Z",
-  "reason": "auto-sync-enforced-check",
-  "sourceAppVersion": "auto-sync-enforced-check",
+  "generatedAt": "2026-02-25T17:04:54.659Z",
+  "reason": "xlsx-tabular-smoke",
+  "sourceAppVersion": "xlsx-tabular-smoke",
   "callListeningLogs": {}
 }
