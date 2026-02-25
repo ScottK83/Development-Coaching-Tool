@@ -10348,25 +10348,38 @@ function extractYearEndBoxText(responseText, boxNumber) {
     const normalized = String(responseText).replace(/\r\n/g, '\n').trim();
     if (!normalized) return '';
 
-    const box1Regex = /(?:^|\n)\s*box\s*1\b[^\n]*:\s*/i;
-    const box2Regex = /(?:^|\n)\s*box\s*2\b[^\n]*:\s*/i;
-    const box1Match = box1Regex.exec(normalized);
-    const box2Match = box2Regex.exec(normalized);
+    const lines = normalized.split('\n');
+    const box1HeaderRegexes = [
+        /^\s*(?:box|section|question)\s*1\b/i,
+        /^\s*1\s*[\).:-]\s*(?:highlight|significant|accomplishments?)\b/i
+    ];
+    const box2HeaderRegexes = [
+        /^\s*(?:box|section|question)\s*2\b/i,
+        /^\s*2\s*[\).:-]\s*(?:identify|future|improvement)\b/i
+    ];
 
-    if (!box1Match && !box2Match) {
+    const findHeaderIndex = (regexes) => lines.findIndex(line => regexes.some(rx => rx.test(line)));
+    const box1Index = findHeaderIndex(box1HeaderRegexes);
+    const box2Index = findHeaderIndex(box2HeaderRegexes);
+
+    if (box1Index === -1 && box2Index === -1) {
         return boxNumber === 1 ? normalized : '';
     }
 
+    const extractSection = (startIndex, endIndex) => {
+        if (startIndex < 0 || startIndex >= lines.length) return '';
+        const headerLine = lines[startIndex] || '';
+        const colonIndex = headerLine.indexOf(':');
+        const inlineText = colonIndex >= 0 ? headerLine.slice(colonIndex + 1).trim() : '';
+        const bodyLines = lines.slice(startIndex + 1, endIndex > startIndex ? endIndex : lines.length);
+        return [inlineText, ...bodyLines].filter(Boolean).join('\n').trim();
+    };
+
     if (boxNumber === 1) {
-        if (!box1Match) return '';
-        const start = box1Match.index + box1Match[0].length;
-        const end = box2Match && box2Match.index > start ? box2Match.index : normalized.length;
-        return normalized.slice(start, end).trim();
+        return extractSection(box1Index, box2Index);
     }
 
-    if (!box2Match) return '';
-    const start = box2Match.index + box2Match[0].length;
-    return normalized.slice(start).trim();
+    return extractSection(box2Index, lines.length);
 }
 
 function copyYearEndBoxResponseToClipboard(boxNumber) {
