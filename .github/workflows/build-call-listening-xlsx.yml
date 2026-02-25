@@ -305,9 +305,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f data/coaching-tool-sync-backup.xlsx
+          git rm -f --ignore-unmatch data/coaching-tool-sync-backup.xlsx
           git add data/call-listening-logs.xlsx data/Development-Coaching-Tool.xlsx
-          git add -u data/coaching-tool-sync-backup.xlsx
           if git diff --cached --quiet; then
             echo "No XLSX changes to commit"
           else
