@@ -3166,6 +3166,7 @@ function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
     const syncNowBtn = document.getElementById('syncNowBtn');
+    const forceRestoreBtn = document.getElementById('forceRestoreRepoBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
 
     if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
@@ -3195,6 +3196,43 @@ function initializeRepoSyncControls() {
             }
         });
         syncNowBtn.dataset.bound = 'true';
+    }
+    if (forceRestoreBtn && !forceRestoreBtn.dataset.bound) {
+        forceRestoreBtn.addEventListener('click', async () => {
+            const confirmed = confirm('Restore from repo backup and overwrite ALL local data in this browser profile? This cannot be undone.');
+            if (!confirmed) return;
+
+            const buttonOriginalText = forceRestoreBtn.textContent;
+            forceRestoreBtn.disabled = true;
+            forceRestoreBtn.textContent = '⏳ Restoring...';
+            setCallListeningSyncStatus('Restoring from repo backup (overwrite local)...', 'info');
+
+            try {
+                const payload = await fetchRepoBackupPayload();
+                if (!hasMeaningfulBackupData(payload)) {
+                    throw new Error('No repo backup data found to restore.');
+                }
+
+                repoSyncHydrationInProgress = true;
+                try {
+                    applyRepoBackupPayload(payload);
+                } finally {
+                    repoSyncHydrationInProgress = false;
+                }
+
+                setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
+                showToast('✅ Local profile overwritten from repo backup.', 3500);
+                setTimeout(() => window.location.reload(), 500);
+            } catch (error) {
+                console.error('Force restore failed:', error);
+                setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');
+                showToast(`⚠️ Restore failed: ${error.message}`, 4000);
+            } finally {
+                forceRestoreBtn.disabled = false;
+                forceRestoreBtn.textContent = buttonOriginalText;
+            }
+        });
+        forceRestoreBtn.dataset.bound = 'true';
     }
     if (!openFullExcelBtn.dataset.bound) {
         openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('Development-Coaching-Tool.xlsx'));
