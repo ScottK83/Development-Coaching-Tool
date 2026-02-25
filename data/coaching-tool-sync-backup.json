@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T22:03:53.180Z",
+  "generatedAt": "2026-02-25T22:04:11.592Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
@@ -4584,7 +4584,7 @@
       "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 25.1% vs target 6.0%\nAfter Call Work: 110s vs target 60s\nOverall Experience: 76.7% vs target 84.0%\nReliability: 51.2 hrs vs target 16.0 hrs\nAnnual Goal Follow-up: Red Flag Violations: 0 violations (2)",
       "managerContext": "What Scoti put \n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nDelivering Consistent, High-Quality Member Support\nI maintained strong performance in handling member inquiries with accuracy, empathy, and professionalism. By applying APS principles such as member first and operating with integrity, I ensured every interaction was clear, timely, and solution focused. This helped build trust and reduce repeat contact.\n\nEnhancing Team Communication and Reducing Member Miscommunication\nI took initiative to communicate clearly with team leads, managers, and peers especially when members were waiting for escalations or guidance. Using the one APS principle, I made sure members never felt ignored by keeping them informed, setting expectations, and collaborating with teammates to deliver consistent and professional service. This helped prevent misunderstandings and supported smoother workflow across the team.\n\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nImproving Adherence and Schedule Alignment\nOne of the main areas of feedback I received was strengthening my adherence to scheduled breaks, lunches, and log-in times. Throughout 2024, I made a conscious effort to better manage my time and plans to stay aligned with schedule expectations. This helped support team coverage, reduce gaps in service, and ensured members experienced fewer delays during high-volume periods.\n\nReducing Call Handling Time While Maintaining Quality\nAnother focus area was improving my average handling time. With guidance from my leader and team leader, I worked on simplifying my call flow, staying more focused during interactions, and using resources more efficiently. I learned how to resolve issues faster without sacrificing accuracy or empathy, which improved both my productivity and the member experience.\n\n \nYear End Leader Discussion Topics and Feedback",
       "copilotResponse": "",
-      "performanceRating": "",
+      "performanceRating": "Successful",
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
@@ -4827,7 +4827,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 18,
-      "byteLength": 44490
+      "byteLength": 44500
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
