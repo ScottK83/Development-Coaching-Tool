@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T22:35:32.242Z",
+  "generatedAt": "2026-02-25T22:36:01.412Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
@@ -4650,7 +4650,7 @@
       "performanceRating": "Successful",
       "meritDetails": "2.0 to 25.98",
       "bonusAmount": "3434.73",
-      "verbalSummary": "Alyssa, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2.0 to 25.98.\nYour incentive/bonus amount is: 3434.73."
+      "verbalSummary": "Alyssa, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nFor this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2.0 to 25.98.\nYour incentive/bonus amount is: 3434.73."
     },
     "2026::Ronda Colis": {
       "trackStatus": "on-track",
@@ -4872,7 +4872,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 19,
-      "byteLength": 47292
+      "byteLength": 47425
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
