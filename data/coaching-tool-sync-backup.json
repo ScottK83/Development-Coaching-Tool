@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:20:12.420Z",
+  "generatedAt": "2026-02-25T21:20:21.957Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4555,8 +4555,8 @@
       "copilotResponse": "",
       "performanceRating": "Successful",
       "meritDetails": "3.14",
-      "bonusAmount": "",
-      "verbalSummary": ""
+      "bonusAmount": "4007.19",
+      "verbalSummary": "Caylie, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 3.14.\nYour incentive/bonus amount is: 4007.19."
     },
     "2025::Taylor Colter": {
       "trackStatus": "on-track",
@@ -4639,7 +4639,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 14,
-      "byteLength": 31987
+      "byteLength": 32469
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
