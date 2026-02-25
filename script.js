@@ -10018,6 +10018,92 @@ function buildOnOffScoreTableHtml(result) {
     `;
 }
 
+function getOnOffTrackerLegendBandsByYear(reviewYear) {
+    const yearNum = parseInt(reviewYear, 10);
+    const moduleBands = window?.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[yearNum];
+    if (moduleBands) {
+        return {
+            bands: moduleBands,
+            sourceLabel: `${yearNum} rating profile`,
+            usingFallback: false
+        };
+    }
+
+    const inlineBands = METRIC_RATING_BANDS_BY_YEAR?.[yearNum];
+    if (inlineBands) {
+        return {
+            bands: inlineBands,
+            sourceLabel: `${yearNum} inline rating bands`,
+            usingFallback: false
+        };
+    }
+
+    return {
+        bands: {
+            aht: { type: 'max', score3: { max: 419 }, score2: { max: 460 } },
+            scheduleAdherence: { type: 'min', score3: { min: 94.5 }, score2: { min: 92.5 } },
+            overallSentiment: { type: 'min', score3: { min: 90.1 }, score2: { min: 87.5 } },
+            cxRepOverall: { type: 'min', score3: { min: 82 }, score2: { min: 79.5 } },
+            reliability: { type: 'max', score3: { max: 16 }, score2: { max: 24 } }
+        },
+        sourceLabel: 'default mirror fallback bands',
+        usingFallback: true
+    };
+}
+
+function renderOnOffTrackerLegend(reviewYear) {
+    const legendEl = document.getElementById('onOffTrackerLegend');
+    if (!legendEl) return;
+
+    const { bands, sourceLabel, usingFallback } = getOnOffTrackerLegendBandsByYear(reviewYear);
+    const legendMetrics = [
+        { key: 'aht', label: 'AHT' },
+        { key: 'scheduleAdherence', label: 'Adherence' },
+        { key: 'overallSentiment', label: 'Overall Sentiment' },
+        { key: 'cxRepOverall', label: 'Associate Overall (Surveys)' },
+        { key: 'reliability', label: 'Reliability' }
+    ];
+
+    const formatValue = (metricKey, threshold) => formatMetricDisplay(metricKey, threshold);
+
+    const cards = legendMetrics.map(metric => {
+        const config = bands?.[metric.key];
+        if (!config) {
+            return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
+                <div style="font-size: 0.85em; color: #666;">No rating bands configured for selected year.</div>
+            </div>`;
+        }
+
+        if (config.type === 'min') {
+            const score3 = formatValue(metric.key, config.score3.min);
+            const score2 = formatValue(metric.key, config.score2.min);
+            return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
+                <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≥ ${score3}</div>
+                <div style="font-size: 0.85em; color: #8d6e00;">Score 2: ≥ ${score2} and &lt; ${score3}</div>
+                <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &lt; ${score2}</div>
+            </div>`;
+        }
+
+        const score3 = formatValue(metric.key, config.score3.max);
+        const score2 = formatValue(metric.key, config.score2.max);
+        return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+            <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
+            <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≤ ${score3}</div>
+            <div style="font-size: 0.85em; color: #8d6e00;">Score 2: &gt; ${score3} and ≤ ${score2}</div>
+            <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &gt; ${score2}</div>
+        </div>`;
+    }).join('');
+
+    legendEl.innerHTML = `
+        <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">🎯 On/Off Tracker Goal Legend (${reviewYear || 'N/A'})</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 8px;">${cards}</div>
+        <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track ≤ 1.79 · On Track/Successful 1.80–2.79 · On Track/Exceptional ≥ 2.80</div>
+        <div style="font-size: 0.78em; color: #777; margin-top: 3px;">Source: ${sourceLabel}${usingFallback ? ' (used when selected year has no rating profile)' : ''}</div>
+    `;
+}
+
 function initializeOnOffTracker() {
     const employeeSelect = document.getElementById('onOffTrackerEmployeeSelect');
     const reviewYearInput = document.getElementById('onOffTrackerReviewYear');
@@ -10033,6 +10119,8 @@ function initializeOnOffTracker() {
     if (!reviewYearInput.value) {
         reviewYearInput.value = String(new Date().getFullYear());
     }
+
+    renderOnOffTrackerLegend(reviewYearInput.value);
 
     employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
     const employees = getYearEndEmployees();
@@ -10081,6 +10169,8 @@ function updateOnOffTrackerDisplay() {
     const factsSummary = document.getElementById('onOffTrackerFactsSummary');
 
     if (!status || !panel || !factsSummary) return;
+
+    renderOnOffTrackerLegend(reviewYear);
 
     if (!employeeName || !reviewYear) {
         panel.style.display = 'none';
