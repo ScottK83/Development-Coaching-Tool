@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+$autoBumpEnabled = ($env:AUTO_BUMP_ON_PUSH -eq "1")
+
 $repoRoot = git rev-parse --show-toplevel
 if (-not $repoRoot) {
     Write-Host "Unable to determine repository root."
@@ -81,6 +83,12 @@ $headCommitMsg = git log -1 --pretty=%B
 if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
     # The previous push already created a version bump commit, don't loop
     Write-Host "HEAD is already a version bump commit from pre-push. Allowing push."
+    exit 0
+}
+
+if (-not $autoBumpEnabled) {
+    Write-Host "APP_VERSION ($currentVersion) is behind expected $nextVersion. Skipping auto-bump during push to avoid push retries."
+    Write-Host "Set AUTO_BUMP_ON_PUSH=1 to restore legacy auto-commit behavior."
     exit 0
 }
 
