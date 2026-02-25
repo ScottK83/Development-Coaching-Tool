@@ -10948,6 +10948,43 @@ function initializeYearEndComments() {
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 }
 
+function getYearEndRedFlagFollowUpLines(employeeName) {
+    if (!employeeName) return [];
+
+    try {
+        const raw = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes');
+        if (!raw) return [];
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return [];
+
+        const exactKey = Object.keys(parsed).find(key => key === employeeName)
+            || Object.keys(parsed).find(key => String(key).toLowerCase() === String(employeeName).toLowerCase());
+        if (!exactKey) return [];
+
+        const employeeNotes = parsed[exactKey];
+        if (!employeeNotes || typeof employeeNotes !== 'object') return [];
+
+        const lines = [];
+        Object.entries(employeeNotes).forEach(([periodKey, notes]) => {
+            const redFlagsRaw = String(notes?.redFlags || '').trim();
+            if (!redFlagsRaw) return;
+
+            const label = periodKey === 'ytd-summary' ? 'YTD Summary' : periodKey;
+            if (/^\d+$/.test(redFlagsRaw)) {
+                lines.push(`Red Flags (${label}): ${redFlagsRaw} logged`);
+            } else {
+                lines.push(`Red Flags (${label}): ${redFlagsRaw}`);
+            }
+        });
+
+        return lines;
+    } catch (error) {
+        console.error('Error loading red flags for year-end defaults:', error);
+        return [];
+    }
+}
+
 function updateYearEndSnapshotDisplay() {
     const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
     const reviewYear = document.getElementById('yearEndReviewYear')?.value;
@@ -11005,6 +11042,7 @@ function updateYearEndSnapshotDisplay() {
     if (responseInput) responseInput.value = savedDraft.copilotResponse;
 
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
+    const redFlagFollowUps = getYearEndRedFlagFollowUpLines(employeeName);
     const { wins, opportunities, targetProfileYear } = buildYearEndMetricSnapshot(
         latestPeriod.employeeRecord,
         reviewYear,
@@ -11037,12 +11075,27 @@ function updateYearEndSnapshotDisplay() {
             : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
     }
 
+    if (improvementsInput && redFlagFollowUps.length) {
+        const existingLines = String(improvementsInput.value || '')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean);
+        const existingNormalized = new Set(existingLines.map(line => line.toLowerCase()));
+        const missingRedFlagLines = redFlagFollowUps.filter(line => !existingNormalized.has(line.toLowerCase()));
+
+        if (missingRedFlagLines.length) {
+            improvementsInput.value = existingLines.length
+                ? `${existingLines.join('\n')}\n${missingRedFlagLines.join('\n')}`
+                : missingRedFlagLines.join('\n');
+        }
+    }
+
     if (improvementsInput && !improvementsInput.value.trim()) {
         const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
         improvementsInput.value = opportunities.length
-            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
-            : annualFollowUps.length
-                ? annualFollowUps.join('\n')
+            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps, redFlagFollowUps).join('\n')
+            : annualFollowUps.length || redFlagFollowUps.length
+                ? annualFollowUps.concat(redFlagFollowUps).join('\n')
                 : 'Continue building consistency and sustaining current performance levels.';
     }
 
@@ -11149,6 +11202,8 @@ Requirements:
 - Mention whether performance is on track or off track naturally
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
+- This is a completed ${reviewYear} year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
+- Do not use present-tense timing words for performance statements (do not use "currently", "currently at", "now", or "today")
 - Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)
 - Box 1 should emphasize meaningful accomplishments and impact
 - Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
