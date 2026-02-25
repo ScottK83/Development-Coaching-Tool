@@ -5944,8 +5944,37 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     const successes = allTrendMetrics 
         ? allTrendMetrics.filter(m => m.meetsTarget) 
         : [];
+
+    const buildMetricComparisonLine = (metric) => {
+        const currentDisplay = formatMetricDisplay(metric.metricKey, metric.employeeValue);
+        const targetDisplay = formatMetricDisplay(metric.metricKey, metric.target);
+        return `- ${metric.label}: ${currentDisplay} vs target ${targetDisplay}`;
+    };
     
     let prompt = `Draft a coaching email for ${displayName}.\n\n`;
+
+    if (allTrendMetrics && allTrendMetrics.length > 0) {
+        prompt += `POSITIVE HIGHLIGHTS:\n`;
+        if (successes.length > 0) {
+            successes.forEach(metric => {
+                prompt += `${buildMetricComparisonLine(metric)}\n`;
+            });
+        } else {
+            prompt += `- No metrics currently above target in this period.\n`;
+        }
+        prompt += `\n`;
+
+        const improvementMetrics = allTrendMetrics.filter(m => !m.meetsTarget);
+        prompt += `IMPROVEMENT AREAS:\n`;
+        if (improvementMetrics.length > 0) {
+            improvementMetrics.forEach(metric => {
+                prompt += `${buildMetricComparisonLine(metric)}\n`;
+            });
+        } else {
+            prompt += `- No below-target metrics detected in this period.\n`;
+        }
+        prompt += `\n`;
+    }
     
     if (successes.length > 0) {
         prompt += `WINS:\n`;
