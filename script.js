@@ -10840,14 +10840,17 @@ function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().get
     };
 }
 
-function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
+function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear(), periodMetadata = null) {
     const summaryEl = document.getElementById('yearEndOnOffSummary');
     const detailsEl = document.getElementById('yearEndOnOffDetails');
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
 
-    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear);
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear, {
+        goalSource: 'metric-trends',
+        periodMetadata
+    });
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10864,7 +10867,10 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
-    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear);
+    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear, {
+        goalSource: 'onoff',
+        periodMetadata: null
+    });
 
     if (!result.isComplete) {
         summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
@@ -10875,9 +10881,11 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     return result;
 }
 
-function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear()) {
+function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(), options = {}) {
+    const goalSource = options?.goalSource === 'metric-trends' ? 'metric-trends' : 'onoff';
+    const periodMetadata = options?.periodMetadata || null;
     const { bands } = getOnOffTrackerLegendBandsByYear(reviewYear);
-    const resolveGoalText = (bandKey, formatKey) => {
+    const resolveOnOffGoalText = (bandKey, formatKey) => {
         const config = bands?.[bandKey];
         if (!config) return 'N/A';
         if (config.type === 'min') {
@@ -10888,35 +10896,49 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear())
         return targetValue === undefined ? 'N/A' : `≤ ${formatMetricDisplay(formatKey, targetValue)}`;
     };
 
+    const resolveMetricTrendsGoalText = (metricKey, formatKey) => {
+        const targetConfig = getYearEndTargetConfig(metricKey, reviewYear, periodMetadata);
+        if (!targetConfig || targetConfig.value === undefined || targetConfig.value === null) return 'N/A';
+        const operator = targetConfig.type === 'min' ? '≥' : '≤';
+        return `${operator} ${formatMetricDisplay(formatKey, targetConfig.value)}`;
+    };
+
+    const resolveGoalText = (targetMetricKey, bandMetricKey, formatKey) => {
+        if (goalSource === 'metric-trends') {
+            return resolveMetricTrendsGoalText(targetMetricKey, formatKey);
+        }
+        return resolveOnOffGoalText(bandMetricKey, formatKey);
+    };
+
     const rows = [
         {
             label: 'AHT',
             valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
-            goalText: resolveGoalText('aht', 'aht'),
+            goalText: resolveGoalText('aht', 'aht', 'aht'),
             score: result.scores.aht
         },
         {
             label: 'Adherence',
             valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
-            goalText: resolveGoalText('scheduleAdherence', 'scheduleAdherence'),
+            goalText: resolveGoalText('scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence'),
             score: result.scores.adherence
         },
         {
             label: 'Overall Sentiment',
             valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            goalText: resolveGoalText('overallSentiment', 'overallSentiment'),
+            goalText: resolveGoalText('overallSentiment', 'overallSentiment', 'overallSentiment'),
             score: result.scores.sentiment
         },
         {
             label: 'Associate Overall (Surveys)',
             valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
-            goalText: resolveGoalText('cxRepOverall', 'overallExperience'),
+            goalText: resolveGoalText('cxRepOverall', 'cxRepOverall', 'overallExperience'),
             score: result.scores.associateOverall
         },
         {
             label: 'Reliability',
             valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
-            goalText: resolveGoalText('reliability', 'reliability'),
+            goalText: resolveGoalText('reliability', 'reliability', 'reliability'),
             score: result.scores.reliability
         }
     ];
@@ -11400,7 +11422,11 @@ function updateYearEndSnapshotDisplay() {
         ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
         : '<li>No below-target metrics detected in this period.</li>';
 
-    const onOffMirror = renderYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
+    const onOffMirror = renderYearEndOnOffMirror(
+        latestPeriod.employeeRecord,
+        reviewYear,
+        latestPeriod.period?.metadata || null
+    );
     if (trackSelect && !trackSelect.value && onOffMirror?.trackStatusValue) {
         trackSelect.value = onOffMirror.trackStatusValue;
     }
