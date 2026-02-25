@@ -1,0 +1,68 @@
+name: Build Call Listening XLSX
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - data/call-listening-logs.csv
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-xlsx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install openpyxl
+
+      - name: Build XLSX from CSV
+        run: |
+          python - <<'PY'
+          import csv
+          import os
+          from openpyxl import Workbook
+
+          csv_path = 'data/call-listening-logs.csv'
+          xlsx_path = 'data/call-listening-logs.xlsx'
+
+          if not os.path.exists(csv_path):
+              raise SystemExit('CSV not found: data/call-listening-logs.csv')
+
+          wb = Workbook()
+          ws = wb.active
+          ws.title = 'Call Listening Logs'
+
+          with open(csv_path, newline='', encoding='utf-8') as f:
+              reader = csv.reader(f)
+              for row in reader:
+                  ws.append(row)
+
+          for column_cells in ws.columns:
+              length = max((len(str(cell.value)) if cell.value is not None else 0) for cell in column_cells)
+              ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 12), 60)
+
+          wb.save(xlsx_path)
+          print(f'Built {xlsx_path}')
+          PY
+
+      - name: Commit XLSX if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/call-listening-logs.xlsx
+          if git diff --cached --quiet; then
+            echo "No XLSX changes to commit"
+          else
+            git commit -m "chore(data): regenerate call listening xlsx"
+            git push
+          fi

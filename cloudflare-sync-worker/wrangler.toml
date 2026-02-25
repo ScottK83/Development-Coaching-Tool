@@ -1,0 +1,9 @@
+name = "dev-coaching-sync"
+main = "index.js"
+compatibility_date = "2026-02-25"
+
+[vars]
+GH_OWNER = "ScottK83"
+GH_REPO = "Development-Coaching-Tool"
+GH_BRANCH = "main"
+GH_DATA_DIR = "data"

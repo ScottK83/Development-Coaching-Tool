@@ -403,6 +403,19 @@ Box 2 - Future Improvement Areas:
                                     <input type="text" id="callListeningReference" placeholder="Interaction ID / case #" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                                 </div>
                             </div>
+                            <div style="margin-top: 14px; padding: 12px; background: #f5f7f8; border: 1px solid #cfd8dc; border-radius: 6px;">
+                                <div style="display: grid; grid-template-columns: 2fr auto; gap: 10px; align-items: end;">
+                                    <div>
+                                        <label for="callListeningSyncEndpoint" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Auto-Sync Worker URL (optional):</label>
+                                        <input type="url" id="callListeningSyncEndpoint" placeholder="https://your-worker.your-subdomain.workers.dev" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                    </div>
+                                    <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold; color: #333; white-space: nowrap; margin-bottom: 8px;">
+                                        <input type="checkbox" id="callListeningAutoSyncEnabled" checked>
+                                        Auto-sync on save
+                                    </label>
+                                </div>
+                                <div id="callListeningSyncStatus" style="margin-top: 8px; font-size: 0.85em; color: #546e7a;"></div>
+                            </div>
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #455a64;">

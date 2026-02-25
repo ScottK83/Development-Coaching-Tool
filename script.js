@@ -135,6 +135,7 @@ let coachingLatestWeekKey = null;
 let coachingHistory = {};
 let yearEndDraftContext = null;
 let callListeningLogs = {};
+let callListeningSyncTimer = null;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
@@ -197,6 +198,7 @@ const DEBUG_MAX_ENTRIES = 50;
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
+const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
 
 const YEAR_END_TARGETS_BY_YEAR = {
     2025: {
@@ -2819,6 +2821,7 @@ function initializeEventHandlers() {
         saveWeeklyData();
         saveYtdData();
         saveTeamMembers();
+        saveCallListeningLogs(true, 'cleared all data');
         
         populateDeleteWeekDropdown();
         
@@ -2940,13 +2943,124 @@ function loadCallListeningLogs() {
     }
 }
 
-function saveCallListeningLogs() {
+function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     try {
         if (!saveWithSizeCheck('callListeningLogs', callListeningLogs || {})) {
             console.error('Failed to save call listening logs due to size');
         }
+        if (triggerSync) {
+            queueCallListeningRepoSync(reason);
+        }
     } catch (error) {
         console.error('Error saving call listening logs:', error);
+    }
+}
+
+function getDefaultCallListeningSyncConfig() {
+    return {
+        endpoint: '',
+        autoSyncEnabled: true
+    };
+}
+
+function loadCallListeningSyncConfig() {
+    try {
+        const raw = localStorage.getItem(CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        const defaults = getDefaultCallListeningSyncConfig();
+        return {
+            endpoint: typeof parsed?.endpoint === 'string' ? parsed.endpoint : defaults.endpoint,
+            autoSyncEnabled: typeof parsed?.autoSyncEnabled === 'boolean' ? parsed.autoSyncEnabled : defaults.autoSyncEnabled
+        };
+    } catch (error) {
+        console.error('Error loading call listening sync config:', error);
+        return getDefaultCallListeningSyncConfig();
+    }
+}
+
+function saveCallListeningSyncConfig(config) {
+    const safeConfig = {
+        endpoint: String(config?.endpoint || '').trim(),
+        autoSyncEnabled: Boolean(config?.autoSyncEnabled)
+    };
+    try {
+        localStorage.setItem(CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY, JSON.stringify(safeConfig));
+    } catch (error) {
+        console.error('Error saving call listening sync config:', error);
+    }
+    return safeConfig;
+}
+
+function setCallListeningSyncStatus(message, type = 'info') {
+    const statusEl = document.getElementById('callListeningSyncStatus');
+    if (!statusEl) return;
+    const color = type === 'success' ? '#2e7d32' : type === 'error' ? '#b71c1c' : '#546e7a';
+    statusEl.style.color = color;
+    statusEl.textContent = message;
+}
+
+function getCallListeningSyncConfigFromUI() {
+    const endpoint = document.getElementById('callListeningSyncEndpoint')?.value || '';
+    const autoSyncEnabled = document.getElementById('callListeningAutoSyncEnabled')?.checked ?? true;
+    return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled });
+}
+
+function queueCallListeningRepoSync(reason = 'updated') {
+    const config = loadCallListeningSyncConfig();
+    if (!config.autoSyncEnabled || !config.endpoint.trim()) {
+        return;
+    }
+
+    if (callListeningSyncTimer) {
+        clearTimeout(callListeningSyncTimer);
+    }
+
+    setCallListeningSyncStatus('Sync queued...', 'info');
+    callListeningSyncTimer = setTimeout(() => {
+        syncCallListeningLogsToRepo(reason);
+    }, 1200);
+}
+
+async function syncCallListeningLogsToRepo(reason = 'updated') {
+    const config = loadCallListeningSyncConfig();
+    if (!config.autoSyncEnabled || !config.endpoint.trim()) {
+        return;
+    }
+
+    const endpoint = config.endpoint.trim();
+    setCallListeningSyncStatus('Syncing call logs to repo...', 'info');
+
+    try {
+        const payload = {
+            appVersion: APP_VERSION,
+            reason,
+            generatedAt: new Date().toISOString(),
+            callListeningLogs: callListeningLogs || {},
+            callListeningCsv: exportCallListeningLogsToCSV()
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            let details = '';
+            try {
+                details = await response.text();
+            } catch (error) {
+                details = '';
+            }
+            throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
+        }
+
+        setCallListeningSyncStatus(`Last sync: ${new Date().toLocaleString()}`, 'success');
+    } catch (error) {
+        console.error('Call listening sync failed:', error);
+        setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
     }
 }
 
@@ -9593,6 +9707,7 @@ function getCallListeningDraftFromForm() {
 }
 
 function upsertCallListeningEntryFromForm(showSavedToast = false) {
+    getCallListeningSyncConfigFromUI();
     const draft = getCallListeningDraftFromForm();
     if (!draft.employeeName) {
         alert('⚠️ Please select an associate first.');
@@ -9711,6 +9826,27 @@ function loadCallListeningEntryIntoForm(entryId) {
     setValue('callListeningManagerNotes', entry.managerNotes);
 
     showToast('✅ Loaded saved call log into form.', 2500);
+}
+
+function deleteCallListeningEntryById(entryId) {
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    if (!employeeName || !entryId) return;
+
+    const entries = Array.isArray(callListeningLogs[employeeName]) ? callListeningLogs[employeeName] : [];
+    const target = entries.find(entry => entry?.id === entryId);
+    if (!target) return;
+
+    const confirmed = confirm(`Delete this call listening entry for ${employeeName} (${target.listenedOn || 'date unknown'})?`);
+    if (!confirmed) return;
+
+    callListeningLogs[employeeName] = entries.filter(entry => entry?.id !== entryId);
+    if (!callListeningLogs[employeeName].length) {
+        delete callListeningLogs[employeeName];
+    }
+
+    saveCallListeningLogs(true, 'entry deleted');
+    renderCallListeningHistoryForSelectedEmployee();
+    showToast('✅ Call listening entry deleted.', 2500);
 }
 
 function buildCallListeningPrompt(entry) {
@@ -9844,6 +9980,7 @@ function renderCallListeningHistoryForSelectedEmployee() {
             <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                 <button type="button" data-call-action="load" data-entry-id="${escapeHtml(entry.id)}" style="background: #607d8b; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Load</button>
                 <button type="button" data-call-action="copy-verint" data-entry-id="${escapeHtml(entry.id)}" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Copy Verint</button>
+                <button type="button" data-call-action="delete" data-entry-id="${escapeHtml(entry.id)}" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Delete</button>
             </div>
         </li>`;
     }).join('');
@@ -9860,9 +9997,20 @@ function initializeCallListeningSection() {
     const historyList = document.getElementById('callListeningHistoryList');
     const outlookBody = document.getElementById('callListeningOutlookBody');
     const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
+    const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
+    const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
 
-    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn) {
+    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn || !syncEndpointInput || !autoSyncCheckbox) {
         return;
+    }
+
+    const syncConfig = loadCallListeningSyncConfig();
+    syncEndpointInput.value = syncConfig.endpoint || '';
+    autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
+    if (syncConfig.autoSyncEnabled && syncConfig.endpoint.trim()) {
+        setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+    } else {
+        setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
     }
 
     if (!dateInput.value) {
@@ -9907,6 +10055,28 @@ function initializeCallListeningSection() {
         generatePromptBtn.addEventListener('click', generateCallListeningPromptAndCopy);
         generatePromptBtn.dataset.bound = 'true';
     }
+    if (!syncEndpointInput.dataset.bound) {
+        syncEndpointInput.addEventListener('change', () => {
+            const nextConfig = getCallListeningSyncConfigFromUI();
+            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
+                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+            } else {
+                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+            }
+        });
+        syncEndpointInput.dataset.bound = 'true';
+    }
+    if (!autoSyncCheckbox.dataset.bound) {
+        autoSyncCheckbox.addEventListener('change', () => {
+            const nextConfig = getCallListeningSyncConfigFromUI();
+            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
+                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+            } else {
+                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+            }
+        });
+        autoSyncCheckbox.dataset.bound = 'true';
+    }
     if (!outlookBody.dataset.bound) {
         outlookBody.addEventListener('input', (event) => {
             const hasContent = event.target.value.trim().length > 0;
@@ -9931,6 +10101,8 @@ function initializeCallListeningSection() {
                 loadCallListeningEntryIntoForm(entryId);
             } else if (action === 'copy-verint') {
                 copyCallListeningVerintSummary(entryId);
+            } else if (action === 'delete') {
+                deleteCallListeningEntryById(entryId);
             }
         });
         historyList.dataset.bound = 'true';
