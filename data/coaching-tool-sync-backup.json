@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:34:41.931Z",
+  "generatedAt": "2026-02-25T21:34:43.752Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4612,7 +4612,7 @@
       "performanceRating": "Successful",
       "meritDetails": "2.47 to 24.85",
       "bonusAmount": "3633.60",
-      "verbalSummary": ""
+      "verbalSummary": "Pamela, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2.47 to 24.85.\nYour incentive/bonus amount is: 3633.60."
     }
   },
   "appStorageSnapshot": {
@@ -4684,7 +4684,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 15,
-      "byteLength": 34875
+      "byteLength": 35359
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
