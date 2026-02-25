@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T21:34:51.998Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-25T21:35:39.457Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4608,7 +4608,7 @@
       "positivesText": "Hold Time: 9s vs target 30s\nOverall Sentiment: 89.3% vs target 88.0%\nAvoid Negative Words: 90.9% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.9% vs target 93.0%\nTransfers: 26.3% vs target 6.0%\nAverage Handle Time: 568s vs target 440s\nAfter Call Work: 67s vs target 60s\nPositive Word: 82.2% vs target 86.0%\nManaging Emotions: 94.9% vs target 95.0%",
       "managerContext": "",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nPamela’s performance was solidly on track for the year, and she delivered several meaningful accomplishments that supported both business goals and APS principles. She consistently exceeded key quality metrics, including Hold Time at 9s against a 30s goal, Overall Sentiment at 89.3% against an 88.0% goal, and Avoid Negative Words at 90.9% against an 83.0% goal. Her commitment to safety and compliance was exceptional, meeting all APS annual goals such as 100% accuracy on Emergency Safety Hazard Calls, 0 ACC substantiated complaints, 0 phishing email clicks, and timely completion of all required training. She also maintained 100% accuracy on Deposit Waiver reviews and had no Red Flag violations, demonstrating strong attention to detail and reliability. These results reflected a steady, dependable performance that contributed positively to team outcomes.\n\nBox 2 - Future Improvement Areas:\nOne area for continued growth is strengthening efficiency metrics, particularly Transfers at 26.3% against a 6.0% goal and Average Handle Time at 568s against a 440s goal, along with reducing After Call Work from 67s toward the 60s target. In addition, focusing on communication consistency by increasing Positive Word usage from 82.2% toward the 86.0% goal would help reinforce customer experience quality.",
       "performanceRating": "Successful",
       "meritDetails": "2.47 to 24.85",
       "bonusAmount": "3633.60",
@@ -4659,7 +4659,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -4684,7 +4684,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 15,
-      "byteLength": 35359
+      "byteLength": 36706
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
