@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:21:09.538Z",
+  "generatedAt": "2026-02-25T21:34:06.984Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4428,6 +4428,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Pamela Muhammad": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4568,6 +4602,17 @@
       "meritDetails": "3.69 and 28.08",
       "bonusAmount": "4260.50",
       "verbalSummary": "Taylor, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 3.69 and 28.08.\nYour incentive/bonus amount is: 4260.50."
+    },
+    "2025::Pamela Muhammad": {
+      "trackStatus": "",
+      "positivesText": "Hold Time: 9s vs target 30s\nOverall Sentiment: 89.3% vs target 88.0%\nAvoid Negative Words: 90.9% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 92.9% vs target 93.0%\nTransfers: 26.3% vs target 6.0%\nAverage Handle Time: 568s vs target 440s\nAfter Call Work: 67s vs target 60s\nPositive Word: 82.2% vs target 86.0%\nManaging Emotions: 94.9% vs target 95.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -4614,12 +4659,12 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 132
+      "byteLength": 125
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 12,
-      "byteLength": 5055
+      "itemCount": 13,
+      "byteLength": 5475
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -4638,8 +4683,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 14,
-      "byteLength": 34048
+      "itemCount": 15,
+      "byteLength": 34837
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
