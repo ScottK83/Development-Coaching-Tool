@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T23:38:43.260Z",
+  "generatedAt": "2026-02-25T23:38:45.335Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
@@ -4837,7 +4837,7 @@
       "verbalSummary": ""
     },
     "2026::Jenifer Henson": {
-      "trackStatus": "off-track",
+      "trackStatus": "on-track",
       "positivesText": "Hold Time: 17s vs target 30s\nAfter Call Work: 0s vs target 60s\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 100.0% vs target 73.0%\nOverall Sentiment: 88.7% vs target 88.0%\nPositive Word: 92.4% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 91.4% vs target 93.0%\nTransfers: 9.2% vs target 6.0%\nAverage Handle Time: 480s vs target 414s\nOverall Experience: 66.7% vs target 84.0%\nAvoid Negative Words: 80.0% vs target 83.0%\nManaging Emotions: 93.6% vs target 95.0%",
       "managerContext": "",
@@ -4917,7 +4917,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 20,
-      "byteLength": 49649
+      "byteLength": 49648
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
