@@ -3012,6 +3012,23 @@ function saveCallListeningSyncConfig(config) {
     return safeConfig;
 }
 
+function enforceRepoAutoSyncEnabled() {
+    const defaults = getDefaultCallListeningSyncConfig();
+    const current = loadCallListeningSyncConfig();
+
+    const endpoint = String(current?.endpoint || '').trim() || defaults.endpoint;
+    const normalized = {
+        endpoint,
+        autoSyncEnabled: true
+    };
+
+    if (current?.autoSyncEnabled !== true || String(current?.endpoint || '').trim() !== endpoint) {
+        saveCallListeningSyncConfig(normalized);
+    }
+
+    return normalized;
+}
+
 function setCallListeningSyncStatus(message, type = 'info') {
     const statusEl = document.getElementById('callListeningSyncStatus');
     if (!statusEl) return;
@@ -9399,6 +9416,7 @@ function initApp() {
     // Initialize event handlers
     initializeEventHandlers();
     initializeKeyboardShortcuts();
+    enforceRepoAutoSyncEnabled();
     initializeRepoSyncControls();
     installRepoSyncStorageHooks();
     
