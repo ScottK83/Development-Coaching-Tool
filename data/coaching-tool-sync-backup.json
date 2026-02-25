@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:27:55.321Z",
+  "generatedAt": "2026-02-25T20:28:01.337Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4432,7 +4432,7 @@
       "performanceRating": "Successful",
       "meritDetails": "2% to 25.98",
       "bonusAmount": "3434.73",
-      "verbalSummary": "Ang, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2% to 25.98.\nYour incentive/bonus amount is: 3434.73."
+      "verbalSummary": "Ang, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2% to 25.98.\nYour incentive/bonus amount is: 3434.73."
     }
   },
   "appStorageSnapshot": {
@@ -4504,7 +4504,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 11,
-      "byteLength": 19182
+      "byteLength": 19342
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
