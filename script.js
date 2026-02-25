@@ -2958,7 +2958,7 @@ function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
 
 function getDefaultCallListeningSyncConfig() {
     return {
-        endpoint: '',
+        endpoint: 'https://dev-coaching-sync.scottk.workers.dev',
         autoSyncEnabled: true
     };
 }
