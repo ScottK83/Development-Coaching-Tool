@@ -11149,6 +11149,7 @@ Requirements:
 - Mention whether performance is on track or off track naturally
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
+- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)
 - Box 1 should emphasize meaningful accomplishments and impact
 - Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
 - Keep each box concise (about 3-6 sentences each)

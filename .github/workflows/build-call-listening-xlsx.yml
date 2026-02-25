@@ -56,6 +56,148 @@ jobs:
           wb.save(xlsx_path)
           print(f'Built {xlsx_path}')
 
+            def safe_sheet_name(name):
+              return str(name or 'Sheet')[:31]
+
+            def auto_size(ws, min_width=12, max_width=80):
+              for column_cells in ws.columns:
+                length = max((len(str(cell.value)) if cell.value is not None else 0) for cell in column_cells)
+                ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, min_width), max_width)
+
+            def write_table(wb_obj, title, headers, rows):
+              sheet = wb_obj.create_sheet(title=safe_sheet_name(title))
+              sheet.append(headers)
+              for row in rows:
+                sheet.append([row.get(col, '') for col in headers])
+              auto_size(sheet)
+              return sheet
+
+            def flatten_period_data(period_data):
+              period_data = period_data or {}
+              employee_records = []
+              metric_keys = set()
+
+              for period_key, period in period_data.items():
+                if not isinstance(period, dict):
+                  continue
+                metadata = period.get('metadata') if isinstance(period.get('metadata'), dict) else {}
+                employees = period.get('employees') if isinstance(period.get('employees'), list) else []
+                for employee in employees:
+                  if not isinstance(employee, dict):
+                    continue
+                  metric_keys.update(k for k in employee.keys() if k not in {'name', 'employeeId', 'id'})
+                  employee_records.append((period_key, metadata, employee))
+
+              metric_columns = sorted(metric_keys)
+              base_columns = ['PeriodKey', 'PeriodType', 'Label', 'StartDate', 'EndDate', 'ReviewYear', 'EmployeeName']
+              headers = base_columns + metric_columns
+
+              rows = []
+              for period_key, metadata, employee in employee_records:
+                row = {
+                  'PeriodKey': period_key,
+                  'PeriodType': metadata.get('periodType', ''),
+                  'Label': metadata.get('label', ''),
+                  'StartDate': metadata.get('startDate', ''),
+                  'EndDate': metadata.get('endDate', ''),
+                  'ReviewYear': metadata.get('yearEndReviewYear', ''),
+                  'EmployeeName': employee.get('name', '')
+                }
+                for key in metric_columns:
+                  row[key] = employee.get(key, '')
+                rows.append(row)
+
+              return headers, rows
+
+            def flatten_object_list_map(data_map, owner_col='Owner'):
+              data_map = data_map or {}
+              records = []
+              value_keys = set()
+              for owner, entries in data_map.items():
+                if isinstance(entries, dict):
+                  entries = [entries]
+                if not isinstance(entries, list):
+                  continue
+                for idx, entry in enumerate(entries, start=1):
+                  if isinstance(entry, dict):
+                    value_keys.update(entry.keys())
+                    records.append((owner, idx, entry))
+                  else:
+                    records.append((owner, idx, {'Value': str(entry)}))
+                    value_keys.add('Value')
+
+              dynamic = sorted(value_keys)
+              headers = [owner_col, 'Row'] + dynamic
+              rows = []
+              for owner, idx, entry in records:
+                row = {owner_col: owner, 'Row': idx}
+                for key in dynamic:
+                  row[key] = entry.get(key, '')
+                rows.append(row)
+              return headers, rows
+
+            def flatten_scalar_map(data_map, key_col='Key'):
+              data_map = data_map or {}
+              metric_keys = set()
+              for value in data_map.values():
+                if isinstance(value, dict):
+                  metric_keys.update(value.keys())
+              dynamic = sorted(metric_keys)
+              headers = [key_col] + dynamic
+              rows = []
+              for key, value in data_map.items():
+                row = {key_col: key}
+                if isinstance(value, dict):
+                  for metric in dynamic:
+                    row[metric] = value.get(metric, '')
+                rows.append(row)
+              return headers, rows
+
+            def flatten_team_members(data_map):
+              rows = []
+              for period_key, members in (data_map or {}).items():
+                if isinstance(members, list):
+                  for member in members:
+                    rows.append({'PeriodKey': period_key, 'TeamMember': member})
+                else:
+                  rows.append({'PeriodKey': period_key, 'TeamMember': str(members)})
+              return ['PeriodKey', 'TeamMember'], rows
+
+            def flatten_storage_snapshot(snapshot):
+              rows = []
+              for key, raw in (snapshot or {}).items():
+                value_type = type(raw).__name__
+                item_count = ''
+                preview = ''
+                parsed = raw
+                if isinstance(raw, str):
+                  text = raw.strip()
+                  if text and text[0] in '{[':
+                    try:
+                      parsed = json.loads(raw)
+                    except Exception:
+                      parsed = raw
+
+                if isinstance(parsed, dict):
+                  value_type = 'object'
+                  item_count = len(parsed)
+                  preview = json.dumps(parsed, ensure_ascii=False)[:350]
+                elif isinstance(parsed, list):
+                  value_type = 'array'
+                  item_count = len(parsed)
+                  preview = json.dumps(parsed, ensure_ascii=False)[:350]
+                else:
+                  preview = str(parsed)[:350]
+
+                rows.append({
+                  'StorageKey': key,
+                  'ValueType': value_type,
+                  'ItemCount': item_count,
+                  'Preview': preview
+                })
+
+              return ['StorageKey', 'ValueType', 'ItemCount', 'Preview'], rows
+
           full_json_path = 'data/coaching-tool-sync-backup.json'
           full_xlsx_path = 'data/coaching-tool-sync-backup.xlsx'
           if os.path.exists(full_json_path):
@@ -70,28 +212,45 @@ jobs:
               overview.append(['reason', str(payload.get('reason', ''))])
               overview.append(['sourceAppVersion', str(payload.get('sourceAppVersion', ''))])
 
-              for key in [
-                  'weeklyData',
-                  'ytdData',
-                  'coachingHistory',
-                  'callListeningLogs',
-                  'sentimentPhraseDatabase',
-                  'associateSentimentSnapshots',
-                  'myTeamMembers',
-                  'callCenterAverages',
-                  'yearEndAnnualGoalsStore',
-                  'yearEndDraftStore',
-                  'appStorageSnapshot'
-              ]:
-                  sheet = full_wb.create_sheet(title=key[:31])
-                  sheet.append(['JSON'])
-                  raw = json.dumps(payload.get(key, {}), indent=2, ensure_ascii=False)
-                  for line in raw.splitlines() or ['{}']:
-                      sheet.append([line])
-                  sheet.column_dimensions['A'].width = 120
+              weekly_headers, weekly_rows = flatten_period_data(payload.get('weeklyData'))
+              ytd_headers, ytd_rows = flatten_period_data(payload.get('ytdData'))
+              coaching_headers, coaching_rows = flatten_object_list_map(payload.get('coachingHistory'), owner_col='Employee')
+              call_headers, call_rows = flatten_object_list_map(payload.get('callListeningLogs'), owner_col='Employee')
+              avg_headers, avg_rows = flatten_scalar_map(payload.get('callCenterAverages'), key_col='PeriodKey')
+              team_headers, team_rows = flatten_team_members(payload.get('myTeamMembers'))
+              goals_headers, goals_rows = flatten_scalar_map(payload.get('yearEndAnnualGoalsStore'), key_col='StateKey')
+              draft_headers, draft_rows = flatten_scalar_map(payload.get('yearEndDraftStore'), key_col='StateKey')
+              snapshot_headers, snapshot_rows = flatten_storage_snapshot(payload.get('appStorageSnapshot'))
 
-              overview.column_dimensions['A'].width = 28
-              overview.column_dimensions['B'].width = 40
+              overview.append(['weeklyData employee rows', len(weekly_rows)])
+              overview.append(['ytdData employee rows', len(ytd_rows)])
+              overview.append(['coachingHistory rows', len(coaching_rows)])
+              overview.append(['callListeningLogs rows', len(call_rows)])
+              overview.append(['team member rows', len(team_rows)])
+              overview.append(['appStorageSnapshot keys', len(snapshot_rows)])
+
+              write_table(full_wb, 'WeeklyData', weekly_headers, weekly_rows)
+              write_table(full_wb, 'YTDData', ytd_headers, ytd_rows)
+              write_table(full_wb, 'CoachingHistory', coaching_headers, coaching_rows)
+              write_table(full_wb, 'CallListening', call_headers, call_rows)
+              write_table(full_wb, 'CallCenterAverages', avg_headers, avg_rows)
+              write_table(full_wb, 'TeamMembers', team_headers, team_rows)
+              write_table(full_wb, 'YearEndGoals', goals_headers, goals_rows)
+              write_table(full_wb, 'YearEndDrafts', draft_headers, draft_rows)
+              write_table(full_wb, 'AppStorage', snapshot_headers, snapshot_rows)
+
+              sentiment_sheet = full_wb.create_sheet(title='SentimentDB')
+              sentiment_sheet.append(['JSON'])
+              sentiment_raw = json.dumps(payload.get('sentimentPhraseDatabase', {}), ensure_ascii=False)
+              sentiment_sheet.append([sentiment_raw])
+              sentiment_sheet.column_dimensions['A'].width = 120
+
+              raw_sheet = full_wb.create_sheet(title='RawBackupJSON')
+              raw_sheet.append(['JSON'])
+              raw_sheet.append([json.dumps(payload, ensure_ascii=False)])
+              raw_sheet.column_dimensions['A'].width = 140
+
+              auto_size(overview, min_width=18, max_width=60)
               full_wb.save(full_xlsx_path)
               print(f'Built {full_xlsx_path}')
           PY
