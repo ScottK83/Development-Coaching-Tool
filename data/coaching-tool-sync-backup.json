@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T22:04:24.707Z",
-  "reason": "year-end draft updated",
+  "generatedAt": "2026-02-25T22:04:31.773Z",
+  "reason": "year-end annual goals updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4587,7 +4587,7 @@
       "performanceRating": "Successful",
       "meritDetails": "2% 25.98",
       "bonusAmount": "3434.73",
-      "verbalSummary": ""
+      "verbalSummary": "Scoticia, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nFor this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2% 25.98.\nYour incentive/bonus amount is: 3434.73."
     },
     "2025::Teena Pokorski": {
       "trackStatus": "on-track",
@@ -4827,7 +4827,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 18,
-      "byteLength": 44515
+      "byteLength": 44969
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
