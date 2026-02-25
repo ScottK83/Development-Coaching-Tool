@@ -47,6 +47,18 @@ export default {
         appStorageSnapshot: body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {}
       };
 
+      const incomingHasData = hasMeaningfulBackupData(fullBackupPayload);
+      const existingBackup = await getRepoJsonFile(env, branch, fullBackupPath);
+      const existingHasData = hasMeaningfulBackupData(existingBackup);
+
+      if (!incomingHasData && existingHasData) {
+        return json({
+          ok: false,
+          code: 'EMPTY_PAYLOAD_GUARD',
+          error: 'Refusing to overwrite non-empty repo backup with an empty payload. Use a browser profile with synced data.'
+        }, 409);
+      }
+
       const csvContent = csvFromClient || buildCsvFromLogs(callListeningLogs);
 
       const jsonResult = await upsertRepoFile({
@@ -98,6 +110,29 @@ function json(data, status = 200) {
       'Access-Control-Allow-Origin': '*'
     }
   });
+}
+
+function hasMeaningfulBackupData(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+
+  const hasEntries = (value) => {
+    if (!value || typeof value !== 'object') return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return Object.keys(value).length > 0;
+  };
+
+  return [
+    payload.weeklyData,
+    payload.ytdData,
+    payload.coachingHistory,
+    payload.callListeningLogs,
+    payload.associateSentimentSnapshots,
+    payload.myTeamMembers,
+    payload.callCenterAverages,
+    payload.yearEndAnnualGoalsStore,
+    payload.yearEndDraftStore,
+    payload.appStorageSnapshot
+  ].some(hasEntries);
 }
 
 function buildCsvCell(value) {
@@ -163,6 +198,23 @@ async function getExistingFileSha(env, branch, path) {
   try {
     const file = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/') }?ref=${encodeURIComponent(branch)}`);
     return file?.sha || null;
+  } catch (error) {
+    if (String(error.message || '').includes('404')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function getRepoJsonFile(env, branch, path) {
+  try {
+    const file = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/') }?ref=${encodeURIComponent(branch)}`);
+    const encoded = file?.content;
+    if (!encoded) return null;
+
+    const normalized = String(encoded).replace(/\n/g, '');
+    const decoded = decodeURIComponent(escape(atob(normalized)));
+    return JSON.parse(decoded);
   } catch (error) {
     if (String(error.message || '').includes('404')) {
       return null;
