@@ -3132,10 +3132,11 @@ function renderCallListeningLastSync(meta = null) {
 function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
+    const syncNowBtn = document.getElementById('syncNowBtn');
     const openCallExcelBtn = document.getElementById('openCallListeningExcelBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
 
-    if (!syncEndpointInput || !autoSyncCheckbox || !openCallExcelBtn || !openFullExcelBtn) {
+    if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openCallExcelBtn || !openFullExcelBtn) {
         return;
     }
 
@@ -3152,6 +3153,20 @@ function initializeRepoSyncControls() {
     if (!openCallExcelBtn.dataset.bound) {
         openCallExcelBtn.addEventListener('click', () => openRepoExcelFile('call-listening-logs.xlsx'));
         openCallExcelBtn.dataset.bound = 'true';
+    }
+    if (!syncNowBtn.dataset.bound) {
+        syncNowBtn.addEventListener('click', async () => {
+            const buttonOriginalText = syncNowBtn.textContent;
+            syncNowBtn.disabled = true;
+            syncNowBtn.textContent = '⏳ Syncing...';
+            try {
+                await syncRepoData('manual sync now', { force: true });
+            } finally {
+                syncNowBtn.disabled = false;
+                syncNowBtn.textContent = buttonOriginalText;
+            }
+        });
+        syncNowBtn.dataset.bound = 'true';
     }
     if (!openFullExcelBtn.dataset.bound) {
         openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('coaching-tool-sync-backup.xlsx'));
@@ -3248,9 +3263,13 @@ function queueCallListeningRepoSync(reason = 'updated') {
     queueRepoSync(reason);
 }
 
-async function syncRepoData(reason = 'updated') {
+async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
-    if (!config.autoSyncEnabled || !config.endpoint.trim()) {
+    const forceSync = options?.force === true;
+    if ((!config.autoSyncEnabled && !forceSync) || !config.endpoint.trim()) {
+        if (forceSync && !config.endpoint.trim()) {
+            setCallListeningSyncStatus('Sync failed: add Worker URL first.', 'error');
+        }
         return;
     }
 
