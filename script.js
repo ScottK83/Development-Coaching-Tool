@@ -3270,11 +3270,27 @@ async function syncRepoData(reason = 'updated') {
 
         if (!response.ok) {
             let details = '';
+            let errorCode = '';
             try {
-                details = await response.text();
+                const errorText = await response.text();
+                details = errorText;
+                try {
+                    const parsedError = JSON.parse(errorText);
+                    errorCode = String(parsedError?.code || '');
+                    if (parsedError?.error) {
+                        details = String(parsedError.error);
+                    }
+                } catch (parseError) {
+                    // Keep raw response text as details when not JSON.
+                }
             } catch (error) {
                 details = '';
             }
+
+            if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
+                throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
+            }
+
             throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
         }
 
