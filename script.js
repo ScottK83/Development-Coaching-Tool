@@ -2675,11 +2675,16 @@ function initializeEventHandlers() {
                 saveCallListeningLogs();
                 saveSentimentPhraseDatabase();
                 saveAssociateSentimentSnapshots();
+                normalizeTeamMembersForExistingWeeks();
+                saveTeamMembers();
                 
                 showToast('✅ Data imported successfully!');
                 document.getElementById('dataFileInput').value = '';
                 populateDeleteWeekDropdown();
                 populateDeleteSentimentDropdown();
+                populateDeleteEmployeeYearOptions();
+                populateTeamMemberSelector();
+                renderEmployeesList();
             } catch (error) {
                 console.error('Error importing data:', error);
                 alert('ℹ️ Error importing data: ' + error.message);
@@ -2709,11 +2714,14 @@ function initializeEventHandlers() {
         delete weeklyData[selectedWeek];
         delete myTeamMembers[selectedWeek];
         saveWeeklyData();
+        normalizeTeamMembersForExistingWeeks();
         saveTeamMembers();
         
         populateDeleteWeekDropdown();
         populateDeleteSentimentDropdown();
+        populateDeleteEmployeeYearOptions();
         populateTeamMemberSelector();
+        renderEmployeesList();
         showToast('✅ Week deleted successfully');
         
         // Clear coaching form if needed (safely check if elements exist)
@@ -2748,6 +2756,29 @@ function initializeEventHandlers() {
     
     // Populate and handle sentiment data deletion
     populateDeleteSentimentDropdown();
+    populateDeleteEmployeeYearOptions();
+
+    document.getElementById('deleteEmployeeYearBtn')?.addEventListener('click', () => {
+        const employeeSelect = document.getElementById('deleteEmployeeYearSelect');
+        const reviewYearInput = document.getElementById('deleteEmployeeYearInput');
+        const employeeName = String(employeeSelect?.value || '').trim();
+        const reviewYear = parseInt(String(reviewYearInput?.value || ''), 10);
+
+        if (!employeeName) {
+            alert('⚠️ Please select an associate.');
+            return;
+        }
+
+        if (!Number.isInteger(reviewYear)) {
+            alert('⚠️ Please enter a valid review year (example: 2026).');
+            return;
+        }
+
+        const confirmed = confirm(`Delete ${employeeName}'s ${reviewYear} data from weekly uploads, YTD uploads, year-end entries, and matching dated logs?\n\nThis action cannot be undone.`);
+        if (!confirmed) return;
+
+        deleteEmployeeDataByYear(employeeName, reviewYear);
+    });
     
     document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', () => {
         
@@ -2841,6 +2872,7 @@ function initializeEventHandlers() {
         saveCallListeningLogs(true, 'cleared all data');
         
         populateDeleteWeekDropdown();
+        populateDeleteEmployeeYearOptions();
         
         // Hide all sections
         ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
@@ -3789,6 +3821,142 @@ function populateDeleteSentimentDropdown() {
         option.textContent = entry.label;
         dropdown.appendChild(option);
     });
+}
+
+function populateDeleteEmployeeYearOptions() {
+    const dropdown = document.getElementById('deleteEmployeeYearSelect');
+    if (!dropdown) return;
+
+    const currentValue = dropdown.value;
+    dropdown.innerHTML = '<option value="">-- Choose an associate --</option>';
+
+    const employees = getYearEndEmployees();
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        dropdown.appendChild(option);
+    });
+
+    if (currentValue && employees.includes(currentValue)) {
+        dropdown.value = currentValue;
+    }
+}
+
+function getPeriodReviewYear(periodKey, period) {
+    const explicitYear = parseInt(period?.metadata?.yearEndReviewYear, 10);
+    if (Number.isInteger(explicitYear)) return explicitYear;
+
+    const endDateText = period?.metadata?.endDate || (String(periodKey || '').includes('|') ? String(periodKey).split('|')[1] : '');
+    if (endDateText) {
+        const parsed = new Date(endDateText);
+        if (!isNaN(parsed.getTime())) return parsed.getFullYear();
+    }
+
+    return NaN;
+}
+
+function getEntryYear(entry) {
+    if (!entry || typeof entry !== 'object') return NaN;
+    const dateCandidates = [entry.listenedOn, entry.createdAt, entry.date, entry.coachingDate, entry.weekEndingDate, entry.timeframeEnd, entry.periodEndDate];
+    for (const candidate of dateCandidates) {
+        if (!candidate) continue;
+        const parsed = new Date(candidate);
+        if (!isNaN(parsed.getTime())) return parsed.getFullYear();
+    }
+    return NaN;
+}
+
+function normalizeTeamMembersForExistingWeeks() {
+    const validWeekKeys = new Set(Object.keys(weeklyData || {}));
+    const normalized = {};
+
+    Object.entries(myTeamMembers || {}).forEach(([weekKey, members]) => {
+        if (!validWeekKeys.has(weekKey)) return;
+        const weekEmployees = (weeklyData[weekKey]?.employees || []).map(emp => String(emp?.name || '').trim()).filter(Boolean);
+        const validEmployees = new Set(weekEmployees);
+        const safeMembers = Array.isArray(members) ? members.map(name => String(name || '').trim()).filter(Boolean) : [];
+        const filteredMembers = safeMembers.filter(name => validEmployees.has(name));
+        normalized[weekKey] = filteredMembers;
+    });
+
+    myTeamMembers = normalized;
+}
+
+function deleteEmployeeDataByYear(employeeName, reviewYear) {
+    const targetName = String(employeeName || '').trim().toLowerCase();
+    if (!targetName || !Number.isInteger(reviewYear)) return;
+
+    let weeklyPeriodsTouched = 0;
+    let ytdPeriodsTouched = 0;
+    let coachingEntriesRemoved = 0;
+    let callEntriesRemoved = 0;
+
+    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => {
+        const periodYear = getPeriodReviewYear(periodKey, period);
+        if (periodYear !== reviewYear || !Array.isArray(period?.employees)) return;
+        const before = period.employees.length;
+        period.employees = period.employees.filter(emp => String(emp?.name || '').trim().toLowerCase() !== targetName);
+        if (period.employees.length !== before) weeklyPeriodsTouched += 1;
+    });
+
+    Object.entries(ytdData || {}).forEach(([periodKey, period]) => {
+        const periodYear = getPeriodReviewYear(periodKey, period);
+        if (periodYear !== reviewYear || !Array.isArray(period?.employees)) return;
+        const before = period.employees.length;
+        period.employees = period.employees.filter(emp => String(emp?.name || '').trim().toLowerCase() !== targetName);
+        if (period.employees.length !== before) ytdPeriodsTouched += 1;
+    });
+
+    Object.entries(coachingHistory || {}).forEach(([name, entries]) => {
+        if (String(name || '').trim().toLowerCase() !== targetName || !Array.isArray(entries)) return;
+        const before = entries.length;
+        coachingHistory[name] = entries.filter(entry => getEntryYear(entry) !== reviewYear);
+        coachingEntriesRemoved += (before - coachingHistory[name].length);
+        if (!coachingHistory[name].length) delete coachingHistory[name];
+    });
+
+    Object.entries(callListeningLogs || {}).forEach(([name, entries]) => {
+        if (String(name || '').trim().toLowerCase() !== targetName || !Array.isArray(entries)) return;
+        const before = entries.length;
+        callListeningLogs[name] = entries.filter(entry => getEntryYear(entry) !== reviewYear);
+        callEntriesRemoved += (before - callListeningLogs[name].length);
+        if (!callListeningLogs[name].length) delete callListeningLogs[name];
+    });
+
+    const annualGoalsStore = loadYearEndAnnualGoalsStore();
+    Object.keys(annualGoalsStore).forEach(key => {
+        const [yearPart, namePart] = String(key).split('::');
+        if (parseInt(yearPart, 10) === reviewYear && String(namePart || '').trim().toLowerCase() === targetName) {
+            delete annualGoalsStore[key];
+        }
+    });
+    saveYearEndAnnualGoalsStore(annualGoalsStore);
+
+    const yearEndDraftStore = loadYearEndDraftStore();
+    Object.keys(yearEndDraftStore).forEach(key => {
+        const [yearPart, namePart] = String(key).split('::');
+        if (parseInt(yearPart, 10) === reviewYear && String(namePart || '').trim().toLowerCase() === targetName) {
+            delete yearEndDraftStore[key];
+        }
+    });
+    saveYearEndDraftStore(yearEndDraftStore);
+
+    normalizeTeamMembersForExistingWeeks();
+
+    saveWeeklyData();
+    saveYtdData();
+    saveTeamMembers();
+    saveCoachingHistory();
+    saveCallListeningLogs(true, `${reviewYear} data removed for ${employeeName}`);
+
+    populateDeleteWeekDropdown();
+    populateDeleteSentimentDropdown();
+    populateDeleteEmployeeYearOptions();
+    populateTeamMemberSelector();
+    renderEmployeesList();
+
+    showToast(`✅ Removed ${employeeName} ${reviewYear} data (weekly: ${weeklyPeriodsTouched}, ytd: ${ytdPeriodsTouched}, coaching entries: ${coachingEntriesRemoved}, call logs: ${callEntriesRemoved}).`, 4500);
 }
 
 function populateTeamMemberSelector() {
@@ -9479,7 +9647,7 @@ function renderEmployeesList() {
 }
 
 function deleteEmployee(employeeName) {
-    if (!confirm(`Are you sure you want to delete "${employeeName}" from ALL weekly data?\n\nThis will remove them from all uploaded weeks and cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete "${employeeName}" from ALL weekly and YTD data?\n\nThis will remove them from all uploaded periods and cannot be undone.`)) {
         return;
     }
     
@@ -9494,9 +9662,22 @@ function deleteEmployee(employeeName) {
             }
         }
     });
+
+    Object.keys(ytdData).forEach(periodKey => {
+        if (ytdData[periodKey]?.employees) {
+            const beforeLength = ytdData[periodKey].employees.length;
+            ytdData[periodKey].employees = ytdData[periodKey].employees.filter(emp => emp.name !== employeeName);
+            if (ytdData[periodKey].employees.length < beforeLength) {
+                removedCount++;
+            }
+        }
+    });
     
     // Save updated data
     saveWeeklyData();
+    saveYtdData();
+    normalizeTeamMembersForExistingWeeks();
+    saveTeamMembers();
     
     // Remove preferred name
     const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
@@ -9505,8 +9686,10 @@ function deleteEmployee(employeeName) {
     
     // Refresh the list
     renderEmployeesList();
+    populateDeleteEmployeeYearOptions();
+    populateTeamMemberSelector();
     
-    showToast(`✅ Deleted "${employeeName}" from ${removedCount} week(s)`, 3000);
+    showToast(`✅ Deleted "${employeeName}" from ${removedCount} period(s)`, 3000);
 }
 
 
