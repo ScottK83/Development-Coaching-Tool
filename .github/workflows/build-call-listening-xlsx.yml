@@ -26,6 +26,35 @@ jobs:
       - name: Install dependencies
         run: pip install openpyxl
 
+      - name: Validate embedded Python script syntax
+        run: |
+          python - <<'PY'
+          import pathlib
+
+          workflow_path = pathlib.Path('.github/workflows/build-call-listening-xlsx.yml')
+          text = workflow_path.read_text(encoding='utf-8')
+          start_token = "python - <<'PY'"
+          start = text.find(start_token)
+          if start < 0:
+              raise SystemExit('Could not find embedded Python heredoc start token')
+          start = text.find('\n', start) + 1
+          end = text.find('\n          PY', start)
+          if end < 0:
+              raise SystemExit('Could not find embedded Python heredoc end token')
+
+          block = text[start:end]
+          script_lines = []
+          for line in block.splitlines():
+              if line.startswith('          '):
+                  script_lines.append(line[10:])
+              else:
+                  script_lines.append(line)
+
+          script = '\n'.join(script_lines)
+          compile(script, 'build-call-listening-xlsx.yml:heredoc', 'exec')
+          print('Embedded Python syntax OK')
+          PY
+
       - name: Build XLSX from CSV
         run: |
           python - <<'PY'
@@ -33,6 +62,157 @@ jobs:
           import json
           import os
           from openpyxl import Workbook
+
+
+          def safe_sheet_name(name):
+            return str(name or 'Sheet')[:31]
+
+
+          def auto_size(ws, min_width=12, max_width=80):
+            for column_cells in ws.columns:
+              length = max((len(str(cell.value)) if cell.value is not None else 0) for cell in column_cells)
+              ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, min_width), max_width)
+
+
+          def write_table(wb_obj, title, headers, rows):
+            sheet = wb_obj.create_sheet(title=safe_sheet_name(title))
+            sheet.append(headers)
+            for row in rows:
+              sheet.append([row.get(col, '') for col in headers])
+            auto_size(sheet)
+            return sheet
+
+
+          def flatten_period_data(period_data):
+            period_data = period_data or {}
+            employee_records = []
+            metric_keys = set()
+
+            for period_key, period in period_data.items():
+              if not isinstance(period, dict):
+                continue
+              metadata = period.get('metadata') if isinstance(period.get('metadata'), dict) else {}
+              employees = period.get('employees') if isinstance(period.get('employees'), list) else []
+              for employee in employees:
+                if not isinstance(employee, dict):
+                  continue
+                metric_keys.update(k for k in employee.keys() if k not in {'name', 'employeeId', 'id'})
+                employee_records.append((period_key, metadata, employee))
+
+            metric_columns = sorted(metric_keys)
+            base_columns = ['PeriodKey', 'PeriodType', 'Label', 'StartDate', 'EndDate', 'ReviewYear', 'EmployeeName']
+            headers = base_columns + metric_columns
+
+            rows = []
+            for period_key, metadata, employee in employee_records:
+              row = {
+                'PeriodKey': period_key,
+                'PeriodType': metadata.get('periodType', ''),
+                'Label': metadata.get('label', ''),
+                'StartDate': metadata.get('startDate', ''),
+                'EndDate': metadata.get('endDate', ''),
+                'ReviewYear': metadata.get('yearEndReviewYear', ''),
+                'EmployeeName': employee.get('name', '')
+              }
+              for key in metric_columns:
+                row[key] = employee.get(key, '')
+              rows.append(row)
+
+            return headers, rows
+
+
+          def flatten_object_list_map(data_map, owner_col='Owner'):
+            data_map = data_map or {}
+            records = []
+            value_keys = set()
+            for owner, entries in data_map.items():
+              if isinstance(entries, dict):
+                entries = [entries]
+              if not isinstance(entries, list):
+                continue
+              for idx, entry in enumerate(entries, start=1):
+                if isinstance(entry, dict):
+                  value_keys.update(entry.keys())
+                  records.append((owner, idx, entry))
+                else:
+                  records.append((owner, idx, {'Value': str(entry)}))
+                  value_keys.add('Value')
+
+            dynamic = sorted(value_keys)
+            headers = [owner_col, 'Row'] + dynamic
+            rows = []
+            for owner, idx, entry in records:
+              row = {owner_col: owner, 'Row': idx}
+              for key in dynamic:
+                row[key] = entry.get(key, '')
+              rows.append(row)
+            return headers, rows
+
+
+          def flatten_scalar_map(data_map, key_col='Key'):
+            data_map = data_map or {}
+            metric_keys = set()
+            for value in data_map.values():
+              if isinstance(value, dict):
+                metric_keys.update(value.keys())
+            dynamic = sorted(metric_keys)
+            headers = [key_col] + dynamic
+            rows = []
+            for key, value in data_map.items():
+              row = {key_col: key}
+              if isinstance(value, dict):
+                for metric in dynamic:
+                  row[metric] = value.get(metric, '')
+              rows.append(row)
+            return headers, rows
+
+
+          def flatten_team_members(data_map):
+            rows = []
+            for period_key, members in (data_map or {}).items():
+              if isinstance(members, list):
+                for member in members:
+                  rows.append({'PeriodKey': period_key, 'TeamMember': member})
+              else:
+                rows.append({'PeriodKey': period_key, 'TeamMember': str(members)})
+            return ['PeriodKey', 'TeamMember'], rows
+
+
+          def flatten_storage_snapshot(snapshot):
+            rows = []
+            for key, raw in (snapshot or {}).items():
+              value_type = type(raw).__name__
+              item_count = ''
+              preview = ''
+              parsed = raw
+              if isinstance(raw, str):
+                text = raw.strip()
+                if text and text[0] in '{[':
+                  try:
+                    parsed = json.loads(raw)
+                  except Exception:
+                    parsed = raw
+
+              if isinstance(parsed, dict):
+                value_type = 'object'
+                item_count = len(parsed)
+                preview = json.dumps(parsed, ensure_ascii=False)[:350]
+              elif isinstance(parsed, list):
+                value_type = 'array'
+                item_count = len(parsed)
+                preview = json.dumps(parsed, ensure_ascii=False)[:350]
+              else:
+                preview = str(parsed)[:350]
+
+              rows.append({
+                'StorageKey': key,
+                'ValueType': value_type,
+                'ItemCount': item_count,
+                'Preview': preview
+              })
+
+            return ['StorageKey', 'ValueType', 'ItemCount', 'Preview'], rows
+
 
           csv_path = 'data/call-listening-logs.csv'
           xlsx_path = 'data/call-listening-logs.xlsx'
@@ -55,148 +235,6 @@ jobs:
 
           wb.save(xlsx_path)
           print(f'Built {xlsx_path}')
-
-            def safe_sheet_name(name):
-              return str(name or 'Sheet')[:31]
-
-            def auto_size(ws, min_width=12, max_width=80):
-              for column_cells in ws.columns:
-                length = max((len(str(cell.value)) if cell.value is not None else 0) for cell in column_cells)
-                ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, min_width), max_width)
-
-            def write_table(wb_obj, title, headers, rows):
-              sheet = wb_obj.create_sheet(title=safe_sheet_name(title))
-              sheet.append(headers)
-              for row in rows:
-                sheet.append([row.get(col, '') for col in headers])
-              auto_size(sheet)
-              return sheet
-
-            def flatten_period_data(period_data):
-              period_data = period_data or {}
-              employee_records = []
-              metric_keys = set()
-
-              for period_key, period in period_data.items():
-                if not isinstance(period, dict):
-                  continue
-                metadata = period.get('metadata') if isinstance(period.get('metadata'), dict) else {}
-                employees = period.get('employees') if isinstance(period.get('employees'), list) else []
-                for employee in employees:
-                  if not isinstance(employee, dict):
-                    continue
-                  metric_keys.update(k for k in employee.keys() if k not in {'name', 'employeeId', 'id'})
-                  employee_records.append((period_key, metadata, employee))
-
-              metric_columns = sorted(metric_keys)
-              base_columns = ['PeriodKey', 'PeriodType', 'Label', 'StartDate', 'EndDate', 'ReviewYear', 'EmployeeName']
-              headers = base_columns + metric_columns
-
-              rows = []
-              for period_key, metadata, employee in employee_records:
-                row = {
-                  'PeriodKey': period_key,
-                  'PeriodType': metadata.get('periodType', ''),
-                  'Label': metadata.get('label', ''),
-                  'StartDate': metadata.get('startDate', ''),
-                  'EndDate': metadata.get('endDate', ''),
-                  'ReviewYear': metadata.get('yearEndReviewYear', ''),
-                  'EmployeeName': employee.get('name', '')
-                }
-                for key in metric_columns:
-                  row[key] = employee.get(key, '')
-                rows.append(row)
-
-              return headers, rows
-
-            def flatten_object_list_map(data_map, owner_col='Owner'):
-              data_map = data_map or {}
-              records = []
-              value_keys = set()
-              for owner, entries in data_map.items():
-                if isinstance(entries, dict):
-                  entries = [entries]
-                if not isinstance(entries, list):
-                  continue
-                for idx, entry in enumerate(entries, start=1):
-                  if isinstance(entry, dict):
-                    value_keys.update(entry.keys())
-                    records.append((owner, idx, entry))
-                  else:
-                    records.append((owner, idx, {'Value': str(entry)}))
-                    value_keys.add('Value')
-
-              dynamic = sorted(value_keys)
-              headers = [owner_col, 'Row'] + dynamic
-              rows = []
-              for owner, idx, entry in records:
-                row = {owner_col: owner, 'Row': idx}
-                for key in dynamic:
-                  row[key] = entry.get(key, '')
-                rows.append(row)
-              return headers, rows
-
-            def flatten_scalar_map(data_map, key_col='Key'):
-              data_map = data_map or {}
-              metric_keys = set()
-              for value in data_map.values():
-                if isinstance(value, dict):
-                  metric_keys.update(value.keys())
-              dynamic = sorted(metric_keys)
-              headers = [key_col] + dynamic
-              rows = []
-              for key, value in data_map.items():
-                row = {key_col: key}
-                if isinstance(value, dict):
-                  for metric in dynamic:
-                    row[metric] = value.get(metric, '')
-                rows.append(row)
-              return headers, rows
-
-            def flatten_team_members(data_map):
-              rows = []
-              for period_key, members in (data_map or {}).items():
-                if isinstance(members, list):
-                  for member in members:
-                    rows.append({'PeriodKey': period_key, 'TeamMember': member})
-                else:
-                  rows.append({'PeriodKey': period_key, 'TeamMember': str(members)})
-              return ['PeriodKey', 'TeamMember'], rows
-
-            def flatten_storage_snapshot(snapshot):
-              rows = []
-              for key, raw in (snapshot or {}).items():
-                value_type = type(raw).__name__
-                item_count = ''
-                preview = ''
-                parsed = raw
-                if isinstance(raw, str):
-                  text = raw.strip()
-                  if text and text[0] in '{[':
-                    try:
-                      parsed = json.loads(raw)
-                    except Exception:
-                      parsed = raw
-
-                if isinstance(parsed, dict):
-                  value_type = 'object'
-                  item_count = len(parsed)
-                  preview = json.dumps(parsed, ensure_ascii=False)[:350]
-                elif isinstance(parsed, list):
-                  value_type = 'array'
-                  item_count = len(parsed)
-                  preview = json.dumps(parsed, ensure_ascii=False)[:350]
-                else:
-                  preview = str(parsed)[:350]
-
-                rows.append({
-                  'StorageKey': key,
-                  'ValueType': value_type,
-                  'ItemCount': item_count,
-                  'Preview': preview
-                })
-
-              return ['StorageKey', 'ValueType', 'ItemCount', 'Preview'], rows
 
           full_json_path = 'data/coaching-tool-sync-backup.json'
           full_xlsx_path = 'data/coaching-tool-sync-backup.xlsx'
