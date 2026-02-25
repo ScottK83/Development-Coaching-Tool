@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T20:12:50.179Z",
+  "generatedAt": "2026-02-25T20:13:03.391Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.114",
   "weeklyData": {
@@ -4292,6 +4292,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Angelina Fierro": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4354,7 +4388,7 @@
       "performanceRating": "Successful",
       "meritDetails": "3.14 to 26.27",
       "bonusAmount": "3816.37",
-      "verbalSummary": ""
+      "verbalSummary": "Ronda, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 3.14 to 26.27.\nYour incentive/bonus amount is: 3816.37."
     },
     "2025::Marietta Bernal": {
       "trackStatus": "off-track",
@@ -4382,6 +4416,17 @@
       "trackStatus": "on-track",
       "positivesText": "Overall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nOverall Sentiment: 95.5% vs target 88.0%\nPositive Word: 98.9% vs target 86.0%\nAvoid Negative Words: 92.5% vs target 83.0%\nManaging Emotions: 95.1% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 85.4% vs target 93.0%\nTransfers: 11.9% vs target 6.0%\nAverage Handle Time: 538s vs target 414s\nHold Time: 39s vs target 30s\nAfter Call Work: 234s vs target 60s\nFirst Call Resolution: 50.0% vs target 73.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2025::Angelina Fierro": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 1s vs target 30s\nRep Satisfaction: 81.3% vs target 80.0%\nFirst Call Resolution: 78.7% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 86.5% vs target 86.0%\nAvoid Negative Words: 91.5% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 22.3% vs target 6.0%\nAverage Handle Time: 532s vs target 440s\nAfter Call Work: 80s vs target 60s\nOverall Experience: 81.3% vs target 84.0%\nReliability: 28.7 hrs vs target 16.0 hrs",
       "managerContext": "",
       "copilotResponse": "",
       "performanceRating": "",
@@ -4438,8 +4483,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 8,
-      "byteLength": 3373
+      "itemCount": 9,
+      "byteLength": 3793
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -4458,8 +4503,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 10,
-      "byteLength": 17585
+      "itemCount": 11,
+      "byteLength": 18835
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
