@@ -77,8 +77,16 @@ jobs:
           def write_table(wb_obj, title, headers, rows):
             sheet = wb_obj.create_sheet(title=safe_sheet_name(title))
             sheet.append(headers)
+
+            def to_excel_value(value):
+              if value is None:
+                return ''
+              if isinstance(value, (dict, list, tuple, set)):
+                return json.dumps(value, ensure_ascii=False)
+              return value
+
             for row in rows:
-              sheet.append([row.get(col, '') for col in headers])
+              sheet.append([to_excel_value(row.get(col, '')) for col in headers])
             auto_size(sheet)
             return sheet
 
