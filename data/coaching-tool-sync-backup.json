@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-25T21:19:17.146Z",
+  "generatedAt": "2026-02-25T21:19:45.044Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.25.115",
   "weeklyData": {
@@ -4551,7 +4551,7 @@
       "trackStatus": "on-track",
       "positivesText": "Schedule Adherence: 93.7% vs target 93.0%\nAverage Handle Time: 399s vs target 440s\nHold Time: 14s vs target 30s\nRep Satisfaction: 82.1% vs target 80.0%\nFirst Call Resolution: 82.3% vs target 70.0%\nOverall Sentiment: 91.5% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Transfers: 23.9% vs target 6.0%\nAfter Call Work: 119s vs target 60s\nOverall Experience: 77.6% vs target 84.0%\nPositive Word: 85.8% vs target 86.0%\nReliability: 77.2 hrs vs target 16.0 hrs",
-      "managerContext": "",
+      "managerContext": "Caylie's words. Incorporate some of this into the review.\n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nThis year I caught a customer account that had not been set up correctly for service. The customer was wanting to start service at an apartment unit but instead it had been set up as an apartment building. The customer had been trying for awhile to get the issue resolved & nobody before me was able to get this fixed. By noticing the discrepancy & taking quick action, I was able to prevent a service interruption & ensure the customers service was completed accurately. I leveraged our customer focus & integrity principles by double-checking details, communicating clearly, & taking ownership until the issue was fully resolved. This experience reminded me of the impact careful attention can have on a customers experience.\n\nDuring the government shutdown, many customers have been anxious about bills & looking for clarity on their options. I worked to provide calm, patient, & consistent support by listening to their concerns, offering solutions, & helping them navigate available resources. This demonstrated adaptability, as every call was different and required flexibility as well as collaboration, as I worked with my team to to stay aligned on guidance while keeping customers informed. I'm proud of how I was able to maintain empathy & professionalism during a very stressful time for our community.\n\nOverall, I feel I have leveraged the APS principles throughout the year by staying committed to accuracy, compassion, & service. I'm looking forward to continuing to grow in 2026 & expanding my contributions to the team. \n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nIn 2024, I experienced meaningful growth in tow key areas thanks to feedback from my leaders. Earlier in the year, I received feedback encouraging me to trust my judgement more when navigating complex customer issues. Since then, I 've grown in my ability to assess situations, use the tools available, & make confident decisions without second-guessing myself. This has helped me resolve calls more efficiently & feel more comfortable taking ownership of unique situations.\n\nI was also encouraged to slow down & focus on delivering information clearly, especially when customers were stressed or overwhelmed. I took this to heart & have been working on staying calm, pacing my explanations, & ensuring customers fully understand their options. This improvement has strengthened my interactions & has been reflected in positive customer interactions/feedback.",
       "copilotResponse": "",
       "performanceRating": "",
       "meritDetails": "",
@@ -4639,7 +4639,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 14,
-      "byteLength": 29200
+      "byteLength": 31973
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
