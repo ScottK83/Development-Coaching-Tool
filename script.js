@@ -11576,15 +11576,40 @@ async function pasteYearEndResponseFromClipboard() {
     if (!responseInput) return;
 
     try {
-        if (!navigator.clipboard?.readText) {
+        if (!navigator.clipboard) {
             showToast('⚠️ Clipboard paste is not available in this browser. Use Ctrl+V in the box.', 4500);
             responseInput.focus();
             return;
         }
 
-        const clipboardText = await navigator.clipboard.readText();
+        let clipboardText = '';
+
+        if (navigator.clipboard.readText) {
+            clipboardText = String(await navigator.clipboard.readText() || '');
+        }
+
+        if ((!clipboardText || !clipboardText.trim()) && navigator.clipboard.read) {
+            const clipboardItems = await navigator.clipboard.read();
+            for (const item of clipboardItems) {
+                if (item.types.includes('text/plain')) {
+                    const plainBlob = await item.getType('text/plain');
+                    clipboardText = await plainBlob.text();
+                    if (clipboardText && clipboardText.trim()) break;
+                }
+
+                if ((!clipboardText || !clipboardText.trim()) && item.types.includes('text/html')) {
+                    const htmlBlob = await item.getType('text/html');
+                    const htmlText = await htmlBlob.text();
+                    const parser = new DOMParser();
+                    const htmlDoc = parser.parseFromString(htmlText, 'text/html');
+                    clipboardText = String(htmlDoc.body?.innerText || '').trim();
+                    if (clipboardText && clipboardText.trim()) break;
+                }
+            }
+        }
+
         if (!clipboardText || !clipboardText.trim()) {
-            showToast('⚠️ Clipboard is empty.', 3000);
+            showToast('⚠️ Clipboard read was blocked or returned no text. Click the box and press Ctrl+V.', 4500);
             responseInput.focus();
             return;
         }
@@ -11593,7 +11618,7 @@ async function pasteYearEndResponseFromClipboard() {
         persistYearEndDraftState(employeeName, reviewYear);
         showToast('✅ Final notes pasted from clipboard.', 3000);
     } catch (error) {
-        showToast('⚠️ Could not read clipboard. Click in the box and use Ctrl+V.', 4500);
+        showToast('⚠️ Could not access clipboard API. Click in the box and use Ctrl+V.', 4500);
         responseInput.focus();
     }
 }
