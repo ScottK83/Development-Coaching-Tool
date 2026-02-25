@@ -3526,9 +3526,13 @@ function collectYearEndAnnualGoals(employeeName, reviewYear) {
 
     YEAR_END_ANNUAL_GOALS.forEach(goal => {
         const goalState = state[goal.key] || { status: 'met', note: '' };
+        const noteText = String(goalState.note || '').trim();
+        const noteNumberMatch = noteText.match(/\d+(?:\.\d+)?/);
+        const noteNumericValue = noteNumberMatch ? parseFloat(noteNumberMatch[0]) : NaN;
+        const hasPositiveRedFlagCount = goal.key === 'redFlagViolations' && Number.isFinite(noteNumericValue) && noteNumericValue > 0;
         const noteSuffix = goalState.note ? ` (${goalState.note})` : '';
         const text = `${goal.label}: ${goal.expectation}${noteSuffix}`;
-        if (goalState.status === 'not-met') {
+        if (goalState.status === 'not-met' || hasPositiveRedFlagCount) {
             notMetGoals.push(text);
         } else {
             metGoals.push(text);
@@ -9658,6 +9662,7 @@ function loadExecutiveSummaryNotes(associate) {
     document.querySelectorAll('.redflags-input').forEach(input => {
         const weekKey = input.dataset.week;
         input.value = employeeNotes[weekKey]?.redFlags || '';
+        input.addEventListener('input', () => saveExecutiveSummaryNotes(associate));
         input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
     });
     
@@ -9665,6 +9670,7 @@ function loadExecutiveSummaryNotes(associate) {
     document.querySelectorAll('.phishing-input').forEach(input => {
         const weekKey = input.dataset.week;
         input.value = employeeNotes[weekKey]?.phishing || '';
+        input.addEventListener('input', () => saveExecutiveSummaryNotes(associate));
         input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
     });
 }
