@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-25T16:52:51.325Z",
-  "reason": "validation-smoke",
-  "sourceAppVersion": "validation-check",
+  "generatedAt": "2026-02-25T16:54:05.362Z",
+  "reason": "auto-sync-enforced-check",
+  "sourceAppVersion": "auto-sync-enforced-check",
   "weeklyData": {},
   "ytdData": {},
   "coachingHistory": {},
