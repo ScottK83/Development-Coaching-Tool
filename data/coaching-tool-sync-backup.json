@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T17:59:00.771Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-26T17:59:09.801Z",
+  "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": "2026.02.26.64",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5368,8 +5368,8 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 52
+      "itemCount": 3,
+      "byteLength": 81
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
@@ -5379,7 +5379,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 140
+      "byteLength": 142
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
