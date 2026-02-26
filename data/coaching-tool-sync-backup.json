@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T00:18:28.016Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-02-26T00:20:23.195Z",
+  "reason": "call center averages updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4370,6 +4370,22 @@
       "holdTime": 20,
       "reliability": 0,
       "lastUpdated": "2026-02-19T22:31:31.736Z"
+    },
+    "2026-02-15|2026-02-21": {
+      "adherence": 94.2,
+      "overallExperience": 86,
+      "repSatisfaction": 78,
+      "fcr": 68,
+      "transfers": 10.19,
+      "sentiment": 91.4,
+      "positiveWord": 89.7,
+      "negativeWord": 88,
+      "managingEmotions": 96,
+      "aht": 436,
+      "acw": 66,
+      "holdTime": 18,
+      "reliability": 1.47,
+      "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
   "yearEndAnnualGoalsStore": {
@@ -5213,8 +5229,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 7,
-      "byteLength": 1957
+      "itemCount": 8,
+      "byteLength": 2241
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -5244,7 +5260,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 140
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
