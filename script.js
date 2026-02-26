@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.10'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.11'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6480,9 +6480,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         rowIdx++;
     });
 
-    // ========== HIGHLIGHTS SECTION ==========
-    y += 30;
-    
     const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
         metricOrder,
         metrics,
@@ -6490,73 +6487,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         centerAvg,
         previous
     );
-    
-    // Key Wins (Meeting Target AND Beating Center)
-    if (keyWins.length > 0) {
-        ctx.fillStyle = '#e8f5e9';
-        ctx.fillRect(40, y, 820, 40);
-        ctx.fillStyle = '#1b5e20';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
-        y += 50;
-        
-        keyWins.slice(0, 5).forEach((item, idx) => {
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText(`- ${item.label}:`, 60, y + 20);
-            ctx.font = '14px Arial';
-            ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
-            y += 35;
-        });
-    }
-    
-    // Highlights (Improved from Last Week)
-    if (improvedMetrics.length > 0 || previous) {
-        y += 10;
-        ctx.fillStyle = '#e3f2fd';
-        ctx.fillRect(40, y, 820, 40);
-        ctx.fillStyle = '#0d47a1';
-        ctx.font = 'bold 18px Arial';
-        const periodCapitalized = periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1);
-        ctx.fillText(`⭐ Highlights (Improved from Last ${periodCapitalized})`, 50, y + 26);
-        y += 50;
-        
-        if (improvedMetrics.length === 0 && previous) {
-            ctx.fillStyle = '#666666';
-            ctx.font = '14px Arial';
-            ctx.fillText(`- No improvements detected this ${periodTypeText}`, 60, y + 20);
-            y += 40;
-        } else {
-            improvedMetrics.slice(0, 5).forEach((item, idx) => {
-                ctx.fillStyle = '#333333';
-                ctx.font = 'bold 14px Arial';
-                ctx.fillText(`- ${item.label}:`, 60, y + 20);
-                ctx.font = '14px Arial';
-                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last ${periodTypeText}`, 220, y + 20);
-                y += 35;
-            });
-        }
-    }
-    
-    // Focus Areas (Below Center Average)
-    if (focusMetrics.length > 0) {
-        y += 10;
-        ctx.fillStyle = '#fff3e0';
-        ctx.fillRect(40, y, 820, 40);
-        ctx.fillStyle = '#e65100';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
-        y += 50;
-        
-        focusMetrics.slice(0, 5).forEach((item, idx) => {
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText(`- ${item.label}:`, 60, y + 20);
-            ctx.font = '14px Arial';
-            ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
-            y += 35;
-        });
-    }
+
+    y = drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous);
     
     y += 30 + drawTrendLegendOnCanvas(ctx, y + 30, periodTypeText);
 
@@ -6575,6 +6507,76 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
         copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
+}
+
+function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous) {
+    y += 30;
+
+    if (keyWins.length > 0) {
+        ctx.fillStyle = '#e8f5e9';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
+        y += 50;
+
+        keyWins.slice(0, 5).forEach(item => {
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`- ${item.label}:`, 60, y + 20);
+            ctx.font = '14px Arial';
+            ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
+            y += 35;
+        });
+    }
+
+    if (improvedMetrics.length > 0 || previous) {
+        y += 10;
+        ctx.fillStyle = '#e3f2fd';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#0d47a1';
+        ctx.font = 'bold 18px Arial';
+        const periodCapitalized = periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1);
+        ctx.fillText(`⭐ Highlights (Improved from Last ${periodCapitalized})`, 50, y + 26);
+        y += 50;
+
+        if (improvedMetrics.length === 0 && previous) {
+            ctx.fillStyle = '#666666';
+            ctx.font = '14px Arial';
+            ctx.fillText(`- No improvements detected this ${periodTypeText}`, 60, y + 20);
+            y += 40;
+        } else {
+            improvedMetrics.slice(0, 5).forEach(item => {
+                ctx.fillStyle = '#333333';
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(`- ${item.label}:`, 60, y + 20);
+                ctx.font = '14px Arial';
+                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last ${periodTypeText}`, 220, y + 20);
+                y += 35;
+            });
+        }
+    }
+
+    if (focusMetrics.length > 0) {
+        y += 10;
+        ctx.fillStyle = '#fff3e0';
+        ctx.fillRect(40, y, 820, 40);
+        ctx.fillStyle = '#e65100';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
+        y += 50;
+
+        focusMetrics.slice(0, 5).forEach(item => {
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`- ${item.label}:`, 60, y + 20);
+            ctx.font = '14px Arial';
+            ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
+            y += 35;
+        });
+    }
+
+    return y;
 }
 
 function drawTrendLegendOnCanvas(ctx, y, periodTypeText) {
