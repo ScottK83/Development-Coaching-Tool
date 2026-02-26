@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.74'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.75'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13458,34 +13458,56 @@ function generateCoachingPromptAndCopy() {
     openCopilotForCoachingPrompt();
 }
 
-function generateOutlookEmailFromCoPilot() {
+function getCoachingOutlookGenerationInputs() {
     const outlookBody = document.getElementById('coachingOutlookBody');
-    const selectedEmployee = document.getElementById('coachingEmployeeSelect')?.value;
-    const bodyText = (outlookBody?.value || '').trim();
+    return {
+        outlookBody,
+        selectedEmployee: document.getElementById('coachingEmployeeSelect')?.value,
+        bodyText: (outlookBody?.value || '').trim()
+    };
+}
+
+function resolveCoachingOutlookEndDate() {
+    const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
+    if (periodMeta.endDate) {
+        return formatDateMMDDYYYY(periodMeta.endDate);
+    }
+
+    const endDateFromKey = coachingLatestWeekKey?.split('|')[1];
+    return endDateFromKey ? formatDateMMDDYYYY(endDateFromKey) : 'current period';
+}
+
+function resolveCoachingOutlookPreferredName(selectedEmployee) {
+    if (!selectedEmployee) return 'Associate';
+    return getEmployeeNickname(selectedEmployee) || selectedEmployee;
+}
+
+function buildCoachingOutlookSubject(selectedEmployee) {
+    const preferredName = resolveCoachingOutlookPreferredName(selectedEmployee);
+    const endDate = resolveCoachingOutlookEndDate();
+    return `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
+}
+
+function openMailtoDraft(subject, bodyText) {
+    const mailtoLink = document.createElement('a');
+    mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+    document.body.appendChild(mailtoLink);
+    mailtoLink.click();
+    document.body.removeChild(mailtoLink);
+}
+
+function generateOutlookEmailFromCoPilot() {
+    const { bodyText, selectedEmployee } = getCoachingOutlookGenerationInputs();
 
     if (!bodyText) {
         showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
         return;
     }
 
-    const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
-    const endDate = periodMeta.endDate
-        ? formatDateMMDDYYYY(periodMeta.endDate)
-        : (coachingLatestWeekKey?.split('|')[1]
-            ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1])
-            : 'current period');
-
-    const preferredName = selectedEmployee
-        ? (getEmployeeNickname(selectedEmployee) || selectedEmployee)
-        : 'Associate';
-    const subject = `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
+    const subject = buildCoachingOutlookSubject(selectedEmployee);
 
     try {
-        const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
-        document.body.appendChild(mailtoLink);
-        mailtoLink.click();
-        document.body.removeChild(mailtoLink);
+        openMailtoDraft(subject, bodyText);
         showToast('📧 Outlook draft opened', 2500);
     } catch (e) {
         console.error('Error opening Outlook draft from coaching email:', e);
