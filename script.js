@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.15'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.16'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6374,71 +6374,19 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
     y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
-    if (!ytdAvailable) {
-        ctx.fillStyle = '#666666';
-        ctx.font = '12px Arial';
-        ctx.fillText('YTD not available – source data not provided.', 50, y + 18);
-        y += 28;
-    }
-
-    // RENDER METRICS using Phase 3 renderer
-    let currentGroup = null;
-    let rowIdx = 0;
-    
-    metricOrder.forEach(({ key, group }) => {
-        if (metrics[key] === undefined) return;
-        
-        const metric = METRICS_REGISTRY[key];
-        if (!metric) return;
-        
-        // Draw group header
-        if (group !== currentGroup) {
-            currentGroup = group;
-            
-            // Survey group header styling when no surveys
-            const isSurveyGroupNoSurveys = group === 'Survey' && !hasSurveys;
-            const headerBgColor = isSurveyGroupNoSurveys ? '#ffffff' : '#e3f2fd';
-            const headerTextColor = isSurveyGroupNoSurveys ? '#999999' : '#0056B3';
-            
-            ctx.fillStyle = headerBgColor;
-            ctx.fillRect(40, y, 820, 40);
-            ctx.fillStyle = headerTextColor;
-            ctx.font = 'bold 16px Arial, "Segoe UI Emoji", "Apple Color Emoji"';
-            // Add emojis to group headers
-            let groupEmoji = '📊';
-            if (group === 'Core Performance') groupEmoji = '🎯';
-            else if (group === 'Survey') groupEmoji = '📋';
-            else if (group === 'Sentiment') groupEmoji = '💬';
-            else if (group === 'Reliability') groupEmoji = '⏰';
-            
-            // Always show weekly and YTD counts for survey metrics (independently)
-            let groupLabel;
-            if (group === 'Survey') {
-                // Format depends on period type
-                if (metadata.periodType === 'week') {
-                    // Week view: "Survey (X this week | Y YTD)"
-                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this week | ${ytdSurveyTotal} YTD)`;
-                } else {
-                    // Month/YTD view: "Survey (X this period | Y YTD)"
-                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)`;
-                }
-            } else {
-                groupLabel = `${groupEmoji} ${group}`;
-            }
-            ctx.fillText(groupLabel, 50, y + 26);
-            y += 45;
-            rowIdx = 0;
-        }
-        
-        const curr = parseFloat(metrics[key]) || 0;
-        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
-        const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTrendTarget(key);
-        const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
-        
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal, reviewYear);
-        y += 38;
-        rowIdx++;
+    y = drawTrendMetricsTableBody(ctx, y, {
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        ytdEmployee,
+        hasSurveys,
+        surveyTotal,
+        ytdSurveyTotal,
+        reviewYear,
+        metadata,
+        periodLabel,
+        ytdAvailable
     });
 
     const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
@@ -6524,6 +6472,86 @@ function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
     ctx.textAlign = 'left';
 
     return y + 45;
+}
+
+function drawTrendMetricsTableBody(ctx, y, options) {
+    const {
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        ytdEmployee,
+        hasSurveys,
+        surveyTotal,
+        ytdSurveyTotal,
+        reviewYear,
+        metadata,
+        periodLabel,
+        ytdAvailable
+    } = options;
+
+    if (!ytdAvailable) {
+        ctx.fillStyle = '#666666';
+        ctx.font = '12px Arial';
+        ctx.fillText('YTD not available – source data not provided.', 50, y + 18);
+        y += 28;
+    }
+
+    let currentGroup = null;
+    let rowIdx = 0;
+
+    metricOrder.forEach(({ key, group }) => {
+        if (metrics[key] === undefined) return;
+
+        const metric = METRICS_REGISTRY[key];
+        if (!metric) return;
+
+        if (group !== currentGroup) {
+            currentGroup = group;
+
+            const isSurveyGroupNoSurveys = group === 'Survey' && !hasSurveys;
+            const headerBgColor = isSurveyGroupNoSurveys ? '#ffffff' : '#e3f2fd';
+            const headerTextColor = isSurveyGroupNoSurveys ? '#999999' : '#0056B3';
+
+            ctx.fillStyle = headerBgColor;
+            ctx.fillRect(40, y, 820, 40);
+            ctx.fillStyle = headerTextColor;
+            ctx.font = 'bold 16px Arial, "Segoe UI Emoji", "Apple Color Emoji"';
+
+            let groupEmoji = '📊';
+            if (group === 'Core Performance') groupEmoji = '🎯';
+            else if (group === 'Survey') groupEmoji = '📋';
+            else if (group === 'Sentiment') groupEmoji = '💬';
+            else if (group === 'Reliability') groupEmoji = '⏰';
+
+            let groupLabel;
+            if (group === 'Survey') {
+                if (metadata.periodType === 'week') {
+                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this week | ${ytdSurveyTotal} YTD)`;
+                } else {
+                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)`;
+                }
+            } else {
+                groupLabel = `${groupEmoji} ${group}`;
+            }
+
+            ctx.fillText(groupLabel, 50, y + 26);
+            y += 45;
+            rowIdx = 0;
+        }
+
+        const curr = parseFloat(metrics[key]) || 0;
+        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
+        const center = getCenterAverageForMetric(centerAvg, key);
+        const target = getMetricTrendTarget(key);
+        const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
+
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal, reviewYear);
+        y += 38;
+        rowIdx++;
+    });
+
+    return y;
 }
 
 function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous) {
