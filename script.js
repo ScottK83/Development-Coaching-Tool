@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.53'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.54'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11030,6 +11030,71 @@ function getLatestWeekKeyForCoaching() {
     }, null);
 }
 
+function resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn) {
+    status.style.display = 'none';
+    panel.style.display = 'none';
+    promptArea.value = '';
+
+    if (outlookSection && outlookBody && outlookBtn) {
+        outlookSection.style.display = 'none';
+        outlookBody.value = '';
+        outlookBtn.disabled = true;
+        outlookBtn.style.opacity = '0.6';
+        outlookBtn.style.cursor = 'not-allowed';
+    }
+
+    select.innerHTML = '<option value="">-- Choose an associate --</option>';
+}
+
+function populateCoachingEmployeeSelectOptions(select, employees) {
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+}
+
+function getCoachingLatestPeriodEmployees(coachingWeekKey) {
+    const latestWeek = weeklyData[coachingWeekKey];
+    const employees = (latestWeek.employees || [])
+        .filter(emp => emp && emp.name)
+        .filter(emp => isTeamMember(coachingWeekKey, emp.name))
+        .map(emp => emp.name)
+        .sort();
+
+    return { latestWeek, employees };
+}
+
+function setCoachingLatestPeriodStatus(status, coachingWeekKey, latestWeek) {
+    const endDate = latestWeek?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+        : (coachingWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingWeekKey.split('|')[1]) : coachingWeekKey);
+    status.textContent = `Using latest period: Week of ${endDate}`;
+    status.style.display = 'block';
+}
+
+function bindCoachingOutlookInputState(outlookBody, outlookBtn) {
+    if (!outlookBody || !outlookBtn) return;
+    bindElementOnce(outlookBody, 'input', (e) => {
+        const hasContent = e.target.value.trim().length > 0;
+        outlookBtn.disabled = !hasContent;
+        outlookBtn.style.opacity = hasContent ? '1' : '0.6';
+        outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+    });
+}
+
+function bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn) {
+    const deleteLatestBtn = document.getElementById('deleteLatestCoachingBtn');
+    const clearHistoryBtn = document.getElementById('clearCoachingHistoryBtn');
+
+    bindElementOnce(select, 'change', updateCoachingEmailDisplay);
+    bindElementOnce(generateBtn, 'click', generateCoachingPromptAndCopy);
+    bindElementOnce(deleteLatestBtn, 'click', deleteLatestCoachingEntry);
+    bindElementOnce(clearHistoryBtn, 'click', clearCoachingHistoryForEmployee);
+    bindElementOnce(outlookBtn, 'click', generateOutlookEmailFromCoPilot);
+}
+
 function initializeCoachingEmail() {
     const select = document.getElementById('coachingEmployeeSelect');
     const status = document.getElementById('coachingEmailStatus');
@@ -11042,18 +11107,7 @@ function initializeCoachingEmail() {
 
     if (!select || !status || !panel || !promptArea || !generateBtn) return;
 
-    status.style.display = 'none';
-    panel.style.display = 'none';
-    promptArea.value = '';
-    if (outlookSection && outlookBody && outlookBtn) {
-        outlookSection.style.display = 'none';
-        outlookBody.value = '';
-        outlookBtn.disabled = true;
-        outlookBtn.style.opacity = '0.6';
-        outlookBtn.style.cursor = 'not-allowed';
-    }
-
-    select.innerHTML = '<option value="">-- Choose an associate --</option>';
+    resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn);
 
     if (!weeklyData || Object.keys(weeklyData).length === 0) {
         status.textContent = 'No data available. Upload data first to generate coaching emails.';
@@ -11068,60 +11122,11 @@ function initializeCoachingEmail() {
         return;
     }
 
-    const latestWeek = weeklyData[coachingLatestWeekKey];
-    const employees = (latestWeek.employees || [])
-        .filter(emp => emp && emp.name)
-        .filter(emp => isTeamMember(coachingLatestWeekKey, emp.name))
-        .map(emp => emp.name)
-        .sort();
-
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    });
-
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
-    status.textContent = `Using latest period: Week of ${endDate}`;
-    status.style.display = 'block';
-
-    if (!select.dataset.bound) {
-        select.addEventListener('change', updateCoachingEmailDisplay);
-        select.dataset.bound = 'true';
-    }
-    if (!generateBtn.dataset.bound) {
-        generateBtn.addEventListener('click', generateCoachingPromptAndCopy);
-        generateBtn.dataset.bound = 'true';
-    }
-
-    const deleteLatestBtn = document.getElementById('deleteLatestCoachingBtn');
-    const clearHistoryBtn = document.getElementById('clearCoachingHistoryBtn');
-    if (deleteLatestBtn && !deleteLatestBtn.dataset.bound) {
-        deleteLatestBtn.addEventListener('click', deleteLatestCoachingEntry);
-        deleteLatestBtn.dataset.bound = 'true';
-    }
-    if (clearHistoryBtn && !clearHistoryBtn.dataset.bound) {
-        clearHistoryBtn.addEventListener('click', clearCoachingHistoryForEmployee);
-        clearHistoryBtn.dataset.bound = 'true';
-    }
-
-    if (outlookBody && outlookBtn && !outlookBody.dataset.bound) {
-        outlookBody.addEventListener('input', (e) => {
-            const hasContent = e.target.value.trim().length > 0;
-            outlookBtn.disabled = !hasContent;
-            outlookBtn.style.opacity = hasContent ? '1' : '0.6';
-            outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-        });
-        outlookBody.dataset.bound = 'true';
-    }
-
-    if (outlookBtn && !outlookBtn.dataset.bound) {
-        outlookBtn.addEventListener('click', generateOutlookEmailFromCoPilot);
-        outlookBtn.dataset.bound = 'true';
-    }
+    const { latestWeek, employees } = getCoachingLatestPeriodEmployees(coachingLatestWeekKey);
+    populateCoachingEmployeeSelectOptions(select, employees);
+    setCoachingLatestPeriodStatus(status, coachingLatestWeekKey, latestWeek);
+    bindCoachingOutlookInputState(outlookBody, outlookBtn);
+    bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn);
 
     
 }
