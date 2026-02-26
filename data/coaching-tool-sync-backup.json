@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-26T17:12:08.626Z",
-  "reason": "year-end draft updated",
-  "sourceAppVersion": "2026.02.26.60",
+  "generatedAt": "2026-02-26T17:15:38.100Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
+  "sourceAppVersion": "2026.02.26.61",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -4388,130 +4388,7 @@
       "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
-  "ptoTracker": {
-    "selectedAssociate": "Alyssa Dimes",
-    "associates": {
-      "Alyssa Dimes": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Angelina Fierro": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Pamela Muhammad": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 26.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Oceane Ingram": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 4,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Precious Johnson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 18.51,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Brittney Carroll": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Caylie Chirumbolo": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 1.65,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Darryn Coley": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 31.17,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ekiecha Brabham": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 6.25,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Jenifer Henson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Marietta Bernal": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.15,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ronda Colis": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 2.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Scoticia Osborne": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.6,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Taylor Colter": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Teena Pokorski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trevor Pedrowski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trisha Erb": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      }
-    }
-  },
+  "ptoTracker": {},
   "yearEndAnnualGoalsStore": {
     "2025::Scoticia Osborne": {
       "safetyGoalAps": {
@@ -5124,40 +5001,6 @@
         "status": "met",
         "note": ""
       }
-    },
-    "2026::Angelina Fierro": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
     }
   },
   "yearEndDraftStore": {
@@ -5267,8 +5110,8 @@
       "trackStatus": "on-track",
       "positivesText": "Hold Time: 1s vs target 30s\nRep Satisfaction: 81.3% vs target 80.0%\nFirst Call Resolution: 78.7% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 86.5% vs target 86.0%\nAvoid Negative Words: 91.5% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 22.3% vs target 6.0%\nAverage Handle Time: 532s vs target 440s\nAfter Call Work: 80s vs target 60s\nOverall Experience: 81.3% vs target 84.0%\nReliability: 28.7 hrs vs target 16.0 hrs",
-      "managerContext": "This is what she put. I want to make sure I capture a lot of this, and rephrase it for her year end.\n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nThis year, I’m most proud of the progress I made toward my 2024 business goals, particularly in strengthening my performance, consistency, and alignment with APS principles.\n\nOne key contribution was achieving strong results in areas such as AHT, adherence, and customer satisfaction while maintaining quality and empathy in every interaction. I consistently applied the “Customer First” and “Own It” principles by taking accountability for each experience and ensuring customers felt heard and supported.\n\nAnother contribution I’m proud of was being asked to have someone shadow me within my first nine months. This was a meaningful acknowledgment of my performance, professionalism, and commitment to operational excellence. I viewed it as an opportunity to demonstrate “Win Together”, sharing best practices and fostering team collaboration.\n\nAdditionally, being invited to participate in the Contact Center Transformation Assessment meeting was an honor that reflected the trust leadership placed in me. It allowed me to contribute frontline insights and align my work with the company’s vision for continuous improvement — a great example of living the “Simplify and Improve” principle.\n\nOverall, I’ve worked hard to not only meet performance goals but also embody APS values in everything I do. These experiences have strengthened my confidence, broadened my understanding of business operations, and deepened my commitment to delivering excellence and supporting our collective success.\n\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nThis year, I focused on developing my ability to deliver excellent customer service while applying feedback from my leader and others to strengthen my overall performance.\n\n One area of growth has been learning to balance efficiency with empathy. Although my Average Handle Time (AHT) is higher than the target, I’ve learned that providing thorough and genuine support often requires taking the extra time to ensure the customer feels heard, valued, and fully satisfied.\n\nFeedback from my leader encouraged me to continue focusing on active listening, clear communication, and ownership, which has reflected positively in my survey results and customer feedback. I’ve heard consistent comments highlighting patience, professionalism, and my ability to resolve concerns completely — qualities that align with our APS principles and the company’s focus on quality over speed.\n\nOverall, I’ve grown in understanding that excellent service isn’t just about how quickly an interaction ends but about the lasting impression it leaves on the customer and the business.",
-      "copilotResponse": "Box 1 - Significant Accomplishments:\nAngelina delivered strong on track performance and made meaningful progress toward her goals while consistently demonstrating APS Principles. She exceeded multiple quality targets, including Hold Time at 1s against a 30s goal, Rep Satisfaction at 81.3% against an 80.0% goal, First Call Resolution at 78.7% against a 70.0% goal, Overall Sentiment at 91.3% against an 88.0% goal, Positive Word usage at 86.5% against an 86.0% goal, and Avoid Negative Words at 91.5% against an 83.0% goal. She also met all annual safety, compliance, and operational expectations, including 100% accuracy on Emergency Safety Hazard calls and deposit waivers, 0 ACC substantiated complaints, 0 phishing email clicks, and timely completion of all required training. Her participation in the Contact Center Transformation Assessment and being chosen as a shadow example reflected her professionalism, Customer First mindset, and willingness to Win Together. Additionally, Angelina volunteered for APS Cares events, and if selected, it will further strengthen her development and provide another opportunity for her to shine. Overall, her performance contributed positively to customer experience and demonstrated strong commitment to continuous improvement.\nBox 2 - Future Improvement Areas:\nAngelina made noticeable progress after becoming phase 3 and phase 4 trained on transfers, and this growth was reflected in the second half of the year; continued focus here will help reduce transfers, which were 22.3% against a 6.0% goal. Improving Schedule Adherence at 92.7% against a 93.0% goal and narrowing efficiency gaps such as Average Handle Time at 532s against a 440s goal and After Call Work at 80s against a 60s goal will support more consistent operational outcomes. As she continues to navigate APS systems and processes, building on the growth she has already shown will help strengthen both efficiency and the overall customer experience.",
+      "managerContext": "",
+      "copilotResponse": "",
       "performanceRating": "Successful",
       "meritDetails": "2% to 25.98",
       "bonusAmount": "3434.73",
@@ -5372,17 +5215,6 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
-    },
-    "2026::Angelina Fierro": {
-      "trackStatus": "on-track",
-      "positivesText": "Hold Time: 1s vs target 30s\nOverall Experience: 87.5% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 100.0% vs target 73.0%\nOverall Sentiment: 93.5% vs target 88.0%\nPositive Word: 97.4% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
-      "improvementsText": "Schedule Adherence: 90.8% vs target 93.0%\nTransfers: 7.7% vs target 6.0%\nAverage Handle Time: 696s vs target 414s\nAfter Call Work: 179s vs target 60s",
-      "managerContext": "",
-      "copilotResponse": "",
-      "performanceRating": "",
-      "meritDetails": "",
-      "bonusAmount": "",
-      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5390,6 +5222,16 @@
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 280
+    },
+    "devCoachingTool_cloudSyncShared": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 203
+    },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 8,
+      "byteLength": 2241
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -5401,11 +5243,6 @@
       "itemCount": 2,
       "byteLength": 15051
     },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 8,
-      "byteLength": 2241
-    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
@@ -5413,33 +5250,38 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
-    },
-    "devCoachingTool_ptoTracker": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 2196
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
       "itemCount": 3,
-      "byteLength": 129
+      "byteLength": 77
+    },
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 132
+      "byteLength": 140
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 130
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 19,
-      "byteLength": 7990
+      "itemCount": 18,
+      "byteLength": 7570
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 6957
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -5448,28 +5290,28 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 21,
-      "byteLength": 55440
+      "itemCount": 20,
+      "byteLength": 49648
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
     },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
+    },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 228
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 28
+      "byteLength": 212
     }
   }
 }
