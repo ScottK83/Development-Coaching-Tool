@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.64'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.65'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12237,40 +12237,69 @@ function bindElementOnce(element, eventName, handler) {
     element.dataset.bound = 'true';
 }
 
-function initializeYearEndComments() {
-    const employeeSelect = document.getElementById('yearEndEmployeeSelect');
-    const reviewYearInput = document.getElementById('yearEndReviewYear');
-    const status = document.getElementById('yearEndStatus');
-    const snapshotPanel = document.getElementById('yearEndSnapshotPanel');
-    const promptArea = document.getElementById('yearEndPromptArea');
-    const trackSelect = document.getElementById('yearEndTrackSelect');
-    const positivesInput = document.getElementById('yearEndPositivesInput');
-    const improvementsInput = document.getElementById('yearEndImprovementsInput');
-    const managerContextInput = document.getElementById('yearEndManagerContext');
-    const responseInput = document.getElementById('yearEndCopilotResponse');
-    const performanceRatingInput = document.getElementById('yearEndPerformanceRatingInput');
-    const meritDetailsInput = document.getElementById('yearEndMeritDetailsInput');
-    const bonusAmountInput = document.getElementById('yearEndBonusAmountInput');
-    const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
-    const calculateOnOffBtn = document.getElementById('calculateYearEndOnOffBtn');
-    const generateBtn = document.getElementById('generateYearEndPromptBtn');
-    const pasteResponseBtn = document.getElementById('pasteYearEndResponseBtn');
-    const copyBtn = document.getElementById('copyYearEndResponseBtn');
-    const copyBox1Btn = document.getElementById('copyYearEndBox1Btn');
-    const copyBox2Btn = document.getElementById('copyYearEndBox2Btn');
-    const generateVerbalSummaryBtn = document.getElementById('generateYearEndVerbalSummaryBtn');
-    const copyVerbalSummaryBtn = document.getElementById('copyYearEndVerbalSummaryBtn');
+function getYearEndCommentsElements() {
+    return {
+        employeeSelect: document.getElementById('yearEndEmployeeSelect'),
+        reviewYearInput: document.getElementById('yearEndReviewYear'),
+        status: document.getElementById('yearEndStatus'),
+        snapshotPanel: document.getElementById('yearEndSnapshotPanel'),
+        promptArea: document.getElementById('yearEndPromptArea'),
+        trackSelect: document.getElementById('yearEndTrackSelect'),
+        positivesInput: document.getElementById('yearEndPositivesInput'),
+        improvementsInput: document.getElementById('yearEndImprovementsInput'),
+        managerContextInput: document.getElementById('yearEndManagerContext'),
+        responseInput: document.getElementById('yearEndCopilotResponse'),
+        performanceRatingInput: document.getElementById('yearEndPerformanceRatingInput'),
+        meritDetailsInput: document.getElementById('yearEndMeritDetailsInput'),
+        bonusAmountInput: document.getElementById('yearEndBonusAmountInput'),
+        verbalSummaryOutput: document.getElementById('yearEndVerbalSummaryOutput'),
+        calculateOnOffBtn: document.getElementById('calculateYearEndOnOffBtn'),
+        generateBtn: document.getElementById('generateYearEndPromptBtn'),
+        pasteResponseBtn: document.getElementById('pasteYearEndResponseBtn'),
+        copyBtn: document.getElementById('copyYearEndResponseBtn'),
+        copyBox1Btn: document.getElementById('copyYearEndBox1Btn'),
+        copyBox2Btn: document.getElementById('copyYearEndBox2Btn'),
+        generateVerbalSummaryBtn: document.getElementById('generateYearEndVerbalSummaryBtn'),
+        copyVerbalSummaryBtn: document.getElementById('copyYearEndVerbalSummaryBtn')
+    };
+}
 
-    if (!employeeSelect || !reviewYearInput || !status || !snapshotPanel || !promptArea || !trackSelect || !positivesInput || !improvementsInput || !managerContextInput || !responseInput || !performanceRatingInput || !meritDetailsInput || !bonusAmountInput || !verbalSummaryOutput || !generateBtn || !copyBtn || !generateVerbalSummaryBtn || !copyVerbalSummaryBtn) return;
+function hasRequiredYearEndCommentsElements(elements) {
+    return Boolean(
+        elements.employeeSelect
+        && elements.reviewYearInput
+        && elements.status
+        && elements.snapshotPanel
+        && elements.promptArea
+        && elements.trackSelect
+        && elements.positivesInput
+        && elements.improvementsInput
+        && elements.managerContextInput
+        && elements.responseInput
+        && elements.performanceRatingInput
+        && elements.meritDetailsInput
+        && elements.bonusAmountInput
+        && elements.verbalSummaryOutput
+        && elements.generateBtn
+        && elements.copyBtn
+        && elements.generateVerbalSummaryBtn
+        && elements.copyVerbalSummaryBtn
+    );
+}
 
+function resetYearEndCommentsInitialState(snapshotPanel, promptArea) {
     yearEndDraftContext = null;
     promptArea.value = '';
     snapshotPanel.style.display = 'none';
+}
 
+function initializeYearEndReviewYearInput(reviewYearInput) {
     if (!reviewYearInput.value) {
         reviewYearInput.value = String(new Date().getFullYear());
     }
+}
 
+function populateYearEndEmployeeSelect(employeeSelect) {
     employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
     const employees = getYearEndEmployees();
     employees.forEach(name => {
@@ -12279,29 +12308,22 @@ function initializeYearEndComments() {
         option.textContent = name;
         employeeSelect.appendChild(option);
     });
+    return employees;
+}
 
-    if (!employees.length) {
-        status.textContent = 'No employee data found yet. Upload yearly metrics first.';
-        status.style.display = 'block';
-        renderYearEndAnnualGoalsInputs('', reviewYearInput.value || String(new Date().getFullYear()));
-        return;
-    }
-
-    status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
-    status.style.display = 'block';
-
-    bindElementOnce(employeeSelect, 'change', updateYearEndSnapshotDisplay);
-    bindElementOnce(reviewYearInput, 'input', updateYearEndSnapshotDisplay);
-    bindElementOnce(generateBtn, 'click', generateYearEndPromptAndCopy);
-    bindElementOnce(pasteResponseBtn, 'click', pasteYearEndResponseFromClipboard);
-    bindElementOnce(copyBtn, 'click', copyYearEndResponseToClipboard);
-    bindElementOnce(copyBox1Btn, 'click', () => copyYearEndBoxResponseToClipboard(1));
-    bindElementOnce(copyBox2Btn, 'click', () => copyYearEndBoxResponseToClipboard(2));
-    bindElementOnce(generateVerbalSummaryBtn, 'click', generateYearEndVerbalSummary);
-    bindElementOnce(copyVerbalSummaryBtn, 'click', copyYearEndVerbalSummary);
-    bindElementOnce(calculateOnOffBtn, 'click', () => {
-        const selectedEmployee = employeeSelect.value;
-        const selectedYear = reviewYearInput.value;
+function bindYearEndPrimaryActionHandlers(elements) {
+    bindElementOnce(elements.employeeSelect, 'change', updateYearEndSnapshotDisplay);
+    bindElementOnce(elements.reviewYearInput, 'input', updateYearEndSnapshotDisplay);
+    bindElementOnce(elements.generateBtn, 'click', generateYearEndPromptAndCopy);
+    bindElementOnce(elements.pasteResponseBtn, 'click', pasteYearEndResponseFromClipboard);
+    bindElementOnce(elements.copyBtn, 'click', copyYearEndResponseToClipboard);
+    bindElementOnce(elements.copyBox1Btn, 'click', () => copyYearEndBoxResponseToClipboard(1));
+    bindElementOnce(elements.copyBox2Btn, 'click', () => copyYearEndBoxResponseToClipboard(2));
+    bindElementOnce(elements.generateVerbalSummaryBtn, 'click', generateYearEndVerbalSummary);
+    bindElementOnce(elements.copyVerbalSummaryBtn, 'click', copyYearEndVerbalSummary);
+    bindElementOnce(elements.calculateOnOffBtn, 'click', () => {
+        const selectedEmployee = elements.employeeSelect.value;
+        const selectedYear = elements.reviewYearInput.value;
         if (!selectedEmployee || !selectedYear) {
             alert('⚠️ Select associate and review year first.');
             return;
@@ -12310,22 +12332,45 @@ function initializeYearEndComments() {
         document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         showToast('✅ On/Off tracker calculated using Excel mirror logic.', 3000);
     });
+}
 
+function bindYearEndDraftPersistenceHandlers(elements) {
     const persistDraft = () => {
-        persistYearEndDraftState(employeeSelect.value, reviewYearInput.value);
+        persistYearEndDraftState(elements.employeeSelect.value, elements.reviewYearInput.value);
     };
 
-    bindElementOnce(trackSelect, 'change', persistDraft);
-    bindElementOnce(positivesInput, 'input', persistDraft);
-    bindElementOnce(improvementsInput, 'input', persistDraft);
-    bindElementOnce(managerContextInput, 'input', persistDraft);
-    bindElementOnce(responseInput, 'input', persistDraft);
-    bindElementOnce(performanceRatingInput, 'input', persistDraft);
-    bindElementOnce(meritDetailsInput, 'input', persistDraft);
-    bindElementOnce(bonusAmountInput, 'input', persistDraft);
-    bindElementOnce(verbalSummaryOutput, 'input', persistDraft);
+    bindElementOnce(elements.trackSelect, 'change', persistDraft);
+    bindElementOnce(elements.positivesInput, 'input', persistDraft);
+    bindElementOnce(elements.improvementsInput, 'input', persistDraft);
+    bindElementOnce(elements.managerContextInput, 'input', persistDraft);
+    bindElementOnce(elements.responseInput, 'input', persistDraft);
+    bindElementOnce(elements.performanceRatingInput, 'input', persistDraft);
+    bindElementOnce(elements.meritDetailsInput, 'input', persistDraft);
+    bindElementOnce(elements.bonusAmountInput, 'input', persistDraft);
+    bindElementOnce(elements.verbalSummaryOutput, 'input', persistDraft);
+}
 
-    renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
+function initializeYearEndComments() {
+    const elements = getYearEndCommentsElements();
+    if (!hasRequiredYearEndCommentsElements(elements)) return;
+
+    resetYearEndCommentsInitialState(elements.snapshotPanel, elements.promptArea);
+    initializeYearEndReviewYearInput(elements.reviewYearInput);
+
+    const employees = populateYearEndEmployeeSelect(elements.employeeSelect);
+    if (!employees.length) {
+        elements.status.textContent = 'No employee data found yet. Upload yearly metrics first.';
+        elements.status.style.display = 'block';
+        renderYearEndAnnualGoalsInputs('', elements.reviewYearInput.value || String(new Date().getFullYear()));
+        return;
+    }
+
+    elements.status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
+    elements.status.style.display = 'block';
+
+    bindYearEndPrimaryActionHandlers(elements);
+    bindYearEndDraftPersistenceHandlers(elements);
+    renderYearEndAnnualGoalsInputs(elements.employeeSelect.value, elements.reviewYearInput.value);
 }
 
 function clearYearEndOnOffMirror(onOffSummary, onOffDetails) {
