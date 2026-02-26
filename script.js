@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.26'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.27'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13664,6 +13664,20 @@ function parseSentimentKeywordLine(report, line, pendingPhrase) {
     return { handled: false, pendingPhrase };
 }
 
+function logSentimentParseCompletion(fileType, report, allInteractionsMatches) {
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - All Interactions matches found:`, allInteractionsMatches);
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Final report:`, report);
+    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%, inKeywordsSection=${report.inKeywordsSection}`);
+
+    if (report.percentage === 0) {
+        console.error(`⚠️ WARNING: ${fileType} percentage is 0. This might mean:`);
+        console.error(`   - No Interactions line was found in the file`);
+        console.error(`   - The regex didn't match the email format`);
+        console.error(`   - The Keywords section was never detected (inKeywordsSection=${report.inKeywordsSection})`);
+        console.error(`   - All ${allInteractionsMatches.length} Interactions matches were before keywords section`);
+    }
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13744,17 +13758,7 @@ function parseSentimentFile(fileType, lines) {
         }
     }
     
-    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - All Interactions matches found:`, allInteractionsMatches);
-    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Final report:`, report);
-    console.log(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%, inKeywordsSection=${report.inKeywordsSection}`);
-    
-    if (report.percentage === 0) {
-        console.error(`⚠️ WARNING: ${fileType} percentage is 0. This might mean:`);
-        console.error(`   - No Interactions line was found in the file`);
-        console.error(`   - The regex didn't match the email format`);
-        console.error(`   - The Keywords section was never detected (inKeywordsSection=${report.inKeywordsSection})`);
-        console.error(`   - All ${allInteractionsMatches.length} Interactions matches were before keywords section`);
-    }
+    logSentimentParseCompletion(fileType, report, allInteractionsMatches);
     
     return report;
 }
