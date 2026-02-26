@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T21:04:53.015Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-26T21:04:55.742Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.79",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5035,6 +5035,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Trevor Pedrowski": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5260,6 +5294,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2026::Trevor Pedrowski": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 19s vs target 30s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nAvoid Negative Words: 83.3% vs target 83.0%\nReliability: 0.1 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 89.4% vs target 93.0%\nTransfers: 7.5% vs target 6.0%\nAverage Handle Time: 473s vs target 414s\nAfter Call Work: 82s vs target 60s\nFirst Call Resolution: 50.0% vs target 73.0%\nOverall Sentiment: 82.1% vs target 88.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5315,8 +5360,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 19,
-      "byteLength": 7990
+      "itemCount": 20,
+      "byteLength": 8411
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5335,8 +5380,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 21,
-      "byteLength": 50490
+      "itemCount": 22,
+      "byteLength": 51381
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
