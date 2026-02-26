@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.134'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.135'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3083,6 +3083,19 @@ function getTotalCallListeningLogCount() {
     }, 0);
 }
 
+async function runWithButtonBusyState(button, busyText, action) {
+    if (!button) return;
+    const buttonOriginalText = button.textContent;
+    button.disabled = true;
+    button.textContent = busyText;
+    try {
+        await action();
+    } finally {
+        button.disabled = false;
+        button.textContent = buttonOriginalText;
+    }
+}
+
 function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
     const syncSecretInput = document.getElementById('callListeningSyncSecret');
@@ -3105,15 +3118,9 @@ function initializeRepoSyncControls() {
 
     if (!syncNowBtn.dataset.bound) {
         syncNowBtn.addEventListener('click', async () => {
-            const buttonOriginalText = syncNowBtn.textContent;
-            syncNowBtn.disabled = true;
-            syncNowBtn.textContent = '⏳ Syncing...';
-            try {
+            await runWithButtonBusyState(syncNowBtn, '⏳ Syncing...', async () => {
                 await syncRepoData('manual sync now', { force: true });
-            } finally {
-                syncNowBtn.disabled = false;
-                syncNowBtn.textContent = buttonOriginalText;
-            }
+            });
         });
         syncNowBtn.dataset.bound = 'true';
     }
@@ -3122,35 +3129,31 @@ function initializeRepoSyncControls() {
             const confirmed = confirm('Restore from repo backup and overwrite ALL local data in this browser profile? This cannot be undone.');
             if (!confirmed) return;
 
-            const buttonOriginalText = forceRestoreBtn.textContent;
-            forceRestoreBtn.disabled = true;
-            forceRestoreBtn.textContent = '⏳ Restoring...';
-            setCallListeningSyncStatus('Restoring from repo backup (overwrite local)...', 'info');
+            await runWithButtonBusyState(forceRestoreBtn, '⏳ Restoring...', async () => {
+                setCallListeningSyncStatus('Restoring from repo backup (overwrite local)...', 'info');
 
-            try {
-                const payload = await fetchRepoBackupPayload();
-                if (!hasMeaningfulBackupData(payload)) {
-                    throw new Error('No repo backup data found to restore.');
-                }
-
-                repoSyncHydrationInProgress = true;
                 try {
-                    applyRepoBackupPayload(payload);
-                } finally {
-                    repoSyncHydrationInProgress = false;
-                }
+                    const payload = await fetchRepoBackupPayload();
+                    if (!hasMeaningfulBackupData(payload)) {
+                        throw new Error('No repo backup data found to restore.');
+                    }
 
-                setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
-                showToast('✅ Local profile overwritten from repo backup.', 3500);
-                setTimeout(() => window.location.reload(), 500);
-            } catch (error) {
-                console.error('Force restore failed:', error);
-                setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');
-                showToast(`⚠️ Restore failed: ${error.message}`, 4000);
-            } finally {
-                forceRestoreBtn.disabled = false;
-                forceRestoreBtn.textContent = buttonOriginalText;
-            }
+                    repoSyncHydrationInProgress = true;
+                    try {
+                        applyRepoBackupPayload(payload);
+                    } finally {
+                        repoSyncHydrationInProgress = false;
+                    }
+
+                    setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
+                    showToast('✅ Local profile overwritten from repo backup.', 3500);
+                    setTimeout(() => window.location.reload(), 500);
+                } catch (error) {
+                    console.error('Force restore failed:', error);
+                    setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');
+                    showToast(`⚠️ Restore failed: ${error.message}`, 4000);
+                }
+            });
         });
         forceRestoreBtn.dataset.bound = 'true';
     }
