@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.41'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.42'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6233,6 +6233,74 @@ function resolveTrendDirectionDisplay(associateValue, previousValue, isReverse, 
     };
 }
 
+function drawTrendMetricRowShell(ctx, x, y, width, height, rowBgColor) {
+    ctx.fillStyle = rowBgColor;
+    ctx.fillRect(x, y, width, height);
+
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, width, height);
+}
+
+function drawTrendMetricBaseCells(ctx, x, y, metric, target, noSurveys, associateValue, centerExists, centerAvg) {
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'left';
+    const targetDisplay = formatMetricDisplay(metric.key, target);
+    ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
+
+    ctx.fillStyle = noSurveys ? '#999999' : '#333333';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
+    ctx.fillText(formattedValue, x + 240, y + 24);
+
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
+    ctx.fillText(formattedCenter, x + 340, y + 24);
+}
+
+function drawTrendMetricCenterAndTrendCells(ctx, x, y, noSurveys, associateValue, centerAvg, isAboveCenter, metric, previousValue, isReverse, metricKey, periodType) {
+    if (!noSurveys) {
+        const centerExists = centerAvg > 0;
+        const vsCenterDisplay = resolveTrendCenterComparisonDisplay(
+            associateValue,
+            centerAvg,
+            isAboveCenter,
+            metric.key,
+            centerExists
+        );
+
+        ctx.fillStyle = vsCenterDisplay.color;
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(vsCenterDisplay.text, x + 460, y + 24);
+
+        const trendingDisplay = resolveTrendDirectionDisplay(
+            associateValue,
+            previousValue,
+            isReverse,
+            metricKey,
+            periodType
+        );
+
+        ctx.fillStyle = trendingDisplay.color;
+        ctx.font = '13px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(trendingDisplay.text, x + 570, y + 24);
+        return;
+    }
+
+    ctx.fillStyle = '#999999';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('N/A', x + 460, y + 24);
+    ctx.textAlign = 'left';
+    ctx.fillText('N/A', x + 570, y + 24);
+}
+
 function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0, reviewYear = null) {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
@@ -6268,73 +6336,23 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         false;
     
     const rowBgColor = resolveTrendRowBackgroundColor(noSurveys, meetsGoal);
-    
-    // Draw row background
-    ctx.fillStyle = rowBgColor;
-    ctx.fillRect(x, y, width, height);
-    
-    // Draw row border
-    ctx.strokeStyle = '#ddd';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, width, height);
-    
-    // Metric name with target
-    ctx.fillStyle = '#333333';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'left';
-    const targetDisplay = formatMetricDisplay(metric.key, target);
-    ctx.fillText(`${metric.label} (${targetDisplay})`, x + 10, y + 24);
-    
-    // Associate value - show N/A if no surveys, otherwise display the metric value
-    ctx.fillStyle = noSurveys ? '#999999' : '#333333';
-    ctx.font = noSurveys ? 'bold 14px Arial' : 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
-    ctx.fillText(formattedValue, x + 240, y + 24);
-    
-    // Center average - ALWAYS show if available (independent of weekly surveys)
-    ctx.fillStyle = '#333333';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
-    ctx.fillText(formattedCenter, x + 340, y + 24);
-    
-    // VS CENTER and TRENDING - only calculate if employee has survey data this period
-    if (!noSurveys) {
-        const vsCenterDisplay = resolveTrendCenterComparisonDisplay(
-            associateValue,
-            centerAvg,
-            isAboveCenter,
-            metric.key,
-            centerExists
-        );
-        
-        ctx.fillStyle = vsCenterDisplay.color;
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(vsCenterDisplay.text, x + 460, y + 24);
-        
-        const trendingDisplay = resolveTrendDirectionDisplay(
-            associateValue,
-            previousValue,
-            isReverse,
-            metricKey,
-            periodType
-        );
-        
-        ctx.fillStyle = trendingDisplay.color;
-        ctx.font = '13px Arial'; // Smaller font to fit change description
-        ctx.textAlign = 'left';
-        ctx.fillText(trendingDisplay.text, x + 570, y + 24);
-    } else {
-        // If no surveys, show N/A for vs center and trend (but center avg already shown above)
-        ctx.fillStyle = '#999999';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('N/A', x + 460, y + 24);
-        ctx.textAlign = 'left';
-        ctx.fillText('N/A', x + 570, y + 24);
-    }
+
+    drawTrendMetricRowShell(ctx, x, y, width, height, rowBgColor);
+    drawTrendMetricBaseCells(ctx, x, y, metric, target, noSurveys, associateValue, centerExists, centerAvg);
+    drawTrendMetricCenterAndTrendCells(
+        ctx,
+        x,
+        y,
+        noSurveys,
+        associateValue,
+        centerAvg,
+        isAboveCenter,
+        metric,
+        previousValue,
+        isReverse,
+        metricKey,
+        periodType
+    );
     
     // YTD value - always render for all view types
     // CRITICAL: YTD display is INDEPENDENT of weekly survey count
