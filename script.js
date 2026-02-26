@@ -5479,11 +5479,8 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
         // Skip if employee value is 0 (not provided)
         if (employeeValue === 0) return;
         
-        const target = getMetricTarget(registryKey, reviewYear);
-        const yearTargetConfig = Number.isInteger(parseInt(reviewYear, 10))
-            ? YEAR_END_TARGETS_BY_YEAR[parseInt(reviewYear, 10)]?.[registryKey]
-            : null;
-        const targetType = yearTargetConfig?.type || metric.target?.type || 'min';
+        const target = getMetricTrendTarget(registryKey);
+        const targetType = getMetricTrendTargetType(registryKey);
         const isReverse = isReverseMetric(registryKey);
         
         // Check if meets target based on target type
@@ -6390,7 +6387,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         measuredMetricCount++;
         
         const curr = parseFloat(metrics[key]) || 0;
-        const target = getMetricTarget(key, reviewYear);
+        const target = getMetricTrendTarget(key);
         const center = getCenterAverageForMetric(centerAvg, key);
         
         if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
@@ -6572,7 +6569,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         const curr = parseFloat(metrics[key]) || 0;
         const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTarget(key, reviewYear);
+        const target = getMetricTrendTarget(key);
         const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
         
         renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal, reviewYear);
@@ -6596,7 +6593,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         const curr = parseFloat(metrics[key]) || 0;
         const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
         const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTarget(key, reviewYear);
+        const target = getMetricTrendTarget(key);
         const isReverse = isReverseMetric(key);
         
         // Check if improved from last week
@@ -6996,6 +6993,18 @@ function getMetricTarget(metric, reviewYear = null) {
     return 90; // Safe fallback
 }
 
+function getMetricTrendTarget(metricKey) {
+    const metricDef = METRICS_REGISTRY[metricKey];
+    if (metricDef?.target && metricDef.target.value !== undefined && metricDef.target.value !== null) {
+        return metricDef.target.value;
+    }
+    return getMetricTarget(metricKey, null);
+}
+
+function getMetricTrendTargetType(metricKey) {
+    return METRICS_REGISTRY[metricKey]?.target?.type || 'min';
+}
+
 function formatMetricValue(key, value) {
     const metric = METRICS_REGISTRY[key];
     if (!metric) return value.toFixed(1);
@@ -7334,11 +7343,8 @@ function generateTeamTrendSummary() {
         if (values.length === 0) return;
 
         const teamValue = values.reduce((sum, value) => sum + value, 0) / values.length;
-        const target = getMetricTarget(key, reviewYear);
-        const yearTargetConfig = Number.isInteger(parseInt(reviewYear, 10))
-            ? YEAR_END_TARGETS_BY_YEAR[parseInt(reviewYear, 10)]?.[key]
-            : null;
-        const targetType = yearTargetConfig?.type || metricDef.target?.type || 'min';
+        const target = getMetricTrendTarget(key);
+        const targetType = getMetricTrendTargetType(key);
         const meetsTarget = targetType === 'min' ? teamValue >= target : teamValue <= target;
 
         teamMetrics.push({
