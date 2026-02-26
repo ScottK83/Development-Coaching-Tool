@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.02'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.03'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6535,13 +6535,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     
     // ========== LEGEND SECTION ==========
     y += 30;
-    ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(40, y, 820, 180);
-    
-    ctx.fillStyle = '#003DA5';
-    ctx.font = 'bold 18px Arial';
-    ctx.fillText('📋 Legend', 50, y + 30);
-    
     const legendItems = [
         { color: '#d4edda', label: 'Meets goal' },
         { color: '#fff3cd', label: 'Below goal' },
@@ -6553,16 +6546,33 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
         { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
     ];
-    
-    let legendY = y + 60;
-    let legendX = 60;
-    
+
+    const legendColumns = 3;
+    const legendRows = Math.ceil(legendItems.length / legendColumns);
+    const legendRowHeight = 32;
+    const legendTopPadding = 20;
+    const legendBottomPadding = 16;
+    const legendHeaderHeight = 30;
+    const legendBoxHeight = legendTopPadding + legendHeaderHeight + (legendRows * legendRowHeight) + legendBottomPadding;
+    const legendBoxX = 40;
+    const legendBoxWidth = 820;
+    const legendCellWidth = legendBoxWidth / legendColumns;
+    const legendStartX = 50;
+    const legendStartY = y + legendTopPadding + legendHeaderHeight;
+
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(legendBoxX, y, legendBoxWidth, legendBoxHeight);
+
+    ctx.fillStyle = '#003DA5';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('📋 Legend', 50, y + legendTopPadding + 10);
+
     legendItems.forEach((item, idx) => {
-        if (idx === 5) {
-            legendX = 60;
-            legendY += 35;
-        }
-        
+        const col = idx % legendColumns;
+        const row = Math.floor(idx / legendColumns);
+        const legendX = legendStartX + (col * legendCellWidth);
+        const legendY = legendStartY + (row * legendRowHeight);
+
         if (item.symbol) {
             ctx.font = '16px Arial';
             ctx.fillStyle = item.color;
@@ -6570,7 +6580,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             ctx.fillStyle = '#333333';
             ctx.font = '13px Arial';
             ctx.fillText(item.label, legendX + 25, legendY);
-            legendX += 200;
         } else {
             ctx.fillStyle = item.color;
             ctx.fillRect(legendX, legendY - 12, 15, 15);
@@ -6582,11 +6591,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             ctx.fillStyle = '#333333';
             ctx.font = '13px Arial';
             ctx.fillText(item.label, legendX + 22, legendY);
-            legendX += 200;
         }
     });
-    
-    y += 190;
+
+    y += legendBoxHeight + 10;
     
     // Reliability Note (if employee has reliability hours)
     const reliabilityHours = parseFloat(metrics.reliability) || 0;
