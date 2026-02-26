@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.141'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.142'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5474,6 +5474,29 @@ function getRandomTipsForMetric(metricKey, count = 2) {
     return [];
 }
 
+function getTrendTipsForMetrics(weakestMetric, trendingMetric) {
+    return {
+        tipsForWeakest: weakestMetric ? getRandomTipsForMetric(weakestMetric.metricKey, 2) : [],
+        tipsForTrending: trendingMetric ? getRandomTipsForMetric(trendingMetric.metricKey, 2) : []
+    };
+}
+
+function getSelectedTrendSentimentSnapshot(employeeName) {
+    const sentimentSelect = document.getElementById('trendSentimentSelect');
+    const selectedSentiment = sentimentSelect?.value;
+    if (!selectedSentiment) return null;
+
+    const [startDate, endDate] = selectedSentiment.split('|');
+    const snapshots = associateSentimentSnapshots[employeeName];
+    if (!Array.isArray(snapshots)) return null;
+
+    const matchingSnapshot = snapshots.find(s => s.timeframeStart === startDate && s.timeframeEnd === endDate) || null;
+    if (matchingSnapshot) {
+        console.log('📊 Using selected sentiment snapshot:', matchingSnapshot);
+    }
+    return matchingSnapshot;
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
@@ -5528,41 +5551,10 @@ function generateTrendEmail() {
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
     const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
-    
-    // Get tips for BOTH weakest and trending metrics (2 tips each)
-    let tipsForWeakest = [];
-    let tipsForTrending = [];
-    if (weakestMetric) {
-        tipsForWeakest = getRandomTipsForMetric(weakestMetric.metricKey, 2);
-    }
-    if (trendingMetric) {
-        tipsForTrending = getRandomTipsForMetric(trendingMetric.metricKey, 2);
-    }
+    const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
 
     const periodMeta = period.metadata || {};
-    
-    // Get sentiment snapshot from dropdown selection (instead of automatic lookup)
-    let sentimentSnapshot = null;
-    const sentimentSelect = document.getElementById('trendSentimentSelect');
-    const selectedSentiment = sentimentSelect?.value;
-    
-    if (selectedSentiment) {
-        // User selected a specific sentiment snapshot
-        const [startDate, endDate] = selectedSentiment.split('|');
-        const snapshots = associateSentimentSnapshots[employeeName];
-        
-        if (snapshots && Array.isArray(snapshots)) {
-            const matchingSnapshot = snapshots.find(s => 
-                s.timeframeStart === startDate && s.timeframeEnd === endDate
-            );
-            
-            if (matchingSnapshot) {
-                sentimentSnapshot = matchingSnapshot;
-                console.log('📊 Using selected sentiment snapshot:', sentimentSnapshot);
-            }
-        }
-    }
-    // If no sentiment selected, sentimentSnapshot remains null (no sentiment in email)
+    const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
         // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
