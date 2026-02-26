@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.145'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.146'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5509,71 +5509,72 @@ function resolveTrendEmailContext(employeeName, weekKey) {
             showToast('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
         } else {
             showToast('No data found for this period', 5000);
-
-    function handleTrendEmailImageReady(
-        employeeName,
-        displayName,
-        weakestMetric,
-        trendingMetric,
-        tipsForWeakest,
-        tipsForTrending,
-        weekKey,
-        periodMeta,
-        sentimentSnapshot,
-        allMetrics
-    ) {
-        const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
-
-        if (DEBUG) {
-            console.log('Opening Outlook with subject:', emailSubject);
-        }
-
-        openTrendEmailOutlook(emailSubject);
-        showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
-
-        if (weakestMetric || trendingMetric) {
-            showTrendsWithTipsPanel(
-                employeeName,
-                displayName,
-                weakestMetric,
-                trendingMetric,
-                tipsForWeakest,
-                tipsForTrending,
-                weekKey,
-                periodMeta,
-                emailSubject,
-                sentimentSnapshot,
-                allMetrics
-            );
-        }
-    }
         }
         return null;
     }
 
     const employee = period.employees.find(e => e.name === employeeName);
     if (!employee) {
-            handleTrendEmailImageReady(
-                employeeName,
-                displayName,
-                weakestMetric,
-                trendingMetric,
-                tipsForWeakest,
-                tipsForTrending,
-                weekKey,
-                periodMeta,
-                sentimentSnapshot,
-                allMetrics
-            );
+        showToast('Employee not found in selected period', 5000);
+        return null;
+    }
+
+    const currentPeriodType = period.metadata?.periodType || 'week';
+    const prevPeriodKey = getPreviousPeriodData(weekKey, currentPeriodType);
+    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
+    const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
+
+    return {
+        period,
+        periodMeta: period.metadata || {},
+        employee,
         prevEmployee
     };
+}
+
+function handleTrendEmailImageReady(
+    employeeName,
+    displayName,
+    weakestMetric,
+    trendingMetric,
+    tipsForWeakest,
+    tipsForTrending,
+    weekKey,
+    periodMeta,
+    sentimentSnapshot,
+    allMetrics
+) {
+    const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
+
+    if (DEBUG) {
+        console.log('Opening Outlook with subject:', emailSubject);
+    }
+
+    openTrendEmailOutlook(emailSubject);
+    showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
+
+    if (weakestMetric || trendingMetric) {
+        showTrendsWithTipsPanel(
+            employeeName,
+            displayName,
+            weakestMetric,
+            trendingMetric,
+            tipsForWeakest,
+            tipsForTrending,
+            weekKey,
+            periodMeta,
+            emailSubject,
+            sentimentSnapshot,
+            allMetrics
+        );
+    }
 }
 
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
     const nickname = document.getElementById('trendNickname')?.value.trim();
-    
+
     if (!employeeName || !weekKey) {
         console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
@@ -5587,41 +5588,33 @@ function generateTrendEmail() {
     const trendContext = resolveTrendEmailContext(employeeName, weekKey);
     if (!trendContext) return;
     const { period, periodMeta, employee, prevEmployee } = trendContext;
-    
-    // Use nickname if provided, otherwise use full name
+
     const displayName = nickname || employeeName;
-    
-    // Build email image FIRST (while page has focus)
     showToast('ℹ️ Creating email image...', 3000);
-    
-    // Get center averages for trend analysis
+
     const centerAgvs = getCallCenterAverageForPeriod(weekKey) || {};
-    
     const reviewYear = parseInt((period?.metadata?.endDate || '').split('-')[0], 10) || null;
 
-    // Analyze metrics: find weakest + trending down
     const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs, reviewYear);
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
-    const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
+    const allMetrics = trendAnalysis.allMetrics || [];
     const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
-
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
-    
+
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
-        // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
-        const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
-        
-        if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
-        
-        // ALWAYS open Outlook first so user can paste the image
-        openTrendEmailOutlook(emailSubject);
-        showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
-        
-        // If there are metrics below target, show coaching panel for Copilot prompt
-        if (weakestMetric || trendingMetric) {
-            showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, weekKey, periodMeta, emailSubject, sentimentSnapshot, allMetrics);
-        }
+        handleTrendEmailImageReady(
+            employeeName,
+            displayName,
+            weakestMetric,
+            trendingMetric,
+            tipsForWeakest,
+            tipsForTrending,
+            weekKey,
+            periodMeta,
+            sentimentSnapshot,
+            allMetrics
+        );
     });
 }
 
