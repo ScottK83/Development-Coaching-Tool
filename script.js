@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.143'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.144'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5502,6 +5502,36 @@ function getSelectedTrendSentimentSnapshot(employeeName) {
     return matchingSnapshot;
 }
 
+function resolveTrendEmailContext(employeeName, weekKey) {
+    const period = weeklyData[weekKey];
+    if (!period) {
+        if (ytdData[weekKey]) {
+            showToast('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
+        } else {
+            showToast('No data found for this period', 5000);
+        }
+        return null;
+    }
+
+    const employee = period.employees.find(e => e.name === employeeName);
+    if (!employee) {
+        showToast('Employee not found in selected period', 5000);
+        return null;
+    }
+
+    const currentPeriodType = period.metadata?.periodType || 'week';
+    const prevPeriodKey = getPreviousPeriodData(weekKey, currentPeriodType);
+    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
+    const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
+
+    return {
+        period,
+        periodMeta: period.metadata || {},
+        employee,
+        prevEmployee
+    };
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
@@ -5516,29 +5546,10 @@ function generateTrendEmail() {
     if (employeeName && nickname) {
         saveNickname(employeeName, nickname);
     }
-    
-    // Get current period data (weekly only)
-    const period = weeklyData[weekKey];
-    if (!period) {
-        if (ytdData[weekKey]) {
-            showToast('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
-        } else {
-            showToast('No data found for this period', 5000);
-        }
-        return;
-    }
-    
-    const employee = period.employees.find(e => e.name === employeeName);
-    if (!employee) {
-        showToast('Employee not found in selected period', 5000);
-        return;
-    }
-    
-    // Get previous period (strictly same period type + correct previous period)
-    const currentPeriodType = period.metadata?.periodType || 'week';
-    const prevPeriodKey = getPreviousPeriodData(weekKey, currentPeriodType);
-    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
-    const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
+
+    const trendContext = resolveTrendEmailContext(employeeName, weekKey);
+    if (!trendContext) return;
+    const { period, periodMeta, employee, prevEmployee } = trendContext;
     
     // Use nickname if provided, otherwise use full name
     const displayName = nickname || employeeName;
@@ -5558,7 +5569,6 @@ function generateTrendEmail() {
     const allMetrics = trendAnalysis.allMetrics || [];  // NEW: capture all metrics
     const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
 
-    const periodMeta = period.metadata || {};
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
