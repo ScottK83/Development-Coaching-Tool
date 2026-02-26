@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.11'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.12'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3359,10 +3359,14 @@ function scheduleRepoSync(reason) {
         clearTimeout(callListeningSyncTimer);
     }
 
-    setCallListeningSyncStatus('Sync queued (all app data)...', 'info');
+    setRepoSyncQueuedStatus();
     callListeningSyncTimer = setTimeout(() => {
         syncRepoData(reason);
     }, 1200);
+}
+
+function setRepoSyncQueuedStatus() {
+    setCallListeningSyncStatus('Sync queued (all app data)...', 'info');
 }
 
 function queueCallListeningRepoSync(reason = 'updated') {
