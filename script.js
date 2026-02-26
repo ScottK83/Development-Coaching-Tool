@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.54'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.55'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10813,45 +10813,46 @@ function populateExecutiveSummaryTable(associate, periods, periodType) {
     loadExecutiveSummaryNotes(associate);
 }
 
-function loadExecutiveSummaryNotes(associate) {
-    const saved = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')) : {};
-    const employeeNotes = saved[associate] || {};
-    
-    // Populate red flags
-    document.querySelectorAll('.redflags-input').forEach(input => {
+function getExecutiveSummaryNotesStore() {
+    return localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')
+        ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes'))
+        : {};
+}
+
+function bindExecutiveSummaryNotesInputs(selector, noteKey, associate, employeeNotes) {
+    document.querySelectorAll(selector).forEach(input => {
         const weekKey = input.dataset.week;
-        input.value = employeeNotes[weekKey]?.redFlags || '';
-        input.addEventListener('input', () => saveExecutiveSummaryNotes(associate));
-        input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
-    });
-    
-    // Populate phishing
-    document.querySelectorAll('.phishing-input').forEach(input => {
-        const weekKey = input.dataset.week;
-        input.value = employeeNotes[weekKey]?.phishing || '';
-        input.addEventListener('input', () => saveExecutiveSummaryNotes(associate));
-        input.addEventListener('change', () => saveExecutiveSummaryNotes(associate));
+        input.value = employeeNotes[weekKey]?.[noteKey] || '';
+        bindElementOnce(input, 'input', () => saveExecutiveSummaryNotes(associate));
+        bindElementOnce(input, 'change', () => saveExecutiveSummaryNotes(associate));
     });
 }
 
+function saveExecutiveSummaryNoteFields(saved, associate, selector, noteKey) {
+    document.querySelectorAll(selector).forEach(input => {
+        const weekKey = input.dataset.week;
+        if (!saved[associate][weekKey]) saved[associate][weekKey] = {};
+        saved[associate][weekKey][noteKey] = input.value;
+    });
+}
+
+function loadExecutiveSummaryNotes(associate) {
+    const saved = getExecutiveSummaryNotesStore();
+    const employeeNotes = saved[associate] || {};
+
+    bindExecutiveSummaryNotesInputs('.redflags-input', 'redFlags', associate, employeeNotes);
+    bindExecutiveSummaryNotesInputs('.phishing-input', 'phishing', associate, employeeNotes);
+}
+
 function saveExecutiveSummaryNotes(associate) {
-    const saved = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')) : {};
+    const saved = getExecutiveSummaryNotesStore();
     
     if (!saved[associate]) {
         saved[associate] = {};
     }
-    
-    document.querySelectorAll('.redflags-input').forEach(input => {
-        const weekKey = input.dataset.week;
-        if (!saved[associate][weekKey]) saved[associate][weekKey] = {};
-        saved[associate][weekKey].redFlags = input.value;
-    });
-    
-    document.querySelectorAll('.phishing-input').forEach(input => {
-        const weekKey = input.dataset.week;
-        if (!saved[associate][weekKey]) saved[associate][weekKey] = {};
-        saved[associate][weekKey].phishing = input.value;
-    });
+
+    saveExecutiveSummaryNoteFields(saved, associate, '.redflags-input', 'redFlags');
+    saveExecutiveSummaryNoteFields(saved, associate, '.phishing-input', 'phishing');
     
     localStorage.setItem(STORAGE_PREFIX + 'executiveSummaryNotes', JSON.stringify(saved));
     showToast(`? Notes saved for ${associate}`, 3000);
