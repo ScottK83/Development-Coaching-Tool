@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.71'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.72'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13315,25 +13315,20 @@ FINAL INSTRUCTION
 Generate the coaching email for ${preferredName} now.`;
 }
 
-function generateCoachingPromptAndCopy() {
-    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
-    const promptArea = document.getElementById('coachingPromptArea');
-    const button = document.getElementById('generateCoachingPromptBtn');
+function getCoachingPromptGenerationInputs() {
+    return {
+        employeeName: document.getElementById('coachingEmployeeSelect')?.value,
+        promptArea: document.getElementById('coachingPromptArea'),
+        button: document.getElementById('generateCoachingPromptBtn')
+    };
+}
 
-    if (!employeeName) {
-        alert('⚠️ Please select an associate first.');
-        return;
-    }
+function resolveCoachingPromptEmployeeRecord(employeeName) {
+    if (!employeeName || !coachingLatestWeekKey) return null;
+    return weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName) || null;
+}
 
-    const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
-    if (!employeeRecord) {
-        alert('⚠️ No data found for that associate in the latest period.');
-        return;
-    }
-
-    const prompt = buildCoachingPrompt(employeeRecord);
-    promptArea.value = prompt;
-
+function buildLatestCoachingSummaryData(employeeRecord) {
     const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
     const weekEnding = periodMeta.endDate || (coachingLatestWeekKey.split('|')[1] || '');
     const periodLabel = periodMeta.label || (weekEnding ? `Week ending ${formatDateMMDDYYYY(weekEnding)}` : 'this period');
@@ -13344,44 +13339,80 @@ function generateCoachingPromptAndCopy() {
     })();
     const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeRecord);
 
-    window.latestCoachingSummaryData = {
-        firstName: preferredName,
-        periodLabel,
-        celebrate,
-        needsCoaching,
-        reliabilityHours,
-        customNotes: '',
-        timeReference: 'this week'
+    return {
+        weekEnding,
+        summaryData: {
+            firstName: preferredName,
+            periodLabel,
+            celebrate,
+            needsCoaching,
+            reliabilityHours,
+            customNotes: '',
+            timeReference: 'this week'
+        },
+        coachedMetricKeys
     };
+}
 
+function recordAndRenderCoachingEvent(employeeName, weekEnding, coachedMetricKeys) {
     recordCoachingEvent({
         employeeId: employeeName,
-        weekEnding: weekEnding || periodLabel,
+        weekEnding: weekEnding || 'this period',
         metricsCoached: coachedMetricKeys,
         aiAssisted: true
     });
     renderCoachingHistory(employeeName);
-    promptArea.select();
-    document.execCommand('copy');
+}
 
-    if (button) {
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied to CoPilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1200);
-    }
+function showCoachingPromptCopiedState(button) {
+    if (!button) return;
+    const originalText = button.textContent;
+    button.textContent = '✅ Copied to CoPilot';
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 1200);
+}
 
+function revealCoachingOutlookSection() {
     const outlookSection = document.getElementById('coachingOutlookSection');
-    if (outlookSection) {
-        outlookSection.style.display = 'block';
-        outlookSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    if (!outlookSection) return;
+    outlookSection.style.display = 'block';
+    outlookSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
-    // Open CoPilot
+function openCopilotForCoachingPrompt() {
     setTimeout(() => {
         window.open('https://copilot.microsoft.com', '_blank');
     }, 500);
+}
+
+function generateCoachingPromptAndCopy() {
+    const { employeeName, promptArea, button } = getCoachingPromptGenerationInputs();
+
+    if (!employeeName) {
+        alert('⚠️ Please select an associate first.');
+        return;
+    }
+
+    const employeeRecord = resolveCoachingPromptEmployeeRecord(employeeName);
+    if (!employeeRecord) {
+        alert('⚠️ No data found for that associate in the latest period.');
+        return;
+    }
+
+    const prompt = buildCoachingPrompt(employeeRecord);
+    promptArea.value = prompt;
+
+    const { weekEnding, summaryData, coachedMetricKeys } = buildLatestCoachingSummaryData(employeeRecord);
+    window.latestCoachingSummaryData = summaryData;
+
+    recordAndRenderCoachingEvent(employeeName, weekEnding || summaryData.periodLabel, coachedMetricKeys);
+    promptArea.select();
+    document.execCommand('copy');
+
+    showCoachingPromptCopiedState(button);
+    revealCoachingOutlookSection();
+    openCopilotForCoachingPrompt();
 }
 
 function generateOutlookEmailFromCoPilot() {
