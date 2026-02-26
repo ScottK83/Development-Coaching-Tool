@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.45'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.46'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12742,13 +12742,25 @@ function renderCoachingHistory(employeeName) {
     panel.style.display = 'block';
 }
 
-function buildCoachingPrompt(employeeRecord) {
-    const metricKeys = getMetricOrder().map(m => m.key);
+function chooseCoachingTip(metricConfig, usedTips) {
+    const tips = getMetricTips(metricConfig.label);
+    let selectedTip = metricConfig.defaultTip;
+    if (tips && tips.length > 0) {
+        const available = tips.filter(t => !usedTips.has(t));
+        selectedTip = (available.length > 0
+            ? available[Math.floor(Math.random() * available.length)]
+            : tips[Math.floor(Math.random() * tips.length)]);
+    }
+    usedTips.add(selectedTip);
+    return selectedTip;
+}
+
+function collectCoachingPromptMetricData(employeeRecord) {
     const wins = [];
     const opportunities = [];
     const usedTips = new Set();
 
-    metricKeys.forEach(key => {
+    getMetricOrder().map(m => m.key).forEach(key => {
         const metricConfig = METRICS_REGISTRY[key];
         const value = employeeRecord[key];
         if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
@@ -12765,26 +12777,31 @@ function buildCoachingPrompt(employeeRecord) {
 
         if (meetsTarget) {
             wins.push({ label: metricConfig.label, value: displayValue, target: displayTarget });
-        } else {
-            const tips = getMetricTips(metricConfig.label);
-            let selectedTip = metricConfig.defaultTip;
-            if (tips && tips.length > 0) {
-                const available = tips.filter(t => !usedTips.has(t));
-                selectedTip = (available.length > 0
-                    ? available[Math.floor(Math.random() * available.length)]
-                    : tips[Math.floor(Math.random() * tips.length)]);
-            }
-            usedTips.add(selectedTip);
-            opportunities.push({ label: metricConfig.label, value: displayValue, target: displayTarget, tip: selectedTip });
+            return;
         }
+
+        opportunities.push({
+            label: metricConfig.label,
+            value: displayValue,
+            target: displayTarget,
+            tip: chooseCoachingTip(metricConfig, usedTips)
+        });
     });
 
-    const endDate = weeklyData[coachingLatestWeekKey]?.metadata?.endDate
-        ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
-        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
+    return { wins, opportunities };
+}
 
-    const preferredName = getEmployeeNickname(employeeRecord.name);
+function resolveCoachingPromptPeriodEndDate() {
+    const weeklyMeta = weeklyData[coachingLatestWeekKey]?.metadata;
+    if (weeklyMeta?.endDate) {
+        return formatDateMMDDYYYY(weeklyMeta.endDate);
+    }
+    return coachingLatestWeekKey.split('|')[1]
+        ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1])
+        : coachingLatestWeekKey;
+}
 
+function buildCoachingPromptMetricsText(wins, opportunities) {
     const winsText = wins.length
         ? wins.map(w => `- ${w.label}: ${w.value} vs target ${w.target}`).join('\n')
         : '- No metrics meeting goal in this period.';
@@ -12792,6 +12809,16 @@ function buildCoachingPrompt(employeeRecord) {
     const oppText = opportunities.length
         ? opportunities.map(o => `- ${o.label}: ${o.value} vs target ${o.target}\n  Coaching tip: ${o.tip}`).join('\n')
         : '- No metrics below target in this period.';
+
+    return { winsText, oppText };
+}
+
+function buildCoachingPrompt(employeeRecord) {
+    const { wins, opportunities } = collectCoachingPromptMetricData(employeeRecord);
+    const endDate = resolveCoachingPromptPeriodEndDate();
+
+    const preferredName = getEmployeeNickname(employeeRecord.name);
+    const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities);
 
     return `ROLE
 
