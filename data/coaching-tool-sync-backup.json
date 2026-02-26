@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T18:45:17.846Z",
+  "generatedAt": "2026-02-26T18:51:08.615Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.60",
   "weeklyData": {
@@ -5192,6 +5192,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Precious Johnson": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5428,6 +5462,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2026::Precious Johnson": {
+      "trackStatus": "on-track",
+      "positivesText": "Average Handle Time: 390s vs target 414s\nHold Time: 0s vs target 30s\nAfter Call Work: 1s vs target 60s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nOverall Sentiment: 93.5% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 87.4% vs target 93.0%\nTransfers: 7.7% vs target 6.0%\nFirst Call Resolution: 61.5% vs target 73.0%\nReliability: 18.5 hrs vs target 18.0 hrs",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5474,12 +5519,12 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 132
+      "byteLength": 125
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 20,
-      "byteLength": 8411
+      "itemCount": 21,
+      "byteLength": 8832
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5493,8 +5538,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 22,
-      "byteLength": 59443
+      "itemCount": 23,
+      "byteLength": 60288
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
