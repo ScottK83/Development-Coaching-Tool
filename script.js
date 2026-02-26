@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.144'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.145'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5509,25 +5509,62 @@ function resolveTrendEmailContext(employeeName, weekKey) {
             showToast('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
         } else {
             showToast('No data found for this period', 5000);
+
+    function handleTrendEmailImageReady(
+        employeeName,
+        displayName,
+        weakestMetric,
+        trendingMetric,
+        tipsForWeakest,
+        tipsForTrending,
+        weekKey,
+        periodMeta,
+        sentimentSnapshot,
+        allMetrics
+    ) {
+        const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
+
+        if (DEBUG) {
+            console.log('Opening Outlook with subject:', emailSubject);
+        }
+
+        openTrendEmailOutlook(emailSubject);
+        showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
+
+        if (weakestMetric || trendingMetric) {
+            showTrendsWithTipsPanel(
+                employeeName,
+                displayName,
+                weakestMetric,
+                trendingMetric,
+                tipsForWeakest,
+                tipsForTrending,
+                weekKey,
+                periodMeta,
+                emailSubject,
+                sentimentSnapshot,
+                allMetrics
+            );
+        }
+    }
         }
         return null;
     }
 
     const employee = period.employees.find(e => e.name === employeeName);
     if (!employee) {
-        showToast('Employee not found in selected period', 5000);
-        return null;
-    }
-
-    const currentPeriodType = period.metadata?.periodType || 'week';
-    const prevPeriodKey = getPreviousPeriodData(weekKey, currentPeriodType);
-    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
-    const prevEmployee = prevPeriod?.employees.find(e => e.name === employeeName);
-
-    return {
-        period,
-        periodMeta: period.metadata || {},
-        employee,
+            handleTrendEmailImageReady(
+                employeeName,
+                displayName,
+                weakestMetric,
+                trendingMetric,
+                tipsForWeakest,
+                tipsForTrending,
+                weekKey,
+                periodMeta,
+                sentimentSnapshot,
+                allMetrics
+            );
         prevEmployee
     };
 }
