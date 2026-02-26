@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.43'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.44'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12004,6 +12004,12 @@ function updateOnOffTrackerDisplay() {
     panel.style.display = 'block';
 }
 
+function bindElementOnce(element, eventName, handler) {
+    if (!element || element.dataset.bound) return;
+    element.addEventListener(eventName, handler);
+    element.dataset.bound = 'true';
+}
+
 function initializeYearEndComments() {
     const employeeSelect = document.getElementById('yearEndEmployeeSelect');
     const reviewYearInput = document.getElementById('yearEndReviewYear');
@@ -12057,97 +12063,40 @@ function initializeYearEndComments() {
     status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
     status.style.display = 'block';
 
-    if (!employeeSelect.dataset.bound) {
-        employeeSelect.addEventListener('change', updateYearEndSnapshotDisplay);
-        employeeSelect.dataset.bound = 'true';
-    }
-    if (!reviewYearInput.dataset.bound) {
-        reviewYearInput.addEventListener('input', updateYearEndSnapshotDisplay);
-        reviewYearInput.dataset.bound = 'true';
-    }
-    if (!generateBtn.dataset.bound) {
-        generateBtn.addEventListener('click', generateYearEndPromptAndCopy);
-        generateBtn.dataset.bound = 'true';
-    }
-    if (pasteResponseBtn && !pasteResponseBtn.dataset.bound) {
-        pasteResponseBtn.addEventListener('click', pasteYearEndResponseFromClipboard);
-        pasteResponseBtn.dataset.bound = 'true';
-    }
-    if (!copyBtn.dataset.bound) {
-        copyBtn.addEventListener('click', copyYearEndResponseToClipboard);
-        copyBtn.dataset.bound = 'true';
-    }
-    if (copyBox1Btn && !copyBox1Btn.dataset.bound) {
-        copyBox1Btn.addEventListener('click', () => copyYearEndBoxResponseToClipboard(1));
-        copyBox1Btn.dataset.bound = 'true';
-    }
-    if (copyBox2Btn && !copyBox2Btn.dataset.bound) {
-        copyBox2Btn.addEventListener('click', () => copyYearEndBoxResponseToClipboard(2));
-        copyBox2Btn.dataset.bound = 'true';
-    }
-    if (!generateVerbalSummaryBtn.dataset.bound) {
-        generateVerbalSummaryBtn.addEventListener('click', generateYearEndVerbalSummary);
-        generateVerbalSummaryBtn.dataset.bound = 'true';
-    }
-    if (!copyVerbalSummaryBtn.dataset.bound) {
-        copyVerbalSummaryBtn.addEventListener('click', copyYearEndVerbalSummary);
-        copyVerbalSummaryBtn.dataset.bound = 'true';
-    }
-    if (calculateOnOffBtn && !calculateOnOffBtn.dataset.bound) {
-        calculateOnOffBtn.addEventListener('click', () => {
-            const selectedEmployee = employeeSelect.value;
-            const selectedYear = reviewYearInput.value;
-            if (!selectedEmployee || !selectedYear) {
-                alert('⚠️ Select associate and review year first.');
-                return;
-            }
-            updateYearEndSnapshotDisplay();
-            document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            showToast('✅ On/Off tracker calculated using Excel mirror logic.', 3000);
-        });
-        calculateOnOffBtn.dataset.bound = 'true';
-    }
+    bindElementOnce(employeeSelect, 'change', updateYearEndSnapshotDisplay);
+    bindElementOnce(reviewYearInput, 'input', updateYearEndSnapshotDisplay);
+    bindElementOnce(generateBtn, 'click', generateYearEndPromptAndCopy);
+    bindElementOnce(pasteResponseBtn, 'click', pasteYearEndResponseFromClipboard);
+    bindElementOnce(copyBtn, 'click', copyYearEndResponseToClipboard);
+    bindElementOnce(copyBox1Btn, 'click', () => copyYearEndBoxResponseToClipboard(1));
+    bindElementOnce(copyBox2Btn, 'click', () => copyYearEndBoxResponseToClipboard(2));
+    bindElementOnce(generateVerbalSummaryBtn, 'click', generateYearEndVerbalSummary);
+    bindElementOnce(copyVerbalSummaryBtn, 'click', copyYearEndVerbalSummary);
+    bindElementOnce(calculateOnOffBtn, 'click', () => {
+        const selectedEmployee = employeeSelect.value;
+        const selectedYear = reviewYearInput.value;
+        if (!selectedEmployee || !selectedYear) {
+            alert('⚠️ Select associate and review year first.');
+            return;
+        }
+        updateYearEndSnapshotDisplay();
+        document.getElementById('yearEndSnapshotPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('✅ On/Off tracker calculated using Excel mirror logic.', 3000);
+    });
 
     const persistDraft = () => {
         persistYearEndDraftState(employeeSelect.value, reviewYearInput.value);
     };
 
-    if (!trackSelect.dataset.bound) {
-        trackSelect.addEventListener('change', persistDraft);
-        trackSelect.dataset.bound = 'true';
-    }
-    if (!positivesInput.dataset.bound) {
-        positivesInput.addEventListener('input', persistDraft);
-        positivesInput.dataset.bound = 'true';
-    }
-    if (!improvementsInput.dataset.bound) {
-        improvementsInput.addEventListener('input', persistDraft);
-        improvementsInput.dataset.bound = 'true';
-    }
-    if (!managerContextInput.dataset.bound) {
-        managerContextInput.addEventListener('input', persistDraft);
-        managerContextInput.dataset.bound = 'true';
-    }
-    if (!responseInput.dataset.bound) {
-        responseInput.addEventListener('input', persistDraft);
-        responseInput.dataset.bound = 'true';
-    }
-    if (!performanceRatingInput.dataset.bound) {
-        performanceRatingInput.addEventListener('input', persistDraft);
-        performanceRatingInput.dataset.bound = 'true';
-    }
-    if (!meritDetailsInput.dataset.bound) {
-        meritDetailsInput.addEventListener('input', persistDraft);
-        meritDetailsInput.dataset.bound = 'true';
-    }
-    if (!bonusAmountInput.dataset.bound) {
-        bonusAmountInput.addEventListener('input', persistDraft);
-        bonusAmountInput.dataset.bound = 'true';
-    }
-    if (!verbalSummaryOutput.dataset.bound) {
-        verbalSummaryOutput.addEventListener('input', persistDraft);
-        verbalSummaryOutput.dataset.bound = 'true';
-    }
+    bindElementOnce(trackSelect, 'change', persistDraft);
+    bindElementOnce(positivesInput, 'input', persistDraft);
+    bindElementOnce(improvementsInput, 'input', persistDraft);
+    bindElementOnce(managerContextInput, 'input', persistDraft);
+    bindElementOnce(responseInput, 'input', persistDraft);
+    bindElementOnce(performanceRatingInput, 'input', persistDraft);
+    bindElementOnce(meritDetailsInput, 'input', persistDraft);
+    bindElementOnce(bonusAmountInput, 'input', persistDraft);
+    bindElementOnce(verbalSummaryOutput, 'input', persistDraft);
 
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 }
