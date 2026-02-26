@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.121'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.122'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5297,6 +5297,7 @@ function setupMetricTrendsListeners() {
 function displayMetricsPreview(employeeName, weekKey) {
     const metricsPreviewSection = document.getElementById('metricsPreviewSection');
     const metricsPreviewGrid = document.getElementById('metricsPreviewGrid');
+    const metricsPreviewSurveyCount = document.getElementById('metricsPreviewSurveyCount');
     
     if (!metricsPreviewSection || !metricsPreviewGrid) return;
     
@@ -5308,6 +5309,14 @@ function displayMetricsPreview(employeeName, weekKey) {
     
     metricsPreviewSection.dataset.employee = employeeName;
     metricsPreviewSection.dataset.period = weekKey;
+
+    const surveyTotal = Number.isFinite(parseInt(employee.surveyTotal, 10)) ? parseInt(employee.surveyTotal, 10) : 0;
+    const periodType = String(periodData?.metadata?.periodType || 'period').toLowerCase();
+    const periodTypeLabel = periodType === 'week' ? 'week' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : periodType === 'ytd' ? 'YTD period' : 'period';
+    const periodLabel = String(periodData?.metadata?.label || weekKey || '').trim();
+    if (metricsPreviewSurveyCount) {
+        metricsPreviewSurveyCount.textContent = `Surveys in loaded ${periodTypeLabel}: ${surveyTotal}${periodLabel ? ` • ${periodLabel}` : ''}`;
+    }
     
 
     
