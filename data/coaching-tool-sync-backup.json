@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T15:04:50.074Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-26T15:05:04.264Z",
+  "reason": "storage set: devCoachingTool_lastError",
   "sourceAppVersion": "2026.02.26.11",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5405,6 +5405,11 @@
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
+    },
+    "devCoachingTool_lastError": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 228
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
