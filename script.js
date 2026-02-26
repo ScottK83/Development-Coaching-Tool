@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.44'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.45'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12101,6 +12101,73 @@ function initializeYearEndComments() {
     renderYearEndAnnualGoalsInputs(employeeSelect.value, reviewYearInput.value);
 }
 
+function clearYearEndOnOffMirror(onOffSummary, onOffDetails) {
+    if (onOffSummary) onOffSummary.textContent = '';
+    if (onOffDetails) onOffDetails.innerHTML = '';
+}
+
+function clearYearEndDraftInputs(trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput) {
+    if (trackSelect) trackSelect.value = '';
+    if (positivesInput) positivesInput.value = '';
+    if (improvementsInput) improvementsInput.value = '';
+    if (managerContextInput) managerContextInput.value = '';
+    if (responseInput) responseInput.value = '';
+    if (performanceRatingInput) performanceRatingInput.value = '';
+    if (meritDetailsInput) meritDetailsInput.value = '';
+    if (bonusAmountInput) bonusAmountInput.value = '';
+    if (verbalSummaryOutput) verbalSummaryOutput.value = '';
+}
+
+function applyYearEndSavedDraft(savedDraft, trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput) {
+    if (trackSelect) trackSelect.value = savedDraft.trackStatus;
+    if (positivesInput) positivesInput.value = savedDraft.positivesText;
+    if (improvementsInput) improvementsInput.value = savedDraft.improvementsText;
+    if (managerContextInput) managerContextInput.value = savedDraft.managerContext;
+    if (responseInput) responseInput.value = savedDraft.copilotResponse;
+    if (performanceRatingInput) performanceRatingInput.value = savedDraft.performanceRating;
+    if (meritDetailsInput) meritDetailsInput.value = savedDraft.meritDetails;
+    if (bonusAmountInput) bonusAmountInput.value = savedDraft.bonusAmount;
+    if (verbalSummaryOutput) verbalSummaryOutput.value = savedDraft.verbalSummary;
+}
+
+function buildYearEndSummaryLine(latestPeriod, targetProfileYear, wins, opportunities) {
+    const profileLabel = targetProfileYear ? `${targetProfileYear} goals` : 'current goals';
+    const sourceLabel = latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload';
+    return `${latestPeriod.label} • Source: ${sourceLabel} • Targets: ${profileLabel} • ${wins.length} positives • ${opportunities.length} improvement areas`;
+}
+
+function autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals) {
+    if (positivesInput && !positivesInput.value.trim()) {
+        const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
+        positivesInput.value = wins.length
+            ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).concat(metGoalLines).join('\n')
+            : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
+    }
+
+    if (improvementsInput && !improvementsInput.value.trim()) {
+        const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
+        improvementsInput.value = opportunities.length
+            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
+            : annualFollowUps.length
+                ? annualFollowUps.join('\n')
+                : 'Continue building consistency and sustaining current performance levels.';
+    }
+}
+
+function buildYearEndDraftContext(employeeName, reviewYear, latestPeriod, endDateText, wins, opportunities, targetProfileYear, annualGoals) {
+    return {
+        employeeName,
+        reviewYear,
+        periodLabel: latestPeriod.label,
+        sourceLabel: latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'latest uploaded period',
+        endDateText,
+        wins,
+        opportunities,
+        targetProfileYear,
+        annualGoals
+    };
+}
+
 function updateYearEndSnapshotDisplay() {
     const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
     const reviewYear = document.getElementById('yearEndReviewYear')?.value;
@@ -12133,17 +12200,8 @@ function updateYearEndSnapshotDisplay() {
         snapshotPanel.style.display = 'none';
         status.textContent = 'Select associate and review year to load year-end facts.';
         status.style.display = 'block';
-        if (onOffSummary) onOffSummary.textContent = '';
-        if (onOffDetails) onOffDetails.innerHTML = '';
-        if (trackSelect) trackSelect.value = '';
-        if (positivesInput) positivesInput.value = '';
-        if (improvementsInput) improvementsInput.value = '';
-        if (managerContextInput) managerContextInput.value = '';
-        if (responseInput) responseInput.value = '';
-        if (performanceRatingInput) performanceRatingInput.value = '';
-        if (meritDetailsInput) meritDetailsInput.value = '';
-        if (bonusAmountInput) bonusAmountInput.value = '';
-        if (verbalSummaryOutput) verbalSummaryOutput.value = '';
+        clearYearEndOnOffMirror(onOffSummary, onOffDetails);
+        clearYearEndDraftInputs(trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput);
         return;
     }
 
@@ -12152,22 +12210,13 @@ function updateYearEndSnapshotDisplay() {
         snapshotPanel.style.display = 'none';
         status.textContent = `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`;
         status.style.display = 'block';
-        if (onOffSummary) onOffSummary.textContent = '';
-        if (onOffDetails) onOffDetails.innerHTML = '';
+        clearYearEndOnOffMirror(onOffSummary, onOffDetails);
         return;
     }
 
     renderYearEndAnnualGoalsInputs(employeeName, reviewYear);
     const savedDraft = getYearEndDraftState(employeeName, reviewYear);
-    if (trackSelect) trackSelect.value = savedDraft.trackStatus;
-    if (positivesInput) positivesInput.value = savedDraft.positivesText;
-    if (improvementsInput) improvementsInput.value = savedDraft.improvementsText;
-    if (managerContextInput) managerContextInput.value = savedDraft.managerContext;
-    if (responseInput) responseInput.value = savedDraft.copilotResponse;
-    if (performanceRatingInput) performanceRatingInput.value = savedDraft.performanceRating;
-    if (meritDetailsInput) meritDetailsInput.value = savedDraft.meritDetails;
-    if (bonusAmountInput) bonusAmountInput.value = savedDraft.bonusAmount;
-    if (verbalSummaryOutput) verbalSummaryOutput.value = savedDraft.verbalSummary;
+    applyYearEndSavedDraft(savedDraft, trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput);
 
     const annualGoals = collectYearEndAnnualGoals(employeeName, reviewYear);
     const { wins, opportunities, targetProfileYear } = buildYearEndMetricSnapshot(
@@ -12179,8 +12228,7 @@ function updateYearEndSnapshotDisplay() {
         ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
         : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
 
-    const profileLabel = targetProfileYear ? `${targetProfileYear} goals` : 'current goals';
-    summary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • Targets: ${profileLabel} • ${wins.length} positives • ${opportunities.length} improvement areas`;
+    summary.textContent = buildYearEndSummaryLine(latestPeriod, targetProfileYear, wins, opportunities);
 
     winsList.innerHTML = wins.length
         ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
@@ -12199,35 +12247,20 @@ function updateYearEndSnapshotDisplay() {
         trackSelect.value = onOffMirror.trackStatusValue;
     }
 
-    if (positivesInput && !positivesInput.value.trim()) {
-        const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
-        positivesInput.value = wins.length
-            ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).concat(metGoalLines).join('\n')
-            : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
-    }
-
-    if (improvementsInput && !improvementsInput.value.trim()) {
-        const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
-        improvementsInput.value = opportunities.length
-            ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
-            : annualFollowUps.length
-                ? annualFollowUps.join('\n')
-                : 'Continue building consistency and sustaining current performance levels.';
-    }
+    autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals);
 
     appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
-    yearEndDraftContext = {
+    yearEndDraftContext = buildYearEndDraftContext(
         employeeName,
         reviewYear,
-        periodLabel: latestPeriod.label,
-        sourceLabel: latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'latest uploaded period',
+        latestPeriod,
         endDateText,
         wins,
         opportunities,
         targetProfileYear,
         annualGoals
-    };
+    );
 
     status.textContent = `Year-end facts loaded for ${employeeName} (${reviewYear}).`;
     status.style.display = 'block';
