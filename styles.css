@@ -160,24 +160,26 @@ textarea:focus-visible {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #003DA5 0%, #0056B3 100%);
-    color: white;
+    background: var(--ui-accent) !important;
+    color: white !important;
+    border: 1px solid var(--ui-accent-strong) !important;
     margin-right: 10px;
 }
 
 .btn-primary:hover {
-    box-shadow: 0 5px 15px rgba(0, 61, 165, 0.3);
+    background: var(--ui-accent-strong) !important;
+    box-shadow: 0 5px 15px rgba(47, 122, 109, 0.28);
     transform: translateY(-2px);
 }
 
 .btn-secondary {
-    background: #eef6f4;
-    color: var(--ui-accent-strong);
-    border: 1px solid #cfe3df;
+    background: var(--ui-accent) !important;
+    color: white !important;
+    border: 1px solid var(--ui-accent-strong) !important;
 }
 
 .btn-secondary:hover {
-    background: #e2f0ed;
+    background: var(--ui-accent-strong) !important;
 }
 
 .btn-ai {
