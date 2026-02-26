@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.73'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.74'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13099,48 +13099,64 @@ function updateCoachingEmailDisplay() {
     renderCoachingHistory(employeeName);
 }
 
+function getCoachingHistoryElements() {
+    return {
+        panel: document.getElementById('coachingHistoryPanel'),
+        summary: document.getElementById('coachingHistorySummary'),
+        list: document.getElementById('coachingHistoryList')
+    };
+}
+
+function setCoachingHistoryEmptyState(summary, list, panel, summaryText) {
+    summary.textContent = summaryText;
+    list.innerHTML = '';
+    panel.style.display = 'block';
+}
+
+function formatCoachingHistoryMetricLabels(keys = []) {
+    if (!keys.length) return 'General review';
+    return keys
+        .map(key => METRICS_REGISTRY[key]?.label || key)
+        .slice(0, 4)
+        .join(', ');
+}
+
+function buildCoachingHistoryRowsHtml(history) {
+    const rows = history.slice(0, 5).map(entry => {
+        const dateLabel = entry.weekEnding ? formatDateMMDDYYYY(entry.weekEnding) || entry.weekEnding : 'Unknown date';
+        const metricsLabel = formatCoachingHistoryMetricLabels(entry.metricsCoached);
+        const aiLabel = entry.aiAssisted ? ' · AI-assisted' : '';
+        return `<li>${dateLabel} — ${metricsLabel}${aiLabel}</li>`;
+    });
+
+    return rows.join('');
+}
+
+function resolveCoachingHistoryLatestDateLabel(latest) {
+    return latest.weekEnding ? formatDateMMDDYYYY(latest.weekEnding) || latest.weekEnding : '';
+}
+
 function renderCoachingHistory(employeeName) {
-    const panel = document.getElementById('coachingHistoryPanel');
-    const summary = document.getElementById('coachingHistorySummary');
-    const list = document.getElementById('coachingHistoryList');
+    const { panel, summary, list } = getCoachingHistoryElements();
 
     if (!panel || !summary || !list) return;
 
     if (!employeeName) {
-        summary.textContent = 'Select an associate to view coaching history.';
-        list.innerHTML = '';
-        panel.style.display = 'block';
+        setCoachingHistoryEmptyState(summary, list, panel, 'Select an associate to view coaching history.');
         return;
     }
 
     const history = getCoachingHistoryForEmployee(employeeName);
     if (history.length === 0) {
-        summary.textContent = 'No coaching history saved yet.';
-        list.innerHTML = '';
-        panel.style.display = 'block';
+        setCoachingHistoryEmptyState(summary, list, panel, 'No coaching history saved yet.');
         return;
     }
 
     const latest = history[0];
-    const latestDate = latest.weekEnding ? formatDateMMDDYYYY(latest.weekEnding) || latest.weekEnding : '';
+    const latestDate = resolveCoachingHistoryLatestDateLabel(latest);
     summary.textContent = `Last coaching: ${latestDate || 'N/A'} · Total coachings: ${history.length}`;
 
-    const formatMetrics = (keys = []) => {
-        if (!keys.length) return 'General review';
-        return keys
-            .map(key => METRICS_REGISTRY[key]?.label || key)
-            .slice(0, 4)
-            .join(', ');
-    };
-
-    const rows = history.slice(0, 5).map(entry => {
-        const dateLabel = entry.weekEnding ? formatDateMMDDYYYY(entry.weekEnding) || entry.weekEnding : 'Unknown date';
-        const metricsLabel = formatMetrics(entry.metricsCoached);
-        const aiLabel = entry.aiAssisted ? ' · AI-assisted' : '';
-        return `<li>${dateLabel} — ${metricsLabel}${aiLabel}</li>`;
-    });
-
-    list.innerHTML = rows.join('');
+    list.innerHTML = buildCoachingHistoryRowsHtml(history);
     panel.style.display = 'block';
 }
 
