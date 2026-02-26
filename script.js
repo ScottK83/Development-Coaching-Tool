@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.48'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.49'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7577,21 +7577,7 @@ function buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, teamSize) {
     return prompt;
 }
 
-function generateTeamTrendSummary() {
-    const weekKey = document.getElementById('trendPeriodSelect')?.value;
-    if (!weekKey) {
-        showToast('Please select a period first', 5000);
-        return;
-    }
-
-    const period = weeklyData[weekKey];
-    if (!period || !Array.isArray(period.employees) || period.employees.length === 0) {
-        showToast('Team summary currently supports weekly data with employees', 5000);
-        return;
-    }
-
-    const periodMeta = period.metadata || {};
-    const reviewYear = parseInt((periodMeta.endDate || '').split('-')[0], 10) || null;
+function collectTeamTrendMetrics(period) {
     const teamMetrics = [];
 
     getMetricOrder().forEach(({ key }) => {
@@ -7622,6 +7608,105 @@ function generateTeamTrendSummary() {
         });
     });
 
+    return teamMetrics;
+}
+
+function createTeamTrendSummaryModal() {
+    const modal = document.createElement('div');
+    modal.id = 'teamTrendSummaryModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    return modal;
+}
+
+function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, teamPrompt) {
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 900px;
+        width: 92%;
+        max-height: 88vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+
+    panel.innerHTML = `
+        <h3 style="color: #2e7d32; margin-top: 0;">👥 Team Metric Trend Summary</h3>
+        <p style="color: #666; margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
+        <p style="color: #666; margin: 0 0 14px 0; font-size: 0.9em;">Based on ${teamSize} associates</p>
+
+        ${summaryBoxesHtml}
+
+        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+            <h4 style="color: #333; margin-top: 0;">🤖 Team CoPilot Prompt</h4>
+            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${teamPrompt}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+            <button id="copyTeamTrendPromptBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📋 Copy Prompt</button>
+            <button id="openTeamTrendEmailBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📧 Open Team Email Draft</button>
+            <button id="closeTeamTrendSummaryBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #777; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Close</button>
+        </div>
+    `;
+
+    return panel;
+}
+
+function attachTeamTrendSummaryModalHandlers(modal, teamSubject) {
+    const closeModal = () => {
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+    };
+
+    document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
+        const textarea = document.getElementById('teamTrendPromptDisplay');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ Team prompt copied', 2000);
+        window.open('https://copilot.microsoft.com', '_blank');
+    });
+
+    document.getElementById('openTeamTrendEmailBtn')?.addEventListener('click', () => {
+        openTrendEmailOutlook(teamSubject);
+        showToast('📧 Team email draft opened', 2500);
+    });
+
+    document.getElementById('closeTeamTrendSummaryBtn')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+}
+
+function generateTeamTrendSummary() {
+    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    if (!weekKey) {
+        showToast('Please select a period first', 5000);
+        return;
+    }
+
+    const period = weeklyData[weekKey];
+    if (!period || !Array.isArray(period.employees) || period.employees.length === 0) {
+        showToast('Team summary currently supports weekly data with employees', 5000);
+        return;
+    }
+
+    const periodMeta = period.metadata || {};
+    const reviewYear = parseInt((periodMeta.endDate || '').split('-')[0], 10) || null;
+    const teamMetrics = collectTeamTrendMetrics(period);
+
     if (teamMetrics.length === 0) {
         showToast('No team metrics found for this period', 5000);
         return;
@@ -7639,78 +7724,12 @@ function generateTeamTrendSummary() {
     const teamPrompt = buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, period.employees.length);
     const teamSubject = `Trending Metrics - Team Summary - Week ending ${periodMeta.endDate || ''}`;
 
-    const modal = document.createElement('div');
-    modal.id = 'teamTrendSummaryModal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-    `;
-
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        background: white;
-        border-radius: 8px;
-        padding: 24px;
-        max-width: 900px;
-        width: 92%;
-        max-height: 88vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-
-    panel.innerHTML = `
-        <h3 style="color: #2e7d32; margin-top: 0;">👥 Team Metric Trend Summary</h3>
-        <p style="color: #666; margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
-        <p style="color: #666; margin: 0 0 14px 0; font-size: 0.9em;">Based on ${period.employees.length} associates</p>
-
-        ${summaryBoxesHtml}
-
-        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
-            <h4 style="color: #333; margin-top: 0;">🤖 Team CoPilot Prompt</h4>
-            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${teamPrompt}</textarea>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
-            <button id="copyTeamTrendPromptBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📋 Copy Prompt</button>
-            <button id="openTeamTrendEmailBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📧 Open Team Email Draft</button>
-            <button id="closeTeamTrendSummaryBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #777; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Close</button>
-        </div>
-    `;
+    const modal = createTeamTrendSummaryModal();
+    const panel = createTeamTrendSummaryPanel(periodLabel, period.employees.length, summaryBoxesHtml, teamPrompt);
 
     modal.appendChild(panel);
     document.body.appendChild(modal);
-
-    document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
-        const textarea = document.getElementById('teamTrendPromptDisplay');
-        textarea.select();
-        document.execCommand('copy');
-        showToast('✅ Team prompt copied', 2000);
-        window.open('https://copilot.microsoft.com', '_blank');
-    });
-
-    document.getElementById('openTeamTrendEmailBtn')?.addEventListener('click', () => {
-        openTrendEmailOutlook(teamSubject);
-        showToast('📧 Team email draft opened', 2500);
-    });
-
-    const closeModal = () => {
-        if (document.body.contains(modal)) {
-            document.body.removeChild(modal);
-        }
-    };
-
-    document.getElementById('closeTeamTrendSummaryBtn')?.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
+    attachTeamTrendSummaryModalHandlers(modal, teamSubject);
 }
 
 
