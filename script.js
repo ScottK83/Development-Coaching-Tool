@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.13'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.14'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5736,6 +5736,29 @@ function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tip
     }));
 }
 
+function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot) {
+    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    const periodEmployee = periodData?.employees?.find(emp => emp.name === employeeName) || null;
+    const sentimentMetrics = periodEmployee
+        ? {
+            negativeWord: periodEmployee.negativeWord,
+            positiveWord: periodEmployee.positiveWord,
+            managingEmotions: periodEmployee.managingEmotions
+        }
+        : null;
+    const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
+    const sentimentHtml = sentimentSnapshot
+        ? `
+        <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
+            <h4 style="color: #8d6e00; margin-top: 0;">💬 Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
+            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
+        </div>
+        `
+        : '';
+
+    return { sentimentHtml, sentimentFocusText };
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5832,24 +5855,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         `;
     }).join('');
 
-    const periodData = ytdData[weekKey] || weeklyData[weekKey];
-    const periodEmployee = periodData?.employees?.find(emp => emp.name === employeeName) || null;
-    const sentimentMetrics = periodEmployee
-        ? {
-            negativeWord: periodEmployee.negativeWord,
-            positiveWord: periodEmployee.positiveWord,
-            managingEmotions: periodEmployee.managingEmotions
-        }
-        : null;
-    const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
-    const sentimentHtml = sentimentSnapshot
-        ? `
-        <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
-            <h4 style="color: #8d6e00; margin-top: 0;">💬 Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
-            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
-        </div>
-        `
-        : '';
+    const { sentimentHtml } = buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot);
     
     // Build the comprehensive Copilot prompt (NEW)
     const userNotes = ''; // Will be filled by user in textarea
