@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.79'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.80'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7966,64 +7966,23 @@ function initializeYearlyIndividualSummary() {
 }
 
 function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
-    if (!latestKey || !latestWeek?.employees?.length) return [];
-    const centerAvg = getCenterAverageForWeek(latestKey);
-    if (!centerAvg) return [];
-
-    const callouts = [];
-    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-        const metric = METRICS_REGISTRY[metricKey];
-        const centerValue = centerAvg[metricKey];
-        if (centerValue === undefined || centerValue === null || centerValue === '') return;
-
-        let best = null;
-        latestWeek.employees.forEach(emp => {
-            const value = emp[metricKey];
-            if (value === undefined || value === null || value === '') return;
-            const numericValue = parseFloat(value);
-            const numericCenter = parseFloat(centerValue);
-            if (Number.isNaN(numericValue) || Number.isNaN(numericCenter)) return;
-
-            const isReverse = isReverseMetric(metricKey);
-            const diff = isReverse ? numericCenter - numericValue : numericValue - numericCenter;
-            if (diff <= 0) return;
-
-            if (!best || diff > best.diff) {
-                best = {
-                    name: emp.name,
-                    metric: metric.label || metricKey,
-                    value: formatMetricValue(metricKey, numericValue),
-                    center: formatMetricValue(metricKey, numericCenter),
-                    diff: `+${formatMetricValue(metricKey, diff)}`,
-                    rawDiff: diff,
-                    metricKey: metricKey
-                };
-            }
-        });
-
-        if (best) callouts.push(best);
+    const delegated = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummaryCallouts?.({
+        latestWeek,
+        centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
+        metricsRegistry: METRICS_REGISTRY,
+        isReverseMetric,
+        formatMetricValue
     });
-
-    return callouts
-        .sort((a, b) => b.rawDiff - a.rawDiff)
-        .slice(0, 5);
+    return Array.isArray(delegated) ? delegated : [];
 }
 
 function buildExecutiveSummarySavedNotesText(associate) {
     const saved = getExecutiveSummaryNotesStore();
     const employeeNotes = saved[associate] || {};
     const ytdNotes = employeeNotes['ytd-summary'] || {};
-    const redFlags = String(ytdNotes.redFlags || '').trim();
-    const phishing = String(ytdNotes.phishing || '').trim();
 
-    if (!redFlags && !phishing) {
-        return 'SAVED RISK NOTES:\n- No saved red flags or phishing notes.\n';
-    }
-
-    let notesText = 'SAVED RISK NOTES:\n';
-    notesText += `- Red flags: ${redFlags || 'None'}\n`;
-    notesText += `- Phishing attempts: ${phishing || 'None'}\n`;
-    return notesText;
+    const delegated = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummarySavedNotesText?.(ytdNotes);
+    return delegated || 'SAVED RISK NOTES:\n- No saved red flags or phishing notes.\n';
 }
 
 async function generateExecutiveSummaryCopilotEmail() {
@@ -8084,25 +8043,18 @@ async function generateExecutiveSummaryCopilotEmail() {
 
     const savedNotesText = buildExecutiveSummarySavedNotesText(associate);
 
-    const copilotPrompt = `Write a professional team email recognizing wins and providing guidance for the week ending ${endDate}.
+    const copilotPrompt = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummaryCopilotPrompt?.({
+        endDate,
+        individualWinsText,
+        teamPerformanceText,
+        focusAreaText,
+        savedNotesText
+    }) || '';
 
-${individualWinsText}
-${teamPerformanceText}
-${focusAreaText}
-${savedNotesText}
-TONE & STYLE:
-- Professional and motivating
-- Celebrate specific wins with names
-- Frame opportunities positively
-- Keep it concise (under 200 words)
-- Use bullet points for wins
-- Do NOT use em dashes (—) anywhere in the email
-- Use proper bullet points (•) not hyphens
-
-SUBJECT LINE:
-Team Update - Week of ${endDate}
-
-Please generate the email now.`;
+    if (!copilotPrompt) {
+        showToast('Trend Intelligence module not available. Refresh and try again.', 3500);
+        return;
+    }
 
     // Call Copilot with the prompt
     openCopilotWithPrompt(copilotPrompt, 'Executive Summary Email');
@@ -8142,49 +8094,14 @@ function openCopilotWithPrompt(prompt, title = 'CoPilot') {
 }
 
 function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
-    if (!latestKey || !latestWeek?.employees?.length) return [];
-    const centerAvg = getCenterAverageForWeek(latestKey);
-    if (!centerAvg) return [];
-
-    const analysis = [];
-    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-        const metric = METRICS_REGISTRY[metricKey];
-        const centerValue = centerAvg[metricKey];
-        if (centerValue === undefined || centerValue === null || centerValue === '') return;
-
-        // Calculate team average for this metric
-        const values = latestWeek.employees
-            .map(emp => parseFloat(emp[metricKey]))
-            .filter(v => !Number.isNaN(v) && v !== null && v !== undefined);
-        
-        if (values.length === 0) return;
-        
-        const teamAvg = values.reduce((sum, v) => sum + v, 0) / values.length;
-        const numericCenter = parseFloat(centerValue);
-        
-        if (Number.isNaN(teamAvg) || Number.isNaN(numericCenter)) return;
-
-        const isReverse = isReverseMetric(metricKey);
-        const diff = isReverse ? numericCenter - teamAvg : teamAvg - numericCenter;
-        
-        const diffFormatted = diff > 0 
-            ? `+${formatMetricValue(metricKey, Math.abs(diff))} better`
-            : diff < 0
-            ? `-${formatMetricValue(metricKey, Math.abs(diff))} below`
-            : 'at center';
-
-        analysis.push({
-            metricKey: metricKey,
-            metric: metric.label || metricKey,
-            teamValue: formatMetricValue(metricKey, teamAvg),
-            centerValue: formatMetricValue(metricKey, numericCenter),
-            diff: diff,
-            diffFormatted: diffFormatted,
-            rawDiff: Math.abs(diff)
-        });
+    const delegated = window.DevCoachModules?.trendIntelligence?.buildTeamVsCenterAnalysis?.({
+        latestWeek,
+        centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
+        metricsRegistry: METRICS_REGISTRY,
+        isReverseMetric,
+        formatMetricValue
     });
-
-    return analysis.sort((a, b) => b.rawDiff - a.rawDiff);
+    return Array.isArray(delegated) ? delegated : [];
 }
 
 function populateOneOnOneAssociateSelect() {
@@ -9781,22 +9698,17 @@ function generateTodaysFocusCopilotEmail() {
         ? focusData.callouts.map(c => `${c.name} (${c.wins} wins vs avg)`).join(', ')
         : 'No clear callouts yet';
 
-    const prompt = `You are a contact center supervisor drafting a short team email for the week ending ${endDate}.
+    const prompt = window.DevCoachModules?.trendIntelligence?.buildTodaysFocusCopilotPrompt?.({
+        endDate,
+        winLabel,
+        focusLabel,
+        calloutText
+    }) || '';
 
-Include:
-1) Wins: highlight the strongest team win (${winLabel}) and why it matters.
-2) Focus Areas: call out the main focus area (${focusLabel}) with a supportive coaching tone.
-3) Callouts: recognize these teammates by name: ${calloutText}.
-4) A clear next-step ask for the team.
-
-Requirements:
-- Keep it concise and Teams/Outlook-ready
-- Use friendly, motivating language
-- Include a subject line
-- Do NOT use em dashes (—)
-- Add a few emojis for warmth (not excessive)
-
-Write the complete email.`;
+    if (!prompt) {
+        showToast('Trend Intelligence module not available. Refresh and try again.', 3500);
+        return;
+    }
 
     navigator.clipboard.writeText(prompt).then(() => {
         showToast('✅ CoPilot prompt copied. Paste into CoPilot.', 3000);
