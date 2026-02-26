@@ -926,43 +926,51 @@ Box 2 - Future Improvement Areas:
             <section id="ptoSection" style="display: none;">
                 <div class="form-section" style="background: #e8f5f3; border-left: 4px solid #2f7a6d;">
                     <h2>🕒 PTO / Time-Off Tracker</h2>
-                    <p style="color: #355; margin-bottom: 20px;">Track availability percentage, unavailable time entries, and generate threshold emails.</p>
+                    <p style="color: #355; margin-bottom: 20px;">Track PTO hours with carryover + earned, log missed dates by PTO type, and flag attendance policy when PTO unplanned exceeds 16 hours.</p>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
                             <div>
-                                <label for="ptoAvailableHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Max Availability (%):</label>
-                                <input type="number" id="ptoAvailableHours" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoCarriedOverHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Carryover Hours:</label>
+                                <input type="number" id="ptoCarriedOverHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                             <div>
-                                <label for="ptoThresholdWarning" style="font-weight: bold; display: block; margin-bottom: 5px;">Warning Threshold (%):</label>
-                                <input type="number" id="ptoThresholdWarning" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoEarnedThisYearHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Earned This Year (Hours):</label>
+                                <input type="number" id="ptoEarnedThisYearHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                             <div>
-                                <label for="ptoThresholdPolicy" style="font-weight: bold; display: block; margin-bottom: 5px;">Policy Threshold (%):</label>
-                                <input type="number" id="ptoThresholdPolicy" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoReliabilityHoursAgainst" style="font-weight: bold; display: block; margin-bottom: 5px;">Reliability Hours Against (from metrics):</label>
+                                <input type="number" id="ptoReliabilityHoursAgainst" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                         </div>
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Add Missed Time</h3>
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Add Missed Time Entry</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
                             <div>
-                                <label for="ptoMissedDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Date:</label>
-                                <input type="date" id="ptoMissedDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoEntryDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Date Missed:</label>
+                                <input type="date" id="ptoEntryDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                             <div>
-                                <label for="ptoMissedHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Unavailable (%):</label>
-                                <input type="number" id="ptoMissedHours" step="1" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoEntryHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Hours Missed:</label>
+                                <input type="number" id="ptoEntryHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                             <div>
-                                <label for="ptoMissedReason" style="font-weight: bold; display: block; margin-bottom: 5px;">Reason / Notes:</label>
-                                <input type="text" id="ptoMissedReason" placeholder="Optional note" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label for="ptoEntryType" style="font-weight: bold; display: block; margin-bottom: 5px;">Type:</label>
+                                <select id="ptoEntryType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="ptost">PTOST</option>
+                                    <option value="pto-planned">PTO Planned</option>
+                                    <option value="pto-unplanned">PTO Unplanned</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ptoEntryNotes" style="font-weight: bold; display: block; margin-bottom: 5px;">Notes:</label>
+                                <input type="text" id="ptoEntryNotes" placeholder="Optional note" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                         </div>
                         <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="ptoAddEntryBtn" class="btn-primary">➕ Add Missed Time</button>
+                            <button type="button" id="ptoAddEntryBtn" class="btn-primary">➕ Add Entry</button>
                         </div>
                     </div>
 
@@ -972,12 +980,12 @@ Box 2 - Future Improvement Areas:
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Missed Time Entries</h3>
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Time-Off Entries</h3>
                         <div id="ptoEntries" style="display: grid; gap: 10px;"></div>
                     </div>
 
                     <div style="padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Threshold Email</h3>
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Attendance / PTO Email</h3>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                             <button type="button" id="ptoGenerateEmailBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">✉️ Generate Email</button>
                             <button type="button" id="ptoCopyEmailBtn" class="btn-secondary" style="background: #0d6efd; color: white;">📋 Copy Email</button>
