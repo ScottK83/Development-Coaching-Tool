@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.28'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.29'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13688,6 +13688,15 @@ function isSentimentHeaderLine(line) {
     return trimmed === 'Name' || trimmed === 'Value' || /^Name,Value/i.test(trimmed);
 }
 
+function parseSentimentAssociateName(line) {
+    if (!line || line.length <= 10) {
+        return '';
+    }
+
+    const nameMatch = line.match(/^(?:Employee|Agent|Name)[:\s]+(.+)$/i);
+    return nameMatch ? nameMatch[1].trim() : '';
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13711,12 +13720,10 @@ function parseSentimentFile(fileType, lines) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
-        // Extract associate name: look for "Employee:", "Agent:", or "Name:"
-        // But NOT if line is just "Name" (which is the keywords header)
-        if (!report.associateName && line.length > 10) {
-            const nameMatch = line.match(/^(?:Employee|Agent|Name)[:\s]+(.+)$/i);
-            if (nameMatch) {
-                report.associateName = nameMatch[1].trim();
+        if (!report.associateName) {
+            const associateName = parseSentimentAssociateName(line);
+            if (associateName) {
+                report.associateName = associateName;
             }
         }
         
