@@ -264,6 +264,10 @@ function refreshPtoAssociateOptionFlags() {
         if (!associateName) return;
 
         const tracker = migrateLegacyPtoTracker(store.associates?.[associateName] || getDefaultPtoTracker());
+        const ytdReliability = getLatestYtdReliabilityHoursForAssociate(associateName);
+        if (ytdReliability !== null && ytdReliability !== undefined) {
+            tracker.reliabilityHoursAgainst = normalizeHours(ytdReliability);
+        }
         const unaccountedHours = getUnaccountedReliabilityHours(tracker);
         const baseLabel = associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName;
 
