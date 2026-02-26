@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.69'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.70'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12768,6 +12768,55 @@ function copyYearEndResponseToClipboard() {
         .catch(() => showToast('⚠️ Unable to copy year-end notes.', 3000));
 }
 
+function focusYearEndResponseInput(responseInput) {
+    if (responseInput && typeof responseInput.focus === 'function') {
+        responseInput.focus();
+    }
+}
+
+async function getClipboardTextViaReadText() {
+    if (!navigator.clipboard?.readText) return '';
+    return String(await navigator.clipboard.readText() || '');
+}
+
+async function extractClipboardTextFromItem(item) {
+    if (item.types.includes('text/plain')) {
+        const plainBlob = await item.getType('text/plain');
+        const plainText = await plainBlob.text();
+        if (plainText && plainText.trim()) return plainText;
+    }
+
+    if (item.types.includes('text/html')) {
+        const htmlBlob = await item.getType('text/html');
+        const htmlText = await htmlBlob.text();
+        const parser = new DOMParser();
+        const htmlDoc = parser.parseFromString(htmlText, 'text/html');
+        const parsedText = String(htmlDoc.body?.innerText || '').trim();
+        if (parsedText && parsedText.trim()) return parsedText;
+    }
+
+    return '';
+}
+
+async function getClipboardTextViaReadItems() {
+    if (!navigator.clipboard?.read) return '';
+
+    const clipboardItems = await navigator.clipboard.read();
+    for (const item of clipboardItems) {
+        const text = await extractClipboardTextFromItem(item);
+        if (text && text.trim()) return text;
+    }
+
+    return '';
+}
+
+async function readYearEndClipboardText() {
+    let clipboardText = await getClipboardTextViaReadText();
+    if (clipboardText && clipboardText.trim()) return clipboardText;
+    clipboardText = await getClipboardTextViaReadItems();
+    return clipboardText;
+}
+
 async function pasteYearEndResponseFromClipboard() {
     const responseInput = document.getElementById('yearEndCopilotResponse');
     const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
@@ -12777,39 +12826,15 @@ async function pasteYearEndResponseFromClipboard() {
     try {
         if (!navigator.clipboard) {
             showToast('⚠️ Clipboard paste is not available in this browser. Use Ctrl+V in the box.', 4500);
-            responseInput.focus();
+            focusYearEndResponseInput(responseInput);
             return;
         }
 
-        let clipboardText = '';
-
-        if (navigator.clipboard.readText) {
-            clipboardText = String(await navigator.clipboard.readText() || '');
-        }
-
-        if ((!clipboardText || !clipboardText.trim()) && navigator.clipboard.read) {
-            const clipboardItems = await navigator.clipboard.read();
-            for (const item of clipboardItems) {
-                if (item.types.includes('text/plain')) {
-                    const plainBlob = await item.getType('text/plain');
-                    clipboardText = await plainBlob.text();
-                    if (clipboardText && clipboardText.trim()) break;
-                }
-
-                if ((!clipboardText || !clipboardText.trim()) && item.types.includes('text/html')) {
-                    const htmlBlob = await item.getType('text/html');
-                    const htmlText = await htmlBlob.text();
-                    const parser = new DOMParser();
-                    const htmlDoc = parser.parseFromString(htmlText, 'text/html');
-                    clipboardText = String(htmlDoc.body?.innerText || '').trim();
-                    if (clipboardText && clipboardText.trim()) break;
-                }
-            }
-        }
+        const clipboardText = await readYearEndClipboardText();
 
         if (!clipboardText || !clipboardText.trim()) {
             showToast('⚠️ Clipboard read was blocked or returned no text. Click the box and press Ctrl+V.', 4500);
-            responseInput.focus();
+            focusYearEndResponseInput(responseInput);
             return;
         }
 
@@ -12818,7 +12843,7 @@ async function pasteYearEndResponseFromClipboard() {
         showToast('✅ Final notes pasted from clipboard.', 3000);
     } catch (error) {
         showToast('⚠️ Could not access clipboard API. Click in the box and use Ctrl+V.', 4500);
-        responseInput.focus();
+        focusYearEndResponseInput(responseInput);
     }
 }
 
