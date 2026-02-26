@@ -6118,14 +6118,8 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     // ROW BACKGROUND COLOR
     let rowBgColor;
-    const ratingBandColor = Number.isInteger(parseInt(reviewYear, 10))
-        ? getRatingBandRowColor(metricKey || metric.key, associateValue, reviewYear)
-        : null;
-
     if (noSurveys) {
         rowBgColor = '#ffffff'; // White - no surveys
-    } else if (ratingBandColor) {
-        rowBgColor = ratingBandColor;
     } else if (meetsGoal) {
         rowBgColor = '#d4edda'; // Green - meets goal
     } else {
