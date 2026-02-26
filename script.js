@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.138'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.139'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4882,6 +4882,38 @@ function populateTrendSentimentDropdown(employeeName) {
     });
 }
 
+const AVERAGE_FORM_FIELD_MAP = {
+    adherence: 'avgAdherence',
+    overallExperience: 'avgOverallExperience',
+    repSatisfaction: 'avgRepSatisfaction',
+    fcr: 'avgFCR',
+    transfers: 'avgTransfers',
+    sentiment: 'avgSentiment',
+    positiveWord: 'avgPositiveWord',
+    negativeWord: 'avgNegativeWord',
+    managingEmotions: 'avgManagingEmotions',
+    aht: 'avgAHT',
+    acw: 'avgACW',
+    holdTime: 'avgHoldTime',
+    reliability: 'avgReliability'
+};
+
+function getAverageValueFromSource(source, key) {
+    if (!source || typeof source !== 'object') return '';
+    const direct = source[key];
+    if (direct !== undefined && direct !== null) return direct;
+    const nested = source.data ? source.data[key] : undefined;
+    return nested !== undefined && nested !== null ? nested : '';
+}
+
+function applyAveragesToForm(source) {
+    Object.entries(AVERAGE_FORM_FIELD_MAP).forEach(([avgKey, inputId]) => {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = getAverageValueFromSource(source, avgKey);
+    });
+}
+
 function setupAveragesLoader() {
     const avgPeriodType = document.getElementById('avgPeriodType');
     const avgWeekMonday = document.getElementById('avgWeekMonday');
@@ -4897,21 +4929,8 @@ function setupAveragesLoader() {
         // Create storage key from period type and Monday date
         const storageKey = `${mondayDate}_${periodType}`;
         const averages = getCallCenterAverageForPeriod(storageKey);
-        
-        // Populate form fields
-        document.getElementById('avgAdherence').value = averages.adherence || '';
-        document.getElementById('avgOverallExperience').value = averages.overallExperience || '';
-        document.getElementById('avgRepSatisfaction').value = averages.repSatisfaction || '';
-        document.getElementById('avgFCR').value = averages.fcr || '';
-        document.getElementById('avgTransfers').value = averages.transfers || '';
-        document.getElementById('avgSentiment').value = averages.sentiment || '';
-        document.getElementById('avgPositiveWord').value = averages.positiveWord || '';
-        document.getElementById('avgNegativeWord').value = averages.negativeWord || '';
-        document.getElementById('avgManagingEmotions').value = averages.managingEmotions || '';
-        document.getElementById('avgAHT').value = averages.aht || '';
-        document.getElementById('avgACW').value = averages.acw || '';
-        document.getElementById('avgHoldTime').value = averages.holdTime || '';
-        document.getElementById('avgReliability').value = averages.reliability || '';
+
+        applyAveragesToForm(averages);
     };
     
     avgPeriodType.addEventListener('change', loadAveragesForPeriod);
@@ -5008,34 +5027,7 @@ function displayCallCenterAverages(weekKey) {
     const centerAvg = getCallCenterAverageForPeriod(weekKey);
     
     // Load the averages into the form (or clear if none)
-    const fieldMap = {
-        'adherence': 'avgAdherence',
-        'overallExperience': 'avgOverallExperience',
-        'repSatisfaction': 'avgRepSatisfaction',
-        'fcr': 'avgFCR',
-        'transfers': 'avgTransfers',
-        'sentiment': 'avgSentiment',
-        'positiveWord': 'avgPositiveWord',
-        'negativeWord': 'avgNegativeWord',
-        'managingEmotions': 'avgManagingEmotions',
-        'aht': 'avgAHT',
-        'acw': 'avgACW',
-        'holdTime': 'avgHoldTime',
-        'reliability': 'avgReliability'
-    };
-    
-    Object.entries(fieldMap).forEach(([avgKey, inputId]) => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            if (centerAvg) {
-                // Check if it's in the main data object or nested in 'data' property
-                const value = centerAvg[avgKey] !== undefined ? centerAvg[avgKey] : (centerAvg.data ? centerAvg.data[avgKey] : '');
-                input.value = value !== null && value !== undefined ? value : '';
-            } else {
-                input.value = '';
-            }
-        }
-    });
+    applyAveragesToForm(centerAvg);
     
     // Don't auto-expand the form - let user click "Edit Averages" button
     // Form expansion is controlled by toggleAvgMetricsBtn only
@@ -5098,19 +5090,7 @@ function displayCallCenterAverages(weekKey) {
         }
         
         // Copy all values
-        document.getElementById('avgAdherence').value = previousAverages.adherence || '';
-        document.getElementById('avgOverallExperience').value = previousAverages.overallExperience || '';
-        document.getElementById('avgRepSatisfaction').value = previousAverages.repSatisfaction || '';
-        document.getElementById('avgFCR').value = previousAverages.fcr || '';
-        document.getElementById('avgTransfers').value = previousAverages.transfers || '';
-        document.getElementById('avgSentiment').value = previousAverages.sentiment || '';
-        document.getElementById('avgPositiveWord').value = previousAverages.positiveWord || '';
-        document.getElementById('avgNegativeWord').value = previousAverages.negativeWord || '';
-        document.getElementById('avgManagingEmotions').value = previousAverages.managingEmotions || '';
-        document.getElementById('avgAHT').value = previousAverages.aht || '';
-        document.getElementById('avgACW').value = previousAverages.acw || '';
-        document.getElementById('avgHoldTime').value = previousAverages.holdTime || '';
-        document.getElementById('avgReliability').value = previousAverages.reliability || '';
+        applyAveragesToForm(previousAverages);
         
         markUnsavedChanges();
         showToast('✅ Copied from previous week! Click Save to apply.', 4000);
