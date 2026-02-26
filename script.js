@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.23'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.24'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13579,6 +13579,35 @@ function parseSentimentReportDate(line, label) {
     return '';
 }
 
+function handleSentimentInteractionsMatch(report, inKeywordsSection, allInteractionsMatches, interactionsMatch, line, lineIndex) {
+    const callsDetected = parseInt(interactionsMatch[1]);
+    const percentage = parseInt(interactionsMatch[2]);
+    const totalCalls = parseInt(interactionsMatch[3]);
+
+    console.log(`📊 PARSE DEBUG - FOUND Interactions at line ${lineIndex}: ${percentage}% (inKeywordsSection=${inKeywordsSection})`);
+    allInteractionsMatches.push({
+        lineIndex,
+        lineContent: line,
+        callsDetected: callsDetected,
+        percentage: percentage,
+        totalCalls: totalCalls,
+        inKeywordsSection: inKeywordsSection
+    });
+
+    if (inKeywordsSection && !report.inKeywordsSection) {
+        report.callsDetected = callsDetected;
+        report.percentage = percentage;
+        report.totalCalls = totalCalls;
+        report.inKeywordsSection = true;
+        console.log(`✅ SET METRICS (in keywords section): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
+    } else if (!inKeywordsSection && !report.inKeywordsSection) {
+        report.callsDetected = callsDetected;
+        report.percentage = percentage;
+        report.totalCalls = totalCalls;
+        console.log(`⚠️ TENTATIVE METRICS (no keywords section yet): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
+    }
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13632,36 +13661,7 @@ function parseSentimentFile(fileType, lines) {
         console.log(`📊 PARSE DEBUG [fileType=${fileType}] - Line ${i}: "${line}"`);
         const interactionsMatch = line.match(/Interactions:?,?\s*(\d+)\s*\(.*?(\d+)%.*?out\s+of\s+(\d+)/i);
         if (interactionsMatch) {
-            const callsDetected = parseInt(interactionsMatch[1]);
-            const percentage = parseInt(interactionsMatch[2]);
-            const totalCalls = parseInt(interactionsMatch[3]);
-            
-            console.log(`📊 PARSE DEBUG - FOUND Interactions at line ${i}: ${percentage}% (inKeywordsSection=${inKeywordsSection})`);
-            allInteractionsMatches.push({
-                lineIndex: i,
-                lineContent: line,
-                callsDetected: callsDetected,
-                percentage: percentage,
-                totalCalls: totalCalls,
-                inKeywordsSection: inKeywordsSection
-            });
-            
-            // UPDATED LOGIC: Accept Interactions lines that appear AFTER keywords section
-            // BUT also accept the LAST Interactions line found even if no Keywords section (fallback)
-            if (inKeywordsSection && !report.inKeywordsSection) {
-                // Keywords section found - use this data
-                report.callsDetected = callsDetected;
-                report.percentage = percentage;
-                report.totalCalls = totalCalls;
-                report.inKeywordsSection = true;
-                console.log(`✅ SET METRICS (in keywords section): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
-            } else if (!inKeywordsSection && !report.inKeywordsSection) {
-                // No keywords section found yet - tentatively use this (will be overwritten if keywords section appears later)
-                report.callsDetected = callsDetected;
-                report.percentage = percentage;
-                report.totalCalls = totalCalls;
-                console.log(`⚠️ TENTATIVE METRICS (no keywords section yet): ${callsDetected} detected, ${totalCalls} total, ${percentage}%`);
-            }
+            handleSentimentInteractionsMatch(report, inKeywordsSection, allInteractionsMatches, interactionsMatch, line, i);
             continue;
         }
         
