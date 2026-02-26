@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T05:26:32.366Z",
+  "generatedAt": "2026-02-26T05:26:36.381Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": "2026.02.25.119",
   "weeklyData": {
@@ -4389,7 +4389,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Darryn Coley",
+    "selectedAssociate": "Jenifer Henson",
     "associates": {
       "Alyssa Dimes": {
         "carriedOverHours": 0,
@@ -4444,6 +4444,20 @@
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 31.17,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Ekiecha Brabham": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 6.25,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Jenifer Henson": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 8.5,
         "ptostMaxHours": 40,
         "entries": []
       }
@@ -5321,7 +5335,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 1064
+      "byteLength": 1320
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
