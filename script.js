@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.133'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.134'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5365,6 +5365,22 @@ function saveMetricsPreviewEdits() {
     showToast(updatedCount > 0 ? '✅ Metrics saved' : 'No changes to save', 3000);
 }
 
+const TREND_METRIC_MAPPINGS = {
+    scheduleAdherence: 'scheduleAdherence',
+    overallExperience: 'overallExperience',
+    cxRepOverall: 'repSatisfaction',
+    fcr: 'fcr',
+    transfers: 'transfers',
+    overallSentiment: 'sentiment',
+    positiveWord: 'positiveWord',
+    negativeWord: 'negativeWord',
+    managingEmotions: 'managingEmotions',
+    aht: 'aht',
+    acw: 'acw',
+    holdTime: 'holdTime',
+    reliability: 'reliability'
+};
+
 /**
  * Analyzes employee metrics to identify performance gaps and trends.
  * Compares individual achievements against targets and team center averages.
@@ -5389,26 +5405,8 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
      * 2. Random metric = randomly selected from those below target (provides variety)
      */
     const allMetrics = [];
-    
-    const metricMappings = {
-        scheduleAdherence: 'scheduleAdherence',
-        overallExperience: 'overallExperience',
-        cxRepOverall: 'repSatisfaction',
-        fcr: 'fcr',
-        transfers: 'transfers',
-        overallSentiment: 'sentiment',
-        positiveWord: 'positiveWord',
-        negativeWord: 'negativeWord',
-        managingEmotions: 'managingEmotions',
-        aht: 'aht',
-        acw: 'acw',
-        holdTime: 'holdTime',
-        reliability: 'reliability'
-    };
-    
-    const isReverseMetric = (key) => ['transfers', 'aht', 'holdTime', 'acw', 'reliability'].includes(key);
-    
-    Object.entries(metricMappings).forEach(([registryKey, csvKey]) => {
+
+    Object.entries(TREND_METRIC_MAPPINGS).forEach(([registryKey, csvKey]) => {
         const employeeValue = parseFloat(employeeData[registryKey]) || 0;
         const centerValue = parseFloat(centerAverages[csvKey]) || 0;
         const metric = METRICS_REGISTRY[registryKey];
