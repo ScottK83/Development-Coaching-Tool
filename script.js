@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.29'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.30'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13697,12 +13697,8 @@ function parseSentimentAssociateName(line) {
     return nameMatch ? nameMatch[1].trim() : '';
 }
 
-function parseSentimentFile(fileType, lines) {
-    // Parse the "English Speech – Charts Report" format
-    console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
-    console.log(`📊 PARSE START - First 10 lines:`, lines.slice(0, 10));
-    
-    const report = {
+function createEmptySentimentReport() {
+    return {
         associateName: '',
         startDate: '',
         endDate: '',
@@ -13710,8 +13706,16 @@ function parseSentimentFile(fileType, lines) {
         callsDetected: 0,
         percentage: 0,
         phrases: [],
-        inKeywordsSection: false  // Track which Interactions line we used
+        inKeywordsSection: false
     };
+}
+
+function parseSentimentFile(fileType, lines) {
+    // Parse the "English Speech – Charts Report" format
+    console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
+    console.log(`📊 PARSE START - First 10 lines:`, lines.slice(0, 10));
+    
+    const report = createEmptySentimentReport();
     
     let inKeywordsSection = false;
     let pendingPhrase = null; // For handling phrase/value on separate lines
