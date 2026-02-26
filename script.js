@@ -6404,7 +6404,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
     // White background
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 900, 1900);
+    ctx.fillRect(0, 0, 900, 2400);
 
     let y = 0;
 
@@ -6447,6 +6447,21 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '📈 Improved', improvedText, improvedSub);
 
     y += 140;
+
+    // Positive Highlights / Improvement Areas (same style as coaching modal)
+    const trendAnalysisForSummary = analyzeTrendMetrics(current, centerAvg, reviewYear);
+    const trendSummary = buildTrendHighlightsAndImprovements(trendAnalysisForSummary.allMetrics || []);
+    const summaryBoxesHeight = drawTrendSummaryBoxesOnCanvas(
+        ctx,
+        40,
+        y,
+        820,
+        trendSummary.positiveHighlights,
+        trendSummary.improvementAreas,
+        'No above-target metrics in this period.',
+        'No below-target metrics in this period.'
+    );
+    y += summaryBoxesHeight + 24;
 
     // Metrics section header
     ctx.fillStyle = '#e3f2fd';
@@ -6841,6 +6856,95 @@ function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, s
     ctx.fillText(subText, x + w/2, y + 100);
     
     ctx.textAlign = 'left';
+}
+
+function wrapCanvasTextLines(ctx, text, maxWidth) {
+    const safeText = String(text || '').trim();
+    if (!safeText) return [''];
+
+    const words = safeText.split(/\s+/);
+    const lines = [];
+    let currentLine = '';
+
+    words.forEach(word => {
+        const candidate = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(candidate).width <= maxWidth) {
+            currentLine = candidate;
+        } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+        }
+    });
+
+    if (currentLine) lines.push(currentLine);
+    return lines.length > 0 ? lines : [''];
+}
+
+function drawTrendSummaryBoxesOnCanvas(ctx, x, y, totalWidth, positiveHighlights, improvementAreas, positiveEmptyText, improvementEmptyText) {
+    const gap = 16;
+    const boxWidth = (totalWidth - gap) / 2;
+    const leftX = x;
+    const rightX = x + boxWidth + gap;
+    const padding = 14;
+    const titleHeight = 24;
+    const lineHeight = 21;
+    const maxTextWidth = boxWidth - (padding * 2) - 8;
+
+    const buildLines = (items, emptyText) => {
+        const source = Array.isArray(items) && items.length > 0 ? items : [emptyText || 'No items.'];
+        const lines = [];
+        source.forEach(item => {
+            const wrapped = wrapCanvasTextLines(ctx, `• ${item}`, maxTextWidth);
+            wrapped.forEach(line => lines.push(line));
+        });
+        return lines;
+    };
+
+    ctx.font = '12px Arial';
+    const positiveLines = buildLines(positiveHighlights, positiveEmptyText);
+    const improvementLines = buildLines(improvementAreas, improvementEmptyText);
+    const maxLines = Math.max(positiveLines.length, improvementLines.length, 1);
+    const boxHeight = padding + titleHeight + 8 + (maxLines * lineHeight) + padding;
+
+    // Positive box
+    ctx.fillStyle = '#e8f5e9';
+    ctx.strokeStyle = '#81c784';
+    ctx.lineWidth = 1;
+    ctx.fillRect(leftX, y, boxWidth, boxHeight);
+    ctx.strokeRect(leftX, y, boxWidth, boxHeight);
+
+    ctx.fillStyle = '#2e7d32';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('✅', leftX + padding, y + padding + 18);
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('Positive Highlights', leftX + padding + 34, y + padding + 18);
+
+    ctx.fillStyle = '#1b5e20';
+    ctx.font = '12px Arial';
+    positiveLines.forEach((line, index) => {
+        ctx.fillText(line, leftX + padding, y + padding + titleHeight + 16 + (index * lineHeight));
+    });
+
+    // Improvement box
+    ctx.fillStyle = '#ffebee';
+    ctx.strokeStyle = '#ef9a9a';
+    ctx.lineWidth = 1;
+    ctx.fillRect(rightX, y, boxWidth, boxHeight);
+    ctx.strokeRect(rightX, y, boxWidth, boxHeight);
+
+    ctx.fillStyle = '#c62828';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('⚠️', rightX + padding, y + padding + 18);
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('Improvement Areas', rightX + padding + 34, y + padding + 18);
+
+    ctx.fillStyle = '#b71c1c';
+    ctx.font = '12px Arial';
+    improvementLines.forEach((line, index) => {
+        ctx.fillText(line, rightX + padding, y + padding + titleHeight + 16 + (index * lineHeight));
+    });
+
+    return boxHeight;
 }
 
 function getMetricTarget(metric, reviewYear = null) {
