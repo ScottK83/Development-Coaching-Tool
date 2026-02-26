@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T18:44:23.854Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-26T18:45:15.272Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.60",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5423,7 +5423,7 @@
       "positivesText": "Hold Time: 1s vs target 30s\nAfter Call Work: 25s vs target 60s\nOverall Experience: 94.6% vs target 84.0%\nRep Satisfaction: 94.6% vs target 80.0%\nFirst Call Resolution: 86.8% vs target 70.0%\nOverall Sentiment: 93.9% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 13.8% vs target 6.0%\nAverage Handle Time: 451s vs target 440s",
       "managerContext": "What Precious put in - Review the prompted questions below and provide your responses.  \n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nTHE FIRST BUSINESS CONTRIBUTION I AM MOST PROUD OF IS MY AHT - I BELIEVE IT'S VERY IMPORTANT TO BE ABLE TO MULITITASK AN BE EFFICENT WHILE SPEAKING TO CUSTOMERS IN  A WELCOMING TONE.\n\nTHE SECOND BUSINESS CONTRIBUTION I AM MOST PROUD OF IS MANAGING MY EMOTIONS. I HAVE LEARNED THAT NOT TRYING TO RESOLVE THE CUSTOMER ISSUES BUT TO LISTEN TO UNDERSTAND THERE SITUATION HAS ALLOWED ME TO HELP WITH BEING EMPATHETIC WITH THE CUSTOMERS, IT MAKES THEM FEEL HEARD.\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nTHE 2 EXAMPLES OF AREAS I HAVE GROWN IN BASED ON MY ONE ONE AN MEETINGS I BELEIVE IS MY CONFIDENCE IN EXPLAINING OUR RATE PLANS,THE IMPORTANCE OF BB AN HOW THE PROGRAM CAN BE BENEFICIAL IN THE LONG RUN. I BELIVE BY DOING THIS HAS ALLOWED ME TO GREW WITHIN MY METERICS OVERALL AND MY OTHER EXAMPLE OF GROWTH WOULD BE FOR ME ACCEPTING MY OWN WRONG DOINGS AN BEING ABLE TO CALL THE CUSTOMER BACK AN APOLOGIZE, OWN THE SITUSATION AN MOST IMPORTANTLY FIX THE ERROR; I ALSO WILL ALWAYS  CONTINUE TO STAY UP TO DATE WITH READING OSCAR  SO THAT I AM ALWAYS SHARING WITH THE CUSTOMERS CORRECT HONEST ANSWERS .",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nPrecious delivered an on track performance and made several meaningful contributions throughout 2025. She exceeded nearly every quality and customer experience metric, including Hold Time at 1s vs a 30s goal, After Call Work at 25s vs a 60s goal, Overall Experience at 94.6% vs an 84.0% goal, Rep Satisfaction at 94.6% vs an 80.0% goal, First Call Resolution at 86.8% vs a 70.0% goal, and Overall Sentiment at 93.9% vs an 88.0% goal. Precious also met all annual APS goals, including Safety, Emergency Safety Hazard accuracy, zero ACC complaints, and zero phishing clicks. Beyond the metrics, she demonstrated strong growth in her confidence explaining complex topics such as rate plans and programs, and she strengthened her emotional management and listening skills, which positively influenced customer interactions. Her dedication to owning and correcting errors and staying informed through consistent OSCAR review reflected strong alignment with APS Principles of Integrity, Continuous Improvement, and Customer Focus.\nBox 2 - Future Improvement Areas:\nThe primary opportunities for future development involve improving schedule adherence and reducing transfers. Schedule Adherence was 92.2% against a goal of 93.0%, and focusing on daily consistency can help her meet this expectation. Additionally, Transfers were 13.8% vs a 6.0% goal, and building deeper confidence in handling complex scenarios end to end will help lower unnecessary handoffs and further strengthen customer experience.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -5474,7 +5474,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -5494,7 +5494,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 22,
-      "byteLength": 57905
+      "byteLength": 59441
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
