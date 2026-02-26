@@ -78,6 +78,12 @@ if ($currentVersion -eq $nextVersion) {
     exit 0
 }
 
+$todayDatePart = (Get-Date).ToString("yyyy.MM.dd")
+$currentVersionDate = $null
+if ($currentVersion -match "^(?<date>\d{4}\.\d{2}\.\d{2})\.\d+$") {
+    $currentVersionDate = $matches['date']
+}
+
 # Check if HEAD commit message is a version bump commit from pre-push
 $headCommitMsg = git log -1 --pretty=%B
 if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
@@ -87,8 +93,13 @@ if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
 }
 
 if (-not $autoBumpEnabled) {
-    Write-Host "APP_VERSION ($currentVersion) is behind expected $nextVersion. Skipping auto-bump during push to avoid push retries."
-    Write-Host "Set AUTO_BUMP_ON_PUSH=1 to restore legacy auto-commit behavior."
+    if (-not $currentVersionDate) {
+        Write-Host "APP_VERSION format is invalid or missing. Auto-bump is disabled; update script.js manually if needed."
+    }
+    elseif ($currentVersionDate -ne $todayDatePart) {
+        Write-Host "APP_VERSION ($currentVersion) is from $currentVersionDate, not today ($todayDatePart). Auto-bump is disabled."
+        Write-Host "Set AUTO_BUMP_ON_PUSH=1 to restore legacy auto-commit behavior."
+    }
     exit 0
 }
 
