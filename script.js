@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.127'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.128'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3453,6 +3453,47 @@ async function tryAutoRestoreFromRepoBackupOnEmptyState() {
     return true;
 }
 
+async function postRepoSyncPayload(endpoint, config, payload) {
+    return fetch(endpoint, {
+        method: 'POST',
+        headers: buildRepoSyncHeaders(config.sharedSecret),
+        body: JSON.stringify(payload)
+    });
+}
+
+async function throwIfRepoSyncErrorResponse(response) {
+    if (response.ok) return;
+
+    const { details, errorCode } = await parseRepoSyncErrorResponse(response);
+
+    if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
+        throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
+    }
+
+    const normalizedDetails = String(details || '').toLowerCase();
+    if (normalizedDetails.includes('repository rule violation') || normalizedDetails.includes('secret scanning')) {
+        throw new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
+    }
+
+    throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
+}
+
+async function parseRepoSyncSuccessResponse(response) {
+    try {
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
+}
+
+function buildRepoSyncMeta(reason, responseData) {
+    return {
+        syncedAt: new Date().toISOString(),
+        reason,
+        commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || ''
+    };
+}
+
 async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
     const forceSync = options?.force === true;
@@ -3469,38 +3510,11 @@ async function syncRepoData(reason = 'updated', options = {}) {
     try {
         const payload = buildRepoSyncPayload(reason);
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: buildRepoSyncHeaders(config.sharedSecret),
-            body: JSON.stringify(payload)
-        });
+        const response = await postRepoSyncPayload(endpoint, config, payload);
+        await throwIfRepoSyncErrorResponse(response);
 
-        if (!response.ok) {
-            const { details, errorCode } = await parseRepoSyncErrorResponse(response);
-
-            if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
-                throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
-            }
-
-            if (String(details || '').toLowerCase().includes('repository rule violation') || String(details || '').toLowerCase().includes('secret scanning')) {
-                throw new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
-            }
-
-            throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
-        }
-
-        let responseData = null;
-        try {
-            responseData = await response.json();
-        } catch (error) {
-            responseData = null;
-        }
-
-        const syncMeta = {
-            syncedAt: new Date().toISOString(),
-            reason,
-            commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || ''
-        };
+        const responseData = await parseRepoSyncSuccessResponse(response);
+        const syncMeta = buildRepoSyncMeta(reason, responseData);
         saveRepoSyncLastSuccess(syncMeta);
         renderCallListeningLastSync(syncMeta);
 
