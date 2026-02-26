@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T00:20:33.075Z",
+  "generatedAt": "2026-02-26T00:34:12.312Z",
   "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": "2026.02.25.116",
   "weeklyData": {
@@ -5222,16 +5222,6 @@
       "itemCount": 1,
       "byteLength": 280
     },
-    "devCoachingTool_cloudSyncShared": {
-      "valueType": "object",
-      "itemCount": 6,
-      "byteLength": 203
-    },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 8,
-      "byteLength": 2241
-    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
@@ -5242,6 +5232,11 @@
       "itemCount": 2,
       "byteLength": 15051
     },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 8,
+      "byteLength": 2241
+    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
@@ -5249,18 +5244,13 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 77
-    },
-    "devCoachingTool_smartDefault_lastPeriodType": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 6
+      "itemCount": 1,
+      "byteLength": 28
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 131
+      "byteLength": 125
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -5271,11 +5261,6 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
-    },
-    "devCoachingTool_debugLogs": {
-      "valueType": "array",
-      "itemCount": 50,
-      "byteLength": 6957
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -5292,20 +5277,20 @@
       "itemCount": 9,
       "byteLength": 50208
     },
-    "devCoachingTool_employeePreferredNames": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
-    },
-    "devCoachingTool_cloudSyncSettings": {
-      "valueType": "object",
-      "itemCount": 6,
-      "byteLength": 274
-    },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 212
+      "byteLength": 211
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_deletedServerTips": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 16
     }
   }
 }
