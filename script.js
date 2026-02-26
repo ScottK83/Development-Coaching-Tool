@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.80'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.81'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11253,40 +11253,7 @@ function deleteCallListeningEntryById(entryId) {
 function buildCallListeningPrompt(entry) {
     const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
     const delegated = window.DevCoachModules?.callListening?.buildPrompt?.(entry, preferredName);
-    if (delegated) return delegated;
-
-    return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
-
-Call details:
-- Call date: ${entry.listenedOn}
-- Call reference: ${entry.callReference || 'Not provided'}
-
-Feedback notes:
-What went well:
-${entry.whatWentWell || '- None provided'}
-
-Improvement opportunities:
-${entry.improvementAreas || '- None provided'}
-
-Oscar / Knowledge Base URL:
-${entry.oscarUrl || '- Not provided'}
-
-Relevant guidance to include:
-${entry.relevantInfo || '- Not provided'}
-
-Manager context:
-${entry.managerNotes || '- Not provided'}
-
-Write an email-ready coaching message to the associate.
-
-Requirements:
-- Professional, supportive, and specific
-- Start with recognition of strengths
-- Include clear improvement actions with practical next steps
-- If Oscar URL or relevant guidance is provided, naturally reference it as a resource
-- Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
-- Do NOT use em dashes (—)
-- Return ONLY the final email body text.`;
+    return delegated || '';
 }
 
 function generateCallListeningPromptAndCopy() {
@@ -11299,6 +11266,10 @@ function generateCallListeningPromptAndCopy() {
 
     if (!promptArea) return;
     const prompt = buildCallListeningPrompt(entry);
+    if (!prompt) {
+        showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
     promptArea.value = prompt;
 
     const delegatedResult = window.DevCoachModules?.callListening?.copyPromptAndOpenCopilot?.({
@@ -11316,31 +11287,7 @@ function generateCallListeningPromptAndCopy() {
         return;
     }
 
-    if (button) {
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied + Opening Copilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1500);
-    }
-
-    if (outlookSection) {
-        outlookSection.style.display = 'block';
-    }
-
-    const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
-    if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(prompt)
-            .then(() => {
-                showToast('✅ Call listening prompt copied. Paste into Copilot with Ctrl+V.', 4000);
-                if (!copilotWindow) {
-                    alert('✅ Prompt copied to clipboard. Open https://copilot.microsoft.com and paste with Ctrl+V.');
-                }
-            })
-            .catch(() => {
-                showToast('⚠️ Could not copy automatically. Prompt is in the box below.', 4500);
-            });
-    }
+    showToast('⚠️ Call Listening module could not open Copilot flow.', 3500);
 }
 
 function generateCallListeningOutlookEmail() {
@@ -11359,51 +11306,18 @@ function generateCallListeningOutlookEmail() {
     if (delegatedResult?.ok || delegatedResult?.reason === 'missing-body') {
         return;
     }
-
-    if (!bodyText) {
-        showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
-        return;
-    }
-
-    const preferredName = employeeName ? (getEmployeeNickname(employeeName) || employeeName) : 'Associate';
-    const subject = `Call Listening Feedback - ${preferredName}${callDate ? ` - ${callDate}` : ''}`;
-
-    try {
-        const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
-        document.body.appendChild(mailtoLink);
-        mailtoLink.click();
-        document.body.removeChild(mailtoLink);
-        showToast('📧 Outlook draft opened', 2500);
-    } catch (error) {
-        console.error('Error opening Outlook draft from call listening:', error);
-        showToast('⚠️ Could not open Outlook draft.', 3000);
-    }
+    showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
 }
 
 function buildCallListeningHistorySummaryText(employeeName, entryCount) {
     const delegated = window.DevCoachModules?.callListening?.buildHistorySummaryText?.(employeeName, entryCount);
-    if (delegated) return delegated;
-
-    return `${entryCount} saved call listening log${entryCount === 1 ? '' : 's'} for ${employeeName}.`;
+    return delegated || `${entryCount} saved call listening log${entryCount === 1 ? '' : 's'} for ${employeeName}.`;
 }
 
 function buildCallListeningHistoryItemHtml(entry) {
     const delegated = window.DevCoachModules?.callListening?.buildHistoryItemHtml?.(entry, escapeHtml);
     if (delegated) return delegated;
-
-    const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
-    return `<li style="margin-bottom: 14px; line-height: 1.35;">
-            <div style="font-weight: bold; color: #37474f;">${escapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${escapeHtml(entry.callReference)}` : ''}</div>
-            <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${escapeHtml(entry.whatWentWell || 'N/A')}</div>
-            <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${escapeHtml(entry.improvementAreas || 'N/A')}</div>
-            <div style="font-size: 0.82em; color: #666; margin-top: 4px;">Saved: ${escapeHtml(createdAt)}</div>
-            <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-                <button type="button" data-call-action="load" data-entry-id="${escapeHtml(entry.id)}" style="background: #607d8b; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Load</button>
-                <button type="button" data-call-action="copy-verint" data-entry-id="${escapeHtml(entry.id)}" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Copy Verint</button>
-                <button type="button" data-call-action="delete" data-entry-id="${escapeHtml(entry.id)}" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Delete</button>
-            </div>
-        </li>`;
+    return '<li>Unable to render call listening history item.</li>';
 }
 
 function resolveCallListeningHistoryContext() {
@@ -12605,54 +12519,7 @@ function resolveYearEndPromptHeaderData(employeeName, reviewYear, trackStatus) {
 
 function buildYearEndCopilotPrompt(inputData, supportData, headerData) {
     const delegated = window.DevCoachModules?.yearEnd?.buildCopilotPrompt?.(inputData, supportData, headerData);
-    if (delegated) return delegated;
-
-    return `I'm a supervisor preparing year-end review responses for ${headerData.preferredName} (${inputData.employeeName}) for ${inputData.reviewYear}.
-
-Use this data source: ${headerData.sourceLabel} (${headerData.periodLabel}).
-Performance classification: ${headerData.trackLabel}.
-Metric targets to apply: ${headerData.targetProfileLabel}.
-
-Positives to highlight:
-${inputData.positivesText || supportData.fallbackPositives || '- Positive impact and steady contribution to the team.'}
-
-Improvement areas needed:
-${inputData.improvementsText || supportData.fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
-
-Additional manager context and/or associate self-review responses:
-${inputData.managerContext || '- None provided.'}
-
-Annual APS goals status (not part of weekly report):
-Met goals:
-${supportData.annualMetText}
-
-Goals needing follow-up:
-${supportData.annualNotMetText}
-
-Write polished text that I can paste into these two manager review boxes:
-
-1) Highlight significant accomplishments against your employee's goals for the year (business, development, APS principle)
-2) Identify 1-2 areas for future improvement, based on this year's performance
-
-Requirements:
-- Professional, warm, and human - not robotic and not overly corporate
-- Align with goals in business, development, and APS principles
-- Mention whether performance is on track or off track naturally
-- Use the associate self-review/context above when relevant, but do not copy it verbatim
-- When referencing a metric, include the metric value and its goal
-- This is a completed ${inputData.reviewYear} year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
-- Do not use present-tense timing words for performance statements (do not use "currently", "currently at", "now", or "today")
-- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)
-- Box 1 should emphasize meaningful accomplishments and impact
-- Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
-- Keep each box concise (about 3-6 sentences each)
-- Do NOT use em dashes (—)
-- Return in this exact format only:
-Box 1 - Significant Accomplishments:
-[text]
-
-Box 2 - Future Improvement Areas:
-[text]`;
+    return delegated || '';
 }
 
 function setYearEndPromptButtonFeedback(button) {
@@ -12699,6 +12566,10 @@ function generateYearEndPromptAndCopy() {
     const supportData = buildYearEndPromptSupportData(inputData.employeeName, inputData.reviewYear);
     const headerData = resolveYearEndPromptHeaderData(inputData.employeeName, inputData.reviewYear, inputData.trackStatus);
     const prompt = buildYearEndCopilotPrompt(inputData, supportData, headerData);
+    if (!prompt) {
+        showToast('⚠️ Year-End module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
 
     inputData.promptArea.value = prompt;
     setYearEndPromptButtonFeedback(inputData.button);
@@ -12800,45 +12671,7 @@ async function pasteYearEndResponseFromClipboard() {
 
 function extractYearEndBoxText(responseText, boxNumber) {
     const delegated = window.DevCoachModules?.yearEnd?.extractBoxText?.(responseText, boxNumber);
-    if (typeof delegated === 'string' && delegated.length >= 0) return delegated;
-
-    if (!responseText || (boxNumber !== 1 && boxNumber !== 2)) return '';
-
-    const normalized = String(responseText).replace(/\r\n/g, '\n').trim();
-    if (!normalized) return '';
-
-    const lines = normalized.split('\n');
-    const box1HeaderRegexes = [
-        /^\s*(?:box|section|question)\s*1\b/i,
-        /^\s*1\s*[\).:-]\s*(?:highlight|significant|accomplishments?)\b/i
-    ];
-    const box2HeaderRegexes = [
-        /^\s*(?:box|section|question)\s*2\b/i,
-        /^\s*2\s*[\).:-]\s*(?:identify|future|improvement)\b/i
-    ];
-
-    const findHeaderIndex = (regexes) => lines.findIndex(line => regexes.some(rx => rx.test(line)));
-    const box1Index = findHeaderIndex(box1HeaderRegexes);
-    const box2Index = findHeaderIndex(box2HeaderRegexes);
-
-    if (box1Index === -1 && box2Index === -1) {
-        return boxNumber === 1 ? normalized : '';
-    }
-
-    const extractSection = (startIndex, endIndex) => {
-        if (startIndex < 0 || startIndex >= lines.length) return '';
-        const headerLine = lines[startIndex] || '';
-        const colonIndex = headerLine.indexOf(':');
-        const inlineText = colonIndex >= 0 ? headerLine.slice(colonIndex + 1).trim() : '';
-        const bodyLines = lines.slice(startIndex + 1, endIndex > startIndex ? endIndex : lines.length);
-        return [inlineText, ...bodyLines].filter(Boolean).join('\n').trim();
-    };
-
-    if (boxNumber === 1) {
-        return extractSection(box1Index, box2Index);
-    }
-
-    return extractSection(box2Index, lines.length);
+    return typeof delegated === 'string' ? delegated : '';
 }
 
 function copyYearEndBoxResponseToClipboard(boxNumber) {
@@ -12884,13 +12717,12 @@ function generateYearEndVerbalSummary() {
         performanceRating,
         meritDetails,
         bonusAmount
-    ) || `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
+    ) || '';
 
-For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.
-
-Your overall performance rating is: ${performanceRating}.
-Your merit increase details are: ${meritDetails}.
-Your incentive/bonus amount is: ${bonusAmount}.`;
+    if (!summary) {
+        showToast('⚠️ Year-End module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
 
     output.value = summary;
     persistYearEndDraftState(employeeName, reviewYear);
@@ -13455,22 +13287,12 @@ function getCoachingOutlookGenerationInputs() {
 function resolveCoachingOutlookEndDate() {
     const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
     const delegated = window.DevCoachModules?.coaching?.resolveOutlookEndDate?.(periodMeta, coachingLatestWeekKey, formatDateMMDDYYYY);
-    if (delegated) return delegated;
-
-    if (periodMeta.endDate) {
-        return formatDateMMDDYYYY(periodMeta.endDate);
-    }
-
-    const endDateFromKey = coachingLatestWeekKey?.split('|')[1];
-    return endDateFromKey ? formatDateMMDDYYYY(endDateFromKey) : 'current period';
+    return delegated || 'current period';
 }
 
 function resolveCoachingOutlookPreferredName(selectedEmployee) {
     const delegated = window.DevCoachModules?.coaching?.resolveOutlookPreferredName?.(selectedEmployee, getEmployeeNickname);
-    if (delegated) return delegated;
-
-    if (!selectedEmployee) return 'Associate';
-    return getEmployeeNickname(selectedEmployee) || selectedEmployee;
+    return delegated || 'Associate';
 }
 
 function buildCoachingOutlookSubject(selectedEmployee) {
@@ -13481,11 +13303,7 @@ function buildCoachingOutlookSubject(selectedEmployee) {
         periodKey: coachingLatestWeekKey,
         formatDate: formatDateMMDDYYYY
     });
-    if (delegated) return delegated;
-
-    const preferredName = resolveCoachingOutlookPreferredName(selectedEmployee);
-    const endDate = resolveCoachingOutlookEndDate();
-    return `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
+    return delegated || '';
 }
 
 function openMailtoDraft(subject, bodyText) {
@@ -13494,12 +13312,6 @@ function openMailtoDraft(subject, bodyText) {
         delegated(subject, bodyText);
         return;
     }
-
-    const mailtoLink = document.createElement('a');
-    mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
-    document.body.appendChild(mailtoLink);
-    mailtoLink.click();
-    document.body.removeChild(mailtoLink);
 }
 
 function generateOutlookEmailFromCoPilot() {
@@ -13522,20 +13334,7 @@ function generateOutlookEmailFromCoPilot() {
         return;
     }
 
-    if (!bodyText) {
-        showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
-        return;
-    }
-
-    const subject = buildCoachingOutlookSubject(selectedEmployee);
-
-    try {
-        openMailtoDraft(subject, bodyText);
-        showToast('📧 Outlook draft opened', 2500);
-    } catch (e) {
-        console.error('Error opening Outlook draft from coaching email:', e);
-        showToast('⚠️ Could not open Outlook draft.', 3000);
-    }
+    showToast('⚠️ Coaching module is unavailable. Refresh and try again.', 3500);
 }
 
 // ============================================
@@ -14254,16 +14053,8 @@ function generateSentimentSummary() {
     }
 
     if (!summary) {
-        const associateName = positive.associateName || negative.associateName || emotions.associateName || 'Unknown Associate';
-        const startDate = positive.startDate || negative.startDate || emotions.startDate || 'N/A';
-        const endDate = positive.endDate || negative.endDate || emotions.endDate || 'N/A';
-        const dateRange = `${startDate} – ${endDate}`;
-
-        summary += `Associate: ${escapeHtml(associateName)}\n`;
-        summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
-        summary += buildPositiveLanguageSentimentSection(positive, associateName);
-        summary += buildNegativeLanguageSentimentSection(negative);
-        summary += buildManagingEmotionsSentimentSection(emotions);
+        alert('⚠️ Sentiment module is unavailable or could not build summary. Refresh and try again.');
+        return;
     }
     
     // Display the summary
