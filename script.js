@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.60'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.61'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11703,63 +11703,99 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
     };
 }
 
-function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
-    const parseNumber = (value) => {
-        if (value === null || value === undefined || value === '' || value === 'N/A') return null;
-        const numeric = parseFloat(value);
-        return Number.isNaN(numeric) ? null : numeric;
-    };
+function parseOnOffMirrorNumber(value) {
+    if (value === null || value === undefined || value === '' || value === 'N/A') return null;
+    const numeric = parseFloat(value);
+    return Number.isNaN(numeric) ? null : numeric;
+}
 
-    const pickAssociateOverallValue = () => {
-        const overallExperienceVal = parseNumber(employeeRecord?.overallExperience);
-        const cxRepOverallVal = parseNumber(employeeRecord?.cxRepOverall);
-        const isValidPercent = (val) => val !== null && val >= 0 && val <= 100;
+function isValidOnOffPercent(value) {
+    return value !== null && value >= 0 && value <= 100;
+}
 
-        if (isValidPercent(overallExperienceVal) && overallExperienceVal > 0) {
-            return { value: overallExperienceVal, source: 'overallExperience' };
-        }
-        if (isValidPercent(cxRepOverallVal) && cxRepOverallVal > 0) {
-            return { value: cxRepOverallVal, source: 'cxRepOverall' };
-        }
-        if (isValidPercent(overallExperienceVal)) {
-            return { value: overallExperienceVal, source: 'overallExperience' };
-        }
-        if (isValidPercent(cxRepOverallVal)) {
-            return { value: cxRepOverallVal, source: 'cxRepOverall' };
-        }
+function pickYearEndAssociateOverallValue(employeeRecord) {
+    const overallExperienceVal = parseOnOffMirrorNumber(employeeRecord?.overallExperience);
+    const cxRepOverallVal = parseOnOffMirrorNumber(employeeRecord?.cxRepOverall);
 
-        return { value: null, source: 'none' };
-    };
+    if (isValidOnOffPercent(overallExperienceVal) && overallExperienceVal > 0) {
+        return { value: overallExperienceVal, source: 'overallExperience' };
+    }
+    if (isValidOnOffPercent(cxRepOverallVal) && cxRepOverallVal > 0) {
+        return { value: cxRepOverallVal, source: 'cxRepOverall' };
+    }
+    if (isValidOnOffPercent(overallExperienceVal)) {
+        return { value: overallExperienceVal, source: 'overallExperience' };
+    }
+    if (isValidOnOffPercent(cxRepOverallVal)) {
+        return { value: cxRepOverallVal, source: 'cxRepOverall' };
+    }
 
-    const associateOverallPick = pickAssociateOverallValue();
+    return { value: null, source: 'none' };
+}
 
-    const values = {
-        aht: parseNumber(employeeRecord?.aht),
-        adherence: parseNumber(employeeRecord?.scheduleAdherence),
-        sentiment: parseNumber(employeeRecord?.overallSentiment),
+function buildYearEndOnOffValues(employeeRecord, associateOverallPick) {
+    return {
+        aht: parseOnOffMirrorNumber(employeeRecord?.aht),
+        adherence: parseOnOffMirrorNumber(employeeRecord?.scheduleAdherence),
+        sentiment: parseOnOffMirrorNumber(employeeRecord?.overallSentiment),
         associateOverall: associateOverallPick.value,
-        reliability: parseNumber(employeeRecord?.reliability)
+        reliability: parseOnOffMirrorNumber(employeeRecord?.reliability)
     };
+}
+
+function getYearEndOnOffScoreOrFallback(metricKey, value, scoreYear) {
+    if (value === null) return null;
+
+    const configuredScore = getMetricRatingScore(metricKey, value, scoreYear);
+    if (configuredScore !== null && configuredScore !== undefined) {
+        return configuredScore;
+    }
+
+    if (metricKey === 'aht') {
+        return value <= 419 ? 3 : (value <= 460 ? 2 : 1);
+    }
+    if (metricKey === 'scheduleAdherence') {
+        return value >= 94.5 ? 3 : (value >= 92.5 ? 2 : 1);
+    }
+    if (metricKey === 'overallSentiment') {
+        return value >= 90.1 ? 3 : (value >= 87.5 ? 2 : 1);
+    }
+    if (metricKey === 'cxRepOverall') {
+        return value > 82 ? 3 : (value >= 79.5 ? 2 : 1);
+    }
+    if (metricKey === 'reliability') {
+        return value > 24.1 ? 1 : (value >= 16.1 ? 2 : 3);
+    }
+
+    return null;
+}
+
+function buildYearEndOnOffScores(values, scoreYear) {
+    return {
+        aht: getYearEndOnOffScoreOrFallback('aht', values.aht, scoreYear),
+        adherence: getYearEndOnOffScoreOrFallback('scheduleAdherence', values.adherence, scoreYear),
+        sentiment: getYearEndOnOffScoreOrFallback('overallSentiment', values.sentiment, scoreYear),
+        associateOverall: getYearEndOnOffScoreOrFallback('cxRepOverall', values.associateOverall, scoreYear),
+        reliability: getYearEndOnOffScoreOrFallback('reliability', values.reliability, scoreYear)
+    };
+}
+
+function resolveYearEndOnOffTrackStatus(ratingAverage) {
+    if (ratingAverage <= 1.79) {
+        return { trackLabel: 'Off Track', trackStatusValue: 'off-track' };
+    }
+    if (ratingAverage <= 2.79) {
+        return { trackLabel: 'On Track/Successful', trackStatusValue: 'on-track' };
+    }
+    return { trackLabel: 'On Track/Exceptional', trackStatusValue: 'on-track' };
+}
+
+function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
+    const associateOverallPick = pickYearEndAssociateOverallValue(employeeRecord);
+    const values = buildYearEndOnOffValues(employeeRecord, associateOverallPick);
 
     const scoreYear = parseInt(reviewYear, 10);
-
-    const scores = {
-        aht: values.aht === null
-            ? null
-            : (getMetricRatingScore('aht', values.aht, scoreYear) ?? (values.aht <= 419 ? 3 : (values.aht <= 460 ? 2 : 1))),
-        adherence: values.adherence === null
-            ? null
-            : (getMetricRatingScore('scheduleAdherence', values.adherence, scoreYear) ?? (values.adherence >= 94.5 ? 3 : (values.adherence >= 92.5 ? 2 : 1))),
-        sentiment: values.sentiment === null
-            ? null
-            : (getMetricRatingScore('overallSentiment', values.sentiment, scoreYear) ?? (values.sentiment >= 90.1 ? 3 : (values.sentiment >= 87.5 ? 2 : 1))),
-        associateOverall: values.associateOverall === null
-            ? null
-            : (getMetricRatingScore('cxRepOverall', values.associateOverall, scoreYear) ?? (values.associateOverall > 82 ? 3 : (values.associateOverall >= 79.5 ? 2 : 1))),
-        reliability: values.reliability === null
-            ? null
-            : (getMetricRatingScore('reliability', values.reliability, scoreYear) ?? (values.reliability > 24.1 ? 1 : (values.reliability >= 16.1 ? 2 : 3)))
-    };
+    const scores = buildYearEndOnOffScores(values, scoreYear);
 
     const scoreValues = Object.values(scores);
     const hasAllScores = scoreValues.every(score => score !== null);
@@ -11776,16 +11812,7 @@ function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().get
     }
 
     const ratingAverage = scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length;
-    let trackLabel = 'On Track/Exceptional';
-    let trackStatusValue = 'on-track';
-
-    if (ratingAverage <= 1.79) {
-        trackLabel = 'Off Track';
-        trackStatusValue = 'off-track';
-    } else if (ratingAverage <= 2.79) {
-        trackLabel = 'On Track/Successful';
-        trackStatusValue = 'on-track';
-    }
+    const { trackLabel, trackStatusValue } = resolveYearEndOnOffTrackStatus(ratingAverage);
 
     return {
         isComplete: true,
