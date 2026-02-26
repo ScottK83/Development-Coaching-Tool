@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.120'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.121'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2302,10 +2302,6 @@ function initializeEventHandlers() {
         renderDebugPanel();
     });
     
-    document.getElementById('debugBtn')?.addEventListener('click', () => {
-        showOnlySection('debugSection');
-        renderDebugPanel();
-    });
     document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
     document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
     document.getElementById('generateTodaysFocusCopilotBtn')?.addEventListener('click', generateTodaysFocusCopilotEmail);
@@ -2331,61 +2327,6 @@ function initializeEventHandlers() {
     
     // Drag and drop support for CSV files
     const pasteTextarea = document.getElementById('pasteDataTextarea');
-    if (pasteTextarea) {
-        // Prevent default drag behaviors
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            pasteTextarea.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-        
-        // Highlight drop zone
-        ['dragenter', 'dragover'].forEach(eventName => {
-            pasteTextarea.addEventListener(eventName, () => {
-                pasteTextarea.style.background = '#e3f2fd';
-                pasteTextarea.style.borderColor = '#2196F3';
-            });
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            pasteTextarea.addEventListener(eventName, () => {
-                pasteTextarea.style.background = '';
-                pasteTextarea.style.borderColor = '';
-            });
-        });
-        
-        // Handle dropped files
-        pasteTextarea.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            
-            // Check if it's a CSV or text file
-            if (!file.name.endsWith('.csv') && !file.type.includes('text')) {
-                alert('⚠️ Please drop a CSV file');
-                return;
-            }
-            
-            // Read the file
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                pasteTextarea.value = event.target.result;
-                // Trigger validation
-                pasteTextarea.dispatchEvent(new Event('input'));
-                showToast('✅ File loaded! Review data and click Load Data.', 4000);
-            };
-            reader.onerror = () => {
-                alert('❌ Error reading file');
-            };
-            reader.readAsText(file);
-        });
-    }
-    
-    // Real-time data validation preview
     document.getElementById('pasteDataTextarea')?.addEventListener('input', (e) => {
         const dataText = e.target.value;
         const preview = document.getElementById('dataValidationPreview');
@@ -2993,61 +2934,6 @@ function initializeEventHandlers() {
         });
         
         alert('✅ All data has been deleted (including call center averages and history)');
-    });
-    
-    // Data cleanup feature
-    document.getElementById('cleanupSurveyDataBtn')?.addEventListener('click', () => {
-        const issues = scanSurveyDataIssues();
-        const resultsDiv = document.getElementById('cleanupResults');
-        
-        if (!resultsDiv) return;
-        
-        if (issues.length === 0) {
-            resultsDiv.style.display = 'block';
-            resultsDiv.style.background = '#d4edda';
-            resultsDiv.style.border = '2px solid #28a745';
-            resultsDiv.innerHTML = '<strong style="color: #28a745;">✅ No issues found!</strong><br>All survey totals look reasonable.';
-            return;
-        }
-        
-        // Show issues found
-        let html = `<strong style="color: #ff9800;">⚠️ Found ${issues.length} corrupted survey value(s):</strong><br><br>`;
-        html += '<div style="max-height: 300px; overflow-y: auto; margin: 10px 0;">';
-        issues.forEach(issue => {
-            html += `<div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 4px;">` +
-                    `📅 <strong>${issue.weekLabel}</strong><br>` +
-                    `👤 ${issue.employeeName}: Survey Total = <span style="color: #dc3545; font-weight: bold;">${issue.currentValue}</span><br>` +
-                    `<span style="font-size: 0.85em; color: #666;\">(Likely a percentage/score instead of actual survey count)</span>` +
-                    `</div>`;
-        });
-        html += '</div>';
-        html += `<p style="color: #856404; margin: 10px 0;"><strong>These weeks will be deleted so you can re-upload with correct data.</strong></p>`;
-        html += `<button type="button" id="fixSurveyDataBtn" class="btn-secondary" style="background: #ff9800; color: white; margin-top: 10px;">` +
-                `🗑️ Delete Affected Weeks & Re-upload</button> `;
-        html += `<button type="button" id="cancelCleanupBtn" class="btn-secondary" style="background: #6c757d; color: white; margin-top: 10px;">` +
-                `Cancel</button>`;
-        
-        resultsDiv.style.display = 'block';
-        resultsDiv.style.background = '#fff3cd';
-        resultsDiv.style.border = '2px solid #ff9800';
-        resultsDiv.innerHTML = html;
-        
-        // Add fix button handler
-        document.getElementById('fixSurveyDataBtn')?.addEventListener('click', () => {
-            const weeksSet = new Set(issues.map(i => i.weekKey));
-            if (confirm(`This will DELETE ${weeksSet.size} week(s) with corrupted survey data:\n\n${Array.from(weeksSet).map(wk => issues.find(i => i.weekKey === wk).weekLabel).join('\\n')}\n\nYou can re-upload these weeks with correct data.\n\nContinue?`)) {
-                fixSurveyDataIssues(issues);
-                resultsDiv.style.background = '#d4edda';
-                resultsDiv.style.border = '2px solid #28a745';
-                resultsDiv.innerHTML = `<strong style="color: #28a745;">✅ Deleted corrupted week(s)!</strong><br>` +
-                                       `You can now re-upload the correct data for those weeks.`;
-            }
-        });
-        
-        // Cancel button
-        document.getElementById('cancelCleanupBtn')?.addEventListener('click', () => {
-            resultsDiv.style.display = 'none';
-        });
     });
     
     // Populate delete week dropdown on load
@@ -3995,58 +3881,6 @@ function getYearEndTargetConfig(metricKey, reviewYear, periodMetadata) {
     if (!fallback) return null;
     return { ...fallback, profileYear: null };
 }
-
-// Scan for unrealistic survey totals
-function scanSurveyDataIssues() {
-    const issues = [];
-    const THRESHOLD = 20; // Any survey total > 20 per week is suspicious
-    
-    for (const weekKey in weeklyData) {
-        const weekData = weeklyData[weekKey];
-        const metadata = weekData.metadata || {};
-        const weekLabel = metadata.endDate ? `Week ending ${metadata.endDate}` : weekKey;
-        
-        if (weekData.employees) {
-            weekData.employees.forEach(emp => {
-                if (emp.surveyTotal && emp.surveyTotal > THRESHOLD) {
-                    issues.push({
-                        weekKey: weekKey,
-                        weekLabel: weekLabel,
-                        employeeName: emp.name,
-                        currentValue: emp.surveyTotal,
-                        employee: emp
-                    });
-                }
-            });
-        }
-    }
-    
-    return issues;
-}
-
-// Fix survey data issues by deleting corrupted weeks
-function fixSurveyDataIssues(issues) {
-    // Collect unique week keys to delete
-    const weeksToDelete = new Set();
-    issues.forEach(issue => {
-        weeksToDelete.add(issue.weekKey);
-    });
-    
-    // Delete the weeks
-    weeksToDelete.forEach(weekKey => {
-        delete weeklyData[weekKey];
-        delete myTeamMembers[weekKey];
-    });
-    
-    saveWeeklyData();
-    saveTeamMembers();
-    populateDeleteWeekDropdown();
-    populateTeamMemberSelector();
-    
-    showToast(`✅ Deleted ${weeksToDelete.size} week(s) with corrupted data. Re-upload with correct survey counts.`);
-}
-
-
 
 function populateDeleteWeekDropdown() {
     const dropdown = document.getElementById('deleteWeekSelect');
