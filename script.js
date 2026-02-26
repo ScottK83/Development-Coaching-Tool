@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.42'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.43'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2429,6 +2429,96 @@ function handleSubNavSentimentClick() {
     renderSentimentDatabasePanel();
 }
 
+function detectUploadPeriodTypeByRange(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    if (daysDiff >= 26 && daysDiff <= 33) return 'month';
+    if (daysDiff >= 88 && daysDiff <= 95) return 'quarter';
+    if (daysDiff >= 180) return 'ytd';
+    return 'week';
+}
+
+function resolveSelectedUploadPeriodType(detectedPeriodType) {
+    const periodButtons = document.querySelectorAll('.upload-period-btn');
+    periodButtons.forEach(btn => {
+        if (btn.dataset.period === detectedPeriodType) {
+            btn.click();
+        }
+    });
+
+    const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
+        document.querySelector('.upload-period-btn[data-period="week"]');
+    return selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
+}
+
+function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile) {
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const normalizedEndDate = new Date(endYear, endMonth - 1, endDay);
+    const startDateObj = new Date(startYear, startMonth - 1, startDay);
+    const autoReviewYear = String(normalizedEndDate.getFullYear());
+    const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
+
+    let label;
+    if (periodType === 'week') {
+        label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (periodType === 'month') {
+        label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
+    } else if (periodType === 'quarter') {
+        const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
+        label = `Q${quarter} ${startDateObj.getFullYear()}`;
+    } else if (periodType === 'ytd') {
+        label = `YTD through ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    return {
+        label,
+        normalizedEndDate,
+        metadata: {
+            startDate,
+            endDate,
+            label,
+            periodType,
+            yearEndTargetProfile: selectedYearEndProfile,
+            yearEndReviewYear,
+            uploadedAt: new Date().toISOString()
+        }
+    };
+}
+
+function syncWeeklyViewAfterPastedUpload(weekKey) {
+    currentPeriodType = 'week';
+
+    document.querySelectorAll('.period-type-btn').forEach(b => {
+        b.style.background = 'white';
+        b.style.color = '#666';
+        b.style.borderColor = '#ddd';
+    });
+    const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
+    if (weekBtn) {
+        weekBtn.style.background = '#2196F3';
+        weekBtn.style.color = 'white';
+        weekBtn.style.borderColor = '#2196F3';
+    }
+
+    updatePeriodDropdown();
+
+    const periodDropdown = document.getElementById('specificPeriod');
+    if (periodDropdown) {
+        for (let index = 0; index < periodDropdown.options.length; index += 1) {
+            if (periodDropdown.options[index].value === weekKey) {
+                periodDropdown.selectedIndex = index;
+                currentPeriod = weekKey;
+                updateEmployeeDropdown();
+                break;
+            }
+        }
+    }
+}
+
 function handleLoadPastedDataClick() {
     const pastedData = document.getElementById('pasteDataTextarea').value;
     const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
@@ -2449,32 +2539,8 @@ function handleLoadPastedDataClick() {
     endDateObj.setDate(endDateObj.getDate() - 6);
     const startDate = endDateObj.toISOString().split('T')[0];
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-
-    let detectedPeriodType = 'week';
-    if (daysDiff >= 5 && daysDiff <= 9) {
-        detectedPeriodType = 'week';
-    } else if (daysDiff >= 26 && daysDiff <= 33) {
-        detectedPeriodType = 'month';
-    } else if (daysDiff >= 88 && daysDiff <= 95) {
-        detectedPeriodType = 'quarter';
-    } else if (daysDiff >= 180) {
-        detectedPeriodType = 'ytd';
-    }
-
-    const periodButtons = document.querySelectorAll('.upload-period-btn');
-    periodButtons.forEach(btn => {
-        if (btn.dataset.period === detectedPeriodType) {
-            btn.click();
-        }
-    });
-
-    const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
-        document.querySelector('.upload-period-btn[data-period="week"]');
-    const periodType = selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
+    const detectedPeriodType = detectUploadPeriodTypeByRange(startDate, endDate);
+    const periodType = resolveSelectedUploadPeriodType(detectedPeriodType);
 
     saveSmartDefault('lastPeriodType', periodType);
 
@@ -2493,38 +2559,13 @@ function handleLoadPastedDataClick() {
         const weekKey = `${startDate}|${endDate}`;
         const yearEndProfileSelect = document.getElementById('uploadYearEndProfile');
         const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
-
-        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-        const normalizedEndDate = new Date(endYear, endMonth - 1, endDay);
-        const startDateObj = new Date(startYear, startMonth - 1, startDay);
-        const autoReviewYear = String(normalizedEndDate.getFullYear());
-        const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
-
-        let label;
-        if (periodType === 'week') {
-            label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-        } else if (periodType === 'month') {
-            label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
-        } else if (periodType === 'quarter') {
-            const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
-            label = `Q${quarter} ${startDateObj.getFullYear()}`;
-        } else if (periodType === 'ytd') {
-            label = `YTD through ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-        }
+        const uploadContext = buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile);
+        const { label, normalizedEndDate, metadata } = uploadContext;
 
         const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
         targetStore[weekKey] = {
             employees,
-            metadata: {
-                startDate,
-                endDate,
-                label,
-                periodType,
-                yearEndTargetProfile: selectedYearEndProfile,
-                yearEndReviewYear,
-                uploadedAt: new Date().toISOString()
-            }
+            metadata
         };
 
         if (periodType !== 'ytd') {
@@ -2544,33 +2585,7 @@ function handleLoadPastedDataClick() {
         showOnlySection('coachingSection');
 
         if (periodType !== 'ytd') {
-            currentPeriodType = 'week';
-
-            document.querySelectorAll('.period-type-btn').forEach(b => {
-                b.style.background = 'white';
-                b.style.color = '#666';
-                b.style.borderColor = '#ddd';
-            });
-            const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
-            if (weekBtn) {
-                weekBtn.style.background = '#2196F3';
-                weekBtn.style.color = 'white';
-                weekBtn.style.borderColor = '#2196F3';
-            }
-
-            updatePeriodDropdown();
-
-            const periodDropdown = document.getElementById('specificPeriod');
-            if (periodDropdown) {
-                for (let index = 0; index < periodDropdown.options.length; index += 1) {
-                    if (periodDropdown.options[index].value === weekKey) {
-                        periodDropdown.selectedIndex = index;
-                        currentPeriod = weekKey;
-                        updateEmployeeDropdown();
-                        break;
-                    }
-                }
-            }
+            syncWeeklyViewAfterPastedUpload(weekKey);
         }
 
         alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
