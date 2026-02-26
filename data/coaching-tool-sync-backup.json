@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T05:26:45.272Z",
+  "generatedAt": "2026-02-26T05:26:50.130Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": "2026.02.25.119",
   "weeklyData": {
@@ -4389,7 +4389,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Teena Pokorski",
+    "selectedAssociate": "Trevor Pedrowski",
     "associates": {
       "Alyssa Dimes": {
         "carriedOverHours": 0,
@@ -4493,6 +4493,13 @@
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Trevor Pedrowski": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.12,
         "ptostMaxHours": 40,
         "entries": []
       }
@@ -5370,7 +5377,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 1949
+      "byteLength": 2080
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
