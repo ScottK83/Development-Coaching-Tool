@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T22:41:29.217Z",
+  "generatedAt": "2026-02-26T22:41:40.018Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.79",
   "weeklyData": {
@@ -5434,7 +5434,7 @@
       "trackStatus": "off-track",
       "positivesText": "Schedule Adherence: 94.1% vs target 93.0%\nHold Time: 13s vs target 30s\nOverall Experience: 84.1% vs target 84.0%\nRep Satisfaction: 85.7% vs target 80.0%\nFirst Call Resolution: 77.1% vs target 70.0%\nAvoid Negative Words: 86.9% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Transfers: 22.1% vs target 6.0%\nAverage Handle Time: 466s vs target 440s\nAfter Call Work: 180s vs target 60s\nOverall Sentiment: 86.7% vs target 88.0%\nPositive Word: 76.4% vs target 86.0%\nReliability: 60.9 hrs vs target 16.0 hrs",
-      "managerContext": "Need to add that ",
+      "managerContext": "Need to add that Oceane did have challenges. Some stemming from calls, attendance, ",
       "copilotResponse": "",
       "performanceRating": "",
       "meritDetails": "",
@@ -5516,7 +5516,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 25,
-      "byteLength": 57018
+      "byteLength": 57084
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
