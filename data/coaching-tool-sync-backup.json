@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T05:26:04.516Z",
+  "generatedAt": "2026-02-26T05:26:14.888Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": "2026.02.25.119",
   "weeklyData": {
@@ -4389,7 +4389,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Alyssa Dimes",
+    "selectedAssociate": "Pamela Muhammad",
     "associates": {
       "Alyssa Dimes": {
         "carriedOverHours": 0,
@@ -4408,7 +4408,7 @@
       "Pamela Muhammad": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
+        "reliabilityHoursAgainst": 26.12,
         "ptostMaxHours": 40,
         "entries": []
       },
@@ -5293,7 +5293,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 546
+      "byteLength": 553
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
