@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.63'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.64'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -8009,6 +8009,23 @@ function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
         .slice(0, 5);
 }
 
+function buildExecutiveSummarySavedNotesText(associate) {
+    const saved = getExecutiveSummaryNotesStore();
+    const employeeNotes = saved[associate] || {};
+    const ytdNotes = employeeNotes['ytd-summary'] || {};
+    const redFlags = String(ytdNotes.redFlags || '').trim();
+    const phishing = String(ytdNotes.phishing || '').trim();
+
+    if (!redFlags && !phishing) {
+        return 'SAVED RISK NOTES:\n- No saved red flags or phishing notes.\n';
+    }
+
+    let notesText = 'SAVED RISK NOTES:\n';
+    notesText += `- Red flags: ${redFlags || 'None'}\n`;
+    notesText += `- Phishing attempts: ${phishing || 'None'}\n`;
+    return notesText;
+}
+
 async function generateExecutiveSummaryCopilotEmail() {
     const associate = document.getElementById('summaryAssociateSelect')?.value;
     if (!associate) {
@@ -8065,11 +8082,14 @@ async function generateExecutiveSummaryCopilotEmail() {
         focusAreaText = 'TEAM FOCUS AREA: Team is performing well across all metrics!\\n';
     }
 
+    const savedNotesText = buildExecutiveSummarySavedNotesText(associate);
+
     const copilotPrompt = `Write a professional team email recognizing wins and providing guidance for the week ending ${endDate}.
 
 ${individualWinsText}
 ${teamPerformanceText}
 ${focusAreaText}
+${savedNotesText}
 TONE & STYLE:
 - Professional and motivating
 - Celebrate specific wins with names
@@ -12108,6 +12128,40 @@ function renderOnOffTrackerLegend(reviewYear) {
     legendEl.innerHTML = buildOnOffLegendContainerHtml(reviewYear, cards, sourceLabel, usingFallback);
 }
 
+function populateOnOffTrackerEmployeeSelect(employeeSelect) {
+    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
+    const employees = getYearEndEmployees();
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    });
+    return employees;
+}
+
+function resetOnOffTrackerPanel(panel, factsSummary, summary, details) {
+    panel.style.display = 'none';
+    factsSummary.textContent = '';
+    summary.textContent = '';
+    details.innerHTML = '';
+}
+
+function bindOnOffTrackerHandlers(employeeSelect, reviewYearInput, calculateBtn) {
+    const calculate = () => updateOnOffTrackerDisplay();
+    bindElementOnce(employeeSelect, 'change', calculate);
+    bindElementOnce(reviewYearInput, 'input', calculate);
+    bindElementOnce(calculateBtn, 'click', calculate);
+}
+
+function resolveOnOffTrackerFactsSummaryText(latestPeriod) {
+    const endDateText = latestPeriod.period?.metadata?.endDate
+        ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
+        : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
+    const sourceText = latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload';
+    return `${latestPeriod.label} • Source: ${sourceText} • End date: ${endDateText}`;
+}
+
 function initializeOnOffTracker() {
     const employeeSelect = document.getElementById('onOffTrackerEmployeeSelect');
     const reviewYearInput = document.getElementById('onOffTrackerReviewYear');
@@ -12126,14 +12180,7 @@ function initializeOnOffTracker() {
 
     renderOnOffTrackerLegend(reviewYearInput.value);
 
-    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
-    const employees = getYearEndEmployees();
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        employeeSelect.appendChild(option);
-    });
+    const employees = populateOnOffTrackerEmployeeSelect(employeeSelect);
 
     if (!employees.length) {
         status.textContent = 'No employee data found yet. Upload yearly metrics first.';
@@ -12145,24 +12192,8 @@ function initializeOnOffTracker() {
     status.textContent = `Loaded ${employees.length} associates. Select associate and review year.`;
     status.style.display = 'block';
 
-    const calculate = () => updateOnOffTrackerDisplay();
-    if (!employeeSelect.dataset.bound) {
-        employeeSelect.addEventListener('change', calculate);
-        employeeSelect.dataset.bound = 'true';
-    }
-    if (!reviewYearInput.dataset.bound) {
-        reviewYearInput.addEventListener('input', calculate);
-        reviewYearInput.dataset.bound = 'true';
-    }
-    if (!calculateBtn.dataset.bound) {
-        calculateBtn.addEventListener('click', calculate);
-        calculateBtn.dataset.bound = 'true';
-    }
-
-    panel.style.display = 'none';
-    factsSummary.textContent = '';
-    summary.textContent = '';
-    details.innerHTML = '';
+    bindOnOffTrackerHandlers(employeeSelect, reviewYearInput, calculateBtn);
+    resetOnOffTrackerPanel(panel, factsSummary, summary, details);
 }
 
 function updateOnOffTrackerDisplay() {
@@ -12191,10 +12222,7 @@ function updateOnOffTrackerDisplay() {
         return;
     }
 
-    const endDateText = latestPeriod.period?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
-        : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
-    factsSummary.textContent = `${latestPeriod.label} • Source: ${latestPeriod.sourceName === 'ytdData' ? 'YTD upload' : 'Latest period upload'} • End date: ${endDateText}`;
+    factsSummary.textContent = resolveOnOffTrackerFactsSummaryText(latestPeriod);
 
     renderOnOffMirrorForElementIds(latestPeriod.employeeRecord, 'onOffTrackerSummary', 'onOffTrackerDetails', reviewYear);
 
