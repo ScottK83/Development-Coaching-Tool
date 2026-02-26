@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.39'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.40'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6155,6 +6155,26 @@ function isReverseMetric(metricKey) {
     return reverseMetrics.includes(metricKey);
 }
 
+function resolveTrendMetricYtdDisplay(metric, isSurveyMetric, ytdValue, ytdSurveyTotal) {
+    let formattedYtd = '';
+    const ytdValueNum = parseFloat(ytdValue);
+    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
+
+    if (isSurveyMetric) {
+        if (ytdSurveyTotal > 0 && ytdHasValue) {
+            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+        } else if (ytdSurveyTotal === 0) {
+            formattedYtd = 'N/A';
+        } else {
+            formattedYtd = 'N/A';
+        }
+    } else if (ytdHasValue) {
+        formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+    }
+
+    return formattedYtd;
+}
+
 function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0, reviewYear = null) {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
@@ -6304,30 +6324,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     // YTD value - always render for all view types
     // CRITICAL: YTD display is INDEPENDENT of weekly survey count
-    let formattedYtd = '';
-    const ytdValueNum = parseFloat(ytdValue);
-    const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
-    
-    // For survey metrics: Show YTD value if it exists, regardless of weekly count
-    // Only show N/A if ytdSurveyTotal is 0 (no YTD surveys at all)
-    if (isSurveyMetric) {
-        // Check if there's any YTD survey data
-        if (ytdSurveyTotal > 0 && ytdHasValue) {
-            // YTD surveys exist, show the metric value
-            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
-        } else if (ytdSurveyTotal === 0) {
-            // No YTD surveys at all
-            formattedYtd = 'N/A';
-        } else {
-            // Edge case: ytdSurveyTotal > 0 but no ytdValue
-            formattedYtd = 'N/A';
-        }
-    } else {
-        // Non-survey metrics: show value if available
-        if (ytdHasValue) {
-            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
-        }
-    }
+    const formattedYtd = resolveTrendMetricYtdDisplay(metric, isSurveyMetric, ytdValue, ytdSurveyTotal);
     
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
