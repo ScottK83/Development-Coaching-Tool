@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T22:12:08.413Z",
+  "generatedAt": "2026-02-26T22:13:07.326Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.79",
   "weeklyData": {
@@ -5103,6 +5103,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Trisha Erb": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5350,6 +5384,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2025::Trisha Erb": {
+      "trackStatus": "on-track",
+      "positivesText": "Schedule Adherence: 93.8% vs target 93.0%\nHold Time: 2s vs target 30s\nOverall Experience: 90.3% vs target 84.0%\nRep Satisfaction: 94.6% vs target 80.0%\nFirst Call Resolution: 79.5% vs target 70.0%\nOverall Sentiment: 91.5% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Transfers: 23.6% vs target 6.0%\nAverage Handle Time: 543s vs target 440s\nAfter Call Work: 75s vs target 60s\nManaging Emotions: 94.5% vs target 95.0%",
+      "managerContext": "1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nIn 2025 I am most proud of how my confidence and skills have grown. This helps me to be able to educate customers on their rate plans and usage details as well as being able to focus on one call resolution. I have also continued to keep an open and clear line of communication with my Team Leads and Supervisors. Being transparent on areas I need help in helps me be able to be more efficient at my job and be more attentive to customers needs. I am also very grateful to have been invited to participate in the Q3 Insights meeting as well as the 2025 Business Plan Rollout meeting. I was unable to attend the Q3 Insights meeting, but I learned so much by being able to attend the Rollout meeting. I appreciate that my Supervisor continues to see my potential and helps encourage my growth. \n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nAreas that I was able to grow in in 2025 were improving my AHT as well as Avoiding Negative Words. In 2024 my AHT stood at 828.89 seconds and is now at 538 seconds. I intend to continue to improve this as my skills and confidence grow. I also was able to improve on avoiding negative word choices. In 2024 my metrics reflected room for growth at 71% and is now at 87.7%. I am trying daily to focus on how I CAN help, rather than the things I am unable to do.",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5405,8 +5450,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 21,
-      "byteLength": 8826
+      "itemCount": 22,
+      "byteLength": 9241
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5425,8 +5470,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 23,
-      "byteLength": 52260
+      "itemCount": 24,
+      "byteLength": 54659
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
