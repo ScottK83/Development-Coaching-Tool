@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.03'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.04'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3529,6 +3529,12 @@ function handleRepoSyncFailure(error) {
     setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
 }
 
+async function requestValidatedRepoSyncResponse(endpoint, config, payload) {
+    const response = await postRepoSyncPayload(endpoint, config, payload);
+    await throwIfRepoSyncErrorResponse(response);
+    return response;
+}
+
 async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
     const forceSync = options?.force === true;
@@ -3539,8 +3545,7 @@ async function syncRepoData(reason = 'updated', options = {}) {
     try {
         const payload = buildRepoSyncPayload(reason);
 
-        const response = await postRepoSyncPayload(endpoint, config, payload);
-        await throwIfRepoSyncErrorResponse(response);
+        const response = await requestValidatedRepoSyncResponse(endpoint, config, payload);
 
         const responseData = await parseRepoSyncSuccessResponse(response);
         finalizeRepoSyncSuccess(reason, responseData);
