@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.16'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.17'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5759,6 +5759,31 @@ function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot
     return { sentimentHtml, sentimentFocusText };
 }
 
+function renderTrendFocusAreasHtml(focusAreas) {
+    return focusAreas.map((focusArea, areaIndex) => {
+        const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
+            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
+                <strong>💡 Tip ${tipIndex + 1}:</strong> ${tip}
+            </div>
+        `).join('');
+
+        const heading = focusAreas.length === 1
+            ? `📉 Focus Area: ${focusArea.metric.label}`
+            : `📉 Focus Area ${areaIndex + 1}: ${focusArea.metric.label}`;
+
+        return `
+            <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
+                <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
+                <p style="margin: 5px 0 15px 0; color: #333;">
+                    Currently at <strong>${focusArea.metric.employeeValue.toFixed(1)}</strong>, 
+                    target is <strong>${focusArea.metric.targetType === 'min' ? '≥' : '≤'} ${focusArea.metric.target.toFixed(1)}</strong>
+                </p>
+                ${tipsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5832,28 +5857,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     const primaryFocusTips = focusAreas[0]?.tips || [];
     const secondaryFocusTips = focusAreas[1]?.tips || [];
 
-    const focusAreasHtml = focusAreas.map((focusArea, areaIndex) => {
-        const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
-            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-                <strong>💡 Tip ${tipIndex + 1}:</strong> ${tip}
-            </div>
-        `).join('');
-
-        const heading = focusAreas.length === 1
-            ? `📉 Focus Area: ${focusArea.metric.label}`
-            : `📉 Focus Area ${areaIndex + 1}: ${focusArea.metric.label}`;
-
-        return `
-            <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
-                <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
-                <p style="margin: 5px 0 15px 0; color: #333;">
-                    Currently at <strong>${focusArea.metric.employeeValue.toFixed(1)}</strong>, 
-                    target is <strong>${focusArea.metric.targetType === 'min' ? '≥' : '≤'} ${focusArea.metric.target.toFixed(1)}</strong>
-                </p>
-                ${tipsHtml}
-            </div>
-        `;
-    }).join('');
+    const focusAreasHtml = renderTrendFocusAreasHtml(focusAreas);
 
     const { sentimentHtml } = buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot);
     
