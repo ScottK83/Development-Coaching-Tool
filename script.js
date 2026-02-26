@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.33'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.34'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6403,20 +6403,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         improvedSub
     });
 
-    // Positive Highlights / Improvement Areas (same style as coaching modal)
-    const trendAnalysisForSummary = analyzeTrendMetrics(current, centerAvg, reviewYear);
-    const trendSummary = buildTrendHighlightsAndImprovements(trendAnalysisForSummary.allMetrics || []);
-    const summaryBoxesHeight = drawTrendSummaryBoxesOnCanvas(
-        ctx,
-        40,
-        y,
-        820,
-        trendSummary.positiveHighlights,
-        trendSummary.improvementAreas,
-        'No above-target metrics in this period.',
-        'No below-target metrics in this period.'
-    );
-    y += summaryBoxesHeight + 24;
+    y = drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear);
 
     y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
@@ -6532,6 +6519,22 @@ function drawTrendSummaryCardsRow(ctx, y, stats) {
     );
 
     return y + 140;
+}
+
+function drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear) {
+    const trendAnalysisForSummary = analyzeTrendMetrics(current, centerAvg, reviewYear);
+    const trendSummary = buildTrendHighlightsAndImprovements(trendAnalysisForSummary.allMetrics || []);
+    const summaryBoxesHeight = drawTrendSummaryBoxesOnCanvas(
+        ctx,
+        40,
+        y,
+        820,
+        trendSummary.positiveHighlights,
+        trendSummary.improvementAreas,
+        'No above-target metrics in this period.',
+        'No below-target metrics in this period.'
+    );
+    return y + summaryBoxesHeight + 24;
 }
 
 function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
