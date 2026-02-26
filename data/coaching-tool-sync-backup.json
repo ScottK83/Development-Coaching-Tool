@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T15:07:09.857Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-26T15:07:22.079Z",
+  "reason": "storage set: devCoachingTool_deletedServerTips",
   "sourceAppVersion": "2026.02.26.11",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5420,6 +5420,11 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_deletedServerTips": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 16
     }
   }
 }
