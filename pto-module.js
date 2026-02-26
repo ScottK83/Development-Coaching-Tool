@@ -448,21 +448,42 @@ function renderReliabilityWeekDays(dates) {
     const container = document.getElementById('ptoReliabilityWeekDays');
     if (!container) return;
 
+    const status = document.getElementById('ptoReliabilitySelectionStatus');
+    const updateStatus = () => {
+        if (!status) return;
+        const selected = container.querySelectorAll('.pto-week-day-checkbox:checked').length;
+        status.textContent = selected > 0
+            ? `${selected} day${selected === 1 ? '' : 's'} selected`
+            : 'No days selected yet';
+    };
+
     if (!Array.isArray(dates) || !dates.length) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.9em;">Select a week to choose missed day(s).</div>';
+        container.innerHTML = '<div style="color: #666; font-size: 0.9em; padding: 8px 2px;">Select a week to choose missed day(s).</div>';
+        if (status) status.textContent = '';
         return;
     }
 
+    const dayLabel = (dateText) => {
+        const parsed = parseIsoDateSafe(dateText);
+        if (!parsed) return '';
+        return parsed.toLocaleDateString('en-US', { weekday: 'short' });
+    };
+
     const chips = dates.map(date => {
         return `
-            <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #d8ebe7; border-radius: 16px; background: #f7fffd; cursor: pointer;">
-                <input type="checkbox" class="pto-week-day-checkbox" value="${date}">
-                <span>${date}</span>
+            <label style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid #cfe9e4; border-radius: 16px; background: #f9fffd; cursor: pointer;">
+                <input type="checkbox" class="pto-week-day-checkbox" value="${date}" style="margin: 0;">
+                <span style="font-weight: 600; color: #345;">${date}</span>
+                <span style="font-size: 0.82em; color: #577;">${dayLabel(date)}</span>
             </label>
         `;
     }).join('');
 
     container.innerHTML = `<div style="display: flex; gap: 8px; flex-wrap: wrap;">${chips}</div>`;
+    container.querySelectorAll('.pto-week-day-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateStatus);
+    });
+    updateStatus();
 }
 
 function populateReliabilityWeekSelector(associateName) {
