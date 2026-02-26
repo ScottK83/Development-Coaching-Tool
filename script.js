@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.131'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.132'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5467,23 +5467,12 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
     
     let randomMetric = null;
     if (nonSentimentNotMeetingTarget.length > 0) {
-        // Use Fisher-Yates shuffle to randomly pick one non-sentiment metric
-        const shuffled = [...nonSentimentNotMeetingTarget];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        randomMetric = shuffled[0];
+        randomMetric = pickRandomItem(nonSentimentNotMeetingTarget);
     } else {
         // If no non-sentiment metrics, pick randomly from remaining metrics not meeting target
         const otherMetrics = notMeetingTarget.filter(m => m.metricKey !== weakest?.metricKey);
         if (otherMetrics.length > 0) {
-            const shuffled = [...otherMetrics];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-            randomMetric = shuffled[0];
+            randomMetric = pickRandomItem(otherMetrics);
         }
     }
     
@@ -5492,6 +5481,24 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
         trendingDown: randomMetric,
         allMetrics: allMetrics  // NEW: include all metrics for comprehensive prompt building
     };
+}
+
+function getShuffledCopy(items) {
+    const shuffled = Array.isArray(items) ? [...items] : [];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function pickRandomItem(items) {
+    const shuffled = getShuffledCopy(items);
+    return shuffled.length > 0 ? shuffled[0] : null;
+}
+
+function pickRandomItems(items, count = 1) {
+    return getShuffledCopy(items).slice(0, count);
 }
 
 function getRandomTipsForMetric(metricKey, count = 2) {
@@ -5505,14 +5512,8 @@ function getRandomTipsForMetric(metricKey, count = 2) {
         if (!allTips || allTips.length === 0) {
             return [];
         }
-        
-        // Fisher-Yates shuffle for proper randomization
-        const shuffled = [...allTips];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled.slice(0, count);
+
+        return pickRandomItems(allTips, count);
     }
     
     return [];
