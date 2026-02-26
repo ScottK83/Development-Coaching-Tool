@@ -2296,6 +2296,11 @@ function initializeEventHandlers() {
         showManageDataSubSection('subSectionSentimentKeywords');
         renderSentimentDatabasePanel();
     });
+
+    document.getElementById('openDebugFromManageBtn')?.addEventListener('click', () => {
+        showOnlySection('debugSection');
+        renderDebugPanel();
+    });
     
     document.getElementById('debugBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');

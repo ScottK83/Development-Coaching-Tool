@@ -5,6 +5,7 @@
 const PTO_POLICY_UNPLANNED_LIMIT_HOURS = 16;
 const PTOST_MAX_HOURS_DEFAULT = 40;
 const PTO_WEEK_DEFAULT_HOURS = 8;
+const PTO_TRACKING_YEAR = 2026;
 const PTO_LEGACY_ASSOCIATE_KEY = '__LEGACY_PTO__';
 let ptoReliabilityWeekCache = [];
 
@@ -39,6 +40,32 @@ function normalizePtoType(type) {
 
 function normalizeAssociateName(name) {
     return String(name || '').trim();
+}
+
+function getYearFromIsoDateText(value) {
+    const text = String(value || '').trim();
+    const match = text.match(/^(\d{4})-\d{2}-\d{2}$/);
+    return match ? parseInt(match[1], 10) : null;
+}
+
+function isEntryInTrackingYear(entry) {
+    const year = getYearFromIsoDateText(entry?.date);
+    return year === PTO_TRACKING_YEAR;
+}
+
+function getTrackedEntries(data) {
+    const entries = Array.isArray(data?.entries) ? data.entries : [];
+    return entries.filter(isEntryInTrackingYear);
+}
+
+function isPeriodInTrackingYear(startDateText, endDateText, periodKey = '') {
+    const startYear = getYearFromIsoDateText(startDateText);
+    const endYear = getYearFromIsoDateText(endDateText);
+    if (startYear === PTO_TRACKING_YEAR || endYear === PTO_TRACKING_YEAR) return true;
+
+    const firstDateInKey = String(periodKey || '').match(/\d{4}-\d{2}-\d{2}/)?.[0] || '';
+    const keyYear = getYearFromIsoDateText(firstDateInKey);
+    return keyYear === PTO_TRACKING_YEAR;
 }
 
 function isTrackerShaped(data) {
@@ -149,8 +176,12 @@ function getWeeklyAssociates() {
     const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     const names = new Set();
 
-    Object.values(weeklyData).forEach(week => {
+    Object.entries(weeklyData).forEach(([weekKey, week]) => {
         if (!week || typeof week !== 'object') return;
+        const startDate = String(week?.metadata?.startDate || '').trim();
+        const endDate = String(week?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, weekKey)) return;
+
         const employees = Array.isArray(week.employees) ? week.employees : [];
         employees.forEach(employee => {
             const name = normalizeAssociateName(employee?.name);
@@ -209,7 +240,7 @@ function getSelectedAssociateAndTracker(createIfMissing = true) {
 }
 
 function calculatePtoStats(data) {
-    const entries = Array.isArray(data.entries) ? data.entries : [];
+    const entries = getTrackedEntries(data);
     const totalPtostUsed = entries
         .filter(entry => entry.type === 'ptost')
         .reduce((sum, entry) => sum + normalizeHours(entry.hours), 0);
@@ -244,7 +275,7 @@ function calculatePtoStats(data) {
 }
 
 function getAccountedEntryHours(data) {
-    const entries = Array.isArray(data?.entries) ? data.entries : [];
+    const entries = getTrackedEntries(data);
     return entries.reduce((sum, entry) => sum + normalizeHours(entry?.hours), 0);
 }
 
@@ -350,6 +381,10 @@ function getLatestYtdReliabilityHoursForAssociate(associateName) {
 
     Object.entries(ytdData).forEach(([periodKey, period]) => {
         if (!period || typeof period !== 'object') return;
+        const startDate = String(period?.metadata?.startDate || '').trim();
+        const periodEndDate = String(period?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, periodEndDate, periodKey)) return;
+
         const employees = Array.isArray(period.employees) ? period.employees : [];
         const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
         if (!employee) return;
@@ -377,6 +412,53 @@ function getLatestYtdReliabilityHoursForAssociate(associateName) {
     return normalizeHours(rows[0].reliability);
 }
 
+function getLatestReliabilitySourceMetaForAssociate(associateName) {
+    const normalizedAssociate = normalizeAssociateName(associateName);
+    if (!normalizedAssociate) return null;
+
+    const sourceRows = [];
+    const pushSource = (sourceType, periodKey, period) => {
+        if (!period || typeof period !== 'object') return;
+        const startDate = String(period?.metadata?.startDate || '').trim();
+        const endDate = String(period?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, periodKey)) return;
+
+        const employees = Array.isArray(period.employees) ? period.employees : [];
+        const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
+        if (!employee) return;
+
+        const reliability = normalizeHours(employee?.reliability);
+        const endDateObj = parseIsoDateSafe(endDate) || parseIsoDateSafe(startDate);
+        sourceRows.push({
+            sourceType,
+            periodKey,
+            reliability,
+            startDate,
+            endDate,
+            endDateObj
+        });
+    };
+
+    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    Object.entries(weeklyData).forEach(([periodKey, period]) => {
+        const periodType = String(period?.metadata?.periodType || 'week').trim().toLowerCase();
+        pushSource(periodType || 'week', periodKey, period);
+    });
+
+    const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    Object.entries(ytdData).forEach(([periodKey, period]) => pushSource('ytd', periodKey, period));
+
+    if (!sourceRows.length) return null;
+    sourceRows.sort((a, b) => {
+        const left = a.endDateObj ? a.endDateObj.getTime() : 0;
+        const right = b.endDateObj ? b.endDateObj.getTime() : 0;
+        if (left !== right) return right - left;
+        return String(b.periodKey).localeCompare(String(a.periodKey));
+    });
+
+    return sourceRows[0];
+}
+
 function buildReliabilityWeeksForAssociate(associateName) {
     const normalizedAssociate = normalizeAssociateName(associateName);
     if (!normalizedAssociate) return [];
@@ -386,6 +468,10 @@ function buildReliabilityWeeksForAssociate(associateName) {
 
     Object.entries(weeklyData).forEach(([weekKey, period]) => {
         if (!period || typeof period !== 'object') return;
+
+        const startDate = String(period?.metadata?.startDate || '').trim();
+        const endDate = String(period?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, weekKey)) return;
 
         const periodType = String(period?.metadata?.periodType || '').trim().toLowerCase();
         if (periodType && periodType !== 'week') return;
@@ -412,6 +498,120 @@ function buildReliabilityWeeksForAssociate(associateName) {
 
     weeks.sort((a, b) => (b.endDate || '').localeCompare(a.endDate || ''));
     return weeks;
+}
+
+function renderPtoSyncHealthBadge() {
+    const badge = document.getElementById('ptoSyncHealthBadge');
+    if (!badge) return;
+
+    const config = typeof window.loadCallListeningSyncConfig === 'function'
+        ? window.loadCallListeningSyncConfig()
+        : null;
+
+    let lastSuccess = null;
+    try {
+        const raw = localStorage.getItem('devCoachingTool_repoSyncLastSuccess');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.timestamp) lastSuccess = new Date(parsed.timestamp);
+        }
+    } catch (error) {
+        lastSuccess = null;
+    }
+
+    const hasEndpoint = !!String(config?.endpoint || '').trim();
+    const autoSync = config?.autoSyncEnabled !== false;
+    if (!hasEndpoint) {
+        badge.textContent = 'Sync: Not configured';
+        badge.style.background = '#fff3cd';
+        badge.style.color = '#7a4f00';
+        return;
+    }
+
+    if (!autoSync) {
+        badge.textContent = 'Sync: Configured (manual mode)';
+        badge.style.background = '#fff3cd';
+        badge.style.color = '#7a4f00';
+        return;
+    }
+
+    if (lastSuccess) {
+        badge.textContent = `Sync: Connected • ${lastSuccess.toLocaleString()}`;
+        badge.style.background = '#e8f5e9';
+        badge.style.color = '#1b5e20';
+        return;
+    }
+
+    badge.textContent = 'Sync: Connected (no success recorded yet)';
+    badge.style.background = '#e3f2fd';
+    badge.style.color = '#0d47a1';
+}
+
+function renderPtoReliabilitySourceNote(associateName) {
+    const note = document.getElementById('ptoReliabilityDataSource');
+    if (!note) return;
+
+    if (!associateName) {
+        note.textContent = '';
+        return;
+    }
+
+    const source = getLatestReliabilitySourceMetaForAssociate(associateName);
+    if (!source) {
+        note.textContent = `No ${PTO_TRACKING_YEAR} reliability source found yet.`;
+        return;
+    }
+
+    const sourceTypeLabel = String(source.sourceType || '').toUpperCase();
+    const rangeText = source.startDate && source.endDate ? `${source.startDate} to ${source.endDate}` : source.periodKey;
+    note.textContent = `Reliability source (${PTO_TRACKING_YEAR}): ${sourceTypeLabel} • ${rangeText} • ${source.reliability.toFixed(2)}h`;
+}
+
+function getSelectedReliabilityWeek() {
+    const select = document.getElementById('ptoReliabilityWeekSelect');
+    const index = parseInt(select?.value || '', 10);
+    if (!Number.isInteger(index) || index < 0) return null;
+    return ptoReliabilityWeekCache[index] || null;
+}
+
+function autoSplitSelectedReliabilityWeek() {
+    const week = getSelectedReliabilityWeek();
+    if (!week) {
+        showToast('Select a week first', 3000);
+        return;
+    }
+
+    const checkboxes = Array.from(document.querySelectorAll('.pto-week-day-checkbox'));
+    if (!checkboxes.length) {
+        showToast('Select a week to load days first', 3000);
+        return;
+    }
+
+    let selected = checkboxes.filter(box => box.checked);
+    if (!selected.length) {
+        checkboxes.forEach(box => { box.checked = true; });
+        selected = checkboxes;
+    }
+
+    const perDay = normalizeHours(week.reliabilityHours / selected.length);
+    const input = document.getElementById('ptoWeekHoursPerDay');
+    if (input) input.value = perDay.toFixed(2);
+    const statusEl = document.getElementById('ptoReliabilitySelectionStatus');
+    if (statusEl) {
+        statusEl.textContent = `${selected.length} day${selected.length === 1 ? '' : 's'} selected • Auto-split ${week.reliabilityHours.toFixed(2)}h = ${perDay.toFixed(2)}h/day`;
+    }
+}
+
+function confirmReliabilityOverAllocationIfNeeded(tracker, addedHours) {
+    const reliabilityHours = normalizeHours(tracker?.reliabilityHoursAgainst);
+    if (reliabilityHours <= 0) return true;
+
+    const accounted = getAccountedEntryHours(tracker);
+    const projected = normalizeHours(accounted + normalizeHours(addedHours));
+    if (projected <= reliabilityHours) return true;
+
+    const overBy = normalizeHours(projected - reliabilityHours);
+    return window.confirm(`Selected hours exceed reliability by ${overBy.toFixed(2)}h for ${PTO_TRACKING_YEAR}. Continue anyway?`);
 }
 
 function appendEntryWithTypePolicy(data, date, hours, type, notes = '', showPolicyToasts = true) {

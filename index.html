@@ -17,13 +17,12 @@
         <header>
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
-            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button type="button" id="homeBtn" class="btn-secondary" aria-label="Home - Upload Data">🏠 Home (Upload Data)</button>
-                <button type="button" id="coachingEmailBtn" class="btn-secondary" style="background: #E91E63; color: white;" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
-                <button type="button" id="redFlagBtn" class="btn-secondary" style="background: #dc3545; color: white;" aria-label="Red Flag Coaching">🚩 RED FLAG COACHING</button>
-                <button type="button" id="manageDataBtn" class="btn-secondary" style="background: #ff9800; color: white;" aria-label="Manage Data">🗄️ Manage Data</button>
-                <button type="button" id="ptoBtn" class="btn-secondary" style="background: #2f7a6d; color: white;" aria-label="PTO Tracker">🕒 PTO Tracker</button>
-                <button type="button" id="debugBtn" class="btn-secondary" style="background: #6c757d; color: white;" aria-label="Debug Panel">🐞 Debug</button>
+            <div class="top-nav-buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" id="homeBtn" class="btn-secondary top-nav-btn" aria-label="Home - Upload Data">🏠 Home (Upload Data)</button>
+                <button type="button" id="coachingEmailBtn" class="btn-secondary top-nav-btn" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
+                <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Red Flag Coaching">🚩 RED FLAG COACHING</button>
+                <button type="button" id="ptoBtn" class="btn-secondary top-nav-btn" aria-label="PTO Tracker">🕒 PTO Tracker</button>
+                <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Manage Data">🗄️ Manage Data</button>
             </div>
         </header>
 
@@ -757,6 +756,9 @@ Box 2 - Future Improvement Areas:
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
                     <h2>🗄️ Manage Data</h2>
                     <p style="color: #856404; margin-bottom: 20px;">View employees, manage coaching tips, backup, restore, or delete your data.</p>
+                    <div style="margin-bottom: 16px;">
+                        <button type="button" id="openDebugFromManageBtn" class="btn-secondary" style="background: #455a64; color: white;">🐞 Open Debug Panel</button>
+                    </div>
                     
                     <!-- Sub-navigation for Manage Data -->
                     <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">

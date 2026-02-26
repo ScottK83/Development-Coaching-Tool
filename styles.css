@@ -12,9 +12,9 @@
     --ui-border-strong: #c6d2df;
     --ui-text: #1f2d3d;
     --ui-muted: #5f6f82;
-    --ui-accent: #2f7a6d;
-    --ui-accent-strong: #1f5f55;
-    --ui-accent-soft: #e8f5f3;
+    --ui-accent: #0056b3;
+    --ui-accent-strong: #003da5;
+    --ui-accent-soft: #e8f0ff;
     --ui-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
     --ui-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
     --ui-focus: 0 0 0 3px rgba(0, 86, 179, 0.18);
@@ -168,7 +168,7 @@ textarea:focus-visible {
 
 .btn-primary:hover {
     background: var(--ui-accent-strong) !important;
-    box-shadow: 0 5px 15px rgba(47, 122, 109, 0.28);
+    box-shadow: 0 5px 15px rgba(0, 86, 179, 0.28);
     transform: translateY(-2px);
 }
 
@@ -180,6 +180,24 @@ textarea:focus-visible {
 
 .btn-secondary:hover {
     background: var(--ui-accent-strong) !important;
+}
+
+.top-nav-btn {
+    background: linear-gradient(135deg, #0056b3 0%, #003da5 100%) !important;
+    border: 1px solid #003da5 !important;
+}
+
+.top-nav-btn:hover {
+    background: linear-gradient(135deg, #004494 0%, #00327f 100%) !important;
+}
+
+.top-nav-btn-manage {
+    background: linear-gradient(135deg, #ff8f1c 0%, #f26a21 100%) !important;
+    border: 1px solid #c95a1d !important;
+}
+
+.top-nav-btn-manage:hover {
+    background: linear-gradient(135deg, #f07d0c 0%, #df5a0f 100%) !important;
 }
 
 .btn-ai {
