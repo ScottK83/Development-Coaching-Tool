@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T21:04:49.989Z",
+  "generatedAt": "2026-02-26T21:04:53.015Z",
   "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.02.26.79",
   "weeklyData": {
@@ -5311,7 +5311,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 130
+      "byteLength": 125
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
