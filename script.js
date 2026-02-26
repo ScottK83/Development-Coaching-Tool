@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.75'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.76'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13114,6 +13114,9 @@ function setCoachingHistoryEmptyState(summary, list, panel, summaryText) {
 }
 
 function formatCoachingHistoryMetricLabels(keys = []) {
+    const delegated = window.DevCoachModules?.coaching?.formatHistoryMetricLabels?.(keys, METRICS_REGISTRY);
+    if (delegated) return delegated;
+
     if (!keys.length) return 'General review';
     return keys
         .map(key => METRICS_REGISTRY[key]?.label || key)
@@ -13122,6 +13125,12 @@ function formatCoachingHistoryMetricLabels(keys = []) {
 }
 
 function buildCoachingHistoryRowsHtml(history) {
+    const delegated = window.DevCoachModules?.coaching?.buildHistoryRowsHtml?.(history, {
+        formatDate: formatDateMMDDYYYY,
+        metricsRegistry: METRICS_REGISTRY
+    });
+    if (typeof delegated === 'string') return delegated;
+
     const rows = history.slice(0, 5).map(entry => {
         const dateLabel = entry.weekEnding ? formatDateMMDDYYYY(entry.weekEnding) || entry.weekEnding : 'Unknown date';
         const metricsLabel = formatCoachingHistoryMetricLabels(entry.metricsCoached);
@@ -13133,6 +13142,8 @@ function buildCoachingHistoryRowsHtml(history) {
 }
 
 function resolveCoachingHistoryLatestDateLabel(latest) {
+    const delegated = window.DevCoachModules?.coaching?.resolveHistoryLatestDateLabel?.(latest, formatDateMMDDYYYY);
+    if (typeof delegated === 'string') return delegated;
     return latest.weekEnding ? formatDateMMDDYYYY(latest.weekEnding) || latest.weekEnding : '';
 }
 
@@ -13140,6 +13151,20 @@ function renderCoachingHistory(employeeName) {
     const { panel, summary, list } = getCoachingHistoryElements();
 
     if (!panel || !summary || !list) return;
+
+    const delegated = window.DevCoachModules?.coaching?.renderHistoryView;
+    if (typeof delegated === 'function') {
+        delegated({
+            panel,
+            summary,
+            list,
+            employeeName,
+            history: getCoachingHistoryForEmployee(employeeName),
+            formatDate: formatDateMMDDYYYY,
+            metricsRegistry: METRICS_REGISTRY
+        });
+        return;
+    }
 
     if (!employeeName) {
         setCoachingHistoryEmptyState(summary, list, panel, 'Select an associate to view coaching history.');
@@ -13469,6 +13494,9 @@ function getCoachingOutlookGenerationInputs() {
 
 function resolveCoachingOutlookEndDate() {
     const periodMeta = weeklyData[coachingLatestWeekKey]?.metadata || {};
+    const delegated = window.DevCoachModules?.coaching?.resolveOutlookEndDate?.(periodMeta, coachingLatestWeekKey, formatDateMMDDYYYY);
+    if (delegated) return delegated;
+
     if (periodMeta.endDate) {
         return formatDateMMDDYYYY(periodMeta.endDate);
     }
@@ -13478,17 +13506,35 @@ function resolveCoachingOutlookEndDate() {
 }
 
 function resolveCoachingOutlookPreferredName(selectedEmployee) {
+    const delegated = window.DevCoachModules?.coaching?.resolveOutlookPreferredName?.(selectedEmployee, getEmployeeNickname);
+    if (delegated) return delegated;
+
     if (!selectedEmployee) return 'Associate';
     return getEmployeeNickname(selectedEmployee) || selectedEmployee;
 }
 
 function buildCoachingOutlookSubject(selectedEmployee) {
+    const delegated = window.DevCoachModules?.coaching?.buildOutlookSubject?.({
+        selectedEmployee,
+        getEmployeeNickname,
+        periodMeta: weeklyData[coachingLatestWeekKey]?.metadata || {},
+        periodKey: coachingLatestWeekKey,
+        formatDate: formatDateMMDDYYYY
+    });
+    if (delegated) return delegated;
+
     const preferredName = resolveCoachingOutlookPreferredName(selectedEmployee);
     const endDate = resolveCoachingOutlookEndDate();
     return `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
 }
 
 function openMailtoDraft(subject, bodyText) {
+    const delegated = window.DevCoachModules?.coaching?.openMailtoDraft;
+    if (typeof delegated === 'function') {
+        delegated(subject, bodyText);
+        return;
+    }
+
     const mailtoLink = document.createElement('a');
     mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
     document.body.appendChild(mailtoLink);
@@ -13498,6 +13544,23 @@ function openMailtoDraft(subject, bodyText) {
 
 function generateOutlookEmailFromCoPilot() {
     const { bodyText, selectedEmployee } = getCoachingOutlookGenerationInputs();
+
+    const delegated = window.DevCoachModules?.coaching?.generateOutlookDraftFromCopilot;
+    if (typeof delegated === 'function') {
+        delegated({
+            bodyText,
+            selectedEmployee,
+            periodMeta: weeklyData[coachingLatestWeekKey]?.metadata || {},
+            periodKey: coachingLatestWeekKey,
+            getEmployeeNickname,
+            formatDate: formatDateMMDDYYYY,
+            showToast,
+            onError: (error) => {
+                console.error('Error opening Outlook draft from coaching email:', error);
+            }
+        });
+        return;
+    }
 
     if (!bodyText) {
         showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
