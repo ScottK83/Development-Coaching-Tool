@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.08'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.09'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6555,8 +6555,26 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         });
     }
     
-    // ========== LEGEND SECTION ==========
-    y += 30;
+    y += 30 + drawTrendLegendOnCanvas(ctx, y + 30, periodTypeText);
+
+    const reliabilityHours = parseFloat(metrics.reliability) || 0;
+    if (reliabilityHours > 0) {
+        y += drawTrendReliabilityNoteOnCanvas(ctx, y);
+    }
+
+    // Convert to image blob and handle output
+    canvas.toBlob(pngBlob => {
+        if (!pngBlob) {
+            console.error('Failed to create blob from canvas');
+            showToast('ℹ️ Error creating image', 5000);
+            return;
+        }
+
+        copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
+    }, 'image/png');
+}
+
+function drawTrendLegendOnCanvas(ctx, y, periodTypeText) {
     const legendItems = [
         { color: '#d4edda', label: 'Meets goal' },
         { color: '#fff3cd', label: 'Below goal' },
@@ -6616,47 +6634,34 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         }
     });
 
-    y += legendBoxHeight + 10;
-    
-    // Reliability Note (if employee has reliability hours)
-    const reliabilityHours = parseFloat(metrics.reliability) || 0;
-    if (reliabilityHours > 0) {
-        y += 20;
-        ctx.fillStyle = '#fff3cd';
-        ctx.fillRect(40, y, 820, 120);
-        ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(40, y, 820, 120);
-        
-        ctx.fillStyle = '#856404';
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText('🎯 Reliability Note', 50, y + 25);
-        
-        ctx.fillStyle = '#333333';
-        ctx.font = '13px Arial';
-        const note1 = 'Reliability reflects unplanned absences not covered by PTO/ST or pre-scheduled in Verint. If you called in';
-        const note2 = 'or were late without using protected time, those hours count against reliability. If you believe this is an';
-        const note3 = 'error, check Verint for "Same Day" entries. If you have PTO/ST available and want to apply it, reply to let';
-        const note4 = 'me know. Note: Once you reach 16 hours, APS attendance policy takes effect.';
-        
-        ctx.fillText(note1, 50, y + 50);
-        ctx.fillText(note2, 50, y + 68);
-        ctx.fillText(note3, 50, y + 86);
-        ctx.fillText(note4, 50, y + 104);
-        
-        y += 130;
-    }
+    return legendBoxHeight + 10;
+}
 
-    // Convert to image blob and handle output
-    canvas.toBlob(pngBlob => {
-        if (!pngBlob) {
-            console.error('Failed to create blob from canvas');
-            showToast('ℹ️ Error creating image', 5000);
-            return;
-        }
+function drawTrendReliabilityNoteOnCanvas(ctx, y) {
+    const noteY = y + 20;
+    ctx.fillStyle = '#fff3cd';
+    ctx.fillRect(40, noteY, 820, 120);
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(40, noteY, 820, 120);
 
-        copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
-    }, 'image/png');
+    ctx.fillStyle = '#856404';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('🎯 Reliability Note', 50, noteY + 25);
+
+    ctx.fillStyle = '#333333';
+    ctx.font = '13px Arial';
+    const note1 = 'Reliability reflects unplanned absences not covered by PTO/ST or pre-scheduled in Verint. If you called in';
+    const note2 = 'or were late without using protected time, those hours count against reliability. If you believe this is an';
+    const note3 = 'error, check Verint for "Same Day" entries. If you have PTO/ST available and want to apply it, reply to let';
+    const note4 = 'me know. Note: Once you reach 16 hours, APS attendance policy takes effect.';
+
+    ctx.fillText(note1, 50, noteY + 50);
+    ctx.fillText(note2, 50, noteY + 68);
+    ctx.fillText(note3, 50, noteY + 86);
+    ctx.fillText(note4, 50, noteY + 104);
+
+    return 150;
 }
 
 function buildTrendMetricMaps(metricOrder, current, previous) {
