@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.06'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.07'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4931,6 +4931,13 @@ function applyAveragesToForm(source) {
     });
 }
 
+function getPreviousWeekKey(currentWeekKey) {
+    const allKeys = Object.keys(weeklyData).sort();
+    const currentIndex = allKeys.indexOf(currentWeekKey);
+    if (currentIndex <= 0) return null;
+    return allKeys[currentIndex - 1] || null;
+}
+
 function readAveragesFromForm() {
     const averageData = {};
     Object.entries(AVERAGE_FORM_FIELD_MAP).forEach(([avgKey, inputId]) => {
@@ -5084,16 +5091,12 @@ function displayCallCenterAverages(weekKey) {
             return;
         }
         
-        // Find the previous week
-        const allKeys = Object.keys(weeklyData).sort();
-        const currentIndex = allKeys.indexOf(currentWeekKey);
-        
-        if (currentIndex <= 0) {
+        const previousWeekKey = getPreviousWeekKey(currentWeekKey);
+        if (!previousWeekKey) {
             alert('ℹ️ No previous week found');
             return;
         }
-        
-        const previousWeekKey = allKeys[currentIndex - 1];
+
         const previousAverages = getCallCenterAverageForPeriod(previousWeekKey);
         
         if (!previousAverages || Object.keys(previousAverages).length === 0) {
