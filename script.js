@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.82'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.83'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -9177,386 +9177,70 @@ function renderTrendVisualizations() {
 }
 
 async function generateTrendCoachingEmail() {
-    const employeeName = document.getElementById('trendEmployeeSelector')?.value;
-    
-    if (employeeName) {
-        await generateIndividualCoachingEmail(employeeName);
-    } else {
-        await generateGroupCoachingEmail();
+    const delegated = window.DevCoachModules?.trendCoachingEmail?.generateTrendCoachingEmail;
+    if (typeof delegated !== 'function') {
+        showToast('Trend coaching module not available. Refresh and try again.', 3500);
+        return;
     }
+
+    await delegated({
+        selectedEmployeeName: document.getElementById('trendEmployeeSelector')?.value || '',
+        getWeeklyKeysSorted,
+        weeklyData,
+        formatDateMMDDYYYY,
+        loadServerTips,
+        metricsRegistry: METRICS_REGISTRY,
+        metricMeetsTarget,
+        metricDelta,
+        formatMetricValue,
+        getCenterAverageForWeek,
+        getEmployeeNickname,
+        openCopilotWithPrompt,
+        showToast
+    });
 }
 
 async function generateIndividualCoachingEmail(employeeName) {
-    const keys = getWeeklyKeysSorted();
-    if (keys.length < 2) {
-        showToast('Not enough data to generate coaching email', 3000);
+    const delegated = window.DevCoachModules?.trendCoachingEmail?.generateIndividualCoachingEmail;
+    if (typeof delegated !== 'function') {
+        showToast('Trend coaching module not available. Refresh and try again.', 3500);
         return;
     }
 
-    const latestKey = keys[keys.length - 1];
-    const previousKey = keys[keys.length - 2];
-    const latestWeek = weeklyData[latestKey];
-    const previousWeek = weeklyData[previousKey];
-
-    const currentEmp = latestWeek?.employees?.find(e => e.name === employeeName);
-    const previousEmp = previousWeek?.employees?.find(e => e.name === employeeName);
-
-    if (!currentEmp) {
-        showToast('No data found for this employee', 3000);
-        return;
-    }
-
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
-
-    // Load tips
-    const allTips = await loadServerTips();
-
-    // Analyze metrics
-    const metricsToAnalyze = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
-    const wins = [];
-    const opportunities = [];
-
-    metricsToAnalyze.forEach(metricKey => {
-        const current = currentEmp[metricKey];
-        if (current === undefined || current === null || current === '') return;
-
-        const metric = METRICS_REGISTRY[metricKey];
-        const meetsTarget = metricMeetsTarget(metricKey, current);
-        
-        if (meetsTarget) {
-            wins.push({
-                metricKey: metricKey,
-                metric: metric.label || metricKey,
-                value: formatMetricValue(metricKey, parseFloat(current))
-            });
-        } else {
-            const previous = previousEmp?.[metricKey];
-            const trend = previous !== undefined ? metricDelta(metricKey, parseFloat(current), parseFloat(previous)) : 0;
-            const tips = allTips[metricKey] || [];
-            const randomTip = tips.length ? tips[Math.floor(Math.random() * tips.length)] : null;
-            
-            opportunities.push({
-                metricKey: metricKey,
-                metric: metric.label || metricKey,
-                value: formatMetricValue(metricKey, parseFloat(current)),
-                target: formatMetricValue(metricKey, metric.target.value),
-                trend: trend,
-                tip: randomTip
-            });
-        }
+    await delegated({
+        employeeName,
+        getWeeklyKeysSorted,
+        weeklyData,
+        formatDateMMDDYYYY,
+        loadServerTips,
+        metricsRegistry: METRICS_REGISTRY,
+        metricMeetsTarget,
+        metricDelta,
+        formatMetricValue,
+        getEmployeeNickname,
+        openCopilotWithPrompt,
+        showToast
     });
-
-    // Build prompt
-    let winsText = '';
-    if (wins.length > 0) {
-        winsText = 'WINS:\n';
-        wins.forEach(w => {
-            winsText += `- ${w.metric}: ${w.value}\n`;
-        });
-        winsText += '\n';
-    }
-
-    let opportunitiesText = '';
-    let improvementTipsText = '';
-    if (opportunities.length > 0) {
-        opportunitiesText = 'OPPORTUNITIES:\n';
-        opportunitiesText += opportunities.map(opp => {
-            let text = `- ${opp.metric}: Currently ${opp.value}, Target ${opp.target}`;
-            if (opp.trend !== 0) {
-                text += ` (${opp.trend > 0 ? 'improving' : 'declining'})`;
-            }
-            return text;
-        }).join('\n');
-        opportunitiesText += '\n\n';
-        
-        improvementTipsText = 'HOW TO IMPROVE:\n';
-        opportunities.forEach(opp => {
-            if (opp.tip) {
-                improvementTipsText += `- ${opp.metric}: ${opp.tip}\n`;
-            }
-        });
-        improvementTipsText += '\n';
-    }
-
-    const preferredName = getEmployeeNickname(employeeName) || currentEmp.firstName || employeeName.split(' ')[0];
-
-    const copilotPrompt = `Draft a brief, factual coaching email for ${preferredName} (week ending ${endDate}).
-
-${winsText}
-${opportunitiesText}
-${improvementTipsText}
-Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`;
-
-    openCopilotWithPrompt(copilotPrompt, 'Individual Coaching Email');
 }
 
 async function generateGroupCoachingEmail() {
-    const keys = getWeeklyKeysSorted();
-    if (keys.length < 2) {
-        showToast('Not enough data to generate group email', 3000);
+    const delegated = window.DevCoachModules?.trendCoachingEmail?.generateGroupCoachingEmail;
+    if (typeof delegated !== 'function') {
+        showToast('Trend coaching module not available. Refresh and try again.', 3500);
         return;
     }
 
-    const latestKey = keys[keys.length - 1];
-    const previousKey = keys[keys.length - 2];
-    const latestWeek = weeklyData[latestKey];
-    const previousWeek = weeklyData[previousKey];
-
-    if (!latestWeek?.employees || !previousWeek?.employees) {
-        showToast('Not enough employee data', 3000);
-        return;
-    }
-
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
-
-    const centerAvg = getCenterAverageForWeek(latestKey);
-
-    // Load tips
-    const allTips = await loadServerTips();
-
-    // Analyze team-wide patterns with detailed metrics
-    const teamAnalysis = {
-        rockstars: [], // Crushing it across the board + beating center average
-        topPerformers: [], // Meeting all targets
-        improving: [],
-        needsSupport: [],
-        commonOpportunities: {},
-        teamWins: [],
-        metricChampions: {} // Track who's destroying specific metrics
-    };
-
-    // Analyze each employee
-    latestWeek.employees.forEach(emp => {
-        const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
-        if (!prevEmp) return;
-
-        let meetsAllTargets = true;
-        let beatsAllCenterAvg = true;
-        let hasImprovement = false;
-        let needsHelp = false;
-        let metricsAboveCenter = [];
-
-        ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'].forEach(metricKey => {
-            const current = emp[metricKey];
-            const prev = prevEmp[metricKey];
-            const metric = METRICS_REGISTRY[metricKey];
-            
-            if (current !== undefined && current !== null && current !== '') {
-                const meetsTarget = metricMeetsTarget(metricKey, current);
-                if (!meetsTarget) {
-                    meetsAllTargets = false;
-                    teamAnalysis.commonOpportunities[metricKey] = (teamAnalysis.commonOpportunities[metricKey] || 0) + 1;
-                }
-
-                // Check if beating center average
-                const centerValue = centerAvg?.[metricKey];
-                if (centerValue !== undefined && centerValue !== null) {
-                    const currentFloat = parseFloat(current);
-                    const centerFloat = parseFloat(centerValue);
-                    const beatsCenterAvg = metric.higherIsBetter 
-                        ? currentFloat > centerFloat 
-                        : currentFloat < centerFloat;
-                    
-                    if (!beatsCenterAvg) {
-                        beatsAllCenterAvg = false;
-                    } else {
-                        // Track metrics where they're crushing it
-                        const delta = metric.higherIsBetter 
-                            ? currentFloat - centerFloat 
-                            : centerFloat - currentFloat;
-                        
-                        if (delta > 0) {
-                            metricsAboveCenter.push({
-                                metric: metric.label,
-                                empValue: current,
-                                centerValue: centerValue,
-                                delta: delta
-                            });
-                            
-                            // Track champions for this metric
-                            if (!teamAnalysis.metricChampions[metricKey]) {
-                                teamAnalysis.metricChampions[metricKey] = [];
-                            }
-                            teamAnalysis.metricChampions[metricKey].push({
-                                name: emp.name,
-                                value: current,
-                                delta: delta
-                            });
-                        }
-                    }
-                }
-
-                if (prev !== undefined) {
-                    const delta = metricDelta(metricKey, parseFloat(current), parseFloat(prev));
-                    if (delta > 5) hasImprovement = true;
-                    if (delta < -5) needsHelp = true;
-                }
-            }
-        });
-
-        // Categorize employees
-        if (hasImprovement) {
-            // Track improving employees with their metrics for rockstar callouts
-            const improvingMetrics = [];
-            ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'].forEach(metricKey => {
-                const current = emp[metricKey];
-                const prev = prevEmp?.[metricKey];
-                if (current !== undefined && prev !== undefined && current !== null && prev !== null && current !== '' && prev !== '') {
-                    const delta = metricDelta(metricKey, parseFloat(current), parseFloat(prev));
-                    if (delta > 5) {
-                        const metric = METRICS_REGISTRY[metricKey];
-                        improvingMetrics.push({
-                            metric: metric.label,
-                            empValue: formatMetricValue(metricKey, parseFloat(current)),
-                            trend: `+${delta.toFixed(1)}%`
-                        });
-                    }
-                }
-            });
-            teamAnalysis.improving.push({ name: emp.name, metrics: improvingMetrics });
-        } else if (meetsAllTargets) {
-            teamAnalysis.topPerformers.push(emp.name);
-        } else if (needsHelp) {
-            teamAnalysis.needsSupport.push(emp.name);
-        }
-    });
-
-    // Find metric champions (top 3 per metric)
-    Object.keys(teamAnalysis.metricChampions).forEach(metricKey => {
-        teamAnalysis.metricChampions[metricKey].sort((a, b) => b.delta - a.delta);
-        teamAnalysis.metricChampions[metricKey] = teamAnalysis.metricChampions[metricKey].slice(0, 3);
-    });
-
-    // Find top 3 common opportunities
-    const topOpportunities = Object.entries(teamAnalysis.commonOpportunities)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([metricKey, count]) => {
-            const metric = METRICS_REGISTRY[metricKey];
-            const tips = allTips[metricKey] || [];
-            const randomTip = tips.length ? tips[Math.floor(Math.random() * tips.length)] : null;
-            return {
-                metric: metric?.label || metricKey,
-                count: count,
-                tip: randomTip
-            };
-        });
-
-    // Build team wins
-    if (teamAnalysis.improving.length > 0) {
-        teamAnalysis.teamWins.push(`🔥 ${teamAnalysis.improving.length} ROCKSTARS showing strong improvement and momentum`);
-    }
-    if (teamAnalysis.topPerformers.length > 0) {
-        teamAnalysis.teamWins.push(`⭐ ${teamAnalysis.topPerformers.length} team members meeting all targets`);
-    }
-
-    // Build prompt
-    let winsText = 'TEAM WINS & CELEBRATIONS:\n';
-    if (teamAnalysis.teamWins.length > 0) {
-        teamAnalysis.teamWins.forEach(win => {
-            winsText += `${win}\n`;
-        });
-    } else {
-        winsText += '- Team is working hard and showing effort\n';
-    }
-
-    let rockstarsText = '';
-    if (teamAnalysis.improving.length > 0) {
-        rockstarsText = '\n🏆 ROCKSTARS - SHOWING INCREDIBLE IMPROVEMENT:\n';
-        rockstarsText += 'These team members are CRUSHING IT with strong week-over-week gains:\n';
-        teamAnalysis.improving.slice(0, 5).forEach(rockstar => {
-            rockstarsText += `\n${rockstar.name} - IMPROVING BIG TIME:\n`;
-            if (rockstar.metrics && rockstar.metrics.length > 0) {
-                rockstar.metrics.forEach(m => {
-                    rockstarsText += `  • ${m.metric}: ${m.empValue} (${m.trend} improvement!)\n`;
-                });
-            }
-        });
-    }
-
-    let championText = '';
-    const topMetricsToHighlight = Object.entries(teamAnalysis.metricChampions)
-        .filter(([_, champs]) => champs.length > 0)
-        .slice(0, 3);
-    
-    if (topMetricsToHighlight.length > 0) {
-        championText = '\n🎯 METRIC CHAMPIONS:\n';
-        topMetricsToHighlight.forEach(([metricKey, champions]) => {
-            const metric = METRICS_REGISTRY[metricKey];
-            championText += `\n${metric.label} Leaders:\n`;
-            champions.forEach((champ, idx) => {
-                championText += `  ${idx + 1}. ${champ.name} - ${champ.value} (${champ.delta.toFixed(1)} above center avg!)\n`;
-            });
-        });
-    }
-
-    let recognitionText = '';
-    if (teamAnalysis.topPerformers.length > 0) {
-        recognitionText = '\n✅ CONSISTENT PERFORMERS (Meeting All Targets):\n';
-        teamAnalysis.topPerformers.slice(0, 8).forEach(name => {
-            recognitionText += `- ${name}\n`;
-        });
-    }
-
-    let opportunitiesText = '\nTEAM DEVELOPMENT OPPORTUNITIES:\n';
-    if (topOpportunities.length > 0) {
-        topOpportunities.forEach(opp => {
-            opportunitiesText += `- ${opp.metric} (${opp.count} team members need support)\n`;
-            if (opp.tip) {
-                opportunitiesText += `  💡 TIP: ${opp.tip}\n`;
-            }
-        });
-    } else {
-        opportunitiesText += '- Continue current momentum and consistency\n';
-    }
-
-    const copilotPrompt = `Write a HIGH-ENERGY, MOTIVATIONAL team-wide email for the week ending ${endDate}.
-
-${winsText}
-${rockstarsText}
-${championText}
-${recognitionText}
-${opportunitiesText}
-
-CRITICAL REQUIREMENTS:
-- This is a GROUP email going to the entire call center team
-- CALL OUT the rockstars who are KILLING IT and beating the call center average by name
-- Make it EXCITING and CELEBRATORY for top performers
-- Use phrases like "crushing it", "blowing the average out of the water", "absolutely dominating"
-- Create FOMO for those not on the list - make them want to be recognized next week
-- Be specific with numbers and metrics where people are excelling
-- Frame development opportunities positively as "join the winners circle"
-
-TONE & STYLE:
-- HIGH ENERGY, MOTIVATIONAL, and CELEBRATORY
-- Call out winners by name with specific achievements
-- Make top performers feel like ROCKSTARS
-- Professional but exciting and engaging
-- Use bullet points and emojis (🔥⭐🏆💪🎯) for impact
-- Do NOT use em dashes (—) anywhere in the email
-- Keep it concise but impactful (under 350 words)
-
-SUBJECT LINE:
-🔥 This Week's ROCKSTARS - Week of ${endDate}
-
-Please generate the coaching email now with HIGH ENERGY celebrating our top performers!`;
-
-    // Copy to clipboard and open Copilot
-    navigator.clipboard.writeText(copilotPrompt).then(() => {
-        // Show instruction popup
-        alert('✅ Group email prompt copied!\n\nCtrl+V and Enter to paste into Copilot.');
-        
-        // Open Copilot
-        window.open('https://copilot.microsoft.com', '_blank');
-        
-        showToast('Prompt copied! Paste into CoPilot to generate the email.', 3000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
+    await delegated({
+        getWeeklyKeysSorted,
+        weeklyData,
+        formatDateMMDDYYYY,
+        getCenterAverageForWeek,
+        loadServerTips,
+        metricsRegistry: METRICS_REGISTRY,
+        metricMeetsTarget,
+        metricDelta,
+        formatMetricValue,
+        showToast
     });
 }
 
