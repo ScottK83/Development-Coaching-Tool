@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.21'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.22'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13487,6 +13487,51 @@ function buildNegativeLanguageSentimentSection(negative) {
     return section;
 }
 
+function buildManagingEmotionsSentimentSection(emotions) {
+    let section = '';
+    section += `═══════════════════════════════════\n`;
+    section += `MANAGING EMOTIONS\n`;
+    section += `═══════════════════════════════════\n`;
+    section += `Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n\n`;
+
+    const emotionUsedPhrases = emotions.phrases.filter(p => p.value > 0 && !containsCurseWords(p.phrase));
+    const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0 && !containsCurseWords(p.phrase));
+
+    if (emotionUsedPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
+        section += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
+        section += `  • Low emotion escalation (${emotions.percentage}%) - Calming presence detected\n`;
+    } else {
+        section += `📌 EMOTION INDICATORS DETECTED - Customer emotional phrases in calls:\n`;
+        emotionUsedPhrases.sort((a, b) => b.value - a.value).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - detected in ${p.value} calls\n`;
+        });
+    }
+    section += `\n`;
+
+    if (emotionUnusedPhrases.length > 0) {
+        section += `🛡 WATCH OUT - Emotion phrases to prevent (haven't shown up yet):\n`;
+        emotionUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - Avoid letting this develop\n`;
+        });
+    }
+    section += `\n`;
+
+    section += `✅ TECHNIQUES TO MASTER - How to manage emotions:\n`;
+    section += `  • Acknowledge their feelings first: "I can hear the frustration in your voice"\n`;
+    section += `  • Show you understand: "If I were in your position, I'd feel the same way"\n`;
+    section += `  • Don't interrupt or talk over them - let them finish\n`;
+    section += `  • Take action, not excuses: "Here's exactly what I'm going to do..."\n`;
+    section += `  • Follow up: "I'll personally make sure this gets resolved for you"\n`;
+    section += `\n`;
+
+    section += `📝 SCRIPTED RESPONSE (when emotion is high):\n`;
+    section += `  "I completely understand your frustration. I'm listening to you, and I want\n`;
+    section += `   you to know I'm going to take personal ownership of this. Let me get this\n`;
+    section += `   resolved for you right now. Here's what I can do..."\n\n`;
+
+    return section;
+}
+
 function generateSentimentSummary() {
     const { positive, negative, emotions } = sentimentReports;
     
@@ -13511,47 +13556,7 @@ function generateSentimentSummary() {
     
     summary += buildPositiveLanguageSentimentSection(positive, associateName);
     summary += buildNegativeLanguageSentimentSection(negative);
-    
-    // MANAGING EMOTIONS Section
-    summary += `═══════════════════════════════════\n`;
-    summary += `MANAGING EMOTIONS\n`;
-    summary += `═══════════════════════════════════\n`;
-    summary += `Coverage: ${emotions.callsDetected} / ${emotions.totalCalls} calls (${emotions.percentage}%)\n\n`;
-    
-    const emotionUsedPhrases = emotions.phrases.filter(p => p.value > 0 && !containsCurseWords(p.phrase));
-    const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0 && !containsCurseWords(p.phrase));
-    
-    if (emotionUsedPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
-        summary += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
-        summary += `  • Low emotion escalation (${emotions.percentage}%) - Calming presence detected\n`;
-    } else {
-        summary += `📌 EMOTION INDICATORS DETECTED - Customer emotional phrases in calls:\n`;
-        emotionUsedPhrases.sort((a, b) => b.value - a.value).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - detected in ${p.value} calls\n`;
-        });
-    }
-    summary += `\n`;
-    
-    if (emotionUnusedPhrases.length > 0) {
-        summary += `🛡 WATCH OUT - Emotion phrases to prevent (haven't shown up yet):\n`;
-        emotionUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - Avoid letting this develop\n`;
-        });
-    }
-    summary += `\n`;
-    
-    summary += `✅ TECHNIQUES TO MASTER - How to manage emotions:\n`;
-    summary += `  • Acknowledge their feelings first: "I can hear the frustration in your voice"\n`;
-    summary += `  • Show you understand: "If I were in your position, I'd feel the same way"\n`;
-    summary += `  • Don't interrupt or talk over them - let them finish\n`;
-    summary += `  • Take action, not excuses: "Here's exactly what I'm going to do..."\n`;
-    summary += `  • Follow up: "I'll personally make sure this gets resolved for you"\n`;
-    summary += `\n`;
-    
-    summary += `📝 SCRIPTED RESPONSE (when emotion is high):\n`;
-    summary += `  "I completely understand your frustration. I'm listening to you, and I want\n`;
-    summary += `   you to know I'm going to take personal ownership of this. Let me get this\n`;
-    summary += `   resolved for you right now. Here's what I can do..."\n\n`;
+    summary += buildManagingEmotionsSentimentSection(emotions);
     
     // Display the summary
     document.getElementById('sentimentSummaryText').textContent = summary;
