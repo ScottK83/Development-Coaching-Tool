@@ -6700,11 +6700,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     ctx.fillText('📋 Legend', 50, y + 30);
     
     const legendItems = [
-        { color: '#28a745', label: 'Score 3 (green band)' },
-        { color: '#ffc107', label: 'Score 2 (yellow band)' },
-        { color: '#dc3545', label: 'Score 1 (red band)' },
-        { color: '#6c757d', label: 'Better than center' },
-        { color: '#DAA520', label: 'Behind center' },
+        { color: '#d4edda', label: 'Meets goal' },
+        { color: '#fff3cd', label: 'Below goal' },
+        { color: '#ffffff', stroke: '#cccccc', label: 'No survey data (survey metrics)' },
+        { color: '#0056B3', label: 'Above center average' },
+        { color: '#DAA520', label: 'Below center average' },
+        { color: '#999999', label: 'Center/trend unavailable' },
         { color: '#28a745', symbol: '📈', label: `Improved from last ${periodTypeText}` },
         { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
         { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
@@ -6714,7 +6715,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     let legendX = 60;
     
     legendItems.forEach((item, idx) => {
-        if (idx === 4) {
+        if (idx === 5) {
             legendX = 60;
             legendY += 35;
         }
@@ -6730,6 +6731,11 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         } else {
             ctx.fillStyle = item.color;
             ctx.fillRect(legendX, legendY - 12, 15, 15);
+            if (item.stroke) {
+                ctx.strokeStyle = item.stroke;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(legendX, legendY - 12, 15, 15);
+            }
             ctx.fillStyle = '#333333';
             ctx.font = '13px Arial';
             ctx.fillText(item.label, legendX + 22, legendY);
