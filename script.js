@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.126'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.127'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3212,40 +3212,112 @@ function getCallListeningSyncConfigFromUI() {
     return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret });
 }
 
+function summarizeStorageValue(rawValue) {
+    let valueType = 'string';
+    let itemCount = '';
+
+    if (typeof rawValue === 'string') {
+        const trimmed = rawValue.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(rawValue);
+                if (Array.isArray(parsed)) {
+                    valueType = 'array';
+                    itemCount = parsed.length;
+                } else if (parsed && typeof parsed === 'object') {
+                    valueType = 'object';
+                    itemCount = Object.keys(parsed).length;
+                }
+            } catch (error) {
+                valueType = 'string';
+            }
+        }
+    }
+
+    return {
+        valueType,
+        itemCount,
+        byteLength: typeof rawValue === 'string' ? rawValue.length : 0
+    };
+}
+
 function getAllAppStorageSnapshot() {
     const snapshot = {};
     for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
         const rawValue = localStorage.getItem(key);
-        let valueType = 'string';
-        let itemCount = '';
-
-        if (typeof rawValue === 'string') {
-            const trimmed = rawValue.trim();
-            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                try {
-                    const parsed = JSON.parse(rawValue);
-                    if (Array.isArray(parsed)) {
-                        valueType = 'array';
-                        itemCount = parsed.length;
-                    } else if (parsed && typeof parsed === 'object') {
-                        valueType = 'object';
-                        itemCount = Object.keys(parsed).length;
-                    }
-                } catch (error) {
-                    valueType = 'string';
-                }
-            }
-        }
-
-        snapshot[key] = {
-            valueType,
-            itemCount,
-            byteLength: typeof rawValue === 'string' ? rawValue.length : 0
-        };
+        snapshot[key] = summarizeStorageValue(rawValue);
     }
     return snapshot;
+}
+
+function hasNonEmptyEntries(value) {
+    if (!value || typeof value !== 'object') return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return Object.keys(value).length > 0;
+}
+
+function getMeaningfulLocalDataSources() {
+    return [
+        weeklyData,
+        ytdData,
+        coachingHistory,
+        callListeningLogs,
+        associateSentimentSnapshots,
+        myTeamMembers,
+        window.DevCoachModules?.storage?.loadPtoTracker?.() || null,
+        loadCallCenterAverages(),
+        loadYearEndAnnualGoalsStore(),
+        loadYearEndDraftStore()
+    ];
+}
+
+function getMeaningfulBackupDataSources(payload) {
+    return [
+        payload.weeklyData,
+        payload.ytdData,
+        payload.coachingHistory,
+        payload.callListeningLogs,
+        payload.associateSentimentSnapshots,
+        payload.myTeamMembers,
+        payload.ptoTracker,
+        payload.callCenterAverages,
+        payload.yearEndAnnualGoalsStore,
+        payload.yearEndDraftStore,
+        payload.appStorageSnapshot
+    ];
+}
+
+function buildRepoSyncHeaders(sharedSecret) {
+    const normalizedSecret = String(sharedSecret || '').trim();
+    return {
+        'Content-Type': 'application/json',
+        ...(normalizedSecret ? { 'X-Sync-Secret': normalizedSecret } : {})
+    };
+}
+
+async function parseRepoSyncErrorResponse(response) {
+    let details = '';
+    let errorCode = '';
+
+    try {
+        const errorText = await response.text();
+        details = errorText;
+        try {
+            const parsedError = JSON.parse(errorText);
+            errorCode = String(parsedError?.code || '');
+            if (parsedError?.error) {
+                details = String(parsedError.error);
+            }
+        } catch (parseError) {
+            // Keep raw response text as details when not JSON.
+        }
+    } catch (error) {
+        details = '';
+    }
+
+    return { details, errorCode };
 }
 
 function buildRepoSyncPayload(reason = 'updated') {
@@ -3296,48 +3368,13 @@ function queueCallListeningRepoSync(reason = 'updated') {
 }
 
 function hasMeaningfulLocalData() {
-    const hasEntries = (value) => {
-        if (!value || typeof value !== 'object') return false;
-        if (Array.isArray(value)) return value.length > 0;
-        return Object.keys(value).length > 0;
-    };
-
-    return [
-        weeklyData,
-        ytdData,
-        coachingHistory,
-        callListeningLogs,
-        associateSentimentSnapshots,
-        myTeamMembers,
-        window.DevCoachModules?.storage?.loadPtoTracker?.() || null,
-        loadCallCenterAverages(),
-        loadYearEndAnnualGoalsStore(),
-        loadYearEndDraftStore()
-    ].some(hasEntries);
+    return getMeaningfulLocalDataSources().some(hasNonEmptyEntries);
 }
 
 function hasMeaningfulBackupData(payload) {
     if (!payload || typeof payload !== 'object') return false;
 
-    const hasEntries = (value) => {
-        if (!value || typeof value !== 'object') return false;
-        if (Array.isArray(value)) return value.length > 0;
-        return Object.keys(value).length > 0;
-    };
-
-    return [
-        payload.weeklyData,
-        payload.ytdData,
-        payload.coachingHistory,
-        payload.callListeningLogs,
-        payload.associateSentimentSnapshots,
-        payload.myTeamMembers,
-        payload.ptoTracker,
-        payload.callCenterAverages,
-        payload.yearEndAnnualGoalsStore,
-        payload.yearEndDraftStore,
-        payload.appStorageSnapshot
-    ].some(hasEntries);
+    return getMeaningfulBackupDataSources(payload).some(hasNonEmptyEntries);
 }
 
 async function fetchRepoBackupPayload() {
@@ -3434,31 +3471,12 @@ async function syncRepoData(reason = 'updated', options = {}) {
 
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(config.sharedSecret.trim() ? { 'X-Sync-Secret': config.sharedSecret.trim() } : {})
-            },
+            headers: buildRepoSyncHeaders(config.sharedSecret),
             body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            let details = '';
-            let errorCode = '';
-            try {
-                const errorText = await response.text();
-                details = errorText;
-                try {
-                    const parsedError = JSON.parse(errorText);
-                    errorCode = String(parsedError?.code || '');
-                    if (parsedError?.error) {
-                        details = String(parsedError.error);
-                    }
-                } catch (parseError) {
-                    // Keep raw response text as details when not JSON.
-                }
-            } catch (error) {
-                details = '';
-            }
+            const { details, errorCode } = await parseRepoSyncErrorResponse(response);
 
             if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
                 throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
@@ -6559,49 +6577,44 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
             return;
         }
 
-        // Convert blob to data URL for embedding in HTML
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const dataUrl = e.target.result;
-            
-            // Create HTML with embedded image
-            const htmlEmail = `<html><body><img src="${dataUrl}" style="max-width: 100%; height: auto;"></body></html>`;
-            
-            // Try to copy HTML to clipboard so image embeds in Outlook
-            if (navigator.clipboard && navigator.clipboard.write) {
-                const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
-                const htmlClipboardItem = new ClipboardItem({ 'text/html': htmlBlob });
-                navigator.clipboard.write([htmlClipboardItem]).then(() => {
-                    console.log('HTML email with embedded image copied to clipboard');
-                    showToast('✅ Email with image ready to paste!', 3000);
-                    // Call callback to open Outlook AFTER clipboard is ready
-                    if (onClipboardReady) onClipboardReady();
-                }).catch(err => {
-                    console.error('HTML clipboard error:', err);
-                    // Fallback: try plain image copy using original PNG blob
-                    navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': pngBlob })
-                    ]).then(() => {
-                        console.log('Image copied to clipboard (HTML failed)');
-                        showToast('✅ Image copied to clipboard!', 3000);
-                        // Call callback to open Outlook AFTER clipboard is ready
-                        if (onClipboardReady) onClipboardReady();
-                    }).catch(err2 => {
-                        console.error('Image clipboard error:', err2);
-                        downloadImageFallback(pngBlob, empName, period);
-                        // Still call callback even if clipboard failed
-                        if (onClipboardReady) onClipboardReady();
-                    });
-                });
-            } else {
-                console.log('Clipboard API not available, downloading instead');
-                downloadImageFallback(pngBlob, empName, period);
-                // Still call callback even if clipboard not available
-                if (onClipboardReady) onClipboardReady();
-            }
-        };
-        reader.readAsDataURL(pngBlob);
+        copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
+}
+
+function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        const htmlEmail = `<html><body><img src="${dataUrl}" style="max-width: 100%; height: auto;"></body></html>`;
+
+        if (navigator.clipboard && navigator.clipboard.write) {
+            const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
+            const htmlClipboardItem = new ClipboardItem({ 'text/html': htmlBlob });
+            navigator.clipboard.write([htmlClipboardItem]).then(() => {
+                console.log('HTML email with embedded image copied to clipboard');
+                showToast('✅ Email with image ready to paste!', 3000);
+                if (onClipboardReady) onClipboardReady();
+            }).catch(err => {
+                console.error('HTML clipboard error:', err);
+                navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': pngBlob })
+                ]).then(() => {
+                    console.log('Image copied to clipboard (HTML failed)');
+                    showToast('✅ Image copied to clipboard!', 3000);
+                    if (onClipboardReady) onClipboardReady();
+                }).catch(err2 => {
+                    console.error('Image clipboard error:', err2);
+                    downloadImageFallback(pngBlob, empName, period);
+                    if (onClipboardReady) onClipboardReady();
+                });
+            });
+        } else {
+            console.log('Clipboard API not available, downloading instead');
+            downloadImageFallback(pngBlob, empName, period);
+            if (onClipboardReady) onClipboardReady();
+        }
+    };
+    reader.readAsDataURL(pngBlob);
 }
 
 function calculateTrendSurveyTotals(current, metadata) {
