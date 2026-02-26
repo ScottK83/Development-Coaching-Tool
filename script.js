@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.34'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.35'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6347,42 +6347,28 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         return;
     }
     
-    // Extract metadata early (needed for survey total calculation)
-    const metadata = period?.metadata || {};
-    const reviewYear = getReviewYearFromEndDate(metadata.endDate);
-
-    // SINGLE LOAD - Use for all calculations
-    const metricOrder = getMetricOrder();
-    const { metrics, prevMetrics } = buildTrendMetricMaps(metricOrder, current, previous);
-    
-    // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
-    const callCenterAverages = loadCallCenterAverages();
-    const centerAvg = callCenterAverages[weekKey] || {};
-
-    // YTD data (separate dataset)
-    const ytdPeriod = getYtdPeriodForWeekKey(weekKey);
-    const ytdEmployee = ytdPeriod?.employees?.find(e => e.name === current.name) || null;
-    const ytdAvailable = !!ytdEmployee;
-
-    // Extract survey totals for survey metrics
-    const { surveyTotal, ytdSurveyTotal } = calculateTrendSurveyTotals(current, metadata);
-
-    
-    
-    // SUMMARY STATISTICS (used by both canvas and HTML)
-    const hasSurveys = surveyTotal > 0;
+    const trendContext = buildTrendEmailContext(weekKey, period, current, previous);
     const {
+        metadata,
+        reviewYear,
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        ytdEmployee,
+        ytdAvailable,
+        surveyTotal,
+        ytdSurveyTotal,
+        hasSurveys,
         meetingGoals,
-        improved,
         beatingCenter,
         totalMetrics,
         successRate,
-        improvedText
-    } = calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys);
-    // metadata already extracted at function start
-    const periodDisplay = getTrendPeriodDisplay(metadata.periodType);
-    const periodTypeText = periodDisplay.periodTypeText;
-    const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
+        improvedText,
+        periodDisplay,
+        periodTypeText,
+        improvedSub
+    } = trendContext;
 
     // CREATE CANVAS IMAGE (will be resized based on content)
     const canvas = document.createElement('canvas');
@@ -6449,6 +6435,60 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
         copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
+}
+
+function buildTrendEmailContext(weekKey, period, current, previous) {
+    const metadata = period?.metadata || {};
+    const reviewYear = getReviewYearFromEndDate(metadata.endDate);
+
+    const metricOrder = getMetricOrder();
+    const { metrics, prevMetrics } = buildTrendMetricMaps(metricOrder, current, previous);
+
+    const callCenterAverages = loadCallCenterAverages();
+    const centerAvg = callCenterAverages[weekKey] || {};
+
+    const ytdPeriod = getYtdPeriodForWeekKey(weekKey);
+    const ytdEmployee = ytdPeriod?.employees?.find(e => e.name === current.name) || null;
+    const ytdAvailable = !!ytdEmployee;
+
+    const { surveyTotal, ytdSurveyTotal } = calculateTrendSurveyTotals(current, metadata);
+    const hasSurveys = surveyTotal > 0;
+
+    const {
+        meetingGoals,
+        improved,
+        beatingCenter,
+        totalMetrics,
+        successRate,
+        improvedText
+    } = calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys);
+
+    const periodDisplay = getTrendPeriodDisplay(metadata.periodType);
+    const periodTypeText = periodDisplay.periodTypeText;
+    const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
+
+    return {
+        metadata,
+        reviewYear,
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        ytdEmployee,
+        ytdAvailable,
+        surveyTotal,
+        ytdSurveyTotal,
+        hasSurveys,
+        meetingGoals,
+        improved,
+        beatingCenter,
+        totalMetrics,
+        successRate,
+        improvedText,
+        periodDisplay,
+        periodTypeText,
+        improvedSub
+    };
 }
 
 function drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine) {
