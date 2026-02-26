@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.135'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.136'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3138,12 +3138,9 @@ function initializeRepoSyncControls() {
                         throw new Error('No repo backup data found to restore.');
                     }
 
-                    repoSyncHydrationInProgress = true;
-                    try {
+                    await withRepoSyncHydrationLock(async () => {
                         applyRepoBackupPayload(payload);
-                    } finally {
-                        repoSyncHydrationInProgress = false;
-                    }
+                    });
 
                     setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
                     showToast('✅ Local profile overwritten from repo backup.', 3500);
@@ -3380,6 +3377,15 @@ function hasMeaningfulBackupData(payload) {
     return getMeaningfulBackupDataSources(payload).some(hasNonEmptyEntries);
 }
 
+async function withRepoSyncHydrationLock(action) {
+    repoSyncHydrationInProgress = true;
+    try {
+        return await action();
+    } finally {
+        repoSyncHydrationInProgress = false;
+    }
+}
+
 async function fetchRepoBackupPayload() {
     const origin = window?.location?.origin;
     const timestamp = Date.now();
@@ -3452,12 +3458,9 @@ async function tryAutoRestoreFromRepoBackupOnEmptyState() {
         return false;
     }
 
-    repoSyncHydrationInProgress = true;
-    try {
+    await withRepoSyncHydrationLock(async () => {
         applyRepoBackupPayload(payload);
-    } finally {
-        repoSyncHydrationInProgress = false;
-    }
+    });
 
     return true;
 }
