@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.50'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.51'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7941,23 +7941,26 @@ function renderExecutiveSummary() {
     initializeYearlyIndividualSummary();
 }
 
+function handleExecutiveSummaryAssociateChange() {
+    loadExecutiveSummaryData();
+    renderYearlySummaryTrendCharts();
+    showEmailSection();
+    syncOneOnOneAssociateSelect();
+}
+
 function initializeYearlyIndividualSummary() {
     
     populateExecutiveSummaryAssociate();
     populateOneOnOneAssociateSelect();
     
     // Period type is always YTD for executive summary
-    
-    // Add event listener for associate dropdown
-    document.getElementById('summaryAssociateSelect')?.addEventListener('change', () => {
-        loadExecutiveSummaryData();
-        renderYearlySummaryTrendCharts();
-        showEmailSection();
-        syncOneOnOneAssociateSelect();
-    });
-    
+    const summaryAssociateSelect = document.getElementById('summaryAssociateSelect');
+    const generateExecutiveSummaryCopilotBtn = document.getElementById('generateExecutiveSummaryCopilotBtn');
+
+    bindElementOnce(summaryAssociateSelect, 'change', handleExecutiveSummaryAssociateChange);
+
     // Generate CoPilot prompt for Executive Summary email
-    document.getElementById('generateExecutiveSummaryCopilotBtn')?.addEventListener('click', generateExecutiveSummaryCopilotEmail);
+    bindElementOnce(generateExecutiveSummaryCopilotBtn, 'click', generateExecutiveSummaryCopilotEmail);
     
     
 }
