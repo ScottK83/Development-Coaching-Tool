@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T04:59:00.097Z",
+  "generatedAt": "2026-02-26T04:59:02.536Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": "2026.02.25.119",
   "weeklyData": {
@@ -4389,9 +4389,16 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Alyssa Dimes",
+    "selectedAssociate": "Angelina Fierro",
     "associates": {
       "Alyssa Dimes": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Angelina Fierro": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -5272,7 +5279,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 173
+      "byteLength": 301
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
