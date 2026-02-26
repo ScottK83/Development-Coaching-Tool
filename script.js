@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.31'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.32'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5889,6 +5889,36 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
     `;
 }
 
+function createTrendTipsModalElements() {
+    const modal = document.createElement('div');
+    modal.id = 'trendTipsModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 650px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+
+    return { modal, panel };
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5914,31 +5944,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
      * - Focus area (trending down metric) with 2 coaching tips
      * - Open Copilot with coaching prompt
      */
-    const modal = document.createElement('div');
-    modal.id = 'trendTipsModal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-    `;
-    
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        background: white;
-        border-radius: 8px;
-        padding: 24px;
-        max-width: 650px;
-        max-height: 85vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
+    const { modal, panel } = createTrendTipsModalElements();
     
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
     const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(allMetrics || []);
