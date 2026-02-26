@@ -3452,7 +3452,7 @@ function getAllAppStorageSnapshot() {
 }
 
 function buildRepoSyncPayload(reason = 'updated') {
-    const ptoTracker = window.DevCoachModules?.storage?.loadPtoTracker?.() || { entries: [] };
+    const ptoTracker = window.DevCoachModules?.storage?.loadPtoTracker?.() || {};
 
     return {
         appVersion: APP_VERSION,
@@ -3466,7 +3466,7 @@ function buildRepoSyncPayload(reason = 'updated') {
         associateSentimentSnapshots: associateSentimentSnapshots || {},
         myTeamMembers: myTeamMembers || {},
         callCenterAverages: loadCallCenterAverages() || {},
-        ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : { entries: [] },
+        ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
         yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
         yearEndDraftStore: loadYearEndDraftStore(),
         appStorageSnapshot: getAllAppStorageSnapshot(),
@@ -3592,7 +3592,7 @@ function applyRepoBackupPayload(payload) {
     if (window.DevCoachModules?.storage?.savePtoTracker) {
         const restoredPtoTracker = payload?.ptoTracker && typeof payload.ptoTracker === 'object'
             ? payload.ptoTracker
-            : { entries: [] };
+            : {};
         window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);
     }
     saveYearEndAnnualGoalsStore(payload?.yearEndAnnualGoalsStore && typeof payload.yearEndAnnualGoalsStore === 'object' ? payload.yearEndAnnualGoalsStore : {});

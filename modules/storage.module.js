@@ -293,10 +293,10 @@
         try {
             const namespacedKey = STORAGE_PREFIX + 'ptoTracker';
             const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : { entries: [] };
+            return saved ? JSON.parse(saved) : {};
         } catch (error) {
             console.error('Error loading PTO tracker:', error);
-            return { entries: [] };
+            return {};
         }
     }
 

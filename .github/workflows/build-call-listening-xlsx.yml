@@ -239,43 +239,78 @@ jobs:
 
 
           def flatten_pto_tracker(pto_tracker):
-            tracker = pto_tracker if isinstance(pto_tracker, dict) else {}
-            entries = tracker.get('entries') if isinstance(tracker.get('entries'), list) else []
-
             def safe_float(value):
               try:
                 return float(value or 0)
               except Exception:
                 return 0.0
 
-            carried_over = safe_float(tracker.get('carriedOverHours'))
-            earned_this_year = safe_float(tracker.get('earnedThisYearHours'))
-            reliability_hours_against = safe_float(tracker.get('reliabilityHoursAgainst'))
-            ptost_max = safe_float(tracker.get('ptostMaxHours') or 40)
+            store = pto_tracker if isinstance(pto_tracker, dict) else {}
 
-            total_ptost = 0.0
-            total_planned = 0.0
-            total_unplanned = 0.0
-            for entry in entries:
-              if isinstance(entry, dict):
-                hours = safe_float(entry.get('hours'))
-                entry_type = str(entry.get('type') or '').strip().lower()
-                if entry_type == 'ptost':
-                  total_ptost += hours
-                elif entry_type == 'pto-planned':
-                  total_planned += hours
-                else:
-                  total_unplanned += hours
+            legacy_tracker_shape = any(k in store for k in ['entries', 'carriedOverHours', 'earnedThisYearHours', 'reliabilityHoursAgainst', 'ptostMaxHours', 'availableHours'])
+            if legacy_tracker_shape and 'associates' not in store:
+              associates = {'Legacy PTO Data': store}
+            else:
+              associates_source = store.get('associates') if isinstance(store.get('associates'), dict) else {}
+              associates = {
+                str(name or '').strip(): tracker
+                for name, tracker in associates_source.items()
+                if str(name or '').strip()
+              }
 
-            total_pto_available = carried_over + earned_this_year
-            total_pto_used = total_planned + total_unplanned
-            remaining_pto = max(0.0, total_pto_available - total_pto_used)
-            ptost_remaining = max(0.0, ptost_max - total_ptost)
-            effective_unplanned_reliability = max(total_unplanned, reliability_hours_against)
-            policy_triggered = effective_unplanned_reliability > 16
-            status = 'Attendance policy active (>16h PTO unplanned)' if policy_triggered else 'Attendance policy not triggered (<=16h PTO unplanned)'
+            def tracker_stats(tracker):
+              tracker_obj = tracker if isinstance(tracker, dict) else {}
+              entries = tracker_obj.get('entries') if isinstance(tracker_obj.get('entries'), list) else []
+
+              carried_over = safe_float(tracker_obj.get('carriedOverHours'))
+              earned_this_year = safe_float(tracker_obj.get('earnedThisYearHours'))
+              reliability_hours_against = safe_float(tracker_obj.get('reliabilityHoursAgainst'))
+              ptost_max = safe_float(tracker_obj.get('ptostMaxHours') or 40)
+
+              total_ptost = 0.0
+              total_planned = 0.0
+              total_unplanned = 0.0
+              for entry in entries:
+                if isinstance(entry, dict):
+                  hours = safe_float(entry.get('hours'))
+                  entry_type = str(entry.get('type') or '').strip().lower()
+                  if entry_type == 'ptost':
+                    total_ptost += hours
+                  elif entry_type == 'pto-planned':
+                    total_planned += hours
+                  else:
+                    total_unplanned += hours
+
+              total_pto_available = carried_over + earned_this_year
+              total_pto_used = total_planned + total_unplanned
+              remaining_pto = max(0.0, total_pto_available - total_pto_used)
+              ptost_remaining = max(0.0, ptost_max - total_ptost)
+              effective_unplanned_reliability = max(total_unplanned, reliability_hours_against)
+              policy_triggered = effective_unplanned_reliability > 16
+              status = 'Attendance policy active (>16h PTO unplanned)' if policy_triggered else 'Attendance policy not triggered (<=16h PTO unplanned)'
+
+              return {
+                'CarriedOverHours': round(carried_over, 2),
+                'EarnedThisYearHours': round(earned_this_year, 2),
+                'TotalPtoAvailableHours': round(total_pto_available, 2),
+                'PtoPlannedHours': round(total_planned, 2),
+                'PtoUnplannedHours': round(total_unplanned, 2),
+                'TotalPtoUsedHours': round(total_pto_used, 2),
+                'RemainingPtoHours': round(remaining_pto, 2),
+                'PtostUsedHours': round(total_ptost, 2),
+                'PtostMaxHours': round(ptost_max, 2),
+                'PtostRemainingHours': round(ptost_remaining, 2),
+                'ReliabilityHoursAgainst': round(reliability_hours_against, 2),
+                'EffectiveUnplannedReliabilityHours': round(effective_unplanned_reliability, 2),
+                'AttendancePolicyThresholdHours': 16,
+                'AttendancePolicyTriggered': 'Yes' if policy_triggered else 'No',
+                'EntryCount': len(entries),
+                'Status': status,
+                'Entries': entries
+              }
 
             summary_headers = [
+              'Associate',
               'CarriedOverHours',
               'EarnedThisYearHours',
               'TotalPtoAvailableHours',
@@ -293,37 +328,44 @@ jobs:
               'EntryCount',
               'Status'
             ]
-            summary_rows = [{
-              'CarriedOverHours': round(carried_over, 2),
-              'EarnedThisYearHours': round(earned_this_year, 2),
-              'TotalPtoAvailableHours': round(total_pto_available, 2),
-              'PtoPlannedHours': round(total_planned, 2),
-              'PtoUnplannedHours': round(total_unplanned, 2),
-              'TotalPtoUsedHours': round(total_pto_used, 2),
-              'RemainingPtoHours': round(remaining_pto, 2),
-              'PtostUsedHours': round(total_ptost, 2),
-              'PtostMaxHours': round(ptost_max, 2),
-              'PtostRemainingHours': round(ptost_remaining, 2),
-              'ReliabilityHoursAgainst': round(reliability_hours_against, 2),
-              'EffectiveUnplannedReliabilityHours': round(effective_unplanned_reliability, 2),
-              'AttendancePolicyThresholdHours': 16,
-              'AttendancePolicyTriggered': 'Yes' if policy_triggered else 'No',
-              'EntryCount': len(entries),
-              'Status': status
-            }]
 
-            entry_headers = ['Date', 'Hours', 'Type', 'Notes', 'EntryId']
+            summary_rows = []
+            entry_headers = ['Associate', 'Date', 'Hours', 'Type', 'Notes', 'EntryId']
             entry_rows = []
-            for entry in entries:
-              if not isinstance(entry, dict):
-                continue
-              entry_rows.append({
-                'Date': entry.get('date', ''),
-                'Hours': entry.get('hours', ''),
-                'Type': entry.get('type', ''),
-                'Notes': entry.get('notes', entry.get('reason', '')),
-                'EntryId': entry.get('id', '')
+
+            for associate_name in sorted(associates.keys()):
+              stats = tracker_stats(associates[associate_name])
+              summary_rows.append({
+                'Associate': associate_name,
+                'CarriedOverHours': stats['CarriedOverHours'],
+                'EarnedThisYearHours': stats['EarnedThisYearHours'],
+                'TotalPtoAvailableHours': stats['TotalPtoAvailableHours'],
+                'PtoPlannedHours': stats['PtoPlannedHours'],
+                'PtoUnplannedHours': stats['PtoUnplannedHours'],
+                'TotalPtoUsedHours': stats['TotalPtoUsedHours'],
+                'RemainingPtoHours': stats['RemainingPtoHours'],
+                'PtostUsedHours': stats['PtostUsedHours'],
+                'PtostMaxHours': stats['PtostMaxHours'],
+                'PtostRemainingHours': stats['PtostRemainingHours'],
+                'ReliabilityHoursAgainst': stats['ReliabilityHoursAgainst'],
+                'EffectiveUnplannedReliabilityHours': stats['EffectiveUnplannedReliabilityHours'],
+                'AttendancePolicyThresholdHours': stats['AttendancePolicyThresholdHours'],
+                'AttendancePolicyTriggered': stats['AttendancePolicyTriggered'],
+                'EntryCount': stats['EntryCount'],
+                'Status': stats['Status']
               })
+
+              for entry in stats['Entries']:
+                if not isinstance(entry, dict):
+                  continue
+                entry_rows.append({
+                  'Associate': associate_name,
+                  'Date': entry.get('date', ''),
+                  'Hours': entry.get('hours', ''),
+                  'Type': entry.get('type', ''),
+                  'Notes': entry.get('notes', entry.get('reason', '')),
+                  'EntryId': entry.get('id', '')
+                })
 
             return summary_headers, summary_rows, entry_headers, entry_rows
 
