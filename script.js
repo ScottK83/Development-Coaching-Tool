@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.136'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.137'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6253,17 +6253,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
     // SINGLE LOAD - Use for all calculations
     const metricOrder = getMetricOrder();
-    const metrics = {};
-    const prevMetrics = {};
-    
-    metricOrder.forEach(({ key }) => {
-        if (current[key] !== undefined) {
-            metrics[key] = current[key];
-        }
-        if (previous && previous[key] !== undefined) {
-            prevMetrics[key] = previous[key];
-        }
-    });
+    const { metrics, prevMetrics } = buildTrendMetricMaps(metricOrder, current, previous);
     
     // SINGLE DATA SOURCE - Center averages (use weekKey for lookup)
     const callCenterAverages = loadCallCenterAverages();
@@ -6625,6 +6615,22 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
         copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
+}
+
+function buildTrendMetricMaps(metricOrder, current, previous) {
+    const metrics = {};
+    const prevMetrics = {};
+
+    metricOrder.forEach(({ key }) => {
+        if (current?.[key] !== undefined) {
+            metrics[key] = current[key];
+        }
+        if (previous?.[key] !== undefined) {
+            prevMetrics[key] = previous[key];
+        }
+    });
+
+    return { metrics, prevMetrics };
 }
 
 function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady) {
