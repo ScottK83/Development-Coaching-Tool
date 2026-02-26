@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.07'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.08'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3344,15 +3344,17 @@ function buildRepoSyncPayload(reason = 'updated') {
 }
 
 function queueRepoSync(reason = 'updated') {
-    if (repoSyncHydrationInProgress) {
-        return;
-    }
+    if (!canQueueRepoSync()) return;
+    scheduleRepoSync(reason);
+}
 
+function canQueueRepoSync() {
+    if (repoSyncHydrationInProgress) return false;
     const config = loadCallListeningSyncConfig();
-    if (!config.autoSyncEnabled || !config.endpoint.trim()) {
-        return;
-    }
+    return !!(config.autoSyncEnabled && String(config.endpoint || '').trim());
+}
 
+function scheduleRepoSync(reason) {
     if (callListeningSyncTimer) {
         clearTimeout(callListeningSyncTimer);
     }
