@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.56'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.57'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11455,6 +11455,58 @@ function renderCallListeningHistoryForSelectedEmployee() {
     }).join('');
 }
 
+function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {
+    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
+    employees.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    });
+
+    if (currentSelection && employees.includes(currentSelection)) {
+        employeeSelect.value = currentSelection;
+    }
+}
+
+function setCallListeningSectionStatus(status, employeeCount) {
+    status.textContent = employeeCount
+        ? `Loaded ${employeeCount} associates. Save call notes to keep a permanent reference log.`
+        : 'No associates found yet. Upload data first, then log call listening notes.';
+    status.style.display = 'block';
+}
+
+function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
+    const hasContent = outlookBody.value.trim().length > 0;
+    outlookBtn.disabled = !hasContent;
+    outlookBtn.style.opacity = hasContent ? '1' : '0.6';
+    outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+}
+
+function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
+    bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
+    bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
+    bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
+    bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);
+    bindElementOnce(generatePromptBtn, 'click', generateCallListeningPromptAndCopy);
+    bindElementOnce(outlookBody, 'input', () => updateCallListeningOutlookButtonState(outlookBody, outlookBtn));
+    bindElementOnce(outlookBtn, 'click', generateCallListeningOutlookEmail);
+    bindElementOnce(historyList, 'click', (event) => {
+        const button = event.target?.closest('button[data-call-action]');
+        if (!button) return;
+        const action = button.getAttribute('data-call-action');
+        const entryId = button.getAttribute('data-entry-id');
+        if (!entryId) return;
+        if (action === 'load') {
+            loadCallListeningEntryIntoForm(entryId);
+        } else if (action === 'copy-verint') {
+            copyCallListeningVerintSummary(entryId);
+        } else if (action === 'delete') {
+            deleteCallListeningEntryById(entryId);
+        }
+    });
+}
+
 function initializeCallListeningSection() {
     const employeeSelect = document.getElementById('callListeningEmployeeSelect');
     const status = document.getElementById('callListeningStatus');
@@ -11476,78 +11528,11 @@ function initializeCallListeningSection() {
     }
 
     const currentSelection = employeeSelect.value;
-    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
     const employees = getCallListeningEmployeeOptions();
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        employeeSelect.appendChild(option);
-    });
-    if (currentSelection && employees.includes(currentSelection)) {
-        employeeSelect.value = currentSelection;
-    }
-
-    status.textContent = employees.length
-        ? `Loaded ${employees.length} associates. Save call notes to keep a permanent reference log.`
-        : 'No associates found yet. Upload data first, then log call listening notes.';
-    status.style.display = 'block';
-
-    if (!employeeSelect.dataset.callBound) {
-        employeeSelect.addEventListener('change', renderCallListeningHistoryForSelectedEmployee);
-        employeeSelect.dataset.callBound = 'true';
-    }
-    if (!saveBtn.dataset.bound) {
-        saveBtn.addEventListener('click', () => upsertCallListeningEntryFromForm(true));
-        saveBtn.dataset.bound = 'true';
-    }
-    if (!copyVerintBtn.dataset.bound) {
-        copyVerintBtn.addEventListener('click', () => copyCallListeningVerintSummary());
-        copyVerintBtn.dataset.bound = 'true';
-    }
-    if (!exportBtn.dataset.bound) {
-        exportBtn.addEventListener('click', downloadCallListeningLogsCSV);
-        exportBtn.dataset.bound = 'true';
-    }
-    if (!generatePromptBtn.dataset.bound) {
-        generatePromptBtn.addEventListener('click', generateCallListeningPromptAndCopy);
-        generatePromptBtn.dataset.bound = 'true';
-    }
-    if (!outlookBody.dataset.bound) {
-        outlookBody.addEventListener('input', (event) => {
-            const hasContent = event.target.value.trim().length > 0;
-            outlookBtn.disabled = !hasContent;
-            outlookBtn.style.opacity = hasContent ? '1' : '0.6';
-            outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-        });
-        outlookBody.dataset.bound = 'true';
-    }
-    if (!outlookBtn.dataset.bound) {
-        outlookBtn.addEventListener('click', generateCallListeningOutlookEmail);
-        outlookBtn.dataset.bound = 'true';
-    }
-    if (!historyList.dataset.bound) {
-        historyList.addEventListener('click', (event) => {
-            const button = event.target?.closest('button[data-call-action]');
-            if (!button) return;
-            const action = button.getAttribute('data-call-action');
-            const entryId = button.getAttribute('data-entry-id');
-            if (!entryId) return;
-            if (action === 'load') {
-                loadCallListeningEntryIntoForm(entryId);
-            } else if (action === 'copy-verint') {
-                copyCallListeningVerintSummary(entryId);
-            } else if (action === 'delete') {
-                deleteCallListeningEntryById(entryId);
-            }
-        });
-        historyList.dataset.bound = 'true';
-    }
-
-    const hasOutlookBody = outlookBody.value.trim().length > 0;
-    outlookBtn.disabled = !hasOutlookBody;
-    outlookBtn.style.opacity = hasOutlookBody ? '1' : '0.6';
-    outlookBtn.style.cursor = hasOutlookBody ? 'pointer' : 'not-allowed';
+    populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection);
+    setCallListeningSectionStatus(status, employees.length);
+    bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn);
+    updateCallListeningOutlookButtonState(outlookBody, outlookBtn);
 
     renderCallListeningHistoryForSelectedEmployee();
 }
