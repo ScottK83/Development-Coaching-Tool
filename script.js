@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.68'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.69'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12576,36 +12576,45 @@ function updateYearEndSnapshotDisplay() {
     persistYearEndDraftState(employeeName, reviewYear);
 }
 
-function generateYearEndPromptAndCopy() {
-    const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
-    const reviewYear = document.getElementById('yearEndReviewYear')?.value;
-    const trackStatus = document.getElementById('yearEndTrackSelect')?.value;
-    const positivesText = document.getElementById('yearEndPositivesInput')?.value.trim() || '';
-    const improvementsText = document.getElementById('yearEndImprovementsInput')?.value.trim() || '';
-    const managerContext = document.getElementById('yearEndManagerContext')?.value.trim() || '';
-    const promptArea = document.getElementById('yearEndPromptArea');
-    const button = document.getElementById('generateYearEndPromptBtn');
+function getYearEndPromptInputs() {
+    return {
+        employeeName: document.getElementById('yearEndEmployeeSelect')?.value,
+        reviewYear: document.getElementById('yearEndReviewYear')?.value,
+        trackStatus: document.getElementById('yearEndTrackSelect')?.value,
+        positivesText: document.getElementById('yearEndPositivesInput')?.value.trim() || '',
+        improvementsText: document.getElementById('yearEndImprovementsInput')?.value.trim() || '',
+        managerContext: document.getElementById('yearEndManagerContext')?.value.trim() || '',
+        promptArea: document.getElementById('yearEndPromptArea'),
+        button: document.getElementById('generateYearEndPromptBtn')
+    };
+}
 
+function validateYearEndPromptInputs(employeeName, reviewYear, trackStatus, promptArea) {
     if (!employeeName) {
         alert('⚠️ Please select an associate first.');
-        return;
+        return false;
     }
     if (!reviewYear) {
         alert('⚠️ Please enter a review year.');
-        return;
+        return false;
     }
     if (!trackStatus) {
         alert('⚠️ Please mark whether the associate is on track or off track.');
-        return;
+        return false;
     }
-    if (!promptArea) return;
+    if (!promptArea) return false;
+    return true;
+}
 
+function ensureYearEndDraftContext(employeeName, reviewYear) {
     appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
     if (!yearEndDraftContext || yearEndDraftContext.employeeName !== employeeName || yearEndDraftContext.reviewYear !== reviewYear) {
         updateYearEndSnapshotDisplay();
     }
+}
 
+function buildYearEndPromptSupportData(employeeName, reviewYear) {
     const fallbackPositives = (yearEndDraftContext?.wins || [])
         .map(w => `${w.label}: ${w.value} vs target ${w.target}`)
         .join('\n');
@@ -12620,6 +12629,15 @@ function generateYearEndPromptAndCopy() {
         ? annualGoals.notMetGoals.map(line => `- ${line}`).join('\n')
         : '- None';
 
+    return {
+        fallbackPositives,
+        fallbackImprovements,
+        annualMetText,
+        annualNotMetText
+    };
+}
+
+function resolveYearEndPromptHeaderData(employeeName, reviewYear, trackStatus) {
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
     const trackLabel = trackStatus === 'on-track' ? 'On Track' : 'Off Track';
     const periodLabel = yearEndDraftContext?.periodLabel || `${reviewYear} year-end period`;
@@ -12628,27 +12646,37 @@ function generateYearEndPromptAndCopy() {
         ? `${yearEndDraftContext.targetProfileYear} year-end goals`
         : 'current metric goals';
 
-    const prompt = `I'm a supervisor preparing year-end review responses for ${preferredName} (${employeeName}) for ${reviewYear}.
+    return {
+        preferredName,
+        trackLabel,
+        periodLabel,
+        sourceLabel,
+        targetProfileLabel
+    };
+}
 
-Use this data source: ${sourceLabel} (${periodLabel}).
-Performance classification: ${trackLabel}.
-Metric targets to apply: ${targetProfileLabel}.
+function buildYearEndCopilotPrompt(inputData, supportData, headerData) {
+    return `I'm a supervisor preparing year-end review responses for ${headerData.preferredName} (${inputData.employeeName}) for ${inputData.reviewYear}.
+
+Use this data source: ${headerData.sourceLabel} (${headerData.periodLabel}).
+Performance classification: ${headerData.trackLabel}.
+Metric targets to apply: ${headerData.targetProfileLabel}.
 
 Positives to highlight:
-${positivesText || fallbackPositives || '- Positive impact and steady contribution to the team.'}
+${inputData.positivesText || supportData.fallbackPositives || '- Positive impact and steady contribution to the team.'}
 
 Improvement areas needed:
-${improvementsText || fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
+${inputData.improvementsText || supportData.fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
 
 Additional manager context and/or associate self-review responses:
-${managerContext || '- None provided.'}
+${inputData.managerContext || '- None provided.'}
 
 Annual APS goals status (not part of weekly report):
 Met goals:
-${annualMetText}
+${supportData.annualMetText}
 
 Goals needing follow-up:
-${annualNotMetText}
+${supportData.annualNotMetText}
 
 Write polished text that I can paste into these two manager review boxes:
 
@@ -12661,7 +12689,7 @@ Requirements:
 - Mention whether performance is on track or off track naturally
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
-- This is a completed ${reviewYear} year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
+- This is a completed ${inputData.reviewYear} year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
 - Do not use present-tense timing words for performance statements (do not use "currently", "currently at", "now", or "today")
 - Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)
 - Box 1 should emphasize meaningful accomplishments and impact
@@ -12674,19 +12702,18 @@ Box 1 - Significant Accomplishments:
 
 Box 2 - Future Improvement Areas:
 [text]`;
+}
 
-    promptArea.value = prompt;
+function setYearEndPromptButtonFeedback(button) {
+    if (!button) return;
+    const originalText = button.textContent;
+    button.textContent = '✅ Copied + Opening Copilot';
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 1500);
+}
 
-    if (button) {
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied + Opening Copilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1500);
-    }
-
-    const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
-
+function copyYearEndPromptWithFallbacks(prompt, copilotWindow) {
     if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(prompt)
             .then(() => {
@@ -12701,12 +12728,32 @@ Box 2 - Future Improvement Areas:
                     openCopilotWithPrompt(prompt, 'Year-End Comments');
                 }
             });
-    } else {
-        showToast('⚠️ Clipboard not available. Copy the prompt from the box below.', 4500);
-        if (!copilotWindow) {
-            openCopilotWithPrompt(prompt, 'Year-End Comments');
-        }
+        return;
     }
+
+    showToast('⚠️ Clipboard not available. Copy the prompt from the box below.', 4500);
+    if (!copilotWindow) {
+        openCopilotWithPrompt(prompt, 'Year-End Comments');
+    }
+}
+
+function generateYearEndPromptAndCopy() {
+    const inputData = getYearEndPromptInputs();
+
+    if (!validateYearEndPromptInputs(inputData.employeeName, inputData.reviewYear, inputData.trackStatus, inputData.promptArea)) {
+        return;
+    }
+
+    ensureYearEndDraftContext(inputData.employeeName, inputData.reviewYear);
+    const supportData = buildYearEndPromptSupportData(inputData.employeeName, inputData.reviewYear);
+    const headerData = resolveYearEndPromptHeaderData(inputData.employeeName, inputData.reviewYear, inputData.trackStatus);
+    const prompt = buildYearEndCopilotPrompt(inputData, supportData, headerData);
+
+    inputData.promptArea.value = prompt;
+    setYearEndPromptButtonFeedback(inputData.button);
+
+    const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
+    copyYearEndPromptWithFallbacks(prompt, copilotWindow);
 }
 
 function copyYearEndResponseToClipboard() {
