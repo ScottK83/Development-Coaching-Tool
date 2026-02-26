@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.19'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.20'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13361,6 +13361,56 @@ let sentimentReports = {
     emotions: null
 };
 
+function buildPositiveLanguageSentimentSection(positive, associateName) {
+    let section = '';
+    section += `═══════════════════════════════════\n`;
+    section += `POSITIVE LANGUAGE\n`;
+    section += `═══════════════════════════════════\n`;
+    section += `Keywords Summary (phrases used)\n\n`;
+
+    const posUsedPhrases = positive.phrases
+        .filter(p => p.value > 0 && !containsCurseWords(p.phrase))
+        .sort((a, b) => b.value - a.value);
+    if (posUsedPhrases.length > 0) {
+        section += `✓ DOING WELL - You used these positive words/phrases:\n`;
+        posUsedPhrases.slice(0, SENTIMENT_TOP_WINS_COUNT).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - ${p.value} calls\n`;
+        });
+        if (posUsedPhrases.length > SENTIMENT_TOP_WINS_COUNT) {
+            section += `  [... and ${posUsedPhrases.length - SENTIMENT_TOP_WINS_COUNT} more positive phrases]\n`;
+        }
+    } else {
+        section += `✓ DOING WELL:\n`;
+        section += `  • No strong positive phrases detected in this period\n`;
+    }
+    section += `\n`;
+
+    const posUnusedPhrases = positive.phrases
+        .filter(p => p.value === 0 && !containsCurseWords(p.phrase))
+        .sort((a, b) => a.value - b.value);
+    if (posUnusedPhrases.length > 0) {
+        section += `⬆ INCREASE YOUR SCORE - Try using these phrases more often:\n`;
+        posUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}"\n`;
+        });
+    }
+    section += `\n`;
+
+    section += `📝 SCRIPTED OPENING (with positive language):\n`;
+    section += `  "Hello! Thank you for calling. My name is ${escapeHtml(associateName)}. I'm here to\n`;
+    section += `   help you and I appreciate the opportunity to assist you today."\n\n`;
+
+    section += `📝 OWNERSHIP STATEMENT (take responsibility):\n`;
+    section += `  "I understand this is important to you. I'm going to take ownership of\n`;
+    section += `   this and personally ensure we get this resolved for you."\n\n`;
+
+    section += `📝 SCRIPTED CLOSING (with positive language):\n`;
+    section += `  "I truly appreciate you taking the time to work with me on this. We've\n`;
+    section += `   accomplished great things together today, and I'm delighted we could help."\n\n`;
+
+    return section;
+}
+
 function generateSentimentSummary() {
     const { positive, negative, emotions } = sentimentReports;
     
@@ -13383,56 +13433,7 @@ function generateSentimentSummary() {
     summary += `Associate: ${escapeHtml(associateName)}\n`;
     summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
     
-    // POSITIVE LANGUAGE Section
-    summary += `═══════════════════════════════════\n`;
-    summary += `POSITIVE LANGUAGE\n`;
-    summary += `═══════════════════════════════════\n`;
-    summary += `Keywords Summary (phrases used)\n\n`;
-    
-    // Phrases they DID use well
-    const posUsedPhrases = positive.phrases
-        .filter(p => p.value > 0 && !containsCurseWords(p.phrase))
-        .sort((a, b) => b.value - a.value);
-    if (posUsedPhrases.length > 0) {
-        summary += `✓ DOING WELL - You used these positive words/phrases:\n`;
-        posUsedPhrases.slice(0, SENTIMENT_TOP_WINS_COUNT).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - ${p.value} calls\n`;
-        });
-        if (posUsedPhrases.length > SENTIMENT_TOP_WINS_COUNT) {
-            summary += `  [... and ${posUsedPhrases.length - SENTIMENT_TOP_WINS_COUNT} more positive phrases]\n`;
-        }
-    } else {
-        summary += `✓ DOING WELL:\n`;
-        summary += `  • No strong positive phrases detected in this period\n`;
-    }
-    summary += `\n`;
-    
-    // Phrases they COULD use more
-    const posUnusedPhrases = positive.phrases
-        .filter(p => p.value === 0 && !containsCurseWords(p.phrase))
-        .sort((a, b) => a.value - b.value);
-    if (posUnusedPhrases.length > 0) {
-        summary += `⬆ INCREASE YOUR SCORE - Try using these phrases more often:\n`;
-        posUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}"\n`;
-        });
-    }
-    summary += `\n`;
-    
-    // Scripted Opening with Positive Language
-    summary += `📝 SCRIPTED OPENING (with positive language):\n`;
-    summary += `  "Hello! Thank you for calling. My name is ${escapeHtml(associateName)}. I'm here to\n`;
-    summary += `   help you and I appreciate the opportunity to assist you today."\n\n`;
-    
-    // Scripted Ownership Statement
-    summary += `📝 OWNERSHIP STATEMENT (take responsibility):\n`;
-    summary += `  "I understand this is important to you. I'm going to take ownership of\n`;
-    summary += `   this and personally ensure we get this resolved for you."\n\n`;
-    
-    // Scripted Closing with Positive Language
-    summary += `📝 SCRIPTED CLOSING (with positive language):\n`;
-    summary += `  "I truly appreciate you taking the time to work with me on this. We've\n`;
-    summary += `   accomplished great things together today, and I'm delighted we could help."\n\n`;
+    summary += buildPositiveLanguageSentimentSection(positive, associateName);
     
     // AVOIDING NEGATIVE LANGUAGE Section
     summary += `═══════════════════════════════════\n`;
