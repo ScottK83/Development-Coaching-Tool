@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.27'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.28'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13678,6 +13678,16 @@ function logSentimentParseCompletion(fileType, report, allInteractionsMatches) {
     }
 }
 
+function isSentimentKeywordsSectionLine(line) {
+    const normalized = String(line || '').toLowerCase();
+    return normalized.includes('keywords') || normalized.includes('query result metrics');
+}
+
+function isSentimentHeaderLine(line) {
+    const trimmed = String(line || '').trim();
+    return trimmed === 'Name' || trimmed === 'Value' || /^Name,Value/i.test(trimmed);
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13736,14 +13746,14 @@ function parseSentimentFile(fileType, lines) {
         }
         
         // Detect keywords section
-        if (line.toLowerCase().includes('keywords') || line.toLowerCase().includes('query result metrics')) {
+        if (isSentimentKeywordsSectionLine(line)) {
             inKeywordsSection = true;
             console.log(`✅ Found keywords section at line ${i}`);
             continue;
         }
         
         // Skip "Name" and "Value" header lines
-        if (line.trim() === 'Name' || line.trim() === 'Value' || line.match(/^Name,Value/i)) {
+        if (isSentimentHeaderLine(line)) {
             console.log(`Skipping header line: "${line}"`);
             continue;
         }
