@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.124'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.125'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2126,50 +2126,54 @@ function applyMetricHighlights() {
 // ============================================
 
 function initializeEventHandlers() {
-    
-    // Upload period type buttons
+    bindUploadAndPasteHandlers();
+    bindNavigationHandlers();
+    bindManageDataNavigationHandlers();
+    bindQuickActionHandlers();
+    bindCoachingFormHandlers();
+    bindDataAdminHandlers();
+}
+
+function bindUploadAndPasteHandlers() {
     document.querySelectorAll('.upload-period-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Update button styles
-            document.querySelectorAll('.upload-period-btn').forEach(b => {
-                if (b === btn) {
-                    b.style.background = '#28a745';
-                    b.style.borderColor = '#28a745';
-                    b.style.color = 'white';
+            document.querySelectorAll('.upload-period-btn').forEach(button => {
+                if (button === btn) {
+                    button.style.background = '#28a745';
+                    button.style.borderColor = '#28a745';
+                    button.style.color = 'white';
                 } else {
-                    b.style.background = 'white';
-                    b.style.borderColor = '#ddd';
-                    b.style.color = '#666';
+                    button.style.background = 'white';
+                    button.style.borderColor = '#ddd';
+                    button.style.color = '#666';
                 }
             });
         });
     });
-    
-    // Upload Data section - show/hide upload types
+
     document.getElementById('showUploadMetricsBtn')?.addEventListener('click', () => {
         const container = document.getElementById('pasteDataContainer');
         if (container) {
             container.style.display = container.style.display === 'none' ? 'block' : 'none';
         }
     });
-    
-    document.getElementById('showUploadSentimentBtn')?.addEventListener('click', () => {
-        openUploadSentimentModal();
-    });
-    
-    // Upload Sentiment Modal handlers
+
+    document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModal);
     document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
     document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
-    
-    // Tab navigation
+    document.getElementById('pasteDataTextarea')?.addEventListener('input', handlePasteDataTextareaInput);
+    document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
+    enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
+}
+
+function bindNavigationHandlers() {
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
         showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
     });
-    
-    // Sub-navigation for Coaching & Analysis section
+
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
         showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
@@ -2183,52 +2187,15 @@ function initializeEventHandlers() {
         initializeOnOffTracker();
     });
     document.getElementById('subNavSentiment')?.addEventListener('click', handleSubNavSentimentClick);
-    document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
-        showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
-        // Move metric trends section content dynamically
-        const metricTrendsSection = document.getElementById('metricTrendsSection');
-        const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
-        if (metricTrendsSection && subSectionMetricTrends) {
-            // Move all children from metricTrendsSection to subSectionMetricTrends
-            while (metricTrendsSection.firstChild) {
-                subSectionMetricTrends.appendChild(metricTrendsSection.firstChild);
-            }
-        }
-        initializeMetricTrends();
-    });
-    document.getElementById('subNavTrendIntelligence')?.addEventListener('click', () => {
-        showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
-        // Move executive summary section content dynamically
-        const executiveSummarySection = document.getElementById('executiveSummarySection');
-        const subSectionTrendIntelligence = document.getElementById('subSectionTrendIntelligence');
-        if (executiveSummarySection && subSectionTrendIntelligence) {
-            // Move all children from executiveSummarySection to subSectionTrendIntelligence
-            while (executiveSummarySection.firstChild) {
-                subSectionTrendIntelligence.appendChild(executiveSummarySection.firstChild);
-            }
-        }
-        renderExecutiveSummary();
-        
-        // Reset the associate dropdown when navigating to this section
-        const summarySelect = document.getElementById('summaryAssociateSelect');
-        if (summarySelect) {
-            summarySelect.value = '';
-        }
-        
-        // Clear the data containers
-        const dataContainer = document.getElementById('summaryDataContainer');
-        const chartsContainer = document.getElementById('summaryChartsContainer');
-        const emailSection = document.getElementById('summaryEmailSection');
-        
-        if (dataContainer) dataContainer.style.display = 'none';
-        if (chartsContainer) chartsContainer.innerHTML = '';
-        if (emailSection) emailSection.style.display = 'none';
-    });
+    document.getElementById('subNavMetricTrends')?.addEventListener('click', handleSubNavMetricTrendsClick);
+    document.getElementById('subNavTrendIntelligence')?.addEventListener('click', handleSubNavTrendIntelligenceClick);
     document.getElementById('subNavCallListening')?.addEventListener('click', () => {
         showSubSection('subSectionCallListening', 'subNavCallListening');
         initializeCallListeningSection();
     });
-    
+}
+
+function bindManageDataNavigationHandlers() {
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
         showManageDataSubSection('subSectionTeamData');
@@ -2236,8 +2203,7 @@ function initializeEventHandlers() {
         populateDeleteWeekDropdown();
         renderEmployeesList();
     });
-    
-    // Sub-navigation for Manage Data section
+
     document.getElementById('subNavTeamData')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionTeamData');
         initializeRepoSyncControls();
@@ -2246,18 +2212,15 @@ function initializeEventHandlers() {
     });
     document.getElementById('subNavCoachingTips')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionCoachingTips');
-        // Move tips management section content dynamically
         const tipsManagementSection = document.getElementById('tipsManagementSection');
         const subSectionCoachingTips = document.getElementById('subSectionCoachingTips');
         if (tipsManagementSection && subSectionCoachingTips) {
-            // Move all children from tipsManagementSection to subSectionCoachingTips
             while (tipsManagementSection.firstChild) {
                 subSectionCoachingTips.appendChild(tipsManagementSection.firstChild);
             }
         }
         renderTipsManagement();
     });
-    
     document.getElementById('subNavSentimentKeywords')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionSentimentKeywords');
         renderSentimentDatabasePanel();
@@ -2267,15 +2230,15 @@ function initializeEventHandlers() {
         showOnlySection('debugSection');
         renderDebugPanel();
     });
-    
+}
+
+function bindQuickActionHandlers() {
     document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
     document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
     document.getElementById('generateTodaysFocusCopilotBtn')?.addEventListener('click', generateTodaysFocusCopilotEmail);
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
-    document.getElementById('redFlagBtn')?.addEventListener('click', () => {
-        showOnlySection('redFlagSection');
-    });
+    document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
     document.getElementById('ptoBtn')?.addEventListener('click', () => {
         showOnlySection('ptoSection');
         initializePtoTracker();
@@ -2288,174 +2251,153 @@ function initializeEventHandlers() {
         renderDebugPanel();
         showToast('✅ Debug errors cleared', 3000);
     });
-    
-    // SENTIMENT & LANGUAGE SUMMARY WORKFLOW - Duplicate listeners removed, now only attached in subNav click handler
-    
-    // Drag and drop support for CSV files
-    const pasteTextarea = document.getElementById('pasteDataTextarea');
-    document.getElementById('pasteDataTextarea')?.addEventListener('input', (e) => {
-        const dataText = e.target.value;
-        const preview = document.getElementById('dataValidationPreview');
-        
-        if (!dataText.trim()) {
-            preview.style.display = 'none';
-            return;
-        }
-        
-        const validation = validatePastedData(dataText);
-        preview.style.display = 'block';
-        
-        if (validation.valid) {
-            preview.style.background = '#d4edda';
-            preview.style.border = '2px solid #28a745';
-            preview.style.color = '#155724';
-            preview.innerHTML = `
-                ✅ <strong>Data looks good!</strong><br>
-                📊 ${validation.employeeCount} employees detected<br>
-                👤 Preview: ${validation.preview.join(', ')}${validation.employeeCount > 3 ? '...' : ''}
-            `;
-        } else {
-            preview.style.background = '#f8d7da';
-            preview.style.border = '2px solid #dc3545';
-            preview.style.color = '#721c24';
-            preview.innerHTML = `
-                ⚠️ <strong>Data validation issues:</strong><br>
-                ${validation.issues.map(i => `• ${i}`).join('<br>')}
-            `;
-        }
-    });
-    
-    // Load pasted data
-    document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
+}
 
-    enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
-    
-    // Excel file selection
-
-    
-    // Period type buttons
+function bindCoachingFormHandlers() {
     document.querySelectorAll('.period-type-btn').forEach(btn => {
         btn.addEventListener('click', () => handlePeriodTypeButtonClick(btn));
     });
-    
-    // Period selection
     document.getElementById('specificPeriod')?.addEventListener('change', handleSpecificPeriodChange);
-    
-    // Employee selection
     document.getElementById('employeeSelect')?.addEventListener('change', handleEmployeeSelectChange);
-    
-    // Note: nickname saves on generate actions, not on blur
-    
-    // Employee search
     document.getElementById('employeeSearch')?.addEventListener('input', handleEmployeeSearchInput);
-    
-    // Generate email button
-    // Generate Copilot Prompt Button
-    document.getElementById('generateCopilotPromptBtn')?.addEventListener('click', () => {
-        generateCopilotPrompt();
-    });
-    
-    // [DEPRECATED: generateOutlookEmailBtn references removed - function deleted in Phase 1 cleanup]
-    
-    // Enable Generate Email button when Copilot output is pasted
-    document.getElementById('copilotOutputText')?.addEventListener('input', (e) => {
-        const verintBtn = document.getElementById('generateVerintSummaryBtn');
-        const hasContent = e.target.value.trim().length > 0;
-        
-        if (verintBtn) {
-            verintBtn.disabled = !hasContent;
-            verintBtn.style.opacity = hasContent ? '1' : '0.5';
-            verintBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-        }
-    });
-    
-    // Generate Verint Summary Button
-    document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', () => {
-        generateVerintSummary();
-    });
-    
-    // Metric input highlighting - attach to all metrics in registry
+    document.getElementById('generateCopilotPromptBtn')?.addEventListener('click', generateCopilotPrompt);
+    document.getElementById('copilotOutputText')?.addEventListener('input', handleCopilotOutputInput);
+    document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', generateVerintSummary);
     Object.keys(METRICS_REGISTRY).forEach(metricKey => {
         document.getElementById(metricKey)?.addEventListener('input', applyMetricHighlights);
     });
-    
-    // Export data
-    document.getElementById('exportDataBtn')?.addEventListener('click', () => {
-        
-        exportToExcel();
-    });
-    
-    // Export coaching history as CSV
-    document.getElementById('exportCoachingHistoryBtn')?.addEventListener('click', () => {
-        downloadCoachingHistoryCSV();
-    });
-    
-    // Upload more data button
-    document.getElementById('uploadMoreDataBtn')?.addEventListener('click', () => {
-        // Hide success message and clear form
-        document.getElementById('uploadSuccessMessage').style.display = 'none';
-        document.getElementById('pasteDataTextarea').value = '';
-        document.getElementById('pasteWeekEndingDate').value = '';
-        
-        // Switch back to upload tab
-        showOnlySection('uploadSection');
-    });
-    
-    // Import data
+    document.getElementById('exportDataBtn')?.addEventListener('click', exportToExcel);
+    document.getElementById('exportCoachingHistoryBtn')?.addEventListener('click', downloadCoachingHistoryCSV);
+    document.getElementById('uploadMoreDataBtn')?.addEventListener('click', handleUploadMoreDataClick);
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
-        
         document.getElementById('dataFileInput').click();
     });
-    
     document.getElementById('dataFileInput')?.addEventListener('change', handleDataFileInputChange);
+}
 
-    // Delete selected week
+function bindDataAdminHandlers() {
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', handleDeleteSelectedWeekClick);
-    
-    // Select/Deselect all team members
     document.getElementById('selectAllTeamBtn')?.addEventListener('click', handleSelectAllTeamClick);
     document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
-    
-    // Update team selector when week selection changes
     document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
-    
-    // Populate and handle sentiment data deletion
+
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
 
-    document.getElementById('deleteEmployeeYearBtn')?.addEventListener('click', () => {
-        const employeeSelect = document.getElementById('deleteEmployeeYearSelect');
-        const reviewYearInput = document.getElementById('deleteEmployeeYearInput');
-        const employeeName = String(employeeSelect?.value || '').trim();
-        const reviewYear = parseInt(String(reviewYearInput?.value || ''), 10);
-
-        if (!employeeName) {
-            alert('⚠️ Please select an associate.');
-            return;
-        }
-
-        if (!Number.isInteger(reviewYear)) {
-            alert('⚠️ Please enter a valid review year (example: 2026).');
-            return;
-        }
-
-        const confirmed = confirm(`Delete ${employeeName}'s ${reviewYear} data from weekly uploads, YTD uploads, year-end entries, and matching dated logs?\n\nThis action cannot be undone.`);
-        if (!confirmed) return;
-
-        deleteEmployeeDataByYear(employeeName, reviewYear);
-    });
-    
+    document.getElementById('deleteEmployeeYearBtn')?.addEventListener('click', handleDeleteEmployeeYearClick);
     document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', handleDeleteSelectedSentimentClick);
-    
-    // Delete all data
-
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', handleDeleteAllDataClick);
-    
-    // Populate delete week dropdown on load
     populateDeleteWeekDropdown();
-    
-    // Initialize red flag handlers
     initializeRedFlag();
+}
+
+function handlePasteDataTextareaInput(event) {
+    const dataText = event.target.value;
+    const preview = document.getElementById('dataValidationPreview');
+
+    if (!dataText.trim()) {
+        preview.style.display = 'none';
+        return;
+    }
+
+    const validation = validatePastedData(dataText);
+    preview.style.display = 'block';
+
+    if (validation.valid) {
+        preview.style.background = '#d4edda';
+        preview.style.border = '2px solid #28a745';
+        preview.style.color = '#155724';
+        preview.innerHTML = `
+            ✅ <strong>Data looks good!</strong><br>
+            📊 ${validation.employeeCount} employees detected<br>
+            👤 Preview: ${validation.preview.join(', ')}${validation.employeeCount > 3 ? '...' : ''}
+        `;
+    } else {
+        preview.style.background = '#f8d7da';
+        preview.style.border = '2px solid #dc3545';
+        preview.style.color = '#721c24';
+        preview.innerHTML = `
+            ⚠️ <strong>Data validation issues:</strong><br>
+            ${validation.issues.map(i => `• ${i}`).join('<br>')}
+        `;
+    }
+}
+
+function handleSubNavMetricTrendsClick() {
+    showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
+    const metricTrendsSection = document.getElementById('metricTrendsSection');
+    const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
+    if (metricTrendsSection && subSectionMetricTrends) {
+        while (metricTrendsSection.firstChild) {
+            subSectionMetricTrends.appendChild(metricTrendsSection.firstChild);
+        }
+    }
+    initializeMetricTrends();
+}
+
+function handleSubNavTrendIntelligenceClick() {
+    showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
+    const executiveSummarySection = document.getElementById('executiveSummarySection');
+    const subSectionTrendIntelligence = document.getElementById('subSectionTrendIntelligence');
+    if (executiveSummarySection && subSectionTrendIntelligence) {
+        while (executiveSummarySection.firstChild) {
+            subSectionTrendIntelligence.appendChild(executiveSummarySection.firstChild);
+        }
+    }
+    renderExecutiveSummary();
+
+    const summarySelect = document.getElementById('summaryAssociateSelect');
+    if (summarySelect) {
+        summarySelect.value = '';
+    }
+
+    const dataContainer = document.getElementById('summaryDataContainer');
+    const chartsContainer = document.getElementById('summaryChartsContainer');
+    const emailSection = document.getElementById('summaryEmailSection');
+
+    if (dataContainer) dataContainer.style.display = 'none';
+    if (chartsContainer) chartsContainer.innerHTML = '';
+    if (emailSection) emailSection.style.display = 'none';
+}
+
+function handleCopilotOutputInput(event) {
+    const verintBtn = document.getElementById('generateVerintSummaryBtn');
+    const hasContent = event.target.value.trim().length > 0;
+
+    if (verintBtn) {
+        verintBtn.disabled = !hasContent;
+        verintBtn.style.opacity = hasContent ? '1' : '0.5';
+        verintBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+    }
+}
+
+function handleUploadMoreDataClick() {
+    document.getElementById('uploadSuccessMessage').style.display = 'none';
+    document.getElementById('pasteDataTextarea').value = '';
+    document.getElementById('pasteWeekEndingDate').value = '';
+    showOnlySection('uploadSection');
+}
+
+function handleDeleteEmployeeYearClick() {
+    const employeeSelect = document.getElementById('deleteEmployeeYearSelect');
+    const reviewYearInput = document.getElementById('deleteEmployeeYearInput');
+    const employeeName = String(employeeSelect?.value || '').trim();
+    const reviewYear = parseInt(String(reviewYearInput?.value || ''), 10);
+
+    if (!employeeName) {
+        alert('⚠️ Please select an associate.');
+        return;
+    }
+
+    if (!Number.isInteger(reviewYear)) {
+        alert('⚠️ Please enter a valid review year (example: 2026).');
+        return;
+    }
+
+    const confirmed = confirm(`Delete ${employeeName}'s ${reviewYear} data from weekly uploads, YTD uploads, year-end entries, and matching dated logs?\n\nThis action cannot be undone.`);
+    if (!confirmed) return;
+
+    deleteEmployeeDataByYear(employeeName, reviewYear);
 }
 
 function handleSubNavSentimentClick() {
