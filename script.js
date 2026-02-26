@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.18'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.19'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -8247,110 +8247,13 @@ function renderCoachingPriorityQueue() {
     };
 
     employeeNames.forEach(employeeName => {
-        const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
-        const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
-        if (!currentEmp || !prevEmp) return;
+        const entry = buildCoachingPriorityEntry(employeeName, buckets, coreMetrics);
+        if (!entry) return;
 
-        let coachScore = 0;
-        let recognizeScore = 0;
-        let watchScore = 0;
-        const coachReasons = [];
-        const recognizeReasons = [];
-        const watchReasons = [];
-
-        coreMetrics.forEach(metricKey => {
-            const current = currentEmp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || current === null) return;
-
-            const meets = metricMeetsTarget(metricKey, current);
-            const delta = prev === undefined || prev === null ? 0 : metricDelta(metricKey, current, prev);
-            const thresholdData = getTrendDeltaThreshold(metricKey);
-
-            if (!meets) {
-                coachScore += 14;
-                const severity = getMetricSeverity(metricKey, current);
-                if (severity === 'high') coachScore += 10;
-                else if (severity === 'medium') coachScore += 6;
-                else coachScore += 3;
-
-                if (coachReasons.length < 2) {
-                    coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} below target`);
-                }
-            } else {
-                recognizeScore += 9;
-            }
-
-            if (delta > 5) {
-                recognizeScore += 8;
-                if (recognizeReasons.length < 2) {
-                    recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving (+${delta.toFixed(1)})`);
-                }
-            }
-
-            if (delta < -thresholdData.value) {
-                coachScore += 12;
-                if (coachReasons.length < 2) {
-                    coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} dropped ${delta.toFixed(1)}${thresholdData.unit}`);
-                }
-            }
-
-            if (Math.abs(delta) <= 1.5) {
-                watchScore += 2;
-            }
-        });
-
-        const meetsAllCore = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
-            metricMeetsTarget(metricKey, currentEmp[metricKey])
-        );
-
-        if (meetsAllCore) {
-            recognizeScore += 15;
-            if (recognizeReasons.length < 2) recognizeReasons.push('All core metrics at/above target');
-        }
-
-        const impact = calculateCoachingImpact(employeeName, currentEmp);
-        if (impact?.status === 'positive') {
-            recognizeScore += 10;
-            if (recognizeReasons.length < 2) recognizeReasons.push(`Coaching impact ${impact.score}/100`);
-        } else if (impact?.status === 'negative') {
-            coachScore += 12;
-            if (coachReasons.length < 2) coachReasons.push(`Coaching impact ${impact.score}/100 (needs reset)`);
-        } else if (impact?.status === 'mixed') {
-            watchScore += 6;
-        }
-
-        const history = getCoachingHistoryForEmployee(employeeName);
-        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-        const hasRecentCoaching = history.some(h => new Date(h.generatedAt).getTime() >= thirtyDaysAgo);
-        if (!hasRecentCoaching) {
-            watchScore += 8;
-            if (watchReasons.length < 2) watchReasons.push('No coaching touch in 30+ days');
-        }
-
-        if (coachScore < 35 && recognizeScore < 35) {
-            watchScore += 8;
-            if (watchReasons.length < 2) watchReasons.push('Mixed/flat trend signals');
-        }
-
-        const topCategory = [
-            { key: 'coachNow', score: coachScore },
-            { key: 'recognizeNow', score: recognizeScore },
-            { key: 'watchlist', score: watchScore }
-        ].sort((a, b) => b.score - a.score)[0];
-
-        if (topCategory.score <= 0) return;
-
-        const reason = topCategory.key === 'coachNow'
-            ? (coachReasons[0] || 'Performance signals need intervention')
-            : topCategory.key === 'recognizeNow'
-            ? (recognizeReasons[0] || 'Strong and improving performance')
-            : (watchReasons[0] || 'Monitor for next period shifts');
-
-        queue[topCategory.key].push({
+        queue[entry.category].push({
             name: employeeName,
-            score: topCategory.score,
-            reason
+            score: entry.score,
+            reason: entry.reason
         });
     });
 
@@ -8358,41 +8261,25 @@ function renderCoachingPriorityQueue() {
     queue.recognizeNow.sort((a, b) => b.score - a.score);
     queue.watchlist.sort((a, b) => b.score - a.score);
 
-    const renderBucket = (title, entries, bg, border, emptyText) => {
-        let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
-        html += `<strong>${title}</strong>`;
-        if (!entries.length) {
-            html += `<div style="margin-top: 6px; color: #666; font-size: 0.9em;">${emptyText}</div>`;
-        } else {
-            html += '<div style="margin-top: 6px; display: grid; gap: 6px;">';
-            entries.slice(0, 5).forEach(entry => {
-                html += `<div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>`;
-            });
-            html += '</div>';
-        }
-        html += '</div>';
-        return html;
-    };
-
     let html = `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">`;
     html += `<strong>Mode:</strong> ${buckets.descriptor.label} • <strong>Team Members Scored:</strong> ${employeeNames.length}`;
     html += `</div>`;
 
-    html += renderBucket(
+    html += renderCoachingPriorityBucket(
         '🎯 Coach Now',
         queue.coachNow,
         '#ffebee',
         '#f5c6cb',
         'No urgent coaching interventions this cycle.'
     );
-    html += renderBucket(
+    html += renderCoachingPriorityBucket(
         '🏆 Recognize Now',
         queue.recognizeNow,
         '#e8f5e9',
         '#c8e6c9',
         'No standout recognition callouts this cycle.'
     );
-    html += renderBucket(
+    html += renderCoachingPriorityBucket(
         '👀 Watchlist',
         queue.watchlist,
         '#fff8e1',
@@ -8401,6 +8288,130 @@ function renderCoachingPriorityQueue() {
     );
 
     container.innerHTML = html;
+}
+
+function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
+    const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
+    const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
+    if (!currentEmp || !prevEmp) return null;
+
+    let coachScore = 0;
+    let recognizeScore = 0;
+    let watchScore = 0;
+    const coachReasons = [];
+    const recognizeReasons = [];
+    const watchReasons = [];
+
+    coreMetrics.forEach(metricKey => {
+        const current = currentEmp[metricKey];
+        const prev = prevEmp[metricKey];
+        if (current === undefined || current === null) return;
+
+        const meets = metricMeetsTarget(metricKey, current);
+        const delta = prev === undefined || prev === null ? 0 : metricDelta(metricKey, current, prev);
+        const thresholdData = getTrendDeltaThreshold(metricKey);
+
+        if (!meets) {
+            coachScore += 14;
+            const severity = getMetricSeverity(metricKey, current);
+            if (severity === 'high') coachScore += 10;
+            else if (severity === 'medium') coachScore += 6;
+            else coachScore += 3;
+
+            if (coachReasons.length < 2) {
+                coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} below target`);
+            }
+        } else {
+            recognizeScore += 9;
+        }
+
+        if (delta > 5) {
+            recognizeScore += 8;
+            if (recognizeReasons.length < 2) {
+                recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving (+${delta.toFixed(1)})`);
+            }
+        }
+
+        if (delta < -thresholdData.value) {
+            coachScore += 12;
+            if (coachReasons.length < 2) {
+                coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} dropped ${delta.toFixed(1)}${thresholdData.unit}`);
+            }
+        }
+
+        if (Math.abs(delta) <= 1.5) {
+            watchScore += 2;
+        }
+    });
+
+    const meetsAllCore = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+        metricMeetsTarget(metricKey, currentEmp[metricKey])
+    );
+
+    if (meetsAllCore) {
+        recognizeScore += 15;
+        if (recognizeReasons.length < 2) recognizeReasons.push('All core metrics at/above target');
+    }
+
+    const impact = calculateCoachingImpact(employeeName, currentEmp);
+    if (impact?.status === 'positive') {
+        recognizeScore += 10;
+        if (recognizeReasons.length < 2) recognizeReasons.push(`Coaching impact ${impact.score}/100`);
+    } else if (impact?.status === 'negative') {
+        coachScore += 12;
+        if (coachReasons.length < 2) coachReasons.push(`Coaching impact ${impact.score}/100 (needs reset)`);
+    } else if (impact?.status === 'mixed') {
+        watchScore += 6;
+    }
+
+    const history = getCoachingHistoryForEmployee(employeeName);
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const hasRecentCoaching = history.some(h => new Date(h.generatedAt).getTime() >= thirtyDaysAgo);
+    if (!hasRecentCoaching) {
+        watchScore += 8;
+        if (watchReasons.length < 2) watchReasons.push('No coaching touch in 30+ days');
+    }
+
+    if (coachScore < 35 && recognizeScore < 35) {
+        watchScore += 8;
+        if (watchReasons.length < 2) watchReasons.push('Mixed/flat trend signals');
+    }
+
+    const topCategory = [
+        { key: 'coachNow', score: coachScore },
+        { key: 'recognizeNow', score: recognizeScore },
+        { key: 'watchlist', score: watchScore }
+    ].sort((a, b) => b.score - a.score)[0];
+
+    if (topCategory.score <= 0) return null;
+
+    const reason = topCategory.key === 'coachNow'
+        ? (coachReasons[0] || 'Performance signals need intervention')
+        : topCategory.key === 'recognizeNow'
+        ? (recognizeReasons[0] || 'Strong and improving performance')
+        : (watchReasons[0] || 'Monitor for next period shifts');
+
+    return {
+        category: topCategory.key,
+        score: topCategory.score,
+        reason
+    };
+}
+
+function renderCoachingPriorityBucket(title, entries, bg, border, emptyText) {
+    let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
+    html += `<strong>${title}</strong>`;
+    if (!entries.length) {
+        html += `<div style="margin-top: 6px; color: #666; font-size: 0.9em;">${emptyText}</div>`;
+    } else {
+        html += '<div style="margin-top: 6px; display: grid; gap: 6px;">';
+        entries.slice(0, 5).forEach(entry => {
+            html += `<div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>`;
+        });
+        html += '</div>';
+    }
+    html += '</div>';
+    return html;
 }
 
 function buildTrendSeriesData(metricKey, employeeName, keys, periodType) {
