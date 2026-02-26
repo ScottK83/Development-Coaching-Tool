@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.09'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.10'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5623,20 +5623,23 @@ function getTrendEmailSelection() {
     return { employeeName, weekKey, nickname };
 }
 
+function getTrendEmailDisplayName(employeeName, nickname) {
+    if (employeeName && nickname) {
+        saveNickname(employeeName, nickname);
+    }
+    return nickname || employeeName;
+}
+
 function generateTrendEmail() {
     const selection = getTrendEmailSelection();
     if (!selection) return;
     const { employeeName, weekKey, nickname } = selection;
 
-    if (employeeName && nickname) {
-        saveNickname(employeeName, nickname);
-    }
-
     const trendContext = resolveTrendEmailContext(employeeName, weekKey);
     if (!trendContext) return;
     const { period, periodMeta, employee, prevEmployee } = trendContext;
 
-    const displayName = nickname || employeeName;
+    const displayName = getTrendEmailDisplayName(employeeName, nickname);
     showToast('ℹ️ Creating email image...', 3000);
 
     const {
