@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.55'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.56'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11151,60 +11151,84 @@ function getCallListeningDraftFromForm() {
     };
 }
 
-function upsertCallListeningEntryFromForm(showSavedToast = false) {
-    getCallListeningSyncConfigFromUI();
-    const draft = getCallListeningDraftFromForm();
+function validateCallListeningDraft(draft) {
     if (!draft.employeeName) {
         alert('⚠️ Please select an associate first.');
-        return null;
+        return false;
     }
     if (!draft.listenedOn) {
         alert('⚠️ Please select a call date.');
-        return null;
+        return false;
     }
     if (!draft.whatWentWell && !draft.improvementAreas) {
         alert('⚠️ Add at least one note in what went well or improvement areas.');
+        return false;
+    }
+    return true;
+}
+
+function getLatestCallListeningEntry(employeeName) {
+    const existing = Array.isArray(callListeningLogs[employeeName]) ? callListeningLogs[employeeName] : [];
+    return existing[existing.length - 1] || null;
+}
+
+function isSameCallListeningDraftAsEntry(draft, existingEntry) {
+    if (!existingEntry) return false;
+    return existingEntry.listenedOn === draft.listenedOn
+        && (existingEntry.callReference || '') === draft.callReference
+        && (existingEntry.whatWentWell || '') === draft.whatWentWell
+        && (existingEntry.improvementAreas || '') === draft.improvementAreas
+        && (existingEntry.oscarUrl || '') === draft.oscarUrl
+        && (existingEntry.relevantInfo || '') === draft.relevantInfo
+        && (existingEntry.managerNotes || '') === draft.managerNotes;
+}
+
+function createCallListeningEntry(draft) {
+    return {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        ...draft,
+        createdAt: new Date().toISOString()
+    };
+}
+
+function appendCallListeningEntry(employeeName, entry) {
+    if (!callListeningLogs[employeeName]) {
+        callListeningLogs[employeeName] = [];
+    }
+    callListeningLogs[employeeName].push(entry);
+    if (callListeningLogs[employeeName].length > 500) {
+        callListeningLogs[employeeName] = callListeningLogs[employeeName].slice(-500);
+    }
+}
+
+function updateCallListeningStatus(employeeName, listenedOn) {
+    const status = document.getElementById('callListeningStatus');
+    if (!status) return;
+    status.textContent = `Saved call listening log for ${employeeName} (${listenedOn}).`;
+    status.style.display = 'block';
+}
+
+function upsertCallListeningEntryFromForm(showSavedToast = false) {
+    getCallListeningSyncConfigFromUI();
+    const draft = getCallListeningDraftFromForm();
+    if (!validateCallListeningDraft(draft)) {
         return null;
     }
 
-    const existing = Array.isArray(callListeningLogs[draft.employeeName]) ? callListeningLogs[draft.employeeName] : [];
-    const latest = existing[existing.length - 1] || null;
-    const isSameAsLatest = latest
-        && latest.listenedOn === draft.listenedOn
-        && (latest.callReference || '') === draft.callReference
-        && (latest.whatWentWell || '') === draft.whatWentWell
-        && (latest.improvementAreas || '') === draft.improvementAreas
-        && (latest.oscarUrl || '') === draft.oscarUrl
-        && (latest.relevantInfo || '') === draft.relevantInfo
-        && (latest.managerNotes || '') === draft.managerNotes;
+    const latest = getLatestCallListeningEntry(draft.employeeName);
+    const isSameAsLatest = isSameCallListeningDraftAsEntry(draft, latest);
 
     if (isSameAsLatest) {
         if (showSavedToast) showToast('✅ Call log already saved.', 2500);
         return latest;
     }
 
-    const entry = {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        ...draft,
-        createdAt: new Date().toISOString()
-    };
-
-    if (!callListeningLogs[draft.employeeName]) {
-        callListeningLogs[draft.employeeName] = [];
-    }
-    callListeningLogs[draft.employeeName].push(entry);
-    if (callListeningLogs[draft.employeeName].length > 500) {
-        callListeningLogs[draft.employeeName] = callListeningLogs[draft.employeeName].slice(-500);
-    }
+    const entry = createCallListeningEntry(draft);
+    appendCallListeningEntry(draft.employeeName, entry);
 
     saveCallListeningLogs();
     renderCallListeningHistoryForSelectedEmployee();
-
-    const status = document.getElementById('callListeningStatus');
-    if (status) {
-        status.textContent = `Saved call listening log for ${draft.employeeName} (${draft.listenedOn}).`;
-        status.style.display = 'block';
-    }
+    updateCallListeningStatus(draft.employeeName, draft.listenedOn);
 
     if (showSavedToast) showToast('✅ Call listening log saved.', 2500);
     return entry;
