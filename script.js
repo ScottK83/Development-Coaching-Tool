@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.123'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.124'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2335,103 +2335,19 @@ function initializeEventHandlers() {
     
     // Period type buttons
     document.querySelectorAll('.period-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Update button styles
-            document.querySelectorAll('.period-type-btn').forEach(b => {
-                b.style.background = 'white';
-                b.style.color = '#666';
-                b.style.borderColor = '#ddd';
-            });
-            btn.style.background = '#2196F3';
-            btn.style.color = 'white';
-            btn.style.borderColor = '#2196F3';
-            
-            currentPeriodType = btn.dataset.period;
-            updatePeriodDropdown();
-            
-            // Auto-select the first (most recent) period
-            const periodDropdown = document.getElementById('specificPeriod');
-            if (periodDropdown && periodDropdown.options.length > 1) {
-                periodDropdown.selectedIndex = 1; // Select first real option (skip "-- Choose --")
-                currentPeriod = periodDropdown.value;
-                updateEmployeeDropdown();
-            }
-        });
+        btn.addEventListener('click', () => handlePeriodTypeButtonClick(btn));
     });
     
     // Period selection
-    document.getElementById('specificPeriod')?.addEventListener('change', (e) => {
-        currentPeriod = e.target.value;
-        if (currentPeriod) {
-            updateEmployeeDropdown();
-        }
-    });
+    document.getElementById('specificPeriod')?.addEventListener('change', handleSpecificPeriodChange);
     
     // Employee selection
-    document.getElementById('employeeSelect')?.addEventListener('change', (e) => {
-        const selectedName = e.target.value;
-        
-        // Save as smart default
-        if (selectedName) {
-            saveSmartDefault('lastEmployee', selectedName);
-        }
-        
-        if (!selectedName) {
-            ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
-            });
-            return;
-        }
-        
-        const employee = getEmployeeDataForPeriod(selectedName);
-        
-        if (!employee) {
-            alert('ℹ️ Error loading employee data');
-            return;
-        }
-        
-        // Show sections
-        ['employeeInfoSection', 'metricsSection', 'aiAssistSection', 'customNotesSection'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'block';
-        });
-        
-        // Hide old generate button if it exists
-        const oldGenerateBtn = document.getElementById('generateEmailBtn');
-        if (oldGenerateBtn) oldGenerateBtn.style.display = 'none';
-        
-        // Populate fields
-        const savedNickname = getSavedNickname(selectedName);
-        const defaultNickname = getEmployeeNickname(selectedName) || employee.firstName || '';
-        document.getElementById('employeeName').value = savedNickname || defaultNickname;
-        populateMetricInputs(employee);
-        
-        // Update survey status message
-        const surveyStatusEl = document.getElementById('surveyStatusMsg');
-        if (surveyStatusEl) {
-            const hasSurveys = (employee.surveyTotal || 0) > 0;
-            surveyStatusEl.textContent = hasSurveys ? '' : 'No surveys in this period; survey-based metrics are omitted.';
-        }
-        
-        // Scroll to form
-        document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    document.getElementById('employeeSelect')?.addEventListener('change', handleEmployeeSelectChange);
     
     // Note: nickname saves on generate actions, not on blur
     
     // Employee search
-    document.getElementById('employeeSearch')?.addEventListener('input', (e) => {
-        const searchText = e.target.value.toLowerCase();
-        const dropdown = document.getElementById('employeeSelect');
-        const options = dropdown.options;
-        
-        for (let i = 1; i < options.length; i++) {
-            const option = options[i];
-            const text = option.textContent.toLowerCase();
-            option.style.display = text.includes(searchText) ? '' : 'none';
-        }
-    });
+    document.getElementById('employeeSearch')?.addEventListener('input', handleEmployeeSearchInput);
     
     // Generate email button
     // Generate Copilot Prompt Button
@@ -2494,65 +2410,14 @@ function initializeEventHandlers() {
     document.getElementById('dataFileInput')?.addEventListener('change', handleDataFileInputChange);
 
     // Delete selected week
-    document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
-        
-        const weekSelect = document.getElementById('deleteWeekSelect');
-        const selectedWeek = weekSelect.value;
-        
-        if (!selectedWeek) {
-            alert('⚠️ Please select a week to delete');
-            return;
-        }
-        
-        const weekLabel = weekSelect.options[weekSelect.selectedIndex].text;
-        
-        if (!confirm(`Are you sure you want to delete data for:\n\n${weekLabel}\n\nThis action cannot be undone.`)) {
-            return;
-        }
-        
-        
-        delete weeklyData[selectedWeek];
-        delete myTeamMembers[selectedWeek];
-        saveWeeklyData();
-        normalizeTeamMembersForExistingWeeks();
-        saveTeamMembers();
-        
-        populateDeleteWeekDropdown();
-        populateDeleteSentimentDropdown();
-        populateDeleteEmployeeYearOptions();
-        populateTeamMemberSelector();
-        renderEmployeesList();
-        showToast('✅ Week deleted successfully');
-        
-        // Clear coaching form if needed (safely check if elements exist)
-        const employeeSelect = document.getElementById('employeeSelect');
-        if (employeeSelect) employeeSelect.value = '';
-        
-        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-    });
+    document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', handleDeleteSelectedWeekClick);
     
     // Select/Deselect all team members
-    document.getElementById('selectAllTeamBtn')?.addEventListener('click', () => {
-        document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        updateTeamSelection();
-    });
-    
-    document.getElementById('deselectAllTeamBtn')?.addEventListener('click', () => {
-        document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        updateTeamSelection();
-    });
+    document.getElementById('selectAllTeamBtn')?.addEventListener('click', handleSelectAllTeamClick);
+    document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
     
     // Update team selector when week selection changes
-    document.getElementById('deleteWeekSelect')?.addEventListener('change', () => {
-        populateTeamMemberSelector();
-    });
+    document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
     
     // Populate and handle sentiment data deletion
     populateDeleteSentimentDropdown();
@@ -2580,43 +2445,7 @@ function initializeEventHandlers() {
         deleteEmployeeDataByYear(employeeName, reviewYear);
     });
     
-    document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', () => {
-        
-        const sentimentSelect = document.getElementById('deleteSentimentSelect');
-        const selectedKey = sentimentSelect.value;
-        
-        if (!selectedKey) {
-            alert('⚠️ Please select sentiment data to delete');
-            return;
-        }
-        
-        const sentimentLabel = sentimentSelect.options[sentimentSelect.selectedIndex].text;
-        
-        if (!confirm(`Are you sure you want to delete:\n\n${sentimentLabel}\n\nThis action cannot be undone.`)) {
-            return;
-        }
-        
-        // Parse the selected key (format: "employeeId|timeframeStart to timeframeEnd")
-        const pipeIndex = selectedKey.indexOf('|');
-        const employeeId = selectedKey.substring(0, pipeIndex);
-        const timeframe = selectedKey.substring(pipeIndex + 1);
-        
-        if (associateSentimentSnapshots[employeeId]) {
-            // Remove the specific sentiment snapshot by comparing reconstructed timeframe
-            associateSentimentSnapshots[employeeId] = associateSentimentSnapshots[employeeId].filter(
-                snapshot => `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}` !== timeframe
-            );
-            
-            // If no more snapshots for this employee, remove the employee entry
-            if (associateSentimentSnapshots[employeeId].length === 0) {
-                delete associateSentimentSnapshots[employeeId];
-            }
-            
-            saveAssociateSentimentSnapshots();
-            populateDeleteSentimentDropdown();
-            showToast('✅ Sentiment data deleted successfully');
-        }
-    });
+    document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', handleDeleteSelectedSentimentClick);
     
     // Delete all data
 
@@ -2905,6 +2734,177 @@ function handleDeleteAllDataClick() {
     });
 
     alert('✅ All data has been deleted (including call center averages and history)');
+}
+
+function handlePeriodTypeButtonClick(button) {
+    document.querySelectorAll('.period-type-btn').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#666';
+        btn.style.borderColor = '#ddd';
+    });
+    button.style.background = '#2196F3';
+    button.style.color = 'white';
+    button.style.borderColor = '#2196F3';
+
+    currentPeriodType = button.dataset.period;
+    updatePeriodDropdown();
+
+    const periodDropdown = document.getElementById('specificPeriod');
+    if (periodDropdown && periodDropdown.options.length > 1) {
+        periodDropdown.selectedIndex = 1;
+        currentPeriod = periodDropdown.value;
+        updateEmployeeDropdown();
+    }
+}
+
+function handleSpecificPeriodChange(event) {
+    currentPeriod = event.target.value;
+    if (currentPeriod) {
+        updateEmployeeDropdown();
+    }
+}
+
+function handleEmployeeSelectChange(event) {
+    const selectedName = event.target.value;
+
+    if (selectedName) {
+        saveSmartDefault('lastEmployee', selectedName);
+    }
+
+    if (!selectedName) {
+        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+        return;
+    }
+
+    const employee = getEmployeeDataForPeriod(selectedName);
+    if (!employee) {
+        alert('ℹ️ Error loading employee data');
+        return;
+    }
+
+    ['employeeInfoSection', 'metricsSection', 'aiAssistSection', 'customNotesSection'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'block';
+    });
+
+    const oldGenerateBtn = document.getElementById('generateEmailBtn');
+    if (oldGenerateBtn) oldGenerateBtn.style.display = 'none';
+
+    const savedNickname = getSavedNickname(selectedName);
+    const defaultNickname = getEmployeeNickname(selectedName) || employee.firstName || '';
+    document.getElementById('employeeName').value = savedNickname || defaultNickname;
+    populateMetricInputs(employee);
+
+    const surveyStatusEl = document.getElementById('surveyStatusMsg');
+    if (surveyStatusEl) {
+        const hasSurveys = (employee.surveyTotal || 0) > 0;
+        surveyStatusEl.textContent = hasSurveys ? '' : 'No surveys in this period; survey-based metrics are omitted.';
+    }
+
+    document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function handleEmployeeSearchInput(event) {
+    const searchText = event.target.value.toLowerCase();
+    const dropdown = document.getElementById('employeeSelect');
+    if (!dropdown) return;
+
+    const options = dropdown.options;
+    for (let index = 1; index < options.length; index += 1) {
+        const option = options[index];
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(searchText) ? '' : 'none';
+    }
+}
+
+function handleDeleteSelectedWeekClick() {
+    const weekSelect = document.getElementById('deleteWeekSelect');
+    const selectedWeek = weekSelect.value;
+
+    if (!selectedWeek) {
+        alert('⚠️ Please select a week to delete');
+        return;
+    }
+
+    const weekLabel = weekSelect.options[weekSelect.selectedIndex].text;
+    if (!confirm(`Are you sure you want to delete data for:\n\n${weekLabel}\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    delete weeklyData[selectedWeek];
+    delete myTeamMembers[selectedWeek];
+    saveWeeklyData();
+    normalizeTeamMembersForExistingWeeks();
+    saveTeamMembers();
+
+    populateDeleteWeekDropdown();
+    populateDeleteSentimentDropdown();
+    populateDeleteEmployeeYearOptions();
+    populateTeamMemberSelector();
+    renderEmployeesList();
+    showToast('✅ Week deleted successfully');
+
+    const employeeSelect = document.getElementById('employeeSelect');
+    if (employeeSelect) employeeSelect.value = '';
+
+    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+}
+
+function handleSelectAllTeamClick() {
+    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateTeamSelection();
+}
+
+function handleDeselectAllTeamClick() {
+    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateTeamSelection();
+}
+
+function handleDeleteWeekSelectChange() {
+    populateTeamMemberSelector();
+}
+
+function handleDeleteSelectedSentimentClick() {
+    const sentimentSelect = document.getElementById('deleteSentimentSelect');
+    const selectedKey = sentimentSelect.value;
+
+    if (!selectedKey) {
+        alert('⚠️ Please select sentiment data to delete');
+        return;
+    }
+
+    const sentimentLabel = sentimentSelect.options[sentimentSelect.selectedIndex].text;
+    if (!confirm(`Are you sure you want to delete:\n\n${sentimentLabel}\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    const pipeIndex = selectedKey.indexOf('|');
+    const employeeId = selectedKey.substring(0, pipeIndex);
+    const timeframe = selectedKey.substring(pipeIndex + 1);
+
+    if (associateSentimentSnapshots[employeeId]) {
+        associateSentimentSnapshots[employeeId] = associateSentimentSnapshots[employeeId].filter(
+            snapshot => `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}` !== timeframe
+        );
+
+        if (associateSentimentSnapshots[employeeId].length === 0) {
+            delete associateSentimentSnapshots[employeeId];
+        }
+
+        saveAssociateSentimentSnapshots();
+        populateDeleteSentimentDropdown();
+        showToast('✅ Sentiment data deleted successfully');
+    }
 }
 
 function loadYearEndAnnualGoalsStore() {
