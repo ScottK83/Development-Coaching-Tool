@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.57'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.58'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11419,29 +11419,13 @@ function generateCallListeningOutlookEmail() {
     }
 }
 
-function renderCallListeningHistoryForSelectedEmployee() {
-    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
-    const summary = document.getElementById('callListeningHistorySummary');
-    const list = document.getElementById('callListeningHistoryList');
-    if (!summary || !list) return;
+function buildCallListeningHistorySummaryText(employeeName, entryCount) {
+    return `${entryCount} saved call listening log${entryCount === 1 ? '' : 's'} for ${employeeName}.`;
+}
 
-    if (!employeeName) {
-        summary.textContent = 'Select an associate to view call listening history.';
-        list.innerHTML = '';
-        return;
-    }
-
-    const entries = getCallListeningEntriesForEmployee(employeeName);
-    summary.textContent = `${entries.length} saved call listening log${entries.length === 1 ? '' : 's'} for ${employeeName}.`;
-
-    if (!entries.length) {
-        list.innerHTML = '<li>No call listening logs saved yet for this associate.</li>';
-        return;
-    }
-
-    list.innerHTML = entries.slice(0, 50).map(entry => {
-        const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
-        return `<li style="margin-bottom: 14px; line-height: 1.35;">
+function buildCallListeningHistoryItemHtml(entry) {
+    const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
+    return `<li style="margin-bottom: 14px; line-height: 1.35;">
             <div style="font-weight: bold; color: #37474f;">${escapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${escapeHtml(entry.callReference)}` : ''}</div>
             <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${escapeHtml(entry.whatWentWell || 'N/A')}</div>
             <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${escapeHtml(entry.improvementAreas || 'N/A')}</div>
@@ -11452,7 +11436,45 @@ function renderCallListeningHistoryForSelectedEmployee() {
                 <button type="button" data-call-action="delete" data-entry-id="${escapeHtml(entry.id)}" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Delete</button>
             </div>
         </li>`;
-    }).join('');
+}
+
+function resolveCallListeningHistoryContext() {
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const summary = document.getElementById('callListeningHistorySummary');
+    const list = document.getElementById('callListeningHistoryList');
+    return { employeeName, summary, list };
+}
+
+function dispatchCallListeningHistoryAction(action, entryId) {
+    if (!entryId) return;
+    if (action === 'load') {
+        loadCallListeningEntryIntoForm(entryId);
+    } else if (action === 'copy-verint') {
+        copyCallListeningVerintSummary(entryId);
+    } else if (action === 'delete') {
+        deleteCallListeningEntryById(entryId);
+    }
+}
+
+function renderCallListeningHistoryForSelectedEmployee() {
+    const { employeeName, summary, list } = resolveCallListeningHistoryContext();
+    if (!summary || !list) return;
+
+    if (!employeeName) {
+        summary.textContent = 'Select an associate to view call listening history.';
+        list.innerHTML = '';
+        return;
+    }
+
+    const entries = getCallListeningEntriesForEmployee(employeeName);
+    summary.textContent = buildCallListeningHistorySummaryText(employeeName, entries.length);
+
+    if (!entries.length) {
+        list.innerHTML = '<li>No call listening logs saved yet for this associate.</li>';
+        return;
+    }
+
+    list.innerHTML = entries.slice(0, 50).map(buildCallListeningHistoryItemHtml).join('');
 }
 
 function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {
@@ -11496,14 +11518,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
         if (!button) return;
         const action = button.getAttribute('data-call-action');
         const entryId = button.getAttribute('data-entry-id');
-        if (!entryId) return;
-        if (action === 'load') {
-            loadCallListeningEntryIntoForm(entryId);
-        } else if (action === 'copy-verint') {
-            copyCallListeningVerintSummary(entryId);
-        } else if (action === 'delete') {
-            deleteCallListeningEntryById(entryId);
-        }
+        dispatchCallListeningHistoryAction(action, entryId);
     });
 }
 
