@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.05'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.06'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5582,9 +5582,13 @@ function handleTrendEmailImageReady(
     }
 }
 
+function getReviewYearFromEndDate(endDate) {
+    return parseInt(String(endDate || '').split('-')[0], 10) || null;
+}
+
 function buildTrendEmailAnalysisBundle(employee, weekKey, period) {
     const centerAverages = getCallCenterAverageForPeriod(weekKey) || {};
-    const reviewYear = parseInt((period?.metadata?.endDate || '').split('-')[0], 10) || null;
+    const reviewYear = getReviewYearFromEndDate(period?.metadata?.endDate);
     const trendAnalysis = analyzeTrendMetrics(employee, centerAverages, reviewYear);
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
@@ -6274,7 +6278,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     
     // Extract metadata early (needed for survey total calculation)
     const metadata = period?.metadata || {};
-    const reviewYear = parseInt((metadata.endDate || '').split('-')[0], 10) || null;
+    const reviewYear = getReviewYearFromEndDate(metadata.endDate);
 
     // SINGLE LOAD - Use for all calculations
     const metricOrder = getMetricOrder();
