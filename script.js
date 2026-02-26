@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.22'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.23'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13565,6 +13565,20 @@ function generateSentimentSummary() {
     showToast('✅ Summary generated successfully', 2000);
 }
 
+function parseSentimentReportDate(line, label) {
+    if (!line || !line.toLowerCase().includes(`${label} date`)) {
+        return '';
+    }
+
+    const dateMatch = line.match(new RegExp(`${label}\\s+date[:\\s,]*"?([0-9]{1,2}[/\\-][0-9]{1,2}[/\\-][0-9]{2,4})`, 'i'));
+    if (dateMatch) {
+        return dateMatch[1].trim();
+    }
+
+    console.warn(`⚠️ Found "${label} date" line but couldn't parse: "${line}"`);
+    return '';
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13597,31 +13611,19 @@ function parseSentimentFile(fileType, lines) {
             }
         }
         
-        // Extract start date - handle multiple formats including Excel CSV with quotes/commas
         if (!report.startDate) {
-            if (line.toLowerCase().includes('start date')) {
-                // Handle: "Start date:,"1/25/2026, 12:00 AM",," or "Start date: 1/25/2026"
-                const startMatch = line.match(/start\s+date[:\s,]*"?([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
-                if (startMatch) {
-                    report.startDate = startMatch[1].trim();
-                    console.log(`✅ Found start date: ${report.startDate}`);
-                } else {
-                    console.warn(`⚠️ Found "start date" line but couldn't parse: "${line}"`);
-                }
+            const startDate = parseSentimentReportDate(line, 'start');
+            if (startDate) {
+                report.startDate = startDate;
+                console.log(`✅ Found start date: ${report.startDate}`);
             }
         }
-        
-        // Extract end date - handle multiple formats including Excel CSV with quotes/commas
+
         if (!report.endDate) {
-            if (line.toLowerCase().includes('end date')) {
-                // Handle: "End date:,"1/31/2026, 11:59 PM",," or "End date: 1/31/2026"
-                const endMatch = line.match(/end\s+date[:\s,]*"?([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{2,4})/i);
-                if (endMatch) {
-                    report.endDate = endMatch[1].trim();
-                    console.log(`✅ Found end date: ${report.endDate}`);
-                } else {
-                    console.warn(`⚠️ Found "end date" line but couldn't parse: "${line}"`);
-                }
+            const endDate = parseSentimentReportDate(line, 'end');
+            if (endDate) {
+                report.endDate = endDate;
+                console.log(`✅ Found end date: ${report.endDate}`);
             }
         }
         
