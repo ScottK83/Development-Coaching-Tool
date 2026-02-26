@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.46'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.47'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10095,6 +10095,114 @@ function generateVerintSummary() {
     }
 }
 
+function collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel) {
+    const warnings = [];
+    const rationale = [];
+
+    if (thirdEmp) {
+        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
+            const a = currentEmp[metricKey];
+            const b = prevEmp[metricKey];
+            const c = thirdEmp[metricKey];
+            if (a === undefined || b === undefined || c === undefined) return;
+            const worse1 = metricDelta(metricKey, a, b) < 0;
+            const worse2 = metricDelta(metricKey, b, c) < 0;
+            if (!worse1 || !worse2) return;
+
+            const metricLabel = METRICS_REGISTRY[metricKey]?.label || metricKey;
+            warnings.push(`📉 3-${periodLabel} decline in ${metricLabel}. This needs immediate attention.`);
+            rationale.push(`${metricLabel}: negative deltas in two consecutive ${periodLabel}-to-${periodLabel} comparisons.`);
+        });
+    }
+
+    ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].forEach(metricKey => {
+        const current = currentEmp[metricKey];
+        const prev = prevEmp[metricKey];
+        if (current === undefined || prev === undefined) return;
+
+        const delta = metricDelta(metricKey, current, prev);
+        const thresholdData = getTrendDeltaThreshold(metricKey);
+        if (delta >= -thresholdData.value) return;
+
+        const metricLabel = METRICS_REGISTRY[metricKey]?.label || metricKey;
+        warnings.push(`⚠️ Sudden ${periodLabel}-over-${periodLabel} drop in ${metricLabel} (${delta.toFixed(1)}${thresholdData.unit}). Needs supportive conversation.`);
+        rationale.push(`${metricLabel}: delta ${delta.toFixed(1)}${thresholdData.unit} crossed alert threshold (-${thresholdData.value}${thresholdData.unit}).`);
+    });
+
+    return { warnings, rationale };
+}
+
+function collectIndividualTrendWinsAndRationale(employeeName, currentEmp, prevEmp, periodLabel) {
+    const wins = [];
+    const rationale = [];
+
+    const meetsAllTargets = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+        metricMeetsTarget(metricKey, currentEmp[metricKey])
+    );
+
+    if (meetsAllTargets) {
+        wins.push(`✅ ${employeeName} is meeting all key targets. Consider recognition!`);
+        rationale.push('Target consistency rule: all core target metrics are currently at or above goal.');
+    }
+
+    ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].forEach(metricKey => {
+        const current = currentEmp[metricKey];
+        const prev = prevEmp[metricKey];
+        if (current === undefined || prev === undefined) return;
+
+        const delta = metricDelta(metricKey, current, prev);
+        if (delta <= 5) return;
+
+        const metricLabel = METRICS_REGISTRY[metricKey]?.label || metricKey;
+        wins.push(`🎉 Strong ${periodLabel}-over-${periodLabel} improvement in ${metricLabel} (+${delta.toFixed(1)})`);
+        rationale.push(`${metricLabel}: improvement delta ${delta.toFixed(1)} exceeded +5 threshold.`);
+    });
+
+    return { wins, rationale };
+}
+
+function buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp) {
+    return `
+<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName} (${descriptor.shortLabel})</h5>
+<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">
+<strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}
+</div>`;
+}
+
+function buildIndividualTrendItemsSectionHtml(title, titleColor, itemBorderColor, itemBgColor, items) {
+    if (!items.length) return '';
+    let html = `<div style="margin-bottom: 15px;">`;
+    html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
+    items.forEach(item => {
+        html += `<div style="padding: 10px; border-left: 3px solid ${itemBorderColor}; background: ${itemBgColor}; margin-bottom: 6px; border-radius: 4px;">${item}</div>`;
+    });
+    html += `</div>`;
+    return html;
+}
+
+function buildIndividualTrendCoachingImpactHtml(coachingImpact) {
+    if (!coachingImpact) return '';
+
+    const impactColor = coachingImpact.status === 'positive' ? '#2e7d32' : coachingImpact.status === 'negative' ? '#c62828' : '#ef6c00';
+    const impactBg = coachingImpact.status === 'positive' ? '#e8f5e9' : coachingImpact.status === 'negative' ? '#ffebee' : '#fff3e0';
+    const impactLabel = coachingImpact.status === 'positive' ? 'Coaching approach is working' : coachingImpact.status === 'negative' ? 'Coaching approach may need adjustment' : 'Mixed coaching impact';
+
+    let html = `<div style="margin-bottom: 15px;">`;
+    html += `<div style="font-weight: 600; color: ${impactColor}; margin-bottom: 8px;">📌 Coaching Impact Score</div>`;
+    html += `<div style="padding: 10px; border-left: 3px solid ${impactColor}; background: ${impactBg}; margin-bottom: 6px; border-radius: 4px;">`;
+    html += `<strong>${coachingImpact.score}/100</strong> • ${impactLabel} (based on ${coachingImpact.metricCount} coached metrics since ${new Date(coachingImpact.generatedAt).toLocaleDateString()})`;
+    if (coachingImpact.details.length) {
+        html += `<div style="margin-top: 6px;">${coachingImpact.details.join(' • ')}</div>`;
+    }
+    html += `</div></div>`;
+    return html;
+}
+
+function buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins) {
+    if (warnings.length > 0 || wins.length > 0) return '';
+    return `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;"><p style="margin: 0;">📊 No significant trends detected this period. ${employeeName} is performing steadily.</p></div>`;
+}
+
 function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow') {
     const buckets = getTrendComparisonBuckets(keys, periodType);
     const periodLabel = buckets.descriptor.compareLabel;
@@ -10112,109 +10220,20 @@ function renderIndividualTrendAnalysis(container, employeeName, keys, periodType
         return;
     }
 
-    const warnings = [];
-    const wins = [];
-    const rationale = [];
-
-    // Check for 3-period decline if we have enough data
-    if (thirdEmp) {
-        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
-            const a = currentEmp[metricKey];
-            const b = prevEmp[metricKey];
-            const c = thirdEmp[metricKey];
-            if (a === undefined || b === undefined || c === undefined) return;
-            const worse1 = metricDelta(metricKey, a, b) < 0;
-            const worse2 = metricDelta(metricKey, b, c) < 0;
-            if (worse1 && worse2) {
-                warnings.push(`📉 3-${periodLabel} decline in ${METRICS_REGISTRY[metricKey]?.label || metricKey}. This needs immediate attention.`);
-                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: negative deltas in two consecutive ${periodLabel}-to-${periodLabel} comparisons.`);
-            }
-        });
-    }
-
-    // Check for sudden drops based on selected period
-    if (prevEmp) {
-        ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence', 'aht', 'holdTime', 'transfers'].forEach(metricKey => {
-            const current = currentEmp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || prev === undefined) return;
-            const delta = metricDelta(metricKey, current, prev);
-            const thresholdData = getTrendDeltaThreshold(metricKey);
-            const unit = thresholdData.unit;
-            const threshold = thresholdData.value;
-            if (delta < -threshold) {
-                warnings.push(`⚠️ Sudden ${periodLabel}-over-${periodLabel} drop in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (${delta.toFixed(1)}${unit}). Needs supportive conversation.`);
-                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: delta ${delta.toFixed(1)}${unit} crossed alert threshold (-${threshold}${unit}).`);
-            }
-        });
-    }
-
-    // Check for consistency and wins
-    const meetsAllTargets = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
-        metricMeetsTarget(metricKey, currentEmp[metricKey])
-    );
-    
-    if (meetsAllTargets) {
-        wins.push(`✅ ${employeeName} is meeting all key targets. Consider recognition!`);
-        rationale.push('Target consistency rule: all core target metrics are currently at or above goal.');
-    }
-
-    // Check for improvement trends
-    if (prevEmp) {
-        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].forEach(metricKey => {
-            const current = currentEmp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || prev === undefined) return;
-            const delta = metricDelta(metricKey, current, prev);
-            if (delta > 5) {
-                wins.push(`🎉 Strong ${periodLabel}-over-${periodLabel} improvement in ${METRICS_REGISTRY[metricKey]?.label || metricKey} (+${delta.toFixed(1)})`);
-                rationale.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey}: improvement delta ${delta.toFixed(1)} exceeded +5 threshold.`);
-            }
-        });
-
-    }
+    const warningInsights = collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel);
+    const winInsights = collectIndividualTrendWinsAndRationale(employeeName, currentEmp, prevEmp, periodLabel);
+    const warnings = warningInsights.warnings;
+    const wins = winInsights.wins;
+    const rationale = [...warningInsights.rationale, ...winInsights.rationale];
 
     const coachingImpact = calculateCoachingImpact(employeeName, currentEmp);
 
     // Build output
     let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
-    html += `<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName} (${buckets.descriptor.shortLabel})</h5>`;
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
-    html += `<strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}`;
-    html += `</div>`;
-    
-    if (warnings.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #e53935; margin-bottom: 8px;">🚨 Attention Needed:</div>`;
-        warnings.forEach(w => {
-            html += `<div style="padding: 10px; border-left: 3px solid #e53935; background: #ffebee; margin-bottom: 6px; border-radius: 4px;">${w}</div>`;
-        });
-        html += `</div>`;
-    }
-
-    if (wins.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #43a047; margin-bottom: 8px;">✨ Wins & Strengths:</div>`;
-        wins.forEach(w => {
-            html += `<div style="padding: 10px; border-left: 3px solid #43a047; background: #e8f5e9; margin-bottom: 6px; border-radius: 4px;">${w}</div>`;
-        });
-        html += `</div>`;
-    }
-
-    if (coachingImpact) {
-        const impactColor = coachingImpact.status === 'positive' ? '#2e7d32' : coachingImpact.status === 'negative' ? '#c62828' : '#ef6c00';
-        const impactBg = coachingImpact.status === 'positive' ? '#e8f5e9' : coachingImpact.status === 'negative' ? '#ffebee' : '#fff3e0';
-        const impactLabel = coachingImpact.status === 'positive' ? 'Coaching approach is working' : coachingImpact.status === 'negative' ? 'Coaching approach may need adjustment' : 'Mixed coaching impact';
-
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: ${impactColor}; margin-bottom: 8px;">📌 Coaching Impact Score</div>`;
-        html += `<div style="padding: 10px; border-left: 3px solid ${impactColor}; background: ${impactBg}; margin-bottom: 6px; border-radius: 4px;">`;
-        html += `<strong>${coachingImpact.score}/100</strong> • ${impactLabel} (based on ${coachingImpact.metricCount} coached metrics since ${new Date(coachingImpact.generatedAt).toLocaleDateString()})`;
-        if (coachingImpact.details.length) {
-            html += `<div style="margin-top: 6px;">${coachingImpact.details.join(' • ')}</div>`;
-        }
-        html += `</div></div>`;
-    }
+    html += buildIndividualTrendHeaderHtml(employeeName, buckets.descriptor, currentEmp, prevEmp, thirdEmp);
+    html += buildIndividualTrendItemsSectionHtml('🚨 Attention Needed:', '#e53935', '#e53935', '#ffebee', warnings);
+    html += buildIndividualTrendItemsSectionHtml('✨ Wins & Strengths:', '#43a047', '#43a047', '#e8f5e9', wins);
+    html += buildIndividualTrendCoachingImpactHtml(coachingImpact);
 
     if (rationale.length > 0) {
         html += `<div style="margin-bottom: 15px;">`;
@@ -10225,11 +10244,7 @@ function renderIndividualTrendAnalysis(container, employeeName, keys, periodType
         html += `</div>`;
     }
 
-    if (warnings.length === 0 && wins.length === 0) {
-        html += `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;">`;
-        html += `<p style="margin: 0;">📊 No significant trends detected this period. ${employeeName} is performing steadily.</p>`;
-        html += `</div>`;
-    }
+    html += buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins);
 
     html += `<div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #ff9800;">`;
     html += `<strong>💡 Next Step:</strong> Click "Generate Individual Coaching Email" to create a personalized development email with specific tips and action items.`;
