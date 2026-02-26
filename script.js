@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.125'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.126'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6209,97 +6209,21 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const ytdEmployee = ytdPeriod?.employees?.find(e => e.name === current.name) || null;
     const ytdAvailable = !!ytdEmployee;
 
-    // Extract survey total for survey metrics
-    // WEEK views: surveyTotal = current week only, ytdSurveyTotal = SUM of all weeks YTD
-    // MONTH/YTD views: surveyTotal = aggregated for period, ytdSurveyTotal = SUM of all weeks YTD
-    let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
-    let ytdSurveyTotal = 0;
-    
-    // Calculate YTD survey total by SUMMING all weeks in the year (not using most recent value)
-    const currentEndDate = metadata.endDate || ''; // Format: YYYY-MM-DD
-    const currentYear = currentEndDate.substring(0, 4); // Extract YYYY
-    
-    if (DEBUG) {
-        console.log(`=== YTD SURVEY LOOKUP (${current.name}) for ${metadata.periodType} ===`);
-        console.log(`Current period: ${currentEndDate}, year: ${currentYear}`);
-    }
-    
-    // SUM all weekly survey totals from this year up to the current period
-    // Each week's surveyTotal is just that week's count, not cumulative
-    let aggregatedYtdSurveys = 0;
-    
-    for (const wk in weeklyData) {
-        const weekMeta = weeklyData[wk]?.metadata || {};
-        const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
-        const weekYear = weekEndDate.substring(0, 4);
-        const weekPeriodType = weekMeta.periodType || 'week';
-        
-        // Sum WEEKLY records from same calendar year that end on or before current period
-        if (weekPeriodType === 'week' && weekYear === currentYear && weekEndDate <= currentEndDate) {
-            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
-            if (weekEmp && weekEmp.surveyTotal) {
-                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
-                aggregatedYtdSurveys += weekSurvey;
-                if (DEBUG) console.log(`  Adding ${wk}: +${weekSurvey} surveys (running total: ${aggregatedYtdSurveys})`);
-            }
-        }
-    }
-    
-    ytdSurveyTotal = aggregatedYtdSurveys;
-    
-    // For MONTH/YTD views: also update surveyTotal to show aggregated value for the period
-    if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
-        surveyTotal = ytdSurveyTotal;
-        if (DEBUG) console.log(`${metadata.periodType} aggregated surveys: ${surveyTotal}`);
-    }
-    // For WEEK views: surveyTotal stays as current week's count
-    
-    if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
+    // Extract survey totals for survey metrics
+    const { surveyTotal, ytdSurveyTotal } = calculateTrendSurveyTotals(current, metadata);
 
     
     
     // SUMMARY STATISTICS (used by both canvas and HTML)
-    // When no surveys exist, exclude the 3 survey metrics from the denominator
-    const surveyMetricKeys = ['cxRepOverall', 'fcr', 'overallExperience'];
     const hasSurveys = surveyTotal > 0;
-    
-    let meetingGoals = 0;
-    let improved = 0;
-    let beatingCenter = 0;
-    let measuredMetricCount = 0;
-
-    metricOrder.forEach(({ key }) => {
-        if (metrics[key] === undefined) return;
-        
-        // Skip survey metrics if no surveys exist
-        if (!hasSurveys && surveyMetricKeys.includes(key)) return;
-        
-        measuredMetricCount++;
-        
-        const curr = parseFloat(metrics[key]) || 0;
-        const target = getMetricTrendTarget(key);
-        const center = getCenterAverageForMetric(centerAvg, key);
-        
-        if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
-        
-        // Check if beating center average
-        if (center > 0) {
-            const isReverse = isReverseMetric(key);
-            if (isReverse ? curr < center : curr > center) {
-                beatingCenter++;
-            }
-        }
-        
-        // Only count improvements if we have previous data
-        if (previous && prevMetrics[key] !== undefined) {
-            const prev = parseFloat(prevMetrics[key]) || 0;
-            if (curr > prev) improved++;
-        }
-    });
-
-    const totalMetrics = measuredMetricCount;
-    const successRate = Math.round(meetingGoals / totalMetrics * 100);
-    const improvedText = previous ? improved.toString() : 'N/A';
+    const {
+        meetingGoals,
+        improved,
+        beatingCenter,
+        totalMetrics,
+        successRate,
+        improvedText
+    } = calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys);
     // metadata already extracted at function start
     const periodTypeText = metadata.periodType === 'week' ? 'week' : metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
     const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
@@ -6409,8 +6333,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     let currentGroup = null;
     let rowIdx = 0;
     
-    const SURVEY_METRICS = ['cxRepOverall', 'fcr', 'overallExperience'];
-    
     metricOrder.forEach(({ key, group }) => {
         if (metrics[key] === undefined) return;
         
@@ -6470,66 +6392,13 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     // ========== HIGHLIGHTS SECTION ==========
     y += 30;
     
-    // Calculate improved, key wins, and focus metrics
-    const improvedMetrics = [];
-    const keyWins = [];
-    const focusMetrics = [];
-    
-    metricOrder.forEach(({ key }) => {
-        if (metrics[key] === undefined) return;
-        const metric = METRICS_REGISTRY[key];
-        if (!metric) return;
-        
-        const curr = parseFloat(metrics[key]) || 0;
-        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
-        const center = getCenterAverageForMetric(centerAvg, key);
-        const target = getMetricTrendTarget(key);
-        const isReverse = isReverseMetric(key);
-        
-        // Check if improved from last week
-        if (previous && prev !== undefined && prev !== null) {
-            const change = curr - prev;
-            const hasImproved = isReverse ? change < 0 : change > 0;
-            
-            if (hasImproved && Math.abs(change) > 0.1) {
-                const arrow = change > 0 ? '📈' : '📉';
-                const changeText = formatMetricDisplay(key, Math.abs(change));
-                improvedMetrics.push({
-                    label: metric.label,
-                    curr: formatMetricDisplay(key, curr),
-                    change: changeText,
-                    arrow: arrow
-                });
-            }
-        }
-        
-        // Check for key wins (meeting target AND beating center)
-        const meetingTarget = isReverse ? curr <= target : curr >= target;
-        const beatingCenter = center > 0 && (isReverse ? curr < center : curr > center);
-        
-        if (meetingTarget && beatingCenter) {
-            keyWins.push({
-                label: metric.label,
-                curr: formatMetricDisplay(key, curr),
-                target: formatMetricDisplay(key, target),
-                center: formatMetricDisplay(key, center)
-            });
-        }
-        
-        // Check if below center average
-        if (center > 0) {
-            const isBelowCenter = isReverse ? curr > center : curr < center;
-            
-            if (isBelowCenter) {
-                focusMetrics.push({
-                    label: metric.label,
-                    curr: formatMetricDisplay(key, curr),
-                    center: formatMetricDisplay(key, center),
-                    target: formatMetricDisplay(key, target)
-                });
-            }
-        }
-    });
+    const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        previous
+    );
     
     // Key Wins (Meeting Target AND Beating Center)
     if (keyWins.length > 0) {
@@ -6733,6 +6602,153 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         };
         reader.readAsDataURL(pngBlob);
     }, 'image/png');
+}
+
+function calculateTrendSurveyTotals(current, metadata) {
+    let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
+    let ytdSurveyTotal = 0;
+
+    const currentEndDate = metadata.endDate || '';
+    const currentYear = currentEndDate.substring(0, 4);
+
+    if (DEBUG) {
+        console.log(`=== YTD SURVEY LOOKUP (${current.name}) for ${metadata.periodType} ===`);
+        console.log(`Current period: ${currentEndDate}, year: ${currentYear}`);
+    }
+
+    let aggregatedYtdSurveys = 0;
+    for (const wk in weeklyData) {
+        const weekMeta = weeklyData[wk]?.metadata || {};
+        const weekEndDate = weekMeta.endDate || wk.split('|')[1] || '';
+        const weekYear = weekEndDate.substring(0, 4);
+        const weekPeriodType = weekMeta.periodType || 'week';
+
+        if (weekPeriodType === 'week' && weekYear === currentYear && weekEndDate <= currentEndDate) {
+            const weekEmp = weeklyData[wk]?.employees?.find(e => e.name === current.name);
+            if (weekEmp && weekEmp.surveyTotal) {
+                const weekSurvey = parseInt(weekEmp.surveyTotal, 10);
+                aggregatedYtdSurveys += weekSurvey;
+                if (DEBUG) console.log(`  Adding ${wk}: +${weekSurvey} surveys (running total: ${aggregatedYtdSurveys})`);
+            }
+        }
+    }
+
+    ytdSurveyTotal = aggregatedYtdSurveys;
+
+    if (metadata.periodType === 'month' || metadata.periodType === 'ytd') {
+        surveyTotal = ytdSurveyTotal;
+        if (DEBUG) console.log(`${metadata.periodType} aggregated surveys: ${surveyTotal}`);
+    }
+
+    if (DEBUG) console.log(`Final: surveyTotal=${surveyTotal}, ytdSurveyTotal=${ytdSurveyTotal}, periodType=${metadata.periodType}`);
+
+    return { surveyTotal, ytdSurveyTotal };
+}
+
+function calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys) {
+    const surveyMetricKeys = ['cxRepOverall', 'fcr', 'overallExperience'];
+    let meetingGoals = 0;
+    let improved = 0;
+    let beatingCenter = 0;
+    let measuredMetricCount = 0;
+
+    metricOrder.forEach(({ key }) => {
+        if (metrics[key] === undefined) return;
+
+        if (!hasSurveys && surveyMetricKeys.includes(key)) return;
+
+        measuredMetricCount++;
+
+        const curr = parseFloat(metrics[key]) || 0;
+        const target = getMetricTrendTarget(key);
+        const center = getCenterAverageForMetric(centerAvg, key);
+
+        if (isMetricMeetingTarget(key, curr, target)) meetingGoals++;
+
+        if (center > 0) {
+            const isReverse = isReverseMetric(key);
+            if (isReverse ? curr < center : curr > center) {
+                beatingCenter++;
+            }
+        }
+
+        if (previous && prevMetrics[key] !== undefined) {
+            const prev = parseFloat(prevMetrics[key]) || 0;
+            if (curr > prev) improved++;
+        }
+    });
+
+    const totalMetrics = measuredMetricCount;
+    const successRate = Math.round(meetingGoals / totalMetrics * 100);
+    const improvedText = previous ? improved.toString() : 'N/A';
+
+    return {
+        meetingGoals,
+        improved,
+        beatingCenter,
+        totalMetrics,
+        successRate,
+        improvedText
+    };
+}
+
+function buildTrendHighlightsData(metricOrder, metrics, prevMetrics, centerAvg, previous) {
+    const improvedMetrics = [];
+    const keyWins = [];
+    const focusMetrics = [];
+
+    metricOrder.forEach(({ key }) => {
+        if (metrics[key] === undefined) return;
+        const metric = METRICS_REGISTRY[key];
+        if (!metric) return;
+
+        const curr = parseFloat(metrics[key]) || 0;
+        const prev = prevMetrics[key] !== undefined ? parseFloat(prevMetrics[key]) : undefined;
+        const center = getCenterAverageForMetric(centerAvg, key);
+        const target = getMetricTrendTarget(key);
+        const isReverse = isReverseMetric(key);
+
+        if (previous && prev !== undefined && prev !== null) {
+            const change = curr - prev;
+            const hasImproved = isReverse ? change < 0 : change > 0;
+
+            if (hasImproved && Math.abs(change) > 0.1) {
+                const arrow = change > 0 ? '📈' : '📉';
+                const changeText = formatMetricDisplay(key, Math.abs(change));
+                improvedMetrics.push({
+                    label: metric.label,
+                    curr: formatMetricDisplay(key, curr),
+                    change: changeText,
+                    arrow: arrow
+                });
+            }
+        }
+
+        const meetingTarget = isReverse ? curr <= target : curr >= target;
+        const beatingCenter = center > 0 && (isReverse ? curr < center : curr > center);
+        if (meetingTarget && beatingCenter) {
+            keyWins.push({
+                label: metric.label,
+                curr: formatMetricDisplay(key, curr),
+                target: formatMetricDisplay(key, target),
+                center: formatMetricDisplay(key, center)
+            });
+        }
+
+        if (center > 0) {
+            const isBelowCenter = isReverse ? curr > center : curr < center;
+            if (isBelowCenter) {
+                focusMetrics.push({
+                    label: metric.label,
+                    curr: formatMetricDisplay(key, curr),
+                    center: formatMetricDisplay(key, center),
+                    target: formatMetricDisplay(key, target)
+                });
+            }
+        }
+    });
+
+    return { improvedMetrics, keyWins, focusMetrics };
 }
 
 function downloadImageFallback(blob, empName, period) {
