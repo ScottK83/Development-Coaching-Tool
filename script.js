@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.14'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.15'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6346,42 +6346,9 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     canvas.height = 2400; // Increased to accommodate legend + all sections
     const ctx = canvas.getContext('2d');
 
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 900, 2400);
-
-    let y = 0;
-
-    // Blue gradient header
-    const gradient = ctx.createLinearGradient(0, 0, 900, 100);
-    gradient.addColorStop(0, '#003DA5');
-    gradient.addColorStop(1, '#0056B3');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 900, 100);
-
-    // Header text with dynamic subject
     const periodLabel = periodDisplay.periodLabel;
     const subjectLine = buildTrendEmailSubject(metadata, empName);
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px Arial';
-    ctx.fillText('📊 Performance Summary', 50, 45);
-    ctx.font = '14px Arial';
-    ctx.fillText(subjectLine, 50, 75);
-
-    y = 130;
-
-    // Greeting
-    ctx.fillStyle = '#333333';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText(`Hi ${empName},`, 50, y);
-    y += 40;
-
-    // Summary line
-    ctx.font = '15px Arial';
-    ctx.fillStyle = '#666666';
-    ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
-    y += 50;
+    let y = drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine);
 
     // Summary cards (using shared statistics)
     drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
@@ -6405,32 +6372,7 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     );
     y += summaryBoxesHeight + 24;
 
-    // Metrics section header
-    ctx.fillStyle = '#e3f2fd';
-    ctx.fillRect(40, y, 820, 50);
-    ctx.fillStyle = '#003DA5';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('📊 Your Metrics', 50, y + 32);
-    y += 70;
-
-    // Table headers
-    ctx.fillStyle = '#003DA5';
-    ctx.fillRect(40, y, 820, 45);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('Metric', 50, y + 28);
-    ctx.textAlign = 'center';
-    ctx.fillText('Your Metric', 280, y + 28);
-    ctx.fillText('Center Avg', 380, y + 28);
-    ctx.fillText('vs. Center Avg', 500, y + 28);
-    ctx.textAlign = 'left';
-    ctx.fillText(`Change vs last ${periodLabel}`, 570, y + 28);
-    ctx.textAlign = 'center';
-    ctx.fillText('YTD', 770, y + 28);
-    ctx.textAlign = 'left';
-    
-    y += 45;
+    y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
     if (!ytdAvailable) {
         ctx.fillStyle = '#666666';
@@ -6526,6 +6468,62 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
         copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
+}
+
+function drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 900, 2400);
+
+    const gradient = ctx.createLinearGradient(0, 0, 900, 100);
+    gradient.addColorStop(0, '#003DA5');
+    gradient.addColorStop(1, '#0056B3');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 900, 100);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText('📊 Performance Summary', 50, 45);
+    ctx.font = '14px Arial';
+    ctx.fillText(subjectLine, 50, 75);
+
+    let y = 130;
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(`Hi ${empName},`, 50, y);
+    y += 40;
+
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#666666';
+    ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
+
+    return y + 50;
+}
+
+function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
+    ctx.fillStyle = '#e3f2fd';
+    ctx.fillRect(40, y, 820, 50);
+    ctx.fillStyle = '#003DA5';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('📊 Your Metrics', 50, y + 32);
+    y += 70;
+
+    ctx.fillStyle = '#003DA5';
+    ctx.fillRect(40, y, 820, 45);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('Metric', 50, y + 28);
+    ctx.textAlign = 'center';
+    ctx.fillText('Your Metric', 280, y + 28);
+    ctx.fillText('Center Avg', 380, y + 28);
+    ctx.fillText('vs. Center Avg', 500, y + 28);
+    ctx.textAlign = 'left';
+    ctx.fillText(`Change vs last ${periodLabel}`, 570, y + 28);
+    ctx.textAlign = 'center';
+    ctx.fillText('YTD', 770, y + 28);
+    ctx.textAlign = 'left';
+
+    return y + 45;
 }
 
 function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous) {
