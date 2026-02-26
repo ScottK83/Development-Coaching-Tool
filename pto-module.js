@@ -243,6 +243,42 @@ function calculatePtoStats(data) {
     };
 }
 
+function getAccountedEntryHours(data) {
+    const entries = Array.isArray(data?.entries) ? data.entries : [];
+    return entries.reduce((sum, entry) => sum + normalizeHours(entry?.hours), 0);
+}
+
+function getUnaccountedReliabilityHours(data) {
+    const reliabilityHoursAgainst = normalizeHours(data?.reliabilityHoursAgainst);
+    const accountedHours = getAccountedEntryHours(data);
+    return Math.max(0, normalizeHours(reliabilityHoursAgainst - accountedHours));
+}
+
+function refreshPtoAssociateOptionFlags() {
+    const select = document.getElementById('ptoAssociateSelect');
+    if (!select) return;
+
+    const store = loadPtoStore();
+    Array.from(select.options).forEach(option => {
+        const associateName = normalizeAssociateName(option?.value);
+        if (!associateName) return;
+
+        const tracker = migrateLegacyPtoTracker(store.associates?.[associateName] || getDefaultPtoTracker());
+        const unaccountedHours = getUnaccountedReliabilityHours(tracker);
+        const baseLabel = associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName;
+
+        if (unaccountedHours > 0) {
+            option.textContent = `${baseLabel} (${unaccountedHours.toFixed(2)}h unaccounted)`;
+            option.style.color = '#0d6efd';
+            option.style.fontWeight = '700';
+        } else {
+            option.textContent = baseLabel;
+            option.style.color = '';
+            option.style.fontWeight = '';
+        }
+    });
+}
+
 function parseIsoDateSafe(value) {
     if (!value) return null;
     const date = new Date(`${value}T00:00:00`);
@@ -480,6 +516,7 @@ function applySelectedWeekDaysAsEntries() {
     });
 
     savePtoStore(context.store);
+    refreshPtoAssociateOptionFlags();
     renderPtoSummary(context.tracker, context.associateName);
     renderPtoEntries(context.tracker, context.associateName);
     showToast(`Added ${selectedDates.length} day entr${selectedDates.length === 1 ? 'y' : 'ies'}.`, 3500);
@@ -504,6 +541,7 @@ function reclassifyPtoEntryType(entryId, newType) {
     }
 
     savePtoStore(context.store);
+    refreshPtoAssociateOptionFlags();
     renderPtoSummary(context.tracker, context.associateName);
     renderPtoEntries(context.tracker, context.associateName);
 }
@@ -584,6 +622,7 @@ function populatePtoAssociateSelect() {
     latestStore.selectedAssociate = '';
     savePtoStore(latestStore);
 
+    refreshPtoAssociateOptionFlags();
     updatePtoInputsFromTracker('', null);
 }
 
@@ -607,6 +646,7 @@ function initializePtoTracker() {
                 syncTrackerReliabilityFromYtd(context.associateName, context.tracker);
             }
             savePtoStore(context.store);
+            refreshPtoAssociateOptionFlags();
             updatePtoInputsFromTracker(context.associateName, context.tracker || getDefaultPtoTracker());
         });
         select.dataset.bound = 'true';
@@ -633,6 +673,7 @@ function initializePtoTracker() {
             context.tracker.carriedOverHours = normalizeHours(carriedOverInput.value);
             carriedOverInput.value = context.tracker.carriedOverHours.toFixed(2);
             savePtoStore(context.store);
+            refreshPtoAssociateOptionFlags();
             renderPtoSummary(context.tracker, context.associateName);
         });
         carriedOverInput.dataset.bound = 'true';
@@ -645,6 +686,7 @@ function initializePtoTracker() {
             context.tracker.earnedThisYearHours = normalizeHours(earnedThisYearInput.value);
             earnedThisYearInput.value = context.tracker.earnedThisYearHours.toFixed(2);
             savePtoStore(context.store);
+            refreshPtoAssociateOptionFlags();
             renderPtoSummary(context.tracker, context.associateName);
         });
         earnedThisYearInput.dataset.bound = 'true';
@@ -657,6 +699,7 @@ function initializePtoTracker() {
             context.tracker.reliabilityHoursAgainst = normalizeHours(reliabilityHoursInput.value);
             reliabilityHoursInput.value = context.tracker.reliabilityHoursAgainst.toFixed(2);
             savePtoStore(context.store);
+            refreshPtoAssociateOptionFlags();
             renderPtoSummary(context.tracker, context.associateName);
         });
         reliabilityHoursInput.dataset.bound = 'true';
@@ -704,6 +747,7 @@ function addPtoEntry() {
     appendEntryWithTypePolicy(context.tracker, date, hours, type, notes, true);
 
     savePtoStore(context.store);
+    refreshPtoAssociateOptionFlags();
     renderPtoSummary(context.tracker, context.associateName);
     renderPtoEntries(context.tracker, context.associateName);
 
@@ -720,6 +764,7 @@ function deletePtoEntry(entryId) {
     if (!context.tracker) return;
     context.tracker.entries = context.tracker.entries.filter(entry => entry.id !== entryId);
     savePtoStore(context.store);
+    refreshPtoAssociateOptionFlags();
     renderPtoSummary(context.tracker, context.associateName);
     renderPtoEntries(context.tracker, context.associateName);
 }
