@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.01'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.02'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3524,6 +3524,11 @@ function finalizeRepoSyncSuccess(reason, responseData) {
     setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
 }
 
+function handleRepoSyncFailure(error) {
+    console.error('Repo sync failed:', error);
+    setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
+}
+
 async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
     const forceSync = options?.force === true;
@@ -3540,8 +3545,7 @@ async function syncRepoData(reason = 'updated', options = {}) {
         const responseData = await parseRepoSyncSuccessResponse(response);
         finalizeRepoSyncSuccess(reason, responseData);
     } catch (error) {
-        console.error('Repo sync failed:', error);
-        setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
+        handleRepoSyncFailure(error);
     }
 }
 
