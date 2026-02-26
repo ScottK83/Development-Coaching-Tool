@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.72'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.73'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13215,22 +13215,18 @@ function buildCoachingPromptMetricsText(wins, opportunities) {
     return { winsText, oppText };
 }
 
-function buildCoachingPrompt(employeeRecord) {
-    const { wins, opportunities } = collectCoachingPromptMetricData(employeeRecord);
-    const endDate = resolveCoachingPromptPeriodEndDate();
-
-    const preferredName = getEmployeeNickname(employeeRecord.name);
-    const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities);
-
+function buildCoachingPromptRoleSection(employeeName) {
     return `ROLE
 
-You are a real contact center supervisor writing a weekly coaching check-in email for ${employeeRecord.name}.
+You are a real contact center supervisor writing a weekly coaching check-in email for ${employeeName}.
 This should sound like it is coming directly from their supervisor — warm, human, supportive, and invested in their success.
 This is a recurring weekly email.
 Assume you have written to this associate before.
-Vary wording and structure naturally like a human would.
+Vary wording and structure naturally like a human would.`;
+}
 
-VOICE & TONE (CRITICAL)
+function buildCoachingPromptVoiceToneSection() {
+    return `VOICE & TONE (CRITICAL)
 
 - Warm and empathetic
 - Friendly and conversational
@@ -13239,9 +13235,11 @@ VOICE & TONE (CRITICAL)
 - Clear and direct expectations
 - Supportive and invested in success
 - Authentic supervisor-to-associate connection
-- Cheerleading first, coaching second
+- Cheerleading first, coaching second`;
+}
 
-HARD WRITING RULES
+function buildCoachingPromptRulesSection() {
+    return `HARD WRITING RULES
 
 - Do NOT number sections
 - Do NOT label sections (no "Key Wins," "Opportunities," etc.)
@@ -13251,9 +13249,11 @@ HARD WRITING RULES
 - Do NOT use HR clichés or jargon
 - Do NOT use the phrase "This is an opportunity to"
 - Do NOT use em dashes (—)
-- Write in natural paragraphs with clean, simple bullet points where appropriate
+- Write in natural paragraphs with clean, simple bullet points where appropriate`;
+}
 
-EMAIL FLOW (INTERNAL – DO NOT SHOW)
+function buildCoachingPromptFlowSection(preferredName) {
+    return `EMAIL FLOW (INTERNAL – DO NOT SHOW)
 
 Opening:
 - Start by greeting ${preferredName} by name
@@ -13281,9 +13281,11 @@ Expectations:
 Close:
 - End on encouragement and confidence
 - Reinforce momentum and support
-- Tie focus areas to growth and future readiness
+- Tie focus areas to growth and future readiness`;
+}
 
-OUTPUT REQUIREMENTS
+function buildCoachingPromptOutputRequirementsSection(preferredName) {
+    return `OUTPUT REQUIREMENTS
 
 - Address ${preferredName} by name in the opening
 - Use clean bullets for metrics (wins and opportunities)
@@ -13291,9 +13293,11 @@ OUTPUT REQUIREMENTS
 - Pull exactly ONE tip per opportunity metric
 - Rewrite tips in natural language—never copy verbatim
 - Sound like a real supervisor: natural, human, and supportive
-- No numbered sections or labels
+- No numbered sections or labels`;
+}
 
-DATA FOR THIS EMAIL
+function buildCoachingPromptDataSection(endDate, winsText, oppText) {
+    return `DATA FOR THIS EMAIL
 
 Week of ${endDate}
 
@@ -13301,18 +13305,41 @@ Strengths:
 ${winsText}
 
 Focus Areas:
-${oppText}
+${oppText}`;
+}
 
-DATA RULES
+function buildCoachingPromptDataRulesSection() {
+    return `DATA RULES
 
 - Only reference metrics and data provided above
 - Do not invent feedback or metrics
 - Do not assume external factors
-- Every tip must relate directly to the data provided
+- Every tip must relate directly to the data provided`;
+}
 
-FINAL INSTRUCTION
+function buildCoachingPromptFinalInstructionSection(preferredName) {
+    return `FINAL INSTRUCTION
 
 Generate the coaching email for ${preferredName} now.`;
+}
+
+function buildCoachingPrompt(employeeRecord) {
+    const { wins, opportunities } = collectCoachingPromptMetricData(employeeRecord);
+    const endDate = resolveCoachingPromptPeriodEndDate();
+
+    const preferredName = getEmployeeNickname(employeeRecord.name);
+    const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities);
+
+    return [
+        buildCoachingPromptRoleSection(employeeRecord.name),
+        buildCoachingPromptVoiceToneSection(),
+        buildCoachingPromptRulesSection(),
+        buildCoachingPromptFlowSection(preferredName),
+        buildCoachingPromptOutputRequirementsSection(preferredName),
+        buildCoachingPromptDataSection(endDate, winsText, oppText),
+        buildCoachingPromptDataRulesSection(),
+        buildCoachingPromptFinalInstructionSection(preferredName)
+    ].join('\n\n');
 }
 
 function getCoachingPromptGenerationInputs() {
