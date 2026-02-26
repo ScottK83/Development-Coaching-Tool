@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.65'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.66'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11845,15 +11845,9 @@ function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().get
     };
 }
 
-function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear(), periodMetadata = null) {
-    const summaryEl = document.getElementById('yearEndOnOffSummary');
-    const detailsEl = document.getElementById('yearEndOnOffDetails');
-    if (!summaryEl || !detailsEl) return null;
-
-    const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
-
+function applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, goalSource, periodMetadata = null) {
     detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear, {
-        goalSource: 'metric-trends',
+        goalSource,
         periodMetadata
     });
 
@@ -11866,24 +11860,22 @@ function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFul
     return result;
 }
 
+function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear(), periodMetadata = null) {
+    const summaryEl = document.getElementById('yearEndOnOffSummary');
+    const detailsEl = document.getElementById('yearEndOnOffDetails');
+    if (!summaryEl || !detailsEl) return null;
+
+    const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
+    return applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, 'metric-trends', periodMetadata);
+}
+
 function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId, reviewYear = new Date().getFullYear()) {
     const summaryEl = document.getElementById(summaryElementId);
     const detailsEl = document.getElementById(detailsElementId);
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
-    detailsEl.innerHTML = buildOnOffScoreTableHtml(result, reviewYear, {
-        goalSource: 'onoff',
-        periodMetadata: null
-    });
-
-    if (!result.isComplete) {
-        summaryEl.textContent = '⚠️ Missing one or more KPI values. On/Off Track could not be calculated exactly.';
-        return result;
-    }
-
-    summaryEl.textContent = `Rating Average: ${result.ratingAverage.toFixed(2)} • Calculated Status: ${result.trackLabel}`;
-    return result;
+    return applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, 'onoff', null);
 }
 
 function resolveOnOffBandGoalText(bands, bandKey, formatKey) {
