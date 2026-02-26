@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-26T18:00:12.828Z",
-  "reason": "associate sentiment snapshots updated",
-  "sourceAppVersion": "2026.02.26.64",
+  "generatedAt": "2026-02-26T18:18:52.316Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
+  "sourceAppVersion": "2026.02.26.63",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -4388,130 +4388,7 @@
       "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
-  "ptoTracker": {
-    "selectedAssociate": "Jenifer Henson",
-    "associates": {
-      "Alyssa Dimes": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Angelina Fierro": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Pamela Muhammad": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 26.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Oceane Ingram": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 4,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Precious Johnson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 18.51,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Brittney Carroll": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Caylie Chirumbolo": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 1.65,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Darryn Coley": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 31.17,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ekiecha Brabham": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 6.25,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Jenifer Henson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Marietta Bernal": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.15,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ronda Colis": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 2.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Scoticia Osborne": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.6,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Taylor Colter": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Teena Pokorski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trevor Pedrowski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trisha Erb": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      }
-    }
-  },
+  "ptoTracker": {},
   "yearEndAnnualGoalsStore": {
     "2025::Scoticia Osborne": {
       "safetyGoalAps": {
@@ -5124,6 +5001,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Angelina Fierro": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5338,6 +5249,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2026::Angelina Fierro": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 1s vs target 30s\nOverall Experience: 87.5% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 100.0% vs target 73.0%\nOverall Sentiment: 93.5% vs target 88.0%\nPositive Word: 97.4% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 90.8% vs target 93.0%\nTransfers: 7.7% vs target 6.0%\nAverage Handle Time: 696s vs target 414s\nAfter Call Work: 179s vs target 60s",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5345,6 +5267,11 @@
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 280
+    },
+    "devCoachingTool_cloudSyncShared": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 203
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
@@ -5368,13 +5295,13 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 81
+      "itemCount": 4,
+      "byteLength": 101
     },
-    "devCoachingTool_ptoTracker": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 2198
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
@@ -5384,17 +5311,22 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 130
+      "byteLength": 125
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 18,
-      "byteLength": 7570
+      "itemCount": 19,
+      "byteLength": 7990
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 6957
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -5403,28 +5335,28 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 20,
-      "byteLength": 49648
+      "itemCount": 21,
+      "byteLength": 50490
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
     },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
+    },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 227
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 16
+      "byteLength": 212
     }
   }
 }
