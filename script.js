@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.37'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.38'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6393,20 +6393,11 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
 
     y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
-    y = drawTrendMetricsTableBody(ctx, y, {
-        metricOrder,
-        metrics,
-        prevMetrics,
-        centerAvg,
-        ytdEmployee,
-        hasSurveys,
-        surveyTotal,
-        ytdSurveyTotal,
-        reviewYear,
-        metadata,
-        periodLabel,
-        ytdAvailable
-    });
+    const tableOptions = buildTrendMetricsTableOptions(
+        trendContext,
+        periodLabel
+    );
+    y = drawTrendMetricsTableBody(ctx, y, tableOptions);
 
     y = drawTrendInsightsLegendAndReliabilitySection(
         ctx,
@@ -6485,6 +6476,23 @@ function buildTrendEmailContext(weekKey, period, current, previous) {
         periodDisplay,
         periodTypeText,
         improvedSub
+    };
+}
+
+function buildTrendMetricsTableOptions(trendContext, periodLabel) {
+    return {
+        metricOrder: trendContext.metricOrder,
+        metrics: trendContext.metrics,
+        prevMetrics: trendContext.prevMetrics,
+        centerAvg: trendContext.centerAvg,
+        ytdEmployee: trendContext.ytdEmployee,
+        hasSurveys: trendContext.hasSurveys,
+        surveyTotal: trendContext.surveyTotal,
+        ytdSurveyTotal: trendContext.ytdSurveyTotal,
+        reviewYear: trendContext.reviewYear,
+        metadata: trendContext.metadata,
+        periodLabel,
+        ytdAvailable: trendContext.ytdAvailable
     };
 }
 
