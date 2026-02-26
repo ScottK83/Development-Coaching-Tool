@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.38'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.39'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6348,6 +6348,18 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     }
     
     const trendContext = buildTrendEmailContext(weekKey, period, current, previous);
+    // CREATE CANVAS IMAGE (will be resized based on content)
+    const canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 2400; // Increased to accommodate legend + all sections
+    const ctx = canvas.getContext('2d');
+
+    drawTrendEmailCanvasSections(ctx, empName, current, previous, trendContext);
+
+    finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady);
+}
+
+function drawTrendEmailCanvasSections(ctx, empName, current, previous, trendContext) {
     const {
         metadata,
         reviewYear,
@@ -6355,11 +6367,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         metrics,
         prevMetrics,
         centerAvg,
-        ytdEmployee,
-        ytdAvailable,
-        surveyTotal,
-        ytdSurveyTotal,
-        hasSurveys,
         meetingGoals,
         beatingCenter,
         totalMetrics,
@@ -6369,12 +6376,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         periodTypeText,
         improvedSub
     } = trendContext;
-
-    // CREATE CANVAS IMAGE (will be resized based on content)
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 2400; // Increased to accommodate legend + all sections
-    const ctx = canvas.getContext('2d');
 
     const periodLabel = periodDisplay.periodLabel;
     const subjectLine = buildTrendEmailSubject(metadata, empName);
@@ -6390,16 +6391,12 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     });
 
     y = drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear);
-
     y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
-    const tableOptions = buildTrendMetricsTableOptions(
-        trendContext,
-        periodLabel
-    );
+    const tableOptions = buildTrendMetricsTableOptions(trendContext, periodLabel);
     y = drawTrendMetricsTableBody(ctx, y, tableOptions);
 
-    y = drawTrendInsightsLegendAndReliabilitySection(
+    drawTrendInsightsLegendAndReliabilitySection(
         ctx,
         y,
         metricOrder,
@@ -6409,8 +6406,6 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         previous,
         periodTypeText
     );
-
-    finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady);
 }
 
 function finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady) {
