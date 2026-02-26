@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.78'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.79'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11340,6 +11340,9 @@ function deleteCallListeningEntryById(entryId) {
 
 function buildCallListeningPrompt(entry) {
     const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
+    const delegated = window.DevCoachModules?.callListening?.buildPrompt?.(entry, preferredName);
+    if (delegated) return delegated;
+
     return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
 
 Call details:
@@ -11386,6 +11389,21 @@ function generateCallListeningPromptAndCopy() {
     const prompt = buildCallListeningPrompt(entry);
     promptArea.value = prompt;
 
+    const delegatedResult = window.DevCoachModules?.callListening?.copyPromptAndOpenCopilot?.({
+        prompt,
+        button,
+        showToast,
+        alertFn: alert,
+        openWindow: window.open,
+        clipboardWriteText: navigator.clipboard?.writeText?.bind(navigator.clipboard)
+    });
+    if (delegatedResult?.ok) {
+        if (outlookSection) {
+            outlookSection.style.display = 'block';
+        }
+        return;
+    }
+
     if (button) {
         const originalText = button.textContent;
         button.textContent = '✅ Copied + Opening Copilot';
@@ -11418,6 +11436,18 @@ function generateCallListeningOutlookEmail() {
     const callDate = (document.getElementById('callListeningDate')?.value || '').trim();
     const bodyText = (document.getElementById('callListeningOutlookBody')?.value || '').trim();
 
+    const delegatedResult = window.DevCoachModules?.callListening?.generateOutlookDraft?.({
+        employeeName,
+        callDate,
+        bodyText,
+        getEmployeeNickname,
+        showToast,
+        onError: (error) => console.error('Error opening Outlook draft from call listening:', error)
+    });
+    if (delegatedResult?.ok || delegatedResult?.reason === 'missing-body') {
+        return;
+    }
+
     if (!bodyText) {
         showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
         return;
@@ -11440,10 +11470,16 @@ function generateCallListeningOutlookEmail() {
 }
 
 function buildCallListeningHistorySummaryText(employeeName, entryCount) {
+    const delegated = window.DevCoachModules?.callListening?.buildHistorySummaryText?.(employeeName, entryCount);
+    if (delegated) return delegated;
+
     return `${entryCount} saved call listening log${entryCount === 1 ? '' : 's'} for ${employeeName}.`;
 }
 
 function buildCallListeningHistoryItemHtml(entry) {
+    const delegated = window.DevCoachModules?.callListening?.buildHistoryItemHtml?.(entry, escapeHtml);
+    if (delegated) return delegated;
+
     const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
     return `<li style="margin-bottom: 14px; line-height: 1.35;">
             <div style="font-weight: bold; color: #37474f;">${escapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${escapeHtml(entry.callReference)}` : ''}</div>
