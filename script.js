@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.119'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.120'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10437,6 +10437,22 @@ function setAppVersionLabel(statusSuffix = '') {
     const statusEl = document.getElementById('systemStatus');
     if (statusEl) {
         statusEl.textContent = `System: ${APP_VERSION}`;
+    }
+
+    const deployMarkerEl = document.getElementById('deployMarker');
+    if (deployMarkerEl) {
+        const lastSuccess = loadRepoSyncLastSuccess();
+        const commit = String(lastSuccess?.commit || '').trim();
+        const shortCommit = commit ? commit.slice(0, 7) : '';
+        const syncedAt = lastSuccess?.timestamp ? new Date(lastSuccess.timestamp).toLocaleString() : '';
+
+        if (shortCommit && syncedAt) {
+            deployMarkerEl.textContent = `Deploy: ${APP_VERSION} • ${shortCommit} • ${syncedAt}`;
+        } else if (shortCommit) {
+            deployMarkerEl.textContent = `Deploy: ${APP_VERSION} • ${shortCommit}`;
+        } else {
+            deployMarkerEl.textContent = `Deploy: ${APP_VERSION}`;
+        }
     }
 }
 
