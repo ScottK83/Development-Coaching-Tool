@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.12'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.13'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5701,6 +5701,41 @@ function buildTrendEmailSubject(periodMeta, displayName) {
     return `Trending Metrics - ${periodTypeTitle} - ${periodLabel} ending ${endDate} for ${displayName}`;
 }
 
+function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tipsForTrending, allMetrics) {
+    const belowTargetMetrics = Array.isArray(allMetrics)
+        ? allMetrics
+            .filter(metric => metric && !metric.meetsTarget)
+            .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0))
+        : [];
+
+    const focusCandidates = [];
+    const seenFocusMetricKeys = new Set();
+    const addFocusCandidate = (metric, tips) => {
+        if (!metric || !metric.metricKey || seenFocusMetricKeys.has(metric.metricKey)) return;
+        const normalizedTips = Array.isArray(tips)
+            ? tips.map(tip => String(tip || '').trim()).filter(Boolean)
+            : [];
+        focusCandidates.push({ metric, tips: normalizedTips });
+        seenFocusMetricKeys.add(metric.metricKey);
+    };
+
+    addFocusCandidate(weakestMetric, tipsForWeakest);
+    addFocusCandidate(trendingMetric, tipsForTrending);
+
+    belowTargetMetrics.forEach(metric => {
+        if (focusCandidates.length >= 2) return;
+        addFocusCandidate(metric, getRandomTipsForMetric(metric.metricKey, 2));
+    });
+
+    return focusCandidates.slice(0, 2).map((candidate, index) => ({
+        metric: candidate.metric,
+        tips: candidate.tips.length > 0 ? candidate.tips : ['No coaching tips available yet for this metric.'],
+        bgColor: index === 0 ? '#fff3cd' : '#ffe0b2',
+        borderColor: index === 0 ? '#ff9800' : '#f57c00',
+        titleColor: index === 0 ? '#ff9800' : '#f57c00'
+    }));
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5761,39 +5796,13 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         'No below-target metrics in this period.'
     );
     
-    // Build focus areas from below-target metrics (up to 2), even if one metric has no preloaded tips
-    const belowTargetMetrics = Array.isArray(allMetrics)
-        ? allMetrics
-            .filter(metric => metric && !metric.meetsTarget)
-            .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0))
-        : [];
-
-    const focusCandidates = [];
-    const seenFocusMetricKeys = new Set();
-    const addFocusCandidate = (metric, tips) => {
-        if (!metric || !metric.metricKey || seenFocusMetricKeys.has(metric.metricKey)) return;
-        const normalizedTips = Array.isArray(tips)
-            ? tips.map(tip => String(tip || '').trim()).filter(Boolean)
-            : [];
-        focusCandidates.push({ metric, tips: normalizedTips });
-        seenFocusMetricKeys.add(metric.metricKey);
-    };
-
-    addFocusCandidate(weakestMetric, tipsForWeakest);
-    addFocusCandidate(trendingMetric, tipsForTrending);
-
-    belowTargetMetrics.forEach(metric => {
-        if (focusCandidates.length >= 2) return;
-        addFocusCandidate(metric, getRandomTipsForMetric(metric.metricKey, 2));
-    });
-
-    const focusAreas = focusCandidates.slice(0, 2).map((candidate, index) => ({
-        metric: candidate.metric,
-        tips: candidate.tips.length > 0 ? candidate.tips : ['No coaching tips available yet for this metric.'],
-        bgColor: index === 0 ? '#fff3cd' : '#ffe0b2',
-        borderColor: index === 0 ? '#ff9800' : '#f57c00',
-        titleColor: index === 0 ? '#ff9800' : '#f57c00'
-    }));
+    const focusAreas = buildTrendFocusAreas(
+        weakestMetric,
+        tipsForWeakest,
+        trendingMetric,
+        tipsForTrending,
+        allMetrics
+    );
 
     const primaryFocusMetric = focusAreas[0]?.metric || null;
     const secondaryFocusMetric = focusAreas[1]?.metric || null;
