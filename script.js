@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.30'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.31'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5851,6 +5851,44 @@ function attachTrendTipsModalHandlers(options) {
     });
 }
 
+function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, copilotPrompt) {
+    return `
+        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
+        <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
+
+        ${summaryBoxesHtml}
+        
+        ${focusAreasHtml ? `<h4 style="color: #9c27b0; margin: 0 0 12px 0;">🎯 Coaching Focus</h4>${focusAreasHtml}` : ''}
+
+        ${sentimentHtml}
+        
+        <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
+            <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
+        </div>
+        
+        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+            <h4 style="color: #333; margin-top: 0;">🤖 CoPilot Prompt</h4>
+            <p style="color: #666; font-size: 0.9em; margin: 0 0 10px 0;">
+                Copy this prompt and paste it into <strong><a href="https://copilot.microsoft.com" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
+            </p>
+            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${copilotPrompt}</textarea>
+            <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                📋 Copy Prompt
+            </button>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
+                ✅ Log Coaching
+            </button>
+            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
+                Skip
+            </button>
+        </div>
+    `;
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5941,41 +5979,14 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         allMetrics
     );
     
-    panel.innerHTML = `
-        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
-        <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
-
-        ${summaryBoxesHtml}
-        
-        ${focusAreasHtml ? `<h4 style="color: #9c27b0; margin: 0 0 12px 0;">🎯 Coaching Focus</h4>${focusAreasHtml}` : ''}
-
-        ${sentimentHtml}
-        
-        <div style="margin: 20px 0;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
-            <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
-        </div>
-        
-        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
-            <h4 style="color: #333; margin-top: 0;">🤖 CoPilot Prompt</h4>
-            <p style="color: #666; font-size: 0.9em; margin: 0 0 10px 0;">
-                Copy this prompt and paste it into <strong><a href="https://copilot.microsoft.com" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
-            </p>
-            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${copilotPrompt}</textarea>
-            <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                📋 Copy Prompt
-            </button>
-        </div>
-        
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
-                ✅ Log Coaching
-            </button>
-            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
-                Skip
-            </button>
-        </div>
-    `;
+    panel.innerHTML = buildTrendTipsModalHtml(
+        displayName,
+        periodLabel,
+        summaryBoxesHtml,
+        focusAreasHtml,
+        sentimentHtml,
+        copilotPrompt
+    );
     
     modal.appendChild(panel);
     document.body.appendChild(modal);
