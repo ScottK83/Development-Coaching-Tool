@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T17:06:42.953Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-26T17:08:34.963Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.60",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5268,7 +5268,7 @@
       "positivesText": "Hold Time: 1s vs target 30s\nRep Satisfaction: 81.3% vs target 80.0%\nFirst Call Resolution: 78.7% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 86.5% vs target 86.0%\nAvoid Negative Words: 91.5% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 22.3% vs target 6.0%\nAverage Handle Time: 532s vs target 440s\nAfter Call Work: 80s vs target 60s\nOverall Experience: 81.3% vs target 84.0%\nReliability: 28.7 hrs vs target 16.0 hrs",
       "managerContext": "",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nAngelina’s performance was on track for the year, and she delivered several meaningful accomplishments that supported our business goals and APS principles. She consistently exceeded key quality and customer experience metrics, including Hold Time at 1s against a 30s goal, First Call Resolution at 78.7% against a 70.0% goal, and Overall Sentiment at 91.3% against an 88.0% goal. Her focus on communication quality also showed in Positive Word usage at 86.5% against 86.0% and Avoiding Negative Words at 91.5% against 83.0%. She met every APS annual goal, including 100% accuracy on Emergency Safety Hazard calls, 0 substantiated complaints, 0 phishing email clicks, and completion of all required training on time. These results reflected a reliable commitment to safety, learning, and delivering strong service to our customers.\nBox 2 - Future Improvement Areas:\nOne growth area is improving efficiency by reducing Average Handle Time from 532s toward the 440s goal, which includes bringing After Call Work closer to the 60s target. In addition, lowering Transfers from 22.3% toward the 6.0% goal will strengthen ownership and improve the overall customer experience.",
       "performanceRating": "Successful",
       "meritDetails": "2% to 25.98",
       "bonusAmount": "3434.73",
@@ -5429,7 +5429,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -5449,7 +5449,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 21,
-      "byteLength": 50490
+      "byteLength": 51700
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
