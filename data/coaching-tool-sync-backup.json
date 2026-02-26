@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-26T15:10:51.842Z",
+  "generatedAt": "2026-02-26T15:19:35.282Z",
   "reason": "storage set: devCoachingTool_uiNavState",
-  "sourceAppVersion": "2026.02.26.14",
+  "sourceAppVersion": "2026.02.26.17",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -4388,130 +4388,7 @@
       "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
-  "ptoTracker": {
-    "selectedAssociate": "Alyssa Dimes",
-    "associates": {
-      "Alyssa Dimes": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Angelina Fierro": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Pamela Muhammad": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 26.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Oceane Ingram": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 4,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Precious Johnson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 18.51,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Brittney Carroll": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Caylie Chirumbolo": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 1.65,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Darryn Coley": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 31.17,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ekiecha Brabham": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 6.25,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Jenifer Henson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Marietta Bernal": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.15,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ronda Colis": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 2.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Scoticia Osborne": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.6,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Taylor Colter": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Teena Pokorski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trevor Pedrowski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trisha Erb": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      }
-    }
-  },
+  "ptoTracker": {},
   "yearEndAnnualGoalsStore": {
     "2025::Scoticia Osborne": {
       "safetyGoalAps": {
@@ -5346,6 +5223,16 @@
       "itemCount": 1,
       "byteLength": 280
     },
+    "devCoachingTool_cloudSyncShared": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 203
+    },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 8,
+      "byteLength": 2241
+    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
@@ -5356,11 +5243,6 @@
       "itemCount": 2,
       "byteLength": 15051
     },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 8,
-      "byteLength": 2241
-    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
@@ -5368,23 +5250,23 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
-    },
-    "devCoachingTool_ptoTracker": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 2196
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
       "itemCount": 3,
-      "byteLength": 128
+      "byteLength": 77
+    },
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
+      "byteLength": 125
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 123
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -5395,6 +5277,11 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 6957
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -5411,20 +5298,20 @@
       "itemCount": 9,
       "byteLength": 50208
     },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
+    },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 228
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 18
+      "byteLength": 212
     }
   }
 }
