@@ -3011,7 +3011,8 @@ function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
 function getDefaultCallListeningSyncConfig() {
     return {
         endpoint: 'https://dev-coaching-sync.scottk.workers.dev',
-        autoSyncEnabled: true
+        autoSyncEnabled: true,
+        sharedSecret: ''
     };
 }
 
@@ -3022,7 +3023,8 @@ function loadCallListeningSyncConfig() {
         const defaults = getDefaultCallListeningSyncConfig();
         return {
             endpoint: typeof parsed?.endpoint === 'string' ? parsed.endpoint : defaults.endpoint,
-            autoSyncEnabled: typeof parsed?.autoSyncEnabled === 'boolean' ? parsed.autoSyncEnabled : defaults.autoSyncEnabled
+            autoSyncEnabled: typeof parsed?.autoSyncEnabled === 'boolean' ? parsed.autoSyncEnabled : defaults.autoSyncEnabled,
+            sharedSecret: typeof parsed?.sharedSecret === 'string' ? parsed.sharedSecret : defaults.sharedSecret
         };
     } catch (error) {
         console.error('Error loading call listening sync config:', error);
@@ -3033,7 +3035,8 @@ function loadCallListeningSyncConfig() {
 function saveCallListeningSyncConfig(config) {
     const safeConfig = {
         endpoint: String(config?.endpoint || '').trim(),
-        autoSyncEnabled: Boolean(config?.autoSyncEnabled)
+        autoSyncEnabled: Boolean(config?.autoSyncEnabled),
+        sharedSecret: String(config?.sharedSecret || '').trim()
     };
     try {
         withRepoSyncSuppressed(() => {
@@ -3052,7 +3055,8 @@ function enforceRepoAutoSyncEnabled() {
     const endpoint = String(current?.endpoint || '').trim() || defaults.endpoint;
     const normalized = {
         endpoint,
-        autoSyncEnabled: true
+        autoSyncEnabled: true,
+        sharedSecret: String(current?.sharedSecret || '').trim()
     };
 
     if (current?.autoSyncEnabled !== true || String(current?.endpoint || '').trim() !== endpoint) {
@@ -3164,6 +3168,7 @@ function renderCallListeningLastSync(meta = null) {
 
 function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
+    const syncSecretInput = document.getElementById('callListeningSyncSecret');
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
     const syncNowBtn = document.getElementById('syncNowBtn');
     const forceRestoreBtn = document.getElementById('forceRestoreRepoBtn');
@@ -3175,6 +3180,7 @@ function initializeRepoSyncControls() {
 
     const syncConfig = loadCallListeningSyncConfig();
     syncEndpointInput.value = syncConfig.endpoint || '';
+    if (syncSecretInput) syncSecretInput.value = syncConfig.sharedSecret || '';
     autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
     if (syncConfig.autoSyncEnabled && syncConfig.endpoint.trim()) {
         setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
@@ -3249,6 +3255,12 @@ function initializeRepoSyncControls() {
         });
         syncEndpointInput.dataset.bound = 'true';
     }
+    if (syncSecretInput && !syncSecretInput.dataset.bound) {
+        syncSecretInput.addEventListener('change', () => {
+            getCallListeningSyncConfigFromUI();
+        });
+        syncSecretInput.dataset.bound = 'true';
+    }
     if (!autoSyncCheckbox.dataset.bound) {
         autoSyncCheckbox.addEventListener('change', () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
@@ -3287,8 +3299,9 @@ function openRepoExcelFile(fileName) {
 
 function getCallListeningSyncConfigFromUI() {
     const endpoint = document.getElementById('callListeningSyncEndpoint')?.value || '';
+    const sharedSecret = document.getElementById('callListeningSyncSecret')?.value || '';
     const autoSyncEnabled = document.getElementById('callListeningAutoSyncEnabled')?.checked ?? true;
-    return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled });
+    return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret });
 }
 
 function getAllAppStorageSnapshot() {
@@ -3503,7 +3516,8 @@ async function syncRepoData(reason = 'updated', options = {}) {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(config.sharedSecret.trim() ? { 'X-Sync-Secret': config.sharedSecret.trim() } : {})
             },
             body: JSON.stringify(payload)
         });

@@ -21,6 +21,8 @@ From repo root:
 Push-Location cloudflare-sync-worker
 npx wrangler secret put GH_TOKEN
 # Paste a GitHub token with repo contents write access
+npx wrangler secret put SYNC_SHARED_SECRET
+# Optional but recommended: set a shared secret the app must send in X-Sync-Secret
 npx wrangler deploy
 Pop-Location
 ```
@@ -31,7 +33,8 @@ The default owner/repo/branch are already set in `wrangler.toml`.
 
 1. Open `Coaching & Analysis` -> `🎧 Call Listening`
 2. Paste your deployed Worker URL into `Auto-Sync Worker URL`
-3. Keep `Auto-sync on save` checked
+3. If `SYNC_SHARED_SECRET` is set in the worker, paste the same value into `Sync Shared Secret (optional)`
+4. Keep `Auto-sync on save` checked
 
 Every save/update/delete in the app that writes tracked data now syncs to repo.
 
@@ -39,6 +42,7 @@ Every save/update/delete in the app that writes tracked data now syncs to repo.
 
 - If Worker URL is blank, the app continues local-only storage.
 - If sync fails, the app shows the failure in the `callListeningSyncStatus` line but still keeps local data.
+- If worker secret auth is enabled and the app secret is wrong/missing, sync returns `401 Unauthorized`.
 
 ## Manual Smoke Test (Workflow Dispatch)
 

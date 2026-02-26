@@ -14,6 +14,14 @@ export default {
       });
     }
 
+    const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
+    if (expectedSyncSecret) {
+      const providedSyncSecret = String(request.headers.get('x-sync-secret') || '').trim();
+      if (!providedSyncSecret || providedSyncSecret !== expectedSyncSecret) {
+        return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401);
+      }
+    }
+
     if (!env.GH_TOKEN || !env.GH_OWNER || !env.GH_REPO) {
       return json({ error: 'Missing worker secrets/config: GH_TOKEN, GH_OWNER, GH_REPO' }, 500);
     }
@@ -127,7 +135,7 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret'
   };
 }
 
