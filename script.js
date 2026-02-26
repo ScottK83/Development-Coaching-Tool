@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.62'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.63'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12042,6 +12042,55 @@ function getOnOffTrackerLegendBandsByYear(reviewYear) {
     };
 }
 
+function buildOnOffLegendMissingConfigCardHtml(label) {
+    return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${label}</div>
+                <div style="font-size: 0.85em; color: #666;">No rating bands configured for selected year.</div>
+            </div>`;
+}
+
+function buildOnOffLegendMinTypeCardHtml(metricKey, label, config) {
+    const score3 = formatMetricDisplay(metricKey, config.score3.min);
+    const score2 = formatMetricDisplay(metricKey, config.score2.min);
+    return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${label}</div>
+                <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≥ ${score3}</div>
+                <div style="font-size: 0.85em; color: #8d6e00;">Score 2: ≥ ${score2} and &lt; ${score3}</div>
+                <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &lt; ${score2}</div>
+            </div>`;
+}
+
+function buildOnOffLegendMaxTypeCardHtml(metricKey, label, config) {
+    const score3 = formatMetricDisplay(metricKey, config.score3.max);
+    const score2 = formatMetricDisplay(metricKey, config.score2.max);
+    return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
+            <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${label}</div>
+            <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≤ ${score3}</div>
+            <div style="font-size: 0.85em; color: #8d6e00;">Score 2: &gt; ${score3} and ≤ ${score2}</div>
+            <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &gt; ${score2}</div>
+        </div>`;
+}
+
+function buildOnOffLegendMetricCardHtml(metric, bands) {
+    const config = bands?.[metric.key];
+    if (!config) {
+        return buildOnOffLegendMissingConfigCardHtml(metric.label);
+    }
+    if (config.type === 'min') {
+        return buildOnOffLegendMinTypeCardHtml(metric.key, metric.label, config);
+    }
+    return buildOnOffLegendMaxTypeCardHtml(metric.key, metric.label, config);
+}
+
+function buildOnOffLegendContainerHtml(reviewYear, cardsHtml, sourceLabel, usingFallback) {
+    return `
+        <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">🎯 On/Off Tracker Goal Legend (${reviewYear || 'N/A'})</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 8px;">${cardsHtml}</div>
+        <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track ≤ 1.79 · On Track/Successful 1.80–2.79 · On Track/Exceptional ≥ 2.80</div>
+        <div style="font-size: 0.78em; color: #777; margin-top: 3px;">Source: ${sourceLabel}${usingFallback ? ' (used when selected year has no rating profile)' : ''}</div>
+    `;
+}
+
 function renderOnOffTrackerLegend(reviewYear) {
     const legendEl = document.getElementById('onOffTrackerLegend');
     if (!legendEl) return;
@@ -12055,44 +12104,8 @@ function renderOnOffTrackerLegend(reviewYear) {
         { key: 'reliability', label: 'Reliability' }
     ];
 
-    const formatValue = (metricKey, threshold) => formatMetricDisplay(metricKey, threshold);
-
-    const cards = legendMetrics.map(metric => {
-        const config = bands?.[metric.key];
-        if (!config) {
-            return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
-                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
-                <div style="font-size: 0.85em; color: #666;">No rating bands configured for selected year.</div>
-            </div>`;
-        }
-
-        if (config.type === 'min') {
-            const score3 = formatValue(metric.key, config.score3.min);
-            const score2 = formatValue(metric.key, config.score2.min);
-            return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
-                <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
-                <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≥ ${score3}</div>
-                <div style="font-size: 0.85em; color: #8d6e00;">Score 2: ≥ ${score2} and &lt; ${score3}</div>
-                <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &lt; ${score2}</div>
-            </div>`;
-        }
-
-        const score3 = formatValue(metric.key, config.score3.max);
-        const score2 = formatValue(metric.key, config.score2.max);
-        return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
-            <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${metric.label}</div>
-            <div style="font-size: 0.85em; color: #1b5e20;">Score 3: ≤ ${score3}</div>
-            <div style="font-size: 0.85em; color: #8d6e00;">Score 2: &gt; ${score3} and ≤ ${score2}</div>
-            <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &gt; ${score2}</div>
-        </div>`;
-    }).join('');
-
-    legendEl.innerHTML = `
-        <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">🎯 On/Off Tracker Goal Legend (${reviewYear || 'N/A'})</div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 8px;">${cards}</div>
-        <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track ≤ 1.79 · On Track/Successful 1.80–2.79 · On Track/Exceptional ≥ 2.80</div>
-        <div style="font-size: 0.78em; color: #777; margin-top: 3px;">Source: ${sourceLabel}${usingFallback ? ' (used when selected year has no rating profile)' : ''}</div>
-    `;
+    const cards = legendMetrics.map(metric => buildOnOffLegendMetricCardHtml(metric, bands)).join('');
+    legendEl.innerHTML = buildOnOffLegendContainerHtml(reviewYear, cards, sourceLabel, usingFallback);
 }
 
 function initializeOnOffTracker() {
