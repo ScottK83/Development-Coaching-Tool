@@ -13411,6 +13411,82 @@ function buildPositiveLanguageSentimentSection(positive, associateName) {
     return section;
 }
 
+function buildNegativeLanguageSentimentSection(negative) {
+    let section = '';
+    section += `═══════════════════════════════════\n`;
+    section += `AVOIDING NEGATIVE LANGUAGE\n`;
+    section += `═══════════════════════════════════\n`;
+    section += `Keywords Summary (phrases used)\n\n`;
+
+    const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0 && !containsCurseWords(p.phrase));
+    const assocNegativeUnused = negative.phrases.filter(p => p.speaker === 'A' && p.value === 0 && !containsCurseWords(p.phrase));
+    const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0 && !containsCurseWords(p.phrase));
+
+    if (assocNegative.length === 0) {
+        section += `✓ EXCELLENT - Minimal negative language in your calls\n`;
+        section += `  • You're avoiding negative words effectively\n`;
+    } else {
+        section += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
+        assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - used ${p.value} times\n`;
+        });
+    }
+    section += `\n`;
+
+    if (assocNegativeUnused.length > 0) {
+        section += `🛡 WATCH OUT - Database phrases you haven't used yet (prevent bad habits):\n`;
+        assocNegativeUnused.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - Don't let this slip in\n`;
+        });
+    }
+    section += `\n`;
+
+    const negativeReplacements = {
+        'not sure': 'I\'ll find out for you',
+        'an error': 'Let me correct that for you',
+        'we can\'t': 'Here\'s what we can do',
+        'can\'t': 'We can',
+        'no way': 'I understand, let\'s work on this',
+        'i can\'t': 'I can help you with',
+        'no': 'Yes, I can',
+        'unable': 'I\'m able to help you',
+        'don\'t': 'Do',
+        'sorry but': 'I apologize and here\'s how I\'ll fix this',
+        'unfortunately': 'Great news - here\'s what we can do'
+    };
+
+    section += `✅ POSITIVE ALTERNATIVES - Say these instead:\n`;
+    if (assocNegative.length > 0) {
+        assocNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
+            const phrase = p.phrase.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+            const replacement = Object.entries(negativeReplacements).find(([key]) => phrase.includes(key))?.[1];
+            if (replacement) {
+                section += `  • Instead of "${censorCurseWords(p.phrase)}" → "${replacement}"\n`;
+            }
+        });
+    } else {
+        section += `  • "I understand your concern, here's how I can help"\n`;
+        section += `  • "Let me find a solution for you"\n`;
+        section += `  • "I appreciate you working with me on this"\n`;
+    }
+    section += `\n`;
+
+    if (custNegative.length > 0) {
+        section += `📌 CUSTOMER CONTEXT - They said (understand their frustration):\n`;
+        custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
+            section += `  • "${censorCurseWords(p.phrase)}" - detected ${p.value} times\n`;
+        });
+        section += `  → Acknowledge their concern, don't make excuses\n`;
+    }
+    section += `\n`;
+
+    section += `📝 SCRIPTED RESPONSE (when customer is frustrated):\n`;
+    section += `  "I hear your frustration, and I completely understand. I'm committed to\n`;
+    section += `   finding a solution for you right now. Let me see what I can do for you."\n\n`;
+
+    return section;
+}
+
 function generateSentimentSummary() {
     const { positive, negative, emotions } = sentimentReports;
     
@@ -13434,80 +13510,7 @@ function generateSentimentSummary() {
     summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
     
     summary += buildPositiveLanguageSentimentSection(positive, associateName);
-    
-    // AVOIDING NEGATIVE LANGUAGE Section
-    summary += `═══════════════════════════════════\n`;
-    summary += `AVOIDING NEGATIVE LANGUAGE\n`;
-    summary += `═══════════════════════════════════\n`;
-    summary += `Keywords Summary (phrases used)\n\n`;
-    
-    // Separate associate negative from customer negative
-    const assocNegative = negative.phrases.filter(p => p.speaker === 'A' && p.value > 0 && !containsCurseWords(p.phrase));
-    const assocNegativeUnused = negative.phrases.filter(p => p.speaker === 'A' && p.value === 0 && !containsCurseWords(p.phrase));
-    const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0 && !containsCurseWords(p.phrase));
-    
-    if (assocNegative.length === 0) {
-        summary += `✓ EXCELLENT - Minimal negative language in your calls\n`;
-        summary += `  • You're avoiding negative words effectively\n`;
-    } else {
-        summary += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
-        assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - used ${p.value} times\n`;
-        });
-    }
-    summary += `\n`;
-    
-    if (assocNegativeUnused.length > 0) {
-        summary += `🛡 WATCH OUT - Database phrases you haven't used yet (prevent bad habits):\n`;
-        assocNegativeUnused.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - Don't let this slip in\n`;
-        });
-    }
-    summary += `\n`;
-    
-    // Map of negative phrases to positive replacements
-    const negativeReplacements = {
-        'not sure': 'I\'ll find out for you',
-        'an error': 'Let me correct that for you',
-        'we can\'t': 'Here\'s what we can do',
-        'can\'t': 'We can',
-        'no way': 'I understand, let\'s work on this',
-        'i can\'t': 'I can help you with',
-        'no': 'Yes, I can',
-        'unable': 'I\'m able to help you',
-        'don\'t': 'Do',
-        'sorry but': 'I apologize and here\'s how I\'ll fix this',
-        'unfortunately': 'Great news - here\'s what we can do'
-    };
-    
-    summary += `✅ POSITIVE ALTERNATIVES - Say these instead:\n`;
-    if (assocNegative.length > 0) {
-        assocNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
-            const phrase = p.phrase.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-            const replacement = Object.entries(negativeReplacements).find(([key]) => phrase.includes(key))?.[1];
-            if (replacement) {
-                summary += `  • Instead of "${censorCurseWords(p.phrase)}" → "${replacement}"\n`;
-            }
-        });
-    } else {
-        summary += `  • "I understand your concern, here's how I can help"\n`;
-        summary += `  • "Let me find a solution for you"\n`;
-        summary += `  • "I appreciate you working with me on this"\n`;
-    }
-    summary += `\n`;
-    
-    if (custNegative.length > 0) {
-        summary += `📌 CUSTOMER CONTEXT - They said (understand their frustration):\n`;
-        custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
-            summary += `  • "${censorCurseWords(p.phrase)}" - detected ${p.value} times\n`;
-        });
-        summary += `  → Acknowledge their concern, don't make excuses\n`;
-    }
-    summary += `\n`;
-    
-    summary += `📝 SCRIPTED RESPONSE (when customer is frustrated):\n`;
-    summary += `  "I hear your frustration, and I completely understand. I'm committed to\n`;
-    summary += `   finding a solution for you right now. Let me see what I can do for you."\n\n`;
+    summary += buildNegativeLanguageSentimentSection(negative);
     
     // MANAGING EMOTIONS Section
     summary += `═══════════════════════════════════\n`;
