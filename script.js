@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.36'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.37'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6408,22 +6408,16 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         ytdAvailable
     });
 
-    const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
+    y = drawTrendInsightsLegendAndReliabilitySection(
+        ctx,
+        y,
         metricOrder,
         metrics,
         prevMetrics,
         centerAvg,
-        previous
+        previous,
+        periodTypeText
     );
-
-    y = drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous);
-    
-    y += 30 + drawTrendLegendOnCanvas(ctx, y + 30, periodTypeText);
-
-    const reliabilityHours = parseFloat(metrics.reliability) || 0;
-    if (reliabilityHours > 0) {
-        y += drawTrendReliabilityNoteOnCanvas(ctx, y);
-    }
 
     finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady);
 }
@@ -6578,6 +6572,26 @@ function drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear) {
         'No below-target metrics in this period.'
     );
     return y + summaryBoxesHeight + 24;
+}
+
+function drawTrendInsightsLegendAndReliabilitySection(ctx, y, metricOrder, metrics, prevMetrics, centerAvg, previous, periodTypeText) {
+    const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
+        metricOrder,
+        metrics,
+        prevMetrics,
+        centerAvg,
+        previous
+    );
+
+    let nextY = drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous);
+    nextY += 30 + drawTrendLegendOnCanvas(ctx, nextY + 30, periodTypeText);
+
+    const reliabilityHours = parseFloat(metrics.reliability) || 0;
+    if (reliabilityHours > 0) {
+        nextY += drawTrendReliabilityNoteOnCanvas(ctx, nextY);
+    }
+
+    return nextY;
 }
 
 function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
