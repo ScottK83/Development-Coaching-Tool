@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.49'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.50'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7852,6 +7852,66 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
 // EXECUTIVE SUMMARY
 // ============================================
 
+function buildExecutiveSummaryAggregateMetrics(allWeeks) {
+    const metrics = {
+        totalWeeks: allWeeks.length,
+        totalEmployees: new Set(),
+        avgScheduleAdherence: [],
+        avgTransfers: [],
+        avgAHT: []
+    };
+
+    allWeeks.forEach(weekKey => {
+        const week = weeklyData[weekKey];
+        if (!week || !week.employees) return;
+
+        week.employees.forEach(emp => {
+            metrics.totalEmployees.add(emp.name);
+            if (emp.scheduleAdherence) metrics.avgScheduleAdherence.push(emp.scheduleAdherence);
+            if (emp.transfers) metrics.avgTransfers.push(emp.transfers);
+            if (emp.aht) metrics.avgAHT.push(emp.aht);
+        });
+    });
+
+    return metrics;
+}
+
+function calculateExecutiveSummaryAverages(metrics) {
+    const avgAdherence = metrics.avgScheduleAdherence.length > 0
+        ? (metrics.avgScheduleAdherence.reduce((a, b) => a + b, 0) / metrics.avgScheduleAdherence.length).toFixed(2)
+        : 0;
+
+    const avgTransfers = metrics.avgTransfers.length > 0
+        ? (metrics.avgTransfers.reduce((a, b) => a + b, 0) / metrics.avgTransfers.length).toFixed(2)
+        : 0;
+
+    const avgAHT = metrics.avgAHT.length > 0
+        ? Math.round(metrics.avgAHT.reduce((a, b) => a + b, 0) / metrics.avgAHT.length)
+        : 0;
+
+    return { avgAdherence, avgTransfers, avgAHT };
+}
+
+function buildExecutiveSummaryCards(metrics, averages) {
+    return [
+        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
+        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
+        { label: 'Avg Schedule Adherence', value: `${averages.avgAdherence}%`, icon: '✅' },
+        { label: 'Avg Transfers', value: `${averages.avgTransfers}%`, icon: '📉' },
+        { label: 'Avg Handle Time', value: `${averages.avgAHT}s`, icon: '⏱️' }
+    ];
+}
+
+function renderExecutiveSummaryCardsHtml(cards) {
+    return cards.map(card => `
+            <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2em; margin-bottom: 8px;">${card.icon}</div>
+                <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 4px;">${card.value}</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">${card.label}</div>
+            </div>
+        `).join('');
+}
+
 function renderExecutiveSummary() {
     const container = document.getElementById('executiveSummaryContainer');
     if (!container) return;
@@ -7862,61 +7922,15 @@ function renderExecutiveSummary() {
         container.innerHTML = '<p style="color: #666; font-style: italic;">No data uploaded yet. Upload some weekly data to see the executive summary!</p>';
         return;
     }
-    
-    // Calculate aggregate metrics
-    const metrics = {
-        totalWeeks: allWeeks.length,
-        totalEmployees: new Set(),
-        avgScheduleAdherence: [],
-        avgTransfers: [],
-        avgAHT: []
-    };
-    
-    allWeeks.forEach(weekKey => {
-        const week = weeklyData[weekKey];
-        if (week && week.employees) {
-            week.employees.forEach(emp => {
-                metrics.totalEmployees.add(emp.name);
-                if (emp.scheduleAdherence) metrics.avgScheduleAdherence.push(emp.scheduleAdherence);
-                if (emp.transfers) metrics.avgTransfers.push(emp.transfers);
-                if (emp.aht) metrics.avgAHT.push(emp.aht);
-            });
-        }
-    });
-    
-    const avgAdherence = metrics.avgScheduleAdherence.length > 0 
-        ? (metrics.avgScheduleAdherence.reduce((a, b) => a + b, 0) / metrics.avgScheduleAdherence.length).toFixed(2)
-        : 0;
-    
-    const avgTransfers = metrics.avgTransfers.length > 0
-        ? (metrics.avgTransfers.reduce((a, b) => a + b, 0) / metrics.avgTransfers.length).toFixed(2)
-        : 0;
-    
-    const avgAHT = metrics.avgAHT.length > 0
-        ? Math.round(metrics.avgAHT.reduce((a, b) => a + b, 0) / metrics.avgAHT.length)
-        : 0;
+
+    const metrics = buildExecutiveSummaryAggregateMetrics(allWeeks);
+    const averages = calculateExecutiveSummaryAverages(metrics);
+    const cards = buildExecutiveSummaryCards(metrics, averages);
     
     let html = '<div style="margin-bottom: 30px;">';
     html += '<h3>Performance Overview</h3>';
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
-    
-    const cards = [
-        { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
-        { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
-        { label: 'Avg Schedule Adherence', value: avgAdherence + '%', icon: '✅' },
-        { label: 'Avg Transfers', value: avgTransfers + '%', icon: '📉' },
-        { label: 'Avg Handle Time', value: avgAHT + 's', icon: '⏱️' }
-    ];
-    
-    cards.forEach(card => {
-        html += `
-            <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
-                <div style="font-size: 2em; margin-bottom: 8px;">${card.icon}</div>
-                <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 4px;">${card.value}</div>
-                <div style="font-size: 0.9em; opacity: 0.9;">${card.label}</div>
-            </div>
-        `;
-    });
+    html += renderExecutiveSummaryCardsHtml(cards);
     
     html += '</div></div>';
     
