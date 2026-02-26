@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.77'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.78'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12656,6 +12656,9 @@ function resolveYearEndPromptHeaderData(employeeName, reviewYear, trackStatus) {
 }
 
 function buildYearEndCopilotPrompt(inputData, supportData, headerData) {
+    const delegated = window.DevCoachModules?.yearEnd?.buildCopilotPrompt?.(inputData, supportData, headerData);
+    if (delegated) return delegated;
+
     return `I'm a supervisor preparing year-end review responses for ${headerData.preferredName} (${inputData.employeeName}) for ${inputData.reviewYear}.
 
 Use this data source: ${headerData.sourceLabel} (${headerData.periodLabel}).
@@ -12848,6 +12851,9 @@ async function pasteYearEndResponseFromClipboard() {
 }
 
 function extractYearEndBoxText(responseText, boxNumber) {
+    const delegated = window.DevCoachModules?.yearEnd?.extractBoxText?.(responseText, boxNumber);
+    if (typeof delegated === 'string' && delegated.length >= 0) return delegated;
+
     if (!responseText || (boxNumber !== 1 && boxNumber !== 2)) return '';
 
     const normalized = String(responseText).replace(/\r\n/g, '\n').trim();
@@ -12924,7 +12930,13 @@ function generateYearEndVerbalSummary() {
     if (!output) return;
 
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
-    const summary = `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
+    const summary = window.DevCoachModules?.yearEnd?.buildVerbalSummary?.(
+        preferredName,
+        reviewYear,
+        performanceRating,
+        meritDetails,
+        bonusAmount
+    ) || `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
 
 For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.
 
