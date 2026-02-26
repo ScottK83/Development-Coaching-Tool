@@ -295,10 +295,7 @@ function refreshPtoAssociateOptionFlags() {
         if (!associateName) return;
 
         const tracker = migrateLegacyPtoTracker(store.associates?.[associateName] || getDefaultPtoTracker());
-        const ytdReliability = getLatestYtdReliabilityHoursForAssociate(associateName);
-        if (ytdReliability !== null && ytdReliability !== undefined) {
-            tracker.reliabilityHoursAgainst = normalizeHours(ytdReliability);
-        }
+        syncTrackerReliabilityFromYtd(associateName, tracker);
         const unaccountedHours = getUnaccountedReliabilityHours(tracker);
         const baseLabel = associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName;
 
@@ -373,90 +370,91 @@ function getWeekDates(startDateText, endDateText) {
 }
 
 function getLatestYtdReliabilityHoursForAssociate(associateName) {
+    const snapshot = getLatestYtdReliabilitySnapshotForAssociate(associateName);
+    if (!snapshot?.hasYtdPeriod) return null;
+    return normalizeHours(snapshot.reliabilityHours);
+}
+
+function getLatestYtdReliabilitySnapshotForAssociate(associateName) {
     const normalizedAssociate = normalizeAssociateName(associateName);
-    if (!normalizedAssociate) return null;
+    if (!normalizedAssociate) {
+        return {
+            hasYtdPeriod: false,
+            associatePresent: false,
+            reliabilityHours: null,
+            periodKey: '',
+            startDate: '',
+            endDate: ''
+        };
+    }
 
     const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
-    const rows = [];
+    const periods = [];
 
     Object.entries(ytdData).forEach(([periodKey, period]) => {
         if (!period || typeof period !== 'object') return;
+
         const startDate = String(period?.metadata?.startDate || '').trim();
         const periodEndDate = String(period?.metadata?.endDate || '').trim();
         if (!isPeriodInTrackingYear(startDate, periodEndDate, periodKey)) return;
 
-        const employees = Array.isArray(period.employees) ? period.employees : [];
-        const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
-        if (!employee) return;
-
-        const reliability = normalizeHours(employee.reliability);
         const startEnd = getWeekStartEndFromPeriod(periodKey, period);
-        const endDate = parseIsoDateSafe(startEnd.endDate) || parseIsoDateSafe(startEnd.startDate);
+        const endDateObj = parseIsoDateSafe(startEnd.endDate) || parseIsoDateSafe(startEnd.startDate);
 
-        rows.push({
-            reliability,
-            endDate,
-            periodKey: String(periodKey || '')
-        });
-    });
-
-    if (!rows.length) return null;
-
-    rows.sort((a, b) => {
-        const left = a.endDate ? a.endDate.getTime() : 0;
-        const right = b.endDate ? b.endDate.getTime() : 0;
-        if (left !== right) return right - left;
-        return String(b.periodKey).localeCompare(String(a.periodKey));
-    });
-
-    return normalizeHours(rows[0].reliability);
-}
-
-function getLatestReliabilitySourceMetaForAssociate(associateName) {
-    const normalizedAssociate = normalizeAssociateName(associateName);
-    if (!normalizedAssociate) return null;
-
-    const sourceRows = [];
-    const pushSource = (sourceType, periodKey, period) => {
-        if (!period || typeof period !== 'object') return;
-        const startDate = String(period?.metadata?.startDate || '').trim();
-        const endDate = String(period?.metadata?.endDate || '').trim();
-        if (!isPeriodInTrackingYear(startDate, endDate, periodKey)) return;
-
-        const employees = Array.isArray(period.employees) ? period.employees : [];
-        const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
-        if (!employee) return;
-
-        const reliability = normalizeHours(employee?.reliability);
-        const endDateObj = parseIsoDateSafe(endDate) || parseIsoDateSafe(startDate);
-        sourceRows.push({
-            sourceType,
-            periodKey,
-            reliability,
-            startDate,
-            endDate,
+        periods.push({
+            period,
+            periodKey: String(periodKey || ''),
+            startDate: startEnd.startDate,
+            endDate: startEnd.endDate,
             endDateObj
         });
-    };
-
-    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
-    Object.entries(weeklyData).forEach(([periodKey, period]) => {
-        const periodType = String(period?.metadata?.periodType || 'week').trim().toLowerCase();
-        pushSource(periodType || 'week', periodKey, period);
     });
 
-    const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
-    Object.entries(ytdData).forEach(([periodKey, period]) => pushSource('ytd', periodKey, period));
+    if (!periods.length) {
+        return {
+            hasYtdPeriod: false,
+            associatePresent: false,
+            reliabilityHours: null,
+            periodKey: '',
+            startDate: '',
+            endDate: ''
+        };
+    }
 
-    if (!sourceRows.length) return null;
-    sourceRows.sort((a, b) => {
+    periods.sort((a, b) => {
         const left = a.endDateObj ? a.endDateObj.getTime() : 0;
         const right = b.endDateObj ? b.endDateObj.getTime() : 0;
         if (left !== right) return right - left;
         return String(b.periodKey).localeCompare(String(a.periodKey));
     });
 
-    return sourceRows[0];
+    const latest = periods[0];
+    const employees = Array.isArray(latest?.period?.employees) ? latest.period.employees : [];
+    const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
+    const reliabilityHours = employee ? normalizeHours(employee?.reliability) : 0;
+
+    return {
+        hasYtdPeriod: true,
+        associatePresent: !!employee,
+        reliabilityHours,
+        periodKey: latest.periodKey,
+        startDate: latest.startDate,
+        endDate: latest.endDate
+    };
+}
+
+function getLatestReliabilitySourceMetaForAssociate(associateName) {
+    const snapshot = getLatestYtdReliabilitySnapshotForAssociate(associateName);
+    if (!snapshot?.hasYtdPeriod) return null;
+
+    return {
+        sourceType: 'ytd',
+        periodKey: snapshot.periodKey,
+        reliability: normalizeHours(snapshot.reliabilityHours),
+        startDate: snapshot.startDate,
+        endDate: snapshot.endDate,
+        associatePresent: !!snapshot.associatePresent
+    };
 }
 
 function buildReliabilityWeeksForAssociate(associateName) {
@@ -558,12 +556,17 @@ function renderPtoReliabilitySourceNote(associateName) {
 
     const source = getLatestReliabilitySourceMetaForAssociate(associateName);
     if (!source) {
-        note.textContent = `No ${PTO_TRACKING_YEAR} reliability source found yet.`;
+        note.textContent = `No ${PTO_TRACKING_YEAR} YTD reliability source found yet.`;
         return;
     }
 
     const sourceTypeLabel = String(source.sourceType || '').toUpperCase();
     const rangeText = source.startDate && source.endDate ? `${source.startDate} to ${source.endDate}` : source.periodKey;
+    if (!source.associatePresent) {
+        note.textContent = `Reliability source (${PTO_TRACKING_YEAR}): ${sourceTypeLabel} • ${rangeText} • associate not present in latest YTD upload, using 0.00h`;
+        return;
+    }
+
     note.textContent = `Reliability source (${PTO_TRACKING_YEAR}): ${sourceTypeLabel} • ${rangeText} • ${source.reliability.toFixed(2)}h`;
 }
 
@@ -776,9 +779,12 @@ function reclassifyPtoEntryType(entryId, newType) {
 }
 
 function syncTrackerReliabilityFromYtd(associateName, tracker) {
-    const ytdReliability = getLatestYtdReliabilityHoursForAssociate(associateName);
-    if (ytdReliability === null || ytdReliability === undefined) return false;
-    tracker.reliabilityHoursAgainst = normalizeHours(ytdReliability);
+    if (!tracker || typeof tracker !== 'object') return false;
+
+    const snapshot = getLatestYtdReliabilitySnapshotForAssociate(associateName);
+    if (!snapshot?.hasYtdPeriod) return false;
+
+    tracker.reliabilityHoursAgainst = normalizeHours(snapshot.reliabilityHours);
     return true;
 }
 
@@ -794,6 +800,11 @@ function updatePtoInputsFromTracker(associateName, tracker) {
     const copyBtn = document.getElementById('ptoCopyEmailBtn');
 
     const hasAssociate = !!associateName;
+    const ytdSnapshot = hasAssociate ? getLatestYtdReliabilitySnapshotForAssociate(associateName) : null;
+    if (hasAssociate && tracker && ytdSnapshot?.hasYtdPeriod) {
+        tracker.reliabilityHoursAgainst = normalizeHours(ytdSnapshot.reliabilityHours);
+    }
+
     if (detailsContainer) {
         detailsContainer.style.display = hasAssociate ? 'block' : 'none';
     }
@@ -808,7 +819,10 @@ function updatePtoInputsFromTracker(associateName, tracker) {
     }
     if (reliabilityHoursInput) {
         reliabilityHoursInput.value = hasAssociate ? normalizeHours(tracker?.reliabilityHoursAgainst).toFixed(2) : '';
-        reliabilityHoursInput.disabled = !hasAssociate;
+        reliabilityHoursInput.disabled = !hasAssociate || !!ytdSnapshot?.hasYtdPeriod;
+        reliabilityHoursInput.title = ytdSnapshot?.hasYtdPeriod
+            ? 'Reliability is auto-synced from the latest YTD upload and cannot be edited here.'
+            : '';
     }
 
     [addBtn, generateBtn, copyBtn].forEach(btn => {
@@ -821,10 +835,12 @@ function updatePtoInputsFromTracker(associateName, tracker) {
         }
         renderPtoEntries(getDefaultPtoTracker(), '');
         populateReliabilityWeekSelector('');
+        renderPtoReliabilitySourceNote('');
         if (output) output.value = '';
         return;
     }
 
+    renderPtoReliabilitySourceNote(associateName);
     populateReliabilityWeekSelector(associateName);
     renderPtoSummary(tracker, associateName);
     renderPtoEntries(tracker, associateName);
@@ -925,11 +941,25 @@ function initializePtoTracker() {
         reliabilityHoursInput.addEventListener('input', () => {
             const context = getSelectedAssociateAndTracker(true);
             if (!context.tracker) return;
+
+            const ytdSnapshot = getLatestYtdReliabilitySnapshotForAssociate(context.associateName);
+            if (ytdSnapshot?.hasYtdPeriod) {
+                syncTrackerReliabilityFromYtd(context.associateName, context.tracker);
+                reliabilityHoursInput.value = normalizeHours(context.tracker.reliabilityHoursAgainst).toFixed(2);
+                savePtoStore(context.store);
+                refreshPtoAssociateOptionFlags();
+                renderPtoSummary(context.tracker, context.associateName);
+                renderPtoReliabilitySourceNote(context.associateName);
+                showToast('Reliability comes from latest YTD upload and cannot be overridden here.', 3500);
+                return;
+            }
+
             context.tracker.reliabilityHoursAgainst = normalizeHours(reliabilityHoursInput.value);
             reliabilityHoursInput.value = context.tracker.reliabilityHoursAgainst.toFixed(2);
             savePtoStore(context.store);
             refreshPtoAssociateOptionFlags();
             renderPtoSummary(context.tracker, context.associateName);
+            renderPtoReliabilitySourceNote(context.associateName);
         });
         reliabilityHoursInput.dataset.bound = 'true';
     }
