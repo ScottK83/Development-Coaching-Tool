@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.66'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.67'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12432,38 +12432,92 @@ function buildYearEndDraftContext(employeeName, reviewYear, latestPeriod, endDat
     };
 }
 
+function getYearEndSnapshotElements() {
+    return {
+        status: document.getElementById('yearEndStatus'),
+        snapshotPanel: document.getElementById('yearEndSnapshotPanel'),
+        summary: document.getElementById('yearEndFactsSummary'),
+        winsList: document.getElementById('yearEndWinsList'),
+        improvementList: document.getElementById('yearEndImprovementList'),
+        onOffSummary: document.getElementById('yearEndOnOffSummary'),
+        onOffDetails: document.getElementById('yearEndOnOffDetails'),
+        trackSelect: document.getElementById('yearEndTrackSelect'),
+        positivesInput: document.getElementById('yearEndPositivesInput'),
+        improvementsInput: document.getElementById('yearEndImprovementsInput'),
+        managerContextInput: document.getElementById('yearEndManagerContext'),
+        responseInput: document.getElementById('yearEndCopilotResponse'),
+        performanceRatingInput: document.getElementById('yearEndPerformanceRatingInput'),
+        meritDetailsInput: document.getElementById('yearEndMeritDetailsInput'),
+        bonusAmountInput: document.getElementById('yearEndBonusAmountInput'),
+        verbalSummaryOutput: document.getElementById('yearEndVerbalSummaryOutput'),
+        promptArea: document.getElementById('yearEndPromptArea')
+    };
+}
+
+function clearYearEndSnapshotListsAndPrompt(summary, winsList, improvementList, promptArea) {
+    if (promptArea) promptArea.value = '';
+    if (summary) summary.textContent = '';
+    if (winsList) winsList.innerHTML = '';
+    if (improvementList) improvementList.innerHTML = '';
+    yearEndDraftContext = null;
+}
+
+function setYearEndSnapshotStatus(status, snapshotPanel, text, showPanel) {
+    if (!status || !snapshotPanel) return;
+    status.textContent = text;
+    status.style.display = 'block';
+    snapshotPanel.style.display = showPanel ? 'block' : 'none';
+}
+
+function renderYearEndSnapshotMetricLists(winsList, improvementList, wins, opportunities) {
+    if (winsList) {
+        winsList.innerHTML = wins.length
+            ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
+            : '<li>No metrics currently at goal in this period.</li>';
+    }
+
+    if (improvementList) {
+        improvementList.innerHTML = opportunities.length
+            ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
+            : '<li>No below-target metrics detected in this period.</li>';
+    }
+}
+
+function resolveYearEndEndDateText(latestPeriod) {
+    const metadataEndDate = latestPeriod?.period?.metadata?.endDate;
+    const fallbackDate = latestPeriod?.periodKey?.split('|')[1] || latestPeriod?.periodKey;
+    return formatDateMMDDYYYY(metadataEndDate || fallbackDate);
+}
+
 function updateYearEndSnapshotDisplay() {
     const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
     const reviewYear = document.getElementById('yearEndReviewYear')?.value;
-    const status = document.getElementById('yearEndStatus');
-    const snapshotPanel = document.getElementById('yearEndSnapshotPanel');
-    const summary = document.getElementById('yearEndFactsSummary');
-    const winsList = document.getElementById('yearEndWinsList');
-    const improvementList = document.getElementById('yearEndImprovementList');
-    const onOffSummary = document.getElementById('yearEndOnOffSummary');
-    const onOffDetails = document.getElementById('yearEndOnOffDetails');
-    const trackSelect = document.getElementById('yearEndTrackSelect');
-    const positivesInput = document.getElementById('yearEndPositivesInput');
-    const improvementsInput = document.getElementById('yearEndImprovementsInput');
-    const managerContextInput = document.getElementById('yearEndManagerContext');
-    const responseInput = document.getElementById('yearEndCopilotResponse');
-    const performanceRatingInput = document.getElementById('yearEndPerformanceRatingInput');
-    const meritDetailsInput = document.getElementById('yearEndMeritDetailsInput');
-    const bonusAmountInput = document.getElementById('yearEndBonusAmountInput');
-    const verbalSummaryOutput = document.getElementById('yearEndVerbalSummaryOutput');
-    const promptArea = document.getElementById('yearEndPromptArea');
+    const {
+        status,
+        snapshotPanel,
+        summary,
+        winsList,
+        improvementList,
+        onOffSummary,
+        onOffDetails,
+        trackSelect,
+        positivesInput,
+        improvementsInput,
+        managerContextInput,
+        responseInput,
+        performanceRatingInput,
+        meritDetailsInput,
+        bonusAmountInput,
+        verbalSummaryOutput,
+        promptArea
+    } = getYearEndSnapshotElements();
 
     if (!status || !snapshotPanel || !summary || !winsList || !improvementList || !promptArea) return;
 
-    promptArea.value = '';
-    winsList.innerHTML = '';
-    improvementList.innerHTML = '';
-    yearEndDraftContext = null;
+    clearYearEndSnapshotListsAndPrompt(summary, winsList, improvementList, promptArea);
 
     if (!employeeName || !reviewYear) {
-        snapshotPanel.style.display = 'none';
-        status.textContent = 'Select associate and review year to load year-end facts.';
-        status.style.display = 'block';
+        setYearEndSnapshotStatus(status, snapshotPanel, 'Select associate and review year to load year-end facts.', false);
         clearYearEndOnOffMirror(onOffSummary, onOffDetails);
         clearYearEndDraftInputs(trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput);
         return;
@@ -12471,9 +12525,7 @@ function updateYearEndSnapshotDisplay() {
 
     const latestPeriod = getLatestYearPeriodForEmployee(employeeName, reviewYear);
     if (!latestPeriod) {
-        snapshotPanel.style.display = 'none';
-        status.textContent = `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`;
-        status.style.display = 'block';
+        setYearEndSnapshotStatus(status, snapshotPanel, `No ${reviewYear} data found for ${employeeName}. Upload ${reviewYear} metrics first.`, false);
         clearYearEndOnOffMirror(onOffSummary, onOffDetails);
         return;
     }
@@ -12488,19 +12540,11 @@ function updateYearEndSnapshotDisplay() {
         reviewYear,
         latestPeriod.period?.metadata
     );
-    const endDateText = latestPeriod.period?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestPeriod.period.metadata.endDate)
-        : formatDateMMDDYYYY(latestPeriod.periodKey.split('|')[1] || latestPeriod.periodKey);
+    const endDateText = resolveYearEndEndDateText(latestPeriod);
 
     summary.textContent = buildYearEndSummaryLine(latestPeriod, targetProfileYear, wins, opportunities);
 
-    winsList.innerHTML = wins.length
-        ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
-        : '<li>No metrics currently at goal in this period.</li>';
-
-    improvementList.innerHTML = opportunities.length
-        ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
-        : '<li>No below-target metrics detected in this period.</li>';
+    renderYearEndSnapshotMetricLists(winsList, improvementList, wins, opportunities);
 
     const onOffMirror = renderYearEndOnOffMirror(
         latestPeriod.employeeRecord,
@@ -12526,9 +12570,7 @@ function updateYearEndSnapshotDisplay() {
         annualGoals
     );
 
-    status.textContent = `Year-end facts loaded for ${employeeName} (${reviewYear}).`;
-    status.style.display = 'block';
-    snapshotPanel.style.display = 'block';
+    setYearEndSnapshotStatus(status, snapshotPanel, `Year-end facts loaded for ${employeeName} (${reviewYear}).`, true);
 
     // Persist defaults if we auto-populated empty fields
     persistYearEndDraftState(employeeName, reviewYear);
