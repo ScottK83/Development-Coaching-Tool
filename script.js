@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.146'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.147'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3517,6 +3517,13 @@ function getRepoSyncEndpointIfAllowed(config, forceSync) {
     return endpoint;
 }
 
+function finalizeRepoSyncSuccess(reason, responseData) {
+    const syncMeta = buildRepoSyncMeta(reason, responseData);
+    saveRepoSyncLastSuccess(syncMeta);
+    renderCallListeningLastSync(syncMeta);
+    setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
+}
+
 async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
     const forceSync = options?.force === true;
@@ -3531,11 +3538,7 @@ async function syncRepoData(reason = 'updated', options = {}) {
         await throwIfRepoSyncErrorResponse(response);
 
         const responseData = await parseRepoSyncSuccessResponse(response);
-        const syncMeta = buildRepoSyncMeta(reason, responseData);
-        saveRepoSyncLastSuccess(syncMeta);
-        renderCallListeningLastSync(syncMeta);
-
-        setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
+        finalizeRepoSyncSuccess(reason, responseData);
     } catch (error) {
         console.error('Repo sync failed:', error);
         setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
