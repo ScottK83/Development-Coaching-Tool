@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-26T05:26:41.569Z",
+  "generatedAt": "2026-02-26T05:26:43.511Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": "2026.02.25.119",
   "weeklyData": {
@@ -4389,7 +4389,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Scoticia Osborne",
+    "selectedAssociate": "Taylor Colter",
     "associates": {
       "Alyssa Dimes": {
         "carriedOverHours": 0,
@@ -4479,6 +4479,13 @@
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 8.6,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Taylor Colter": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.12,
         "ptostMaxHours": 40,
         "entries": []
       }
@@ -5356,7 +5363,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 1701
+      "byteLength": 1824
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
