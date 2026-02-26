@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.58'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.59'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11573,43 +11573,61 @@ function getYearEndEmployees() {
     return Array.from(employees).sort();
 }
 
+function normalizeYearEndEmployeeLookupName(name) {
+    return String(name || '').trim().toLowerCase();
+}
+
+function matchesYearEndReviewYear(explicitReviewYear, endDate, reviewYear) {
+    return (Number.isInteger(explicitReviewYear) && explicitReviewYear === reviewYear)
+        || (!isNaN(endDate.getTime()) && endDate.getFullYear() === reviewYear);
+}
+
+function buildYearPeriodCandidate(sourceName, periodKey, period, requestedName, reviewYear) {
+    const employeeRecord = (period?.employees || []).find(emp => normalizeYearEndEmployeeLookupName(emp?.name) === requestedName);
+    if (!employeeRecord) return null;
+
+    const metadata = period?.metadata || {};
+    const explicitReviewYear = parseInt(metadata.yearEndReviewYear, 10);
+    const endDateText = metadata.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
+    const endDate = endDateText ? new Date(endDateText) : new Date(NaN);
+
+    if (!matchesYearEndReviewYear(explicitReviewYear, endDate, reviewYear)) {
+        return null;
+    }
+
+    const priority = ((sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1)
+        + (Number.isInteger(explicitReviewYear) && explicitReviewYear === reviewYear ? 2 : 0);
+
+    return {
+        sourceName,
+        periodKey,
+        period,
+        employeeRecord,
+        endDate,
+        priority,
+        label: metadata.label || `${metadata.periodType || 'period'} ending ${formatDateMMDDYYYY(endDateText) || endDateText}`
+    };
+}
+
+function collectYearPeriodCandidatesForEmployee(employeeName, reviewYear) {
+    const requestedName = normalizeYearEndEmployeeLookupName(employeeName);
+    const candidates = [];
+
+    const appendCandidate = (sourceName, periodKey, period) => {
+        const candidate = buildYearPeriodCandidate(sourceName, periodKey, period, requestedName, reviewYear);
+        if (candidate) candidates.push(candidate);
+    };
+
+    Object.entries(ytdData || {}).forEach(([periodKey, period]) => appendCandidate('ytdData', periodKey, period));
+    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => appendCandidate('weeklyData', periodKey, period));
+
+    return candidates;
+}
+
 function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
     const yearNum = parseInt(reviewYear, 10);
     if (!employeeName || !Number.isInteger(yearNum)) return null;
-    const normalizedRequestedName = String(employeeName).trim().toLowerCase();
-
-    const candidates = [];
-
-    const pushCandidate = (sourceName, periodKey, period) => {
-        const employeeRecord = (period?.employees || []).find(emp => {
-            const candidateName = String(emp?.name || '').trim().toLowerCase();
-            return candidateName === normalizedRequestedName;
-        });
-        if (!employeeRecord) return;
-
-        const metadata = period?.metadata || {};
-        const explicitReviewYear = parseInt(metadata.yearEndReviewYear, 10);
-        const endDateText = metadata.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
-        const endDate = endDateText ? new Date(endDateText) : new Date(NaN);
-        const matchesReviewYear = (Number.isInteger(explicitReviewYear) && explicitReviewYear === yearNum)
-            || (!isNaN(endDate.getTime()) && endDate.getFullYear() === yearNum);
-        if (!matchesReviewYear) return;
-
-        const priority = ((sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1)
-            + (Number.isInteger(explicitReviewYear) && explicitReviewYear === yearNum ? 2 : 0);
-        candidates.push({
-            sourceName,
-            periodKey,
-            period,
-            employeeRecord,
-            endDate,
-            priority,
-            label: metadata.label || `${metadata.periodType || 'period'} ending ${formatDateMMDDYYYY(endDateText) || endDateText}`
-        });
-    };
-
-    Object.entries(ytdData || {}).forEach(([periodKey, period]) => pushCandidate('ytdData', periodKey, period));
-    Object.entries(weeklyData || {}).forEach(([periodKey, period]) => pushCandidate('weeklyData', periodKey, period));
+    const candidates = collectYearPeriodCandidatesForEmployee(employeeName, yearNum);
 
     if (!candidates.length) return null;
 
