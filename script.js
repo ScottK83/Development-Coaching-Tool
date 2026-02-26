@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.76'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.77'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -14278,22 +14278,33 @@ function generateSentimentSummary() {
         return;
     }
     
-    // Extract associate name (should be same across all files)
-    const associateName = positive.associateName || negative.associateName || emotions.associateName || 'Unknown Associate';
-    
-    // Extract date range (should be same across all files)
-    const startDate = positive.startDate || negative.startDate || emotions.startDate || 'N/A';
-    const endDate = positive.endDate || negative.endDate || emotions.endDate || 'N/A';
-    const dateRange = `${startDate} – ${endDate}`;
-    
-    // Build summary according to specification
+    const delegated = window.DevCoachModules?.sentiment?.buildSentimentSummaryText;
     let summary = '';
-    summary += `Associate: ${escapeHtml(associateName)}\n`;
-    summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
-    
-    summary += buildPositiveLanguageSentimentSection(positive, associateName);
-    summary += buildNegativeLanguageSentimentSection(negative);
-    summary += buildManagingEmotionsSentimentSection(emotions);
+    if (typeof delegated === 'function') {
+        const composed = delegated(
+            { positive, negative, emotions },
+            {
+                escapeHtml,
+                buildPositiveLanguageSentimentSection,
+                buildNegativeLanguageSentimentSection,
+                buildManagingEmotionsSentimentSection
+            }
+        );
+        summary = composed?.summary || '';
+    }
+
+    if (!summary) {
+        const associateName = positive.associateName || negative.associateName || emotions.associateName || 'Unknown Associate';
+        const startDate = positive.startDate || negative.startDate || emotions.startDate || 'N/A';
+        const endDate = positive.endDate || negative.endDate || emotions.endDate || 'N/A';
+        const dateRange = `${startDate} – ${endDate}`;
+
+        summary += `Associate: ${escapeHtml(associateName)}\n`;
+        summary += `Date Range: ${escapeHtml(dateRange)}\n\n`;
+        summary += buildPositiveLanguageSentimentSection(positive, associateName);
+        summary += buildNegativeLanguageSentimentSection(negative);
+        summary += buildManagingEmotionsSentimentSection(emotions);
+    }
     
     // Display the summary
     document.getElementById('sentimentSummaryText').textContent = summary;
@@ -14978,94 +14989,24 @@ function generateSentimentCoPilotPrompt() {
     }
     
     const associateName = positive.associateName || 'the associate';
-    
-    // Goals from METRICS_REGISTRY
-    const POSITIVE_GOAL = 86; // positiveWord target
-    const NEGATIVE_GOAL = 83; // negativeWord target (higher = better at avoiding)
-    const EMOTIONS_GOAL = 95; // managingEmotions target
-    
-    // Build data summary for CoPilot
-    let dataSummary = `DATA SUMMARY:\n\n`;
-    dataSummary += `POSITIVE LANGUAGE: ${positive.callsDetected}/${positive.totalCalls} calls (${positive.percentage}%)\n`;
-    dataSummary += `Goal: ${POSITIVE_GOAL}% | Status: ${positive.percentage >= POSITIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    dataSummary += `Top 5 positive phrases they're using:\n`;
-    const topPos = positive.phrases
-        .filter(p => p.value > MIN_PHRASE_VALUE)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, TOP_PHRASES_COUNT);
-    topPos.forEach(p => {
-        const percentageOfCalls = ((p.value / positive.totalCalls) * 100).toFixed(0);
-        dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x / ${percentageOfCalls}% of calls)\n`;
-    });
-    dataSummary += `\n→ COACHING TIP: Encourage them to use these positive phrases on MORE calls (aim for 100% usage).\n`;
-    
-    dataSummary += `\nAVOIDING NEGATIVE: ${negative.callsDetected}/${negative.totalCalls} calls (${negative.percentage}%)\n`;
-    dataSummary += `Goal: ${NEGATIVE_GOAL}% | Status: ${negative.percentage >= NEGATIVE_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    const assocNeg = negative.phrases
-        .filter(p => p.speaker === 'A' && p.value > MIN_PHRASE_VALUE)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, TOP_PHRASES_COUNT);
-    if (assocNeg.length > 0) {
-        dataSummary += `Top 5 negative words associate said (MUST ELIMINATE):\n`;
-        assocNeg.forEach(p => {
-            dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
-        });
-        dataSummary += `\n→ COACHING TIP: These words must be removed from their vocabulary completely. Replace with positive alternatives.\n`;
-    } else {
-        dataSummary += `  ✓ Minimal negative language detected\n`;
+    const delegatedPrompt = window.DevCoachModules?.sentiment?.buildSentimentCopilotPrompt?.(
+        { positive, negative, emotions },
+        {
+            associateName,
+            POSITIVE_GOAL: 86,
+            NEGATIVE_GOAL: 83,
+            EMOTIONS_GOAL: 95,
+            MIN_PHRASE_VALUE,
+            TOP_PHRASES_COUNT,
+            escapeHtml
+        }
+    );
+    const prompt = delegatedPrompt || '';
+
+    if (!prompt) {
+        alert('⚠️ Could not generate CoPilot prompt from sentiment data.');
+        return;
     }
-    
-    dataSummary += `\nMANAGING EMOTIONS: ${emotions.callsDetected}/${emotions.totalCalls} calls (${emotions.percentage}%)\n`;
-    dataSummary += `Goal: ${EMOTIONS_GOAL}% | Status: ${emotions.percentage >= EMOTIONS_GOAL ? '✓ Met goal' : '✗ Below goal'}\n`;
-    const emoDetected = emotions.phrases
-        .filter(p => p.value > MIN_PHRASE_VALUE)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, TOP_PHRASES_COUNT);
-    if (emoDetected.length > 0) {
-        dataSummary += `Customer emotional phrases detected:\n`;
-        emoDetected.forEach(p => {
-            dataSummary += `  • "${escapeHtml(p.phrase)}" (${p.value}x)\n`;
-        });
-    } else {
-        dataSummary += `  ✓ Low emotional indicators detected\n`;
-    }
-    
-    // Extract date range for subject line (use individual dates from report)
-    const startDate = positive.startDate || 'Unknown';
-    const endDate = positive.endDate || 'Unknown';
-    
-    const prompt = `Write a brief coaching email to ${associateName} using bullet points.
-
-SUBJECT LINE: Sentiment Summary - ${startDate} - ${endDate}
-
-${dataSummary}
-
-KEY COACHING POINTS TO INCLUDE:
-
-1. POSITIVE LANGUAGE: Recognize the good phrases they're using. Encourage them to use these phrases on EVERY call (100% usage rate), not just some calls.
-
-2. NEGATIVE LANGUAGE: These words MUST be completely eliminated from their vocabulary. Help them identify positive alternatives to replace these negative words.
-
-3. Use the actual numbers and percentages from the data above.
-
-FORMAT:
-
-WHAT'S GOING WELL:
-* Highlight 2-3 positive phrases they're using effectively
-* Mention their current usage rate
-
-AREA TO FOCUS ON:
-* Address the negative language that needs elimination
-* Be specific about which words to remove
-
-CONCRETE ACTION FOR THIS WEEK:
-* Challenge them to use positive phrases on MORE calls (aim for 100%)
-* Give them 1-2 positive alternatives for the negative words they're saying
-
-CLOSING:
-* End with confidence and encouragement
-
-Keep it under 200 words. Real tone, no corporate speak. Be direct but supportive.`;
     
     // Copy to clipboard and show feedback
     navigator.clipboard.writeText(prompt).then(() => {
