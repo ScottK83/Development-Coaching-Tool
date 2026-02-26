@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.17'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.18'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5784,6 +5784,73 @@ function renderTrendFocusAreasHtml(focusAreas) {
     }).join('');
 }
 
+function attachTrendTipsModalHandlers(options) {
+    const {
+        modal,
+        displayName,
+        primaryFocusMetric,
+        secondaryFocusMetric,
+        primaryFocusTips,
+        secondaryFocusTips,
+        sentimentSnapshot,
+        allMetrics,
+        copilotPrompt,
+        focusAreas,
+        employeeName,
+        periodLabel
+    } = options;
+
+    document.getElementById('copyPromptBtn').addEventListener('click', () => {
+        const textarea = document.getElementById('copilotPromptDisplay');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ Prompt copied! Opening Copilot...', 2000);
+        window.open('https://copilot.microsoft.com', '_blank');
+    });
+
+    document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
+        const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
+        const finalPrompt = userNotesText
+            ? buildTrendCoachingPrompt(
+                displayName,
+                primaryFocusMetric,
+                secondaryFocusMetric,
+                primaryFocusTips,
+                secondaryFocusTips,
+                userNotesText,
+                sentimentSnapshot,
+                allMetrics
+            )
+            : copilotPrompt;
+
+        const metricsCoached = focusAreas
+            .map(area => area.metric?.metricKey)
+            .filter(Boolean);
+
+        recordCoachingEvent({
+            employeeId: employeeName,
+            weekEnding: periodLabel,
+            metricsCoached: metricsCoached,
+            aiAssisted: true
+        });
+
+        showToast('✅ Coaching logged', 2000);
+        document.getElementById('copilotPromptDisplay').value = finalPrompt;
+        showToast('💡 Updated prompt above with your notes. Copy and paste into CoPilot!', 3000);
+        document.getElementById('copilotPromptDisplay').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
 /**
  * Displays a modal panel for trend-based coaching with praise, focus areas, and tips.
  * User can review coaching suggestions, add notes, and optionally launch Copilot for email drafting.
@@ -5912,64 +5979,20 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     
     modal.appendChild(panel);
     document.body.appendChild(modal);
-    
-    // Copy prompt button handler
-    document.getElementById('copyPromptBtn').addEventListener('click', () => {
-        const textarea = document.getElementById('copilotPromptDisplay');
-        textarea.select();
-        document.execCommand('copy');
-        showToast('✅ Prompt copied! Opening Copilot...', 2000);
-        
-        // Open Copilot in new tab
-        window.open('https://copilot.microsoft.com', '_blank');
-    });
-    
-    document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
-        const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
-        
-        // Rebuild prompt with user notes if provided
-        const finalPrompt = userNotesText 
-            ? buildTrendCoachingPrompt(
-                displayName, 
-                primaryFocusMetric,
-                secondaryFocusMetric,
-                primaryFocusTips,
-                secondaryFocusTips,
-                userNotesText,
-                sentimentSnapshot,
-                allMetrics
-            )
-            : copilotPrompt;
-        
-        // Log as coaching entry - include all coached metrics
-        const metricsCoached = focusAreas
-            .map(area => area.metric?.metricKey)
-            .filter(Boolean);
-        
-        recordCoachingEvent({
-            employeeId: employeeName,
-            weekEnding: periodLabel,
-            metricsCoached: metricsCoached,
-            aiAssisted: true
-        });
-        
-        showToast('✅ Coaching logged', 2000);
-        
-        // Update textarea with final prompt and offer to copy
-        document.getElementById('copilotPromptDisplay').value = finalPrompt;
-        showToast('💡 Updated prompt above with your notes. Copy and paste into CoPilot!', 3000);
-        document.getElementById('copilotPromptDisplay').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-    
-    document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-    
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
-        }
+
+    attachTrendTipsModalHandlers({
+        modal,
+        displayName,
+        primaryFocusMetric,
+        secondaryFocusMetric,
+        primaryFocusTips,
+        secondaryFocusTips,
+        sentimentSnapshot,
+        allMetrics,
+        copilotPrompt,
+        focusAreas,
+        employeeName,
+        periodLabel
     });
 }
 
