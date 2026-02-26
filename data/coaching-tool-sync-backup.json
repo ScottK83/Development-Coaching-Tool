@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-26T15:07:32.269Z",
-  "reason": "storage set: devCoachingTool_deletedServerTips",
+  "generatedAt": "2026-02-26T15:07:55.904Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.02.26.11",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4389,7 +4389,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Jenifer Henson",
+    "selectedAssociate": "Alyssa Dimes",
     "associates": {
       "Alyssa Dimes": {
         "carriedOverHours": 0,
@@ -5374,12 +5374,12 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 2198
+      "byteLength": 2196
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 131
+      "byteLength": 128
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
