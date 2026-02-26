@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.140'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.141'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5201,19 +5201,6 @@ function setupMetricTrendsListeners() {
         saveMetricsPreviewBtn.addEventListener('click', saveMetricsPreviewEdits);
     }
     
-    // Show/hide buttons based on employee selection
-    const employeeDropdown = document.getElementById('trendEmployeeSelect');
-    if (employeeDropdown) {
-        employeeDropdown.addEventListener('change', (e) => {
-            const selectedValue = e.target.value;
-            const generateTrendBtn = document.getElementById('generateTrendBtn');
-            const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
-            const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
-
-            applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn);
-        });
-    }
-
     // Ensure buttons are correctly shown on initial load
     updateTrendButtonsVisibility();
     
