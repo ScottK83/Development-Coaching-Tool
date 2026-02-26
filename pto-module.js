@@ -288,7 +288,6 @@ function populatePtoAssociateSelect() {
 
     const store = loadPtoStore();
     const associates = getAssociateOptions(store);
-    const selected = normalizeAssociateName(select.value || store.selectedAssociate);
 
     select.innerHTML = '<option value="">-- Choose an associate --</option>';
     associates.forEach(name => {
@@ -298,15 +297,13 @@ function populatePtoAssociateSelect() {
         select.appendChild(option);
     });
 
-    const effectiveSelection = selected && associates.includes(selected) ? selected : (associates[0] || '');
-    select.value = effectiveSelection;
+    select.value = '';
 
     const latestStore = loadPtoStore();
-    latestStore.selectedAssociate = effectiveSelection;
+    latestStore.selectedAssociate = '';
     savePtoStore(latestStore);
 
-    const context = getSelectedAssociateAndTracker(true);
-    updatePtoInputsFromTracker(context.associateName, context.tracker || getDefaultPtoTracker());
+    updatePtoInputsFromTracker('', null);
 }
 
 function initializePtoTracker() {
