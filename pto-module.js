@@ -4,7 +4,9 @@
 
 const PTO_POLICY_UNPLANNED_LIMIT_HOURS = 16;
 const PTOST_MAX_HOURS_DEFAULT = 40;
+const PTO_WEEK_DEFAULT_HOURS = 8;
 const PTO_LEGACY_ASSOCIATE_KEY = '__LEGACY_PTO__';
+let ptoReliabilityWeekCache = [];
 
 function getDefaultPtoTracker() {
     return {
@@ -241,7 +243,280 @@ function calculatePtoStats(data) {
     };
 }
 
+function parseIsoDateSafe(value) {
+    if (!value) return null;
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+}
+
+function formatIsoDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getWeekStartEndFromPeriod(weekKey, period) {
+    const metadata = period?.metadata && typeof period.metadata === 'object' ? period.metadata : {};
+    const startFromMetadata = String(metadata.startDate || '').trim();
+    const endFromMetadata = String(metadata.endDate || '').trim();
+
+    const keyMatches = String(weekKey || '').match(/\d{4}-\d{2}-\d{2}/g) || [];
+    const keyDates = keyMatches
+        .map(text => ({ text, date: parseIsoDateSafe(text) }))
+        .filter(item => item.date)
+        .sort((a, b) => a.date - b.date)
+        .map(item => item.text);
+
+    const startDate = startFromMetadata || keyDates[0] || '';
+    let endDate = endFromMetadata || keyDates[keyDates.length - 1] || '';
+
+    const parsedStart = parseIsoDateSafe(startDate);
+    const parsedEnd = parseIsoDateSafe(endDate);
+    if (parsedStart && !parsedEnd) {
+        const fallbackEnd = new Date(parsedStart);
+        fallbackEnd.setDate(fallbackEnd.getDate() + 6);
+        endDate = formatIsoDate(fallbackEnd);
+    }
+
+    return {
+        startDate,
+        endDate
+    };
+}
+
+function getWeekDates(startDateText, endDateText) {
+    const startDate = parseIsoDateSafe(startDateText);
+    const endDate = parseIsoDateSafe(endDateText);
+    if (!startDate || !endDate) return [];
+    if (endDate < startDate) return [];
+
+    const dates = [];
+    const cursor = new Date(startDate);
+    while (cursor <= endDate && dates.length < 14) {
+        dates.push(formatIsoDate(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+}
+
+function getLatestYtdReliabilityHoursForAssociate(associateName) {
+    const normalizedAssociate = normalizeAssociateName(associateName);
+    if (!normalizedAssociate) return null;
+
+    const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    const rows = [];
+
+    Object.entries(ytdData).forEach(([periodKey, period]) => {
+        if (!period || typeof period !== 'object') return;
+        const employees = Array.isArray(period.employees) ? period.employees : [];
+        const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
+        if (!employee) return;
+
+        const reliability = normalizeHours(employee.reliability);
+        const startEnd = getWeekStartEndFromPeriod(periodKey, period);
+        const endDate = parseIsoDateSafe(startEnd.endDate) || parseIsoDateSafe(startEnd.startDate);
+
+        rows.push({
+            reliability,
+            endDate,
+            periodKey: String(periodKey || '')
+        });
+    });
+
+    if (!rows.length) return null;
+
+    rows.sort((a, b) => {
+        const left = a.endDate ? a.endDate.getTime() : 0;
+        const right = b.endDate ? b.endDate.getTime() : 0;
+        if (left !== right) return right - left;
+        return String(b.periodKey).localeCompare(String(a.periodKey));
+    });
+
+    return normalizeHours(rows[0].reliability);
+}
+
+function buildReliabilityWeeksForAssociate(associateName) {
+    const normalizedAssociate = normalizeAssociateName(associateName);
+    if (!normalizedAssociate) return [];
+
+    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    const weeks = [];
+
+    Object.entries(weeklyData).forEach(([weekKey, period]) => {
+        if (!period || typeof period !== 'object') return;
+        const employees = Array.isArray(period.employees) ? period.employees : [];
+        const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
+        if (!employee) return;
+
+        const reliabilityHours = normalizeHours(employee.reliability);
+        if (reliabilityHours <= 0) return;
+
+        const startEnd = getWeekStartEndFromPeriod(weekKey, period);
+        const weekDates = getWeekDates(startEnd.startDate, startEnd.endDate);
+        if (!weekDates.length) return;
+
+        weeks.push({
+            weekKey,
+            startDate: startEnd.startDate,
+            endDate: startEnd.endDate,
+            reliabilityHours,
+            weekDates
+        });
+    });
+
+    weeks.sort((a, b) => (b.endDate || '').localeCompare(a.endDate || ''));
+    return weeks;
+}
+
+function appendEntryWithTypePolicy(data, date, hours, type, notes = '', showPolicyToasts = true) {
+    const normalizedType = normalizePtoType(type);
+    const normalizedHours = normalizeHours(hours);
+    if (!date || normalizedHours <= 0) return;
+
+    const pushEntry = (entryType, entryHours, entryNotes = '') => {
+        data.entries.push({
+            id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+            date,
+            hours: normalizeHours(entryHours),
+            type: normalizePtoType(entryType),
+            notes: String(entryNotes || '').trim()
+        });
+    };
+
+    if (normalizedType !== 'ptost') {
+        pushEntry(normalizedType, normalizedHours, notes);
+        return;
+    }
+
+    const stats = calculatePtoStats(data);
+    const ptostRemaining = Math.max(0, normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT) - stats.totalPtostUsed);
+    if (ptostRemaining <= 0) {
+        pushEntry('pto-unplanned', normalizedHours, notes ? `${notes} (auto-converted from PTOST: exhausted)` : 'auto-converted from PTOST: exhausted');
+        if (showPolicyToasts) showToast('PTOST exhausted. Entry saved as PTO unplanned.', 4000);
+        return;
+    }
+
+    if (normalizedHours > ptostRemaining) {
+        pushEntry('ptost', ptostRemaining, notes);
+        pushEntry('pto-unplanned', normalizedHours - ptostRemaining, notes ? `${notes} (overflow after PTOST exhausted)` : 'overflow after PTOST exhausted');
+        if (showPolicyToasts) showToast('Entry split: remaining PTOST used, overflow saved as PTO unplanned.', 4500);
+        return;
+    }
+
+    pushEntry('ptost', normalizedHours, notes);
+}
+
+function renderReliabilityWeekDays(dates) {
+    const container = document.getElementById('ptoReliabilityWeekDays');
+    if (!container) return;
+
+    if (!Array.isArray(dates) || !dates.length) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.9em;">Select a week to choose missed day(s).</div>';
+        return;
+    }
+
+    const chips = dates.map(date => {
+        return `
+            <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #d8ebe7; border-radius: 16px; background: #f7fffd; cursor: pointer;">
+                <input type="checkbox" class="pto-week-day-checkbox" value="${date}">
+                <span>${date}</span>
+            </label>
+        `;
+    }).join('');
+
+    container.innerHTML = `<div style="display: flex; gap: 8px; flex-wrap: wrap;">${chips}</div>`;
+}
+
+function populateReliabilityWeekSelector(associateName) {
+    const select = document.getElementById('ptoReliabilityWeekSelect');
+    const hint = document.getElementById('ptoReliabilityWeekHint');
+    if (!select || !hint) return;
+
+    ptoReliabilityWeekCache = buildReliabilityWeeksForAssociate(associateName);
+    select.innerHTML = '<option value="">-- Choose a week with reliability hours --</option>';
+
+    ptoReliabilityWeekCache.forEach((week, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = `${week.startDate} to ${week.endDate} • Reliability ${week.reliabilityHours.toFixed(2)}h`;
+        select.appendChild(option);
+    });
+
+    if (!ptoReliabilityWeekCache.length) {
+        hint.textContent = 'No weekly reliability hours found for this associate yet.';
+    } else {
+        hint.textContent = `Found ${ptoReliabilityWeekCache.length} week(s) with reliability hours. Choose a week and assign day(s).`;
+    }
+
+    renderReliabilityWeekDays([]);
+}
+
+function applySelectedWeekDaysAsEntries() {
+    const context = getSelectedAssociateAndTracker(true);
+    if (!context.associateName || !context.tracker) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const selectedDates = Array.from(document.querySelectorAll('.pto-week-day-checkbox:checked')).map(item => item.value);
+    if (!selectedDates.length) {
+        showToast('Select at least one day for the chosen week', 3000);
+        return;
+    }
+
+    const hoursPerDayInput = document.getElementById('ptoWeekHoursPerDay');
+    const entryType = normalizePtoType(document.getElementById('ptoWeekEntryType')?.value || 'ptost');
+    const notes = String(document.getElementById('ptoWeekEntryNotes')?.value || '').trim();
+    const hoursPerDay = normalizeHours(hoursPerDayInput?.value || PTO_WEEK_DEFAULT_HOURS);
+    if (hoursPerDay <= 0) {
+        showToast('Enter valid hours per selected day', 3000);
+        return;
+    }
+
+    selectedDates.forEach(date => {
+        appendEntryWithTypePolicy(context.tracker, date, hoursPerDay, entryType, notes, false);
+    });
+
+    savePtoStore(context.store);
+    renderPtoSummary(context.tracker, context.associateName);
+    renderPtoEntries(context.tracker, context.associateName);
+    showToast(`Added ${selectedDates.length} day entr${selectedDates.length === 1 ? 'y' : 'ies'}.`, 3500);
+}
+
+function reclassifyPtoEntryType(entryId, newType) {
+    const context = getSelectedAssociateAndTracker(true);
+    if (!context.tracker) return;
+
+    const idx = context.tracker.entries.findIndex(entry => entry.id === entryId);
+    if (idx < 0) return;
+
+    const entry = context.tracker.entries[idx];
+    const normalizedType = normalizePtoType(newType);
+    if (entry.type === normalizedType) return;
+
+    if (normalizedType !== 'ptost') {
+        entry.type = normalizedType;
+    } else {
+        const existing = context.tracker.entries.splice(idx, 1)[0];
+        appendEntryWithTypePolicy(context.tracker, existing.date, existing.hours, 'ptost', existing.notes, true);
+    }
+
+    savePtoStore(context.store);
+    renderPtoSummary(context.tracker, context.associateName);
+    renderPtoEntries(context.tracker, context.associateName);
+}
+
+function syncTrackerReliabilityFromYtd(associateName, tracker) {
+    const ytdReliability = getLatestYtdReliabilityHoursForAssociate(associateName);
+    if (ytdReliability === null || ytdReliability === undefined) return false;
+    tracker.reliabilityHoursAgainst = normalizeHours(ytdReliability);
+    return true;
+}
+
 function updatePtoInputsFromTracker(associateName, tracker) {
+    const detailsContainer = document.getElementById('ptoDetailsContainer');
     const carriedOverInput = document.getElementById('ptoCarriedOverHours');
     const earnedThisYearInput = document.getElementById('ptoEarnedThisYearHours');
     const reliabilityHoursInput = document.getElementById('ptoReliabilityHoursAgainst');
@@ -252,6 +527,10 @@ function updatePtoInputsFromTracker(associateName, tracker) {
     const copyBtn = document.getElementById('ptoCopyEmailBtn');
 
     const hasAssociate = !!associateName;
+    if (detailsContainer) {
+        detailsContainer.style.display = hasAssociate ? 'block' : 'none';
+    }
+
     if (carriedOverInput) {
         carriedOverInput.value = hasAssociate ? normalizeHours(tracker?.carriedOverHours).toFixed(2) : '';
         carriedOverInput.disabled = !hasAssociate;
@@ -274,10 +553,12 @@ function updatePtoInputsFromTracker(associateName, tracker) {
             summary.innerHTML = '<span style="color: #666;">Select an associate to track PTO.</span>';
         }
         renderPtoEntries(getDefaultPtoTracker(), '');
+        populateReliabilityWeekSelector('');
         if (output) output.value = '';
         return;
     }
 
+    populateReliabilityWeekSelector(associateName);
     renderPtoSummary(tracker, associateName);
     renderPtoEntries(tracker, associateName);
 }
@@ -308,6 +589,8 @@ function populatePtoAssociateSelect() {
 
 function initializePtoTracker() {
     const select = document.getElementById('ptoAssociateSelect');
+    const reliabilityWeekSelect = document.getElementById('ptoReliabilityWeekSelect');
+    const addWeekDaysBtn = document.getElementById('ptoAddWeekDaysBtn');
     const carriedOverInput = document.getElementById('ptoCarriedOverHours');
     const earnedThisYearInput = document.getElementById('ptoEarnedThisYearHours');
     const reliabilityHoursInput = document.getElementById('ptoReliabilityHoursAgainst');
@@ -320,10 +603,27 @@ function initializePtoTracker() {
     if (select && !select.dataset.bound) {
         select.addEventListener('change', () => {
             const context = getSelectedAssociateAndTracker(true);
+            if (context.associateName && context.tracker) {
+                syncTrackerReliabilityFromYtd(context.associateName, context.tracker);
+            }
             savePtoStore(context.store);
             updatePtoInputsFromTracker(context.associateName, context.tracker || getDefaultPtoTracker());
         });
         select.dataset.bound = 'true';
+    }
+
+    if (reliabilityWeekSelect && !reliabilityWeekSelect.dataset.bound) {
+        reliabilityWeekSelect.addEventListener('change', () => {
+            const index = parseInt(reliabilityWeekSelect.value, 10);
+            const selectedWeek = Number.isInteger(index) && index >= 0 ? ptoReliabilityWeekCache[index] : null;
+            renderReliabilityWeekDays(selectedWeek?.weekDates || []);
+        });
+        reliabilityWeekSelect.dataset.bound = 'true';
+    }
+
+    if (addWeekDaysBtn && !addWeekDaysBtn.dataset.bound) {
+        addWeekDaysBtn.addEventListener('click', applySelectedWeekDaysAsEntries);
+        addWeekDaysBtn.dataset.bound = 'true';
     }
 
     if (carriedOverInput && !carriedOverInput.dataset.bound) {
@@ -401,38 +701,11 @@ function addPtoEntry() {
         return;
     }
 
-    const data = context.tracker;
-    const stats = calculatePtoStats(data);
-
-    const pushEntry = (entryType, entryHours, entryNotes = '') => {
-        data.entries.push({
-            id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-            date,
-            hours: normalizeHours(entryHours),
-            type: normalizePtoType(entryType),
-            notes: entryNotes
-        });
-    };
-
-    if (type === 'ptost') {
-        const ptostRemaining = Math.max(0, normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT) - stats.totalPtostUsed);
-        if (ptostRemaining <= 0) {
-            pushEntry('pto-unplanned', hours, notes ? `${notes} (auto-converted from PTOST: exhausted)` : 'auto-converted from PTOST: exhausted');
-            showToast('PTOST exhausted. Entry saved as PTO unplanned.', 4000);
-        } else if (hours > ptostRemaining) {
-            pushEntry('ptost', ptostRemaining, notes);
-            pushEntry('pto-unplanned', hours - ptostRemaining, notes ? `${notes} (overflow after PTOST exhausted)` : 'overflow after PTOST exhausted');
-            showToast('Entry split: remaining PTOST used, overflow saved as PTO unplanned.', 4500);
-        } else {
-            pushEntry('ptost', hours, notes);
-        }
-    } else {
-        pushEntry(type, hours, notes);
-    }
+    appendEntryWithTypePolicy(context.tracker, date, hours, type, notes, true);
 
     savePtoStore(context.store);
-    renderPtoSummary(data, context.associateName);
-    renderPtoEntries(data, context.associateName);
+    renderPtoSummary(context.tracker, context.associateName);
+    renderPtoEntries(context.tracker, context.associateName);
 
     const dateInput = document.getElementById('ptoEntryDate');
     const hoursInput = document.getElementById('ptoEntryHours');
@@ -496,13 +769,25 @@ function renderPtoEntries(data, associateName = '') {
                     <div>
                         <strong>${entry.date}</strong> — ${normalizeHours(entry.hours).toFixed(2)}h • <strong>${typeLabel(entry.type)}</strong>${noteText}
                     </div>
-                    <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select data-entry-type-id="${entry.id}" style="padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="ptost" ${entry.type === 'ptost' ? 'selected' : ''}>PTOST</option>
+                            <option value="pto-planned" ${entry.type === 'pto-planned' ? 'selected' : ''}>PTO Planned</option>
+                            <option value="pto-unplanned" ${entry.type === 'pto-unplanned' ? 'selected' : ''}>PTO Unplanned</option>
+                        </select>
+                        <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
+                    </div>
                 </div>
             `;
         })
         .join('');
 
     container.innerHTML = rows;
+    container.querySelectorAll('select[data-entry-type-id]').forEach(select => {
+        select.addEventListener('change', () => {
+            reclassifyPtoEntryType(select.dataset.entryTypeId, select.value);
+        });
+    });
     container.querySelectorAll('button[data-entry-id]').forEach(btn => {
         btn.addEventListener('click', () => deletePtoEntry(btn.dataset.entryId));
     });

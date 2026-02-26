@@ -935,6 +935,8 @@ Box 2 - Future Improvement Areas:
                         </select>
                     </div>
 
+                    <div id="ptoDetailsContainer" style="display: none;">
+
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
                             <div>
@@ -982,6 +984,37 @@ Box 2 - Future Improvement Areas:
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
+                        <h3 style="color: #2f7a6d; margin-top: 0;">Assign Reliability Week to Day(s)</h3>
+                        <div id="ptoReliabilityWeekHint" style="color: #666; font-size: 0.9em; margin-bottom: 10px;"></div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 10px;">
+                            <div>
+                                <label for="ptoReliabilityWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Week with Reliability Hours:</label>
+                                <select id="ptoReliabilityWeekSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">-- Choose a week with reliability hours --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ptoWeekHoursPerDay" style="font-weight: bold; display: block; margin-bottom: 5px;">Hours per Selected Day:</label>
+                                <input type="number" id="ptoWeekHoursPerDay" value="8" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ptoWeekEntryType" style="font-weight: bold; display: block; margin-bottom: 5px;">Reason Type:</label>
+                                <select id="ptoWeekEntryType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="ptost">PTOST</option>
+                                    <option value="pto-planned">PTO Planned</option>
+                                    <option value="pto-unplanned">PTO Unplanned</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ptoWeekEntryNotes" style="font-weight: bold; display: block; margin-bottom: 5px;">Notes:</label>
+                                <input type="text" id="ptoWeekEntryNotes" placeholder="Optional note for selected day(s)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <div id="ptoReliabilityWeekDays" style="margin-bottom: 10px;"></div>
+                        <button type="button" id="ptoAddWeekDaysBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">➕ Add Selected Day(s)</button>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
                         <h3 style="color: #2f7a6d; margin-top: 0;">Summary</h3>
                         <div id="ptoSummary" style="font-size: 0.95em; color: #355;"></div>
                     </div>
@@ -998,6 +1031,8 @@ Box 2 - Future Improvement Areas:
                             <button type="button" id="ptoCopyEmailBtn" class="btn-secondary" style="background: #0d6efd; color: white;">📋 Copy Email</button>
                         </div>
                         <textarea id="ptoEmailOutput" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;"></textarea>
+                    </div>
+
                     </div>
                 </div>
             </section>
