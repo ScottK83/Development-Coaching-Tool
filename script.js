@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.40'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.41'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6175,6 +6175,64 @@ function resolveTrendMetricYtdDisplay(metric, isSurveyMetric, ytdValue, ytdSurve
     return formattedYtd;
 }
 
+function resolveTrendRowBackgroundColor(noSurveys, meetsGoal) {
+    if (noSurveys) return '#ffffff';
+    if (meetsGoal) return '#d4edda';
+    return '#fff3cd';
+}
+
+function resolveTrendCenterComparisonDisplay(associateValue, centerAvg, isAboveCenter, metricKey, centerExists) {
+    if (!centerExists) {
+        return {
+            color: '#999999',
+            text: 'N/A'
+        };
+    }
+
+    const difference = associateValue - centerAvg;
+    let text = formatMetricValue(metricKey, Math.abs(difference));
+    if (difference > 0) text = `+${text}`;
+    else if (difference < 0) text = `-${text}`;
+
+    return {
+        color: isAboveCenter ? '#0056B3' : '#DAA520',
+        text
+    };
+}
+
+function resolveTrendDirectionDisplay(associateValue, previousValue, isReverse, metricKey, periodType) {
+    const prevNum = previousValue !== undefined && previousValue !== null ? parseFloat(previousValue) : null;
+    const prevIsValid = prevNum !== null && !isNaN(prevNum);
+
+    if (!prevIsValid) {
+        return {
+            color: '#666666',
+            text: 'N/A'
+        };
+    }
+
+    const trendDiff = associateValue - prevNum;
+    const absDiff = Math.abs(trendDiff);
+    const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
+
+    if (absDiff < 0.1) {
+        return {
+            color: '#666666',
+            text: '➡️ No change'
+        };
+    }
+
+    const changeValue = formatMetricValue(metricKey, absDiff);
+    const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+    const sign = trendDiff > 0 ? '+' : '-';
+    const directionEmoji = trendDiff > 0 ? '📈' : '📉';
+
+    return {
+        color: isImprovement ? '#28a745' : '#dc3545',
+        text: `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`
+    };
+}
+
 function renderMetricRow(ctx, x, y, width, height, metric, associateValue, centerAvg, ytdValue, target, previousValue, rowIndex, alternatingColor, surveyTotal = 0, metricKey = '', periodType = 'week', ytdSurveyTotal = 0, reviewYear = null) {
     /**
      * PHASE 3.1 - METRIC ROW RENDERER
@@ -6209,15 +6267,7 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
         (isReverse ? associateValue < centerAvg : associateValue > centerAvg) : 
         false;
     
-    // ROW BACKGROUND COLOR
-    let rowBgColor;
-    if (noSurveys) {
-        rowBgColor = '#ffffff'; // White - no surveys
-    } else if (meetsGoal) {
-        rowBgColor = '#d4edda'; // Green - meets goal
-    } else {
-        rowBgColor = '#fff3cd'; // Yellow - does not meet goal
-    }
+    const rowBgColor = resolveTrendRowBackgroundColor(noSurveys, meetsGoal);
     
     // Draw row background
     ctx.fillStyle = rowBgColor;
@@ -6251,67 +6301,31 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     
     // VS CENTER and TRENDING - only calculate if employee has survey data this period
     if (!noSurveys) {
-        // VS CENTER CELL - show raw difference
-        let vsCenterColor;
-        let vsCenterText;
+        const vsCenterDisplay = resolveTrendCenterComparisonDisplay(
+            associateValue,
+            centerAvg,
+            isAboveCenter,
+            metric.key,
+            centerExists
+        );
         
-        if (!centerExists) {
-            vsCenterColor = '#999999'; // Gray - no data
-            vsCenterText = 'N/A';
-        } else {
-            const difference = associateValue - centerAvg;
-            
-            // Always show raw difference
-            vsCenterText = formatMetricValue(metric.key, Math.abs(difference));
-            if (difference > 0) vsCenterText = `+${vsCenterText}`;
-            else if (difference < 0) vsCenterText = `-${vsCenterText}`;
-            
-            if (isAboveCenter) {
-                vsCenterColor = '#0056B3'; // Blue - above center
-            } else {
-                vsCenterColor = '#DAA520'; // Dark yellow - below center
-            }
-        }
-        
-        ctx.fillStyle = vsCenterColor;
+        ctx.fillStyle = vsCenterDisplay.color;
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(vsCenterText, x + 460, y + 24);
+        ctx.fillText(vsCenterDisplay.text, x + 460, y + 24);
         
-        // Trending (if previous data exists) - show emoji + change value
-        let trendingColor = '#666666';
-        let trendingText = 'N/A';
-        let trendingEmoji = '';
+        const trendingDisplay = resolveTrendDirectionDisplay(
+            associateValue,
+            previousValue,
+            isReverse,
+            metricKey,
+            periodType
+        );
         
-        // Only show trending if previous value exists AND is a valid number
-        const prevNum = previousValue !== undefined && previousValue !== null ? parseFloat(previousValue) : null;
-        const prevIsValid = prevNum !== null && !isNaN(prevNum);
-        
-        if (prevIsValid) {
-            const trendDiff = associateValue - prevNum;
-        const absDiff = Math.abs(trendDiff);
-        
-        // Determine improvement based on metric type
-        const isImprovement = isReverse ? trendDiff < 0 : trendDiff > 0;
-        
-        if (absDiff < 0.1) {
-            trendingEmoji = '➡️'; // Flat/no change
-            trendingColor = '#666666';
-            trendingText = '➡️ No change';
-        } else {
-            const changeValue = formatMetricValue(metricKey, absDiff);
-            const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-            const sign = trendDiff > 0 ? '+' : '-';
-            const directionEmoji = trendDiff > 0 ? '📈' : '📉';
-            trendingColor = isImprovement ? '#28a745' : '#dc3545';
-            trendingText = `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`;
-        }
-        }
-        
-        ctx.fillStyle = trendingColor;
+        ctx.fillStyle = trendingDisplay.color;
         ctx.font = '13px Arial'; // Smaller font to fit change description
         ctx.textAlign = 'left';
-        ctx.fillText(trendingText, x + 570, y + 24);
+        ctx.fillText(trendingDisplay.text, x + 570, y + 24);
     } else {
         // If no surveys, show N/A for vs center and trend (but center avg already shown above)
         ctx.fillStyle = '#999999';
