@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.52'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.53'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10857,6 +10857,93 @@ function saveExecutiveSummaryNotes(associate) {
     showToast(`? Notes saved for ${associate}`, 3000);
 }
 
+function getYearlySummaryMetricsToShow() {
+    return ['scheduleAdherence', 'overallExperience', 'cxRepOverall', 'fcr', 'transfers', 'aht', 'acw', 'holdTime', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+}
+
+function collectYearlySummaryTrendData(employeeName, keys, metricsToShow) {
+    const trendData = {};
+
+    metricsToShow.forEach(metricKey => {
+        trendData[metricKey] = [];
+        keys.forEach(weekKey => {
+            const week = weeklyData[weekKey];
+            const emp = week?.employees?.find(e => e.name === employeeName);
+            if (emp && emp[metricKey] !== undefined && emp[metricKey] !== null && emp[metricKey] !== '') {
+                trendData[metricKey].push({
+                    weekKey,
+                    value: parseFloat(emp[metricKey]),
+                    label: formatWeekLabel(weekKey)
+                });
+            }
+        });
+    });
+
+    return trendData;
+}
+
+function initializeYearlySummaryChartsContainer(chartsContainer) {
+    chartsContainer.innerHTML = '<h4 style="margin: 0 0 20px 0; color: #ff9800; font-size: 1.3em;">📊 Weekly Metric Trends</h4>';
+
+    const chartsGrid = document.createElement('div');
+    chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;';
+    chartsContainer.appendChild(chartsGrid);
+    return chartsGrid;
+}
+
+function buildYearlySummaryChartCard(chartsGrid) {
+    const chartContainer = document.createElement('div');
+    chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'max-height: 250px;';
+
+    chartContainer.appendChild(canvas);
+    chartsGrid.appendChild(chartContainer);
+
+    return canvas;
+}
+
+function renderYearlySummaryMetricChart(canvas, metric, metricKey, data) {
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.label),
+            datasets: [{
+                label: metric.label || metricKey,
+                data: data.map(d => d.value),
+                backgroundColor: 'rgba(255, 152, 0, 0.6)',
+                borderColor: 'rgba(255, 152, 0, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: `${metric.label || metricKey} Trend`,
+                    font: { size: 14, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: metric.unit === '%',
+                    title: {
+                        display: true,
+                        text: metric.unit || ''
+                    }
+                }
+            }
+        }
+    });
+}
+
 function renderYearlySummaryTrendCharts() {
     const chartsContainer = document.getElementById('summaryChartsContainer');
     if (!chartsContainer) return;
@@ -10874,32 +10961,9 @@ function renderYearlySummaryTrendCharts() {
         return;
     }
 
-    // Get data for selected employee across all weekly periods
-    const metricsToShow = ['scheduleAdherence', 'overallExperience', 'cxRepOverall', 'fcr', 'transfers', 'aht', 'acw', 'holdTime', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
-    const trendData = {};
-
-    metricsToShow.forEach(metricKey => {
-        trendData[metricKey] = [];
-        keys.forEach(weekKey => {
-            const week = weeklyData[weekKey];
-            const emp = week?.employees?.find(e => e.name === employeeName);
-            if (emp && emp[metricKey] !== undefined && emp[metricKey] !== null && emp[metricKey] !== '') {
-                trendData[metricKey].push({
-                    weekKey: weekKey,
-                    value: parseFloat(emp[metricKey]),
-                    label: formatWeekLabel(weekKey)
-                });
-            }
-        });
-    });
-
-    // Create title
-    chartsContainer.innerHTML = '<h4 style="margin: 0 0 20px 0; color: #ff9800; font-size: 1.3em;">📊 Weekly Metric Trends</h4>';
-
-    // Create grid for charts
-    const chartsGrid = document.createElement('div');
-    chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;';
-    chartsContainer.appendChild(chartsGrid);
+    const metricsToShow = getYearlySummaryMetricsToShow();
+    const trendData = collectYearlySummaryTrendData(employeeName, keys, metricsToShow);
+    const chartsGrid = initializeYearlySummaryChartsContainer(chartsContainer);
 
     // Create bar charts for each metric
     metricsToShow.forEach(metricKey => {
@@ -10908,53 +10972,8 @@ function renderYearlySummaryTrendCharts() {
         
         if (!data || data.length < 1) return;
 
-        const chartContainer = document.createElement('div');
-        chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
-        
-        const canvas = document.createElement('canvas');
-        canvas.style.cssText = 'max-height: 250px;';
-        
-        chartContainer.appendChild(canvas);
-        chartsGrid.appendChild(chartContainer);
-
-        // Create bar chart
-        new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: data.map(d => d.label),
-                datasets: [{
-                    label: metric.label || metricKey,
-                    data: data.map(d => d.value),
-                    backgroundColor: 'rgba(255, 152, 0, 0.6)',
-                    borderColor: 'rgba(255, 152, 0, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    title: {
-                        display: true,
-                        text: `${metric.label || metricKey} Trend`,
-                        font: { size: 14, weight: 'bold' }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: metric.unit === '%',
-                        title: {
-                            display: true,
-                            text: metric.unit || ''
-                        }
-                    }
-                }
-            }
-        });
+        const canvas = buildYearlySummaryChartCard(chartsGrid);
+        renderYearlySummaryMetricChart(canvas, metric, metricKey, data);
     });
 }
 
