@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.32'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.33'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6394,12 +6394,14 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     const subjectLine = buildTrendEmailSubject(metadata, empName);
     let y = drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine);
 
-    // Summary cards (using shared statistics)
-    drawEmailCard(ctx, 50, y, 250, 110, '#ffffff', '#28a745', '✅ Meeting Goals', `${meetingGoals}/${totalMetrics}`, `${successRate}% Success Rate`);
-    drawEmailCard(ctx, 325, y, 250, 110, '#ffffff', '#2196F3', '📈 Above Average', `${beatingCenter}/${totalMetrics}`, `Better than Call Center`);
-    drawEmailCard(ctx, 600, y, 250, 110, '#ffffff', '#ff9800', '📈 Improved', improvedText, improvedSub);
-
-    y += 140;
+    y = drawTrendSummaryCardsRow(ctx, y, {
+        meetingGoals,
+        totalMetrics,
+        successRate,
+        beatingCenter,
+        improvedText,
+        improvedSub
+    });
 
     // Positive Highlights / Improvement Areas (same style as coaching modal)
     const trendAnalysisForSummary = analyzeTrendMetrics(current, centerAvg, reviewYear);
@@ -6489,6 +6491,47 @@ function drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine) {
     ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
 
     return y + 50;
+}
+
+function drawTrendSummaryCardsRow(ctx, y, stats) {
+    drawEmailCard(
+        ctx,
+        50,
+        y,
+        250,
+        110,
+        '#ffffff',
+        '#28a745',
+        '✅ Meeting Goals',
+        `${stats.meetingGoals}/${stats.totalMetrics}`,
+        `${stats.successRate}% Success Rate`
+    );
+    drawEmailCard(
+        ctx,
+        325,
+        y,
+        250,
+        110,
+        '#ffffff',
+        '#2196F3',
+        '📈 Above Average',
+        `${stats.beatingCenter}/${stats.totalMetrics}`,
+        'Better than Call Center'
+    );
+    drawEmailCard(
+        ctx,
+        600,
+        y,
+        250,
+        110,
+        '#ffffff',
+        '#ff9800',
+        '📈 Improved',
+        stats.improvedText,
+        stats.improvedSub
+    );
+
+    return y + 140;
 }
 
 function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
