@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.51'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.52'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10708,46 +10708,80 @@ function populateExecutiveSummaryAssociate() {
 function loadExecutiveSummaryData() {
     const associate = document.getElementById('summaryAssociateSelect').value;
     const periodType = 'ytd'; // Always use Year-to-Date
-    
-    
+
     if (!associate) {
-        
-        document.getElementById('summaryDataContainer').style.display = 'none';
-        document.getElementById('summaryChartsContainer').style.display = 'none';
+        setExecutiveSummaryVisibility(false);
         return;
     }
-    
 
-    
-    // Collect ALL periods (regardless of upload type) for YTD view
-    const matchingPeriods = [];
-    for (const weekKey in weeklyData) {
-        const weekData = weeklyData[weekKey];
-        
-        // For executive summary (YTD), include all periods regardless of metadata type
-        const employee = weekData.employees.find(e => e.name === associate);
-        if (employee) {
-            
-            matchingPeriods.push({
-                weekKey,
-                label: weekData.metadata?.label || weekKey,
-                employee: employee,
-                centerAverage: getCenterAverageForWeek(weekKey),
-                startDate: weekData.metadata?.startDate,
-                endDate: weekData.metadata?.endDate
-            });
-        }
-    }
-    
-    
+    const matchingPeriods = collectExecutiveSummaryPeriodsForAssociate(associate);
+
     // Populate data table
     populateExecutiveSummaryTable(associate, matchingPeriods, periodType);
     
     // Display metric trend charts
     renderYearlySummaryTrendCharts();
-    
-    document.getElementById('summaryDataContainer').style.display = 'block';
-    document.getElementById('summaryChartsContainer').style.display = 'block';
+
+    setExecutiveSummaryVisibility(true);
+}
+
+function setExecutiveSummaryVisibility(isVisible) {
+    const dataContainer = document.getElementById('summaryDataContainer');
+    const chartsContainer = document.getElementById('summaryChartsContainer');
+    const display = isVisible ? 'block' : 'none';
+
+    if (dataContainer) dataContainer.style.display = display;
+    if (chartsContainer) chartsContainer.style.display = display;
+}
+
+function collectExecutiveSummaryPeriodsForAssociate(associate) {
+    const matchingPeriods = [];
+    for (const weekKey in weeklyData) {
+        const weekData = weeklyData[weekKey];
+        const employee = weekData?.employees?.find(e => e.name === associate);
+        if (!employee) continue;
+
+        matchingPeriods.push({
+            weekKey,
+            label: weekData.metadata?.label || weekKey,
+            employee,
+            centerAverage: getCenterAverageForWeek(weekKey),
+            startDate: weekData.metadata?.startDate,
+            endDate: weekData.metadata?.endDate
+        });
+    }
+    return matchingPeriods;
+}
+
+function calculateExecutiveSummaryYtdAverages(periods) {
+    const sums = {
+        scheduleAdherence: { total: 0, count: 0 },
+        overallExperience: { total: 0, count: 0 },
+        fcr: { total: 0, count: 0 },
+        transfers: { total: 0, count: 0 }
+    };
+
+    periods.forEach(period => {
+        if (!period.employee) return;
+
+        Object.keys(sums).forEach(metricKey => {
+            const value = period.employee[metricKey];
+            if (value === undefined || value === null || value === '') return;
+            sums[metricKey].total += parseFloat(value);
+            sums[metricKey].count += 1;
+        });
+    });
+
+    const average = (metricKey) => sums[metricKey].count > 0
+        ? (sums[metricKey].total / sums[metricKey].count).toFixed(1)
+        : 0;
+
+    return {
+        avgAdherence: average('scheduleAdherence'),
+        avgExperience: average('overallExperience'),
+        avgFCR: average('fcr'),
+        avgTransfers: average('transfers')
+    };
 }
 
 function populateExecutiveSummaryTable(associate, periods, periodType) {
@@ -10755,37 +10789,7 @@ function populateExecutiveSummaryTable(associate, periods, periodType) {
     tbody.innerHTML = '';
     
     // Create a single YTD summary row instead of showing all periods
-    // Aggregate all metrics across all periods
-    let adherenceSum = 0, adherenceCount = 0;
-    let experienceSum = 0, experienceCount = 0;
-    let fcrSum = 0, fcrCount = 0;
-    let transfersSum = 0, transfersCount = 0;
-    
-    periods.forEach(period => {
-        if (!period.employee) return;
-        
-        if (period.employee.scheduleAdherence !== undefined && period.employee.scheduleAdherence !== null && period.employee.scheduleAdherence !== '') {
-            adherenceSum += parseFloat(period.employee.scheduleAdherence);
-            adherenceCount++;
-        }
-        if (period.employee.overallExperience !== undefined && period.employee.overallExperience !== null && period.employee.overallExperience !== '') {
-            experienceSum += parseFloat(period.employee.overallExperience);
-            experienceCount++;
-        }
-        if (period.employee.fcr !== undefined && period.employee.fcr !== null && period.employee.fcr !== '') {
-            fcrSum += parseFloat(period.employee.fcr);
-            fcrCount++;
-        }
-        if (period.employee.transfers !== undefined && period.employee.transfers !== null && period.employee.transfers !== '') {
-            transfersSum += parseFloat(period.employee.transfers);
-            transfersCount++;
-        }
-    });
-    
-    const avgAdherence = adherenceCount > 0 ? (adherenceSum / adherenceCount).toFixed(1) : 0;
-    const avgExperience = experienceCount > 0 ? (experienceSum / experienceCount).toFixed(1) : 0;
-    const avgFCR = fcrCount > 0 ? (fcrSum / fcrCount).toFixed(1) : 0;
-    const avgTransfers = transfersCount > 0 ? (transfersSum / transfersCount).toFixed(1) : 0;
+    const { avgAdherence, avgExperience, avgFCR, avgTransfers } = calculateExecutiveSummaryYtdAverages(periods);
     
     const row = document.createElement('tr');
     row.innerHTML = `
