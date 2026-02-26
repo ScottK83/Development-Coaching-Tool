@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.61'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.62'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11866,85 +11866,84 @@ function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detail
     return result;
 }
 
-function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(), options = {}) {
-    const goalSource = options?.goalSource === 'metric-trends' ? 'metric-trends' : 'onoff';
-    const periodMetadata = options?.periodMetadata || null;
-    const { bands } = getOnOffTrackerLegendBandsByYear(reviewYear);
-    const resolveOnOffGoalText = (bandKey, formatKey) => {
-        const config = bands?.[bandKey];
-        if (!config) return 'N/A';
-        if (config.type === 'min') {
-            const targetValue = config.score3?.min ?? config.score2?.min;
-            return targetValue === undefined ? 'N/A' : `≥ ${formatMetricDisplay(formatKey, targetValue)}`;
-        }
-        const targetValue = config.score3?.max ?? config.score2?.max;
-        return targetValue === undefined ? 'N/A' : `≤ ${formatMetricDisplay(formatKey, targetValue)}`;
-    };
+function resolveOnOffBandGoalText(bands, bandKey, formatKey) {
+    const config = bands?.[bandKey];
+    if (!config) return 'N/A';
+    if (config.type === 'min') {
+        const targetValue = config.score3?.min ?? config.score2?.min;
+        return targetValue === undefined ? 'N/A' : `≥ ${formatMetricDisplay(formatKey, targetValue)}`;
+    }
+    const targetValue = config.score3?.max ?? config.score2?.max;
+    return targetValue === undefined ? 'N/A' : `≤ ${formatMetricDisplay(formatKey, targetValue)}`;
+}
 
-    const resolveMetricTrendsGoalText = (metricKey, formatKey) => {
-        const targetConfig = getYearEndTargetConfig(metricKey, reviewYear, periodMetadata);
-        if (!targetConfig || targetConfig.value === undefined || targetConfig.value === null) return 'N/A';
-        const operator = targetConfig.type === 'min' ? '≥' : '≤';
-        return `${operator} ${formatMetricDisplay(formatKey, targetConfig.value)}`;
-    };
+function resolveMetricTrendsGoalText(metricKey, formatKey, reviewYear, periodMetadata) {
+    const targetConfig = getYearEndTargetConfig(metricKey, reviewYear, periodMetadata);
+    if (!targetConfig || targetConfig.value === undefined || targetConfig.value === null) return 'N/A';
+    const operator = targetConfig.type === 'min' ? '≥' : '≤';
+    return `${operator} ${formatMetricDisplay(formatKey, targetConfig.value)}`;
+}
 
-    const resolveGoalText = (targetMetricKey, bandMetricKey, formatKey) => {
-        if (goalSource === 'metric-trends') {
-            return resolveMetricTrendsGoalText(targetMetricKey, formatKey);
-        }
-        return resolveOnOffGoalText(bandMetricKey, formatKey);
-    };
+function resolveOnOffGoalText(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) {
+    if (goalSource === 'metric-trends') {
+        return resolveMetricTrendsGoalText(targetMetricKey, formatKey, reviewYear, periodMetadata);
+    }
+    return resolveOnOffBandGoalText(bands, bandMetricKey, formatKey);
+}
 
-    const rows = [
+function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
+    return [
         {
             label: 'AHT',
             valueText: result.values.aht === null ? 'N/A' : formatMetricDisplay('aht', result.values.aht),
-            goalText: resolveGoalText('aht', 'aht', 'aht'),
+            goalText: resolveOnOffGoalText(goalSource, bands, 'aht', 'aht', 'aht', reviewYear, periodMetadata),
             score: result.scores.aht
         },
         {
             label: 'Adherence',
             valueText: result.values.adherence === null ? 'N/A' : formatMetricDisplay('scheduleAdherence', result.values.adherence),
-            goalText: resolveGoalText('scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence'),
+            goalText: resolveOnOffGoalText(goalSource, bands, 'scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence', reviewYear, periodMetadata),
             score: result.scores.adherence
         },
         {
             label: 'Overall Sentiment',
             valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            goalText: resolveGoalText('overallSentiment', 'overallSentiment', 'overallSentiment'),
+            goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
             score: result.scores.sentiment
         },
         {
             label: 'Associate Overall (Surveys)',
             valueText: result.values.associateOverall === null ? 'N/A' : formatMetricDisplay('overallExperience', result.values.associateOverall),
-            goalText: resolveGoalText('cxRepOverall', 'cxRepOverall', 'overallExperience'),
+            goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'overallExperience', reviewYear, periodMetadata),
             score: result.scores.associateOverall
         },
         {
             label: 'Reliability',
             valueText: result.values.reliability === null ? 'N/A' : formatMetricDisplay('reliability', result.values.reliability),
-            goalText: resolveGoalText('reliability', 'reliability', 'reliability'),
+            goalText: resolveOnOffGoalText(goalSource, bands, 'reliability', 'reliability', 'reliability', reviewYear, periodMetadata),
             score: result.scores.reliability
         }
     ];
+}
 
-    const getScoreCellStyle = (score) => {
-        if (score === 1) return 'background: #ff1a1a; color: #fff; font-weight: bold;';
-        if (score === 2) return 'background: #f0de87; color: #222; font-weight: bold;';
-        if (score === 3) return 'background: #00b050; color: #fff; font-weight: bold;';
-        return 'background: #eee; color: #666; font-weight: bold;';
-    };
+function getOnOffScoreCellStyle(score) {
+    if (score === 1) return 'background: #ff1a1a; color: #fff; font-weight: bold;';
+    if (score === 2) return 'background: #f0de87; color: #222; font-weight: bold;';
+    if (score === 3) return 'background: #00b050; color: #fff; font-weight: bold;';
+    return 'background: #eee; color: #666; font-weight: bold;';
+}
 
-    const ratingText = result.ratingAverage === null ? 'N/A' : result.ratingAverage.toFixed(2);
-    const statusText = result.trackLabel || 'N/A';
-    const statusStyle = statusText === 'Off Track'
+function getOnOffStatusStyle(statusText) {
+    return statusText === 'Off Track'
         ? 'background: #ff1a1a; color: #fff;'
         : statusText === 'On Track/Exceptional'
             ? 'background: #00b050; color: #fff;'
             : statusText === 'On Track/Successful'
                 ? 'background: #c8f7c5; color: #1b5e20;'
                 : 'background: #ddd; color: #222;';
+}
 
+function buildOnOffHeaderSummaryHtml(ratingText, statusText, statusStyle) {
     return `
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
             <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid #d6c4f5; background: #f4effc;">
@@ -11956,6 +11955,34 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(),
                 ${statusText}
             </div>
         </div>
+    `;
+}
+
+function buildOnOffRowsHtml(rows) {
+    return rows.map(row => `
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.label}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.goalText}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getOnOffScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
+                        </tr>
+                    `).join('');
+}
+
+function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(), options = {}) {
+    const goalSource = options?.goalSource === 'metric-trends' ? 'metric-trends' : 'onoff';
+    const periodMetadata = options?.periodMetadata || null;
+    const { bands } = getOnOffTrackerLegendBandsByYear(reviewYear);
+    const rows = buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata);
+
+    const ratingText = result.ratingAverage === null ? 'N/A' : result.ratingAverage.toFixed(2);
+    const statusText = result.trackLabel || 'N/A';
+    const statusStyle = getOnOffStatusStyle(statusText);
+    const summaryHtml = buildOnOffHeaderSummaryHtml(ratingText, statusText, statusStyle);
+    const rowsHtml = buildOnOffRowsHtml(rows);
+
+    return `
+        ${summaryHtml}
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead>
@@ -11967,14 +11994,7 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(),
                     </tr>
                 </thead>
                 <tbody>
-                    ${rows.map(row => `
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.label}</td>
-                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
-                            <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.goalText}</td>
-                            <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
-                        </tr>
-                    `).join('')}
+                    ${rowsHtml}
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Rating Average</td>
                         <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="3">${ratingText}</td>
