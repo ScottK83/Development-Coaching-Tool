@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.142'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.143'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3506,17 +3506,22 @@ function buildRepoSyncMeta(reason, responseData) {
     };
 }
 
+function getRepoSyncEndpointIfAllowed(config, forceSync) {
+    const endpoint = String(config?.endpoint || '').trim();
+    if ((!config?.autoSyncEnabled && !forceSync) || !endpoint) {
+        if (forceSync && !endpoint) {
+            setCallListeningSyncStatus('Sync failed: add Worker URL first.', 'error');
+        }
+        return null;
+    }
+    return endpoint;
+}
+
 async function syncRepoData(reason = 'updated', options = {}) {
     const config = loadCallListeningSyncConfig();
     const forceSync = options?.force === true;
-    if ((!config.autoSyncEnabled && !forceSync) || !config.endpoint.trim()) {
-        if (forceSync && !config.endpoint.trim()) {
-            setCallListeningSyncStatus('Sync failed: add Worker URL first.', 'error');
-        }
-        return;
-    }
-
-    const endpoint = config.endpoint.trim();
+    const endpoint = getRepoSyncEndpointIfAllowed(config, forceSync);
+    if (!endpoint) return;
     setCallListeningSyncStatus('Syncing all app data to repo...', 'info');
 
     try {
