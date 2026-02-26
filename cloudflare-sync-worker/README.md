@@ -12,6 +12,7 @@ A GitHub Action then regenerates:
 
 - `data/call-listening-logs.xlsx`
 - `data/Development-Coaching-Tool.xlsx`
+- `data/PTO-Tracking.xlsx`
 
 ## 1) Configure Worker
 
@@ -59,5 +60,6 @@ Expected result:
 - Artifacts in repo are up to date:
   - `data/call-listening-logs.xlsx`
   - `data/Development-Coaching-Tool.xlsx` (or skipped if backup JSON is invalid)
+  - `data/PTO-Tracking.xlsx`
 
 If it fails, open the failed run logs and check the `Build XLSX from CSV` step first.

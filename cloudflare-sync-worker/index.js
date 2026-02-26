@@ -61,6 +61,7 @@ export default {
         associateSentimentSnapshots: sanitizeForRepo(body?.associateSentimentSnapshots && typeof body.associateSentimentSnapshots === 'object' ? body.associateSentimentSnapshots : {}),
         myTeamMembers: sanitizeForRepo(body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {}),
         callCenterAverages: sanitizeForRepo(body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {}),
+        ptoTracker: sanitizeForRepo(body?.ptoTracker && typeof body.ptoTracker === 'object' ? body.ptoTracker : { entries: [] }),
         yearEndAnnualGoalsStore: sanitizeForRepo(body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {}),
         yearEndDraftStore: sanitizeForRepo(body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {}),
         appStorageSnapshot: sanitizeForRepo(body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {})
@@ -156,6 +157,7 @@ function hasMeaningfulBackupData(payload) {
     payload.associateSentimentSnapshots,
     payload.myTeamMembers,
     payload.callCenterAverages,
+    payload.ptoTracker,
     payload.yearEndAnnualGoalsStore,
     payload.yearEndDraftStore,
     payload.appStorageSnapshot

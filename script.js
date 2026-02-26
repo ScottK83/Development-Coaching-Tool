@@ -213,6 +213,7 @@ const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
 const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
 const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
+const UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
 
 const YEAR_END_TARGETS_BY_YEAR = {
     2025: {
@@ -658,6 +659,7 @@ function showOnlySection(sectionId) {
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.style.display = 'block';
+        saveUiNavState({ sectionId });
     }
 }
 
@@ -703,6 +705,11 @@ function showSubSection(subSectionId, activeButtonId = null) {
             }
         }
     });
+
+    saveUiNavState({
+        sectionId: 'coachingEmailSection',
+        coachingSubSectionId: subSectionId
+    });
 }
 
 /**
@@ -736,6 +743,105 @@ function showManageDataSubSection(subSectionId) {
             }
         }
     });
+
+    saveUiNavState({
+        sectionId: 'manageDataSection',
+        manageDataSubSectionId: subSectionId
+    });
+}
+
+function getDefaultUiNavState() {
+    return {
+        sectionId: 'coachingForm',
+        coachingSubSectionId: 'subSectionCoachingEmail',
+        manageDataSubSectionId: 'subSectionTeamData'
+    };
+}
+
+function loadUiNavState() {
+    try {
+        const raw = localStorage.getItem(UI_NAV_STATE_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        const defaults = getDefaultUiNavState();
+        return {
+            sectionId: typeof parsed?.sectionId === 'string' ? parsed.sectionId : defaults.sectionId,
+            coachingSubSectionId: typeof parsed?.coachingSubSectionId === 'string' ? parsed.coachingSubSectionId : defaults.coachingSubSectionId,
+            manageDataSubSectionId: typeof parsed?.manageDataSubSectionId === 'string' ? parsed.manageDataSubSectionId : defaults.manageDataSubSectionId
+        };
+    } catch (error) {
+        console.error('Error loading UI nav state:', error);
+        return getDefaultUiNavState();
+    }
+}
+
+function saveUiNavState(partialState = {}) {
+    try {
+        const current = loadUiNavState();
+        const next = {
+            ...current,
+            ...partialState
+        };
+        localStorage.setItem(UI_NAV_STATE_STORAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+        console.error('Error saving UI nav state:', error);
+    }
+}
+
+function restoreLastViewedSection() {
+    const state = loadUiNavState();
+    const sectionId = state.sectionId || 'coachingForm';
+
+    const coachingSubSectionToButton = {
+        subSectionCoachingEmail: 'subNavCoachingEmail',
+        subSectionYearEnd: 'subNavYearEnd',
+        subSectionOnOffTracker: 'subNavOnOffTracker',
+        subSectionSentiment: 'subNavSentiment',
+        subSectionMetricTrends: 'subNavMetricTrends',
+        subSectionTrendIntelligence: 'subNavTrendIntelligence',
+        subSectionCallListening: 'subNavCallListening'
+    };
+
+    const manageDataSubSectionToButton = {
+        subSectionTeamData: 'subNavTeamData',
+        subSectionCoachingTips: 'subNavCoachingTips',
+        subSectionSentimentKeywords: 'subNavSentimentKeywords'
+    };
+
+    if (sectionId === 'coachingEmailSection') {
+        showOnlySection('coachingEmailSection');
+        const subSectionId = state.coachingSubSectionId || 'subSectionCoachingEmail';
+        const buttonId = coachingSubSectionToButton[subSectionId] || 'subNavCoachingEmail';
+        document.getElementById(buttonId)?.click();
+        return;
+    }
+
+    if (sectionId === 'manageDataSection') {
+        showOnlySection('manageDataSection');
+        const subSectionId = state.manageDataSubSectionId || 'subSectionTeamData';
+        const buttonId = manageDataSubSectionToButton[subSectionId] || 'subNavTeamData';
+        document.getElementById(buttonId)?.click();
+        return;
+    }
+
+    if (sectionId === 'debugSection') {
+        showOnlySection('debugSection');
+        renderDebugPanel();
+        return;
+    }
+
+    if (sectionId === 'redFlagSection') {
+        showOnlySection('redFlagSection');
+        return;
+    }
+
+    if (sectionId === 'ptoSection') {
+        showOnlySection('ptoSection');
+        initializePtoTracker();
+        return;
+    }
+
+    showOnlySection('coachingForm');
+    initializeSection('coachingForm');
 }
 
 /**
@@ -3173,6 +3279,7 @@ function initializeRepoSyncControls() {
     const syncNowBtn = document.getElementById('syncNowBtn');
     const forceRestoreBtn = document.getElementById('forceRestoreRepoBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
+    const openPtoExcelBtn = document.getElementById('openPtoExcelBtn');
 
     if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
         return;
@@ -3243,6 +3350,10 @@ function initializeRepoSyncControls() {
     if (!openFullExcelBtn.dataset.bound) {
         openFullExcelBtn.addEventListener('click', () => openRepoExcelFile('Development-Coaching-Tool.xlsx'));
         openFullExcelBtn.dataset.bound = 'true';
+    }
+    if (openPtoExcelBtn && !openPtoExcelBtn.dataset.bound) {
+        openPtoExcelBtn.addEventListener('click', () => openRepoExcelFile('PTO-Tracking.xlsx'));
+        openPtoExcelBtn.dataset.bound = 'true';
     }
     if (!syncEndpointInput.dataset.bound) {
         syncEndpointInput.addEventListener('change', () => {
@@ -3341,6 +3452,8 @@ function getAllAppStorageSnapshot() {
 }
 
 function buildRepoSyncPayload(reason = 'updated') {
+    const ptoTracker = window.DevCoachModules?.storage?.loadPtoTracker?.() || { entries: [] };
+
     return {
         appVersion: APP_VERSION,
         reason,
@@ -3353,6 +3466,7 @@ function buildRepoSyncPayload(reason = 'updated') {
         associateSentimentSnapshots: associateSentimentSnapshots || {},
         myTeamMembers: myTeamMembers || {},
         callCenterAverages: loadCallCenterAverages() || {},
+        ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : { entries: [] },
         yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
         yearEndDraftStore: loadYearEndDraftStore(),
         appStorageSnapshot: getAllAppStorageSnapshot(),
@@ -3398,6 +3512,7 @@ function hasMeaningfulLocalData() {
         callListeningLogs,
         associateSentimentSnapshots,
         myTeamMembers,
+        window.DevCoachModules?.storage?.loadPtoTracker?.() || null,
         loadCallCenterAverages(),
         loadYearEndAnnualGoalsStore(),
         loadYearEndDraftStore()
@@ -3420,6 +3535,7 @@ function hasMeaningfulBackupData(payload) {
         payload.callListeningLogs,
         payload.associateSentimentSnapshots,
         payload.myTeamMembers,
+        payload.ptoTracker,
         payload.callCenterAverages,
         payload.yearEndAnnualGoalsStore,
         payload.yearEndDraftStore,
@@ -3473,6 +3589,12 @@ function applyRepoBackupPayload(payload) {
     normalizeTeamMembersForExistingWeeks();
     saveTeamMembers();
     saveCallCenterAverages(payload?.callCenterAverages && typeof payload.callCenterAverages === 'object' ? payload.callCenterAverages : {});
+    if (window.DevCoachModules?.storage?.savePtoTracker) {
+        const restoredPtoTracker = payload?.ptoTracker && typeof payload.ptoTracker === 'object'
+            ? payload.ptoTracker
+            : { entries: [] };
+        window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);
+    }
     saveYearEndAnnualGoalsStore(payload?.yearEndAnnualGoalsStore && typeof payload.yearEndAnnualGoalsStore === 'object' ? payload.yearEndAnnualGoalsStore : {});
     saveYearEndDraftStore(payload?.yearEndDraftStore && typeof payload.yearEndDraftStore === 'object' ? payload.yearEndDraftStore : {});
 }
@@ -10274,11 +10396,8 @@ async function initApp() {
     initializeRepoSyncControls();
     installRepoSyncStorageHooks();
     
-    // Always show Upload Data page on refresh
-    showOnlySection('coachingForm');
-    
-    // Initialize data for the active section (fixes refresh behavior)
-    initializeSection('coachingForm');
+    // Restore last viewed section/sub-section on refresh
+    restoreLastViewedSection();
     
     // If we have data, update the period dropdown
     if (Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0) {

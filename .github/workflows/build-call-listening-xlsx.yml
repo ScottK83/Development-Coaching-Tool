@@ -238,6 +238,55 @@ jobs:
             return ['StorageKey', 'ValueType', 'ItemCount', 'Preview'], rows
 
 
+          def flatten_pto_tracker(pto_tracker):
+            tracker = pto_tracker if isinstance(pto_tracker, dict) else {}
+            entries = tracker.get('entries') if isinstance(tracker.get('entries'), list) else []
+            available = float(tracker.get('availableHours') or 0)
+            thresholds = tracker.get('thresholds') if isinstance(tracker.get('thresholds'), dict) else {}
+            warning = float(thresholds.get('warning') or 0)
+            policy = float(thresholds.get('policy') or 0)
+            total_missed = 0.0
+            for entry in entries:
+              if isinstance(entry, dict):
+                try:
+                  total_missed += float(entry.get('hours') or 0)
+                except Exception:
+                  continue
+
+            remaining = max(0.0, available - total_missed)
+            if total_missed >= policy:
+              status = 'Policy threshold reached'
+            elif total_missed >= warning:
+              status = 'Warning threshold reached'
+            else:
+              status = 'Below thresholds'
+
+            summary_headers = ['AvailablePercent', 'WarningThreshold', 'PolicyThreshold', 'TotalUnavailablePercent', 'RemainingPercent', 'EntryCount', 'Status']
+            summary_rows = [{
+              'AvailablePercent': round(available, 2),
+              'WarningThreshold': round(warning, 2),
+              'PolicyThreshold': round(policy, 2),
+              'TotalUnavailablePercent': round(total_missed, 2),
+              'RemainingPercent': round(remaining, 2),
+              'EntryCount': len(entries),
+              'Status': status
+            }]
+
+            entry_headers = ['Date', 'UnavailablePercent', 'Reason', 'EntryId']
+            entry_rows = []
+            for entry in entries:
+              if not isinstance(entry, dict):
+                continue
+              entry_rows.append({
+                'Date': entry.get('date', ''),
+                'UnavailablePercent': entry.get('hours', ''),
+                'Reason': entry.get('reason', ''),
+                'EntryId': entry.get('id', '')
+              })
+
+            return summary_headers, summary_rows, entry_headers, entry_rows
+
+
           csv_path = 'data/call-listening-logs.csv'
           xlsx_path = 'data/call-listening-logs.xlsx'
 
@@ -321,6 +370,21 @@ jobs:
               auto_size(overview, min_width=18, max_width=60)
               full_wb.save(full_xlsx_path)
               print(f'Built {full_xlsx_path}')
+
+                pto_xlsx_path = 'data/PTO-Tracking.xlsx'
+                pto_wb = Workbook()
+                pto_summary_headers, pto_summary_rows, pto_entry_headers, pto_entry_rows = flatten_pto_tracker(payload.get('ptoTracker'))
+
+                pto_summary_sheet = pto_wb.active
+                pto_summary_sheet.title = 'PTO Summary'
+                pto_summary_sheet.append(pto_summary_headers)
+                for row in pto_summary_rows:
+                  pto_summary_sheet.append([row.get(col, '') for col in pto_summary_headers])
+                auto_size(pto_summary_sheet, min_width=18, max_width=60)
+
+                write_table(pto_wb, 'PTO Entries', pto_entry_headers, pto_entry_rows)
+                pto_wb.save(pto_xlsx_path)
+                print(f'Built {pto_xlsx_path}')
           else:
               print(f'Skipped {full_xlsx_path}: backup payload unavailable or invalid')
           PY
@@ -330,7 +394,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f --ignore-unmatch data/coaching-tool-sync-backup.xlsx
-          git add --all -- data/call-listening-logs.xlsx data/Development-Coaching-Tool.xlsx
+          git add --all -- data/call-listening-logs.xlsx data/Development-Coaching-Tool.xlsx data/PTO-Tracking.xlsx
           if git diff --cached --quiet; then
             echo "No XLSX changes to commit"
           else
