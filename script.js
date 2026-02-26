@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.129'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.130'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3405,14 +3405,22 @@ async function fetchRepoBackupPayload() {
     return null;
 }
 
+function coerceObject(value, fallback = {}) {
+    return value && typeof value === 'object' ? value : fallback;
+}
+
+function coerceNullableObject(value) {
+    return value && typeof value === 'object' ? value : null;
+}
+
 function applyRepoBackupPayload(payload) {
-    weeklyData = payload?.weeklyData && typeof payload.weeklyData === 'object' ? payload.weeklyData : {};
-    ytdData = payload?.ytdData && typeof payload.ytdData === 'object' ? payload.ytdData : {};
-    coachingHistory = payload?.coachingHistory && typeof payload.coachingHistory === 'object' ? payload.coachingHistory : {};
-    callListeningLogs = payload?.callListeningLogs && typeof payload.callListeningLogs === 'object' ? payload.callListeningLogs : {};
-    sentimentPhraseDatabase = payload?.sentimentPhraseDatabase && typeof payload.sentimentPhraseDatabase === 'object' ? payload.sentimentPhraseDatabase : null;
-    associateSentimentSnapshots = payload?.associateSentimentSnapshots && typeof payload.associateSentimentSnapshots === 'object' ? payload.associateSentimentSnapshots : {};
-    myTeamMembers = payload?.myTeamMembers && typeof payload.myTeamMembers === 'object' ? payload.myTeamMembers : {};
+    weeklyData = coerceObject(payload?.weeklyData);
+    ytdData = coerceObject(payload?.ytdData);
+    coachingHistory = coerceObject(payload?.coachingHistory);
+    callListeningLogs = coerceObject(payload?.callListeningLogs);
+    sentimentPhraseDatabase = coerceNullableObject(payload?.sentimentPhraseDatabase);
+    associateSentimentSnapshots = coerceObject(payload?.associateSentimentSnapshots);
+    myTeamMembers = coerceObject(payload?.myTeamMembers);
 
     saveWeeklyData();
     saveYtdData();
@@ -3422,15 +3430,13 @@ function applyRepoBackupPayload(payload) {
     saveAssociateSentimentSnapshots();
     normalizeTeamMembersForExistingWeeks();
     saveTeamMembers();
-    saveCallCenterAverages(payload?.callCenterAverages && typeof payload.callCenterAverages === 'object' ? payload.callCenterAverages : {});
+    saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
     if (window.DevCoachModules?.storage?.savePtoTracker) {
-        const restoredPtoTracker = payload?.ptoTracker && typeof payload.ptoTracker === 'object'
-            ? payload.ptoTracker
-            : {};
+        const restoredPtoTracker = coerceObject(payload?.ptoTracker);
         window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);
     }
-    saveYearEndAnnualGoalsStore(payload?.yearEndAnnualGoalsStore && typeof payload.yearEndAnnualGoalsStore === 'object' ? payload.yearEndAnnualGoalsStore : {});
-    saveYearEndDraftStore(payload?.yearEndDraftStore && typeof payload.yearEndDraftStore === 'object' ? payload.yearEndDraftStore : {});
+    saveYearEndAnnualGoalsStore(coerceObject(payload?.yearEndAnnualGoalsStore));
+    saveYearEndDraftStore(coerceObject(payload?.yearEndDraftStore));
 }
 
 async function tryAutoRestoreFromRepoBackupOnEmptyState() {
