@@ -386,6 +386,10 @@ function buildReliabilityWeeksForAssociate(associateName) {
 
     Object.entries(weeklyData).forEach(([weekKey, period]) => {
         if (!period || typeof period !== 'object') return;
+
+        const periodType = String(period?.metadata?.periodType || '').trim().toLowerCase();
+        if (periodType && periodType !== 'week') return;
+
         const employees = Array.isArray(period.employees) ? period.employees : [];
         const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
         if (!employee) return;
