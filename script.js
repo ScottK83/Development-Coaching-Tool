@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.59'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.60'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -11641,6 +11641,35 @@ function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
     return candidates[0];
 }
 
+function parseYearEndMetricValue(employeeRecord, metricKey) {
+    const rawValue = employeeRecord?.[metricKey];
+    if (rawValue === null || rawValue === undefined || rawValue === '' || rawValue === 'N/A') {
+        return null;
+    }
+    const value = parseFloat(rawValue);
+    return isNaN(value) ? null : value;
+}
+
+function isYearEndTargetConfigValid(targetConfig) {
+    return Boolean(targetConfig && targetConfig.value !== undefined && targetConfig.value !== null);
+}
+
+function doesYearEndMetricMeetTarget(value, targetConfig) {
+    return targetConfig.type === 'min'
+        ? value >= targetConfig.value
+        : value <= targetConfig.value;
+}
+
+function buildYearEndMetricEntry(metricKey, metricLabel, value, targetConfig, meetsTarget) {
+    return {
+        key: metricKey,
+        label: metricLabel,
+        value: formatMetricDisplay(metricKey, value),
+        target: formatMetricDisplay(metricKey, targetConfig.value),
+        meetsTarget
+    };
+}
+
 function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata = null) {
     const wins = [];
     const opportunities = [];
@@ -11648,27 +11677,17 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
 
     getMetricOrder().forEach(({ key }) => {
         const metricConfig = METRICS_REGISTRY[key];
-        const rawValue = employeeRecord?.[key];
-        if (!metricConfig || rawValue === null || rawValue === undefined || rawValue === '' || rawValue === 'N/A') return;
+        if (!metricConfig) return;
 
-        const value = parseFloat(rawValue);
-        if (isNaN(value)) return;
+        const value = parseYearEndMetricValue(employeeRecord, key);
+        if (value === null) return;
 
         const targetConfig = getYearEndTargetConfig(key, reviewYear, periodMetadata);
-        if (!targetConfig || targetConfig.value === undefined || targetConfig.value === null) return;
+        if (!isYearEndTargetConfigValid(targetConfig)) return;
         if (targetConfig.profileYear) profileYears.add(targetConfig.profileYear);
 
-        const meetsTarget = targetConfig.type === 'min'
-            ? value >= targetConfig.value
-            : value <= targetConfig.value;
-
-        const entry = {
-            key,
-            label: metricConfig.label,
-            value: formatMetricDisplay(key, value),
-            target: formatMetricDisplay(key, targetConfig.value),
-            meetsTarget: meetsTarget
-        };
+        const meetsTarget = doesYearEndMetricMeetTarget(value, targetConfig);
+        const entry = buildYearEndMetricEntry(key, metricConfig.label, value, targetConfig, meetsTarget);
 
         if (entry.meetsTarget) {
             wins.push(entry);
