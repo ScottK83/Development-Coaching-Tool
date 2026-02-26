@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.47'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.48'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10254,6 +10254,100 @@ function renderIndividualTrendAnalysis(container, employeeName, keys, periodType
     container.innerHTML = html;
 }
 
+function hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp) {
+    return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+        const a = currentEmp[metricKey];
+        const b = prevEmp[metricKey];
+        const c = thirdEmp[metricKey];
+        if (a === undefined || b === undefined || c === undefined) return false;
+        const worse1 = metricDelta(metricKey, a, b) < 0;
+        const worse2 = metricDelta(metricKey, b, c) < 0;
+        return worse1 && worse2;
+    });
+}
+
+function hasGroupSuddenDrop(currentEmp, prevEmp) {
+    return ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
+        const current = currentEmp[metricKey];
+        const prev = prevEmp[metricKey];
+        if (current === undefined || prev === undefined) return false;
+        const delta = metricDelta(metricKey, current, prev);
+        return delta < -4;
+    });
+}
+
+function hasGroupImprovement(currentEmp, prevEmp) {
+    return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+        const current = currentEmp[metricKey];
+        const prev = prevEmp[metricKey];
+        if (current === undefined || prev === undefined) return false;
+        const delta = metricDelta(metricKey, current, prev);
+        return delta > 5;
+    });
+}
+
+function isGroupConsistentPerformer(currentEmp) {
+    return ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+        metricMeetsTarget(metricKey, currentEmp[metricKey])
+    );
+}
+
+function classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp) {
+    if (thirdEmp && hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp)) {
+        teamInsights.atRisk.push(employeeName);
+        return;
+    }
+
+    if (hasGroupSuddenDrop(currentEmp, prevEmp)) {
+        teamInsights.declining.push(employeeName);
+        return;
+    }
+
+    if (hasGroupImprovement(currentEmp, prevEmp)) {
+        teamInsights.improving.push(employeeName);
+        return;
+    }
+
+    if (isGroupConsistentPerformer(currentEmp)) {
+        teamInsights.consistent.push(employeeName);
+    }
+}
+
+function buildGroupTrendHeaderHtml(buckets) {
+    let html = `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
+    html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
+    html += `</div>`;
+    return html;
+}
+
+function buildGroupTrendSummaryCardsHtml(teamInsights) {
+    let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
+
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
+    html += `</div>`;
+
+    html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
+    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
+    html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    return html;
+}
+
+function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
+    if (!names.length) return '';
+    let html = `<div style="margin-bottom: 15px;">`;
+    html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
+    html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor};">`;
+    html += names.join(', ');
+    html += `</div></div>`;
+    return html;
+}
+
 function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
     const buckets = getTrendComparisonBuckets(keys, periodType);
 
@@ -10276,117 +10370,21 @@ function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
         const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
         if (!prevEmp) return;
 
-        // Check for 3-period decline
-        if (buckets.thirdKeys.length) {
-            const thirdEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys);
-            if (thirdEmp) {
-                const hasDecline = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-                    const a = currentEmp[metricKey];
-                    const b = prevEmp[metricKey];
-                    const c = thirdEmp[metricKey];
-                    if (a === undefined || b === undefined || c === undefined) return false;
-                    const worse1 = metricDelta(metricKey, a, b) < 0;
-                    const worse2 = metricDelta(metricKey, b, c) < 0;
-                    return worse1 && worse2;
-                });
+        const thirdEmp = buckets.thirdKeys.length
+            ? buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys)
+            : null;
 
-                if (hasDecline) {
-                    teamInsights.atRisk.push(employeeName);
-                    return;
-                }
-            }
-        }
-
-        // Check for sudden drops
-        const hasSuddenDrop = ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
-            const current = currentEmp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || prev === undefined) return false;
-            const delta = metricDelta(metricKey, current, prev);
-            return delta < -4;
-        });
-
-        if (hasSuddenDrop) {
-            teamInsights.declining.push(employeeName);
-            return;
-        }
-
-        // Check for improvements
-        const hasImprovement = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-            const current = currentEmp[metricKey];
-            const prev = prevEmp[metricKey];
-            if (current === undefined || prev === undefined) return false;
-            const delta = metricDelta(metricKey, current, prev);
-            return delta > 5;
-        });
-
-        if (hasImprovement) {
-            teamInsights.improving.push(employeeName);
-            return;
-        }
-
-        // Check for consistency
-        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey => 
-            metricMeetsTarget(metricKey, currentEmp[metricKey])
-        );
-        
-        if (consistent) {
-            teamInsights.consistent.push(employeeName);
-        }
+        classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp);
     });
 
     // Build team overview
     let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
-    html += `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
-    html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
-    html += `</div>`;
-    
-    // Summary cards
-    html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
-    
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
-    html += `</div>`;
-    
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
-    html += `</div>`;
-    
-    // Detailed lists
-    if (teamInsights.atRisk.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #e53935; margin-bottom: 8px;">🚨 At Risk - Need Immediate Coaching:</div>`;
-        html += `<div style="padding: 12px; background: #ffebee; border-radius: 6px; border-left: 4px solid #e53935;">`;
-        html += teamInsights.atRisk.join(', ');
-        html += `</div></div>`;
-    }
-
-    if (teamInsights.declining.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #fb8c00; margin-bottom: 8px;">⚠️ Declining - Watch Closely:</div>`;
-        html += `<div style="padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #fb8c00;">`;
-        html += teamInsights.declining.join(', ');
-        html += `</div></div>`;
-    }
-
-    if (teamInsights.improving.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #43a047; margin-bottom: 8px;">🎉 Improving - Recognize Progress:</div>`;
-        html += `<div style="padding: 12px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #43a047;">`;
-        html += teamInsights.improving.join(', ');
-        html += `</div></div>`;
-    }
-
-    if (teamInsights.consistent.length > 0) {
-        html += `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: #1e88e5; margin-bottom: 8px;">✅ Consistent Performers:</div>`;
-        html += `<div style="padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1e88e5;">`;
-        html += teamInsights.consistent.join(', ');
-        html += `</div></div>`;
-    }
+    html += buildGroupTrendHeaderHtml(buckets);
+    html += buildGroupTrendSummaryCardsHtml(teamInsights);
+    html += buildGroupTrendNamedSectionHtml('🚨 At Risk - Need Immediate Coaching:', '#e53935', '#ffebee', '#e53935', teamInsights.atRisk);
+    html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
+    html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
+    html += buildGroupTrendNamedSectionHtml('✅ Consistent Performers:', '#1e88e5', '#e3f2fd', '#1e88e5', teamInsights.consistent);
 
     html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
     html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
