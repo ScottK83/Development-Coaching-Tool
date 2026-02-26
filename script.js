@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.132'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.133'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3069,6 +3069,20 @@ function renderCallListeningLastSync(meta = null) {
     el.textContent = `Last successful sync: ${when}${details ? ` (${details})` : ''}`;
 }
 
+function setAutoSyncEnabledStatus(config) {
+    if (config?.autoSyncEnabled && String(config?.endpoint || '').trim()) {
+        setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
+    } else {
+        setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
+    }
+}
+
+function getTotalCallListeningLogCount() {
+    return Object.values(callListeningLogs || {}).reduce((count, entries) => {
+        return count + (Array.isArray(entries) ? entries.length : 0);
+    }, 0);
+}
+
 function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
     const syncSecretInput = document.getElementById('callListeningSyncSecret');
@@ -3086,11 +3100,7 @@ function initializeRepoSyncControls() {
     syncEndpointInput.value = syncConfig.endpoint || '';
     if (syncSecretInput) syncSecretInput.value = syncConfig.sharedSecret || '';
     autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
-    if (syncConfig.autoSyncEnabled && syncConfig.endpoint.trim()) {
-        setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-    } else {
-        setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
-    }
+    setAutoSyncEnabledStatus(syncConfig);
     renderCallListeningLastSync();
 
     if (!syncNowBtn.dataset.bound) {
@@ -3155,11 +3165,7 @@ function initializeRepoSyncControls() {
     if (!syncEndpointInput.dataset.bound) {
         syncEndpointInput.addEventListener('change', () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
-            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
-                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-            } else {
-                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
-            }
+            setAutoSyncEnabledStatus(nextConfig);
         });
         syncEndpointInput.dataset.bound = 'true';
     }
@@ -3172,11 +3178,7 @@ function initializeRepoSyncControls() {
     if (!autoSyncCheckbox.dataset.bound) {
         autoSyncCheckbox.addEventListener('change', () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
-            if (nextConfig.autoSyncEnabled && nextConfig.endpoint.trim()) {
-                setCallListeningSyncStatus('Auto-sync enabled. Changes will sync after save/update/delete.', 'info');
-            } else {
-                setCallListeningSyncStatus('Auto-sync disabled. Add Worker URL and enable auto-sync to push to repo.', 'info');
-            }
+            setAutoSyncEnabledStatus(nextConfig);
         });
         autoSyncCheckbox.dataset.bound = 'true';
     }
@@ -3194,9 +3196,7 @@ function openRepoExcelFile(fileName) {
     }
 
     if (fileName === 'call-listening-logs.xlsx') {
-        const totalCallLogs = Object.values(callListeningLogs || {}).reduce((count, entries) => {
-            return count + (Array.isArray(entries) ? entries.length : 0);
-        }, 0);
+        const totalCallLogs = getTotalCallListeningLogCount();
         if (totalCallLogs === 0) {
             showToast('ℹ️ Call Logs Excel will be blank until at least one call listening entry is saved.', 4500);
         }
