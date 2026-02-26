@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.139'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.140'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -4914,6 +4914,15 @@ function applyAveragesToForm(source) {
     });
 }
 
+function readAveragesFromForm() {
+    const averageData = {};
+    Object.entries(AVERAGE_FORM_FIELD_MAP).forEach(([avgKey, inputId]) => {
+        const parsed = parseFloat(document.getElementById(inputId)?.value);
+        averageData[avgKey] = Number.isFinite(parsed) ? parsed : 0;
+    });
+    return averageData;
+}
+
 function setupAveragesLoader() {
     const avgPeriodType = document.getElementById('avgPeriodType');
     const avgWeekMonday = document.getElementById('avgWeekMonday');
@@ -5042,21 +5051,7 @@ function displayCallCenterAverages(weekKey) {
             return;
         }
         
-        const averageData = {
-            adherence: parseFloat(document.getElementById('avgAdherence')?.value) || 0,
-            overallExperience: parseFloat(document.getElementById('avgOverallExperience')?.value) || 0,
-            repSatisfaction: parseFloat(document.getElementById('avgRepSatisfaction')?.value) || 0,
-            fcr: parseFloat(document.getElementById('avgFCR')?.value) || 0,
-            transfers: parseFloat(document.getElementById('avgTransfers')?.value) || 0,
-            sentiment: parseFloat(document.getElementById('avgSentiment')?.value) || 0,
-            positiveWord: parseFloat(document.getElementById('avgPositiveWord')?.value) || 0,
-            negativeWord: parseFloat(document.getElementById('avgNegativeWord')?.value) || 0,
-            managingEmotions: parseFloat(document.getElementById('avgManagingEmotions')?.value) || 0,
-            aht: parseFloat(document.getElementById('avgAHT')?.value) || 0,
-            acw: parseFloat(document.getElementById('avgACW')?.value) || 0,
-            holdTime: parseFloat(document.getElementById('avgHoldTime')?.value) || 0,
-            reliability: parseFloat(document.getElementById('avgReliability')?.value) || 0
-        };
+        const averageData = readAveragesFromForm();
         
         setCallCenterAverageForPeriod(weekKey, averageData);
         clearUnsavedChanges();
