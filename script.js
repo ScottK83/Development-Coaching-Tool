@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.35'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.36'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6425,7 +6425,10 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         y += drawTrendReliabilityNoteOnCanvas(ctx, y);
     }
 
-    // Convert to image blob and handle output
+    finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady);
+}
+
+function finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady) {
     canvas.toBlob(pngBlob => {
         if (!pngBlob) {
             console.error('Failed to create blob from canvas');
