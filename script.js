@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.24'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.25'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13608,6 +13608,32 @@ function handleSentimentInteractionsMatch(report, inKeywordsSection, allInteract
     }
 }
 
+function appendParsedSentimentPhrase(phrases, rawPhrase, value, fallbackMode = 'none') {
+    const extracted = extractSentimentSpeakerAndPhrase(rawPhrase);
+    if (extracted) {
+        phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
+        return true;
+    }
+
+    if (fallbackMode === 'defaultA') {
+        const cleanPhrase = String(rawPhrase || '').replace(/^"(.*)"$/, '$1');
+        phrases.push({ phrase: cleanPhrase, value, speaker: 'A' });
+        return true;
+    }
+
+    if (fallbackMode === 'simpleTagged') {
+        const simpleMatch = String(rawPhrase || '').match(/[+\-#]\s*\(([AC]):\s*"?([^")]+)"?\)/i);
+        if (simpleMatch) {
+            const speaker = simpleMatch[1].toUpperCase();
+            const cleanPhrase = simpleMatch[2].trim();
+            phrases.push({ phrase: cleanPhrase, value, speaker });
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13685,12 +13711,8 @@ function parseSentimentFile(fileType, lines) {
             if (csvQuotedMatch) {
                 let rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
                 const value = parseInt(csvQuotedMatch[2]);
-                
-                // Extract speaker (A or C) and phrase
-                const extracted = extractSentimentSpeakerAndPhrase(rawPhrase);
-                if (extracted) {
-                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
-                }
+
+                appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'none');
                 continue;
             }
             
@@ -13698,15 +13720,8 @@ function parseSentimentFile(fileType, lines) {
             if (csvMatch) {
                 let rawPhrase = csvMatch[1].trim();
                 const value = parseInt(csvMatch[2]);
-                
-                // Extract speaker and phrase
-                const extracted = extractSentimentSpeakerAndPhrase(rawPhrase);
-                if (extracted) {
-                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
-                } else {
-                    const cleanPhrase = rawPhrase.replace(/^"(.*)"$/, '$1');
-                    report.phrases.push({ phrase: cleanPhrase, value, speaker: 'A' });
-                }
+
+                appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'defaultA');
                 continue;
             }
             
@@ -13720,20 +13735,8 @@ function parseSentimentFile(fileType, lines) {
             // Check if current line is just a number (the value for the previous phrase)
             if (pendingPhrase && line.match(/^\d+$/)) {
                 const value = parseInt(line.trim());
-                
-                // Extract speaker and phrase
-                const extracted = extractSentimentSpeakerAndPhrase(pendingPhrase);
-                if (extracted) {
-                    report.phrases.push({ phrase: extracted.phrase, value, speaker: extracted.speaker });
-                } else {
-                    // Fallback: try simpler extraction
-                    const simpleMatch = pendingPhrase.match(/[+\-#]\s*\(([AC]):\s*"?([^")]+)"?\)/i);
-                    if (simpleMatch) {
-                        const speaker = simpleMatch[1].toUpperCase();
-                        const cleanPhrase = simpleMatch[2].trim();
-                        report.phrases.push({ phrase: cleanPhrase, value, speaker });
-                    }
-                }
+
+                appendParsedSentimentPhrase(report.phrases, pendingPhrase, value, 'simpleTagged');
                 pendingPhrase = null;
                 continue;
             }
