@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.04'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.05'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5600,7 +5600,7 @@ function buildTrendEmailAnalysisBundle(employee, weekKey, period) {
     };
 }
 
-function generateTrendEmail() {
+function getTrendEmailSelection() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
     const nickname = document.getElementById('trendNickname')?.value.trim();
@@ -5608,8 +5608,16 @@ function generateTrendEmail() {
     if (!employeeName || !weekKey) {
         console.error('Missing selection - Employee:', employeeName, 'Week:', weekKey);
         showToast('Please select both employee and period', 5000);
-        return;
+        return null;
     }
+
+    return { employeeName, weekKey, nickname };
+}
+
+function generateTrendEmail() {
+    const selection = getTrendEmailSelection();
+    if (!selection) return;
+    const { employeeName, weekKey, nickname } = selection;
 
     if (employeeName && nickname) {
         saveNickname(employeeName, nickname);
