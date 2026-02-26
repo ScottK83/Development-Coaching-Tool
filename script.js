@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.137'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.138'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5123,6 +5123,10 @@ function updateTrendButtonsVisibility() {
     const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
     const selectedValue = employeeDropdown?.value || '';
 
+    applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn);
+}
+
+function applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn) {
     if (selectedValue === '') {
         if (generateTrendBtn) generateTrendBtn.style.display = 'none';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
@@ -5230,23 +5234,8 @@ function setupMetricTrendsListeners() {
             const generateTrendBtn = document.getElementById('generateTrendBtn');
             const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
             const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
-            
-            if (selectedValue === '') {
-                // No selection - hide both buttons
-                if (generateTrendBtn) generateTrendBtn.style.display = 'none';
-                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
-                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
-            } else if (selectedValue === 'ALL') {
-                // All associates selected - show only "Generate All"
-                if (generateTrendBtn) generateTrendBtn.style.display = 'none';
-                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
-                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'block';
-            } else {
-                // Specific associate selected - show only "Generate Trend Email"
-                if (generateTrendBtn) generateTrendBtn.style.display = 'block';
-                if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
-                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
-            }
+
+            applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn);
         });
     }
 
