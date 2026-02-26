@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.130'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.131'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5610,10 +5610,7 @@ function generateTrendEmail() {
     
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
         // AFTER image is copied to clipboard, show tips panel with strengths + areas to focus
-        const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : periodMeta.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-        const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : periodMeta.periodType === 'quarter' ? 'Quarter' : 'Week';
-        const mailEndDate = periodMeta.endDate || 'unknown';
-        const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
+        const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
         
         if (DEBUG) { console.log('Opening Outlook with subject:', emailSubject); }
         
@@ -5642,6 +5639,20 @@ function openTrendEmailOutlook(emailSubject) {
     } catch(e) {
         console.error('Error opening mailto:', e);
     }
+}
+
+function getTrendPeriodDisplay(periodType = 'week') {
+    const normalized = String(periodType || 'week').toLowerCase();
+    const periodTypeText = normalized === 'month' ? 'month' : normalized === 'quarter' ? 'quarter' : normalized === 'ytd' ? 'ytd' : 'week';
+    const periodTypeTitle = normalized === 'month' ? 'Monthly' : normalized === 'quarter' ? 'Quarterly' : normalized === 'ytd' ? 'YTD' : 'Weekly';
+    const periodLabel = normalized === 'month' ? 'Month' : normalized === 'quarter' ? 'Quarter' : normalized === 'ytd' ? 'YTD' : 'Week';
+    return { periodTypeText, periodTypeTitle, periodLabel };
+}
+
+function buildTrendEmailSubject(periodMeta, displayName) {
+    const { periodTypeTitle, periodLabel } = getTrendPeriodDisplay(periodMeta?.periodType);
+    const endDate = periodMeta?.endDate || 'unknown';
+    return `Trending Metrics - ${periodTypeTitle} - ${periodLabel} ending ${endDate} for ${displayName}`;
 }
 
 /**
@@ -6274,7 +6285,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
         improvedText
     } = calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys);
     // metadata already extracted at function start
-    const periodTypeText = metadata.periodType === 'week' ? 'week' : metadata.periodType === 'month' ? 'month' : metadata.periodType === 'quarter' ? 'quarter' : 'week';
+    const periodDisplay = getTrendPeriodDisplay(metadata.periodType);
+    const periodTypeText = periodDisplay.periodTypeText;
     const improvedSub = previous ? `From Last ${periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1)}` : 'No Prior Data';
 
     // CREATE CANVAS IMAGE (will be resized based on content)
@@ -6297,10 +6309,8 @@ function createTrendEmailImage(empName, weekKey, period, current, previous, onCl
     ctx.fillRect(0, 0, 900, 100);
 
     // Header text with dynamic subject
-    const periodType = metadata.periodType === 'week' ? 'Weekly' : metadata.periodType === 'month' ? 'Monthly' : metadata.periodType === 'quarter' ? 'Quarterly' : 'Weekly';
-    const periodLabel = metadata.periodType === 'week' ? 'Week' : metadata.periodType === 'month' ? 'Month' : metadata.periodType === 'quarter' ? 'Quarter' : 'Week';
-    const endDate = metadata.endDate || 'unknown';
-    const subjectLine = `Trending Metrics - ${periodType} - ${periodLabel} ending ${endDate} for ${empName}`;
+    const periodLabel = periodDisplay.periodLabel;
+    const subjectLine = buildTrendEmailSubject(metadata, empName);
     
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
