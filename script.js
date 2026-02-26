@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.147'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.01'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -5573,6 +5573,24 @@ function handleTrendEmailImageReady(
     }
 }
 
+function buildTrendEmailAnalysisBundle(employee, weekKey, period) {
+    const centerAverages = getCallCenterAverageForPeriod(weekKey) || {};
+    const reviewYear = parseInt((period?.metadata?.endDate || '').split('-')[0], 10) || null;
+    const trendAnalysis = analyzeTrendMetrics(employee, centerAverages, reviewYear);
+    const weakestMetric = trendAnalysis.weakest;
+    const trendingMetric = trendAnalysis.trendingDown;
+    const allMetrics = trendAnalysis.allMetrics || [];
+    const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
+
+    return {
+        weakestMetric,
+        trendingMetric,
+        allMetrics,
+        tipsForWeakest,
+        tipsForTrending
+    };
+}
+
 function generateTrendEmail() {
     const employeeName = document.getElementById('trendEmployeeSelect')?.value;
     const weekKey = document.getElementById('trendPeriodSelect')?.value;
@@ -5595,14 +5613,13 @@ function generateTrendEmail() {
     const displayName = nickname || employeeName;
     showToast('ℹ️ Creating email image...', 3000);
 
-    const centerAgvs = getCallCenterAverageForPeriod(weekKey) || {};
-    const reviewYear = parseInt((period?.metadata?.endDate || '').split('-')[0], 10) || null;
-
-    const trendAnalysis = analyzeTrendMetrics(employee, centerAgvs, reviewYear);
-    const weakestMetric = trendAnalysis.weakest;
-    const trendingMetric = trendAnalysis.trendingDown;
-    const allMetrics = trendAnalysis.allMetrics || [];
-    const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
+    const {
+        weakestMetric,
+        trendingMetric,
+        allMetrics,
+        tipsForWeakest,
+        tipsForTrending
+    } = buildTrendEmailAnalysisBundle(employee, weekKey, period);
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
 
     createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
