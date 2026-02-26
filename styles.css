@@ -12,6 +12,9 @@
     --ui-border-strong: #c6d2df;
     --ui-text: #1f2d3d;
     --ui-muted: #5f6f82;
+    --ui-accent: #2f7a6d;
+    --ui-accent-strong: #1f5f55;
+    --ui-accent-soft: #e8f5f3;
     --ui-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
     --ui-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
     --ui-focus: 0 0 0 3px rgba(0, 86, 179, 0.18);
@@ -71,15 +74,15 @@ main section {
 .form-section h2 {
     font-size: 1.5em;
     margin-bottom: 20px;
-    color: #003DA5;
-    border-bottom: 2px solid #003DA5;
+    color: var(--ui-accent) !important;
+    border-bottom: 2px solid var(--ui-accent) !important;
     padding-bottom: 10px;
 }
 
 .form-section h3 {
     font-size: 1.2em;
     margin-bottom: 15px;
-    color: #0056B3;
+    color: var(--ui-accent) !important;
 }
 
 .form-group {
@@ -168,12 +171,13 @@ textarea:focus-visible {
 }
 
 .btn-secondary {
-    background: #e9ecef;
-    color: #333;
+    background: #eef6f4;
+    color: var(--ui-accent-strong);
+    border: 1px solid #cfe3df;
 }
 
 .btn-secondary:hover {
-    background: #dee2e6;
+    background: #e2f0ed;
 }
 
 .btn-ai {
@@ -362,6 +366,30 @@ textarea:focus-visible {
 .form-section h4,
 .form-section h5 {
     line-height: 1.3;
+}
+
+.form-section p,
+.form-section small,
+.form-section label {
+    color: var(--ui-text) !important;
+}
+
+.form-section [style*="border-left"] {
+    border-left-color: var(--ui-accent) !important;
+}
+
+.form-section [style*="border: 2px solid"],
+.form-section [style*="border: 1px solid"] {
+    border-color: var(--ui-border-strong) !important;
+}
+
+.form-section [style*="background: #e8f5f3"],
+.form-section [style*="background: #f3e5f5"],
+.form-section [style*="background: #eef5ff"],
+.form-section [style*="background: #fff3cd"],
+.form-section [style*="background: #ffebee"],
+.form-section [style*="background: #e3f2fd"] {
+    background: var(--ui-accent-soft) !important;
 }
 
 .history-header {
