@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.25'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.26'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -13634,6 +13634,36 @@ function appendParsedSentimentPhrase(phrases, rawPhrase, value, fallbackMode = '
     return false;
 }
 
+function parseSentimentKeywordLine(report, line, pendingPhrase) {
+    const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
+    if (csvQuotedMatch) {
+        const rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
+        const value = parseInt(csvQuotedMatch[2]);
+        appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'none');
+        return { handled: true, pendingPhrase };
+    }
+
+    const csvMatch = line.match(/^([^,]+),(\d+)$/);
+    if (csvMatch) {
+        const rawPhrase = csvMatch[1].trim();
+        const value = parseInt(csvMatch[2]);
+        appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'defaultA');
+        return { handled: true, pendingPhrase };
+    }
+
+    if (line.match(/^[+\-#]/)) {
+        return { handled: true, pendingPhrase: line.trim() };
+    }
+
+    if (pendingPhrase && line.match(/^\d+$/)) {
+        const value = parseInt(line.trim());
+        appendParsedSentimentPhrase(report.phrases, pendingPhrase, value, 'simpleTagged');
+        return { handled: true, pendingPhrase: null };
+    }
+
+    return { handled: false, pendingPhrase };
+}
+
 function parseSentimentFile(fileType, lines) {
     // Parse the "English Speech – Charts Report" format
     console.log(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
@@ -13706,38 +13736,9 @@ function parseSentimentFile(fileType, lines) {
         
         // Parse keyword phrases - handling BOTH formats
         if (inKeywordsSection && report.totalCalls > 0) {
-            // Format 1: CSV with comma separator: "+(A:absolutely),83"
-            const csvQuotedMatch = line.match(/^"([^"]+(?:""[^"]+)*)",(\d+)/);
-            if (csvQuotedMatch) {
-                let rawPhrase = csvQuotedMatch[1].replace(/""/g, '"').trim();
-                const value = parseInt(csvQuotedMatch[2]);
-
-                appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'none');
-                continue;
-            }
-            
-            const csvMatch = line.match(/^([^,]+),(\d+)$/);
-            if (csvMatch) {
-                let rawPhrase = csvMatch[1].trim();
-                const value = parseInt(csvMatch[2]);
-
-                appendParsedSentimentPhrase(report.phrases, rawPhrase, value, 'defaultA');
-                continue;
-            }
-            
-            // Format 2: Phrase on one line, value on next line
-            // Check if current line is a phrase (starts with + or contains parentheses)
-            if (line.match(/^[+\-#]/)) {
-                pendingPhrase = line.trim();
-                continue;
-            }
-            
-            // Check if current line is just a number (the value for the previous phrase)
-            if (pendingPhrase && line.match(/^\d+$/)) {
-                const value = parseInt(line.trim());
-
-                appendParsedSentimentPhrase(report.phrases, pendingPhrase, value, 'simpleTagged');
-                pendingPhrase = null;
+            const keywordLineResult = parseSentimentKeywordLine(report, line, pendingPhrase);
+            pendingPhrase = keywordLineResult.pendingPhrase;
+            if (keywordLineResult.handled) {
                 continue;
             }
         }
