@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.128'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.129'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3529,10 +3529,14 @@ function getCallListeningEntriesForEmployee(employeeName) {
     if (!employeeName) return [];
     const entries = Array.isArray(callListeningLogs?.[employeeName]) ? callListeningLogs[employeeName] : [];
     return entries.slice().sort((a, b) => {
-        const dateA = new Date(a.listenedOn || a.createdAt || 0).getTime();
-        const dateB = new Date(b.listenedOn || b.createdAt || 0).getTime();
+        const dateA = getCallListeningEntryTimestamp(a);
+        const dateB = getCallListeningEntryTimestamp(b);
         return dateB - dateA;
     });
+}
+
+function getCallListeningEntryTimestamp(entry) {
+    return new Date(entry?.listenedOn || entry?.createdAt || 0).getTime();
 }
 
 function findCallListeningEntryById(employeeName, entryId) {
@@ -3548,8 +3552,8 @@ function toCsvCell(value) {
     return `"${text.replace(/"/g, '""')}"`;
 }
 
-function exportCallListeningLogsToCSV() {
-    const headers = [
+function getCallListeningCsvHeaders() {
+    return [
         'Associate',
         'Call Date',
         'Call Reference',
@@ -3560,21 +3564,28 @@ function exportCallListeningLogsToCSV() {
         'Manager Notes',
         'Created At'
     ];
+}
 
+function buildCallListeningCsvRow(employeeName, entry) {
+    return [
+        toCsvCell(employeeName),
+        toCsvCell(entry.listenedOn || ''),
+        toCsvCell(entry.callReference || ''),
+        toCsvCell(entry.whatWentWell || ''),
+        toCsvCell(entry.improvementAreas || ''),
+        toCsvCell(entry.oscarUrl || ''),
+        toCsvCell(entry.relevantInfo || ''),
+        toCsvCell(entry.managerNotes || ''),
+        toCsvCell(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')
+    ].join(',');
+}
+
+function exportCallListeningLogsToCSV() {
+    const headers = getCallListeningCsvHeaders();
     const lines = [headers.join(',')];
     Object.entries(callListeningLogs || {}).forEach(([employeeName, entries]) => {
         (entries || []).forEach(entry => {
-            lines.push([
-                toCsvCell(employeeName),
-                toCsvCell(entry.listenedOn || ''),
-                toCsvCell(entry.callReference || ''),
-                toCsvCell(entry.whatWentWell || ''),
-                toCsvCell(entry.improvementAreas || ''),
-                toCsvCell(entry.oscarUrl || ''),
-                toCsvCell(entry.relevantInfo || ''),
-                toCsvCell(entry.managerNotes || ''),
-                toCsvCell(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')
-            ].join(','));
+            lines.push(buildCallListeningCsvRow(employeeName, entry));
         });
     });
 
