@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.70'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.71'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -12987,46 +12987,42 @@ function clearCoachingHistoryForEmployee() {
     showToast('✅ Coaching history cleared', 3000);
 }
 
-function updateCoachingEmailDisplay() {
-    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
-    const panel = document.getElementById('coachingMetricsPanel');
-    const summary = document.getElementById('coachingMetricsSummary');
-    const winsList = document.getElementById('coachingWinsList');
-    const oppList = document.getElementById('coachingOpportunitiesList');
-    const promptArea = document.getElementById('coachingPromptArea');
-    const outlookSection = document.getElementById('coachingOutlookSection');
-    const outlookBody = document.getElementById('coachingOutlookBody');
-    const outlookBtn = document.getElementById('generateOutlookEmailBtn');
+function getCoachingEmailDisplayElements() {
+    return {
+        panel: document.getElementById('coachingMetricsPanel'),
+        summary: document.getElementById('coachingMetricsSummary'),
+        winsList: document.getElementById('coachingWinsList'),
+        oppList: document.getElementById('coachingOpportunitiesList'),
+        promptArea: document.getElementById('coachingPromptArea'),
+        outlookSection: document.getElementById('coachingOutlookSection'),
+        outlookBody: document.getElementById('coachingOutlookBody'),
+        outlookBtn: document.getElementById('generateOutlookEmailBtn')
+    };
+}
 
-    if (!panel || !summary || !winsList || !oppList || !promptArea) return;
+function resetCoachingEmailDisplayState(elements) {
+    elements.winsList.innerHTML = '';
+    elements.oppList.innerHTML = '';
+    elements.promptArea.value = '';
 
-    winsList.innerHTML = '';
-    oppList.innerHTML = '';
-    promptArea.value = '';
-    if (outlookSection && outlookBody && outlookBtn) {
-        outlookSection.style.display = 'none';
-        outlookBody.value = '';
-        outlookBtn.disabled = true;
-        outlookBtn.style.opacity = '0.6';
-        outlookBtn.style.cursor = 'not-allowed';
+    if (elements.outlookSection && elements.outlookBody && elements.outlookBtn) {
+        elements.outlookSection.style.display = 'none';
+        elements.outlookBody.value = '';
+        elements.outlookBtn.disabled = true;
+        elements.outlookBtn.style.opacity = '0.6';
+        elements.outlookBtn.style.cursor = 'not-allowed';
     }
+}
 
-    if (!employeeName || !coachingLatestWeekKey) {
-        panel.style.display = 'none';
-        renderCoachingHistory(employeeName);
-        return;
-    }
+function resolveCoachingEmployeeRecord(employeeName) {
+    if (!employeeName || !coachingLatestWeekKey) return null;
+    return weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName) || null;
+}
 
-    const employeeRecord = weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName);
-    if (!employeeRecord) {
-        panel.style.display = 'none';
-        renderCoachingHistory(employeeName);
-        return;
-    }
-
-    const metricKeys = getMetricOrder().map(m => m.key);
+function buildCoachingDisplayMetricData(employeeRecord) {
     const wins = [];
     const opportunities = [];
+    const metricKeys = getMetricOrder().map(m => m.key);
 
     metricKeys.forEach(key => {
         const metricConfig = METRICS_REGISTRY[key];
@@ -13040,14 +13036,11 @@ function updateCoachingEmailDisplay() {
         if (target === undefined || target === null) return;
 
         const meetsTarget = isMetricMeetingTarget(key, numValue, target);
-        const displayValue = formatMetricDisplay(key, numValue);
-        const displayTarget = formatMetricDisplay(key, target);
-
         const entry = {
-            key: key,
+            key,
             label: metricConfig.label,
-            value: displayValue,
-            target: displayTarget
+            value: formatMetricDisplay(key, numValue),
+            target: formatMetricDisplay(key, target)
         };
 
         if (meetsTarget) {
@@ -13057,12 +13050,21 @@ function updateCoachingEmailDisplay() {
         }
     });
 
-    const endDate = weeklyData[coachingLatestWeekKey]?.metadata?.endDate
-        ? formatDateMMDDYYYY(weeklyData[coachingLatestWeekKey].metadata.endDate)
-        : (coachingLatestWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingLatestWeekKey.split('|')[1]) : coachingLatestWeekKey);
+    return { wins, opportunities };
+}
 
-    summary.textContent = `Week of ${endDate} • ${wins.length} wins • ${opportunities.length} focus areas`;
+function resolveCoachingDisplayEndDate() {
+    const period = weeklyData[coachingLatestWeekKey];
+    const metadataEndDate = period?.metadata?.endDate;
+    if (metadataEndDate) {
+        return formatDateMMDDYYYY(metadataEndDate);
+    }
 
+    const keyEndDate = coachingLatestWeekKey.split('|')[1];
+    return keyEndDate ? formatDateMMDDYYYY(keyEndDate) : coachingLatestWeekKey;
+}
+
+function renderCoachingMetricLists(winsList, oppList, wins, opportunities) {
     winsList.innerHTML = wins.length
         ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
         : '<li>No metrics meeting goal in the latest period.</li>';
@@ -13070,8 +13072,30 @@ function updateCoachingEmailDisplay() {
     oppList.innerHTML = opportunities.length
         ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
         : '<li>No focus areas below target in the latest period.</li>';
+}
 
-    panel.style.display = 'block';
+function updateCoachingEmailDisplay() {
+    const employeeName = document.getElementById('coachingEmployeeSelect')?.value;
+    const elements = getCoachingEmailDisplayElements();
+
+    if (!elements.panel || !elements.summary || !elements.winsList || !elements.oppList || !elements.promptArea) return;
+
+    resetCoachingEmailDisplayState(elements);
+
+    const employeeRecord = resolveCoachingEmployeeRecord(employeeName);
+    if (!employeeRecord) {
+        elements.panel.style.display = 'none';
+        renderCoachingHistory(employeeName);
+        return;
+    }
+
+    const { wins, opportunities } = buildCoachingDisplayMetricData(employeeRecord);
+    const endDate = resolveCoachingDisplayEndDate();
+
+    elements.summary.textContent = `Week of ${endDate} • ${wins.length} wins • ${opportunities.length} focus areas`;
+    renderCoachingMetricLists(elements.winsList, elements.oppList, wins, opportunities);
+
+    elements.panel.style.display = 'block';
     renderCoachingHistory(employeeName);
 }
 
