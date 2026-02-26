@@ -5184,17 +5184,21 @@ function updateTrendButtonsVisibility() {
     const employeeDropdown = document.getElementById('trendEmployeeSelect');
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+    const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
     const selectedValue = employeeDropdown?.value || '';
 
     if (selectedValue === '') {
         if (generateTrendBtn) generateTrendBtn.style.display = 'none';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
     } else if (selectedValue === 'ALL') {
         if (generateTrendBtn) generateTrendBtn.style.display = 'none';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
+        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'block';
     } else {
         if (generateTrendBtn) generateTrendBtn.style.display = 'block';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
     }
 }
 
@@ -5257,6 +5261,7 @@ function setupMetricTrendsListeners() {
     // Generate trend email buttons
     const generateTrendBtn = document.getElementById('generateTrendBtn');
     const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+    const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
     const saveMetricsPreviewBtn = document.getElementById('saveMetricsPreviewBtn');
     
     if (!generateTrendBtn) {
@@ -5270,6 +5275,12 @@ function setupMetricTrendsListeners() {
     } else {
         generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
     }
+
+    if (!generateTeamTrendBtn) {
+        console.error('generateTeamTrendBtn element not found!');
+    } else {
+        generateTeamTrendBtn.addEventListener('click', generateTeamTrendSummary);
+    }
     
     if (saveMetricsPreviewBtn) {
         saveMetricsPreviewBtn.addEventListener('click', saveMetricsPreviewEdits);
@@ -5282,19 +5293,23 @@ function setupMetricTrendsListeners() {
             const selectedValue = e.target.value;
             const generateTrendBtn = document.getElementById('generateTrendBtn');
             const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
+            const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
             
             if (selectedValue === '') {
                 // No selection - hide both buttons
                 if (generateTrendBtn) generateTrendBtn.style.display = 'none';
                 if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
             } else if (selectedValue === 'ALL') {
                 // All associates selected - show only "Generate All"
                 if (generateTrendBtn) generateTrendBtn.style.display = 'none';
                 if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
+                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'block';
             } else {
                 // Specific associate selected - show only "Generate Trend Email"
                 if (generateTrendBtn) generateTrendBtn.style.display = 'block';
                 if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
+                if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
             }
         });
     }
@@ -5745,6 +5760,13 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     `;
     
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
+    const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(allMetrics || []);
+    const summaryBoxesHtml = renderTrendSummaryBoxesHtml(
+        positiveHighlights,
+        improvementAreas,
+        'No above-target metrics in this period.',
+        'No below-target metrics in this period.'
+    );
     
     // Build focus areas HTML - show both weakest and trending metrics
     let focusAreasHtml = '';
@@ -5822,6 +5844,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     panel.innerHTML = `
         <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
         <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
+
+        ${summaryBoxesHtml}
         
         ${focusAreasHtml}
 
@@ -5973,35 +5997,6 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         } else {
             prompt += `- No below-target metrics detected in this period.\n`;
         }
-        prompt += `\n`;
-    }
-    
-    if (successes.length > 0) {
-        prompt += `WINS:\n`;
-        successes.slice(0, 3).forEach(metric => {
-            prompt += `- ${metric.label}: ${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})\n`;
-        });
-        prompt += `\n`;
-    }
-    
-    // OPPORTUNITIES SECTION - Metrics not meeting target
-    const opportunities = allTrendMetrics 
-        ? allTrendMetrics.filter(m => !m.meetsTarget)
-        : [];
-    
-    if (opportunities.length > 0) {
-        prompt += `OPPORTUNITIES:\n`;
-        opportunities.slice(0, 3).forEach(metric => {
-            // For negativeWord metric: show both using % and avoiding %
-            let displayValue = `${metric.employeeValue.toFixed(1)} (target: ${metric.target.toFixed(1)})`;
-            if (metric.metricKey === 'negativeWord') {
-                const usingNegative = (100 - metric.employeeValue).toFixed(1);
-                const usingNegativeTarget = (100 - metric.target).toFixed(1);
-                displayValue = `${metric.employeeValue.toFixed(1)}% avoiding, ${usingNegative}% using negative words (target: avoid ${metric.target.toFixed(1)}%, use ${usingNegativeTarget}%)`;
-            }
-            
-            prompt += `- ${metric.label}: ${displayValue}\n`;
-        });
         prompt += `\n`;
     }
     
@@ -7106,6 +7101,223 @@ function isMetricMeetingTarget(metric, value, target) {
     }
     // Fallback: assume 'min' type
     return value >= target;
+}
+
+function buildTrendHighlightsAndImprovements(allTrendMetrics) {
+    const safeMetrics = Array.isArray(allTrendMetrics) ? allTrendMetrics : [];
+    const positiveHighlights = [];
+    const improvementAreas = [];
+
+    safeMetrics.forEach(metric => {
+        if (!metric || !metric.metricKey || metric.employeeValue === undefined || metric.target === undefined) {
+            return;
+        }
+
+        const currentDisplay = formatMetricDisplay(metric.metricKey, metric.employeeValue);
+        const targetDisplay = formatMetricDisplay(metric.metricKey, metric.target);
+        const line = `${metric.label}: ${currentDisplay} vs target ${targetDisplay}`;
+
+        if (metric.meetsTarget) {
+            positiveHighlights.push(line);
+        } else {
+            improvementAreas.push(line);
+        }
+    });
+
+    return { positiveHighlights, improvementAreas };
+}
+
+function renderTrendSummaryBoxesHtml(positiveHighlights, improvementAreas, positiveEmptyText, improvementEmptyText) {
+    const renderListItems = (items) => items.map(item => `<li style="margin: 0 0 6px 0;">${escapeHtml(item)}</li>`).join('');
+
+    const positiveHtml = positiveHighlights.length > 0
+        ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(positiveHighlights)}</ul>`
+        : `<p style="margin: 0; color: #2e7d32;">${escapeHtml(positiveEmptyText || 'No above-target metrics in this period.')}</p>`;
+
+    const improvementHtml = improvementAreas.length > 0
+        ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(improvementAreas)}</ul>`
+        : `<p style="margin: 0; color: #b71c1c;">${escapeHtml(improvementEmptyText || 'No below-target metrics in this period.')}</p>`;
+
+    return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px 0;">
+            <div style="padding: 14px; border: 1px solid #81c784; border-radius: 8px; background: #e8f5e9; color: #1b5e20;">
+                <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Positive Highlights</h4>
+                ${positiveHtml}
+            </div>
+            <div style="padding: 14px; border: 1px solid #ef9a9a; border-radius: 8px; background: #ffebee; color: #b71c1c;">
+                <h4 style="margin: 0 0 10px 0; color: #b71c1c;">⚠️ Improvement Areas</h4>
+                ${improvementHtml}
+            </div>
+        </div>
+    `;
+}
+
+function buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, teamSize) {
+    const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(teamMetrics);
+    let prompt = `Draft a concise team coaching update for ${periodLabel}.\n`;
+    prompt += `Audience: the full team (${teamSize} associates in this data set).\n\n`;
+
+    prompt += `POSITIVE HIGHLIGHTS:\n`;
+    if (positiveHighlights.length > 0) {
+        positiveHighlights.forEach(line => {
+            prompt += `- ${line}\n`;
+        });
+    } else {
+        prompt += `- No above-target metrics in this period.\n`;
+    }
+    prompt += `\n`;
+
+    prompt += `IMPROVEMENT AREAS:\n`;
+    if (improvementAreas.length > 0) {
+        improvementAreas.forEach(line => {
+            prompt += `- ${line}\n`;
+        });
+    } else {
+        prompt += `- No below-target metrics in this period.\n`;
+    }
+    prompt += `\n`;
+
+    prompt += `Write in a warm, motivational tone. Keep it factual, avoid fluff, and end with 2-3 team actions for next period.`;
+    return prompt;
+}
+
+function generateTeamTrendSummary() {
+    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+    if (!weekKey) {
+        showToast('Please select a period first', 5000);
+        return;
+    }
+
+    const period = weeklyData[weekKey];
+    if (!period || !Array.isArray(period.employees) || period.employees.length === 0) {
+        showToast('Team summary currently supports weekly data with employees', 5000);
+        return;
+    }
+
+    const periodMeta = period.metadata || {};
+    const reviewYear = parseInt((periodMeta.endDate || '').split('-')[0], 10) || null;
+    const teamMetrics = [];
+
+    getMetricOrder().forEach(({ key }) => {
+        const metricDef = METRICS_REGISTRY[key];
+        if (!metricDef) return;
+
+        const values = period.employees
+            .map(emp => parseFloat(emp[key]))
+            .filter(value => !Number.isNaN(value));
+
+        if (values.length === 0) return;
+
+        const teamValue = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const target = getMetricTarget(key, reviewYear);
+        const yearTargetConfig = Number.isInteger(parseInt(reviewYear, 10))
+            ? YEAR_END_TARGETS_BY_YEAR[parseInt(reviewYear, 10)]?.[key]
+            : null;
+        const targetType = yearTargetConfig?.type || metricDef.target?.type || 'min';
+        const meetsTarget = targetType === 'min' ? teamValue >= target : teamValue <= target;
+
+        teamMetrics.push({
+            metricKey: key,
+            label: metricDef.label,
+            employeeValue: teamValue,
+            target,
+            targetType,
+            meetsTarget,
+            gapFromTarget: targetType === 'min'
+                ? Math.max(0, target - teamValue)
+                : Math.max(0, teamValue - target)
+        });
+    });
+
+    if (teamMetrics.length === 0) {
+        showToast('No team metrics found for this period', 5000);
+        return;
+    }
+
+    const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(teamMetrics);
+    const summaryBoxesHtml = renderTrendSummaryBoxesHtml(
+        positiveHighlights,
+        improvementAreas,
+        'No above-target team metrics in this period.',
+        'No below-target team metrics in this period.'
+    );
+
+    const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
+    const teamPrompt = buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, period.employees.length);
+    const teamSubject = `Trending Metrics - Team Summary - Week ending ${periodMeta.endDate || ''}`;
+
+    const modal = document.createElement('div');
+    modal.id = 'teamTrendSummaryModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 900px;
+        width: 92%;
+        max-height: 88vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+
+    panel.innerHTML = `
+        <h3 style="color: #2e7d32; margin-top: 0;">👥 Team Metric Trend Summary</h3>
+        <p style="color: #666; margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
+        <p style="color: #666; margin: 0 0 14px 0; font-size: 0.9em;">Based on ${period.employees.length} associates</p>
+
+        ${summaryBoxesHtml}
+
+        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+            <h4 style="color: #333; margin-top: 0;">🤖 Team CoPilot Prompt</h4>
+            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${teamPrompt}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+            <button id="copyTeamTrendPromptBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📋 Copy Prompt</button>
+            <button id="openTeamTrendEmailBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📧 Open Team Email Draft</button>
+            <button id="closeTeamTrendSummaryBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #777; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Close</button>
+        </div>
+    `;
+
+    modal.appendChild(panel);
+    document.body.appendChild(modal);
+
+    document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
+        const textarea = document.getElementById('teamTrendPromptDisplay');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ Team prompt copied', 2000);
+        window.open('https://copilot.microsoft.com', '_blank');
+    });
+
+    document.getElementById('openTeamTrendEmailBtn')?.addEventListener('click', () => {
+        openTrendEmailOutlook(teamSubject);
+        showToast('📧 Team email draft opened', 2500);
+    });
+
+    const closeModal = () => {
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+    };
+
+    document.getElementById('closeTeamTrendSummaryBtn')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
 }
 
 
