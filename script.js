@@ -90,7 +90,7 @@ window.addEventListener('error', (event) => {
         event.preventDefault();
         return;
     }
-    
+
     const errorInfo = {
         message: event.message,
         source: event.filename,
