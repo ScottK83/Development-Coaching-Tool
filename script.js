@@ -5768,46 +5768,67 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         'No below-target metrics in this period.'
     );
     
-    // Build focus areas HTML - show both weakest and trending metrics
-    let focusAreasHtml = '';
-    
-    if (weakestMetric && tipsForWeakest.length > 0) {
-        const weakestTipsHtml = tipsForWeakest.map((tip, i) => `
+    // Build focus areas from below-target metrics (up to 2), even if one metric has no preloaded tips
+    const belowTargetMetrics = Array.isArray(allMetrics)
+        ? allMetrics
+            .filter(metric => metric && !metric.meetsTarget)
+            .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0))
+        : [];
+
+    const focusCandidates = [];
+    const seenFocusMetricKeys = new Set();
+    const addFocusCandidate = (metric, tips) => {
+        if (!metric || !metric.metricKey || seenFocusMetricKeys.has(metric.metricKey)) return;
+        const normalizedTips = Array.isArray(tips)
+            ? tips.map(tip => String(tip || '').trim()).filter(Boolean)
+            : [];
+        focusCandidates.push({ metric, tips: normalizedTips });
+        seenFocusMetricKeys.add(metric.metricKey);
+    };
+
+    addFocusCandidate(weakestMetric, tipsForWeakest);
+    addFocusCandidate(trendingMetric, tipsForTrending);
+
+    belowTargetMetrics.forEach(metric => {
+        if (focusCandidates.length >= 2) return;
+        addFocusCandidate(metric, getRandomTipsForMetric(metric.metricKey, 2));
+    });
+
+    const focusAreas = focusCandidates.slice(0, 2).map((candidate, index) => ({
+        metric: candidate.metric,
+        tips: candidate.tips.length > 0 ? candidate.tips : ['No coaching tips available yet for this metric.'],
+        bgColor: index === 0 ? '#fff3cd' : '#ffe0b2',
+        borderColor: index === 0 ? '#ff9800' : '#f57c00',
+        titleColor: index === 0 ? '#ff9800' : '#f57c00'
+    }));
+
+    const primaryFocusMetric = focusAreas[0]?.metric || null;
+    const secondaryFocusMetric = focusAreas[1]?.metric || null;
+    const primaryFocusTips = focusAreas[0]?.tips || [];
+    const secondaryFocusTips = focusAreas[1]?.tips || [];
+
+    const focusAreasHtml = focusAreas.map((focusArea, areaIndex) => {
+        const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
             <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-                <strong>💡 Tip ${i + 1}:</strong> ${tip}
+                <strong>💡 Tip ${tipIndex + 1}:</strong> ${tip}
             </div>
         `).join('');
-        
-        focusAreasHtml += `
-            <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ff9800;">
-                <h4 style="color: #ff9800; margin-top: 0;">📉 Focus Area 1: ${weakestMetric.label}</h4>
+
+        const heading = focusAreas.length === 1
+            ? `📉 Focus Area: ${focusArea.metric.label}`
+            : `📉 Focus Area ${areaIndex + 1}: ${focusArea.metric.label}`;
+
+        return `
+            <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
+                <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
                 <p style="margin: 5px 0 15px 0; color: #333;">
-                    Currently at <strong>${weakestMetric.employeeValue.toFixed(1)}</strong>, 
-                    target is <strong>${weakestMetric.targetType === 'min' ? '≥' : '≤'} ${weakestMetric.target.toFixed(1)}</strong>
+                    Currently at <strong>${focusArea.metric.employeeValue.toFixed(1)}</strong>, 
+                    target is <strong>${focusArea.metric.targetType === 'min' ? '≥' : '≤'} ${focusArea.metric.target.toFixed(1)}</strong>
                 </p>
-                ${weakestTipsHtml}
+                ${tipsHtml}
             </div>
         `;
-    }
-    
-    if (trendingMetric && tipsForTrending.length > 0) {
-        const trendingTipsHtml = tipsForTrending.map((tip, i) => `
-            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-                <strong>💡 Tip ${i + 1}:</strong> ${tip}
-            </div>
-        `).join('');
-        
-        focusAreasHtml += `
-            <div style="margin-bottom: 20px; padding: 15px; background: #ffe0b2; border-radius: 4px; border-left: 4px solid #f57c00;">
-                <h4 style="color: #f57c00; margin-top: 0;">📉 Focus Area 2: ${trendingMetric.label}</h4>
-                <p style="margin: 5px 0 15px 0; color: #333;">
-                    Currently at <strong>${trendingMetric.employeeValue.toFixed(1)}</strong>, 
-                    target is <strong>${trendingMetric.targetType === 'min' ? '≥' : '≤'} ${trendingMetric.target.toFixed(1)}</strong>
-                </p>
-                ${trendingTipsHtml}
-            </div>
-        `;
-    }
+    }).join('');
 
     const periodData = ytdData[weekKey] || weeklyData[weekKey];
     const periodEmployee = periodData?.employees?.find(emp => emp.name === employeeName) || null;
@@ -5832,10 +5853,10 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     const userNotes = ''; // Will be filled by user in textarea
     const copilotPrompt = buildTrendCoachingPrompt(
         displayName, 
-        weakestMetric, 
-        trendingMetric, 
-        tipsForWeakest,
-        tipsForTrending,
+        primaryFocusMetric,
+        secondaryFocusMetric,
+        primaryFocusTips,
+        secondaryFocusTips,
         userNotes,
         sentimentSnapshot,
         allMetrics
@@ -5847,7 +5868,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
 
         ${summaryBoxesHtml}
         
-        ${focusAreasHtml}
+        ${focusAreasHtml ? `<h4 style="color: #9c27b0; margin: 0 0 12px 0;">🎯 Coaching Focus</h4>${focusAreasHtml}` : ''}
 
         ${sentimentHtml}
         
@@ -5898,10 +5919,10 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         const finalPrompt = userNotesText 
             ? buildTrendCoachingPrompt(
                 displayName, 
-                weakestMetric, 
-                trendingMetric, 
-                tipsForWeakest,
-                tipsForTrending,
+                primaryFocusMetric,
+                secondaryFocusMetric,
+                primaryFocusTips,
+                secondaryFocusTips,
                 userNotesText,
                 sentimentSnapshot,
                 allMetrics
@@ -5909,9 +5930,9 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
             : copilotPrompt;
         
         // Log as coaching entry - include all coached metrics
-        const metricsCoached = [];
-        if (weakestMetric) metricsCoached.push(weakestMetric.metricKey);
-        if (trendingMetric) metricsCoached.push(trendingMetric.metricKey);
+        const metricsCoached = focusAreas
+            .map(area => area.metric?.metricKey)
+            .filter(Boolean);
         
         recordCoachingEvent({
             employeeId: employeeName,
