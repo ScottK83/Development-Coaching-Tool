@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.25.122'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.25.123'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -142,6 +142,7 @@ let repoSyncHydrationInProgress = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
+let sentimentListenersAttached = false;
 
 // ============================================
 // STORAGE HELPERS (defined early for guaranteed availability)
@@ -2181,42 +2182,7 @@ function initializeEventHandlers() {
         showSubSection('subSectionOnOffTracker', 'subNavOnOffTracker');
         initializeOnOffTracker();
     });
-    // Track if sentiment listeners are attached to prevent duplicates
-    let sentimentListenersAttached = false;
-    
-    document.getElementById('subNavSentiment')?.addEventListener('click', () => {
-        showSubSection('subSectionSentiment', 'subNavSentiment');
-        // Move sentiment section content dynamically (only if not already moved)
-        const sentimentSection = document.getElementById('sentimentSection');
-        const subSectionSentiment = document.getElementById('subSectionSentiment');
-        if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
-            // Move all children from sentimentSection to subSectionSentiment
-            while (sentimentSection.firstChild) {
-                subSectionSentiment.appendChild(sentimentSection.firstChild);
-            }
-        }
-        
-        // Attach event listeners only once
-        if (!sentimentListenersAttached) {
-            document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
-            document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
-            document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
-            document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
-            document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
-            document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
-            
-            // NEW: Add paste button handlers
-            document.getElementById('sentimentPositivePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Positive'); });
-            document.getElementById('sentimentNegativePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Negative'); });
-            document.getElementById('sentimentEmotionsPasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Emotions'); });
-            
-            document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
-            document.getElementById('saveAssociateSentimentSnapshotBtn')?.addEventListener('click', saveAssociateSentimentSnapshotFromCurrentReports);
-            sentimentListenersAttached = true;
-        }
-
-        renderSentimentDatabasePanel();
-    });
+    document.getElementById('subNavSentiment')?.addEventListener('click', handleSubNavSentimentClick);
     document.getElementById('subNavMetricTrends')?.addEventListener('click', () => {
         showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
         // Move metric trends section content dynamically
@@ -2360,188 +2326,7 @@ function initializeEventHandlers() {
     });
     
     // Load pasted data
-    document.getElementById('loadPastedDataBtn')?.addEventListener('click', () => {
-        
-        const pastedData = document.getElementById('pasteDataTextarea').value;
-        const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
-        
-        // Validate data first
-        const validation = validatePastedData(pastedData);
-        if (!validation.valid) {
-            alert('⚠️ Data validation failed:\n\n' + validation.issues.join('\n'));
-            return;
-        }
-        
-        if (!weekEndingDate) {
-            alert('⚠️ Please select the week ending date (Saturday)');
-            return;
-        }
-        
-        // Calculate week range (Sunday - Saturday)
-        const endDate = weekEndingDate;
-        const endDateObj = new Date(weekEndingDate);
-        endDateObj.setDate(endDateObj.getDate() - 6); // Go back 6 days to get Sunday
-        const startDate = endDateObj.toISOString().split('T')[0];
-        
-        // Auto-detect period type from date range
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-        
-        let detectedPeriodType = 'week';
-        if (daysDiff >= 5 && daysDiff <= 9) {
-            detectedPeriodType = 'week';
-        } else if (daysDiff >= 26 && daysDiff <= 33) {
-            detectedPeriodType = 'month';
-        } else if (daysDiff >= 88 && daysDiff <= 95) {
-            detectedPeriodType = 'quarter';
-        } else if (daysDiff >= 180) {
-            detectedPeriodType = 'ytd';
-        }
-        
-        // Auto-select the detected period type button
-        const periodButtons = document.querySelectorAll('.upload-period-btn');
-        periodButtons.forEach(btn => {
-            if (btn.dataset.period === detectedPeriodType) {
-                btn.click(); // Trigger the button click to activate it
-            }
-        });
-        
-        
-        // Get selected period type (after auto-detection)
-        const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') || 
-                           document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
-                           document.querySelector('.upload-period-btn[data-period="week"]');
-        const periodType = selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
-        
-        // Save period type as smart default
-        saveSmartDefault('lastPeriodType', periodType);
-        
-        
-        if (!pastedData) {
-            alert('⚠️ Please paste data first');
-            return;
-        }
-        
-        try {
-            const employees = parsePastedData(pastedData, startDate, endDate);
-            
-            if (employees.length === 0) {
-                alert('ℹ️ No valid employee data found');
-                return;
-            }
-            
-            // Store data with period type
-            const weekKey = `${startDate}|${endDate}`;
-            const yearEndProfileSelect = document.getElementById('uploadYearEndProfile');
-            const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
-            
-            // Parse dates safely (avoid timezone issues)
-            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-            const endDateObj = new Date(endYear, endMonth - 1, endDay);
-            const startDateObj = new Date(startYear, startMonth - 1, startDay);
-            const autoReviewYear = String(endDateObj.getFullYear());
-            const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
-            
-            // Create label based on period type
-            let label;
-            if (periodType === 'week') {
-                label = `Week ending ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-            } else if (periodType === 'month') {
-                label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
-            } else if (periodType === 'quarter') {
-                const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
-                label = `Q${quarter} ${startDateObj.getFullYear()}`;
-            } else if (periodType === 'ytd') {
-                label = `YTD through ${endDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-            }
-            
-            const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
-            targetStore[weekKey] = {
-                employees: employees,
-                metadata: {
-                    startDate: startDate,
-                    endDate: endDate,
-                    label: label,
-                    periodType: periodType,
-                    yearEndTargetProfile: selectedYearEndProfile,
-                    yearEndReviewYear: yearEndReviewYear,
-                    uploadedAt: new Date().toISOString()
-                }
-            };
-
-            if (periodType !== 'ytd') {
-                upsertAutoYtdForYear(endDateObj.getFullYear(), endDate);
-            }
-            
-
-            
-            saveWeeklyData();
-            saveYtdData();
-            
-            populateDeleteWeekDropdown();
-            populateUploadedDataDropdown();  // Refresh the uploaded data dropdown for metric trends
-            
-            // Populate team member selector
-            populateTeamMemberSelector();
-            
-            // Show success
-            document.getElementById('uploadSuccessMessage').style.display = 'block';
-            document.getElementById('pasteDataTextarea').value = '';
-            
-            // Auto-switch to Coaching tab
-            showOnlySection('coachingSection');
-            
-            // Refresh Generate Coaching UI with new data
-            if (periodType !== 'ytd') {
-                // Set period type to 'week' and refresh dropdown
-                currentPeriodType = 'week';
-                
-                // Update period type button styles
-                document.querySelectorAll('.period-type-btn').forEach(b => {
-                    b.style.background = 'white';
-                    b.style.color = '#666';
-                    b.style.borderColor = '#ddd';
-                });
-                const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
-                if (weekBtn) {
-                    weekBtn.style.background = '#2196F3';
-                    weekBtn.style.color = 'white';
-                    weekBtn.style.borderColor = '#2196F3';
-                }
-                
-                // Refresh period dropdown
-                updatePeriodDropdown();
-                
-                // Auto-select the newly uploaded week
-                const periodDropdown = document.getElementById('specificPeriod');
-                if (periodDropdown) {
-                    // Find the option that matches the newly uploaded week
-                    for (let i = 0; i < periodDropdown.options.length; i++) {
-                        if (periodDropdown.options[i].value === weekKey) {
-                            periodDropdown.selectedIndex = i;
-                            currentPeriod = weekKey;
-                            updateEmployeeDropdown();
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
-            
-            // Reload page to refresh UI
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-            
-            
-        } catch (error) {
-            console.error('Error parsing pasted data:', error);
-            alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
-        }
-    });
+    document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
 
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
     
@@ -2706,45 +2491,7 @@ function initializeEventHandlers() {
         document.getElementById('dataFileInput').click();
     });
     
-    document.getElementById('dataFileInput')?.addEventListener('change', (e) => {
-        
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                
-                const data = JSON.parse(e.target.result);
-                
-                if (data.weeklyData) weeklyData = data.weeklyData;
-                if (data.ytdData) ytdData = data.ytdData;
-                if (data.callListeningLogs) callListeningLogs = data.callListeningLogs;
-                if (data.sentimentPhraseDatabase) sentimentPhraseDatabase = data.sentimentPhraseDatabase;
-                if (data.associateSentimentSnapshots) associateSentimentSnapshots = data.associateSentimentSnapshots;
-                
-                saveWeeklyData();
-                saveYtdData();
-                saveCallListeningLogs();
-                saveSentimentPhraseDatabase();
-                saveAssociateSentimentSnapshots();
-                normalizeTeamMembersForExistingWeeks();
-                saveTeamMembers();
-                
-                showToast('✅ Data imported successfully!');
-                document.getElementById('dataFileInput').value = '';
-                populateDeleteWeekDropdown();
-                populateDeleteSentimentDropdown();
-                populateDeleteEmployeeYearOptions();
-                populateTeamMemberSelector();
-                renderEmployeesList();
-            } catch (error) {
-                console.error('Error importing data:', error);
-                alert('ℹ️ Error importing data: ' + error.message);
-            }
-        };
-        reader.readAsText(file);
-    });
+    document.getElementById('dataFileInput')?.addEventListener('change', handleDataFileInputChange);
 
     // Delete selected week
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', () => {
@@ -2873,74 +2620,291 @@ function initializeEventHandlers() {
     
     // Delete all data
 
-    document.getElementById('deleteAllDataBtn')?.addEventListener('click', () => {
-        
-        const weekCount = Object.keys(weeklyData).length;
-        
-        if (weekCount === 0) {
-            alert('⚠️ No data to delete');
-            return;
-        }
-        
-        const message = `⚠️ WARNING: This will permanently delete:\n\n` +
-            `📊 ${weekCount} week(s) of employee data\n\n` +
-            `This action CANNOT be undone!\n\n` +
-            `Type "DELETE" to confirm:`;
-        
-        const confirmation = prompt(message);
-        
-        if (confirmation !== 'DELETE') {
-            alert('⚠️ Deletion cancelled');
-            return;
-        }
-        
-        
-        // Clear ALL data including call center averages, team members, and history
-        weeklyData = {};
-        ytdData = {};
-        myTeamMembers = {};
-        callListeningLogs = {};
-        
-        // Clear all localStorage data
-        localStorage.removeItem(STORAGE_PREFIX + 'weeklyData');
-        localStorage.removeItem(STORAGE_PREFIX + 'ytdData');
-        localStorage.removeItem(STORAGE_PREFIX + 'myTeamMembers');
-        localStorage.removeItem(STORAGE_PREFIX + 'callCenterAverages');
-        localStorage.removeItem(STORAGE_PREFIX + 'employeeNicknames');
-        localStorage.removeItem(STORAGE_PREFIX + 'employeePreferredNames');
-        localStorage.removeItem(STORAGE_PREFIX + 'coachingHistory');
-        localStorage.removeItem(STORAGE_PREFIX + 'callListeningLogs');
-        localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
-        localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
-        localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
-        localStorage.removeItem(STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY);
-        localStorage.removeItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
-
-        sentimentPhraseDatabase = null;
-        associateSentimentSnapshots = {};
-        
-        saveWeeklyData();
-        saveYtdData();
-        saveTeamMembers();
-        saveCallListeningLogs(true, 'cleared all data');
-        
-        populateDeleteWeekDropdown();
-        populateDeleteEmployeeYearOptions();
-        
-        // Hide all sections
-        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        
-        alert('✅ All data has been deleted (including call center averages and history)');
-    });
+    document.getElementById('deleteAllDataBtn')?.addEventListener('click', handleDeleteAllDataClick);
     
     // Populate delete week dropdown on load
     populateDeleteWeekDropdown();
     
     // Initialize red flag handlers
     initializeRedFlag();
+}
+
+function handleSubNavSentimentClick() {
+    showSubSection('subSectionSentiment', 'subNavSentiment');
+
+    const sentimentSection = document.getElementById('sentimentSection');
+    const subSectionSentiment = document.getElementById('subSectionSentiment');
+    if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
+        while (sentimentSection.firstChild) {
+            subSectionSentiment.appendChild(sentimentSection.firstChild);
+        }
+    }
+
+    if (!sentimentListenersAttached) {
+        document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
+        document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
+        document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
+        document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
+        document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
+        document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
+        document.getElementById('sentimentPositivePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Positive'); });
+        document.getElementById('sentimentNegativePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Negative'); });
+        document.getElementById('sentimentEmotionsPasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Emotions'); });
+        document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
+        document.getElementById('saveAssociateSentimentSnapshotBtn')?.addEventListener('click', saveAssociateSentimentSnapshotFromCurrentReports);
+        sentimentListenersAttached = true;
+    }
+
+    renderSentimentDatabasePanel();
+}
+
+function handleLoadPastedDataClick() {
+    const pastedData = document.getElementById('pasteDataTextarea').value;
+    const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
+
+    const validation = validatePastedData(pastedData);
+    if (!validation.valid) {
+        alert('⚠️ Data validation failed:\n\n' + validation.issues.join('\n'));
+        return;
+    }
+
+    if (!weekEndingDate) {
+        alert('⚠️ Please select the week ending date (Saturday)');
+        return;
+    }
+
+    const endDate = weekEndingDate;
+    const endDateObj = new Date(weekEndingDate);
+    endDateObj.setDate(endDateObj.getDate() - 6);
+    const startDate = endDateObj.toISOString().split('T')[0];
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    let detectedPeriodType = 'week';
+    if (daysDiff >= 5 && daysDiff <= 9) {
+        detectedPeriodType = 'week';
+    } else if (daysDiff >= 26 && daysDiff <= 33) {
+        detectedPeriodType = 'month';
+    } else if (daysDiff >= 88 && daysDiff <= 95) {
+        detectedPeriodType = 'quarter';
+    } else if (daysDiff >= 180) {
+        detectedPeriodType = 'ytd';
+    }
+
+    const periodButtons = document.querySelectorAll('.upload-period-btn');
+    periodButtons.forEach(btn => {
+        if (btn.dataset.period === detectedPeriodType) {
+            btn.click();
+        }
+    });
+
+    const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
+        document.querySelector('.upload-period-btn[data-period="week"]');
+    const periodType = selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
+
+    saveSmartDefault('lastPeriodType', periodType);
+
+    if (!pastedData) {
+        alert('⚠️ Please paste data first');
+        return;
+    }
+
+    try {
+        const employees = parsePastedData(pastedData, startDate, endDate);
+        if (employees.length === 0) {
+            alert('ℹ️ No valid employee data found');
+            return;
+        }
+
+        const weekKey = `${startDate}|${endDate}`;
+        const yearEndProfileSelect = document.getElementById('uploadYearEndProfile');
+        const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
+
+        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+        const normalizedEndDate = new Date(endYear, endMonth - 1, endDay);
+        const startDateObj = new Date(startYear, startMonth - 1, startDay);
+        const autoReviewYear = String(normalizedEndDate.getFullYear());
+        const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
+
+        let label;
+        if (periodType === 'week') {
+            label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        } else if (periodType === 'month') {
+            label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
+        } else if (periodType === 'quarter') {
+            const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
+            label = `Q${quarter} ${startDateObj.getFullYear()}`;
+        } else if (periodType === 'ytd') {
+            label = `YTD through ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        }
+
+        const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
+        targetStore[weekKey] = {
+            employees,
+            metadata: {
+                startDate,
+                endDate,
+                label,
+                periodType,
+                yearEndTargetProfile: selectedYearEndProfile,
+                yearEndReviewYear,
+                uploadedAt: new Date().toISOString()
+            }
+        };
+
+        if (periodType !== 'ytd') {
+            upsertAutoYtdForYear(normalizedEndDate.getFullYear(), endDate);
+        }
+
+        saveWeeklyData();
+        saveYtdData();
+
+        populateDeleteWeekDropdown();
+        populateUploadedDataDropdown();
+        populateTeamMemberSelector();
+
+        document.getElementById('uploadSuccessMessage').style.display = 'block';
+        document.getElementById('pasteDataTextarea').value = '';
+
+        showOnlySection('coachingSection');
+
+        if (periodType !== 'ytd') {
+            currentPeriodType = 'week';
+
+            document.querySelectorAll('.period-type-btn').forEach(b => {
+                b.style.background = 'white';
+                b.style.color = '#666';
+                b.style.borderColor = '#ddd';
+            });
+            const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
+            if (weekBtn) {
+                weekBtn.style.background = '#2196F3';
+                weekBtn.style.color = 'white';
+                weekBtn.style.borderColor = '#2196F3';
+            }
+
+            updatePeriodDropdown();
+
+            const periodDropdown = document.getElementById('specificPeriod');
+            if (periodDropdown) {
+                for (let index = 0; index < periodDropdown.options.length; index += 1) {
+                    if (periodDropdown.options[index].value === weekKey) {
+                        periodDropdown.selectedIndex = index;
+                        currentPeriod = weekKey;
+                        updateEmployeeDropdown();
+                        break;
+                    }
+                }
+            }
+        }
+
+        alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
+
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    } catch (error) {
+        console.error('Error parsing pasted data:', error);
+        alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+    }
+}
+
+function handleDataFileInputChange(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+        try {
+            const data = JSON.parse(loadEvent.target.result);
+
+            if (data.weeklyData) weeklyData = data.weeklyData;
+            if (data.ytdData) ytdData = data.ytdData;
+            if (data.callListeningLogs) callListeningLogs = data.callListeningLogs;
+            if (data.sentimentPhraseDatabase) sentimentPhraseDatabase = data.sentimentPhraseDatabase;
+            if (data.associateSentimentSnapshots) associateSentimentSnapshots = data.associateSentimentSnapshots;
+
+            saveWeeklyData();
+            saveYtdData();
+            saveCallListeningLogs();
+            saveSentimentPhraseDatabase();
+            saveAssociateSentimentSnapshots();
+            normalizeTeamMembersForExistingWeeks();
+            saveTeamMembers();
+
+            showToast('✅ Data imported successfully!');
+            document.getElementById('dataFileInput').value = '';
+            populateDeleteWeekDropdown();
+            populateDeleteSentimentDropdown();
+            populateDeleteEmployeeYearOptions();
+            populateTeamMemberSelector();
+            renderEmployeesList();
+        } catch (error) {
+            console.error('Error importing data:', error);
+            alert('ℹ️ Error importing data: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function handleDeleteAllDataClick() {
+    const weekCount = Object.keys(weeklyData).length;
+    if (weekCount === 0) {
+        alert('⚠️ No data to delete');
+        return;
+    }
+
+    const message = `⚠️ WARNING: This will permanently delete:\n\n` +
+        `📊 ${weekCount} week(s) of employee data\n\n` +
+        `This action CANNOT be undone!\n\n` +
+        `Type "DELETE" to confirm:`;
+
+    const confirmation = prompt(message);
+    if (confirmation !== 'DELETE') {
+        alert('⚠️ Deletion cancelled');
+        return;
+    }
+
+    weeklyData = {};
+    ytdData = {};
+    myTeamMembers = {};
+    callListeningLogs = {};
+
+    localStorage.removeItem(STORAGE_PREFIX + 'weeklyData');
+    localStorage.removeItem(STORAGE_PREFIX + 'ytdData');
+    localStorage.removeItem(STORAGE_PREFIX + 'myTeamMembers');
+    localStorage.removeItem(STORAGE_PREFIX + 'callCenterAverages');
+    localStorage.removeItem(STORAGE_PREFIX + 'employeeNicknames');
+    localStorage.removeItem(STORAGE_PREFIX + 'employeePreferredNames');
+    localStorage.removeItem(STORAGE_PREFIX + 'coachingHistory');
+    localStorage.removeItem(STORAGE_PREFIX + 'callListeningLogs');
+    localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
+    localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
+    localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
+    localStorage.removeItem(STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY);
+    localStorage.removeItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
+
+    sentimentPhraseDatabase = null;
+    associateSentimentSnapshots = {};
+
+    saveWeeklyData();
+    saveYtdData();
+    saveTeamMembers();
+    saveCallListeningLogs(true, 'cleared all data');
+
+    populateDeleteWeekDropdown();
+    populateDeleteEmployeeYearOptions();
+
+    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+
+    alert('✅ All data has been deleted (including call center averages and history)');
 }
 
 function loadYearEndAnnualGoalsStore() {
