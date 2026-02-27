@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T20:22:13.375Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-27T20:22:39.371Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.05",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5581,7 +5581,7 @@
       "positivesText": "Average Handle Time: 380s vs target 440s\nHold Time: 10s vs target 30s\nFirst Call Resolution: 80.0% vs target 70.0%\nAvoid Negative Words: 89.1% vs target 83.0%\nManaging Emotions: 97.5% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 88.5% vs target 93.0%\nTransfers: 27.9% vs target 6.0%\nAfter Call Work: 128s vs target 60s\nOverall Experience: 60.0% vs target 84.0%\nRep Satisfaction: 73.3% vs target 80.0%\nOverall Sentiment: 87.1% vs target 88.0%",
       "managerContext": "",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nDarryn delivered several meaningful strengths throughout 2025, even with an overall performance rating of Off Track. He consistently exceeded key quality and efficiency metrics, including an Average Handle Time of 380s against a goal of 440s, Hold Time of 10s against a goal of 30s, and First Call Resolution of 80.0% against a goal of 70.0%. He also demonstrated strong alignment with APS principles by maintaining high scores in Avoiding Negative Words at 89.1% versus 83.0% and Managing Emotions at 97.5% versus 95.0%. His performance against annual APS goals was excellent, with 100% accuracy on emergency safety hazard calls, 0 ACC substantiated complaints, 0 phishing clicks, and timely completion of all required training and time entries. These accomplishments reflected dependable quality, strong customer care behaviors, and a commitment to meeting APS expectations.\nBox 2 - Future Improvement Areas:\nTo strengthen performance going forward, Darryn should focus on improving schedule adherence, which was 88.5% against a goal of 93.0%, and on reducing transfer rates, which were 27.9% against a goal of 6.0%. Improving these areas will help create a more consistent customer experience and support stronger alignment to operational expectations.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -5649,7 +5649,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5674,7 +5674,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 26,
-      "byteLength": 65577
+      "byteLength": 66872
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
