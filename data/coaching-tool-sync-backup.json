@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T06:43:23.727Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-27T14:51:50.560Z",
+  "reason": "storage set: devCoachingTool_trendQueueLegendExpanded",
   "sourceAppVersion": "2026.02.26.99",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5410,6 +5410,11 @@
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
+    },
+    "devCoachingTool_trendQueueLegendExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
