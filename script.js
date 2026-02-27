@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.94'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.95'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -8842,7 +8842,8 @@ function renderCoachingPriorityQueue() {
         queue[entry.category].push({
             name: employeeName,
             score: entry.score,
-            reason: entry.reason
+            reason: entry.reason,
+            why: entry.why || []
         });
     });
 
@@ -8859,21 +8860,24 @@ function renderCoachingPriorityQueue() {
         queue.coachNow,
         '#ffebee',
         '#f5c6cb',
-        'No urgent coaching interventions this cycle.'
+        'No urgent coaching interventions this cycle.',
+        'Why coach now:'
     );
     html += renderCoachingPriorityBucket(
         '🏆 Recognize Now',
         queue.recognizeNow,
         '#e8f5e9',
         '#c8e6c9',
-        'No standout recognition callouts this cycle.'
+        'No standout recognition callouts this cycle.',
+        'Why recognize now:'
     );
     html += renderCoachingPriorityBucket(
         '👀 Watchlist',
         queue.watchlist,
         '#fff8e1',
         '#ffe0b2',
-        'No watchlist candidates right now.'
+        'No watchlist candidates right now.',
+        'Why watch:'
     );
 
     container.innerHTML = html;
@@ -8907,7 +8911,7 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
             else if (severity === 'medium') coachScore += 6;
             else coachScore += 3;
 
-            if (coachReasons.length < 2) {
+            if (coachReasons.length < 3) {
                 coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} below target`);
             }
         } else {
@@ -8916,14 +8920,14 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
 
         if (delta > 5) {
             recognizeScore += 8;
-            if (recognizeReasons.length < 2) {
+            if (recognizeReasons.length < 3) {
                 recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving (+${delta.toFixed(1)})`);
             }
         }
 
         if (delta < -thresholdData.value) {
             coachScore += 12;
-            if (coachReasons.length < 2) {
+            if (coachReasons.length < 3) {
                 coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} dropped ${delta.toFixed(1)}${thresholdData.unit}`);
             }
         }
@@ -8939,18 +8943,19 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
 
     if (meetsAllCore) {
         recognizeScore += 15;
-        if (recognizeReasons.length < 2) recognizeReasons.push('All core metrics at/above target');
+        if (recognizeReasons.length < 3) recognizeReasons.push('All core metrics at/above target');
     }
 
     const impact = calculateCoachingImpact(employeeName, currentEmp);
     if (impact?.status === 'positive') {
         recognizeScore += 10;
-        if (recognizeReasons.length < 2) recognizeReasons.push(`Coaching impact ${impact.score}/100`);
+        if (recognizeReasons.length < 3) recognizeReasons.push(`Coaching impact ${impact.score}/100`);
     } else if (impact?.status === 'negative') {
         coachScore += 12;
-        if (coachReasons.length < 2) coachReasons.push(`Coaching impact ${impact.score}/100 (needs reset)`);
+        if (coachReasons.length < 3) coachReasons.push(`Coaching impact ${impact.score}/100 (needs reset)`);
     } else if (impact?.status === 'mixed') {
         watchScore += 6;
+        if (watchReasons.length < 3) watchReasons.push(`Mixed coaching impact ${impact.score}/100`);
     }
 
     const history = resolveCoachingHistoryForEmployee(employeeName);
@@ -8958,12 +8963,12 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
     const hasRecentCoaching = history.some(h => new Date(h.generatedAt).getTime() >= thirtyDaysAgo);
     if (!hasRecentCoaching) {
         watchScore += 8;
-        if (watchReasons.length < 2) watchReasons.push('No coaching touch in 30+ days');
+        if (watchReasons.length < 3) watchReasons.push('No coaching touch in 30+ days');
     }
 
     if (coachScore < 35 && recognizeScore < 35) {
         watchScore += 8;
-        if (watchReasons.length < 2) watchReasons.push('Mixed/flat trend signals');
+        if (watchReasons.length < 3) watchReasons.push('Mixed/flat trend signals');
     }
 
     const topCategory = [
@@ -8980,14 +8985,21 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
         ? (recognizeReasons[0] || 'Strong and improving performance')
         : (watchReasons[0] || 'Monitor for next period shifts');
 
+    const why = topCategory.key === 'coachNow'
+        ? coachReasons
+        : topCategory.key === 'recognizeNow'
+        ? recognizeReasons
+        : watchReasons;
+
     return {
         category: topCategory.key,
         score: topCategory.score,
-        reason
+        reason,
+        why
     };
 }
 
-function renderCoachingPriorityBucket(title, entries, bg, border, emptyText) {
+function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, whyLabel = 'Why:') {
     let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
     html += `<strong>${title}</strong>`;
     if (!entries.length) {
@@ -8995,7 +9007,13 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText) {
     } else {
         html += '<div style="margin-top: 6px; display: grid; gap: 6px;">';
         entries.slice(0, 5).forEach(entry => {
-            html += `<div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>`;
+            const whyText = Array.isArray(entry.why) && entry.why.length
+                ? entry.why.slice(0, 3).join(' • ')
+                : entry.reason;
+            html += `<div>
+                <div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>
+                <div style="margin-top: 2px; color: #455a64; font-size: 0.88em;"><strong>${whyLabel}</strong> ${whyText}</div>
+            </div>`;
         });
         html += '</div>';
     }
