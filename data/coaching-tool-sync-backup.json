@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T20:18:50.230Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-27T20:18:53.443Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.05",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5260,6 +5260,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Brittney Carroll": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5518,6 +5552,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2026::Brittney Carroll": {
+      "trackStatus": "off-track",
+      "positivesText": "Transfers: 3.4% vs target 6.0%\nHold Time: 20s vs target 30s\nOverall Sentiment: 88.4% vs target 88.0%\nPositive Word: 89.1% vs target 86.0%\nReliability: 0.5 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 92.0% vs target 93.0%\nAverage Handle Time: 715s vs target 426s\nAfter Call Work: 158s vs target 60s\nOverall Experience: 50.0% vs target 75.0%\nRep Satisfaction: 50.0% vs target 82.0%\nFirst Call Resolution: 50.0% vs target 73.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5568,8 +5613,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 22,
-      "byteLength": 9249
+      "itemCount": 23,
+      "byteLength": 9670
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5583,8 +5628,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 24,
-      "byteLength": 61177
+      "itemCount": 25,
+      "byteLength": 62061
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
