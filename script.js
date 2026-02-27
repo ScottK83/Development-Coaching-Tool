@@ -8983,6 +8983,18 @@ function renderCoachingPriorityQueue() {
         'Why watch:'
     );
 
+    html += `
+        <details style="margin-top: 10px; border: 1px solid #d9e2ef; border-radius: 6px; background: #f7f9fc; color: #455a64; font-size: 0.88em; line-height: 1.45;">
+            <summary style="cursor: pointer; padding: 10px; font-weight: 700; color: #2f4f87;">📘 Scoring Legend (Show/Hide)</summary>
+            <div style="padding: 0 10px 10px 10px;">
+                <div><strong>Coach Now:</strong> +14 below target, +10/+6/+3 severity, +12 significant drop, +12 negative coaching impact.</div>
+                <div><strong>Recognize Now:</strong> +9 meeting target, +8 strong improvement, +15 all core metrics on target, +10 positive coaching impact.</div>
+                <div><strong>Watchlist:</strong> points for mixed/flat signals, mixed coaching impact, or no coaching touch in 30+ days.</div>
+                <div style="margin-top: 4px;"><strong>Note:</strong> Scores are weighted points (not percentages), so totals can exceed 100.</div>
+            </div>
+        </details>
+    `;
+
     container.innerHTML = html;
 }
 
