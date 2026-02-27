@@ -279,25 +279,57 @@
         };
         
         const colMap = {
-            name: findColumnIndex('name'),
-            totalCalls: findColumnIndex(['totalcalls', 'answered', 'total calls answered', 'calls answered']),
-            transfers: findColumnIndex(['transfers', 'transfer %']),
-            transfersCount: findColumnIndex(['number of transfers']),
-            aht: findColumnIndex(['aht', 'average handle']),
-            talkTime: findColumnIndex(['talk']),
-            holdTime: findColumnIndex(['hold']),
-            acw: findColumnIndex(['acw', 'after call']),
-            adherence: findColumnIndex(['adherence', 'schedule']),
-            emotions: findColumnIndex(['managing emotions', 'emotion']),
-            negativeWord: findColumnIndex(['avoid negative', 'negative word']),
-            positiveWord: findColumnIndex(['positive word']),
-            sentiment: findColumnIndex(['overall sentiment']),
-            fcr: findColumnIndex(['fcr', 'first call resolution']),
-            cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat', 'repsat']),
-            overallExperience: findColumnIndex(['overall experience', 'overallexperience', 'oe top2', 'oe top 2', 'top2']),
-            overallExperienceTop3: findColumnIndex(['oe top3', 'oe top 3', 'overall experience top3', 'overall experience top 3']),
-            surveyTotal: findColumnIndex(['oe survey', 'survey total']),
-            reliability: findColumnIndex(['reliability', 'reliability hours'])
+            name: findColumnIndex(['name', 'employee', 'associate']),
+            totalCalls: findColumnIndex([
+                'totalcalls',
+                'answered',
+                'total calls answered',
+                'calls answered',
+                'total answered calls',
+                'answered calls'
+            ]),
+            transfers: findColumnIndex(['transfers', 'transfer %', 'transfer rate', 'xfer %']),
+            transfersCount: findColumnIndex(['number of transfers', 'transfer count', 'xfer count']),
+            aht: findColumnIndex(['aht', 'average handle', 'avg handle time', 'average handle time']),
+            talkTime: findColumnIndex(['talk', 'talk time']),
+            holdTime: findColumnIndex(['hold', 'hold time']),
+            acw: findColumnIndex(['acw', 'after call', 'after call work', 'wrap time', 'wrap']),
+            adherence: findColumnIndex(['adherence', 'schedule', 'schedule adherence', 'adherence %']),
+            emotions: findColumnIndex(['managing emotions', 'emotion', 'manage emotions', 'manage emotion score', 'manageemotions', 'manageemotions score']),
+            negativeWord: findColumnIndex(['avoid negative', 'negative word', 'avoid negative words', 'negative words avoided', 'avoidnegwords', 'avoid neg words', 'avoidnegwords score']),
+            positiveWord: findColumnIndex(['positive word', 'positive words', 'posword', 'pos word', 'posword score']),
+            sentiment: findColumnIndex(['overall sentiment', 'sentiment score', 'overall sentiment score', 'overallsentiment', 'overallsentiment score']),
+            fcr: findColumnIndex(['fcr', 'first call resolution', 'first call resolution %']),
+            cxRepOverall: findColumnIndex([
+                'rep satisfaction',
+                'rep sat',
+                'repsat',
+                'rep satisfaction %',
+                'customer rep satisfaction',
+                'associate overall'
+            ]),
+            overallExperience: findColumnIndex([
+                'overall experience',
+                'overallexperience',
+                'oe top2',
+                'oe top 2',
+                'overall experience top2',
+                'overall experience top 2',
+                'top2',
+                'top 2 box',
+                'top2 box'
+            ]),
+            overallExperienceTop3: findColumnIndex([
+                'oe top3',
+                'oe top 3',
+                'overall experience top3',
+                'overall experience top 3',
+                'top3',
+                'top 3 box',
+                'top3 box'
+            ]),
+            surveyTotal: findColumnIndex(['oe survey', 'survey total', 'survey responses', 'total surveys', 'oesurvey total', 'oe survey total']),
+            reliability: findColumnIndex(['reliability', 'reliability hours', 'reliability hrs', 'hours against'])
         };
         
         const getCell = (cells, colIndex) => {

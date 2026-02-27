@@ -11929,10 +11929,6 @@ function resolveMetricTrendsGoalText(metricKey, formatKey, reviewYear, periodMet
 }
 
 function resolveOnOffGoalText(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) {
-    if (goalSource === 'onoff') {
-        return resolveOnOffBandGoalText(bands, bandMetricKey, formatKey);
-    }
-
     const annualGoalText = resolveMetricTrendsGoalText(targetMetricKey, formatKey, reviewYear, periodMetadata);
     if (annualGoalText !== 'N/A') {
         return annualGoalText;
@@ -11957,7 +11953,7 @@ function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetada
         {
             label: 'Overall Sentiment',
             valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            goalText: `${resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata)} (PosWords 86% + AvoidNeg 83% + ManageEmotions 95%)`,
+            goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
             score: result.scores.sentiment
         },
         {
@@ -12038,7 +12034,7 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(),
                     <tr>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
-                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Stretch Goal Tier</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Annual Goal</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
                     </tr>
                 </thead>
