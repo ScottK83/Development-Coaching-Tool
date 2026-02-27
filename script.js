@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.90'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.91'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -6964,6 +6964,11 @@ function calculateTrendSurveyTotals(current, metadata) {
     let surveyTotal = current.surveyTotal ? parseInt(current.surveyTotal, 10) : 0;
     let ytdSurveyTotal = 0;
 
+    if (current?.isTeamAggregate) {
+        ytdSurveyTotal = surveyTotal;
+        return { surveyTotal, ytdSurveyTotal };
+    }
+
     const currentEndDate = metadata.endDate || '';
     const currentYear = currentEndDate.substring(0, 4);
 
@@ -7616,7 +7621,7 @@ function buildTeamTrendAggregateEmployee(period) {
         return null;
     }
 
-    const aggregate = { name: 'Team Combined' };
+    const aggregate = { name: 'Team Combined', isTeamAggregate: true };
 
     getMetricOrder().forEach(({ key }) => {
         const values = period.employees
@@ -7631,12 +7636,27 @@ function buildTeamTrendAggregateEmployee(period) {
     });
 
     const totalSurveyCount = period.employees
-        .map(emp => parseFloat(emp?.surveysOffered))
+        .map(emp => {
+            const surveyTotal = parseFloat(emp?.surveyTotal);
+            if (!Number.isNaN(surveyTotal)) {
+                return surveyTotal;
+            }
+            return parseFloat(emp?.surveysOffered);
+        })
         .filter(value => !Number.isNaN(value))
         .reduce((sum, value) => sum + value, 0);
 
     if (totalSurveyCount > 0) {
-        aggregate.surveysOffered = totalSurveyCount;
+        aggregate.surveyTotal = totalSurveyCount;
+    }
+
+    const totalCalls = period.employees
+        .map(emp => parseFloat(emp?.totalCalls))
+        .filter(value => !Number.isNaN(value))
+        .reduce((sum, value) => sum + value, 0);
+
+    if (totalCalls > 0) {
+        aggregate.totalCalls = totalCalls;
     }
 
     return aggregate;
