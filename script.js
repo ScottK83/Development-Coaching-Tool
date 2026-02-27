@@ -9230,12 +9230,209 @@ function renderSupervisorIntelligence() {
     initializeTrendIntelligence();
     renderTrendIntelligence();
     renderRecognitionIntelligence();
+    renderCoachingImpactTracker();
     renderCoachingLoadAwareness();
     renderCoachingPriorityQueue();
     renderComplianceAlerts();
 }
 
 let trendIntelligenceListenersAttached = false;
+let trendIntelligenceFocusMode = false;
+
+function setTrendFocusMode(enabled) {
+    trendIntelligenceFocusMode = Boolean(enabled);
+    const focusBtn = document.getElementById('trendFocusModeBtn');
+    if (focusBtn) {
+        focusBtn.textContent = trendIntelligenceFocusMode ? '🪄 Focus Mode: On' : '🪄 Focus Mode: Off';
+    }
+
+    const secondarySectionIds = [
+        'trendVisualizationsContainer',
+        'recognitionIntelligenceOutput',
+        'coachingLoadOutput',
+        'coachingPriorityQueueOutput',
+        'complianceAlertsOutput'
+    ];
+
+    secondarySectionIds.forEach(id => {
+        const inner = document.getElementById(id);
+        const card = inner?.closest('div[style*="border: 1px solid #cfe1ff"]');
+        if (card) {
+            card.style.display = trendIntelligenceFocusMode ? 'none' : 'block';
+        }
+    });
+
+    const impactPanel = document.getElementById('coachingImpactTrackerPanel');
+    if (impactPanel) {
+        impactPanel.style.display = 'block';
+    }
+}
+
+function getTrendSelectedEmployee() {
+    return document.getElementById('trendEmployeeSelector')?.value || '';
+}
+
+function buildTrendAiExplainPrompt() {
+    const selectedEmployee = getTrendSelectedEmployee();
+    const keys = getWeeklyKeysSorted();
+    const latestKey = keys.length ? keys[keys.length - 1] : null;
+    const prevKey = keys.length > 1 ? keys[keys.length - 2] : null;
+
+    if (!selectedEmployee || !latestKey) {
+        return '';
+    }
+
+    const latestWeek = weeklyData[latestKey];
+    const prevWeek = prevKey ? weeklyData[prevKey] : null;
+    const current = latestWeek?.employees?.find(e => e.name === selectedEmployee);
+    const previous = prevWeek?.employees?.find(e => e.name === selectedEmployee);
+    if (!current) return '';
+
+    const metricKeys = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht', 'acw', 'holdTime'];
+    const lines = metricKeys.map(metricKey => {
+        const metricLabel = METRICS_REGISTRY[metricKey]?.label || metricKey;
+        const currentValue = current?.[metricKey];
+        const previousValue = previous?.[metricKey];
+        if (currentValue === undefined || currentValue === null || currentValue === '') return null;
+        const currentDisplay = formatMetricDisplay(metricKey, parseFloat(currentValue));
+        const targetDisplay = formatMetricDisplay(metricKey, getMetricTrendTarget(metricKey));
+        const trend = previousValue !== undefined && previousValue !== null && previousValue !== ''
+            ? metricDelta(metricKey, parseFloat(currentValue), parseFloat(previousValue)).toFixed(1)
+            : 'N/A';
+        return `- ${metricLabel}: current ${currentDisplay}, target ${targetDisplay}, delta vs prior ${trend}`;
+    }).filter(Boolean).join('\n');
+
+    return `You are a performance coach helping a supervisor interpret trends for ${selectedEmployee}.\n\nUse this metric snapshot:\n${lines}\n\nDeliver:\n1) What behavior patterns likely drive results\n2) Top 2 risks and why\n3) Top 2 leverage strengths\n4) One direct coaching conversation opener\n\nKeep it concise, practical, and supervisor-ready.`;
+}
+
+function buildTrendAiGoalPrompt() {
+    const selectedEmployee = getTrendSelectedEmployee();
+    const keys = getWeeklyKeysSorted();
+    const latestKey = keys.length ? keys[keys.length - 1] : null;
+    const prevKey = keys.length > 1 ? keys[keys.length - 2] : null;
+
+    if (!selectedEmployee || !latestKey) {
+        return '';
+    }
+
+    const latestWeek = weeklyData[latestKey];
+    const prevWeek = prevKey ? weeklyData[prevKey] : null;
+    const current = latestWeek?.employees?.find(e => e.name === selectedEmployee);
+    const previous = prevWeek?.employees?.find(e => e.name === selectedEmployee);
+    if (!current) return '';
+
+    const focusMetric = ['overallSentiment', 'fcr', 'scheduleAdherence', 'transfers', 'aht']
+        .map(metricKey => ({
+            metricKey,
+            value: parseFloat(current?.[metricKey]),
+            gap: metricGapToTarget(metricKey, parseFloat(current?.[metricKey]))
+        }))
+        .filter(item => Number.isFinite(item.value))
+        .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))[0];
+
+    if (!focusMetric) return '';
+
+    const previousValue = previous ? parseFloat(previous[focusMetric.metricKey]) : NaN;
+    const trendText = Number.isFinite(previousValue)
+        ? metricDelta(focusMetric.metricKey, focusMetric.value, previousValue).toFixed(1)
+        : 'N/A';
+
+    return `Create one measurable 30-day development goal for ${selectedEmployee}.\n\nFocus metric: ${METRICS_REGISTRY[focusMetric.metricKey]?.label || focusMetric.metricKey}\nCurrent: ${formatMetricDisplay(focusMetric.metricKey, focusMetric.value)}\nTarget: ${formatMetricDisplay(focusMetric.metricKey, getMetricTrendTarget(focusMetric.metricKey))}\nTrend delta vs prior: ${trendText}\n\nOutput required:\n- Goal statement (single sentence)\n- 3 weekly behavior commitments\n- Weekly check-in metric to track\n\nKeep it accountable and realistic for a frontline associate.`;
+}
+
+function launchTrendCopilotPrompt(prompt, emptyMessage) {
+    if (!prompt) {
+        showToast(emptyMessage || 'Select an associate first', 3000);
+        return;
+    }
+    openCopilotWithPrompt(prompt, 'Trend Intelligence Copilot');
+}
+
+function computeCoachingImpactForEmployee(employeeName) {
+    const history = getCoachingHistoryForEmployee(employeeName);
+    if (!history.length) return null;
+
+    const keys = getWeeklyKeysSorted();
+    if (keys.length < 2) return null;
+
+    const latestKey = keys[keys.length - 1];
+    const previousKey = keys[keys.length - 2];
+    const latestWeek = weeklyData[latestKey];
+    const previousWeek = weeklyData[previousKey];
+    const current = latestWeek?.employees?.find(e => e.name === employeeName);
+    const previous = previousWeek?.employees?.find(e => e.name === employeeName);
+    if (!current || !previous) return null;
+
+    const recent = history.slice(0, 3);
+    const recentMetricKeys = Array.from(new Set(recent.flatMap(h => Array.isArray(h.metricsCoached) ? h.metricsCoached : [])));
+    if (!recentMetricKeys.length) return null;
+
+    let improved = 0;
+    let total = 0;
+    let volatilityReduced = 0;
+
+    recentMetricKeys.forEach(metricKey => {
+        const currentValue = parseFloat(current[metricKey]);
+        const previousValue = parseFloat(previous[metricKey]);
+        if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) return;
+
+        const delta = metricDelta(metricKey, currentValue, previousValue);
+        const improvedMetric = delta > 0;
+        if (improvedMetric) improved += 1;
+        total += 1;
+
+        const details = getMetricVolatilityDetails(employeeName, metricKey, latestKey, latestWeek?.metadata?.periodType || 'week');
+        if (details && !details.isVolatile) volatilityReduced += 1;
+    });
+
+    if (total === 0) return null;
+
+    const momentumScore = Math.round((improved / total) * 100);
+    const consistencyScore = Math.round((volatilityReduced / total) * 100);
+    const goalProgressScore = Math.round(((recentMetricKeys.filter(metricKey => metricMeetsTarget(metricKey, current[metricKey])).length) / total) * 100);
+
+    return {
+        employeeName,
+        momentumScore,
+        consistencyScore,
+        goalProgressScore,
+        totalTracked: total
+    };
+}
+
+function renderCoachingImpactTracker() {
+    const container = document.getElementById('coachingImpactTrackerOutput');
+    if (!container) return;
+
+    const employeeSet = new Set();
+    Object.values(weeklyData).forEach(week => {
+        week?.employees?.forEach(emp => {
+            if (emp?.name) employeeSet.add(emp.name);
+        });
+    });
+
+    const scored = Array.from(employeeSet)
+        .map(name => computeCoachingImpactForEmployee(name))
+        .filter(Boolean)
+        .sort((a, b) => ((b.momentumScore + b.consistencyScore + b.goalProgressScore) - (a.momentumScore + a.consistencyScore + a.goalProgressScore)));
+
+    if (!scored.length) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No coaching impact data yet. Log coaching sessions to track momentum and outcomes.</div>';
+        return;
+    }
+
+    const selectedEmployee = getTrendSelectedEmployee();
+    const spotlight = selectedEmployee ? scored.find(s => s.employeeName === selectedEmployee) : scored[0];
+    const list = selectedEmployee ? [spotlight].filter(Boolean) : scored.slice(0, 5);
+
+    container.innerHTML = list.map(item => `
+        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+            <strong>${item.employeeName}</strong><br>
+            Momentum: <strong>${item.momentumScore}%</strong> · Consistency: <strong>${item.consistencyScore}%</strong> · Goal Progress: <strong>${item.goalProgressScore}%</strong>
+            <div style="color: #546e7a; font-size: 0.88em; margin-top: 4px;">Tracked metrics: ${item.totalTracked}</div>
+        </div>
+    `).join('');
+}
 
 function initializeTrendIntelligence() {
     // Populate employee selector
@@ -9285,11 +9482,23 @@ function initializeTrendIntelligence() {
         document.getElementById('trendEmployeeSelector')?.addEventListener('change', () => {
             renderTrendIntelligence();
             renderTrendVisualizations();
+            renderCoachingImpactTracker();
         });
 
         document.getElementById('generateTrendCoachingBtn')?.addEventListener('click', generateTrendCoachingEmail);
+        document.getElementById('trendFocusModeBtn')?.addEventListener('click', () => {
+            setTrendFocusMode(!trendIntelligenceFocusMode);
+        });
+        document.getElementById('copilotExplainTrendBtn')?.addEventListener('click', () => {
+            launchTrendCopilotPrompt(buildTrendAiExplainPrompt(), 'Select an associate to use AI Explain Insight');
+        });
+        document.getElementById('copilotGoalBtn')?.addEventListener('click', () => {
+            launchTrendCopilotPrompt(buildTrendAiGoalPrompt(), 'Select an associate to generate a 30-day goal');
+        });
         trendIntelligenceListenersAttached = true;
     }
+
+    setTrendFocusMode(trendIntelligenceFocusMode);
 
     // Initial render of visualizations
     renderTrendVisualizations();
@@ -9534,6 +9743,7 @@ function renderTrendIntelligence() {
     }
 
     renderCoachingPriorityQueue();
+    renderCoachingImpactTracker();
 }
 
 function renderTrendVisualizations() {
@@ -10236,22 +10446,29 @@ if (document.readyState === 'loading') {
 function populateExecutiveSummaryAssociate() {
     
     const select = document.getElementById('summaryAssociateSelect');
+    if (!select) return;
+
     const allEmployees = new Set();
+    const teamFilteredEmployees = new Set();
     
     // Collect all unique employee names from weeklyData
     for (const weekKey in weeklyData) {
         const week = weeklyData[weekKey];
         if (week.employees && Array.isArray(week.employees)) {
             week.employees.forEach(emp => {
-                if (emp.name && isTeamMember(weekKey, emp.name)) {
-                    allEmployees.add(emp.name);
+                if (!emp.name) return;
+
+                allEmployees.add(emp.name);
+                if (isTeamMember(weekKey, emp.name)) {
+                    teamFilteredEmployees.add(emp.name);
                 }
             });
         }
     }
     
     // Sort and populate dropdown
-    const sortedEmployees = Array.from(allEmployees).sort();
+    const selectedSet = teamFilteredEmployees.size > 0 ? teamFilteredEmployees : allEmployees;
+    const sortedEmployees = Array.from(selectedSet).sort();
     select.innerHTML = '<option value="">-- Choose an associate --</option>';
     sortedEmployees.forEach(name => {
         const option = document.createElement('option');
