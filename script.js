@@ -8401,24 +8401,56 @@ function getPreviousPeriodData(currentWeekKey, periodType) {
 // EXECUTIVE SUMMARY
 // ============================================
 
-function buildExecutiveSummaryAggregateMetrics(allWeeks) {
+function getExecutiveSummaryActiveYear(allWeeks) {
+    const years = allWeeks.map(weekKey => {
+        const metadataEndDate = weeklyData[weekKey]?.metadata?.endDate;
+        const fallbackEndDate = weekKey.includes('|') ? weekKey.split('|')[1] : '';
+        const endDateText = metadataEndDate || fallbackEndDate;
+        const parsedYear = parseInt(String(endDateText || '').slice(0, 4), 10);
+        return Number.isInteger(parsedYear) ? parsedYear : null;
+    }).filter(Number.isInteger);
+
+    return years.length ? Math.max(...years) : new Date().getFullYear();
+}
+
+function buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate = '') {
+    const metricKeys = getMetricOrder().map(item => item.key);
+    const activeYear = getExecutiveSummaryActiveYear(allWeeks);
     const metrics = {
-        totalWeeks: allWeeks.length,
+        totalWeeks: 0,
         totalEmployees: new Set(),
-        avgScheduleAdherence: [],
-        avgTransfers: [],
-        avgAHT: []
+        averagesByMetric: {},
+        activeYear,
+        selectedAssociate
     };
+
+    metricKeys.forEach(metricKey => {
+        metrics.averagesByMetric[metricKey] = [];
+    });
 
     allWeeks.forEach(weekKey => {
         const week = weeklyData[weekKey];
         if (!week || !week.employees) return;
 
+        const metadataEndDate = week?.metadata?.endDate;
+        const fallbackEndDate = weekKey.includes('|') ? weekKey.split('|')[1] : '';
+        const endDateText = metadataEndDate || fallbackEndDate;
+        const endYear = parseInt(String(endDateText || '').slice(0, 4), 10);
+        if (!Number.isInteger(endYear) || endYear !== activeYear) return;
+
+        metrics.totalWeeks += 1;
+
         week.employees.forEach(emp => {
+            if (!emp?.name) return;
+            if (selectedAssociate && emp.name !== selectedAssociate) return;
+
             metrics.totalEmployees.add(emp.name);
-            if (emp.scheduleAdherence) metrics.avgScheduleAdherence.push(emp.scheduleAdherence);
-            if (emp.transfers) metrics.avgTransfers.push(emp.transfers);
-            if (emp.aht) metrics.avgAHT.push(emp.aht);
+
+            metricKeys.forEach(metricKey => {
+                const value = parseFloat(emp[metricKey]);
+                if (!Number.isFinite(value)) return;
+                metrics.averagesByMetric[metricKey].push(value);
+            });
         });
     });
 
@@ -8426,34 +8458,78 @@ function buildExecutiveSummaryAggregateMetrics(allWeeks) {
 }
 
 function calculateExecutiveSummaryAverages(metrics) {
-    const avgAdherence = metrics.avgScheduleAdherence.length > 0
-        ? (metrics.avgScheduleAdherence.reduce((a, b) => a + b, 0) / metrics.avgScheduleAdherence.length).toFixed(2)
-        : 0;
+    const averages = {};
+    Object.keys(metrics.averagesByMetric || {}).forEach(metricKey => {
+        const values = metrics.averagesByMetric[metricKey] || [];
+        if (!values.length) {
+            averages[metricKey] = null;
+            return;
+        }
+        averages[metricKey] = values.reduce((sum, value) => sum + value, 0) / values.length;
+    });
+    return averages;
+}
 
-    const avgTransfers = metrics.avgTransfers.length > 0
-        ? (metrics.avgTransfers.reduce((a, b) => a + b, 0) / metrics.avgTransfers.length).toFixed(2)
-        : 0;
+function getExecutiveSummaryMetricCardStyle(metricKey, averageValue, reviewYear) {
+    const neutralStyle = {
+        background: 'linear-gradient(135deg, #90a4ae 0%, #78909c 100%)',
+        textColor: '#ffffff'
+    };
 
-    const avgAHT = metrics.avgAHT.length > 0
-        ? Math.round(metrics.avgAHT.reduce((a, b) => a + b, 0) / metrics.avgAHT.length)
-        : 0;
+    if (!Number.isFinite(averageValue)) return neutralStyle;
 
-    return { avgAdherence, avgTransfers, avgAHT };
+    const onOffMetrics = new Set(['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall', 'reliability']);
+    if (onOffMetrics.has(metricKey)) {
+        const score = getYearEndOnOffScoreOrFallback(metricKey, averageValue, reviewYear);
+        if (score === 3) return { background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)', textColor: '#ffffff' };
+        if (score === 2) return { background: 'linear-gradient(135deg, #f0de87 0%, #e6c65a 100%)', textColor: '#222222' };
+        if (score === 1) return { background: 'linear-gradient(135deg, #c62828 0%, #ef5350 100%)', textColor: '#ffffff' };
+    }
+
+    if (metricMeetsTarget(metricKey, averageValue)) {
+        return { background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)', textColor: '#ffffff' };
+    }
+
+    const gap = Math.abs(metricGapToTarget(metricKey, averageValue));
+    const threshold = getTrendDeltaThreshold(metricKey)?.value || 0;
+    if (threshold > 0 && gap <= threshold) {
+        return { background: 'linear-gradient(135deg, #f0de87 0%, #e6c65a 100%)', textColor: '#222222' };
+    }
+
+    return { background: 'linear-gradient(135deg, #c62828 0%, #ef5350 100%)', textColor: '#ffffff' };
 }
 
 function buildExecutiveSummaryCards(metrics, averages) {
+    const reviewYear = metrics.activeYear || new Date().getFullYear();
+    const metricCards = getMetricOrder().map(({ key }) => {
+        const metricDef = METRICS_REGISTRY[key];
+        if (!metricDef) return null;
+
+        const averageValue = averages[key];
+        const style = getExecutiveSummaryMetricCardStyle(key, averageValue, reviewYear);
+
+        return {
+            label: `Avg ${metricDef.label}`,
+            value: Number.isFinite(averageValue) ? formatMetricDisplay(key, averageValue) : 'N/A',
+            icon: '📈',
+            ...style
+        };
+    }).filter(Boolean);
+
     return [
         { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '📊' },
         { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '👥' },
-        { label: 'Avg Schedule Adherence', value: `${averages.avgAdherence}%`, icon: '✅' },
-        { label: 'Avg Transfers', value: `${averages.avgTransfers}%`, icon: '📉' },
-        { label: 'Avg Handle Time', value: `${averages.avgAHT}s`, icon: '⏱️' }
-    ];
+        ...metricCards
+    ].map(card => ({
+        background: card.background || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        textColor: card.textColor || '#ffffff',
+        ...card
+    }));
 }
 
 function renderExecutiveSummaryCardsHtml(cards) {
     return cards.map(card => `
-            <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
+            <div style="padding: 20px; background: ${card.background}; color: ${card.textColor}; border-radius: 8px; text-align: center;">
                 <div style="font-size: 2em; margin-bottom: 8px;">${card.icon}</div>
                 <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 4px;">${card.value}</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">${card.label}</div>
@@ -8472,12 +8548,16 @@ function renderExecutiveSummary() {
         return;
     }
 
-    const metrics = buildExecutiveSummaryAggregateMetrics(allWeeks);
+    const selectedAssociate = document.getElementById('summaryAssociateSelect')?.value || '';
+    const metrics = buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate);
     const averages = calculateExecutiveSummaryAverages(metrics);
     const cards = buildExecutiveSummaryCards(metrics, averages);
     
     let html = '<div style="margin-bottom: 30px;">';
-    html += '<h3>Performance Overview</h3>';
+    const scopeLabel = selectedAssociate
+        ? `Performance Overview — ${escapeHtml(selectedAssociate)} (${metrics.activeYear} YTD)`
+        : `Performance Overview (${metrics.activeYear} YTD)`;
+    html += `<h3>${scopeLabel}</h3>`;
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
     html += renderExecutiveSummaryCardsHtml(cards);
     
@@ -8491,6 +8571,7 @@ function renderExecutiveSummary() {
 }
 
 function handleExecutiveSummaryAssociateChange() {
+    renderExecutiveSummary();
     loadExecutiveSummaryData();
     renderYearlySummaryTrendCharts();
     syncOneOnOneAssociateSelect();
@@ -10774,6 +10855,7 @@ function populateExecutiveSummaryAssociate() {
     
     const select = document.getElementById('summaryAssociateSelect');
     if (!select) return;
+    const currentSelection = select.value;
 
     const allEmployees = new Set();
     const teamFilteredEmployees = new Set();
@@ -10803,6 +10885,10 @@ function populateExecutiveSummaryAssociate() {
         option.textContent = name;
         select.appendChild(option);
     });
+
+    if (currentSelection && sortedEmployees.includes(currentSelection)) {
+        select.value = currentSelection;
+    }
     
     
 }
