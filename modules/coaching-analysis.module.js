@@ -114,6 +114,19 @@
      * Build coaching prompt for CoPilot email generation
      */
     function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
+        if (typeof window.buildTrendCoachingPrompt === 'function') {
+            return window.buildTrendCoachingPrompt(
+                displayName,
+                weakestMetric,
+                trendingMetric,
+                tipsForWeakest,
+                tipsForTrending,
+                userNotes,
+                sentimentSnapshot,
+                allTrendMetrics
+            );
+        }
+
         const successes = allTrendMetrics 
             ? allTrendMetrics.filter(m => m.meetsTarget) 
             : [];
@@ -192,6 +205,10 @@
      * Analyze trend metrics for coaching
      */
     function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
+        if (typeof window.analyzeTrendMetrics === 'function') {
+            return window.analyzeTrendMetrics(employeeData, centerAverages, reviewYear);
+        }
+
         const allMetrics = [];
         const metricMappings = {
             scheduleAdherence: 'scheduleAdherence',
@@ -219,7 +236,7 @@
             if (!metric || employeeValue === 0) return;
             
             const target = window.DevCoachModules?.metrics?.getMetricTarget?.(registryKey, reviewYear) || metric?.target?.value || 0;
-            const targetType = 'min'; // Simplified - use metrics module for full logic
+            const targetType = metric?.target?.type || 'min';
             
             const meetsTarget = targetType === 'min' 
                 ? employeeValue >= target 

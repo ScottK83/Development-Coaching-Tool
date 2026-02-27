@@ -5396,39 +5396,143 @@ const TREND_METRIC_MAPPINGS = {
  * if (analysis.weakest) console.log(`Weakest: ${analysis.weakest.label}`);
  * if (analysis.trendingDown) console.log(`Random focus: ${analysis.trendingDown.label}`);
  */
-function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
-    /**
-     * Analyze metrics and return:
-     * 1. Weakest metric = furthest below their target
-     * 2. Random metric = randomly selected from those below target (provides variety)
-     */
+function getMetricBandByUnit(metricKey, bands = { percent: 2, sec: 15, hrs: 1, fallback: 2 }) {
+    const unit = METRICS_REGISTRY[metricKey]?.unit;
+    if (unit === 'sec') return bands.sec;
+    if (unit === 'hrs') return bands.hrs;
+    if (unit === '%') return bands.percent;
+    return bands.fallback;
+}
+
+function resolveMetricTrendDirection(metricKey, currentValue, previousValue) {
+    const prev = parseFloat(previousValue);
+    if (!Number.isFinite(prev)) {
+        return {
+            delta: null,
+            direction: 'stable'
+        };
+    }
+
+    const delta = metricDelta(metricKey, currentValue, prev);
+    const stableBand = getMetricBandByUnit(metricKey, { percent: 1, sec: 8, hrs: 0.5, fallback: 1 });
+    if (Math.abs(delta) < stableBand) {
+        return {
+            delta,
+            direction: 'stable'
+        };
+    }
+
+    return {
+        delta,
+        direction: delta > 0 ? 'improving' : 'declining'
+    };
+}
+
+function getMetricVolatilityDetails(employeeName, metricKey, weekKey, periodType = 'week') {
+    if (!employeeName || !weekKey) return null;
+
+    const keys = getWeeklyKeysSorted().filter(key => {
+        const metaType = weeklyData[key]?.metadata?.periodType || 'week';
+        return metaType === periodType;
+    });
+    const idx = keys.indexOf(weekKey);
+    if (idx < 0) return null;
+
+    const sampleKeys = keys.slice(Math.max(0, idx - 3), idx + 1);
+    const values = sampleKeys
+        .map(key => {
+            const period = weeklyData[key];
+            const emp = period?.employees?.find(e => e.name === employeeName);
+            const value = parseFloat(emp?.[metricKey]);
+            return Number.isFinite(value) ? value : null;
+        })
+        .filter(v => v !== null);
+
+    if (values.length < 3) return null;
+
+    const deltas = [];
+    for (let i = 1; i < values.length; i++) {
+        deltas.push(metricDelta(metricKey, values[i], values[i - 1]));
+    }
+
+    if (!deltas.length) return null;
+
+    const avgSwing = deltas.reduce((sum, d) => sum + Math.abs(d), 0) / deltas.length;
+    const directionBand = getMetricBandByUnit(metricKey, { percent: 1, sec: 8, hrs: 0.5, fallback: 1 });
+    let signChanges = 0;
+    let lastSign = 0;
+
+    deltas.forEach(delta => {
+        if (Math.abs(delta) < directionBand) return;
+        const sign = delta > 0 ? 1 : -1;
+        if (lastSign !== 0 && sign !== lastSign) signChanges += 1;
+        lastSign = sign;
+    });
+
+    const volatilityBand = getMetricBandByUnit(metricKey, { percent: 2.5, sec: 18, hrs: 1.1, fallback: 2.5 });
+    const isVolatile = avgSwing >= volatilityBand || signChanges >= 2;
+
+    return {
+        isVolatile,
+        avgSwing,
+        signChanges,
+        sampleSize: values.length
+    };
+}
+
+function classifyTrendMetric(metric) {
+    const margin = metric.targetType === 'min'
+        ? metric.employeeValue - metric.target
+        : metric.target - metric.employeeValue;
+    const nearBand = getMetricBandByUnit(metric.metricKey, { percent: 2, sec: 20, hrs: 1, fallback: 2 });
+    const exceedBand = getMetricBandByUnit(metric.metricKey, { percent: 4, sec: 35, hrs: 2, fallback: 4 });
+    const watchDropBand = getMetricBandByUnit(metric.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 });
+
+    if (metric.meetsTarget) {
+        if (metric.trendDirection === 'declining' && (margin <= nearBand || Math.abs(metric.trendDelta || 0) >= watchDropBand)) {
+            return 'Watch Area';
+        }
+        if (margin >= exceedBand || metric.trendDirection === 'improving') {
+            return 'Exceeding Expectation';
+        }
+        return 'On Track';
+    }
+
+    if (metric.trendDirection === 'improving' && metric.gapFromTarget <= nearBand) {
+        return 'Watch Area';
+    }
+
+    return 'Needs Focus';
+}
+
+function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, previousEmployeeData = null, context = {}) {
     const allMetrics = [];
+    const employeeName = context.employeeName || employeeData?.name;
+    const weekKey = context.weekKey || null;
+    const periodType = context.periodType || 'week';
 
     Object.entries(TREND_METRIC_MAPPINGS).forEach(([registryKey, csvKey]) => {
         const employeeValue = parseFloat(employeeData[registryKey]) || 0;
         const centerValue = parseFloat(centerAverages[csvKey]) || 0;
         const metric = METRICS_REGISTRY[registryKey];
-        
-        if (!metric) return;
-        
-        // Skip if employee value is 0 (not provided)
-        if (employeeValue === 0) return;
-        
+        if (!metric || employeeValue === 0) return;
+
         const target = getMetricTrendTarget(registryKey);
         const targetType = getMetricTrendTargetType(registryKey);
         const isReverse = isReverseMetric(registryKey);
-        
-        // Check if meets target based on target type
-        const meetsTarget = targetType === 'min' 
-            ? employeeValue >= target 
+        const meetsTarget = targetType === 'min'
+            ? employeeValue >= target
             : employeeValue <= target;
-        
-        // Check if below center
-        const isBelowCenter = centerValue > 0 
+        const isBelowCenter = centerValue > 0
             ? (isReverse ? employeeValue > centerValue : employeeValue < centerValue)
             : false;
-        
-        allMetrics.push({
+
+        const previousValueRaw = previousEmployeeData ? parseFloat(previousEmployeeData[registryKey]) : NaN;
+        const previousValue = Number.isFinite(previousValueRaw) ? previousValueRaw : null;
+        const trendState = resolveMetricTrendDirection(registryKey, employeeValue, previousValue);
+        const volatility = getMetricVolatilityDetails(employeeName, registryKey, weekKey, periodType);
+
+        const metricRecord = {
             metricKey: registryKey,
             label: metric.label,
             employeeValue,
@@ -5439,43 +5543,44 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
             isReverse,
             isBelowCenter,
             gap: Math.abs(employeeValue - centerValue),
-            gapFromTarget: targetType === 'min' 
-                ? Math.max(0, target - employeeValue)  // How far below target
-                : Math.max(0, employeeValue - target)  // How far above target
-        });
+            gapFromTarget: targetType === 'min'
+                ? Math.max(0, target - employeeValue)
+                : Math.max(0, employeeValue - target),
+            previousValue,
+            trendDelta: trendState.delta,
+            trendDirection: trendState.direction,
+            isVolatile: Boolean(volatility?.isVolatile),
+            volatilityDetails: volatility,
+            classification: 'On Track'
+        };
+
+        metricRecord.classification = classifyTrendMetric(metricRecord);
+        allMetrics.push(metricRecord);
     });
-    
-    // Find weakest (largest gap from target among those not meeting target)
-    const notMeetingTarget = allMetrics.filter(m => !m.meetsTarget);
-    const weakest = notMeetingTarget.length > 0
-        ? notMeetingTarget.reduce((prev, curr) => 
-            curr.gapFromTarget > prev.gapFromTarget ? curr : prev
-          )
+
+    const weakest = allMetrics.length > 0
+        ? [...allMetrics].sort((a, b) => {
+            const riskA = (a.gapFromTarget || 0) + (a.trendDirection === 'declining' ? getMetricBandByUnit(a.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
+            const riskB = (b.gapFromTarget || 0) + (b.trendDirection === 'declining' ? getMetricBandByUnit(b.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
+            return riskB - riskA;
+        })[0]
         : null;
-    
-    // Find second coaching metric - RANDOM selection from those not meeting target (excluding weakest)
-    // This provides variety week-to-week if the same metric remains weakest
-    // Prioritize non-sentiment metrics unless sentiment data is available
-    const nonSentimentNotMeetingTarget = notMeetingTarget.filter(m => 
-        !['positiveWord', 'negativeWord', 'managingEmotions'].includes(m.metricKey) &&
-        m.metricKey !== weakest?.metricKey
-    );
-    
-    let randomMetric = null;
-    if (nonSentimentNotMeetingTarget.length > 0) {
-        randomMetric = pickRandomItem(nonSentimentNotMeetingTarget);
-    } else {
-        // If no non-sentiment metrics, pick randomly from remaining metrics not meeting target
-        const otherMetrics = notMeetingTarget.filter(m => m.metricKey !== weakest?.metricKey);
-        if (otherMetrics.length > 0) {
-            randomMetric = pickRandomItem(otherMetrics);
-        }
-    }
-    
+
+    const decliningCandidates = allMetrics
+        .filter(m => m.metricKey !== weakest?.metricKey)
+        .filter(m => m.trendDirection === 'declining' || m.classification === 'Watch Area' || m.classification === 'Needs Focus')
+        .sort((a, b) => {
+            const riskA = (a.gapFromTarget || 0) + Math.abs(a.trendDelta || 0);
+            const riskB = (b.gapFromTarget || 0) + Math.abs(b.trendDelta || 0);
+            return riskB - riskA;
+        });
+
+    const trendingDown = decliningCandidates.length > 0 ? decliningCandidates[0] : null;
+
     return {
-        weakest: weakest,
-        trendingDown: randomMetric,
-        allMetrics: allMetrics  // NEW: include all metrics for comprehensive prompt building
+        weakest,
+        trendingDown,
+        allMetrics
     };
 }
 
@@ -5613,7 +5718,14 @@ function getReviewYearFromEndDate(endDate) {
 function buildTrendEmailAnalysisBundle(employee, weekKey, period) {
     const centerAverages = getCallCenterAverageForPeriod(weekKey) || {};
     const reviewYear = getReviewYearFromEndDate(period?.metadata?.endDate);
-    const trendAnalysis = analyzeTrendMetrics(employee, centerAverages, reviewYear);
+    const prevPeriodKey = getPreviousPeriodData(weekKey, period?.metadata?.periodType || 'week');
+    const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
+    const previousEmployee = prevPeriod?.employees?.find(e => e.name === employee?.name) || null;
+    const trendAnalysis = analyzeTrendMetrics(employee, centerAverages, reviewYear, previousEmployee, {
+        employeeName: employee?.name,
+        weekKey,
+        periodType: period?.metadata?.periodType || 'week'
+    });
     const weakestMetric = trendAnalysis.weakest;
     const trendingMetric = trendAnalysis.trendingDown;
     const allMetrics = trendAnalysis.allMetrics || [];
@@ -5799,6 +5911,150 @@ function renderTrendFocusAreasHtml(focusAreas) {
     }).join('');
 }
 
+function renderTrendIntelligenceSnapshotHtml(allMetrics) {
+    const metrics = Array.isArray(allMetrics) ? allMetrics : [];
+    if (metrics.length === 0) return '';
+
+    const classificationPriority = {
+        'Needs Focus': 0,
+        'Watch Area': 1,
+        'On Track': 2,
+        'Exceeding Expectation': 3
+    };
+
+    const sorted = [...metrics].sort((a, b) => {
+        const classA = classificationPriority[a.classification] ?? 9;
+        const classB = classificationPriority[b.classification] ?? 9;
+        if (classA !== classB) return classA - classB;
+        const riskA = (a.gapFromTarget || 0) + Math.max(0, -(a.trendDelta || 0));
+        const riskB = (b.gapFromTarget || 0) + Math.max(0, -(b.trendDelta || 0));
+        return riskB - riskA;
+    });
+
+    const topItems = sorted.slice(0, 6);
+    const rows = topItems.map(metric => {
+        const directionText = metric.trendDirection === 'improving'
+            ? 'Improving'
+            : metric.trendDirection === 'declining'
+            ? 'Declining'
+            : 'Stable';
+        const directionColor = metric.trendDirection === 'improving'
+            ? '#2e7d32'
+            : metric.trendDirection === 'declining'
+            ? '#b71c1c'
+            : '#455a64';
+
+        const classColor = metric.classification === 'Exceeding Expectation'
+            ? '#2e7d32'
+            : metric.classification === 'On Track'
+            ? '#0277bd'
+            : metric.classification === 'Watch Area'
+            ? '#ef6c00'
+            : '#b71c1c';
+
+        const volatilityText = metric.isVolatile ? 'Volatile' : 'Stable';
+        const volatilityColor = metric.isVolatile ? '#ef6c00' : '#455a64';
+
+        return `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; color: #333;">${metric.label}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${classColor}; font-weight: 600;">${metric.classification || 'On Track'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${directionColor};">${directionText}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${volatilityColor};">${volatilityText}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const counts = {
+        exceeding: metrics.filter(m => m.classification === 'Exceeding Expectation').length,
+        onTrack: metrics.filter(m => m.classification === 'On Track').length,
+        watch: metrics.filter(m => m.classification === 'Watch Area').length,
+        needsFocus: metrics.filter(m => m.classification === 'Needs Focus').length
+    };
+
+    return `
+        <div style="margin: 20px 0; padding: 15px; background: #f4f9ff; border-radius: 4px; border-left: 4px solid #1976d2;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                <h4 style="color: #1976d2; margin: 0;">🧠 Intelligence Snapshot</h4>
+                <button id="copyTrendIntelligenceSnapshotBtn" type="button" style="padding: 8px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85em;">
+                    📋 Copy Snapshot
+                </button>
+            </div>
+            <p style="margin: 0 0 10px 0; color: #455a64; font-size: 0.9em;">
+                Exceeding: <strong>${counts.exceeding}</strong> · On Track: <strong>${counts.onTrack}</strong> · Watch: <strong>${counts.watch}</strong> · Needs Focus: <strong>${counts.needsFocus}</strong>
+            </p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; background: white; border: 1px solid #e3eef9;">
+                <thead>
+                    <tr style="background: #e3f2fd; color: #0d47a1; text-align: left;">
+                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Metric</th>
+                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Class</th>
+                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Momentum</th>
+                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Volatility</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function buildTrendIntelligenceSnapshotText(allMetrics) {
+    const metrics = Array.isArray(allMetrics) ? allMetrics : [];
+    if (metrics.length === 0) return 'No intelligence snapshot data available.';
+
+    const classificationPriority = {
+        'Needs Focus': 0,
+        'Watch Area': 1,
+        'On Track': 2,
+        'Exceeding Expectation': 3
+    };
+
+    const counts = {
+        exceeding: metrics.filter(m => m.classification === 'Exceeding Expectation').length,
+        onTrack: metrics.filter(m => m.classification === 'On Track').length,
+        watch: metrics.filter(m => m.classification === 'Watch Area').length,
+        needsFocus: metrics.filter(m => m.classification === 'Needs Focus').length
+    };
+
+    const topItems = [...metrics]
+        .sort((a, b) => {
+            const classA = classificationPriority[a.classification] ?? 9;
+            const classB = classificationPriority[b.classification] ?? 9;
+            if (classA !== classB) return classA - classB;
+            const riskA = (a.gapFromTarget || 0) + Math.max(0, -(a.trendDelta || 0));
+            const riskB = (b.gapFromTarget || 0) + Math.max(0, -(b.trendDelta || 0));
+            return riskB - riskA;
+        })
+        .slice(0, 8);
+
+    const lines = topItems.map(metric => {
+        const directionText = metric.trendDirection === 'improving'
+            ? 'Improving'
+            : metric.trendDirection === 'declining'
+            ? 'Declining'
+            : 'Stable';
+        const volatilityText = metric.isVolatile ? 'Volatile' : 'Stable';
+        const currentText = formatMetricDisplay(metric.metricKey, metric.employeeValue);
+        const goalText = formatMetricDisplay(metric.metricKey, metric.target);
+        const previousText = metric.previousValue !== null && metric.previousValue !== undefined
+            ? formatMetricDisplay(metric.metricKey, metric.previousValue)
+            : 'N/A';
+        const teamText = Number.isFinite(metric.centerValue) && metric.centerValue > 0
+            ? formatMetricDisplay(metric.metricKey, metric.centerValue)
+            : 'N/A';
+        return `- ${metric.label}: ${metric.classification || 'On Track'} | Current ${currentText} | Goal ${goalText} | Previous ${previousText} | Team ${teamText} | ${directionText} | ${volatilityText}`;
+    });
+
+    return [
+        'INTELLIGENCE SNAPSHOT',
+        `Exceeding: ${counts.exceeding} | On Track: ${counts.onTrack} | Watch: ${counts.watch} | Needs Focus: ${counts.needsFocus}`,
+        '',
+        ...lines
+    ].join('\n');
+}
+
 function attachTrendTipsModalHandlers(options) {
     const {
         modal,
@@ -5822,6 +6078,24 @@ function attachTrendTipsModalHandlers(options) {
         showToast('✅ Prompt copied! Opening Copilot...', 2000);
         window.open('https://copilot.microsoft.com', '_blank');
     });
+
+    const copySnapshotBtn = document.getElementById('copyTrendIntelligenceSnapshotBtn');
+    if (copySnapshotBtn) {
+        copySnapshotBtn.addEventListener('click', () => {
+            const summaryText = buildTrendIntelligenceSnapshotText(allMetrics || []);
+            navigator.clipboard.writeText(summaryText).then(() => {
+                showToast('✅ Intelligence snapshot copied', 2000);
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = summaryText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('✅ Intelligence snapshot copied', 2000);
+            });
+        });
+    }
 
     document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
         const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
@@ -5866,7 +6140,7 @@ function attachTrendTipsModalHandlers(options) {
     });
 }
 
-function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, copilotPrompt) {
+function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, intelligenceSnapshotHtml, copilotPrompt) {
     return `
         <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
         <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
@@ -5874,6 +6148,8 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
         ${summaryBoxesHtml}
         
         ${focusAreasHtml ? `<h4 style="color: #9c27b0; margin: 0 0 12px 0;">🎯 Coaching Focus</h4>${focusAreasHtml}` : ''}
+
+        ${intelligenceSnapshotHtml}
 
         ${sentimentHtml}
         
@@ -5984,6 +6260,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
     const secondaryFocusTips = focusAreas[1]?.tips || [];
 
     const focusAreasHtml = renderTrendFocusAreasHtml(focusAreas);
+    const intelligenceSnapshotHtml = renderTrendIntelligenceSnapshotHtml(allMetrics || []);
 
     const { sentimentHtml } = buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot);
     
@@ -6005,6 +6282,7 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         periodLabel,
         summaryBoxesHtml,
         focusAreasHtml,
+        intelligenceSnapshotHtml,
         sentimentHtml,
         copilotPrompt
     );
@@ -6044,95 +6322,199 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * const prompt = buildTrendCoachingPrompt('John', weakest, trending, ['Tip 1', 'Tip 2'], ['Tip 3', 'Tip 4'], '');
  */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
-    /**
-     * Build a concise, factual CoPilot prompt for trend coaching email
-     * - List successes (meeting target)
-     * - List opportunities (below target) with tips
-     * - Include sentiment data if available
-     * - Keep it brief and factual, no fluff
-     */
-    
-    // SUCCESSES SECTION - Only metrics meeting target
-    const successes = allTrendMetrics 
-        ? allTrendMetrics.filter(m => m.meetsTarget) 
+    const metrics = Array.isArray(allTrendMetrics) ? allTrendMetrics : [];
+    const getTrendLabel = (metric) => {
+        if (!metric || metric.trendDelta === null || metric.trendDelta === undefined) return 'stable (no prior period)';
+        if (metric.trendDirection === 'improving') return `improving (${formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta))})`;
+        if (metric.trendDirection === 'declining') return `declining (${formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta))})`;
+        return 'stable';
+    };
+
+    const classificationOrder = {
+        'Needs Focus': 0,
+        'Watch Area': 1,
+        'On Track': 2,
+        'Exceeding Expectation': 3
+    };
+
+    const strengths = [...metrics]
+        .filter(m => m.classification === 'Exceeding Expectation' || (m.classification === 'On Track' && m.trendDirection === 'improving'))
+        .sort((a, b) => (classificationOrder[b.classification] - classificationOrder[a.classification]) || ((b.trendDelta || 0) - (a.trendDelta || 0)))
+        .slice(0, 4);
+
+    const priorities = [...metrics]
+        .filter(m => m.classification === 'Needs Focus' || m.classification === 'Watch Area')
+        .sort((a, b) => {
+            const scoreA = (a.gapFromTarget || 0) + Math.max(0, -(a.trendDelta || 0));
+            const scoreB = (b.gapFromTarget || 0) + Math.max(0, -(b.trendDelta || 0));
+            return scoreB - scoreA;
+        })
+        .slice(0, 4);
+
+    const efficientSet = new Set(['aht', 'acw', 'holdTime', 'transfers']);
+    const behaviorSet = new Set(['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall', 'fcr']);
+    const efficiencyNeeds = priorities.filter(m => efficientSet.has(m.metricKey)).length;
+    const behaviorNeeds = priorities.filter(m => behaviorSet.has(m.metricKey)).length;
+
+    const patternInsights = [];
+    if (efficiencyNeeds > 0 && behaviorNeeds > 0) {
+        patternInsights.push('Balanced pressure pattern: both call-control efficiency and communication-quality metrics need attention, suggesting pace and conversation quality are competing.');
+    } else if (efficiencyNeeds > 0) {
+        patternInsights.push('Execution pattern: primary risk is call flow efficiency, indicating opportunities in structure, pacing, and decision speed during interactions.');
+    } else if (behaviorNeeds > 0) {
+        patternInsights.push('Customer-experience pattern: tone and communication consistency are the main opportunities, pointing to word choice and emotional control habits.');
+    } else {
+        patternInsights.push('Consistency pattern: performance is generally steady with no concentrated risk cluster, so coaching should focus on sustaining repeatable habits.');
+    }
+
+    const volatilityRisks = metrics.filter(m => m.isVolatile).slice(0, 2);
+    if (volatilityRisks.length > 0) {
+        patternInsights.push(`Volatility signal: ${volatilityRisks.map(m => m.label).join(' and ')} show noticeable swings, so consistency routines should be reinforced to stabilize outcomes.`);
+    }
+
+    const topPriority = priorities[0] || weakestMetric || null;
+    const topPriorityTips = topPriority?.metricKey === weakestMetric?.metricKey
+        ? (tipsForWeakest || [])
+        : topPriority?.metricKey === trendingMetric?.metricKey
+        ? (tipsForTrending || [])
         : [];
 
-    const buildMetricComparisonLine = (metric) => {
-        const currentDisplay = formatMetricDisplay(metric.metricKey, metric.employeeValue);
-        const targetDisplay = formatMetricDisplay(metric.metricKey, metric.target);
-        return `- ${metric.label}: ${currentDisplay} vs target ${targetDisplay}`;
+    const actionTipLines = (topPriorityTips || []).slice(0, 2).map(t => `- ${t}`);
+    if (actionTipLines.length === 0) {
+        actionTipLines.push('- Use one call-plan checklist per shift to standardize call control and reduce avoidable variance.');
+        actionTipLines.push('- Complete a 5-minute end-of-day reflection to identify one repeatable behavior for the next shift.');
+    }
+
+    const resolveThirtyDayGoal = () => {
+        if (!topPriority) return 'Maintain all key metrics in On Track or Exceeding status for four consecutive weekly reviews.';
+        if (topPriority.meetsTarget) {
+            return `${topPriority.label}: hold at or better than ${formatMetricDisplay(topPriority.metricKey, topPriority.target)} while avoiding further decline across the next 30 days.`;
+        }
+        const gap = topPriority.gapFromTarget || 0;
+        const closeBy = Math.max(getMetricBandByUnit(topPriority.metricKey, { percent: 1.5, sec: 12, hrs: 0.8, fallback: 1.5 }), gap * 0.4);
+        const goalValue = topPriority.targetType === 'min'
+            ? topPriority.employeeValue + closeBy
+            : topPriority.employeeValue - closeBy;
+        const boundedGoal = topPriority.targetType === 'min'
+            ? Math.min(goalValue, topPriority.target)
+            : Math.max(goalValue, topPriority.target);
+        return `${topPriority.label}: move from ${formatMetricDisplay(topPriority.metricKey, topPriority.employeeValue)} to at least ${formatMetricDisplay(topPriority.metricKey, boundedGoal)} within 30 days.`;
     };
-    
-    let prompt = `Draft a coaching email for ${displayName}.\n\n`;
 
-    if (allTrendMetrics && allTrendMetrics.length > 0) {
-        prompt += `POSITIVE HIGHLIGHTS:\n`;
-        if (successes.length > 0) {
-            successes.forEach(metric => {
-                prompt += `${buildMetricComparisonLine(metric)}\n`;
-            });
-        } else {
-            prompt += `- No metrics currently above target in this period.\n`;
-        }
-        prompt += `\n`;
+    const metricTableLines = metrics
+        .sort((a, b) => (classificationOrder[a.classification] - classificationOrder[b.classification]) || (b.gapFromTarget - a.gapFromTarget))
+        .map(metric => {
+            const current = formatMetricDisplay(metric.metricKey, metric.employeeValue);
+            const target = formatMetricDisplay(metric.metricKey, metric.target);
+            const previous = metric.previousValue !== null && metric.previousValue !== undefined
+                ? formatMetricDisplay(metric.metricKey, metric.previousValue)
+                : 'N/A';
+            const teamAvg = metric.centerValue > 0 ? formatMetricDisplay(metric.metricKey, metric.centerValue) : 'N/A';
+            const volatility = metric.isVolatile ? 'swinging' : 'stable';
+            return `- ${metric.label}: current ${current} | goal ${target} | previous ${previous} | team avg ${teamAvg} | momentum ${getTrendLabel(metric)} | volatility ${volatility} | class ${metric.classification}`;
+        })
+        .join('\n');
 
-        const improvementMetrics = allTrendMetrics.filter(m => !m.meetsTarget);
-        prompt += `IMPROVEMENT AREAS:\n`;
-        if (improvementMetrics.length > 0) {
-            improvementMetrics.forEach(metric => {
-                prompt += `${buildMetricComparisonLine(metric)}\n`;
-            });
-        } else {
-            prompt += `- No below-target metrics detected in this period.\n`;
+    const strengthLines = strengths.length > 0
+        ? strengths.map(m => `- ${m.label}: demonstrates ${m.trendDirection === 'improving' ? 'building momentum and coachability' : 'reliable execution under normal call demand'}.`).join('\n')
+        : '- No clear strengths are separated enough from baseline this period; reinforce foundational consistency first.';
+
+    const priorityLines = priorities.length > 0
+        ? priorities.map(m => `- ${m.label}: ${m.trendDirection === 'declining' ? 'declining trajectory' : 'below-target performance'} requires focused coaching to prevent broader impact.`).join('\n')
+        : '- No immediate risk areas detected; maintain consistent coaching cadence and monitor for drift.';
+
+    const leadershipLinks = [];
+    priorities.forEach(m => {
+        if (['aht', 'acw', 'holdTime', 'transfers', 'fcr'].includes(m.metricKey)) {
+            leadershipLinks.push(`- ${m.label} → Decision quality, Accountability, Continuous improvement`);
         }
-        prompt += `\n`;
-    }
-    
-    // HOW TO IMPROVE - Use the pre-selected tips for focus areas
-    if ((weakestMetric && tipsForWeakest && tipsForWeakest.length > 0) || 
-        (trendingMetric && tipsForTrending && tipsForTrending.length > 0)) {
-        prompt += `HOW TO IMPROVE:\n`;
-        
-        if (weakestMetric && tipsForWeakest && tipsForWeakest.length > 0) {
-            prompt += `\n${weakestMetric.label}:\n`;
-            tipsForWeakest.forEach((tip, i) => {
-                prompt += `  ${i + 1}. ${tip}\n`;
-            });
+        if (['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall'].includes(m.metricKey)) {
+            leadershipLinks.push(`- ${m.label} → Communication clarity, Customer focus, Emotional regulation`);
         }
-        
-        if (trendingMetric && tipsForTrending && tipsForTrending.length > 0) {
-            prompt += `\n${trendingMetric.label}:\n`;
-            tipsForTrending.forEach((tip, i) => {
-                prompt += `  ${i + 1}. ${tip}\n`;
-            });
+        if (['scheduleAdherence', 'reliability'].includes(m.metricKey)) {
+            leadershipLinks.push(`- ${m.label} → Accountability, Collaboration, Continuous improvement`);
         }
-        
-        prompt += `\n`;
-    }
-    
-    // SENTIMENT SECTION - if snapshot exists
-    if (sentimentSnapshot) {
-        const sentimentMetrics = allTrendMetrics
-            ? {
-                negativeWord: allTrendMetrics.find(m => m.metricKey === 'negativeWord')?.employeeValue,
-                positiveWord: allTrendMetrics.find(m => m.metricKey === 'positiveWord')?.employeeValue,
-                managingEmotions: allTrendMetrics.find(m => m.metricKey === 'managingEmotions')?.employeeValue
-            }
-            : null;
-        const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
-        if (sentimentFocusText) {
-            prompt += `SENTIMENT DATA:\n`;
-            prompt += `${sentimentFocusText}\n\n`;
+    });
+
+    const leadershipSection = leadershipLinks.length > 0
+        ? Array.from(new Set(leadershipLinks)).slice(0, 4).join('\n')
+        : '- Current trends align to maintaining Accountability and Continuous improvement through consistent execution habits.';
+
+    const sentimentMetrics = metrics.length > 0
+        ? {
+            negativeWord: metrics.find(m => m.metricKey === 'negativeWord')?.employeeValue,
+            positiveWord: metrics.find(m => m.metricKey === 'positiveWord')?.employeeValue,
+            managingEmotions: metrics.find(m => m.metricKey === 'managingEmotions')?.employeeValue
         }
-    }
-    
-    if (userNotes) {
-        prompt += `ADDITIONAL NOTES:\n${userNotes}\n\n`;
-    }
-    
-    prompt += `Make it warm and encouraging while staying factual and concise.`;
-    
-    return prompt;
+        : null;
+    const sentimentFocusText = sentimentSnapshot
+        ? buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics)
+        : '';
+
+    const actionPlanSection = [
+        'Immediate tactical adjustments:',
+        ...actionTipLines,
+        'Skill development suggestions:',
+        '- Run one focused call-listening review each week with behavior-specific feedback and one repeatable behavior target.',
+        'Process adjustments:',
+        '- Add a mid-week checkpoint on trend direction so downward momentum is coached before end-of-period results lock in.',
+        `30-day measurable improvement goal: ${resolveThirtyDayGoal()}`
+    ].join('\n');
+
+    const notesSection = userNotes ? `\nMANAGER CONTEXT:\n${userNotes}\n` : '';
+    const sentimentSection = sentimentFocusText ? `\nSENTIMENT CONTEXT:\n${sentimentFocusText}\n` : '';
+
+    return `You are the AI Intelligence Layer for a Supervisor Development Coaching Tool.
+
+Use the performance data below to produce deep coaching intelligence and a ready-to-send coaching email.
+
+ASSOCIATE: ${displayName}
+
+METRIC INTELLIGENCE INPUT:
+${metricTableLines || '- No metric data available.'}
+${sentimentSection}${notesSection}
+OUTPUT REQUIREMENTS:
+- Compare each metric to goal and previous period.
+- Identify patterns across efficiency, sentiment, call control, and emotional regulation.
+- Flag volatility and early risks, even when still above goal.
+- Use behavioral interpretation, not numeric restatement.
+
+Generate exactly this structure:
+
+=== EXECUTIVE PERFORMANCE SUMMARY ===
+3-5 sentences for supervisor use.
+
+=== STRENGTHS TO LEVERAGE ===
+${strengthLines}
+
+=== PRIORITY DEVELOPMENT AREAS ===
+${priorityLines}
+
+=== PERFORMANCE PATTERN INSIGHTS ===
+${patternInsights.join(' ')}
+
+=== RECOMMENDED ACTION PLAN ===
+${actionPlanSection}
+
+=== LEADERSHIP COMPETENCY CONNECTION ===
+${leadershipSection}
+
+=== COACHING MESSAGE DRAFT ===
+Write a copy-ready coaching email directly to ${displayName}.
+
+Tone requirements:
+- Supportive but direct
+- Accountability-focused
+- Growth-oriented
+- Professional
+- No filler phrases
+- No mention of AI
+
+Formatting requirements:
+- Outlook-ready plain text
+- Clean headings and bullets
+- No technical commentary
+- No em dash characters.`;
 }
 
 
