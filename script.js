@@ -2353,11 +2353,9 @@ function handleSubNavTrendIntelligenceClick() {
 
     const dataContainer = document.getElementById('summaryDataContainer');
     const chartsContainer = document.getElementById('summaryChartsContainer');
-    const emailSection = document.getElementById('summaryEmailSection');
 
     if (dataContainer) dataContainer.style.display = 'none';
     if (chartsContainer) chartsContainer.innerHTML = '';
-    if (emailSection) emailSection.style.display = 'none';
 }
 
 function handleCopilotOutputInput(event) {
@@ -8391,7 +8389,6 @@ function renderExecutiveSummary() {
 function handleExecutiveSummaryAssociateChange() {
     loadExecutiveSummaryData();
     renderYearlySummaryTrendCharts();
-    showEmailSection();
     syncOneOnOneAssociateSelect();
 }
 
@@ -8402,14 +8399,8 @@ function initializeYearlyIndividualSummary() {
     
     // Period type is always YTD for executive summary
     const summaryAssociateSelect = document.getElementById('summaryAssociateSelect');
-    const generateExecutiveSummaryCopilotBtn = document.getElementById('generateExecutiveSummaryCopilotBtn');
 
     bindElementOnce(summaryAssociateSelect, 'change', handleExecutiveSummaryAssociateChange);
-
-    // Generate CoPilot prompt for Executive Summary email
-    bindElementOnce(generateExecutiveSummaryCopilotBtn, 'click', generateExecutiveSummaryCopilotEmail);
-    
-    
 }
 
 function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
@@ -8585,14 +8576,6 @@ function syncOneOnOneAssociateSelect() {
     if (!select || !summarySelect) return;
     if (summarySelect.value && select.value !== summarySelect.value) {
         select.value = summarySelect.value;
-    }
-}
-
-function showEmailSection() {
-    const associate = document.getElementById('summaryAssociateSelect').value;
-    const section = document.getElementById('summaryEmailSection');
-    if (associate && section) {
-        section.style.display = 'block';
     }
 }
 
