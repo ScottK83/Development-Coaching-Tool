@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-27T15:51:44.780Z",
+  "generatedAt": "2026-02-27T15:52:05.451Z",
   "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.02.26.99",
   "weeklyData": {
@@ -5375,7 +5375,7 @@
       "verbalSummary": ""
     },
     "2026::Ekiecha Brabham": {
-      "trackStatus": "on-track",
+      "trackStatus": "off-track",
       "positivesText": "Hold Time: 20s vs target 30s\nAvoid Negative Words: 86.1% vs target 83.0%\nManaging Emotions: 95.6% vs target 95.0%\nReliability: 6.3 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 91.8% vs target 93.0%\nTransfers: 7.3% vs target 6.0%\nAverage Handle Time: 433s vs target 414s\nAfter Call Work: 136s vs target 60s\nOverall Experience: 81.8% vs target 84.0%\nRep Satisfaction: 72.7% vs target 82.0%",
       "managerContext": "",
@@ -5494,7 +5494,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 22,
-      "byteLength": 51437
+      "byteLength": 51438
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
