@@ -5468,11 +5468,15 @@ function displayMetricsPreview(employeeName, weekKey) {
         const target = registryMetric?.target?.value;
         const targetType = registryMetric?.target?.type;
         const isWholeNumberMetric = metric.key === 'acw' || metric.key === 'holdTime';
+        const isTenthsMetric = !isWholeNumberMetric;
 
         let value = rawValue;
         if (isWholeNumberMetric && rawValue !== '' && rawValue !== null && rawValue !== undefined) {
             const numericValue = parseFloat(rawValue);
             value = Number.isFinite(numericValue) ? Math.round(numericValue) : rawValue;
+        } else if (isTenthsMetric && rawValue !== '' && rawValue !== null && rawValue !== undefined) {
+            const numericValue = parseFloat(rawValue);
+            value = Number.isFinite(numericValue) ? numericValue.toFixed(1) : rawValue;
         }
         
         // Build target hint like call center averages do
@@ -5491,7 +5495,7 @@ function displayMetricsPreview(employeeName, weekKey) {
         html += `
             <div>
                 <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit})${targetHint}:</label>
-                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="${isWholeNumberMetric ? '1' : '0.01'}" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="${isWholeNumberMetric ? '1' : '0.1'}" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
         `;
     });
