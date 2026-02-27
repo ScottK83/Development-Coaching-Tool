@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.93'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.94'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -8726,10 +8726,29 @@ function getTrendDeltaThreshold(metricKey) {
     return { value: 4, unit };
 }
 
+function resolveCoachingHistoryForEmployee(employeeName) {
+    if (!employeeName) return [];
+
+    if (typeof getCoachingHistoryForEmployee === 'function') {
+        try {
+            const resolvedHistory = getCoachingHistoryForEmployee(employeeName);
+            if (Array.isArray(resolvedHistory)) return resolvedHistory;
+        } catch (error) {
+            console.warn('Using fallback coaching history resolver:', error);
+        }
+    }
+
+    const history = coachingHistory?.[employeeName];
+    if (!Array.isArray(history)) return [];
+    return history
+        .slice()
+        .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+}
+
 function calculateCoachingImpact(employeeName, currentSnapshot) {
     if (!employeeName || !currentSnapshot) return null;
 
-    const history = getCoachingHistoryForEmployee(employeeName);
+    const history = resolveCoachingHistoryForEmployee(employeeName);
     if (!history.length) return null;
 
     const latestSession = history[0];
@@ -8934,7 +8953,7 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
         watchScore += 6;
     }
 
-    const history = getCoachingHistoryForEmployee(employeeName);
+    const history = resolveCoachingHistoryForEmployee(employeeName);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const hasRecentCoaching = history.some(h => new Date(h.generatedAt).getTime() >= thirtyDaysAgo);
     if (!hasRecentCoaching) {
@@ -9132,7 +9151,7 @@ function selectSmartTip({ employeeId, metricKey, severity, tips }) {
 }
 
 function getCoachingContext(employeeId, metricKey, currentValue) {
-    const history = getCoachingHistoryForEmployee(employeeId);
+    const history = resolveCoachingHistoryForEmployee(employeeId);
     const last = history.find(entry => (entry.metricsCoached || []).includes(metricKey));
     if (!last) return null;
 
@@ -9332,7 +9351,7 @@ function launchTrendCopilotPrompt(prompt, emptyMessage) {
 }
 
 function computeCoachingImpactForEmployee(employeeName) {
-    const history = getCoachingHistoryForEmployee(employeeName);
+    const history = resolveCoachingHistoryForEmployee(employeeName);
     if (!history.length) return null;
 
     const keys = getWeeklyKeysSorted();
@@ -9525,7 +9544,7 @@ function renderCoachingLoadAwareness() {
 
     // Check each employee's coaching history
     allEmployees.forEach(employeeId => {
-        const history = getCoachingHistoryForEmployee(employeeId);
+        const history = resolveCoachingHistoryForEmployee(employeeId);
         if (!history.length) {
             // Never been coached
             noRecent.push(employeeId);
@@ -9583,7 +9602,7 @@ async function generateOneOnOnePrep() {
         delta: metricDelta(key, current[key], previous[key])
     })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 2) : [];
 
-    const history = getCoachingHistoryForEmployee(associate).slice(0, 3);
+    const history = resolveCoachingHistoryForEmployee(associate).slice(0, 3);
     const lastCoaching = history.length
         ? history.map(h => `${h.weekEnding || new Date(h.generatedAt).toLocaleDateString()}: ${(h.metricsCoached || []).join(', ') || 'General'}`)
         : ['None in last period'];
@@ -9658,7 +9677,7 @@ function renderRecognitionIntelligence() {
         }
 
         const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(key => metricMeetsTarget(key, emp[key]));
-        const recentCoaching = getCoachingHistoryForEmployee(emp.name).find(h =>
+        const recentCoaching = resolveCoachingHistoryForEmployee(emp.name).find(h =>
             new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000
         );
         if (consistent && !recentCoaching) {
@@ -12743,7 +12762,7 @@ function renderCoachingHistory(employeeName) {
             summary,
             list,
             employeeName,
-            history: getCoachingHistoryForEmployee(employeeName),
+            history: resolveCoachingHistoryForEmployee(employeeName),
             formatDate: formatDateMMDDYYYY,
             metricsRegistry: METRICS_REGISTRY
         });
