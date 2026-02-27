@@ -5467,7 +5467,7 @@ function displayMetricsPreview(employeeName, weekKey) {
         const registryMetric = METRICS_REGISTRY[metric.key];
         const target = registryMetric?.target?.value;
         const targetType = registryMetric?.target?.type;
-        const isWholeNumberMetric = metric.key === 'acw' || metric.key === 'holdTime';
+        const isWholeNumberMetric = metric.key === 'aht' || metric.key === 'acw' || metric.key === 'holdTime';
         const isTenthsMetric = !isWholeNumberMetric;
 
         let value = rawValue;
@@ -5486,9 +5486,6 @@ function displayMetricsPreview(employeeName, weekKey) {
             targetHint = ` (Target: ${targetSymbol} ${target}${metric.unit})`;
             if (metric.key === 'overallSentiment') {
                 targetHint = ' (Target 88%)';
-            }
-            if (metric.key === 'aht') {
-                targetHint += ' [AHT = ACW + Talk + Hold]';
             }
         }
         
