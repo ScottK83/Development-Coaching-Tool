@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.84'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.85'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -9450,103 +9450,22 @@ async function generateCopilotPrompt() {
 }
 
 function generateVerintSummary() {
-    const employeeSelect = document.getElementById('employeeSelect');
-    const selectedEmployeeId = employeeSelect?.value;
-    const employeeName = document.getElementById('employeeName')?.value.trim();
-    
-    if (!selectedEmployeeId) {
-        alert('⚠️ Please select an employee first');
+    const moduleApi = window.DevCoachModules?.copilotPrompt;
+    if (!moduleApi?.generateVerintSummary) {
+        showToast('Verint Summary module not available. Refresh and try again.', 3500);
         return;
     }
-    
-    if (employeeName) {
-        saveNickname(selectedEmployeeId, employeeName);
-    }
 
-    // Get ALL coaching history for this employee
-    const history = getCoachingHistoryForEmployee(selectedEmployeeId);
-    
-    if (history && history.length > 0) {
-        const cleanLabel = (item) => {
-            if (!item) return '';
-            const match = item.match(/^-\s*(.+?):/);
-            if (match) return match[1].trim();
-            return item.replace(/^-/,'').split(':')[0].trim();
-        };
-        
-        const firstName = getEmployeeNickname(selectedEmployeeId) || selectedEmployeeId.split(' ')[0];
-        
-        // Build narrative summary for the LATEST coaching session
-        const latestSession = history[0];
-        const date = new Date(latestSession.generatedAt).toLocaleDateString();
-        const winsLabels = (latestSession.celebrate || []).map(cleanLabel).filter(Boolean);
-        const oppLabels = (latestSession.needsCoaching || []).map(cleanLabel).filter(Boolean);
-        
-        let verintText = `Coaching Session with ${firstName} - ${date}\n\n`;
-        
-        // Wins section
-        if (winsLabels.length > 0) {
-            verintText += `I recognized ${firstName} for their strong performance in `;
-            if (winsLabels.length === 1) {
-                verintText += `${winsLabels[0]}`;
-            } else if (winsLabels.length === 2) {
-                verintText += `${winsLabels[0]} and ${winsLabels[1]}`;
-            } else {
-                verintText += winsLabels.slice(0, -1).join(', ') + `, and ${winsLabels[winsLabels.length - 1]}`;
-            }
-            verintText += `. Encouraged them to keep up the great work in these areas.\n\n`;
-        } else {
-            verintText += `We discussed ${firstName}'s current performance and acknowledged their efforts to improve.\n\n`;
-        }
-        
-        // Development areas section
-        if (oppLabels.length > 0) {
-            verintText += `We reviewed development opportunities in `;
-            if (oppLabels.length === 1) {
-                verintText += `${oppLabels[0]}`;
-            } else if (oppLabels.length === 2) {
-                verintText += `${oppLabels[0]} and ${oppLabels[1]}`;
-            } else {
-                verintText += oppLabels.slice(0, -1).join(', ') + `, and ${oppLabels[oppLabels.length - 1]}`;
-            }
-            verintText += `. We discussed specific strategies and tips to help improve performance in these metrics. ${firstName} acknowledged the feedback and committed to implementing the discussed improvements.\n\n`;
-        }
-        
-        // Action items
-        verintText += `Action Items:\n`;
-        if (oppLabels.length > 0) {
-            oppLabels.forEach(metric => {
-                verintText += `• Focus on improving ${metric}\n`;
-            });
-        } else {
-            verintText += `• Continue current performance level\n`;
-        }
-        
-        verintText += `\nNext Steps: Follow up next week to review progress and provide additional support as needed.`;
-        
-        // Add coaching history count
-        if (history.length > 1) {
-            verintText += `\n\n--- Previous Coaching Sessions: ${history.length - 1} ---`;
-        }
-
-        const outputElement = document.getElementById('verintSummaryOutput');
-        outputElement.value = verintText;
-        
-        // Show the section
-        document.getElementById('verintSummarySection').style.display = 'block';
-        
-        // Copy to clipboard
-        navigator.clipboard.writeText(verintText).then(() => {
-            showToast('✅ Verint coaching notes copied to clipboard!', 3000);
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            showToast('⚠️ Failed to copy. Text is displayed above.', 3000);
-        });
-    } else {
-        const outputElement = document.getElementById('verintSummaryOutput');
-        outputElement.value = `No coaching history found for ${selectedEmployeeId}. Generate a coaching email first.`;
-        document.getElementById('verintSummarySection').style.display = 'block';
-    }
+    moduleApi.generateVerintSummary({
+        document,
+        navigator,
+        console,
+        alert,
+        showToast,
+        saveNickname,
+        getCoachingHistoryForEmployee,
+        getEmployeeNickname
+    });
 }
 
 function collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel) {
