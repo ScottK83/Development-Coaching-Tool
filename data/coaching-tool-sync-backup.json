@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T20:19:06.446Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-27T20:19:56.234Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.05",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5603,7 +5603,7 @@
       "positivesText": "Overall Experience: 80.0% vs target 75.0%\nRep Satisfaction: 89.2% vs target 80.0%\nFirst Call Resolution: 78.4% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 92.1% vs target 86.0%\nAvoid Negative Words: 87.1% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 91.6% vs target 93.0%\nTransfers: 9.5% vs target 6.0%\nAverage Handle Time: 669s vs target 440s\nHold Time: 34s vs target 30s\nAfter Call Work: 131s vs target 60s\nManaging Emotions: 94.7% vs target 95.0%",
       "managerContext": "",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nBrittney delivered a strong year with performance on track and meaningful progress across her business and APS goals. She exceeded all customer experience metrics, including Overall Experience at 80.0% vs a 75.0% goal, Rep Satisfaction at 89.2% vs an 80.0% goal, and First Call Resolution at 78.4% vs a 70.0% goal. Quality performance was also a highlight, with Overall Sentiment at 91.3% vs an 88.0% goal, Positive Word at 92.1% vs an 86.0% goal, and Avoid Negative Words at 87.1% vs an 83.0% goal. She met every annual APS requirement, including 100% accuracy on Emergency Safety Hazard Calls, 0 ACC substantiated complaints, 0 phishing email clicks, 0 red flag violations, and timely completion of all training and time entries. Her consistency, reliability, and commitment to delivering positive customer experiences reflected strong alignment with APS principles.\nBox 2 - Future Improvement Areas:\nA continued focus on efficiency will help strengthen overall performance, including lowering Average Handle Time of 669 seconds toward the 440 second goal and improving After Call Work, which was 131 seconds against a 60 second goal. It would also be beneficial to reduce transfers, which were 9.5% against a 6.0% goal, to further support customer continuity and minimize handoffs.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -5649,7 +5649,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5674,7 +5674,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 26,
-      "byteLength": 63001
+      "byteLength": 64325
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
