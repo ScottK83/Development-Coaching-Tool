@@ -8941,6 +8941,7 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
 
     const sums = {};
     const counts = {};
+    const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
     let periodsIncluded = 0;
 
     periodKeys.forEach(weekKey => {
@@ -8949,7 +8950,13 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
         if (!employee) return;
 
         periodsIncluded += 1;
+        const surveyTotal = Number.isInteger(parseInt(employee?.surveyTotal, 10))
+            ? parseInt(employee.surveyTotal, 10)
+            : 0;
+
         Object.keys(METRICS_REGISTRY).forEach(metricKey => {
+            if (surveyBackedMetrics.has(metricKey) && surveyTotal <= 0) return;
+
             const value = parseFloat(employee[metricKey]);
             if (Number.isNaN(value)) return;
             sums[metricKey] = (sums[metricKey] || 0) + value;
