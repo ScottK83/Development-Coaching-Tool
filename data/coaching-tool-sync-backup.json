@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-27T15:55:59.483Z",
+  "generatedAt": "2026-02-27T15:56:12.975Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.01",
   "weeklyData": {
@@ -5469,7 +5469,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
+      "byteLength": 125
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
