@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T15:49:00.649Z",
-  "reason": "year-end draft updated",
+  "generatedAt": "2026-02-27T15:49:08.599Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.02.26.99",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4388,130 +4388,7 @@
       "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
-  "ptoTracker": {
-    "selectedAssociate": "Jenifer Henson",
-    "associates": {
-      "Alyssa Dimes": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Angelina Fierro": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Pamela Muhammad": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 26.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Oceane Ingram": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 4,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Precious Johnson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 18.51,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Brittney Carroll": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Caylie Chirumbolo": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 1.65,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Darryn Coley": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 31.17,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ekiecha Brabham": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 6.25,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Jenifer Henson": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Marietta Bernal": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.15,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Ronda Colis": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 2.5,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Scoticia Osborne": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 8.6,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Taylor Colter": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Teena Pokorski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trevor Pedrowski": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0.12,
-        "ptostMaxHours": 40,
-        "entries": []
-      },
-      "Trisha Erb": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": []
-      }
-    }
-  },
+  "ptoTracker": {},
   "yearEndAnnualGoalsStore": {
     "2025::Scoticia Osborne": {
       "safetyGoalAps": {
@@ -5125,6 +5002,176 @@
         "note": ""
       }
     },
+    "2026::Angelina Fierro": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2026::Trevor Pedrowski": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2026::Trisha Erb": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2025::Trisha Erb": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2025::Oceane Ingram": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
     "2026::Darryn Coley": {
       "safetyGoalAps": {
         "status": "met",
@@ -5407,6 +5454,61 @@
       "bonusAmount": "",
       "verbalSummary": ""
     },
+    "2026::Angelina Fierro": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 1s vs target 30s\nOverall Experience: 87.5% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 100.0% vs target 73.0%\nOverall Sentiment: 93.5% vs target 88.0%\nPositive Word: 97.4% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 90.8% vs target 93.0%\nTransfers: 7.7% vs target 6.0%\nAverage Handle Time: 696s vs target 414s\nAfter Call Work: 179s vs target 60s",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2026::Trevor Pedrowski": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 19s vs target 30s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nAvoid Negative Words: 83.3% vs target 83.0%\nReliability: 0.1 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 89.4% vs target 93.0%\nTransfers: 7.5% vs target 6.0%\nAverage Handle Time: 473s vs target 414s\nAfter Call Work: 82s vs target 60s\nFirst Call Resolution: 50.0% vs target 73.0%\nOverall Sentiment: 82.1% vs target 88.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2026::Trisha Erb": {
+      "trackStatus": "on-track",
+      "positivesText": "Schedule Adherence: 93.9% vs target 93.0%\nHold Time: 4s vs target 30s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nOverall Sentiment: 93.3% vs target 88.0%\nPositive Word: 97.6% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Transfers: 9.2% vs target 6.0%\nAverage Handle Time: 664s vs target 414s\nAfter Call Work: 207s vs target 60s\nFirst Call Resolution: 20.0% vs target 73.0%\nManaging Emotions: 94.3% vs target 95.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2025::Trisha Erb": {
+      "trackStatus": "on-track",
+      "positivesText": "Schedule Adherence: 93.8% vs target 93.0%\nHold Time: 2s vs target 30s\nOverall Experience: 90.3% vs target 84.0%\nRep Satisfaction: 94.6% vs target 80.0%\nFirst Call Resolution: 79.5% vs target 70.0%\nOverall Sentiment: 91.5% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Transfers: 23.6% vs target 6.0%\nAverage Handle Time: 543s vs target 440s\nAfter Call Work: 75s vs target 60s\nManaging Emotions: 94.5% vs target 95.0%",
+      "managerContext": "1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nIn 2025 I am most proud of how my confidence and skills have grown. This helps me to be able to educate customers on their rate plans and usage details as well as being able to focus on one call resolution. I have also continued to keep an open and clear line of communication with my Team Leads and Supervisors. Being transparent on areas I need help in helps me be able to be more efficient at my job and be more attentive to customers needs. I am also very grateful to have been invited to participate in the Q3 Insights meeting as well as the 2025 Business Plan Rollout meeting. I was unable to attend the Q3 Insights meeting, but I learned so much by being able to attend the Rollout meeting. I appreciate that my Supervisor continues to see my potential and helps encourage my growth. \n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nAreas that I was able to grow in in 2025 were improving my AHT as well as Avoiding Negative Words. In 2024 my AHT stood at 828.89 seconds and is now at 538 seconds. I intend to continue to improve this as my skills and confidence grow. I also was able to improve on avoiding negative word choices. In 2024 my metrics reflected room for growth at 71% and is now at 87.7%. I am trying daily to focus on how I CAN help, rather than the things I am unable to do.",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nTrisha delivered an on track performance for 2025 and made several meaningful contributions to the team. She exceeded key customer experience goals, including Overall Experience at 90.3% against a goal of 84.0%, Rep Satisfaction at 94.6% against a goal of 80.0%, and First Call Resolution at 79.5% against a goal of 70.0%. Her operational consistency was also strong, with Schedule Adherence at 93.8% against a goal of 93.0% and Hold Time at 2 seconds against a goal of 30 seconds. She demonstrated strong alignment with APS Principles by maintaining open communication, seeking feedback, and showing clear growth in confidence and skill, which supported her ability to educate customers and focus on one call resolution. She also met all annual APS goals, including 100% accuracy on Emergency Safety Hazard Calls, 0 ACC substantiated complaints, and 0 phishing email clicks, reflecting reliability and attention to detail.\n\nBox 2 - Future Improvement Areas:\nTwo areas would benefit from continued focus. First, reducing Transfers, which were 23.6% against a goal of 6.0%, will help strengthen ownership and improve customer continuity. Second, improving efficiency metrics such as Average Handle Time at 543 seconds against a goal of 440 seconds and After Call Work at 75 seconds against a goal of 60 seconds will support stronger balance between quality and productivity.",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2025::Oceane Ingram": {
+      "trackStatus": "off-track",
+      "positivesText": "Schedule Adherence: 94.1% vs target 93.0%\nHold Time: 13s vs target 30s\nOverall Experience: 84.1% vs target 84.0%\nRep Satisfaction: 85.7% vs target 80.0%\nFirst Call Resolution: 77.1% vs target 70.0%\nAvoid Negative Words: 86.9% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Transfers: 22.1% vs target 6.0%\nAverage Handle Time: 466s vs target 440s\nAfter Call Work: 180s vs target 60s\nOverall Sentiment: 86.7% vs target 88.0%\nPositive Word: 76.4% vs target 86.0%\nReliability: 60.9 hrs vs target 16.0 hrs",
+      "managerContext": "Need to add that Oceane did have challenges. Some stemming from calls, attendance, and behaviour. Oceane was placed on a Performance Improvement plan, and she has shown major growth in this area. Add that I know she will continue on having a successful 2026.\n\n\nNEED TO REALLY HAMMER THIS STUFF HOME - THESE ARE HER COMMENTS\n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\n I truly appreciate being a part of thisorganization. As an APS customer service representative, I strive to provideexcellent customer service and satisfaction for our customers. My primary roleat APS is to help and assist our customers to resolve their billing accountproblems, answer any inquiries, and direct them to available resources and todo so with a positive, caring attitude and attention to detail.\n\nIn myemployment journey as a CSR, I am grateful to havehelped so many of our customers. Putting the APS Core Values, such as Integrity& Trust, Respect & Inclusion, and Accountability, into practice eachday has helped me become a better service representative and overall achieveand exceed many of the metrics for 2025.\n\nThereare many aspects of my improvement within my career at APS that I am proud ofthat have helped me leverage the APS Promise and Principles to achieve thesegoals. First and foremost, one of my goals in 2024 was to maintain my adherence. My adherence for 2025 is 94.05%. My second business goal that I have achievedis in excelling my surveys. Throughout this year, I have had 69 customersurveys. Within those surveys, I have maintained 77% in FCR and 86% in advisorsatisfaction, bringing my overall survey score to 84%.\n\nMany ofthe customers I have had the opportunity to help this year have personallyexpressed their gratitude for my respect, patience, empathy, and assistance inresolving their APS billing/account problems. This can be  heardthroughout many of the customer interactions I have daily. For example, acustomer (3656780000 PRATER, JAQUELINE, 11/6/2025, 6:15p.m.) called in, dissatisfied and upset about her budget billingprogram. Throughout the call, I carefully listened to her concerns andcomplaints, remaining respectful, calm, and patient. By using probingquestions, I discovered that her apartment AC unit was likely the source of therecent high demand costs she was seeing on her billing. I explained toJaqueline the details of the APS budget billingprogram . Herfeedback was heartwarming and is as follows: \"You did amazing. When can Iget a survey? I would love to give you a survey. You've spent a tremendousamount of time. You've given me the best customer service. You're patient andkind and I appreciate you\". This is one example of many customerinteractions I have , and I strive to achievethe utmost level of customer satisfaction.\n\nInaddition, as an APS CSR, I endeavorto manage customer emotions, staying away from negative words that could impacta customer's experience during a call. To this end I take time to listen to my customers’ needs and often askquestions, so I may better understand their concerns and requests in order toprovide the best possible solutions. This is why I am proud of my business contribution to my overall sentimentscores, especially my Managing Emotions and Negative Words. For2025,  I achieved a 97% rating forManaging Emotions and 87.1% for Negative Words. One recent customerinteraction shows why I achieved this high rating for my sentiment scores. On11/7/2025 at 4:20p.m., I spoke with customer (4988790000 BENNETT, ELIZABETH)about her disconnection notice. This was an emotional call. While carefullylistening to her financial situation, I picked up on a couple of key details,such as her son needing medical equipment and her jobbeing financially impacted by the government shutdown. For Elizabeth, I wasable to reset her arrangement, send her the E3 form, and direct her to agency assistance. In addition, I notated her account and put her name down on  for customers affected by the federal shutdown. Elizabeth wasgrateful and provided this feedback: \"Thank you. This is such a blessing.You are very helpful, and I appreciate this so much.\" In my day-to-dayinteractions with customers, it's rewarding to be able to make a difference andhelp answer customer questions andresolve their problems.\n\nIam additionally proud of my Hold Time Metric. For 2025, my average Hold Timewas 12 seconds, which is significantly better than the hold time metric forassociates of 30 seconds. This shows that I am at attentive to the customer andattempt to resolve their issues in a timely manner. All these metrics tie in the APSprinciples of customer focus, which helps us put our best foot forward toassisting customers with all their inquiries and concerns related to APS andtheir service with us.\n\nSomeother aspects of my role in 2025 that I am proud of is being promoted toCSR II in September 2025. I have successfullycompleted Phase 3-4 training and passed both of my JPEs (HB/PA). I have also won several contests.  In July I won Week 4 2025Summer BB Advisor Challenge. In addition, I won the HBA weekly contest for Week 2/4, for my utilization of the HBA tool during calls. Lastly, duringAugust and September 2025, I consistently maintained all 9 of my metrics eachweek which led me to win the Achievements award for both months. Furthermore, I have gotten a gold star 9 times this yearfor my 9/9 metrics which shows dedication and determination to excel.\n\nWithouthesitation I can say, that the APS Principles, NavigatingRisk, Succeed Together and Learn and Improve have helped me achieve  my accomplishments. In my position, I have learned and practicedthe principle of Navigating Risk. Aswith all customer service roles, I have had to deal with irate and unhappycustomers. When these customers don’t receive the answer they like, they oftenrequest escalations from supervisors. For these interactions, I try my best tonavigate the risk by first de-escalating the situation and managing customerresistance. In addition, before escalating the call to a supervisor or teamleader, I recommend alternative solutions to their issues and first speak witha team lead to offer potential empowerment decisions. Another principle Ipractice is Succeed Together. I am alwayswilling to work overtime, during holidays, and to cover other coworker shiftsduring their times of illness and/or duty group. In my position, I havewelcomed feedback from my team, peers, trainers, and team leaders.  I have reflected on feedback and havediligently worked to improve my performance and metrics and strive to put intopractice the principle of Learn and Improve. \n\nIhave worked diligently and tried my best to meet the performance metrics andalign myself with the APS Promise and Principles. Throughout our mycareer at APS, I have learned and improved. I am always striving to learn frommy mistakes so that I may be the best associate I can. I know I have room forimprovement and growth and am excited to start the new year to improve myperformance and metrics ratings. My main business goal for 2026 that I willstrive for is to limit my AHT to 440 seconds which is an aspect of the job thatI have struggled with. Another business goal Iwill focus on is to improve my Overall Sentiment scores. At the end of year, I ended up with an Overall Sentiment scoreof 87.1%, which is 0.9% lower than the goal and aPositive Words score of 77.4%. I am confident that Iwill be able to maintain my Overall Sentiment score. Lastly, I will strive to end the year of 2026 with aACW below 60 seconds.\n\nI have placed the APS Principles into practice to uphold our mission to: Serveour customers with safe, reliable, and affordable energy. I strive to help assist each customer with theirquestions and concerns. I am proud of my improvement and growth during 2025 andcannot wait to improve and grow further. I am grateful to be a part ofAPS and make a difference. This is just the beginning for my career here at APS. My dream role inthis company is to be an AutoCAD drafter. This is why I have taken  CAD 100 to help excel in my dream role. I am thankfulof all of the skills and experiences that my current CSR role has given me as a stepping stone to my future. \n\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nThroughout 2025, I experienced meaningful growth and improvements in my role as an APS Customer Service Representative, much of which came from consistent coaching, feedback, and support from my leaders. This is shown throughout my areas of Overall Sentiment and AHT scores. I am truly grateful for this role, as it has allowed me to strengthen both my customer service abilities and my professional development at APS.\n\n \n\nOne major area of growth for me was Overall Sentiment, including improving my Negative Words, Positive Words, and Managing Emotions. During this past summer, I received feedback by one of the team leaders that while I did well in managing emotions, I could elevate my performance by using more intentional positive language and reducing negative phrasing. After discussing this with my team leader, I focused on practicing positive word choice, such as creating a standard greeting and closing statements for each call. In addition, I started to limit my negative word choice and incorporating more positive words and phrases in customer conversations. This is shown in my improvement in my Overall Sentiment scores. For instance, my scores in January were 54.5% Positive Words, 84.4% Negative Words, and 97.6% Managing Emotions which gave me an Overall Sentiment score of 78.9%. After my initial meeting with the team leader in May 2025, my scores had significantly improved specifically in my Positive Words which increased to 87.5% and an Overall Sentiment score of 89.1%. Furthermore, I continued to improve in all my sentiment scores each month proceeding. For example, in October 2025 I maintained a score of 88% in Positive Words, 90.5% in Negative Words, and 98.1% in Managing Emotions which lead me to an Overall Sentiment score of 92.2%. Thus, this shows a constant trend of improving each of my sentiment scores in the right direction. This was done by growing based on the feedback from team leaders to help me manage customer resistance more confidently and staying positive during difficult calls. As a result, by the end of 2025, I achieved a 77.7% score in Positive Words, 97% score in Managing Emotions, an 87.1% score in Negative Words with an Overall Sentiment score of 87.1%, showing clear progress from where I started. Although I am still working to improve my Positive Words score to meet the full sentiment goal of 88% in which I am 0.9% away from, I have seen steady improvement throughout the year due to applying the coaching and feedback I received. Thus, this shows dedication and commitment to continuously improve. I am certain that I will be able to reach 88% goal by December 2025.\n\n \n\nAnother important area of development was my AHT performance. After Phase 3-4 training, my team leaders provided essential feedback that while my customer service was strong, my call efficiency and wrap time needed significant improvement. I had several coaching conversations on strategies like refining my call flow, simplifying explanations, and completing documentation for customer contacts more efficiently and effectively. I applied this feedback consistently and had made a significant impact on my scores. For instance, during May 2025, my AHT score was 699 seconds. After my meetings with the team leaders, I was able to decrease my AHT significantly and in August 2025 by AHT was 354 seconds. This is a 345 second decrease which is almost 50% decrease of my previous score in May. Due to my significant improvement, in September of 2025, I set myself a goal to be under 440 seconds by December 2025 and was on track to meet all my metrics, showing strong progress in both AHT and ACW. Toward the end of the year, during the Seasonal Hold End period starting in October, call volume increased significantly as we handled disconnect-related calls. This was an intense and emotionally heavy period, and I faced challenges maintaining the same flow I had earlier in the summer. I did not prepare myself for this challenging period and thus my AHT worsened. For instance, my AHT in October 2025 was 471 seconds which was 31 seconds above the required goal. While this temporarily impacted my metrics, it also helped me learn how to adapt under pressure and reinforced the importance of the coaching I received about efficiency and time management earlier this year. Even during this stressful period, I continued to apply leader feedback, and it allowed me to remain steady and support our customers through a very difficult season. Sadly, I was unable to reach my goal that I set to be under 440 seconds. I managed to end the year with a AHT score of 469 seconds, which is 29 seconds below the required metric. However, I am confident in my ability to reach 440 seconds by the end of 2025.\n\n \n\nOverall, I believe 2025 was a year of tremendous growth and improvement for me. Through ongoing feedback and support from my team leaders, I strengthened my sentiment scores, improved my call efficiency, and learned how to maintain professionalism and grace even during our busiest and most challenging times. I am grateful for the opportunity to grow in this role and for the foundation it continues to build for my future at APS. I look forward to improving my scores next year so I can focus on providing the best possible customer experience and satisfaction for our customers. ",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nOceane made several meaningful contributions in 2025 and consistently demonstrated strong commitment to customer care, even while overall performance was Off Track. She took great pride in creating positive customer experiences, which was reflected in results such as 84.1% Overall Experience vs the 84.0% goal, 85.7% Rep Satisfaction vs the 80.0% goal, and 77.1% First Call Resolution vs the 70.0% goal. Oceane shared several examples where she used patience, empathy, and careful listening to de-escalate difficult calls and find solutions that truly supported the customer, and that approach aligned strongly with APS Principles. She also exceeded key operational metrics including Schedule Adherence at 94.1% vs the 93.0% goal and Hold Time at 13 seconds vs the 30 second goal, while meeting all APS annual safety and compliance goals with 100% accuracy. In addition, she showed meaningful growth while on a Performance Improvement Plan and demonstrated resilience, willingness to learn, and steady improvement in sentiment through intentional effort. Oceane’s dedication to improving her skills, completing training on time, and actively applying leader feedback showed real progress and positions her well for continued success in 2026.\nBox 2 - Future Improvement Areas:\nContinued focus on call efficiency will be important, including reducing AHT at 466 seconds vs the 440 second goal and lowering ACW at 180 seconds vs the 60 second goal to support overall performance consistency. Strengthening reliability, which ended at 60.9 hours vs the 16.0 hour goal, will also help reinforce the progress she made this year and sustain the momentum she built going into 2026.",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
     "2026::Darryn Coley": {
       "trackStatus": "off-track",
       "positivesText": "Average Handle Time: 391s vs target 426s\nHold Time: 20s vs target 30s\nFirst Call Resolution: 100.0% vs target 73.0%\nAvoid Negative Words: 86.2% vs target 83.0%\nManaging Emotions: 96.5% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
@@ -5436,6 +5538,11 @@
       "itemCount": 1,
       "byteLength": 280
     },
+    "devCoachingTool_cloudSyncShared": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 203
+    },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
       "itemCount": 8,
@@ -5458,13 +5565,13 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 81
+      "itemCount": 4,
+      "byteLength": 101
     },
-    "devCoachingTool_ptoTracker": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 2198
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
@@ -5474,17 +5581,22 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 131
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 20,
-      "byteLength": 8404
+      "itemCount": 25,
+      "byteLength": 10493
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 6957
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -5493,33 +5605,28 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 22,
-      "byteLength": 51425
+      "itemCount": 27,
+      "byteLength": 74306
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
     },
-    "devCoachingTool_trendQueueLegendExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 227
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 16
+      "byteLength": 212
     }
   }
 }
