@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T20:20:40.008Z",
-  "reason": "year-end annual goals updated",
+  "generatedAt": "2026-02-27T20:21:01.245Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.05",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5504,7 +5504,7 @@
       "positivesText": "Hold Time: 27s vs target 30s\nRep Satisfaction: 83.3% vs target 80.0%\nFirst Call Resolution: 76.7% vs target 70.0%\nAvoid Negative Words: 88.7% vs target 83.0%\nManaging Emotions: 95.8% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.2% vs target 93.0%\nTransfers: 17.9% vs target 6.0%\nAverage Handle Time: 458s vs target 440s\nAfter Call Work: 117s vs target 60s\nOverall Experience: 83.3% vs target 84.0%\nOverall Sentiment: 86.0% vs target 88.0%",
       "managerContext": "",
-      "copilotResponse": "",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nEkiecha delivered several strong contributions throughout the year, even with an overall Off Track performance classification. She consistently exceeded multiple key targets, including Hold Time at 27s vs the 30s goal, Rep Satisfaction at 83.3% vs the 80.0% goal, and First Call Resolution at 76.7% vs the 70.0% goal. Her strengths in call quality were also clear, with Avoid Negative Words at 88.7% vs the 83.0% goal and Managing Emotions at 95.8% vs the 95.0% goal. Ekiecha also met all APS annual goals, including perfect accuracy on Emergency Safety Hazard calls, no substantiated complaints, no phishing email clicks, and all required training and time entries completed on time. These accomplishments reflected a strong commitment to customer experience, policy adherence, and APS principles of safety and reliability.\nBox 2 - Future Improvement Areas:\nFor future growth, Ekiecha would benefit from improving operational consistency, specifically reducing transfer rates, which were 17.9% vs the 6.0% goal, and lowering After Call Work, which averaged 117s vs the 60s goal. Strengthening these areas would help enhance overall efficiency and bring performance more fully in line with year-end expectations.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -5649,7 +5649,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 132
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5674,7 +5674,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 26,
-      "byteLength": 64325
+      "byteLength": 65577
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
