@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.95'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.96'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -8847,6 +8847,12 @@ function renderCoachingPriorityQueue() {
         });
     });
 
+    trendPrioritySnapshot = {
+        queue,
+        buckets,
+        employeeNamesCount: employeeNames.length
+    };
+
     queue.coachNow.sort((a, b) => b.score - a.score);
     queue.recognizeNow.sort((a, b) => b.score - a.score);
     queue.watchlist.sort((a, b) => b.score - a.score);
@@ -9257,7 +9263,8 @@ function renderSupervisorIntelligence() {
 }
 
 let trendIntelligenceListenersAttached = false;
-let trendIntelligenceFocusMode = false;
+let trendIntelligenceFocusMode = true;
+let trendPrioritySnapshot = null;
 
 function setTrendFocusMode(enabled) {
     trendIntelligenceFocusMode = Boolean(enabled);
@@ -9267,25 +9274,71 @@ function setTrendFocusMode(enabled) {
     }
 
     const secondarySectionIds = [
+        'trendIntelligenceOutput',
         'trendVisualizationsContainer',
         'recognitionIntelligenceOutput',
+        'coachingImpactTrackerPanel',
         'coachingLoadOutput',
         'coachingPriorityQueueOutput',
         'complianceAlertsOutput'
     ];
 
     secondarySectionIds.forEach(id => {
-        const inner = document.getElementById(id);
-        const card = inner?.closest('div[style*="border: 1px solid #cfe1ff"]');
+        const element = document.getElementById(id);
+        if (!element) return;
+        const card = id === 'coachingImpactTrackerPanel'
+            ? element
+            : element.closest('div[style*="border: 1px solid #cfe1ff"]');
         if (card) {
             card.style.display = trendIntelligenceFocusMode ? 'none' : 'block';
         }
     });
 
-    const impactPanel = document.getElementById('coachingImpactTrackerPanel');
-    if (impactPanel) {
-        impactPanel.style.display = 'block';
+    const simplePanel = document.getElementById('trendSimpleViewOutput');
+    if (simplePanel) {
+        simplePanel.style.display = 'block';
     }
+}
+
+function renderTrendSimpleView() {
+    const container = document.getElementById('trendSimpleViewOutput');
+    if (!container) return;
+
+    const snapshot = trendPrioritySnapshot;
+    if (!snapshot) {
+        container.innerHTML = '<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Simple View is waiting for trend data. Click Refresh Analysis.</div>';
+        return;
+    }
+
+    const topCoach = (snapshot.queue?.coachNow || []).slice(0, 3);
+    const topRecognize = (snapshot.queue?.recognizeNow || []).slice(0, 2);
+    const modeLabel = snapshot.buckets?.descriptor?.label || 'Current comparison window';
+    const scoredCount = snapshot.employeeNamesCount || 0;
+
+    const coachHtml = topCoach.length
+        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${entry.name}</strong> — ${entry.reason}</li>`).join('')
+        : '<li>No urgent coaching interventions this cycle.</li>';
+
+    const recognizeHtml = topRecognize.length
+        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${entry.name}</strong> — ${entry.reason}</li>`).join('')
+        : '<li>No standout recognition callouts this cycle.</li>';
+
+    container.innerHTML = `
+        <div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
+            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">🧭 Simple View — This Week’s Priorities</div>
+            <div style="color: #546e7a; font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="padding: 10px; border-radius: 6px; background: #fff0f0; border: 1px solid #f3c9c9;">
+                    <div style="font-weight: 700; color: #b71c1c; margin-bottom: 6px;">Coach First (Top 3)</div>
+                    <ul style="margin: 0; padding-left: 18px; color: #333;">${coachHtml}</ul>
+                </div>
+                <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
+                    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">Recognize Now (Top 2)</div>
+                    <ul style="margin: 0; padding-left: 18px; color: #333;">${recognizeHtml}</ul>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function getTrendSelectedEmployee() {
@@ -9736,6 +9789,10 @@ function renderTrendIntelligence() {
     
     if (keys.length < 2) {
         container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 weeks of data to see trends.</div>';
+        const simpleContainer = document.getElementById('trendSimpleViewOutput');
+        if (simpleContainer) {
+            simpleContainer.innerHTML = '<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Upload at least 2 weeks of data to unlock Simple View priorities.</div>';
+        }
         if (modeIndicator) modeIndicator.style.display = 'none';
         return;
     }
@@ -9763,6 +9820,7 @@ function renderTrendIntelligence() {
     }
 
     renderCoachingPriorityQueue();
+    renderTrendSimpleView();
     renderCoachingImpactTracker();
 }
 
