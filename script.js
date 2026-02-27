@@ -2169,6 +2169,7 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
     document.getElementById('pasteDataTextarea')?.addEventListener('input', handlePasteDataTextareaInput);
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
+    document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
 }
 
@@ -2616,6 +2617,79 @@ function handleLoadPastedDataClick() {
     } catch (error) {
         console.error('Error parsing pasted data:', error);
         alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
+    }
+}
+
+function handleTestPastedDataClick() {
+    const pastedData = document.getElementById('pasteDataTextarea')?.value || '';
+    const weekEndingDate = document.getElementById('pasteWeekEndingDate')?.value;
+    const preview = document.getElementById('dataValidationPreview');
+
+    const validation = validatePastedData(pastedData);
+    if (!validation.valid) {
+        alert('⚠️ Data validation failed:\n\n' + validation.issues.join('\n'));
+        return;
+    }
+
+    if (!pastedData.trim()) {
+        alert('⚠️ Please paste data first');
+        return;
+    }
+
+    let endDate = weekEndingDate;
+    let startDate = '';
+
+    if (weekEndingDate) {
+        const endDateObj = new Date(weekEndingDate);
+        endDateObj.setDate(endDateObj.getDate() - 6);
+        startDate = endDateObj.toISOString().split('T')[0];
+    } else {
+        const today = new Date();
+        endDate = today.toISOString().split('T')[0];
+        const startDateObj = new Date(today);
+        startDateObj.setDate(startDateObj.getDate() - 6);
+        startDate = startDateObj.toISOString().split('T')[0];
+    }
+
+    try {
+        const employees = parsePastedData(pastedData, startDate, endDate);
+        if (!employees.length) {
+            alert('ℹ️ Test parse complete, but no valid employee rows were detected.');
+            return;
+        }
+
+        const metricsChecked = ['scheduleAdherence', 'overallExperience', 'overallExperienceTop3', 'overallSentiment', 'fcr', 'aht', 'acw', 'reliability'];
+        const metricCoverage = metricsChecked
+            .map(metricKey => {
+                const hasValueCount = employees.filter(emp => {
+                    const value = emp?.[metricKey];
+                    return value !== '' && value !== null && value !== undefined && !Number.isNaN(parseFloat(value));
+                }).length;
+                return `${METRICS_REGISTRY[metricKey]?.label || metricKey}: ${hasValueCount}/${employees.length}`;
+            })
+            .join('<br>');
+
+        const sampleNames = employees.slice(0, 5).map(emp => emp.name).join(', ');
+        const dateLabel = weekEndingDate ? `${startDate} to ${endDate}` : `${startDate} to ${endDate} (auto test range)`;
+
+        if (preview) {
+            preview.style.display = 'block';
+            preview.style.background = '#d4edda';
+            preview.style.border = '2px solid #28a745';
+            preview.style.color = '#155724';
+            preview.innerHTML = `
+                ✅ <strong>Test Upload Passed (No Save Performed)</strong><br>
+                📅 Parse window: ${dateLabel}<br>
+                👥 Employees parsed: ${employees.length}<br>
+                👤 Sample: ${sampleNames}${employees.length > 5 ? '...' : ''}<br>
+                <div style="margin-top: 8px;"><strong>Metric coverage:</strong><br>${metricCoverage}</div>
+            `;
+        }
+
+        showToast(`✅ Test Upload passed for ${employees.length} employees (no data saved).`, 4500);
+    } catch (error) {
+        console.error('Error in test parse:', error);
+        alert(`⚠️ Test Upload failed: ${error.message}\n\nNo data was saved.`);
     }
 }
 
