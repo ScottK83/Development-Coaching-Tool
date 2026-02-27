@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-27T15:03:28.838Z",
+  "generatedAt": "2026-02-27T15:03:40.860Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.99",
   "weeklyData": {
@@ -5205,6 +5205,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Darryn Coley": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5485,6 +5519,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2025::Darryn Coley": {
+      "trackStatus": "off-track",
+      "positivesText": "Average Handle Time: 380s vs target 440s\nHold Time: 10s vs target 30s\nFirst Call Resolution: 80.0% vs target 70.0%\nAvoid Negative Words: 89.1% vs target 83.0%\nManaging Emotions: 97.5% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 88.5% vs target 93.0%\nTransfers: 27.9% vs target 6.0%\nAfter Call Work: 128s vs target 60s\nOverall Experience: 60.0% vs target 75.0%\nRep Satisfaction: 73.3% vs target 80.0%\nOverall Sentiment: 87.1% vs target 88.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5531,7 +5576,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
+      "byteLength": 125
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5540,8 +5585,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 24,
-      "byteLength": 10076
+      "itemCount": 25,
+      "byteLength": 10493
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5560,8 +5605,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 26,
-      "byteLength": 73417
+      "itemCount": 27,
+      "byteLength": 74306
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
