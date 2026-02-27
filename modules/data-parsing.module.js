@@ -280,7 +280,7 @@
         
         const colMap = {
             name: findColumnIndex('name'),
-            totalCalls: findColumnIndex(['totalcalls', 'answered']),
+            totalCalls: findColumnIndex(['totalcalls', 'answered', 'total calls answered', 'calls answered']),
             transfers: findColumnIndex(['transfers', 'transfer %']),
             transfersCount: findColumnIndex(['number of transfers']),
             aht: findColumnIndex(['aht', 'average handle']),
@@ -294,7 +294,8 @@
             sentiment: findColumnIndex(['overall sentiment']),
             fcr: findColumnIndex(['fcr', 'first call resolution']),
             cxRepOverall: findColumnIndex(['rep satisfaction', 'rep sat', 'repsat']),
-            overallExperience: findColumnIndex(['overall experience', 'overallexperience']),
+            overallExperience: findColumnIndex(['overall experience', 'overallexperience', 'oe top2', 'oe top 2', 'top2']),
+            overallExperienceTop3: findColumnIndex(['oe top3', 'oe top 3', 'overall experience top3', 'overall experience top 3']),
             surveyTotal: findColumnIndex(['oe survey', 'survey total']),
             reliability: findColumnIndex(['reliability', 'reliability hours'])
         };
@@ -341,13 +342,11 @@
             
             const totalCallsRaw = getCell(cells, colMap.totalCalls);
             const parsedTotalCalls = parseInt(totalCallsRaw, 10);
-            if (!Number.isInteger(parsedTotalCalls)) {
-                continue;
-            }
-            
             const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
             const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
-            let totalCalls = parsedTotalCalls;
+            const totalCalls = Number.isInteger(parsedTotalCalls)
+                ? parsedTotalCalls
+                : (surveyTotal > 0 ? surveyTotal : 0);
             
             const employeeData = {
                 name: displayName,
@@ -356,6 +355,7 @@
                 cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
                 fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
                 overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
+                overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
                 transfers: parsePercentage(getCell(cells, colMap.transfers)) || 0,
                 transfersCount: parseInt(getCell(cells, colMap.transfersCount)) || 0,
                 aht: parseSeconds(getCell(cells, colMap.aht)) || '',

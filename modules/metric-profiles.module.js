@@ -19,9 +19,15 @@
         2026: {
             scheduleAdherence: { type: 'min', value: 93 },
             cxRepOverall: { type: 'min', value: 82 },
+            fcr: { type: 'min', value: 73 },
+            overallExperience: { type: 'min', value: 75 },
             transfers: { type: 'max', value: 6 },
             overallSentiment: { type: 'min', value: 88 },
-            aht: { type: 'max', value: 414 },
+            positiveWord: { type: 'min', value: 86 },
+            negativeWord: { type: 'min', value: 83 },
+            managingEmotions: { type: 'min', value: 95 },
+            aht: { type: 'max', value: 426 },
+            acw: { type: 'max', value: 60 },
             reliability: { type: 'max', value: 18 }
         }
     };

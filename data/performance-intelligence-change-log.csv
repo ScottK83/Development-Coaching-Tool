@@ -1,0 +1,12 @@
+Date,Version,Area,Change,Reference Notes
+2026-02-26,2026.02.26.97,Trend Intelligence,"Added one-click 'Copy This Week Plan' (Top 3 coach + Top 2 recognize) from Simple View snapshot.",Keeps weekly priorities copy-ready for supervisor planning and follow-up
+2026-02-26,2026.02.26.97,On/Off Tracker,"Separated Annual Goal display from 3-tier scoring thresholds in On/Off output.",Prevents confusion between review goals and rating tiers
+2026-02-26,2026.02.26.97,On/Off Tracker,"Updated labels to 'Annual Goal' and '3-Tier Scoring Legend'.",Clarifies review KPI vs tier scoring model
+2026-02-26,2026.02.26.96,Trend Intelligence,"Defaulted Focus Mode ON and added Simple View (Top 3 coach / Top 2 recognize).",Reduced dashboard noise and improved decision speed
+2026-02-26,2026.02.26.95,Trend Intelligence,"Added explicit 'why coach now' rationale in Weekly Priority Queue.",Improves supervisor explainability and coaching confidence
+2026-02-26,2026.02.26.94,Trend Intelligence,"Added defensive coaching history resolver fallback for production runtime safety.",Resolved getCoachingHistoryForEmployee undefined runtime issue
+2026-02-26,2026.02.26.93,Trend Intelligence,"Improved CTA hierarchy with sticky primary action bar.",Raised visibility of primary coaching action
+2026-02-26,2026.02.26.92,Coaching UX,"Removed redundant executive summary coaching email CTA.",Reduced duplication and visual clutter
+2026-02-26,2026.02.26.91,Trend Intelligence,"Added Focus Mode, AI Explain, AI 30-Day Goal, and Coaching Impact Tracker.",Embedded AI actions and progress visibility into trend workflow
+2026-02-26,2026.02.26.90,Trend Intelligence,"Added Intelligence Snapshot panel + copy snapshot action.",Made trend intelligence easier to share in notes/email
+2026-02-26,2026.02.26.89,Analysis Engine,"Upgraded trend analysis with momentum/volatility/classification and strategic coaching sections.",Core Performance Intelligence enhancement while preserving existing workflow

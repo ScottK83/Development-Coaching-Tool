@@ -1,0 +1,14 @@
+Metric Key,Metric Label,Annual Goal Type,Annual Goal,Score 3 Threshold,Score 2 Threshold,Score 1 Rule,Used In On/Off Scoring
+scheduleAdherence,Schedule Adherence,min,93,>=94.5,>=92.5,<92.5,Yes
+cxRepOverall,Rep Satisfaction,min,82,>=84,>=81.5,<81.5,Yes
+overallExperience,Overall Experience (OE Top2),min,75,N/A,N/A,N/A,No (tracked in trends/year-end)
+overallSentiment,Overall Sentiment,min,88,>=90,>=87.5,<87.5,Yes
+positiveWord,Positive Words,min,86,N/A,N/A,N/A,No (sentiment component)
+negativeWord,Avoiding Negative Words,min,83,N/A,N/A,N/A,No (sentiment component)
+managingEmotions,Managing Emotions,min,95,N/A,N/A,N/A,No (sentiment component)
+aht,Average Handle Time,max,426,<=414,<=434,>434,Yes
+acw,After Call Work,max,60,N/A,N/A,N/A,No (AHT component)
+reliability,Reliability,max,18,<=18,<=24,>24,Yes
+transfers,Transfers,max,6,<=4,<=6,>6,No (tracked in trends/year-end)
+fcr,First Call Resolution,min,73,N/A,N/A,N/A,No (tracked in trends/year-end)
+overallExperienceTop3,Overall Experience (OE Top3),min,84,N/A,N/A,N/A,Reference only

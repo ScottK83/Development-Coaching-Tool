@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.96'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.98'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -234,9 +234,15 @@ const YEAR_END_TARGETS_BY_YEAR = {
     2026: {
         scheduleAdherence: { type: 'min', value: 93 },
         cxRepOverall: { type: 'min', value: 82 },
+        fcr: { type: 'min', value: 73 },
+        overallExperience: { type: 'min', value: 75 },
         transfers: { type: 'max', value: 6 },
         overallSentiment: { type: 'min', value: 88 },
-        aht: { type: 'max', value: 414 },
+        positiveWord: { type: 'min', value: 86 },
+        negativeWord: { type: 'min', value: 83 },
+        managingEmotions: { type: 'min', value: 95 },
+        aht: { type: 'max', value: 426 },
+        acw: { type: 'max', value: 60 },
         reliability: { type: 'max', value: 18 }
     }
 };
@@ -384,7 +390,7 @@ const METRICS_REGISTRY = {
         key: 'overallExperience',
         label: 'Overall Experience',
         icon: '⭐',
-        target: { type: 'min', value: 84 },
+        target: { type: 'min', value: 75 },
         unit: '%',
         columnIndex: 17,
         chartType: null,
@@ -461,7 +467,7 @@ const METRICS_REGISTRY = {
         key: 'aht',
         label: 'Average Handle Time',
         icon: '⏱️',
-        target: { type: 'max', value: 432 },
+        target: { type: 'max', value: 426 },
         unit: 'sec',
         columnIndex: 4,
         chartType: 'line',
@@ -3115,6 +3121,7 @@ function initializeRepoSyncControls() {
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
     const syncNowBtn = document.getElementById('syncNowBtn');
     const forceRestoreBtn = document.getElementById('forceRestoreRepoBtn');
+    const exportLedgerBtn = document.getElementById('exportIntelligenceLedgerXlsxBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
     const openPtoExcelBtn = document.getElementById('openPtoExcelBtn');
 
@@ -3175,6 +3182,14 @@ function initializeRepoSyncControls() {
         openPtoExcelBtn.addEventListener('click', () => openRepoExcelFile('PTO-Tracking.xlsx'));
         openPtoExcelBtn.dataset.bound = 'true';
     }
+    if (exportLedgerBtn && !exportLedgerBtn.dataset.bound) {
+        exportLedgerBtn.addEventListener('click', async () => {
+            await runWithButtonBusyState(exportLedgerBtn, '⏳ Exporting...', async () => {
+                await exportIntelligenceLedgerWorkbook();
+            });
+        });
+        exportLedgerBtn.dataset.bound = 'true';
+    }
     if (!syncEndpointInput.dataset.bound) {
         syncEndpointInput.addEventListener('change', () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
@@ -3216,6 +3231,66 @@ function openRepoExcelFile(fileName) {
     }
 
     window.open(fileUrl, '_blank');
+}
+
+async function fetchReferenceCsvFromWorkspaceOrRepo(fileName) {
+    const origin = window?.location?.origin;
+    const cacheBust = `cb=${Date.now()}`;
+    const candidates = [];
+
+    if (origin && origin !== 'null') {
+        candidates.push(`${origin}/data/${fileName}?${cacheBust}`);
+    }
+
+    candidates.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/${encodeURIComponent(fileName)}?${cacheBust}`);
+
+    for (const url of candidates) {
+        try {
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) continue;
+            const text = await response.text();
+            if (String(text || '').trim()) return text;
+        } catch (error) {
+            // Try next candidate
+        }
+    }
+
+    throw new Error(`Unable to load ${fileName}`);
+}
+
+function appendCsvAsSheet(workbook, csvText, sheetName) {
+    const parsedWorkbook = XLSX.read(csvText, { type: 'string' });
+    const firstSheetName = parsedWorkbook.SheetNames?.[0];
+    if (!firstSheetName) {
+        throw new Error(`CSV could not be parsed for sheet: ${sheetName}`);
+    }
+
+    const sheet = parsedWorkbook.Sheets[firstSheetName];
+    XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+}
+
+async function exportIntelligenceLedgerWorkbook() {
+    if (typeof XLSX === 'undefined') {
+        showToast('⚠️ XLSX library not loaded. Refresh and try again.', 3500);
+        return;
+    }
+
+    try {
+        const changeLogCsv = await fetchReferenceCsvFromWorkspaceOrRepo('performance-intelligence-change-log.csv');
+        const metrics2026Csv = await fetchReferenceCsvFromWorkspaceOrRepo('performance-intelligence-metrics-2026.csv');
+
+        const workbook = XLSX.utils.book_new();
+        appendCsvAsSheet(workbook, changeLogCsv, 'Change Log');
+        appendCsvAsSheet(workbook, metrics2026Csv, 'Metrics 2026');
+
+        const dateStamp = new Date().toISOString().split('T')[0];
+        const fileName = `Performance-Intelligence-Ledger-${dateStamp}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+        showToast('✅ Intelligence ledger exported to .xlsx', 3000);
+    } catch (error) {
+        console.error('Error exporting intelligence ledger workbook:', error);
+        showToast(`⚠️ Could not export ledger: ${error.message}`, 4500);
+    }
 }
 
 function getCallListeningSyncConfigFromUI() {
@@ -5301,6 +5376,12 @@ function displayMetricsPreview(employeeName, weekKey) {
         if (target !== undefined && targetType) {
             const targetSymbol = targetType === 'min' ? '≥' : '≤';
             targetHint = ` (Target: ${targetSymbol} ${target}${metric.unit})`;
+            if (metric.key === 'overallSentiment') {
+                targetHint += ' [PosWords 86% + AvoidNeg 83% + ManageEmotions 95%]';
+            }
+            if (metric.key === 'aht') {
+                targetHint += ' [AHT = ACW + Talk + Hold]';
+            }
         }
         
         html += `
@@ -9341,6 +9422,88 @@ function renderTrendSimpleView() {
     `;
 }
 
+function buildTrendThisWeekPlanText() {
+    const snapshot = trendPrioritySnapshot;
+    if (!snapshot) return '';
+
+    const topCoach = (snapshot.queue?.coachNow || []).slice(0, 3);
+    const topRecognize = (snapshot.queue?.recognizeNow || []).slice(0, 2);
+    const modeLabel = snapshot.buckets?.descriptor?.label || 'Current comparison window';
+    const scoredCount = snapshot.employeeNamesCount || 0;
+
+    const lines = [
+        'This Week Plan',
+        `${modeLabel} • Team Members Scored: ${scoredCount}`,
+        '',
+        'Coach First (Top 3)'
+    ];
+
+    if (topCoach.length) {
+        topCoach.forEach((entry, index) => {
+            const whyText = Array.isArray(entry.why) && entry.why.length
+                ? ` | Why: ${entry.why.slice(0, 3).join(' • ')}`
+                : '';
+            lines.push(`[ ] ${index + 1}. ${entry.name} — ${entry.reason}${whyText}`);
+        });
+    } else {
+        lines.push('[ ] No urgent coaching interventions this cycle.');
+    }
+
+    lines.push('');
+    lines.push('Recognize Now (Top 2)');
+
+    if (topRecognize.length) {
+        topRecognize.forEach((entry, index) => {
+            const whyText = Array.isArray(entry.why) && entry.why.length
+                ? ` | Why: ${entry.why.slice(0, 3).join(' • ')}`
+                : '';
+            lines.push(`[ ] ${index + 1}. ${entry.name} — ${entry.reason}${whyText}`);
+        });
+    } else {
+        lines.push('[ ] No standout recognition callouts this cycle.');
+    }
+
+    return lines.join('\n');
+}
+
+function copyTrendThisWeekPlan() {
+    if (!trendPrioritySnapshot) {
+        renderCoachingPriorityQueue();
+    }
+
+    const text = buildTrendThisWeekPlanText();
+    if (!text) {
+        showToast('No trend priorities available yet. Click Refresh Analysis first.', 3200);
+        return;
+    }
+
+    const fallbackCopy = () => {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', 'true');
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(area);
+        if (copied) {
+            showToast('✅ This Week Plan copied', 2800);
+        } else {
+            showToast('Unable to copy This Week Plan', 3000);
+        }
+    };
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('✅ This Week Plan copied', 2800))
+            .catch(() => fallbackCopy());
+        return;
+    }
+
+    fallbackCopy();
+}
+
 function getTrendSelectedEmployee() {
     return document.getElementById('trendEmployeeSelector')?.value || '';
 }
@@ -9559,6 +9722,7 @@ function initializeTrendIntelligence() {
         });
 
         document.getElementById('generateTrendCoachingBtn')?.addEventListener('click', generateTrendCoachingEmail);
+        document.getElementById('copyTrendWeekPlanBtn')?.addEventListener('click', copyTrendThisWeekPlan);
         document.getElementById('trendFocusModeBtn')?.addEventListener('click', () => {
             setTrendFocusMode(!trendIntelligenceFocusMode);
         });
@@ -11680,8 +11844,9 @@ function resolveMetricTrendsGoalText(metricKey, formatKey, reviewYear, periodMet
 }
 
 function resolveOnOffGoalText(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) {
-    if (goalSource === 'metric-trends') {
-        return resolveMetricTrendsGoalText(targetMetricKey, formatKey, reviewYear, periodMetadata);
+    const annualGoalText = resolveMetricTrendsGoalText(targetMetricKey, formatKey, reviewYear, periodMetadata);
+    if (annualGoalText !== 'N/A') {
+        return annualGoalText;
     }
     return resolveOnOffBandGoalText(bands, bandMetricKey, formatKey);
 }
@@ -11703,7 +11868,7 @@ function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetada
         {
             label: 'Overall Sentiment',
             valueText: result.values.sentiment === null ? 'N/A' : formatMetricDisplay('overallSentiment', result.values.sentiment),
-            goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
+            goalText: `${resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata)} (PosWords 86% + AvoidNeg 83% + ManageEmotions 95%)`,
             score: result.scores.sentiment
         },
         {
@@ -11784,7 +11949,7 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(),
                     <tr>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
-                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Goal</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Annual Goal</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
                     </tr>
                 </thead>
@@ -11879,7 +12044,7 @@ function buildOnOffLegendMetricCardHtml(metric, bands) {
 
 function buildOnOffLegendContainerHtml(reviewYear, cardsHtml, sourceLabel, usingFallback) {
     return `
-        <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">🎯 On/Off Tracker Goal Legend (${reviewYear || 'N/A'})</div>
+        <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">🎯 On/Off Tracker 3-Tier Scoring Legend (${reviewYear || 'N/A'})</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 8px;">${cardsHtml}</div>
         <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track ≤ 1.79 · On Track/Successful 1.80–2.79 · On Track/Exceptional ≥ 2.80</div>
         <div style="font-size: 0.78em; color: #777; margin-top: 3px;">Source: ${sourceLabel}${usingFallback ? ' (used when selected year has no rating profile)' : ''}</div>
