@@ -8905,6 +8905,19 @@ function renderCoachingPriorityQueue() {
     const container = document.getElementById('coachingPriorityQueueOutput');
     if (!container) return;
 
+    const legendStorageKey = STORAGE_PREFIX + 'trendQueueLegendExpanded';
+    let isLegendExpanded = true;
+    try {
+        const storedLegendState = localStorage.getItem(legendStorageKey);
+        if (storedLegendState === '0' || storedLegendState === 'false') {
+            isLegendExpanded = false;
+        } else if (storedLegendState === '1' || storedLegendState === 'true') {
+            isLegendExpanded = true;
+        }
+    } catch {
+        // keep default open state
+    }
+
     const keys = getWeeklyKeysSorted();
     if (keys.length < 2) {
         container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 periods of data to generate a priority queue.</div>';
@@ -8984,7 +8997,7 @@ function renderCoachingPriorityQueue() {
     );
 
     html += `
-        <details style="margin-top: 10px; border: 1px solid #d9e2ef; border-radius: 6px; background: #f7f9fc; color: #455a64; font-size: 0.88em; line-height: 1.45;">
+        <details id="trendQueueLegend" ${isLegendExpanded ? 'open' : ''} style="margin-top: 10px; border: 1px solid #d9e2ef; border-radius: 6px; background: #f7f9fc; color: #455a64; font-size: 0.88em; line-height: 1.45;">
             <summary style="cursor: pointer; padding: 10px; font-weight: 700; color: #2f4f87;">📘 Scoring Legend (Show/Hide)</summary>
             <div style="padding: 0 10px 10px 10px;">
                 <div><strong>Coach Now:</strong> +14 below target, +10/+6/+3 severity, +12 significant drop, +12 negative coaching impact.</div>
@@ -8996,6 +9009,17 @@ function renderCoachingPriorityQueue() {
     `;
 
     container.innerHTML = html;
+
+    const legendDetails = document.getElementById('trendQueueLegend');
+    if (legendDetails) {
+        legendDetails.addEventListener('toggle', () => {
+            try {
+                localStorage.setItem(legendStorageKey, legendDetails.open ? '1' : '0');
+            } catch {
+                // ignore storage write failures
+            }
+        });
+    }
 }
 
 function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
