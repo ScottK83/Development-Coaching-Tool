@@ -5463,10 +5463,17 @@ function displayMetricsPreview(employeeName, weekKey) {
     // Generate HTML for each metric with target values like call center averages
     let html = '';
     metricsToPreview.forEach(metric => {
-        const value = employee[metric.key] !== undefined ? employee[metric.key] : '';
+        const rawValue = employee[metric.key] !== undefined ? employee[metric.key] : '';
         const registryMetric = METRICS_REGISTRY[metric.key];
         const target = registryMetric?.target?.value;
         const targetType = registryMetric?.target?.type;
+        const isWholeNumberMetric = metric.key === 'acw' || metric.key === 'holdTime';
+
+        let value = rawValue;
+        if (isWholeNumberMetric && rawValue !== '' && rawValue !== null && rawValue !== undefined) {
+            const numericValue = parseFloat(rawValue);
+            value = Number.isFinite(numericValue) ? Math.round(numericValue) : rawValue;
+        }
         
         // Build target hint like call center averages do
         let targetHint = '';
@@ -5474,7 +5481,7 @@ function displayMetricsPreview(employeeName, weekKey) {
             const targetSymbol = targetType === 'min' ? '≥' : '≤';
             targetHint = ` (Target: ${targetSymbol} ${target}${metric.unit})`;
             if (metric.key === 'overallSentiment') {
-                targetHint += ' [PosWords 86% + AvoidNeg 83% + ManageEmotions 95%]';
+                targetHint = ' (Target 88%)';
             }
             if (metric.key === 'aht') {
                 targetHint += ' [AHT = ACW + Talk + Hold]';
@@ -5484,7 +5491,7 @@ function displayMetricsPreview(employeeName, weekKey) {
         html += `
             <div>
                 <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit})${targetHint}:</label>
-                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="0.01" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="${isWholeNumberMetric ? '1' : '0.01'}" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
         `;
     });
