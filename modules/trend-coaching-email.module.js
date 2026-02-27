@@ -318,6 +318,11 @@ SUBJECT LINE:
 
 Please generate the coaching email now with HIGH ENERGY celebrating our top performers!`;
 
+        if (typeof context.openCopilotWithPrompt === 'function') {
+            context.openCopilotWithPrompt(copilotPrompt, 'Group Coaching Email');
+            return;
+        }
+
         navigator.clipboard.writeText(copilotPrompt).then(() => {
             alert('✅ Group email prompt copied!\n\nCtrl+V and Enter to paste into Copilot.');
             window.open('https://copilot.microsoft.com', '_blank');
