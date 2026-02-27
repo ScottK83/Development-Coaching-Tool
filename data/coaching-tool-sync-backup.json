@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T15:49:25.787Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-27T15:49:28.406Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.26.99",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5386,7 +5386,7 @@
       "verbalSummary": ""
     },
     "2026::Alyssa Dimes": {
-      "trackStatus": "on-track",
+      "trackStatus": "on-track-successful",
       "positivesText": "Transfers: 5.7% vs target 6.0%\nAfter Call Work: 50s vs target 60s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 75.0% vs target 73.0%\nOverall Sentiment: 94.1% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.3% vs target 93.0%\nAverage Handle Time: 592s vs target 414s\nHold Time: 115s vs target 30s",
       "managerContext": "",
@@ -5469,7 +5469,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 125
+      "byteLength": 142
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5494,7 +5494,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 22,
-      "byteLength": 51425
+      "byteLength": 51436
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
