@@ -86,14 +86,6 @@
         return `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
     }
 
-    function openMailtoDraft(subject, bodyText) {
-        const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
-        document.body.appendChild(mailtoLink);
-        mailtoLink.click();
-        document.body.removeChild(mailtoLink);
-    }
-
     function generateOutlookDraftFromCopilot(options = {}) {
         const bodyText = String(options.bodyText || '').trim();
         const showToast = typeof options.showToast === 'function' ? options.showToast : () => {};
@@ -112,7 +104,11 @@
         });
 
         try {
-            openMailtoDraft(subject, bodyText);
+            const openDraft = window.DevCoachModules?.sharedUtils?.openMailtoDraft;
+            if (typeof openDraft !== 'function') {
+                throw new Error('Shared mailto utility unavailable');
+            }
+            openDraft(subject, bodyText);
             showToast('📧 Outlook draft opened', 2500);
             return { ok: true, subject };
         } catch (error) {
@@ -133,7 +129,6 @@
         resolveOutlookEndDate,
         resolveOutlookPreferredName,
         buildOutlookSubject,
-        openMailtoDraft,
         generateOutlookDraftFromCopilot
     };
 })();

@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.87'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.88'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -9606,106 +9606,46 @@ function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
 // ============================================
 
 function renderEmployeesList() {
-    const container = document.getElementById('employeesList');
-    
-    // Get all unique employees from uploaded weekly data
-    const employeeSet = new Set();
-    Object.values(weeklyData).forEach(week => {
-        if (week && week.employees) {
-            week.employees.forEach(emp => {
-                employeeSet.add(emp.name);
-            });
+    const moduleApi = window.DevCoachModules?.employeeList;
+    if (!moduleApi?.renderEmployeesList) {
+        const container = document.getElementById('employeesList');
+        if (container) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Employee List module not available. Refresh and try again.</div>';
         }
-    });
-    
-    const employees = Array.from(employeeSet).sort();
-    
-    if (employees.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
         return;
     }
-    
-    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
-    
-    container.innerHTML = `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` + 
-    employees.map(name => {
-        const currentPreferred = preferredNames[name] || getEmployeeNickname(name);
-        const defaultValue = preferredNames[name] || '';
-        
-        return `
-        <div style="padding: 15px; border-bottom: 1px solid #eee; background: #fafafa;">
-            <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
-                <div style="flex: 1;">
-                    <strong style="color: #6a1b9a;">${name}</strong>
-                    <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Weekly Data Uploads</div>
-                </div>
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
-                    <input type="text" id="prefName_${escapeHtml(name)}" value="${defaultValue}" placeholder="${getEmployeeNickname(name)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
-                    <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${currentPreferred}</strong></div>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="saveEmployeeNameBtn" data-name="${escapeHtml(name)}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
-                    <button class="deleteEmployeeBtn" data-name="${escapeHtml(name)}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">🗑️ Delete</button>
-                </div>
-            </div>
-        </div>
-    `}).join('');
-    
-    // Add event delegation for employee management
-    container.addEventListener('click', (e) => {
-        if (e.target.classList.contains('saveEmployeeNameBtn')) {
-            saveEmployeePreferredName(e.target.dataset.name);
-        } else if (e.target.classList.contains('deleteEmployeeBtn')) {
-            deleteEmployee(e.target.dataset.name);
-        }
+
+    moduleApi.renderEmployeesList({
+        container: document.getElementById('employeesList'),
+        weeklyData,
+        storagePrefix: STORAGE_PREFIX,
+        escapeHtml,
+        getEmployeeNickname,
+        onSaveName: saveEmployeePreferredName,
+        onDeleteEmployee: deleteEmployee
     });
 }
 
 function deleteEmployee(employeeName) {
-    if (!confirm(`Are you sure you want to delete "${employeeName}" from ALL weekly and YTD data?\n\nThis will remove them from all uploaded periods and cannot be undone.`)) {
-        return;
-    }
-    
-    // Remove from all weekly data
-    let removedCount = 0;
-    Object.keys(weeklyData).forEach(weekKey => {
-        if (weeklyData[weekKey]?.employees) {
-            const beforeLength = weeklyData[weekKey].employees.length;
-            weeklyData[weekKey].employees = weeklyData[weekKey].employees.filter(emp => emp.name !== employeeName);
-            if (weeklyData[weekKey].employees.length < beforeLength) {
-                removedCount++;
-            }
-        }
-    });
+    const moduleApi = window.DevCoachModules?.employeeList;
+    if (!moduleApi?.deleteEmployee) return;
 
-    Object.keys(ytdData).forEach(periodKey => {
-        if (ytdData[periodKey]?.employees) {
-            const beforeLength = ytdData[periodKey].employees.length;
-            ytdData[periodKey].employees = ytdData[periodKey].employees.filter(emp => emp.name !== employeeName);
-            if (ytdData[periodKey].employees.length < beforeLength) {
-                removedCount++;
-            }
+    moduleApi.deleteEmployee(employeeName, {
+        confirmDelete: (message) => confirm(message),
+        weeklyData,
+        ytdData,
+        storagePrefix: STORAGE_PREFIX,
+        saveWeeklyData,
+        saveYtdData,
+        normalizeTeamMembersForExistingWeeks,
+        saveTeamMembers,
+        showToast,
+        onAfterDelete: () => {
+            renderEmployeesList();
+            populateDeleteEmployeeYearOptions();
+            populateTeamMemberSelector();
         }
     });
-    
-    // Save updated data
-    saveWeeklyData();
-    saveYtdData();
-    normalizeTeamMembersForExistingWeeks();
-    saveTeamMembers();
-    
-    // Remove preferred name
-    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
-    delete preferredNames[employeeName];
-    localStorage.setItem(STORAGE_PREFIX + 'employeePreferredNames', JSON.stringify(preferredNames));
-    
-    // Refresh the list
-    renderEmployeesList();
-    populateDeleteEmployeeYearOptions();
-    populateTeamMemberSelector();
-    
-    showToast(`✅ Deleted "${employeeName}" from ${removedCount} period(s)`, 3000);
 }
 
 

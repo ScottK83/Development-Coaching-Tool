@@ -82,14 +82,6 @@ Requirements:
         return `Call Listening Feedback - ${preferredName}${callDate ? ` - ${callDate}` : ''}`;
     }
 
-    function openMailtoDraft(subject, bodyText) {
-        const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
-        document.body.appendChild(mailtoLink);
-        mailtoLink.click();
-        document.body.removeChild(mailtoLink);
-    }
-
     function generateOutlookDraft(options = {}) {
         const employeeName = String(options.employeeName || '').trim();
         const callDate = String(options.callDate || '').trim();
@@ -104,7 +96,11 @@ Requirements:
         const subject = buildOutlookSubject(employeeName, callDate, options.getEmployeeNickname);
 
         try {
-            openMailtoDraft(subject, bodyText);
+            const openDraft = window.DevCoachModules?.sharedUtils?.openMailtoDraft;
+            if (typeof openDraft !== 'function') {
+                throw new Error('Shared mailto utility unavailable');
+            }
+            openDraft(subject, bodyText);
             showToast('📧 Outlook draft opened', 2500);
             return { ok: true, subject };
         } catch (error) {
@@ -141,7 +137,6 @@ Requirements:
         buildPrompt,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,
-        openMailtoDraft,
         generateOutlookDraft,
         buildHistorySummaryText,
         buildHistoryItemHtml

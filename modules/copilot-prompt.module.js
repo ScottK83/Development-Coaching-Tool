@@ -232,10 +232,12 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         const doc = context.document || document;
         const nav = context.navigator || navigator;
         const showToast = context.showToast || function() {};
+        const toNonEmptyString = window.DevCoachModules?.sharedUtils?.toNonEmptyString || ((value) => (typeof value === 'string' ? value.trim() : ''));
+        const joinWithConjunction = window.DevCoachModules?.sharedUtils?.joinWithConjunction || ((items) => (Array.isArray(items) ? items.filter(Boolean).join(', ') : ''));
 
         const employeeSelect = doc.getElementById('employeeSelect');
         const selectedEmployeeId = employeeSelect?.value;
-        const employeeName = doc.getElementById('employeeName')?.value.trim();
+        const employeeName = toNonEmptyString(doc.getElementById('employeeName')?.value);
 
         if (!selectedEmployeeId) {
             context.alert?.('⚠️ Please select an employee first');
@@ -266,28 +268,14 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
             let verintText = `Coaching Session with ${firstName} - ${date}\n\n`;
 
             if (winsLabels.length > 0) {
-                verintText += `I recognized ${firstName} for their strong performance in `;
-                if (winsLabels.length === 1) {
-                    verintText += `${winsLabels[0]}`;
-                } else if (winsLabels.length === 2) {
-                    verintText += `${winsLabels[0]} and ${winsLabels[1]}`;
-                } else {
-                    verintText += winsLabels.slice(0, -1).join(', ') + `, and ${winsLabels[winsLabels.length - 1]}`;
-                }
+                verintText += `I recognized ${firstName} for their strong performance in ${joinWithConjunction(winsLabels)} `;
                 verintText += '. Encouraged them to keep up the great work in these areas.\n\n';
             } else {
                 verintText += `We discussed ${firstName}'s current performance and acknowledged their efforts to improve.\n\n`;
             }
 
             if (oppLabels.length > 0) {
-                verintText += 'We reviewed development opportunities in ';
-                if (oppLabels.length === 1) {
-                    verintText += `${oppLabels[0]}`;
-                } else if (oppLabels.length === 2) {
-                    verintText += `${oppLabels[0]} and ${oppLabels[1]}`;
-                } else {
-                    verintText += oppLabels.slice(0, -1).join(', ') + `, and ${oppLabels[oppLabels.length - 1]}`;
-                }
+                verintText += `We reviewed development opportunities in ${joinWithConjunction(oppLabels)}`;
                 verintText += `. We discussed specific strategies and tips to help improve performance in these metrics. ${firstName} acknowledged the feedback and committed to implementing the discussed improvements.\n\n`;
             }
 
