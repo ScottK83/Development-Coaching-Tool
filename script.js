@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.83'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.84'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -9417,233 +9417,35 @@ function copyTodaysFocus() {
 // ============================================
 
 async function generateCopilotPrompt() {
-    const employeeName = document.getElementById('employeeName').value;
-    const employeeSelect = document.getElementById('employeeSelect');
-    const selectedEmployeeId = employeeSelect?.value;
-    const firstName = (employeeName || '').split(' ')[0] || employeeName || (selectedEmployeeId ? selectedEmployeeId.split(' ')[0] : '');
-    
-    if (!firstName) {
-        alert('⚠️ Please select an employee first');
+    const moduleApi = window.DevCoachModules?.copilotPrompt;
+    if (!moduleApi?.generateCopilotPrompt) {
+        showToast('CoPilot Prompt module not available. Refresh and try again.', 3500);
         return;
     }
 
-    if (!selectedEmployeeId) {
-        alert('⚠️ Please select an employee first');
-        return;
-    }
-
-    if (selectedEmployeeId && employeeName) {
-        saveNickname(selectedEmployeeId, employeeName.trim());
-    }
-    const employeeData = getEmployeeDataForPeriod(selectedEmployeeId);
-    if (!employeeData) {
-        alert('⚠️ Unable to load metrics for this employee. Please reload data.');
-        return;
-    }
-    const { periodLabel, timeReference } = getActivePeriodContext();
-    const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeData);
-    
-    // Get metadata for sentiment phrase lookup
-    const metadataSource = currentPeriodType === 'ytd' ? ytdData : weeklyData;
-    const metadata = currentPeriod && metadataSource[currentPeriod]?.metadata ? metadataSource[currentPeriod].metadata : null;
-    const timeframeKey = metadata ? `${metadata.startDate}_${metadata.endDate}` : null;
-    
-    // Load tips from CSV
-    const allTips = await loadServerTips();
-    
-    // Metric key mapping to match tips.csv keys
-    const metricKeyMap = {
-        'Schedule Adherence': 'scheduleAdherence',
-        'CX Rep Overall': 'cxRepOverall',
-        'First Call Resolution': 'fcr',
-        'Overall Experience': 'overallExperience',
-        'Transfers': 'transfers',
-        'Overall Sentiment': 'overallSentiment',
-        'Positive Word': 'positiveWord',
-        'Avoid Negative Word': 'negativeWord',
-        'Managing Emotions': 'managingEmotions',
-        'Avg Handle Time': 'aht',
-        'After Call Work': 'acw',
-        'Hold Time': 'holdTime',
-        'Reliability': 'reliability'
-    };
-    
-    // Build coaching email with new unified prompt format
-    const customNotes = document.getElementById('customNotes')?.value.trim();
-    
-    // Build WINS section
-    let winsSection = `WINS (What ${firstName} Achieved):\n`;
-    if (celebrate.length > 0) {
-        celebrate.forEach(item => winsSection += `${item}\n`);
-    } else {
-        winsSection += `(none)\n`;
-    }
-    
-    // Build OPPORTUNITIES section with smart tips
-    let opportunitiesSection = `OPPORTUNITIES (Areas to Improve):\n`;
-    const coachingContextLines = [];
-    if (needsCoaching.length > 0) {
-        needsCoaching.forEach(item => {
-            opportunitiesSection += `${item}\n`;
-            const metricMatch = item.match(/^- (.+?):/);
-            if (metricMatch) {
-                const metricLabel = metricMatch[1];
-                const metricKey = metricKeyMap[metricLabel];
-                if (metricKey) {
-                    const metricValue = employeeData[metricKey];
-                    const severity = getMetricSeverity(metricKey, metricValue);
-                    const metricTips = allTips[metricKey] || [];
-                    const smartTip = selectSmartTip({
-                        employeeId: selectedEmployeeId,
-                        metricKey,
-                        severity,
-                        tips: metricTips
-                    });
-                    if (smartTip) {
-                        opportunitiesSection += `  TIP: ${smartTip}\n`;
-                    }
-                    
-                    // Add uploaded sentiment phrases if available
-                    if (timeframeKey && associateSentimentSnapshots[selectedEmployeeId]?.[timeframeKey]) {
-                        const sentimentData = associateSentimentSnapshots[selectedEmployeeId][timeframeKey];
-                        
-                        // For Positive Word: reference positive phrases
-                        if (metricKey === 'positiveWord' && sentimentData.positive?.phrases?.length > 0) {
-                            const topPhrases = sentimentData.positive.phrases
-                                .slice(0, 5)
-                                .map(p => `"${p.phrase}" (${p.value}x)`)
-                                .join(', ');
-                            opportunitiesSection += `  YOUR POSITIVE PHRASES: ${topPhrases}. Use these on EVERY call to reach 100%!\n`;
-                        }
-                        
-                        // For Negative Word: reference negative phrases to eliminate
-                        if (metricKey === 'negativeWord' && sentimentData.negative?.phrases?.length > 0) {
-                            const topPhrases = sentimentData.negative.phrases
-                                .slice(0, 5)
-                                .map(p => `"${p.phrase}" (${p.value}x)`)
-                                .join(', ');
-                            opportunitiesSection += `  NEGATIVE PHRASES TO ELIMINATE: ${topPhrases}. Avoid using these.\n`;
-                        }
-                        
-                        // For Managing Emotions: reference emotion phrases
-                        if (metricKey === 'managingEmotions' && sentimentData.emotions?.phrases?.length > 0) {
-                            const topPhrases = sentimentData.emotions.phrases
-                                .slice(0, 5)
-                                .map(p => `"${p.phrase}" (${p.value}x)`)
-                                .join(', ');
-                            opportunitiesSection += `  EMOTION INDICATORS: ${topPhrases}. Focus on staying composed when these arise.\n`;
-                        }
-                    }
-                    
-                    const contextLine = getCoachingContext(selectedEmployeeId, metricKey, metricValue);
-                    if (contextLine) coachingContextLines.push(contextLine);
-                }
-            }
-        });
-    } else {
-        opportunitiesSection += `(none)\n`;
-    }
-    
-    // Add reliability note if applicable
-    const reliabilityMetric = needsCoaching.find(item => item.includes('Reliability'));
-    let reliabilityHours = null;
-    if (reliabilityMetric) {
-        const hoursMatch = reliabilityMetric.match(/(\d+\.?\d*)\s*hrs?/);
-        const parsedHours = hoursMatch?.[1] ? parseFloat(hoursMatch[1]) : NaN;
-        reliabilityHours = Number.isFinite(parsedHours) ? parsedHours : employeeData.reliability;
-        opportunitiesSection += `\nRELIABILITY NOTE:\nYou have ${reliabilityHours} hours listed as unscheduled/unplanned time. Please check Verint to make sure this aligns with any time missed ${timeReference} that was unscheduled. If this is an error, please let me know.\n`;
-    }
-
-    const confidenceInsight = buildConfidenceInsight(employeeData, coachedMetricKeys);
-    let supervisorContext = '';
-    if (coachingContextLines.length || confidenceInsight) {
-        supervisorContext = `\nSUPERVISOR CONTEXT (use naturally, do not copy verbatim):\n`;
-        coachingContextLines.forEach(line => supervisorContext += `- ${line}\n`);
-        if (confidenceInsight) supervisorContext += `- ${confidenceInsight}\n`;
-    }
-
-    const complianceFlags = detectComplianceFlags(customNotes);
-    if (complianceFlags.length > 0) {
-        supervisorContext += `\nCOMPLIANCE FLAG: ${complianceFlags.join(', ')}. Please document and follow policy.\n`;
-        logComplianceFlag({
-            employeeId: selectedEmployeeId,
-            flag: complianceFlags.join(', '),
-            timestamp: new Date().toISOString()
-        });
-    }
-
-    // Store data for Verint summary generation
-    window.latestCoachingSummaryData = {
-        firstName,
-        periodLabel,
-        celebrate,
-        needsCoaching,
-        reliabilityHours,
-        customNotes,
-        timeReference
-    };
-    
-    let additionalContext = '';
-    if (customNotes) {
-        additionalContext = `\nADDITIONAL CONTEXT:\n${customNotes}\n`;
-    }
-    
-    // Build the unified Copilot prompt - conversational format to avoid detection as system prompt
-    const prompt = `I'm a supervisor preparing a coaching email for an employee named ${firstName} for their ${periodLabel} performance review. I need your help drafting this in a natural, warm tone - not corporate or template-like.
-
-Here's the performance data:
-
-${winsSection}
-
-${opportunitiesSection}${additionalContext}${supervisorContext}
-
-Can you help me write an email to ${firstName} with this structure:
-
-1. Warm, conversational greeting
-
-2. WINS section:
-   - Brief intro line
-    - Bullets in this concise format: "• Metric Name - Goal X%. You were at Y%."
-   - After bullets: A paragraph celebrating their achievements and encouraging them to keep it up
-
-3. OPPORTUNITIES section:
-   - Brief supportive intro line
-    - Bullets in this format: "• Metric Name - Goal X%. You were at Y%."
-    - Note: If Reliability is included, format as: "• Reliability - X hours unscheduled" (no goal needed)
-   - After bullets: A paragraph with coaching tips (reword the tips naturally so they don't sound templated). Be constructive and supportive. If there's a reliability note, weave it in naturally here.
-
-4. Warm close inviting them to discuss
-
-Keep it conversational, upbeat, and motivating. Use "you" language. Avoid corporate buzzwords and any mention of AI or analysis. Make this sound like a genuine supervisor who cares about their success.
-
-Vary your wording and sentence structure so it doesn't sound templated or AI-generated. Use natural phrasing and avoid repeating the same patterns.
-
-Add emojis throughout the email to make it fun and engaging! Use them in the greeting, with wins, with opportunities, and in the closing. Make it feel warm and approachable.
-
-Do NOT use em dashes (—) anywhere in the email.
-
-Use the % symbol instead of writing out "percent" (e.g., "95%" not "95 percent").
-
-The email should be ready to send as-is. Just give me the complete email to ${firstName}, nothing else.`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(prompt).then(() => {
-        // Show instruction popup
-        alert('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
-        
-        // Open Copilot
-        window.open('https://copilot.microsoft.com', '_blank');
-        
-        // Show the paste section
-        document.getElementById('copilotOutputSection').style.display = 'block';
-        
-        // Scroll to paste section
-        document.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
-        showToast('✅ Prompt copied! Paste into CoPilot, then paste the result back here.');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
+    await moduleApi.generateCopilotPrompt({
+        document,
+        window,
+        navigator,
+        console,
+        alert,
+        showToast,
+        saveNickname,
+        getEmployeeDataForPeriod,
+        getActivePeriodContext,
+        evaluateMetricsForCoaching,
+        currentPeriodType,
+        ytdData,
+        weeklyData,
+        currentPeriod,
+        loadServerTips,
+        getMetricSeverity,
+        selectSmartTip,
+        associateSentimentSnapshots,
+        getCoachingContext,
+        buildConfidenceInsight,
+        detectComplianceFlags,
+        logComplianceFlag
     });
 }
 
