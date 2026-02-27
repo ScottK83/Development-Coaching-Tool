@@ -316,6 +316,153 @@ Write the complete email.`;
         container.innerHTML = html;
     }
 
+    function hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp, context = {}) {
+        const metricDelta = context.metricDelta || (() => 0);
+        return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+            const a = currentEmp[metricKey];
+            const b = prevEmp[metricKey];
+            const c = thirdEmp[metricKey];
+            if (a === undefined || b === undefined || c === undefined) return false;
+            const worse1 = metricDelta(metricKey, a, b) < 0;
+            const worse2 = metricDelta(metricKey, b, c) < 0;
+            return worse1 && worse2;
+        });
+    }
+
+    function hasGroupSuddenDrop(currentEmp, prevEmp, context = {}) {
+        const metricDelta = context.metricDelta || (() => 0);
+        return ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
+            const current = currentEmp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return false;
+            const delta = metricDelta(metricKey, current, prev);
+            return delta < -4;
+        });
+    }
+
+    function hasGroupImprovement(currentEmp, prevEmp, context = {}) {
+        const metricDelta = context.metricDelta || (() => 0);
+        return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+            const current = currentEmp[metricKey];
+            const prev = prevEmp[metricKey];
+            if (current === undefined || prev === undefined) return false;
+            const delta = metricDelta(metricKey, current, prev);
+            return delta > 5;
+        });
+    }
+
+    function isGroupConsistentPerformer(currentEmp, context = {}) {
+        const metricMeetsTarget = context.metricMeetsTarget || (() => false);
+        return ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+            metricMeetsTarget(metricKey, currentEmp[metricKey])
+        );
+    }
+
+    function classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp, context = {}) {
+        if (thirdEmp && hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp, context)) {
+            teamInsights.atRisk.push(employeeName);
+            return;
+        }
+
+        if (hasGroupSuddenDrop(currentEmp, prevEmp, context)) {
+            teamInsights.declining.push(employeeName);
+            return;
+        }
+
+        if (hasGroupImprovement(currentEmp, prevEmp, context)) {
+            teamInsights.improving.push(employeeName);
+            return;
+        }
+
+        if (isGroupConsistentPerformer(currentEmp, context)) {
+            teamInsights.consistent.push(employeeName);
+        }
+    }
+
+    function buildGroupTrendHeaderHtml(buckets) {
+        let html = `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
+        html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
+        html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
+        html += `</div>`;
+        return html;
+    }
+
+    function buildGroupTrendSummaryCardsHtml(teamInsights) {
+        let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
+
+        html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
+        html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
+        html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
+        html += `</div>`;
+
+        html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
+        html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
+        html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
+        html += `</div>`;
+        html += `</div>`;
+
+        return html;
+    }
+
+    function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
+        if (!names.length) return '';
+        let html = `<div style="margin-bottom: 15px;">`;
+        html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
+        html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor};">`;
+        html += names.join(', ');
+        html += `</div></div>`;
+        return html;
+    }
+
+    function renderGroupTrendAnalysis(container, keys, periodType = 'wow', context = {}) {
+        const getTrendComparisonBuckets = context.getTrendComparisonBuckets || (() => ({ currentKeys: [], previousKeys: [], thirdKeys: [], descriptor: { label: 'period', shortLabel: 'WoW' } }));
+        const getEmployeeNamesForPeriod = context.getEmployeeNamesForPeriod || (() => new Set());
+        const buildEmployeeAggregateForPeriod = context.buildEmployeeAggregateForPeriod || (() => null);
+
+        const buckets = getTrendComparisonBuckets(keys, periodType);
+
+        if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
+            container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} group analysis.</div>`;
+            return;
+        }
+
+        const teamInsights = {
+            atRisk: [],
+            declining: [],
+            improving: [],
+            consistent: []
+        };
+
+        const employeeNames = Array.from(getEmployeeNamesForPeriod(buckets.currentKeys));
+
+        employeeNames.forEach(employeeName => {
+            const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
+            const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
+            if (!prevEmp) return;
+
+            const thirdEmp = buckets.thirdKeys.length
+                ? buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys)
+                : null;
+
+            classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp, context);
+        });
+
+        let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
+        html += buildGroupTrendHeaderHtml(buckets);
+        html += buildGroupTrendSummaryCardsHtml(teamInsights);
+        html += buildGroupTrendNamedSectionHtml('🚨 At Risk - Need Immediate Coaching:', '#e53935', '#ffebee', '#e53935', teamInsights.atRisk);
+        html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
+        html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
+        html += buildGroupTrendNamedSectionHtml('✅ Consistent Performers:', '#1e88e5', '#e3f2fd', '#1e88e5', teamInsights.consistent);
+
+        html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
+        html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
+        html += `</div>`;
+        html += `</div>`;
+
+        container.innerHTML = html;
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.trendIntelligence = {
         buildExecutiveSummaryCallouts,
@@ -329,6 +476,15 @@ Write the complete email.`;
         buildIndividualTrendItemsSectionHtml,
         buildIndividualTrendCoachingImpactHtml,
         buildIndividualTrendNoSignalsHtml,
-        renderIndividualTrendAnalysis
+        renderIndividualTrendAnalysis,
+        hasGroupThreePeriodDecline,
+        hasGroupSuddenDrop,
+        hasGroupImprovement,
+        isGroupConsistentPerformer,
+        classifyGroupTrendEmployee,
+        buildGroupTrendHeaderHtml,
+        buildGroupTrendSummaryCardsHtml,
+        buildGroupTrendNamedSectionHtml,
+        renderGroupTrendAnalysis
     };
 })();

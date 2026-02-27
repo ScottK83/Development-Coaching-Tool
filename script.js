@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.86'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.87'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -9535,143 +9535,70 @@ function renderIndividualTrendAnalysis(container, employeeName, keys, periodType
 }
 
 function hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp) {
-    return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-        const a = currentEmp[metricKey];
-        const b = prevEmp[metricKey];
-        const c = thirdEmp[metricKey];
-        if (a === undefined || b === undefined || c === undefined) return false;
-        const worse1 = metricDelta(metricKey, a, b) < 0;
-        const worse2 = metricDelta(metricKey, b, c) < 0;
-        return worse1 && worse2;
-    });
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.hasGroupThreePeriodDecline) return false;
+    return moduleApi.hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp, { metricDelta });
 }
 
 function hasGroupSuddenDrop(currentEmp, prevEmp) {
-    return ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
-        const current = currentEmp[metricKey];
-        const prev = prevEmp[metricKey];
-        if (current === undefined || prev === undefined) return false;
-        const delta = metricDelta(metricKey, current, prev);
-        return delta < -4;
-    });
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.hasGroupSuddenDrop) return false;
+    return moduleApi.hasGroupSuddenDrop(currentEmp, prevEmp, { metricDelta });
 }
 
 function hasGroupImprovement(currentEmp, prevEmp) {
-    return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
-        const current = currentEmp[metricKey];
-        const prev = prevEmp[metricKey];
-        if (current === undefined || prev === undefined) return false;
-        const delta = metricDelta(metricKey, current, prev);
-        return delta > 5;
-    });
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.hasGroupImprovement) return false;
+    return moduleApi.hasGroupImprovement(currentEmp, prevEmp, { metricDelta });
 }
 
 function isGroupConsistentPerformer(currentEmp) {
-    return ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
-        metricMeetsTarget(metricKey, currentEmp[metricKey])
-    );
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.isGroupConsistentPerformer) return false;
+    return moduleApi.isGroupConsistentPerformer(currentEmp, { metricMeetsTarget });
 }
 
 function classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp) {
-    if (thirdEmp && hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp)) {
-        teamInsights.atRisk.push(employeeName);
-        return;
-    }
-
-    if (hasGroupSuddenDrop(currentEmp, prevEmp)) {
-        teamInsights.declining.push(employeeName);
-        return;
-    }
-
-    if (hasGroupImprovement(currentEmp, prevEmp)) {
-        teamInsights.improving.push(employeeName);
-        return;
-    }
-
-    if (isGroupConsistentPerformer(currentEmp)) {
-        teamInsights.consistent.push(employeeName);
-    }
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.classifyGroupTrendEmployee) return;
+    moduleApi.classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp, {
+        metricDelta,
+        metricMeetsTarget
+    });
 }
 
 function buildGroupTrendHeaderHtml(buckets) {
-    let html = `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
-    html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
-    html += `</div>`;
-    return html;
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.buildGroupTrendHeaderHtml) return '';
+    return moduleApi.buildGroupTrendHeaderHtml(buckets);
 }
 
 function buildGroupTrendSummaryCardsHtml(teamInsights) {
-    let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
-
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
-    html += `</div>`;
-
-    html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
-    html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
-    html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
-    html += `</div>`;
-    html += `</div>`;
-
-    return html;
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.buildGroupTrendSummaryCardsHtml) return '';
+    return moduleApi.buildGroupTrendSummaryCardsHtml(teamInsights);
 }
 
 function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
-    if (!names.length) return '';
-    let html = `<div style="margin-bottom: 15px;">`;
-    html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
-    html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor};">`;
-    html += names.join(', ');
-    html += `</div></div>`;
-    return html;
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.buildGroupTrendNamedSectionHtml) return '';
+    return moduleApi.buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names);
 }
 
 function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
-    const buckets = getTrendComparisonBuckets(keys, periodType);
-
-    if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
-        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} group analysis.</div>`;
+    const moduleApi = window.DevCoachModules?.trendIntelligence;
+    if (!moduleApi?.renderGroupTrendAnalysis) {
+        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Trend Intelligence module not available. Refresh and try again.</div>';
         return;
     }
 
-    const teamInsights = {
-        atRisk: [],
-        declining: [],
-        improving: [],
-        consistent: []
-    };
-
-    const employeeNames = Array.from(getEmployeeNamesForPeriod(buckets.currentKeys));
-
-    employeeNames.forEach(employeeName => {
-        const currentEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.currentKeys);
-        const prevEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.previousKeys);
-        if (!prevEmp) return;
-
-        const thirdEmp = buckets.thirdKeys.length
-            ? buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys)
-            : null;
-
-        classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp);
+    moduleApi.renderGroupTrendAnalysis(container, keys, periodType, {
+        metricDelta,
+        metricMeetsTarget,
+        getTrendComparisonBuckets,
+        getEmployeeNamesForPeriod,
+        buildEmployeeAggregateForPeriod
     });
-
-    // Build team overview
-    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
-    html += buildGroupTrendHeaderHtml(buckets);
-    html += buildGroupTrendSummaryCardsHtml(teamInsights);
-    html += buildGroupTrendNamedSectionHtml('🚨 At Risk - Need Immediate Coaching:', '#e53935', '#ffebee', '#e53935', teamInsights.atRisk);
-    html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
-    html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
-    html += buildGroupTrendNamedSectionHtml('✅ Consistent Performers:', '#1e88e5', '#e3f2fd', '#1e88e5', teamInsights.consistent);
-
-    html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
-    html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
-    html += `</div>`;
-    html += `</div>`;
-    
-    container.innerHTML = html;
 }
 
 // ============================================
