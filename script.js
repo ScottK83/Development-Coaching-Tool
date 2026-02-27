@@ -2341,15 +2341,31 @@ function handleSubNavMetricTrendsClick() {
     initializeMetricTrends();
 }
 
+function ensureTrendIntelligenceMounted() {
+    const subSection = document.getElementById('subSectionTrendIntelligence');
+    if (!subSection) return;
+
+    const alreadyMounted = Boolean(subSection.querySelector('#executiveSummaryContainer'));
+    if (alreadyMounted) return;
+
+    const sourceSection = document.getElementById('executiveSummarySection');
+    if (!sourceSection) return;
+
+    while (sourceSection.firstChild) {
+        subSection.appendChild(sourceSection.firstChild);
+    }
+
+    const placeholderText = Array.from(subSection.querySelectorAll('p')).find(p =>
+        (p.textContent || '').toLowerCase().includes('trend intelligence content will appear here')
+    );
+    if (placeholderText) {
+        placeholderText.remove();
+    }
+}
+
 function handleSubNavTrendIntelligenceClick() {
     showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
-    const executiveSummarySection = document.getElementById('executiveSummarySection');
-    const subSectionTrendIntelligence = document.getElementById('subSectionTrendIntelligence');
-    if (executiveSummarySection && subSectionTrendIntelligence) {
-        while (executiveSummarySection.firstChild) {
-            subSectionTrendIntelligence.appendChild(executiveSummarySection.firstChild);
-        }
-    }
+    ensureTrendIntelligenceMounted();
     renderExecutiveSummary();
 
     const summarySelect = document.getElementById('summaryAssociateSelect');
@@ -9355,12 +9371,9 @@ function setTrendFocusMode(enabled) {
     }
 
     const secondarySectionIds = [
-        'trendIntelligenceOutput',
         'trendVisualizationsContainer',
-        'recognitionIntelligenceOutput',
         'coachingImpactTrackerPanel',
         'coachingLoadOutput',
-        'coachingPriorityQueueOutput',
         'complianceAlertsOutput'
     ];
 
@@ -9385,9 +9398,11 @@ function renderTrendSimpleView() {
     const container = document.getElementById('trendSimpleViewOutput');
     if (!container) return;
 
+    const goalsSummaryHtml = buildTrendGoalsSummaryHtml();
+
     const snapshot = trendPrioritySnapshot;
     if (!snapshot) {
-        container.innerHTML = '<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Simple View is waiting for trend data. Click Refresh Analysis.</div>';
+        container.innerHTML = `${goalsSummaryHtml}<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Simple View is waiting for trend data. Click Refresh Analysis.</div>`;
         return;
     }
 
@@ -9405,6 +9420,7 @@ function renderTrendSimpleView() {
         : '<li>No standout recognition callouts this cycle.</li>';
 
     container.innerHTML = `
+        ${goalsSummaryHtml}
         <div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
             <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">🧭 Simple View — This Week’s Priorities</div>
             <div style="color: #546e7a; font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
@@ -9418,6 +9434,32 @@ function renderTrendSimpleView() {
                     <ul style="margin: 0; padding-left: 18px; color: #333;">${recognizeHtml}</ul>
                 </div>
             </div>
+        </div>
+    `;
+}
+
+function buildTrendGoalsSummaryHtml() {
+    const goalItems = [
+        ['scheduleAdherence', 'Adherence'],
+        ['overallSentiment', 'Overall Sentiment'],
+        ['overallExperience', 'OE Top 2'],
+        ['fcr', 'FCR'],
+        ['aht', 'AHT'],
+        ['acw', 'ACW'],
+        ['transfers', 'Transfers'],
+        ['reliability', 'Reliability']
+    ];
+
+    const itemsHtml = goalItems.map(([metricKey, label]) => {
+        const target = getMetricTrendTarget(metricKey);
+        const formatted = Number.isFinite(target) ? formatMetricDisplay(metricKey, target) : 'n/a';
+        return `<li style="margin: 0 0 4px 0;"><strong>${label}:</strong> ${formatted}</li>`;
+    }).join('');
+
+    return `
+        <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #d9e7ff; border-radius: 8px; background: #f5f9ff;">
+            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 6px;">🎯 2026 Goals Snapshot</div>
+            <ul style="margin: 0; padding-left: 18px; color: #3f5168; columns: 2; column-gap: 24px;">${itemsHtml}</ul>
         </div>
     `;
 }
