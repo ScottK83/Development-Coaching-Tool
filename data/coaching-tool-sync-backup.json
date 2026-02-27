@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-27T15:55:50.163Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-02-27T15:55:59.483Z",
+  "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.01",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5298,7 +5298,7 @@
       "verbalSummary": ""
     },
     "2025::Angelina Fierro": {
-      "trackStatus": "on-track",
+      "trackStatus": "on-track-successful",
       "positivesText": "Hold Time: 1s vs target 30s\nRep Satisfaction: 81.3% vs target 80.0%\nFirst Call Resolution: 78.7% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 86.5% vs target 86.0%\nAvoid Negative Words: 91.5% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 22.3% vs target 6.0%\nAverage Handle Time: 532s vs target 440s\nAfter Call Work: 80s vs target 60s\nOverall Experience: 81.3% vs target 84.0%\nReliability: 28.7 hrs vs target 16.0 hrs",
       "managerContext": "",
@@ -5494,7 +5494,7 @@
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 22,
-      "byteLength": 51438
+      "byteLength": 51449
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
