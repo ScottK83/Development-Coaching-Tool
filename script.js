@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.26.89'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.26.90'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -7611,6 +7611,37 @@ function collectTeamTrendMetrics(period) {
     return teamMetrics;
 }
 
+function buildTeamTrendAggregateEmployee(period) {
+    if (!period || !Array.isArray(period.employees) || period.employees.length === 0) {
+        return null;
+    }
+
+    const aggregate = { name: 'Team Combined' };
+
+    getMetricOrder().forEach(({ key }) => {
+        const values = period.employees
+            .map(emp => parseFloat(emp?.[key]))
+            .filter(value => !Number.isNaN(value));
+
+        if (values.length === 0) {
+            return;
+        }
+
+        aggregate[key] = values.reduce((sum, value) => sum + value, 0) / values.length;
+    });
+
+    const totalSurveyCount = period.employees
+        .map(emp => parseFloat(emp?.surveysOffered))
+        .filter(value => !Number.isNaN(value))
+        .reduce((sum, value) => sum + value, 0);
+
+    if (totalSurveyCount > 0) {
+        aggregate.surveysOffered = totalSurveyCount;
+    }
+
+    return aggregate;
+}
+
 function createTeamTrendSummaryModal() {
     const modal = document.createElement('div');
     modal.id = 'teamTrendSummaryModal';
@@ -7664,7 +7695,7 @@ function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, te
     return panel;
 }
 
-function attachTeamTrendSummaryModalHandlers(modal, teamSubject) {
+function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period) {
     const closeModal = () => {
         if (document.body.contains(modal)) {
             document.body.removeChild(modal);
@@ -7680,8 +7711,22 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject) {
     });
 
     document.getElementById('openTeamTrendEmailBtn')?.addEventListener('click', () => {
-        openTrendEmailOutlook(teamSubject);
-        showToast('📧 Team email draft opened', 2500);
+        const currentTeam = buildTeamTrendAggregateEmployee(period);
+        if (!currentTeam) {
+            showToast('No team data available to build email image', 4000);
+            return;
+        }
+
+        const periodType = period?.metadata?.periodType || 'week';
+        const prevPeriodKey = getPreviousPeriodData(weekKey, periodType);
+        const prevPeriod = prevPeriodKey ? weeklyData[prevPeriodKey] : null;
+        const previousTeam = buildTeamTrendAggregateEmployee(prevPeriod);
+
+        showToast('ℹ️ Creating team email image...', 3000);
+        createTrendEmailImage('Team', weekKey, period, currentTeam, previousTeam, () => {
+            openTrendEmailOutlook(teamSubject);
+            showToast('📧 Outlook opening... Team image is copied to clipboard. Paste into email body.', 4500);
+        });
     });
 
     document.getElementById('closeTeamTrendSummaryBtn')?.addEventListener('click', closeModal);
@@ -7729,7 +7774,7 @@ function generateTeamTrendSummary() {
 
     modal.appendChild(panel);
     document.body.appendChild(modal);
-    attachTeamTrendSummaryModalHandlers(modal, teamSubject);
+    attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period);
 }
 
 
