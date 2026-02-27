@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-27T20:18:53.443Z",
+  "generatedAt": "2026-02-27T20:18:56.326Z",
   "reason": "year-end draft updated",
   "sourceAppVersion": "2026.02.27.05",
   "weeklyData": {
@@ -5294,6 +5294,40 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2025::Brittney Carroll": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -5563,6 +5597,17 @@
       "meritDetails": "",
       "bonusAmount": "",
       "verbalSummary": ""
+    },
+    "2025::Brittney Carroll": {
+      "trackStatus": "off-track",
+      "positivesText": "Overall Experience: 80.0% vs target 75.0%\nRep Satisfaction: 89.2% vs target 80.0%\nFirst Call Resolution: 78.4% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 92.1% vs target 86.0%\nAvoid Negative Words: 87.1% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 91.6% vs target 93.0%\nTransfers: 9.5% vs target 6.0%\nAverage Handle Time: 669s vs target 440s\nHold Time: 34s vs target 30s\nAfter Call Work: 131s vs target 60s\nManaging Emotions: 94.7% vs target 95.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
     }
   },
   "appStorageSnapshot": {
@@ -5604,7 +5649,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 132
+      "byteLength": 125
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -5613,8 +5658,8 @@
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 23,
-      "byteLength": 9670
+      "itemCount": 24,
+      "byteLength": 10091
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5628,8 +5673,8 @@
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 25,
-      "byteLength": 62061
+      "itemCount": 26,
+      "byteLength": 62991
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
