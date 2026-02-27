@@ -3773,8 +3773,15 @@ function getYearEndDraftState(employeeName, reviewYear) {
     const stateKey = `${String(reviewYear)}::${employeeName}`;
     const saved = store[stateKey] || {};
 
+    const allowedTrackStatuses = new Set([
+        'on-track',
+        'off-track',
+        'on-track-successful',
+        'on-track-exceptional'
+    ]);
+
     return {
-        trackStatus: saved.trackStatus === 'on-track' || saved.trackStatus === 'off-track' ? saved.trackStatus : '',
+        trackStatus: allowedTrackStatuses.has(saved.trackStatus) ? saved.trackStatus : '',
         positivesText: typeof saved.positivesText === 'string' ? saved.positivesText : '',
         improvementsText: typeof saved.improvementsText === 'string' ? saved.improvementsText : '',
         managerContext: typeof saved.managerContext === 'string' ? saved.managerContext : '',
@@ -11830,9 +11837,9 @@ function resolveYearEndOnOffTrackStatus(ratingAverage) {
         return { trackLabel: 'Off Track', trackStatusValue: 'off-track' };
     }
     if (ratingAverage <= 2.79) {
-        return { trackLabel: 'On Track/Successful', trackStatusValue: 'on-track' };
+        return { trackLabel: 'On Track/Successful', trackStatusValue: 'on-track-successful' };
     }
-    return { trackLabel: 'On Track/Exceptional', trackStatusValue: 'on-track' };
+    return { trackLabel: 'On Track/Exceptional', trackStatusValue: 'on-track-exceptional' };
 }
 
 function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
@@ -11891,7 +11898,7 @@ function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFul
     if (!summaryEl || !detailsEl) return null;
 
     const result = calculateYearEndOnOffMirror(employeeRecord, reviewYear);
-    return applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, 'metric-trends', periodMetadata);
+    return applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, 'onoff', periodMetadata);
 }
 
 function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId, reviewYear = new Date().getFullYear()) {
@@ -11922,6 +11929,10 @@ function resolveMetricTrendsGoalText(metricKey, formatKey, reviewYear, periodMet
 }
 
 function resolveOnOffGoalText(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) {
+    if (goalSource === 'onoff') {
+        return resolveOnOffBandGoalText(bands, bandMetricKey, formatKey);
+    }
+
     const annualGoalText = resolveMetricTrendsGoalText(targetMetricKey, formatKey, reviewYear, periodMetadata);
     if (annualGoalText !== 'N/A') {
         return annualGoalText;
@@ -12027,7 +12038,7 @@ function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(),
                     <tr>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
-                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Annual Goal</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Stretch Goal Tier</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
                     </tr>
                 </thead>
@@ -12665,7 +12676,11 @@ function buildYearEndPromptSupportData(employeeName, reviewYear) {
 
 function resolveYearEndPromptHeaderData(employeeName, reviewYear, trackStatus) {
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
-    const trackLabel = trackStatus === 'on-track' ? 'On Track' : 'Off Track';
+    const trackLabel = trackStatus === 'on-track-exceptional'
+        ? 'On Track/Exceptional'
+        : trackStatus === 'on-track-successful' || trackStatus === 'on-track'
+            ? 'On Track/Successful'
+            : 'Off Track';
     const periodLabel = yearEndDraftContext?.periodLabel || `${reviewYear} year-end period`;
     const sourceLabel = yearEndDraftContext?.sourceLabel || 'uploaded metrics';
     const targetProfileLabel = yearEndDraftContext?.targetProfileYear
