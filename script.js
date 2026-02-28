@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.27.07'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.27.08'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2288,6 +2288,7 @@ function bindDataAdminHandlers() {
     document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
     document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
     document.getElementById('toggleTeamMemberSelectorBtn')?.addEventListener('click', handleToggleTeamMemberSelectorClick);
+    applyTeamMemberSelectorState(loadTeamMemberSelectorExpandedPreference());
 
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
@@ -2923,24 +2924,52 @@ function handleDeselectAllTeamClick() {
 }
 
 function handleDeleteWeekSelectChange() {
-    populateTeamMemberSelector();
+    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
+    const isExpanded = toggleBtn?.getAttribute('aria-expanded') === 'true';
+    if (isExpanded) {
+        populateTeamMemberSelector();
+    }
 }
 
-function handleToggleTeamMemberSelectorClick() {
+function applyTeamMemberSelectorState(isExpanded) {
     const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
     const selectorBody = document.getElementById('teamMemberSelectorBody');
     if (!toggleBtn || !selectorBody) return;
 
-    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-    const shouldExpand = !isExpanded;
+    toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    toggleBtn.textContent = isExpanded ? 'Hide Team Member Selection' : 'Show Team Member Selection';
+    selectorBody.style.display = isExpanded ? 'block' : 'none';
 
-    toggleBtn.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
-    toggleBtn.textContent = shouldExpand ? 'Hide Team Member Selection' : 'Show Team Member Selection';
-    selectorBody.style.display = shouldExpand ? 'block' : 'none';
-
-    if (shouldExpand) {
+    if (isExpanded) {
         populateTeamMemberSelector();
     }
+}
+
+function loadTeamMemberSelectorExpandedPreference() {
+    try {
+        return localStorage.getItem(STORAGE_PREFIX + 'teamMemberSelectorExpanded') === 'true';
+    } catch (error) {
+        console.error('Error loading team member selector preference:', error);
+        return false;
+    }
+}
+
+function saveTeamMemberSelectorExpandedPreference(isExpanded) {
+    try {
+        localStorage.setItem(STORAGE_PREFIX + 'teamMemberSelectorExpanded', isExpanded ? 'true' : 'false');
+    } catch (error) {
+        console.error('Error saving team member selector preference:', error);
+    }
+}
+
+function handleToggleTeamMemberSelectorClick() {
+    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
+    if (!toggleBtn) return;
+
+    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    const shouldExpand = !isExpanded;
+    applyTeamMemberSelectorState(shouldExpand);
+    saveTeamMemberSelectorExpandedPreference(shouldExpand);
 }
 
 function handleDeleteSelectedSentimentClick() {
