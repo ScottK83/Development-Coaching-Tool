@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.27.06'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.02.27.07'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2287,6 +2287,7 @@ function bindDataAdminHandlers() {
     document.getElementById('selectAllTeamBtn')?.addEventListener('click', handleSelectAllTeamClick);
     document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
     document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
+    document.getElementById('toggleTeamMemberSelectorBtn')?.addEventListener('click', handleToggleTeamMemberSelectorClick);
 
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
@@ -2923,6 +2924,23 @@ function handleDeselectAllTeamClick() {
 
 function handleDeleteWeekSelectChange() {
     populateTeamMemberSelector();
+}
+
+function handleToggleTeamMemberSelectorClick() {
+    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
+    const selectorBody = document.getElementById('teamMemberSelectorBody');
+    if (!toggleBtn || !selectorBody) return;
+
+    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    const shouldExpand = !isExpanded;
+
+    toggleBtn.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+    toggleBtn.textContent = shouldExpand ? 'Hide Team Member Selection' : 'Show Team Member Selection';
+    selectorBody.style.display = shouldExpand ? 'block' : 'none';
+
+    if (shouldExpand) {
+        populateTeamMemberSelector();
+    }
 }
 
 function handleDeleteSelectedSentimentClick() {

@@ -816,8 +816,11 @@ Box 2 - Future Improvement Areas:
                     <div style="margin-bottom: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #1976d2;">
                         <h3 style="color: #1976d2; margin-top: 0;">👤 Team Member Selection</h3>
                         <p style="color: #666; margin-bottom: 15px;">Check/uncheck team members to show or hide them in coaching, trends, and emails. Leave all unchecked to show everyone.</p>
-                        <div id="teamMemberSelector" style="max-height: 300px; overflow-y: auto; border: 1px solid #90caf9; border-radius: 4px; background: white; padding: 12px;">
-                            <div style="padding: 20px; text-align: center; color: #999;">No employees available. Upload weekly data first.</div>
+                        <button type="button" id="toggleTeamMemberSelectorBtn" class="btn-secondary" aria-expanded="false" style="background: #1976d2; color: white; margin-bottom: 12px;">Show Team Member Selection</button>
+                        <div id="teamMemberSelectorBody" style="display: none;">
+                            <div id="teamMemberSelector" style="max-height: 300px; overflow-y: auto; border: 1px solid #90caf9; border-radius: 4px; background: white; padding: 12px;">
+                                <div style="padding: 20px; text-align: center; color: #999;">No employees available. Upload weekly data first.</div>
+                            </div>
                         </div>
                     </div>
 
