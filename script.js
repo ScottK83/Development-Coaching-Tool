@@ -215,6 +215,7 @@ const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
 const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
 const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
+const REPO_BACKUP_APPLIED_AT_STORAGE_KEY = STORAGE_PREFIX + 'repoBackupAppliedAt';
 const UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
 
 const YEAR_END_TARGETS_BY_YEAR = {
@@ -1846,6 +1847,9 @@ function bindTeamFilterChangeHandlers() {
 
     window.addEventListener('devcoach:teamFilterChanged', () => {
         updateEmployeeDropdown();
+        initializeTrendIntelligence();
+        renderTrendIntelligence();
+        renderTrendVisualizations();
         populateTrendPeriodDropdown();
         const selectedTrendPeriod = String(document.getElementById('trendPeriodSelect')?.value || '').trim();
         if (selectedTrendPeriod) {
@@ -3855,19 +3859,65 @@ function applyRepoBackupPayload(payload) {
     saveYearEndDraftStore(coerceObject(payload?.yearEndDraftStore));
 }
 
-async function tryAutoRestoreFromRepoBackupOnEmptyState() {
-    if (hasMeaningfulLocalData()) {
-        return false;
+function loadRepoBackupAppliedAt() {
+    try {
+        return String(localStorage.getItem(REPO_BACKUP_APPLIED_AT_STORAGE_KEY) || '').trim();
+    } catch (error) {
+        return '';
     }
+}
 
+function saveRepoBackupAppliedAt(isoText) {
+    try {
+        withRepoSyncSuppressed(() => {
+            localStorage.setItem(REPO_BACKUP_APPLIED_AT_STORAGE_KEY, String(isoText || '').trim());
+        });
+    } catch (error) {
+        console.error('Error saving repo backup applied marker:', error);
+    }
+}
+
+function parseTimeMs(value) {
+    const dateText = String(value || '').trim();
+    if (!dateText) return 0;
+    const parsed = Date.parse(dateText);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getLatestLocalRepoDataTimestampMs() {
+    const lastSync = loadRepoSyncLastSuccess();
+    const syncMs = parseTimeMs(lastSync?.syncedAt);
+    const appliedMs = parseTimeMs(loadRepoBackupAppliedAt());
+    return Math.max(syncMs, appliedMs, 0);
+}
+
+async function tryAutoRestoreFromRepoBackupOnEmptyState() {
     const payload = await fetchRepoBackupPayload();
     if (!hasMeaningfulBackupData(payload)) {
         return false;
     }
 
+    const localHasData = hasMeaningfulLocalData();
+    const remoteGeneratedAtMs = parseTimeMs(payload?.generatedAt);
+    const latestLocalMs = getLatestLocalRepoDataTimestampMs();
+
+    if (localHasData) {
+        if (!remoteGeneratedAtMs || (latestLocalMs > 0 && remoteGeneratedAtMs <= latestLocalMs)) {
+            return false;
+        }
+
+        const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
+        const shouldRestore = confirm(`Newer synced backup found from ${remoteWhen}.\n\nRestore this backup on this PC now?\n\nChoose Cancel to keep current local data.`);
+        if (!shouldRestore) {
+            return false;
+        }
+    }
+
     await withRepoSyncHydrationLock(async () => {
         applyRepoBackupPayload(payload);
     });
+
+    saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
 
     return true;
 }
