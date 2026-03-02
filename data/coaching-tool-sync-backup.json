@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-02T17:54:21.295Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
-  "sourceAppVersion": "2026.03.01.1",
+  "generatedAt": "2026-03-02T18:08:23.910Z",
+  "reason": "manual sync now",
+  "sourceAppVersion": "2026.03.02.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -5610,6 +5610,11 @@
       "itemCount": 12,
       "byteLength": 9785
     },
+    "devCoachingTool_callListeningSyncConfig": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 164
+    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
@@ -5623,7 +5628,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 131
+      "byteLength": 128
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5673,7 +5678,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 118
+      "byteLength": 142
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
