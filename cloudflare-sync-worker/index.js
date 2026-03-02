@@ -440,27 +440,54 @@ async function getRepoJsonFile(env, branch, path) {
 }
 
 async function upsertRepoFile({ env, branch, path, message, content }) {
-  const sha = await getExistingFileSha(env, branch, path);
   const encodedContent = btoa(unescape(encodeURIComponent(content)));
+  const maxAttempts = 3;
 
-  const payload = {
-    message,
-    content: encodedContent,
-    branch
-  };
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const sha = await getExistingFileSha(env, branch, path);
 
-  if (sha) payload.sha = sha;
+      const payload = {
+        message,
+        content: encodedContent,
+        branch
+      };
 
-  const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/') }`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+      if (sha) payload.sha = sha;
 
-  return {
-    commitSha: result?.commit?.sha || null,
-    contentSha: result?.content?.sha || null
-  };
+      const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/') }`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      return {
+        commitSha: result?.commit?.sha || null,
+        contentSha: result?.content?.sha || null
+      };
+    } catch (error) {
+      if (attempt < maxAttempts && isGithubContentConflictError(error)) {
+        await waitForRetry(attempt);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`Failed to upsert ${path} after ${maxAttempts} attempts.`);
+}
+
+function isGithubContentConflictError(error) {
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('github api 409')
+    || msg.includes('does not match')
+    || msg.includes('sha') && msg.includes('match');
+}
+
+async function waitForRetry(attemptNumber) {
+  const delayMs = Math.min(900, attemptNumber * 250);
+  await new Promise(resolve => setTimeout(resolve, delayMs));
 }
