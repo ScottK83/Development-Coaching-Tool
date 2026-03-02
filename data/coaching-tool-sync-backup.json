@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-02T18:18:00.006Z",
-  "reason": "storage set: devCoachingTool_teamMemberSelectorExpanded",
-  "sourceAppVersion": "2026.03.02.1",
+  "generatedAt": "2026-03-02T18:18:27.592Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
+  "sourceAppVersion": "2026.03.02.2",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
       "employees": [
@@ -5683,7 +5683,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 4,
-      "byteLength": 340
+      "byteLength": 342
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
