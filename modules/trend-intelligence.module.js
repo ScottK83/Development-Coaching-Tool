@@ -1,6 +1,15 @@
 (function() {
     'use strict';
 
+    function getFilteredEmployees(week, options = {}) {
+        const allEmployees = Array.isArray(week?.employees) ? week.employees : [];
+        const includeFn = typeof options.isAssociateIncludedByTeamFilter === 'function'
+            ? options.isAssociateIncludedByTeamFilter
+            : () => true;
+
+        return allEmployees.filter(emp => includeFn(emp?.name));
+    }
+
     function buildExecutiveSummaryCallouts(options = {}) {
         const latestWeek = options.latestWeek;
         const centerAvg = options.centerAvg;
@@ -9,6 +18,8 @@
         const formatMetricValue = typeof options.formatMetricValue === 'function' ? options.formatMetricValue : (key, value) => `${value}`;
 
         if (!latestWeek?.employees?.length || !centerAvg) return [];
+        const filteredEmployees = getFilteredEmployees(latestWeek, options);
+        if (!filteredEmployees.length) return [];
 
         const callouts = [];
         Object.keys(metricsRegistry).forEach(metricKey => {
@@ -17,7 +28,7 @@
             if (centerValue === undefined || centerValue === null || centerValue === '') return;
 
             let best = null;
-            latestWeek.employees.forEach(emp => {
+            filteredEmployees.forEach(emp => {
                 const value = emp[metricKey];
                 if (value === undefined || value === null || value === '') return;
                 const numericValue = parseFloat(value);
@@ -56,6 +67,8 @@
         const formatMetricValue = typeof options.formatMetricValue === 'function' ? options.formatMetricValue : (key, value) => `${value}`;
 
         if (!latestWeek?.employees?.length || !centerAvg) return [];
+        const filteredEmployees = getFilteredEmployees(latestWeek, options);
+        if (!filteredEmployees.length) return [];
 
         const analysis = [];
         Object.keys(metricsRegistry).forEach(metricKey => {
@@ -63,7 +76,7 @@
             const centerValue = centerAvg[metricKey];
             if (centerValue === undefined || centerValue === null || centerValue === '') return;
 
-            const values = latestWeek.employees
+            const values = filteredEmployees
                 .map(emp => parseFloat(emp[metricKey]))
                 .filter(v => !Number.isNaN(v) && v !== null && v !== undefined);
             if (values.length === 0) return;

@@ -254,6 +254,29 @@ function getLatestTrackingWeekKey(weeklyData) {
 }
 
 function getPtoTeamSelectionFilter(weeklyData) {
+    const sharedContextResolver = window.getTeamSelectionContext;
+    if (typeof sharedContextResolver === 'function') {
+        const context = sharedContextResolver();
+        const weekKey = String(context?.weekKey || '').trim();
+        if (!weekKey) return null;
+
+        const selectedMembers = Array.isArray(context?.selectedMembers)
+            ? context.selectedMembers.map(normalizeAssociateName).filter(Boolean)
+            : [];
+
+        if (!selectedMembers.length) {
+            return {
+                weekKey,
+                allowedSet: null
+            };
+        }
+
+        return {
+            weekKey,
+            allowedSet: new Set(selectedMembers)
+        };
+    }
+
     const latestWeekKey = getLatestTrackingWeekKey(weeklyData);
     if (!latestWeekKey) return null;
 

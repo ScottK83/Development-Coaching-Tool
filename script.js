@@ -139,6 +139,7 @@ let callListeningSyncTimer = null;
 let repoSyncStorageHookInstalled = false;
 let repoSyncSuppressCounter = 0;
 let repoSyncHydrationInProgress = false;
+let teamFilterChangeHandlersBound = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
@@ -1739,6 +1740,7 @@ function saveTeamMembers() {
 function setTeamMembersForWeek(weekKey, memberNames) {
     myTeamMembers[weekKey] = memberNames;
     saveTeamMembers();
+    notifyTeamFilterChanged();
 }
 
 function getTeamMembersForWeek(weekKey) {
@@ -1749,6 +1751,122 @@ function isTeamMember(weekKey, employeeName) {
     const members = getTeamMembersForWeek(weekKey);
     return members.length === 0 || members.includes(employeeName);
 }
+
+function getLatestTeamSelectionWeekKey() {
+    const weekKeys = Object.keys(weeklyData || {});
+    if (!weekKeys.length) return '';
+
+    const getEndTimestamp = (weekKey) => {
+        const metadataEnd = String(weeklyData?.[weekKey]?.metadata?.endDate || '').trim();
+        const fallbackEnd = String(weekKey || '').split('|')[1] || String(weekKey || '').split('|')[0] || '';
+        const candidate = metadataEnd || fallbackEnd;
+        const parsed = candidate ? new Date(candidate) : new Date(NaN);
+        return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+    };
+
+    return weekKeys.reduce((latest, key) => {
+        if (!latest) return key;
+        return getEndTimestamp(key) > getEndTimestamp(latest) ? key : latest;
+    }, '');
+}
+
+function getTeamSelectionWeekKey() {
+    const dropdownWeek = String(document.getElementById('deleteWeekSelect')?.value || '').trim();
+    if (dropdownWeek && weeklyData?.[dropdownWeek]) return dropdownWeek;
+    return getLatestTeamSelectionWeekKey();
+}
+
+function getTeamSelectionContext() {
+    const weekKey = getTeamSelectionWeekKey();
+    const employeesForWeek = Array.isArray(weeklyData?.[weekKey]?.employees)
+        ? weeklyData[weekKey].employees.map(emp => String(emp?.name || '').trim()).filter(Boolean)
+        : [];
+    const selectedMembers = weekKey
+        ? getTeamMembersForWeek(weekKey).map(name => String(name || '').trim()).filter(Boolean)
+        : [];
+
+    return {
+        weekKey,
+        selectedMembers,
+        selectedSet: selectedMembers.length ? new Set(selectedMembers) : null,
+        totalEmployeesInWeek: employeesForWeek.length,
+        isFiltering: selectedMembers.length > 0
+    };
+}
+
+function isAssociateIncludedByTeamFilter(employeeName, context = null) {
+    const normalizedName = String(employeeName || '').trim();
+    if (!normalizedName) return false;
+    const filterContext = context || getTeamSelectionContext();
+    if (!filterContext?.isFiltering || !filterContext?.selectedSet) return true;
+    return filterContext.selectedSet.has(normalizedName);
+}
+
+function filterAssociateNamesByTeamSelection(names) {
+    const context = getTeamSelectionContext();
+    return (Array.isArray(names) ? names : [])
+        .map(name => String(name || '').trim())
+        .filter(Boolean)
+        .filter(name => isAssociateIncludedByTeamFilter(name, context));
+}
+
+function updateTeamFilterStatusChip() {
+    const chip = document.getElementById('teamFilterStatusChip');
+    if (!chip) return;
+
+    const context = getTeamSelectionContext();
+    if (!context.weekKey) {
+        chip.textContent = 'Active Team Filter: No weekly data loaded';
+        chip.style.background = '#eceff1';
+        chip.style.color = '#455a64';
+        return;
+    }
+
+    const weekLabel = formatWeekLabel(context.weekKey) || context.weekKey;
+    if (!context.isFiltering) {
+        chip.textContent = `Active Team Filter: All associates • Week ending ${weekLabel}`;
+        chip.style.background = '#e8f5e9';
+        chip.style.color = '#2e7d32';
+        return;
+    }
+
+    chip.textContent = `Active Team Filter: ${context.selectedMembers.length} selected • Week ending ${weekLabel}`;
+    chip.style.background = '#fff3e0';
+    chip.style.color = '#ef6c00';
+}
+
+function notifyTeamFilterChanged() {
+    const context = getTeamSelectionContext();
+    updateTeamFilterStatusChip();
+    window.dispatchEvent(new CustomEvent('devcoach:teamFilterChanged', { detail: context }));
+}
+
+function bindTeamFilterChangeHandlers() {
+    if (teamFilterChangeHandlersBound) return;
+
+    window.addEventListener('devcoach:teamFilterChanged', () => {
+        updateEmployeeDropdown();
+        populateTrendPeriodDropdown();
+        const selectedTrendPeriod = String(document.getElementById('trendPeriodSelect')?.value || '').trim();
+        if (selectedTrendPeriod) {
+            populateEmployeeDropdownForPeriod(selectedTrendPeriod);
+        }
+
+        populateExecutiveSummaryAssociate();
+        populateOneOnOneAssociateSelect();
+        initializeCoachingEmail();
+        initializeYearEndComments();
+        initializeCallListeningSection();
+        if (typeof initializePtoTracker === 'function') {
+            initializePtoTracker();
+        }
+    });
+
+    teamFilterChangeHandlersBound = true;
+}
+
+window.getTeamSelectionContext = getTeamSelectionContext;
+window.isAssociateIncludedByTeamFilter = isAssociateIncludedByTeamFilter;
 
 // ============================================
 // CALL CENTER AVERAGES - FOR METRIC TRENDS
@@ -1977,18 +2095,20 @@ function updateEmployeeDropdown() {
     dropdown.innerHTML = '<option value="">-- Choose an employee --</option>';
     
     const employees = new Set();
+    const teamFilterContext = getTeamSelectionContext();
     
     // For week/month/quarter: currentPeriod is the weekKey
     if (currentPeriod && weeklyData[currentPeriod] && currentPeriodType !== 'ytd') {
         weeklyData[currentPeriod].employees.forEach(emp => {
-            // Only add if they're on the team (or no team selection yet)
-            if (isTeamMember(currentPeriod, emp.name)) {
+            if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
                 employees.add(emp.name);
             }
         });
     } else if (currentPeriodType === 'ytd' && currentPeriod && ytdData[currentPeriod]) {
         ytdData[currentPeriod].employees.forEach(emp => {
-            employees.add(emp.name);
+            if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
+                employees.add(emp.name);
+            }
         });
     }
     
@@ -2926,8 +3046,10 @@ function handleDeselectAllTeamClick() {
 function handleDeleteWeekSelectChange() {
     const panelToggleButton = document.getElementById('toggleTeamMemberSelectorBtn');
     const isExpanded = panelToggleButton?.getAttribute('aria-expanded') === 'true';
+    notifyTeamFilterChanged();
     if (isExpanded) {
         populateTeamMemberSelector();
+        renderEmployeesList();
     }
 }
 
@@ -3128,10 +3250,17 @@ function enforceRepoAutoSyncEnabled() {
 
 function setCallListeningSyncStatus(message, type = 'info') {
     const statusEl = document.getElementById('callListeningSyncStatus');
-    if (!statusEl) return;
     const color = type === 'success' ? '#2e7d32' : type === 'error' ? '#b71c1c' : '#546e7a';
-    statusEl.style.color = color;
-    statusEl.textContent = message;
+    if (statusEl) {
+        statusEl.style.color = color;
+        statusEl.textContent = message;
+    }
+
+    const footerSyncStatus = document.getElementById('syncStatusFooter');
+    if (footerSyncStatus) {
+        footerSyncStatus.textContent = `Sync: ${message || 'unknown'}`;
+        footerSyncStatus.style.color = color;
+    }
 }
 
 function withRepoSyncSuppressed(action) {
@@ -3213,17 +3342,63 @@ function saveRepoSyncLastSuccess(meta) {
 
 function renderCallListeningLastSync(meta = null) {
     const el = document.getElementById('callListeningLastSync');
-    if (!el) return;
-
     const data = meta || loadRepoSyncLastSuccess();
+    const lastSyncFooterEl = document.getElementById('lastSyncFooter');
+
     if (!data?.syncedAt) {
-        el.textContent = 'Last successful sync: none yet';
+        if (el) {
+            el.textContent = 'Last successful sync: none yet';
+        }
+        if (lastSyncFooterEl) {
+            lastSyncFooterEl.textContent = 'Last Sync: none yet';
+        }
         return;
     }
 
     const when = new Date(data.syncedAt).toLocaleString();
     const details = [data.reason, data.commit].filter(Boolean).join(' • ');
-    el.textContent = `Last successful sync: ${when}${details ? ` (${details})` : ''}`;
+    if (el) {
+        el.textContent = `Last successful sync: ${when}${details ? ` (${details})` : ''}`;
+    }
+    if (lastSyncFooterEl) {
+        lastSyncFooterEl.textContent = `Last Sync: ${when}`;
+    }
+}
+
+function buildDiagnosticsSummary() {
+    const syncMeta = loadRepoSyncLastSuccess();
+    const teamContext = getTeamSelectionContext();
+    const shortCommit = String(syncMeta?.commit || '').trim().slice(0, 7) || 'n/a';
+    const syncedAt = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt).toLocaleString() : 'none';
+
+    return [
+        `Version: ${APP_VERSION}`,
+        `Deploy: ${shortCommit}`,
+        `Last Sync: ${syncedAt}`,
+        `Team Filter Week: ${teamContext.weekKey || 'none'}`,
+        `Team Filter Mode: ${teamContext.isFiltering ? `${teamContext.selectedMembers.length} selected` : 'all associates'}`,
+        `Current Period Type: ${currentPeriodType || 'unknown'}`,
+        `Current Period: ${currentPeriod || 'none'}`,
+        `Weekly Periods Loaded: ${Object.keys(weeklyData || {}).length}`,
+        `YTD Periods Loaded: ${Object.keys(ytdData || {}).length}`
+    ].join('\n');
+}
+
+function bindDiagnosticsCopyAction() {
+    const button = document.getElementById('copyDiagnosticsBtn');
+    if (!button || button.dataset.bound === 'true') return;
+
+    button.addEventListener('click', async () => {
+        const diagnostics = buildDiagnosticsSummary();
+        try {
+            await navigator.clipboard.writeText(diagnostics);
+            showToast('✅ Diagnostics copied.', 2500);
+        } catch (_error) {
+            alert(`Copy failed. Diagnostics:\n\n${diagnostics}`);
+        }
+    });
+
+    button.dataset.bound = 'true';
 }
 
 function setAutoSyncEnabledStatus(config) {
@@ -5063,8 +5238,9 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         return;
     }
     
+    const teamFilterContext = getTeamSelectionContext();
     const employees = periodData.employees
-        .filter(emp => ytdData[weekKey] ? true : isTeamMember(weekKey, emp.name))
+        .filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext))
         .map(emp => emp.name)
         .sort();
     
@@ -8558,6 +8734,8 @@ function buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate = '')
         metrics.averagesByMetric[metricKey] = [];
     });
 
+    const teamFilterContext = getTeamSelectionContext();
+
     allWeeks.forEach(weekKey => {
         const week = weeklyData[weekKey];
         if (!week || !week.employees) return;
@@ -8573,6 +8751,7 @@ function buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate = '')
         week.employees.forEach(emp => {
             if (!emp?.name) return;
             if (selectedAssociate && emp.name !== selectedAssociate) return;
+            if (!isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) return;
 
             metrics.totalEmployees.add(emp.name);
 
@@ -8724,7 +8903,8 @@ function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
         centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
         metricsRegistry: METRICS_REGISTRY,
         isReverseMetric,
-        formatMetricValue
+        formatMetricValue,
+        isAssociateIncludedByTeamFilter
     });
     return Array.isArray(delegated) ? delegated : [];
 }
@@ -8852,7 +9032,8 @@ function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
         centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
         metricsRegistry: METRICS_REGISTRY,
         isReverseMetric,
-        formatMetricValue
+        formatMetricValue,
+        isAssociateIncludedByTeamFilter
     });
     return Array.isArray(delegated) ? delegated : [];
 }
@@ -8862,11 +9043,12 @@ function populateOneOnOneAssociateSelect() {
     if (!select) return;
 
     const allEmployees = new Set();
+    const teamFilterContext = getTeamSelectionContext();
     for (const weekKey in weeklyData) {
         const week = weeklyData[weekKey];
         if (week.employees && Array.isArray(week.employees)) {
             week.employees.forEach(emp => {
-                if (emp.name && isTeamMember(weekKey, emp.name)) {
+                if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
                     allEmployees.add(emp.name);
                 }
             });
@@ -9030,11 +9212,14 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
 function getEmployeeNamesForPeriod(periodKeys) {
     const names = new Set();
     if (!Array.isArray(periodKeys)) return names;
+    const teamFilterContext = getTeamSelectionContext();
 
     periodKeys.forEach(weekKey => {
         const employees = weeklyData[weekKey]?.employees || [];
         employees.forEach(emp => {
-            if (emp?.name) names.add(emp.name);
+            if (emp?.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
+                names.add(emp.name);
+            }
         });
     });
 
@@ -9944,9 +10129,12 @@ function renderCoachingImpactTracker() {
     if (!container) return;
 
     const employeeSet = new Set();
+    const teamFilterContext = getTeamSelectionContext();
     Object.values(weeklyData).forEach(week => {
         week?.employees?.forEach(emp => {
-            if (emp?.name) employeeSet.add(emp.name);
+            if (emp?.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
+                employeeSet.add(emp.name);
+            }
         });
     });
 
@@ -9978,11 +10166,12 @@ function initializeTrendIntelligence() {
     const employeeSelect = document.getElementById('trendEmployeeSelector');
     if (employeeSelect) {
         const allEmployees = new Set();
+        const teamFilterContext = getTeamSelectionContext();
         for (const weekKey in weeklyData) {
             const week = weeklyData[weekKey];
             if (week.employees && Array.isArray(week.employees)) {
                 week.employees.forEach(emp => {
-                    if (emp.name && isTeamMember(weekKey, emp.name)) {
+                    if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
                         allEmployees.add(emp.name);
                     }
                 });
@@ -10397,6 +10586,7 @@ async function generateTrendCoachingEmail() {
         formatMetricValue,
         getCenterAverageForWeek,
         getEmployeeNickname,
+        isAssociateIncludedByTeamFilter,
         openCopilotWithPrompt,
         showToast
     });
@@ -10419,6 +10609,7 @@ async function generateIndividualCoachingEmail(employeeName) {
         metricMeetsTarget,
         metricDelta,
         formatMetricValue,
+        isAssociateIncludedByTeamFilter,
         getEmployeeNickname,
         openCopilotWithPrompt,
         showToast
@@ -10442,6 +10633,7 @@ async function generateGroupCoachingEmail() {
         metricMeetsTarget,
         metricDelta,
         formatMetricValue,
+        isAssociateIncludedByTeamFilter,
         showToast
     });
 }
@@ -10481,10 +10673,14 @@ function buildTodaysFocusData() {
     const prevWeek = prevKey ? weeklyData[prevKey] : null;
     if (!latestWeek?.employees) return null;
 
+    const teamFilterContext = getTeamSelectionContext();
+    const latestEmployees = latestWeek.employees.filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
+    if (!latestEmployees.length) return null;
+
     const metricsToUse = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
     const averages = {};
     metricsToUse.forEach(key => {
-        const vals = latestWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+        const vals = latestEmployees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
         averages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     });
 
@@ -10506,7 +10702,7 @@ function buildTodaysFocusData() {
         distribution[key] = { better: 0, worse: 0, total: 0 };
     });
 
-    latestWeek.employees.forEach(emp => {
+    latestEmployees.forEach(emp => {
         metricsToUse.forEach(key => {
             const avg = averages[key];
             const value = emp[key];
@@ -10817,13 +11013,9 @@ function renderEmployeesList() {
         return;
     }
 
-    const deleteWeekDropdown = document.getElementById('deleteWeekSelect');
-    let teamSelectionWeek = String(deleteWeekDropdown?.value || '').trim();
-    if (!teamSelectionWeek) {
-        const sortedWeeks = Object.keys(weeklyData || {}).sort().reverse();
-        teamSelectionWeek = sortedWeeks[0] || '';
-    }
-    const teamSelectionMembers = teamSelectionWeek ? getTeamMembersForWeek(teamSelectionWeek) : [];
+    const teamSelectionContext = getTeamSelectionContext();
+    const teamSelectionWeek = teamSelectionContext.weekKey;
+    const teamSelectionMembers = teamSelectionContext.selectedMembers;
 
     moduleApi.renderEmployeesList({
         container: document.getElementById('employeesList'),
@@ -10883,10 +11075,13 @@ async function initApp() {
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
     loadTeamMembers();
+    bindTeamFilterChangeHandlers();
+    notifyTeamFilterChanged();
 
     const restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
     if (restoredFromRepo) {
         showToast('✅ Restored synced data for this browser profile.', 4000);
+        notifyTeamFilterChanged();
     }
     
 
@@ -10908,7 +11103,9 @@ async function initApp() {
     initializeKeyboardShortcuts();
     enforceRepoAutoSyncEnabled();
     initializeRepoSyncControls();
+    bindDiagnosticsCopyAction();
     installRepoSyncStorageHooks();
+    renderCallListeningLastSync();
     
     // Restore last viewed section/sub-section on refresh
     restoreLastViewedSection();
@@ -10953,14 +11150,25 @@ function setAppVersionLabel(statusSuffix = '') {
         const lastSuccess = loadRepoSyncLastSuccess();
         const commit = String(lastSuccess?.commit || '').trim();
         const shortCommit = commit ? commit.slice(0, 7) : '';
-        const syncedAt = lastSuccess?.syncedAt ? new Date(lastSuccess.syncedAt).toLocaleString() : '';
-
-        if (shortCommit && syncedAt) {
-            deployMarkerEl.textContent = `Deploy: ${shortCommit} • ${syncedAt}`;
-        } else if (shortCommit) {
+        if (shortCommit) {
             deployMarkerEl.textContent = `Deploy: ${shortCommit}`;
         } else {
             deployMarkerEl.textContent = 'Deploy: n/a';
+        }
+    }
+
+    const syncStatusFooterEl = document.getElementById('syncStatusFooter');
+    const syncStatusText = String(syncStatusFooterEl?.textContent || '').trim().toLowerCase();
+    if (syncStatusFooterEl && (!syncStatusText || syncStatusText.includes('loading'))) {
+        syncStatusFooterEl.textContent = 'Sync: initializing...';
+        syncStatusFooterEl.style.color = '#546e7a';
+    }
+
+    const lastSyncFooterEl = document.getElementById('lastSyncFooter');
+    if (lastSyncFooterEl) {
+        const lastSuccess = loadRepoSyncLastSuccess();
+        if (!lastSuccess?.syncedAt) {
+            lastSyncFooterEl.textContent = 'Last Sync: none yet';
         }
     }
 }
@@ -11010,7 +11218,7 @@ function populateExecutiveSummaryAssociate() {
     const currentSelection = select.value;
 
     const allEmployees = new Set();
-    const teamFilteredEmployees = new Set();
+    const teamFilterContext = getTeamSelectionContext();
     
     // Collect all unique employee names from weeklyData
     for (const weekKey in weeklyData) {
@@ -11020,16 +11228,12 @@ function populateExecutiveSummaryAssociate() {
                 if (!emp.name) return;
 
                 allEmployees.add(emp.name);
-                if (isTeamMember(weekKey, emp.name)) {
-                    teamFilteredEmployees.add(emp.name);
-                }
             });
         }
     }
     
     // Sort and populate dropdown
-    const selectedSet = teamFilteredEmployees.size > 0 ? teamFilteredEmployees : allEmployees;
-    const sortedEmployees = Array.from(selectedSet).sort();
+    const sortedEmployees = filterAssociateNamesByTeamSelection(Array.from(allEmployees)).sort();
     select.innerHTML = '<option value="">-- Choose an associate --</option>';
     sortedEmployees.forEach(name => {
         const option = document.createElement('option');
@@ -11398,9 +11602,10 @@ function populateCoachingEmployeeSelectOptions(select, employees) {
 
 function getCoachingLatestPeriodEmployees(coachingWeekKey) {
     const latestWeek = weeklyData[coachingWeekKey];
+    const teamFilterContext = getTeamSelectionContext();
     const employees = (latestWeek.employees || [])
         .filter(emp => emp && emp.name)
-        .filter(emp => isTeamMember(coachingWeekKey, emp.name))
+        .filter(emp => isAssociateIncludedByTeamFilter(emp.name, teamFilterContext))
         .map(emp => emp.name)
         .sort();
 
@@ -11475,7 +11680,7 @@ function initializeCoachingEmail() {
 function getCallListeningEmployeeOptions() {
     const dataEmployees = getYearEndEmployees();
     const logEmployees = Object.keys(callListeningLogs || {});
-    return Array.from(new Set([...dataEmployees, ...logEmployees])).sort();
+    return filterAssociateNamesByTeamSelection(Array.from(new Set([...dataEmployees, ...logEmployees]))).sort();
 }
 
 function getCallListeningDraftFromForm() {
@@ -11860,7 +12065,7 @@ function getYearEndEmployees() {
         });
     });
 
-    return Array.from(employees).sort();
+    return filterAssociateNamesByTeamSelection(Array.from(employees)).sort();
 }
 
 function normalizeYearEndEmployeeLookupName(name) {
@@ -14847,13 +15052,14 @@ function populateSentimentAssociateDropdown() {
     if (!select) return;
     
     const allEmployees = new Set();
+    const teamFilterContext = getTeamSelectionContext();
     
     // Collect all unique employee names from weeklyData
     for (const weekKey in weeklyData) {
         const week = weeklyData[weekKey];
         if (week.employees && Array.isArray(week.employees)) {
             week.employees.forEach(emp => {
-                if (emp.name && isTeamMember(weekKey, emp.name)) {
+                if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
                     allEmployees.add(emp.name);
                 }
             });

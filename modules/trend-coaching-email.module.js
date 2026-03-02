@@ -1,6 +1,13 @@
 (function() {
     'use strict';
 
+    function isIncludedByTeamFilter(context = {}, employeeName = '') {
+        const includeFn = typeof context.isAssociateIncludedByTeamFilter === 'function'
+            ? context.isAssociateIncludedByTeamFilter
+            : () => true;
+        return includeFn(employeeName);
+    }
+
     async function generateIndividualCoachingEmail(context = {}) {
         const employeeName = context.employeeName;
         const keys = context.getWeeklyKeysSorted?.() || [];
@@ -140,6 +147,7 @@ Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`
         };
 
         latestWeek.employees.forEach(emp => {
+            if (!isIncludedByTeamFilter(context, emp?.name)) return;
             const prevEmp = previousWeek.employees.find(e => e.name === emp.name);
             if (!prevEmp) return;
 
