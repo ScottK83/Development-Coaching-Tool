@@ -10519,11 +10519,13 @@ function renderComplianceAlerts() {
     const container = document.getElementById('complianceAlertsOutput');
     if (!container) return;
     const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
-    if (!log.length) {
+    const teamFilterContext = getTeamSelectionContext();
+    const filteredLog = log.filter(entry => isAssociateIncludedByTeamFilter(entry?.employeeId, teamFilterContext));
+    if (!filteredLog.length) {
         container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No compliance flags logged.</div>';
         return;
     }
-    const items = log.slice(-5).reverse().map(entry => {
+    const items = filteredLog.slice(-5).reverse().map(entry => {
         return `<div style="padding: 10px; border: 1px solid #f1d5d5; border-radius: 6px; background: #fff7f7;">
             <strong>${entry.employeeId || 'Unknown'}</strong> • ${entry.flag} • ${new Date(entry.timestamp).toLocaleString()}
         </div>`;
@@ -10540,13 +10542,16 @@ function renderCoachingLoadAwareness() {
 
     const noRecent = [];
     const highLoad = [];
+    const teamFilterContext = getTeamSelectionContext();
 
     // Get all unique employees from weekly data
     const allEmployees = new Set();
     Object.values(weeklyData).forEach(week => {
         if (week && week.employees) {
             week.employees.forEach(emp => {
-                if (emp.name) allEmployees.add(emp.name);
+                if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
+                    allEmployees.add(emp.name);
+                }
             });
         }
     });
@@ -10668,9 +10673,16 @@ function renderRecognitionIntelligence() {
     const mostImproved = [];
     const recoveryWins = [];
     const quietConsistent = [];
+    const teamFilterContext = getTeamSelectionContext();
+    const latestFilteredEmployees = latestWeek.employees.filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
+    const previousByName = new Map(
+        prevWeek.employees
+            .filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext))
+            .map(emp => [emp.name, emp])
+    );
 
-    latestWeek.employees.forEach(emp => {
-        const prevEmp = prevWeek.employees.find(e => e.name === emp.name);
+    latestFilteredEmployees.forEach(emp => {
+        const prevEmp = previousByName.get(emp.name);
         if (!prevEmp) return;
 
         const sentimentDelta = metricDelta('overallSentiment', emp.overallSentiment, prevEmp.overallSentiment);
