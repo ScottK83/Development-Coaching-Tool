@@ -2672,12 +2672,15 @@ function buildMetricsUploadQualityWarnings(employees) {
     if (!safeEmployees.length) return [];
 
     const holdBlankCount = safeEmployees.filter(emp => emp?.holdTime === '' || emp?.holdTime === null || emp?.holdTime === undefined).length;
+    const holdBlankRatio = holdBlankCount / safeEmployees.length;
     const ahtPresentCount = safeEmployees.filter(emp => Number.isFinite(parseFloat(emp?.aht))).length;
     const acwPresentCount = safeEmployees.filter(emp => Number.isFinite(parseFloat(emp?.acw))).length;
 
     const warnings = [];
     if (holdBlankCount === safeEmployees.length && (ahtPresentCount > 0 || acwPresentCount > 0)) {
         warnings.push('Hold Time parsed blank for all associates. Verify the Hold column/header in source data.');
+    } else if (holdBlankRatio >= 0.65 && (ahtPresentCount > 0 || acwPresentCount > 0)) {
+        warnings.push(`Hold Time is blank for ${holdBlankCount}/${safeEmployees.length} associates. Please confirm source column mapping before save.`);
     }
 
     return warnings;

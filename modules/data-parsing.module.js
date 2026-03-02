@@ -118,7 +118,10 @@
         if (!Array.isArray(rows) || !rows.length) return colMap;
 
         const currentHoldCount = countNumericValuesForColumn(rows, colMap.holdTime);
-        if (currentHoldCount > 0) return colMap;
+        const rowCount = rows.length;
+        const holdCoverage = rowCount > 0 ? (currentHoldCount / rowCount) : 0;
+        const holdCoverageLooksHealthy = currentHoldCount >= 3 && holdCoverage >= 0.45;
+        if (holdCoverageLooksHealthy) return colMap;
 
         const reserved = new Set(
             Object.entries(colMap)
@@ -128,6 +131,7 @@
 
         let bestIndex = -1;
         let bestScore = -1;
+        let bestCount = 0;
 
         for (let index = 0; index < headers.length; index += 1) {
             if (reserved.has(index)) continue;
@@ -143,10 +147,12 @@
             if (score > bestScore) {
                 bestScore = score;
                 bestIndex = index;
+                bestCount = numericCount;
             }
         }
 
-        if (bestIndex >= 0) {
+        const meaningfulImprovement = bestCount >= Math.max(currentHoldCount + 3, Math.floor(rowCount * 0.4));
+        if (bestIndex >= 0 && meaningfulImprovement) {
             colMap.holdTime = bestIndex;
         }
 
