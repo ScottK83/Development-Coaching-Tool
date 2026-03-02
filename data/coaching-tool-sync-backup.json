@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T17:34:39.879Z",
-  "reason": "pto tracker updated",
+  "generatedAt": "2026-03-02T17:34:44.467Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4827,7 +4827,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 158
+      "byteLength": 122
     },
     "devCoachingTool_cloudSyncShared": {
       "valueType": "object",
@@ -4897,7 +4897,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 121
+      "byteLength": 128
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
