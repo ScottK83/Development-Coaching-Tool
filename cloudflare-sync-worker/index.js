@@ -37,6 +37,7 @@ export default {
 
     try {
       const body = await request.json();
+      const mode = String(body?.mode || '').trim();
       const allowDataRegression = body?.allowDataRegression === true;
       const callListeningLogs = body?.callListeningLogs && typeof body.callListeningLogs === 'object'
         ? body.callListeningLogs
@@ -46,6 +47,25 @@ export default {
       const generatedAt = new Date().toISOString();
       const branch = env.GH_BRANCH || 'main';
       const dataDir = env.GH_DATA_DIR || 'data';
+
+      if (mode === 'uploadFile') {
+        const uploadResult = await handleUploadFileToRepo({
+          env,
+          body,
+          branch,
+          dataDir
+        });
+
+        return json({
+          ok: true,
+          mode: 'uploadFile',
+          branch,
+          path: uploadResult.path,
+          fileName: uploadResult.fileName,
+          commit: uploadResult.commitSha,
+          generatedAt
+        }, 200, corsHeaders(requestOrigin, allowedOrigin));
+      }
 
       const jsonPath = `${dataDir}/call-listening-logs.json`;
       const csvPath = `${dataDir}/call-listening-logs.csv`;
@@ -390,6 +410,76 @@ function buildCsvFromLogs(callListeningLogs) {
   return lines.join('\n');
 }
 
+async function handleUploadFileToRepo({ env, body, branch, dataDir }) {
+  const rawFileName = String(body?.fileName || '').trim();
+  const fileName = sanitizeUploadFileName(rawFileName);
+  if (!fileName) {
+    throw new Error('Missing or invalid fileName for uploadFile mode.');
+  }
+
+  if (!isSupportedExcelFile(fileName)) {
+    throw new Error('Only Excel files are supported (.xls, .xlsx, .xlsm, .xlsb).');
+  }
+
+  const base64Input = String(body?.fileContentBase64 || '').trim();
+  const contentBase64 = normalizeBase64Content(base64Input);
+  if (!contentBase64) {
+    throw new Error('Missing fileContentBase64 for uploadFile mode.');
+  }
+
+  const uploadsDir = String(env.GH_UPLOADS_DIR || `${dataDir}/uploads`).trim() || `${dataDir}/uploads`;
+  const path = `${uploadsDir}/${fileName}`;
+  const message = `chore(data): upload excel file ${fileName}`;
+
+  const result = await upsertRepoFileBase64({
+    env,
+    branch,
+    path,
+    message,
+    contentBase64
+  });
+
+  return {
+    fileName,
+    path,
+    commitSha: result.commitSha
+  };
+}
+
+function sanitizeUploadFileName(fileName) {
+  const baseName = String(fileName || '')
+    .split(/[\\/]/)
+    .pop()
+    .trim();
+
+  if (!baseName) return '';
+
+  const sanitized = baseName
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9._-]/g, '-');
+
+  return sanitized.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+}
+
+function isSupportedExcelFile(fileName) {
+  return /\.(xls|xlsx|xlsm|xlsb)$/i.test(String(fileName || '').trim());
+}
+
+function normalizeBase64Content(value) {
+  const cleaned = String(value || '').replace(/\s+/g, '');
+  if (!cleaned) return '';
+
+  if (!/^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+    throw new Error('fileContentBase64 contains invalid characters.');
+  }
+
+  if (cleaned.length > 30 * 1024 * 1024) {
+    throw new Error('Uploaded file is too large for worker upload limit.');
+  }
+
+  return cleaned;
+}
+
 async function githubRequest(env, path, options = {}) {
   const apiUrl = `https://api.github.com${path}`;
   const response = await fetch(apiUrl, {
@@ -478,6 +568,46 @@ async function upsertRepoFile({ env, branch, path, message, content }) {
   }
 
   throw new Error(`Failed to upsert ${path} after ${maxAttempts} attempts.`);
+}
+
+async function upsertRepoFileBase64({ env, branch, path, message, contentBase64 }) {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const sha = await getExistingFileSha(env, branch, path);
+
+      const payload = {
+        message,
+        content: contentBase64,
+        branch
+      };
+
+      if (sha) payload.sha = sha;
+
+      const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/') }`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      return {
+        commitSha: result?.commit?.sha || null,
+        contentSha: result?.content?.sha || null
+      };
+    } catch (error) {
+      if (attempt < maxAttempts && isGithubContentConflictError(error)) {
+        await waitForRetry(attempt);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`Failed to upload ${path} after ${maxAttempts} attempts.`);
 }
 
 function isGithubContentConflictError(error) {

@@ -3480,6 +3480,7 @@ function initializeRepoSyncControls() {
     const exportLedgerBtn = document.getElementById('exportIntelligenceLedgerXlsxBtn');
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
     const openPtoExcelBtn = document.getElementById('openPtoExcelBtn');
+    const uploadExcelBtn = document.getElementById('uploadExcelToRepoBtn');
 
     if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
         return;
@@ -3549,6 +3550,14 @@ function initializeRepoSyncControls() {
         });
         exportLedgerBtn.dataset.bound = 'true';
     }
+    if (uploadExcelBtn && !uploadExcelBtn.dataset.bound) {
+        uploadExcelBtn.addEventListener('click', async () => {
+            await runWithButtonBusyState(uploadExcelBtn, '⏳ Uploading...', async () => {
+                await uploadExcelFileToRepo();
+            });
+        });
+        uploadExcelBtn.dataset.bound = 'true';
+    }
     if (!syncEndpointInput.dataset.bound) {
         const persistEndpointConfig = () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
@@ -3572,6 +3581,93 @@ function initializeRepoSyncControls() {
             setAutoSyncEnabledStatus(nextConfig);
         });
         autoSyncCheckbox.dataset.bound = 'true';
+    }
+}
+
+function setRepoExcelUploadStatus(message, type = 'info') {
+    const statusEl = document.getElementById('repoExcelUploadStatus');
+    if (!statusEl) return;
+
+    statusEl.textContent = message;
+    if (type === 'success') {
+        statusEl.style.color = '#2e7d32';
+    } else if (type === 'error') {
+        statusEl.style.color = '#c62828';
+    } else {
+        statusEl.style.color = '#546e7a';
+    }
+}
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+        const chunk = bytes.subarray(index, index + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+    }
+
+    return btoa(binary);
+}
+
+function isExcelFileName(fileName) {
+    return /\.(xls|xlsx|xlsm|xlsb)$/i.test(String(fileName || '').trim());
+}
+
+async function uploadExcelFileToRepo() {
+    const fileInput = document.getElementById('repoExcelUploadInput');
+    const selectedFile = fileInput?.files?.[0] || null;
+
+    if (!selectedFile) {
+        setRepoExcelUploadStatus('Select an Excel file first.', 'error');
+        return;
+    }
+
+    if (!isExcelFileName(selectedFile.name)) {
+        setRepoExcelUploadStatus('Only Excel files are supported (.xls, .xlsx, .xlsm, .xlsb).', 'error');
+        return;
+    }
+
+    const syncConfig = getCallListeningSyncConfigFromUI();
+    const endpoint = String(syncConfig?.endpoint || '').trim();
+    if (!endpoint) {
+        setRepoExcelUploadStatus('Add Worker URL first in Auto-Sync Worker URL.', 'error');
+        return;
+    }
+
+    setRepoExcelUploadStatus(`Uploading ${selectedFile.name} to repo...`, 'info');
+
+    try {
+        const fileBuffer = await selectedFile.arrayBuffer();
+        const fileContentBase64 = arrayBufferToBase64(fileBuffer);
+
+        const response = await postRepoSyncPayload(endpoint, syncConfig, {
+            mode: 'uploadFile',
+            reason: `manual excel upload: ${selectedFile.name}`,
+            fileName: selectedFile.name,
+            fileContentBase64,
+            fileMimeType: selectedFile.type || ''
+        });
+
+        await throwIfRepoSyncErrorResponse(response);
+        const responseData = await parseRepoSyncSuccessResponse(response);
+
+        const savedPath = String(responseData?.path || '').trim();
+        setRepoExcelUploadStatus(
+            savedPath
+                ? `Uploaded to repo: ${savedPath}`
+                : `Uploaded ${selectedFile.name} to repo successfully.`,
+            'success'
+        );
+        showToast('✅ Excel file uploaded to repo', 3000);
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    } catch (error) {
+        console.error('Excel upload failed:', error);
+        setRepoExcelUploadStatus(`Upload failed: ${error.message}`, 'error');
+        showToast(`⚠️ Upload failed: ${error.message}`, 4500);
     }
 }
 
