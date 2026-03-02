@@ -117,6 +117,10 @@
     function autoCorrectHoldTimeColumn(colMap, headers, rows) {
         if (!Array.isArray(rows) || !rows.length) return colMap;
 
+        const hasHoldLikeHeader = Array.isArray(headers)
+            && headers.some(header => String(header || '').toLowerCase().includes('hold'));
+        if (colMap.holdTime < 0 && !hasHoldLikeHeader) return colMap;
+
         const currentHoldCount = countNumericValuesForColumn(rows, colMap.holdTime);
         const rowCount = rows.length;
         const holdCoverage = rowCount > 0 ? (currentHoldCount / rowCount) : 0;
@@ -358,8 +362,14 @@
         };
         
         const headerColumnCount = headers.length;
+        const detectedHeaderMatchCount = Object.values(colMapDetected)
+            .filter(index => Number.isInteger(index) && index >= 0).length;
+        const usePositionalFallback = detectedHeaderMatchCount <= 2;
+
         const resolveColumnIndex = (mappedIndex, fallbackKey) => {
             if (mappedIndex >= 0) return mappedIndex;
+
+            if (!usePositionalFallback) return -1;
 
             const fallbackIndex = DEFAULT_COLUMN_INDEX[fallbackKey];
             if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < headerColumnCount) {

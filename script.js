@@ -2680,7 +2680,7 @@ function buildMetricsUploadQualityWarnings(employees) {
 
     const warnings = [];
     if (holdBlankCount === safeEmployees.length && (ahtPresentCount > 0 || acwPresentCount > 0)) {
-        warnings.push('Hold Time parsed blank for all associates. Verify the Hold column/header in source data.');
+        warnings.push('Hold Time is blank for all associates. This source export may not include a hold-time column; if expected, verify the Hold header in source data.');
     } else if (holdBlankRatio >= 0.65 && (ahtPresentCount > 0 || acwPresentCount > 0)) {
         warnings.push(`Hold Time is blank for ${holdBlankCount}/${safeEmployees.length} associates. Please confirm source column mapping before save.`);
     }
@@ -7556,6 +7556,7 @@ function drawTrendEmailCanvasSections(ctx, empName, current, previous, trendCont
         metrics,
         prevMetrics,
         centerAvg,
+        hasSurveys,
         meetingGoals,
         beatingCenter,
         totalMetrics,
@@ -7593,7 +7594,8 @@ function drawTrendEmailCanvasSections(ctx, empName, current, previous, trendCont
         prevMetrics,
         centerAvg,
         previous,
-        periodTypeText
+        periodTypeText,
+        hasSurveys
     );
 }
 
@@ -7766,7 +7768,7 @@ function drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear) {
     return y + summaryBoxesHeight + 24;
 }
 
-function drawTrendInsightsLegendAndReliabilitySection(ctx, y, metricOrder, metrics, prevMetrics, centerAvg, previous, periodTypeText) {
+function drawTrendInsightsLegendAndReliabilitySection(ctx, y, metricOrder, metrics, prevMetrics, centerAvg, previous, periodTypeText, hasSurveys = true) {
     const { improvedMetrics, keyWins, focusMetrics } = buildTrendHighlightsData(
         metricOrder,
         metrics,
@@ -7775,8 +7777,17 @@ function drawTrendInsightsLegendAndReliabilitySection(ctx, y, metricOrder, metri
         previous
     );
 
+    const hasUnavailableCenterOrTrend = !previous || metricOrder.some(({ key }) => {
+        if (metrics[key] === undefined) return false;
+        const centerValue = parseFloat(getCenterAverageForMetric(centerAvg, key));
+        return !Number.isFinite(centerValue) || centerValue <= 0;
+    });
+
     let nextY = drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetrics, periodTypeText, previous);
-    nextY += 30 + drawTrendLegendOnCanvas(ctx, nextY + 30, periodTypeText);
+    nextY += 30 + drawTrendLegendOnCanvas(ctx, nextY + 30, periodTypeText, {
+        includeNoSurveyData: !hasSurveys,
+        includeUnavailableState: hasUnavailableCenterOrTrend
+    });
 
     const reliabilityHours = parseFloat(metrics.reliability) || 0;
     if (reliabilityHours > 0) {
@@ -7963,18 +7974,29 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
     return y;
 }
 
-function drawTrendLegendOnCanvas(ctx, y, periodTypeText) {
+function drawTrendLegendOnCanvas(ctx, y, periodTypeText, options = {}) {
+    const {
+        includeNoSurveyData = true,
+        includeUnavailableState = true
+    } = options;
+
     const legendItems = [
         { color: '#d4edda', label: 'Meets goal' },
         { color: '#fff3cd', label: 'Below goal' },
-        { color: '#ffffff', stroke: '#cccccc', label: 'No survey data (survey metrics)' },
         { color: '#0056B3', label: 'Above center average' },
         { color: '#DAA520', label: 'Below center average' },
-        { color: '#999999', label: 'Center/trend unavailable' },
         { color: '#28a745', symbol: '📈', label: `Improved from last ${periodTypeText}` },
         { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
         { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
     ];
+
+    if (includeNoSurveyData) {
+        legendItems.splice(2, 0, { color: '#ffffff', stroke: '#888888', label: 'No survey data (survey metrics)' });
+    }
+
+    if (includeUnavailableState) {
+        legendItems.splice(includeNoSurveyData ? 5 : 4, 0, { color: '#999999', label: 'Center/trend unavailable' });
+    }
 
     const legendColumns = 3;
     const legendRows = Math.ceil(legendItems.length / legendColumns);
