@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T17:34:06.799Z",
+  "generatedAt": "2026-03-02T17:34:08.661Z",
   "reason": "team members updated",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
@@ -3908,7 +3908,6 @@
   "myTeamMembers": {
     "2026-02-08|2026-02-14": [
       "Angelina Fierro",
-      "Brittney Carroll",
       "Caylie Chirumbolo",
       "Darryn Coley",
       "Ekiecha Brabham",
@@ -4885,7 +4884,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 303
+      "byteLength": 284
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
