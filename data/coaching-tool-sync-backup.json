@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T19:10:09.795Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-03-02T19:14:59.345Z",
+  "reason": "weekly data updated",
   "sourceAppVersion": "2026.03.02.9",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -3193,17 +3193,17 @@
         {
           "name": "Angelina Fierro",
           "firstName": "Angelina",
-          "scheduleAdherence": 86.17,
+          "scheduleAdherence": 86.2,
           "cxRepOverall": 100,
           "fcr": 0,
           "overallExperience": 100,
           "overallExperienceTop3": 100,
-          "transfers": 10.24,
+          "transfers": 10.2,
           "transfersCount": 0,
           "aht": 810,
           "talkTime": "",
           "acw": 252,
-          "holdTime": "",
+          "holdTime": 2,
           "reliability": 0,
           "overallSentiment": 95,
           "positiveWord": 99.2,
@@ -5740,7 +5740,7 @@
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 10,
-      "byteLength": 57473
+      "byteLength": 57470
     },
     "devCoachingTool_trendQueueLegendExpanded": {
       "valueType": "string",
