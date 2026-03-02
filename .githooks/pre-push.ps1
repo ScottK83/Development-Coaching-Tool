@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$autoBumpEnabled = ($env:AUTO_BUMP_ON_PUSH -eq "1")
+$autoBumpEnabled = ($env:AUTO_BUMP_ON_PUSH -ne "0")
 
 $repoRoot = git rev-parse --show-toplevel
 if (-not $repoRoot) {
@@ -93,13 +93,7 @@ if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
 }
 
 if (-not $autoBumpEnabled) {
-    if (-not $currentVersionDate) {
-        Write-Host "APP_VERSION format is invalid or missing. Auto-bump is disabled; update script.js manually if needed."
-    }
-    elseif ($currentVersionDate -ne $todayDatePart) {
-        Write-Host "APP_VERSION ($currentVersion) is from $currentVersionDate, not today ($todayDatePart). Auto-bump is disabled."
-        Write-Host "Set AUTO_BUMP_ON_PUSH=1 to restore legacy auto-commit behavior."
-    }
+    Write-Host "AUTO_BUMP_ON_PUSH=0 detected. Skipping APP_VERSION bump."
     exit 0
 }
 

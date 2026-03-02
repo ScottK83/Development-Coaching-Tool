@@ -11396,10 +11396,6 @@ function setAppVersionLabel(statusSuffix = '') {
     const versionEl = document.getElementById('appVersion');
     if (!versionEl) return;
     versionEl.textContent = `Version: ${APP_VERSION}${statusSuffix}`;
-    const statusEl = document.getElementById('systemStatus');
-    if (statusEl) {
-        statusEl.textContent = `System: ${APP_VERSION}`;
-    }
 
     const deployMarkerEl = document.getElementById('deployMarker');
     if (deployMarkerEl) {
@@ -11411,13 +11407,6 @@ function setAppVersionLabel(statusSuffix = '') {
         } else {
             deployMarkerEl.textContent = 'Deploy: n/a';
         }
-    }
-
-    const syncStatusFooterEl = document.getElementById('syncStatusFooter');
-    const syncStatusText = String(syncStatusFooterEl?.textContent || '').trim().toLowerCase();
-    if (syncStatusFooterEl && (!syncStatusText || syncStatusText.includes('loading'))) {
-        syncStatusFooterEl.textContent = 'Sync: initializing...';
-        syncStatusFooterEl.style.color = '#546e7a';
     }
 
     const lastSyncFooterEl = document.getElementById('lastSyncFooter');
