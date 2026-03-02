@@ -3456,6 +3456,7 @@ function initializeRepoSyncControls() {
     if (!syncNowBtn.dataset.bound) {
         syncNowBtn.addEventListener('click', async () => {
             await runWithButtonBusyState(syncNowBtn, '⏳ Syncing...', async () => {
+                getCallListeningSyncConfigFromUI();
                 await syncRepoData('manual sync now', { force: true });
             });
         });
