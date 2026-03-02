@@ -83,6 +83,28 @@
         22: CANONICAL_SCHEMA.RELIABILITY_HOURS
     };
 
+    const DEFAULT_COLUMN_INDEX = {
+        name: 0,
+        totalCalls: 1,
+        transfers: 2,
+        transfersCount: 3,
+        aht: 4,
+        talkTime: 5,
+        holdTime: 6,
+        acw: 7,
+        adherence: 8,
+        emotions: 9,
+        negativeWord: 10,
+        positiveWord: 11,
+        sentiment: 12,
+        fcr: 13,
+        cxRepOverall: 15,
+        overallExperience: 17,
+        overallExperienceTop3: -1,
+        surveyTotal: 18,
+        reliability: 22
+    };
+
     // ============================================
     // PARSING FUNCTIONS
     // ============================================
@@ -278,7 +300,19 @@
             return headers.findIndex(h => matchesKeyword(h, keywords));
         };
         
-        const colMap = {
+        const headerColumnCount = headers.length;
+        const resolveColumnIndex = (mappedIndex, fallbackKey) => {
+            if (mappedIndex >= 0) return mappedIndex;
+
+            const fallbackIndex = DEFAULT_COLUMN_INDEX[fallbackKey];
+            if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < headerColumnCount) {
+                return fallbackIndex;
+            }
+
+            return -1;
+        };
+
+        const colMapDetected = {
             name: findColumnIndex(['name', 'employee', 'associate']),
             totalCalls: findColumnIndex([
                 'totalcalls',
@@ -331,6 +365,11 @@
             surveyTotal: findColumnIndex(['oe survey', 'survey total', 'survey responses', 'total surveys', 'oesurvey total', 'oe survey total']),
             reliability: findColumnIndex(['reliability', 'reliability hours', 'reliability hrs', 'hours against'])
         };
+
+        const colMap = {};
+        Object.keys(colMapDetected).forEach(key => {
+            colMap[key] = resolveColumnIndex(colMapDetected[key], key);
+        });
         
         const getCell = (cells, colIndex) => {
             if (colIndex < 0) return '';

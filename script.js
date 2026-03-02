@@ -2666,6 +2666,22 @@ function syncWeeklyViewAfterPastedUpload(weekKey) {
     }
 }
 
+function buildMetricsUploadQualityWarnings(employees) {
+    const safeEmployees = Array.isArray(employees) ? employees : [];
+    if (!safeEmployees.length) return [];
+
+    const holdBlankCount = safeEmployees.filter(emp => emp?.holdTime === '' || emp?.holdTime === null || emp?.holdTime === undefined).length;
+    const ahtPresentCount = safeEmployees.filter(emp => Number.isFinite(parseFloat(emp?.aht))).length;
+    const acwPresentCount = safeEmployees.filter(emp => Number.isFinite(parseFloat(emp?.acw))).length;
+
+    const warnings = [];
+    if (holdBlankCount === safeEmployees.length && (ahtPresentCount > 0 || acwPresentCount > 0)) {
+        warnings.push('Hold Time parsed blank for all associates. Verify the Hold column/header in source data.');
+    }
+
+    return warnings;
+}
+
 function handleLoadPastedDataClick() {
     const pastedData = document.getElementById('pasteDataTextarea').value;
     const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
@@ -2701,6 +2717,14 @@ function handleLoadPastedDataClick() {
         if (employees.length === 0) {
             alert('ℹ️ No valid employee data found');
             return;
+        }
+
+        const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
+        if (qualityWarnings.length) {
+            const proceed = confirm(`⚠️ Upload quality warning:\n\n${qualityWarnings.join('\n')}\n\nContinue saving this upload?`);
+            if (!proceed) {
+                return;
+            }
         }
 
         const weekKey = `${startDate}|${endDate}`;
@@ -2797,6 +2821,10 @@ function handleTestPastedDataClick() {
 
         const sampleNames = employees.slice(0, 5).map(emp => emp.name).join(', ');
         const dateLabel = weekEndingDate ? `${startDate} to ${endDate}` : `${startDate} to ${endDate} (auto test range)`;
+        const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
+        const qualityHtml = qualityWarnings.length
+            ? `<div style="margin-top: 8px; color: #8a6d1f;"><strong>Warnings:</strong><br>${qualityWarnings.join('<br>')}</div>`
+            : '';
 
         if (preview) {
             preview.style.display = 'block';
@@ -2809,6 +2837,7 @@ function handleTestPastedDataClick() {
                 👥 Employees parsed: ${employees.length}<br>
                 👤 Sample: ${sampleNames}${employees.length > 5 ? '...' : ''}<br>
                 <div style="margin-top: 8px;"><strong>Metric coverage:</strong><br>${metricCoverage}</div>
+                ${qualityHtml}
             `;
         }
 
