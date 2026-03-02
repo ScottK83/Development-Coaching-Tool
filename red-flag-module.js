@@ -16,6 +16,7 @@ function initializeRedFlag() {
     document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
     document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
 
+    populateFollowUpAssociateDropdown();
     switchRedFlagMode('follow-up');
     handleFollowUpTodoTypeChange();
 }
@@ -58,6 +59,9 @@ function switchRedFlagMode(mode) {
     if (followUpPanel) {
         followUpPanel.style.display = isFollowUp ? 'block' : 'none';
     }
+    if (isFollowUp) {
+        populateFollowUpAssociateDropdown();
+    }
     if (followUpPreview) {
         const hasPreview = Boolean(document.getElementById('followUpEmailPreviewText')?.textContent?.trim());
         followUpPreview.style.display = isFollowUp && hasPreview ? 'block' : 'none';
@@ -73,6 +77,38 @@ function switchRedFlagMode(mode) {
     if (showRedFlagBtn) {
         showRedFlagBtn.style.background = isFollowUp ? '#b0bec5' : '#dc3545';
         showRedFlagBtn.style.color = isFollowUp ? '#263238' : 'white';
+    }
+}
+
+function populateFollowUpAssociateDropdown() {
+    const associateSelect = document.getElementById('followUpPersonName');
+    if (!associateSelect) return;
+
+    const previousValue = associateSelect.value;
+    associateSelect.innerHTML = '<option value="">-- Select Associate --</option>';
+
+    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    const employeeSet = new Set();
+
+    Object.values(weeklyData).forEach(period => {
+        if (!period || !Array.isArray(period.employees)) return;
+        period.employees.forEach(employee => {
+            const name = String(employee?.name || '').trim();
+            if (name) {
+                employeeSet.add(name);
+            }
+        });
+    });
+
+    Array.from(employeeSet).sort((a, b) => a.localeCompare(b)).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        associateSelect.appendChild(option);
+    });
+
+    if (previousValue && employeeSet.has(previousValue)) {
+        associateSelect.value = previousValue;
     }
 }
 
@@ -131,7 +167,7 @@ function buildApsEmailFromName(personName) {
 
 function sendFollowUpEmail() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
-    const associateName = document.getElementById('followUpPersonName')?.value.trim() || '';
+    const associateName = String(document.getElementById('followUpPersonName')?.value || '').trim();
     const customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
     const customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
     const declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
