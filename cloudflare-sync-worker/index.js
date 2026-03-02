@@ -207,6 +207,12 @@ function isIncomingBackupRegression({ incomingHasData, existingHasData, incoming
     return true;
   }
 
+  if (!incomingLatest && existingLatest) {
+    const incomingFootprint = Number(incomingSummary?.footprintScore || 0);
+    const existingFootprint = Number(existingSummary?.footprintScore || 0);
+    return incomingFootprint < existingFootprint;
+  }
+
   if (incomingLatest && existingLatest && incomingLatest === existingLatest) {
     const incomingFootprint = Number(incomingSummary?.footprintScore || 0);
     const existingFootprint = Number(existingSummary?.footprintScore || 0);
@@ -276,9 +282,18 @@ function hasMeaningfulBackupData(payload) {
   if (!payload || typeof payload !== 'object') return false;
 
   const hasEntries = (value) => {
-    if (!value || typeof value !== 'object') return false;
-    if (Array.isArray(value)) return value.length > 0;
-    return Object.keys(value).length > 0;
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'boolean') return value;
+    if (Array.isArray(value)) {
+      return value.some(item => hasEntries(item));
+    }
+    if (typeof value !== 'object') return false;
+
+    const keys = Object.keys(value);
+    if (!keys.length) return false;
+    return keys.some(key => hasEntries(value[key]));
   };
 
   return [
