@@ -139,6 +139,7 @@ let callListeningSyncTimer = null;
 let repoSyncStorageHookInstalled = false;
 let repoSyncSuppressCounter = 0;
 let repoSyncHydrationInProgress = false;
+let repoSyncConflictPromptMutedUntil = 0;
 let teamFilterChangeHandlersBound = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
@@ -4152,6 +4153,7 @@ function getRepoSyncEndpointIfAllowed(config, forceSync) {
 }
 
 function finalizeRepoSyncSuccess(reason, responseData) {
+    repoSyncConflictPromptMutedUntil = 0;
     const syncMeta = buildRepoSyncMeta(reason, responseData);
     saveRepoSyncLastSuccess(syncMeta);
     renderCallListeningLastSync(syncMeta);
@@ -4182,6 +4184,20 @@ async function maybeHandleRepoSyncConflict(error) {
         return false;
     }
 
+    const interactive = error?.interactive === true;
+    const now = Date.now();
+
+    if (!interactive) {
+        if (now < repoSyncConflictPromptMutedUntil) {
+            return true;
+        }
+
+        repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
+        setCallListeningSyncStatus('Sync paused: local profile is older than repo backup. Use Sync Now or Force Restore when ready.', 'error');
+        showToast('⚠️ Auto-sync paused to avoid overwrite prompts. Use Sync Now after re-upload or Force Restore.', 5000);
+        return true;
+    }
+
     const incomingSummary = error?.payload?.incomingSummary || null;
     const existingSummary = error?.payload?.existingSummary || null;
     const message = [
@@ -4194,6 +4210,7 @@ async function maybeHandleRepoSyncConflict(error) {
 
     const shouldRestore = confirm(message);
     if (!shouldRestore) {
+        repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
         setCallListeningSyncStatus('Sync blocked (older local profile). Use Force Restore to match latest repo data.', 'error');
         return true;
     }
@@ -4202,6 +4219,7 @@ async function maybeHandleRepoSyncConflict(error) {
         setCallListeningSyncStatus('Sync conflict detected. Restoring latest repo backup...', 'info');
         const restored = await tryAutoRestoreFromRepoBackupOnEmptyState();
         if (restored) {
+            repoSyncConflictPromptMutedUntil = 0;
             showToast('✅ Restored latest repo backup. Sync is now aligned.', 4000);
             setCallListeningSyncStatus('Restore complete. This browser now matches repo data.', 'success');
             setTimeout(() => window.location.reload(), 500);
@@ -4240,6 +4258,7 @@ async function syncRepoData(reason = 'updated', options = {}) {
         const responseData = await parseRepoSyncSuccessResponse(response);
         finalizeRepoSyncSuccess(reason, responseData);
     } catch (error) {
+        error.interactive = forceSync;
         const handledConflict = await maybeHandleRepoSyncConflict(error);
         if (handledConflict) return;
         handleRepoSyncFailure(error);
