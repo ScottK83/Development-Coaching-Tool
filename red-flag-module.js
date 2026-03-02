@@ -8,6 +8,7 @@ function initializeRedFlag() {
     document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
 
     document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
+    document.getElementById('followUpProcessType')?.addEventListener('change', handleFollowUpProcessTypeChange);
     document.getElementById('showFollowUpPanelBtn')?.addEventListener('click', () => switchRedFlagMode('follow-up'));
     document.getElementById('showRedFlagPanelBtn')?.addEventListener('click', () => switchRedFlagMode('red-flag'));
     document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
@@ -24,6 +25,24 @@ const REFUND_CHECK_REVIEW_PROCESS = `Rep didn’t verify in the To-Do that the m
 Next, submit a new To-Do clearly stating that you verified where the refund check will be mailed.
 
 To validate the address, open the person record (the account may be inactive), then go to Correspondence Info. If no mailing address is listed, confirm the correct mailing address directly with the customer before resubmitting.`;
+
+const FOLLOW_UP_PROCESS_LIBRARY = {
+    'rep-did-not-verify': `Before submitting the To-Do, verify and document where the refund check will be mailed.
+
+In CCB, open the person record and review Correspondence Info. If the account is inactive or no address is listed, confirm the mailing address directly with the customer.
+
+Resubmit the To-Do with clear notes that state the address was validated and where the check should be sent.`,
+    'missing-validation': `Complete all required validation steps before resubmitting the To-Do.
+
+Confirm the customer details in CCB, verify mailing instructions, and ensure all policy checks are completed.
+
+Update the new To-Do with clear confirmation notes so the reviewer can approve without additional follow-up.`,
+    'insufficient-notes': `Resubmit the To-Do with complete, specific notes.
+
+Your notes should clearly state what was reviewed, what was verified, and the final mailing destination for the refund check.
+
+Detailed documentation helps avoid delays and supports faster approval.`
+};
 
 let pendingFollowUpMailtoUrl = '';
 
@@ -60,18 +79,43 @@ function switchRedFlagMode(mode) {
 function handleFollowUpTodoTypeChange() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
     const refundFields = document.getElementById('refundCheckReviewFields');
+    const processType = document.getElementById('followUpProcessType');
     const processArea = document.getElementById('followUpProcess');
 
-    if (!refundFields || !processArea) return;
+    if (!refundFields || !processArea || !processType) return;
 
     const isRefundCheckReview = todoType === 'refund-check-review';
     refundFields.style.display = isRefundCheckReview ? 'block' : 'none';
 
     if (isRefundCheckReview) {
-        processArea.value = REFUND_CHECK_REVIEW_PROCESS;
+        if (!processType.value) {
+            processType.value = 'rep-did-not-verify';
+        }
+        handleFollowUpProcessTypeChange();
     } else {
+        processType.value = '';
         processArea.value = '';
     }
+}
+
+function handleFollowUpProcessTypeChange() {
+    const processType = document.getElementById('followUpProcessType')?.value || '';
+    const processArea = document.getElementById('followUpProcess');
+    if (!processArea) return;
+
+    if (!processType) {
+        processArea.value = '';
+        return;
+    }
+
+    if (processType === 'other') {
+        if (!processArea.value.trim()) {
+            processArea.value = 'Enter the correct process details for this follow-up.';
+        }
+        return;
+    }
+
+    processArea.value = FOLLOW_UP_PROCESS_LIBRARY[processType] || REFUND_CHECK_REVIEW_PROCESS;
 }
 
 function buildApsEmailFromName(personName) {
@@ -87,57 +131,56 @@ function buildApsEmailFromName(personName) {
 
 function sendFollowUpEmail() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
-    const personName = document.getElementById('followUpPersonName')?.value.trim() || '';
+    const associateName = document.getElementById('followUpPersonName')?.value.trim() || '';
     const customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
     const customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
-    const customerEmail = document.getElementById('followUpCustomerEmail')?.value.trim() || '';
     const declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
+    const processType = document.getElementById('followUpProcessType')?.value || '';
     const correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
 
     if (todoType !== 'refund-check-review') {
         alert('⚠️ Please select "Refund Check Review" as the To-Do type.');
         return;
     }
-    if (!personName) {
-        alert('⚠️ Please enter the person name.');
+    if (!associateName) {
+        alert('⚠️ Please enter the associate name.');
         return;
     }
     if (!customerName) {
         alert('⚠️ Please enter the customer name.');
         return;
     }
-    if (!customerEmail) {
-        alert('⚠️ Please enter the customer email.');
+    if (!customerAccount) {
+        alert('⚠️ Please enter the customer account number.');
         return;
     }
     if (!declineReason) {
         alert('⚠️ Please enter why the To-Do was declined.');
         return;
     }
-
-    const toEmail = buildApsEmailFromName(personName);
-    if (!toEmail) {
-        alert('⚠️ Could not build an APS email from the person name. Please enter a valid first and last name.');
+    if (!processType) {
+        alert('⚠️ Please select a correct process option.');
         return;
     }
 
-    const subject = `Follow Up Required: Refund Check Review - ${customerName}`;
-    const body = `Hi ${personName},
+    const toEmail = buildApsEmailFromName(associateName);
+    if (!toEmail) {
+        alert('⚠️ Could not build an APS email from the associate name. Please enter a valid first and last name.');
+        return;
+    }
 
-Your Refund Check Review To-Do was denied.
+    const subject = `Follow Up Needed: Refund Check Review - ${customerName} (${customerAccount})`;
+    const body = `Hi ${associateName},
 
-Customer Information:
-- Customer Name: ${customerName}
-- Customer Account: ${customerAccount || 'Not provided'}
-- Customer Email: ${customerEmail}
+Your Refund Check Review To-Do for ${customerName} (Account ${customerAccount}) was declined.
 
-Reason for Denial:
+What needs to be corrected:
 ${declineReason}
 
-Correct Process:
+Correct process to follow:
 ${correctProcess}
 
-Please complete the required validation steps and submit a new To-Do once confirmed.
+Please complete these steps and submit a new To-Do with clear notes confirming what was verified.
 
 Thank you.`;
 
@@ -191,8 +234,8 @@ function clearFollowUpEmail() {
     const personName = document.getElementById('followUpPersonName');
     const customerAccount = document.getElementById('followUpCustomerAccount');
     const customerName = document.getElementById('followUpCustomerName');
-    const customerEmail = document.getElementById('followUpCustomerEmail');
     const declineReason = document.getElementById('followUpDeclineReason');
+    const processType = document.getElementById('followUpProcessType');
     const processArea = document.getElementById('followUpProcess');
     const previewSection = document.getElementById('followUpEmailPreviewSection');
     const previewText = document.getElementById('followUpEmailPreviewText');
@@ -201,8 +244,8 @@ function clearFollowUpEmail() {
     if (personName) personName.value = '';
     if (customerAccount) customerAccount.value = '';
     if (customerName) customerName.value = '';
-    if (customerEmail) customerEmail.value = '';
     if (declineReason) declineReason.value = '';
+    if (processType) processType.value = '';
     if (processArea) processArea.value = '';
     if (previewText) previewText.textContent = '';
     if (previewSection) previewSection.style.display = 'none';

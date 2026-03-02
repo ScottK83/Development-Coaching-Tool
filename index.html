@@ -1223,13 +1223,13 @@ Box 2 - Future Improvement Areas:
                                 </select>
                             </div>
                             <div>
-                                <label for="followUpPersonName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Person Name:</label>
+                                <label for="followUpPersonName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Associate Name:</label>
                                 <input type="text" id="followUpPersonName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
                             </div>
                         </div>
 
                         <div id="refundCheckReviewFields" style="display: none;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                                 <div>
                                     <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
                                     <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
@@ -1237,10 +1237,6 @@ Box 2 - Future Improvement Areas:
                                 <div>
                                     <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
                                     <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                </div>
-                                <div>
-                                    <label for="followUpCustomerEmail" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Email:</label>
-                                    <input type="email" id="followUpCustomerEmail" placeholder="e.g., customer@email.com" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
                                 </div>
                             </div>
 
@@ -1250,8 +1246,15 @@ Box 2 - Future Improvement Areas:
                             </div>
 
                             <div style="margin-bottom: 15px;">
-                                <label for="followUpProcess" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
-                                <textarea id="followUpProcess" readonly style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;"></textarea>
+                                <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
+                                <select id="followUpProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
+                                    <option value="">-- Select Correct Process --</option>
+                                    <option value="rep-did-not-verify">Rep didn’t verify address/details in To-Do</option>
+                                    <option value="missing-validation">Missing required validation before resubmission</option>
+                                    <option value="insufficient-notes">To-Do notes were incomplete/unclear</option>
+                                    <option value="other">Other (custom)</option>
+                                </select>
+                                <textarea id="followUpProcess" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
                             </div>
 
                             <button type="button" id="sendFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📝 Build Follow Up Draft</button>
