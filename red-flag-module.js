@@ -9,6 +9,7 @@ function initializeRedFlag() {
 
     document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
     document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
+    document.getElementById('openFollowUpEmailBtn')?.addEventListener('click', openFollowUpEmailDraft);
     document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
     document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
 
@@ -20,6 +21,8 @@ const REFUND_CHECK_REVIEW_PROCESS = `Rep didn’t verify in the To-Do that the m
 Next, submit a new To-Do clearly stating that you verified where the refund check will be mailed.
 
 To validate the address, open the person record (the account may be inactive), then go to Correspondence Info. If no mailing address is listed, confirm the correct mailing address directly with the customer before resubmitting.`;
+
+let pendingFollowUpMailtoUrl = '';
 
 function handleFollowUpTodoTypeChange() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
@@ -113,8 +116,16 @@ Thank you.`;
         previewSection.style.display = 'block';
     }
 
-    const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
+    pendingFollowUpMailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function openFollowUpEmailDraft() {
+    if (!pendingFollowUpMailtoUrl) {
+        alert('⚠️ Build the follow up draft first.');
+        return;
+    }
+
+    window.location.href = pendingFollowUpMailtoUrl;
 }
 
 function copyFollowUpEmail() {
@@ -162,6 +173,7 @@ function clearFollowUpEmail() {
     if (processArea) processArea.value = '';
     if (previewText) previewText.textContent = '';
     if (previewSection) previewSection.style.display = 'none';
+    pendingFollowUpMailtoUrl = '';
 
     handleFollowUpTodoTypeChange();
 }
