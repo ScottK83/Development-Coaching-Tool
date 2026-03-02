@@ -105,6 +105,54 @@
         reliability: 22
     };
 
+    function countNumericValuesForColumn(rows, colIndex) {
+        if (!Number.isInteger(colIndex) || colIndex < 0) return 0;
+        return rows.reduce((count, cells) => {
+            const value = cells?.[colIndex];
+            const numeric = parseFloat(value);
+            return Number.isNaN(numeric) ? count : count + 1;
+        }, 0);
+    }
+
+    function autoCorrectHoldTimeColumn(colMap, headers, rows) {
+        if (!Array.isArray(rows) || !rows.length) return colMap;
+
+        const currentHoldCount = countNumericValuesForColumn(rows, colMap.holdTime);
+        if (currentHoldCount > 0) return colMap;
+
+        const reserved = new Set(
+            Object.entries(colMap)
+                .filter(([key, index]) => key !== 'holdTime' && Number.isInteger(index) && index >= 0)
+                .map(([, index]) => index)
+        );
+
+        let bestIndex = -1;
+        let bestScore = -1;
+
+        for (let index = 0; index < headers.length; index += 1) {
+            if (reserved.has(index)) continue;
+
+            const headerText = String(headers[index] || '').toLowerCase();
+            const numericCount = countNumericValuesForColumn(rows, index);
+            if (numericCount <= 0) continue;
+
+            let score = numericCount;
+            if (headerText.includes('hold')) score += 100;
+            if (headerText.includes('sec')) score += 10;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = index;
+            }
+        }
+
+        if (bestIndex >= 0) {
+            colMap.holdTime = bestIndex;
+        }
+
+        return colMap;
+    }
+
     // ============================================
     // PARSING FUNCTIONS
     // ============================================
@@ -256,7 +304,10 @@
     // ============================================
 
     function parsePastedData(pastedText, startDate, endDate) {
-        const lines = pastedText.split('\n').map(line => line.trim()).filter(line => line);
+        const lines = pastedText
+            .split('\n')
+            .map(line => String(line || '').replace(/\r/g, ''))
+            .filter(line => line.trim().length > 0);
         
         if (lines.length < 2) {
             throw new Error('Data appears incomplete. Please paste header row and data rows.');
@@ -396,6 +447,7 @@
         };
         
         const employees = [];
+        const parsedRows = [];
         
         for (let i = 1; i < lines.length; i++) {
             const rawRow = lines[i];
@@ -413,8 +465,22 @@
             } catch (error) {
                 continue;
             }
+
+            if (!cells.length) continue;
+
+            const nameCell = getCell(cells, colMap.name);
+            if (!String(nameCell || '').trim()) continue;
+
+            parsedRows.push(cells);
+        }
+
+        autoCorrectHoldTimeColumn(colMap, headers, parsedRows);
+
+        for (let i = 0; i < parsedRows.length; i++) {
+            const cells = parsedRows[i];
             
             const nameField = getCell(cells, colMap.name);
+            if (!String(nameField || '').trim()) continue;
             let firstName = '', lastName = '';
             
             const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
