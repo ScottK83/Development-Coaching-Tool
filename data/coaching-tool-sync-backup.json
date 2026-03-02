@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T17:37:44.556Z",
-  "reason": "team members updated",
+  "generatedAt": "2026-03-02T17:37:49.219Z",
+  "reason": "storage set: devCoachingTool_teamMemberSelectorExpanded",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4648,8 +4648,7 @@
     "2026-02-22|2026-02-28": [
       "Alyssa Dimes",
       "Angelina Fierro",
-      "Oceane Ingram",
-      "Trisha Erb"
+      "Oceane Ingram"
     ]
   },
   "callCenterAverages": {
@@ -6070,7 +6069,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 89
+      "byteLength": 76
     },
     "devCoachingTool_coachingHistory": {
       "valueType": "object",
@@ -6080,7 +6079,7 @@
     "devCoachingTool_teamMemberSelectorExpanded": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 4
+      "byteLength": 5
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
