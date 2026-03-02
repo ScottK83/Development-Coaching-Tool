@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T17:45:03.094Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-03-02T17:45:45.457Z",
+  "reason": "storage set: devCoachingTool_trendQueueLegendExpanded",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -2668,378 +2668,358 @@
         "yearEndReviewYear": "2025",
         "uploadedAt": "2026-02-23T15:12:12.345Z"
       }
-    }
-  },
-  "ytdData": {
-    "2026-01-01|2026-02-14": {
+    },
+    "2026-02-15|2026-02-21": {
       "employees": [
         {
           "name": "Marietta Bernal",
           "firstName": "Marietta",
-          "transfersCount": 154,
-          "surveyTotal": 18,
-          "reliability": 0.15,
-          "totalCalls": 1490,
-          "scheduleAdherence": 94.54080536912753,
-          "transfers": 10.335979865771812,
-          "cxRepOverall": 69.44388888888889,
-          "fcr": 55.55444444444444,
-          "overallExperience": 55.55444444444444,
-          "aht": 399.2691275167785,
-          "talkTime": 398.54563758389264,
+          "scheduleAdherence": 95.05,
+          "cxRepOverall": 75,
+          "fcr": 66.67,
+          "overallExperience": 66.67,
+          "transfers": 9.86,
+          "transfersCount": 28,
+          "aht": 346,
+          "talkTime": 345,
           "acw": 0,
-          "holdTime": 1.0523489932885906,
-          "overallSentiment": 83.09402684563759,
-          "managingEmotions": 94.55375838926173,
-          "negativeWord": 81.72744966442953,
-          "positiveWord": 72.99979865771813
+          "holdTime": 0,
+          "reliability": 0,
+          "overallSentiment": 82.2,
+          "positiveWord": 67.9,
+          "negativeWord": 84.7,
+          "managingEmotions": 94,
+          "surveyTotal": 3,
+          "totalCalls": 284
         },
         {
           "name": "Ekiecha Brabham",
           "firstName": "Ekiecha",
-          "transfersCount": 81,
-          "surveyTotal": 11,
-          "reliability": 6.25,
-          "totalCalls": 1114,
-          "scheduleAdherence": 91.78412926391381,
-          "transfers": 7.271633752244165,
-          "cxRepOverall": 72.72727272727273,
-          "fcr": 54.54363636363637,
-          "overallExperience": 81.81818181818181,
-          "aht": 433.06552962298025,
-          "talkTime": 277.62926391382405,
-          "acw": 135.71903052064633,
-          "holdTime": 19.89317773788151,
-          "overallSentiment": 85.00062836624775,
-          "managingEmotions": 95.59991023339317,
-          "negativeWord": 86.07145421903051,
-          "positiveWord": 73.37486535008978
-        },
-        {
-          "name": "Caylie Chirumbolo",
-          "firstName": "Caylie",
-          "transfersCount": 88,
-          "surveyTotal": 8,
-          "reliability": 1.35,
-          "totalCalls": 1327,
-          "scheduleAdherence": 89.83070082893745,
-          "transfers": 6.630633006782214,
-          "cxRepOverall": 62.50125,
-          "fcr": 87.5,
-          "overallExperience": 50.00125,
-          "aht": 457.386586284853,
-          "talkTime": 315.08138658628485,
-          "acw": 127.3873398643557,
-          "holdTime": 15.223059532780708,
-          "overallSentiment": 92.46586284853052,
-          "managingEmotions": 96.98605877920122,
-          "negativeWord": 89.70286360211001,
-          "positiveWord": 90.79012810851545
-        },
-        {
-          "name": "Darryn Coley",
-          "firstName": "Darryn",
-          "transfersCount": 183,
+          "scheduleAdherence": 90.57,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "transfers": 5.96,
+          "transfersCount": 9,
+          "aht": 492,
+          "talkTime": 335,
+          "acw": 126,
+          "holdTime": 30,
+          "reliability": 0,
+          "overallSentiment": 86.4,
+          "positiveWord": 78.9,
+          "negativeWord": 83.8,
+          "managingEmotions": 96.5,
           "surveyTotal": 1,
-          "reliability": 20.84,
-          "totalCalls": 1294,
-          "scheduleAdherence": 88.04886398763523,
-          "transfers": 14.14305255023184,
-          "cxRepOverall": 0,
-          "fcr": 100,
-          "overallExperience": 0,
-          "aht": 391.6877897990726,
-          "talkTime": 239.4064914992272,
-          "acw": 133.2851622874807,
-          "holdTime": 19.33771251931994,
-          "overallSentiment": 81.57071097372489,
-          "managingEmotions": 96.24598145285935,
-          "negativeWord": 85.90942812982998,
-          "positiveWord": 62.542581143740335
-        },
-        {
-          "name": "Ronda Colis",
-          "firstName": "Ronda",
-          "transfersCount": 41,
-          "surveyTotal": 8,
-          "reliability": 2.5,
-          "totalCalls": 716,
-          "scheduleAdherence": 92.52641061452512,
-          "transfers": 5.724371508379889,
-          "cxRepOverall": 100,
-          "fcr": 75,
-          "overallExperience": 75,
-          "aht": 849.2905027932961,
-          "talkTime": 624.1494413407821,
-          "acw": 221.33100558659217,
-          "holdTime": 3.494413407821229,
-          "overallSentiment": 90.35013966480447,
-          "managingEmotions": 93.84511173184356,
-          "negativeWord": 82.77388268156425,
-          "positiveWord": 94.45279329608938
-        },
-        {
-          "name": "Taylor Colter",
-          "firstName": "Taylor",
-          "transfersCount": 0,
-          "surveyTotal": 0,
-          "reliability": 0.12,
-          "totalCalls": 490,
-          "scheduleAdherence": 98.45679591836735,
-          "transfers": 0,
-          "aht": 282.68163265306123,
-          "talkTime": 274.5448979591837,
-          "acw": 0,
-          "holdTime": 7.681632653061224,
-          "overallSentiment": 66.89734693877551,
-          "managingEmotions": 100,
-          "negativeWord": 100,
-          "positiveWord": 1.4336322869955156
-        },
-        {
-          "name": "Alyssa Dimes",
-          "firstName": "Alyssa",
-          "transfersCount": 55,
-          "surveyTotal": 4,
-          "reliability": 0,
-          "totalCalls": 963,
-          "scheduleAdherence": 92.32958463136032,
-          "transfers": 5.711360332294912,
-          "cxRepOverall": 100,
-          "fcr": 75,
-          "overallExperience": 100,
-          "aht": 592.2679127725856,
-          "talkTime": 427.7767393561786,
-          "acw": 49.938733125649016,
-          "holdTime": 114.56801661474559,
-          "overallSentiment": 94.05482866043613,
-          "managingEmotions": 95.70394600207685,
-          "negativeWord": 88.3158878504673,
-          "positiveWord": 98.0122533748702
-        },
-        {
-          "name": "Trisha Erb",
-          "firstName": "Trisha",
-          "transfersCount": 39,
-          "surveyTotal": 5,
-          "reliability": 0,
-          "totalCalls": 424,
-          "scheduleAdherence": 93.8526179245283,
-          "transfers": 9.19620283018868,
-          "cxRepOverall": 100,
-          "fcr": 20,
-          "overallExperience": 100,
-          "aht": 663.9528301886793,
-          "talkTime": 453.03537735849056,
-          "acw": 207.39150943396226,
-          "holdTime": 3.525943396226415,
-          "overallSentiment": 93.30896226415092,
-          "managingEmotions": 94.29693396226413,
-          "negativeWord": 88.06037735849057,
-          "positiveWord": 97.60306603773584
-        },
-        {
-          "name": "Angelina Fierro",
-          "firstName": "Angelina",
-          "transfersCount": 74,
-          "surveyTotal": 8,
-          "reliability": 0,
-          "totalCalls": 957,
-          "scheduleAdherence": 90.46973876698014,
-          "transfers": 7.731118077324974,
-          "cxRepOverall": 100,
-          "fcr": 100,
-          "overallExperience": 87.5,
-          "aht": 687.6238244514107,
-          "talkTime": 514.6415882967607,
-          "acw": 171.27272727272728,
-          "holdTime": 1.3845350052246603,
-          "overallSentiment": 93.46781609195402,
-          "managingEmotions": 95.18996865203762,
-          "negativeWord": 87.97586206896551,
-          "positiveWord": 97.27648902821316
-        },
-        {
-          "name": "Jenifer Henson",
-          "firstName": "Jenifer",
-          "transfersCount": 105,
-          "surveyTotal": 6,
-          "reliability": 8.5,
-          "totalCalls": 1136,
-          "scheduleAdherence": 91.4199295774648,
-          "transfers": 9.24230633802817,
-          "cxRepOverall": 100,
-          "fcr": 100,
-          "overallExperience": 66.66666666666667,
-          "aht": 480.2262323943662,
-          "talkTime": 463.72271126760563,
-          "acw": 0,
-          "holdTime": 16.68838028169014,
-          "overallSentiment": 88.68080985915493,
-          "managingEmotions": 93.61135563380282,
-          "negativeWord": 80.02896126760562,
-          "positiveWord": 92.35536971830987
-        },
-        {
-          "name": "Oceane Ingram",
-          "firstName": "Oceane",
-          "transfersCount": 33,
-          "surveyTotal": 2,
-          "reliability": 0,
-          "totalCalls": 278,
-          "scheduleAdherence": 85.44374100719425,
-          "transfers": 11.873453237410072,
-          "cxRepOverall": 100,
-          "fcr": 50,
-          "overallExperience": 100,
-          "aht": 537.9064748201439,
-          "talkTime": 264.6115107913669,
-          "acw": 234.30935251798562,
-          "holdTime": 39.45323741007194,
-          "overallSentiment": 95.50647482014388,
-          "managingEmotions": 95.10143884892086,
-          "negativeWord": 92.4841726618705,
-          "positiveWord": 98.88057553956834
-        },
-        {
-          "name": "Precious Johnson",
-          "firstName": "Precious",
-          "transfersCount": 94,
-          "surveyTotal": 12,
-          "reliability": 10.01,
-          "totalCalls": 1274,
-          "scheduleAdherence": 88.55667974882262,
-          "transfers": 7.377864992150706,
-          "cxRepOverall": 100,
-          "fcr": 58.33166666666667,
-          "overallExperience": 100,
-          "aht": 391.0149136577708,
-          "talkTime": 390.2103610675039,
-          "acw": 1.042386185243328,
-          "holdTime": 0,
-          "overallSentiment": 93.59073783359499,
-          "managingEmotions": 96.40455259026689,
-          "negativeWord": 85.77378335949766,
-          "positiveWord": 98.63932496075353
-        },
-        {
-          "name": "Pamela Muhammad",
-          "firstName": "Pamela",
-          "transfersCount": 354,
-          "surveyTotal": 7,
-          "reliability": 17.619999999999997,
-          "totalCalls": 1221,
-          "scheduleAdherence": 94.90228501228502,
-          "transfers": 28.991523341523344,
-          "cxRepOverall": 42.857142857142854,
-          "fcr": 28.571428571428573,
-          "overallExperience": 57.142857142857146,
-          "aht": 544.9598689598689,
-          "talkTime": 434.018837018837,
-          "acw": 90.97379197379198,
-          "holdTime": 20.117936117936118,
-          "overallSentiment": 84.14791154791155,
-          "managingEmotions": 96.55569205569205,
-          "negativeWord": 88.38206388206389,
-          "positiveWord": 67.55921375921376
-        },
-        {
-          "name": "Scoticia Osborne",
-          "firstName": "Scoticia",
-          "transfersCount": 72,
-          "surveyTotal": 4,
-          "reliability": 4.6,
-          "totalCalls": 1007,
-          "scheduleAdherence": 92.26965243296922,
-          "transfers": 7.14966236345581,
-          "cxRepOverall": 100,
-          "fcr": 75,
-          "overallExperience": 100,
-          "aht": 449.8391261171797,
-          "talkTime": 401.87090367428004,
-          "acw": 46.07149950347567,
-          "holdTime": 1.8967229394240317,
-          "overallSentiment": 91.18093346573981,
-          "managingEmotions": 96.58172790466733,
-          "negativeWord": 86.74766633565044,
-          "positiveWord": 90.26137040714995
-        },
-        {
-          "name": "Teena Pokorski",
-          "firstName": "Teena",
-          "transfersCount": 103,
-          "surveyTotal": 15,
-          "reliability": 0,
-          "totalCalls": 1352,
-          "scheduleAdherence": 94.63325443786982,
-          "transfers": 7.617366863905327,
-          "cxRepOverall": 100,
-          "fcr": 93.33333333333333,
-          "overallExperience": 100,
-          "aht": 506.41789940828403,
-          "talkTime": 378.95414201183434,
-          "acw": 120.13979289940828,
-          "holdTime": 7.335798816568047,
-          "overallSentiment": 94.74548816568048,
-          "managingEmotions": 96.46516272189348,
-          "negativeWord": 90.28121301775148,
-          "positiveWord": 97.49704142011835
-        },
-        {
-          "name": "Trevor Pedrowski",
-          "firstName": "Trevor",
-          "transfersCount": 74,
-          "surveyTotal": 2,
-          "reliability": 0,
-          "totalCalls": 1016,
-          "scheduleAdherence": 89.30668307086614,
-          "transfers": 7.284163385826773,
-          "cxRepOverall": 100,
-          "fcr": 50,
-          "overallExperience": 100,
-          "aht": 479.0994094488189,
-          "talkTime": 377.4488188976378,
-          "acw": 83.10629921259843,
-          "holdTime": 18.344488188976378,
-          "overallSentiment": 82.2525590551181,
-          "managingEmotions": 93.87155511811024,
-          "negativeWord": 82.84261811023622,
-          "positiveWord": 69.99478346456692
+          "totalCalls": 151
         },
         {
           "name": "Brittney Carroll",
           "firstName": "Brittney",
-          "transfersCount": 10,
-          "surveyTotal": 2,
-          "reliability": 0.5,
-          "totalCalls": 282,
-          "scheduleAdherence": 93.25907801418438,
-          "transfers": 3.543333333333333,
+          "scheduleAdherence": 82.69,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 2.7,
+          "transfersCount": 1,
+          "aht": 920,
+          "talkTime": 758,
+          "acw": 160,
+          "holdTime": 1,
+          "reliability": 0,
+          "overallSentiment": 87.4,
+          "positiveWord": 94.6,
+          "negativeWord": 70.3,
+          "managingEmotions": 97.3,
+          "surveyTotal": 0,
+          "totalCalls": 37
+        },
+        {
+          "name": "Caylie Chirumbolo",
+          "firstName": "Caylie",
+          "scheduleAdherence": 86.51,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 11.83,
+          "transfersCount": 11,
+          "aht": 438,
+          "talkTime": 295,
+          "acw": 131,
+          "holdTime": 13,
+          "reliability": 0.3,
+          "overallSentiment": 91.1,
+          "positiveWord": 89.5,
+          "negativeWord": 87.9,
+          "managingEmotions": 96,
+          "surveyTotal": 0,
+          "totalCalls": 93
+        },
+        {
+          "name": "Darryn Coley",
+          "firstName": "Darryn",
+          "scheduleAdherence": 88.94,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 18.99,
+          "transfersCount": 30,
+          "aht": 382,
+          "talkTime": 224,
+          "acw": 129,
+          "holdTime": 29,
+          "reliability": 10.33,
+          "overallSentiment": 85.2,
+          "positiveWord": 67.7,
+          "negativeWord": 89,
+          "managingEmotions": 98.7,
+          "surveyTotal": 0,
+          "totalCalls": 158
+        },
+        {
+          "name": "Ronda Colis",
+          "firstName": "Ronda",
+          "scheduleAdherence": 93.2,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 3.19,
+          "transfersCount": 3,
+          "aht": 802,
+          "talkTime": 598,
+          "acw": 199,
+          "holdTime": 5,
+          "reliability": 0,
+          "overallSentiment": 91.7,
+          "positiveWord": 92.3,
+          "negativeWord": 85.6,
+          "managingEmotions": 97.1,
+          "surveyTotal": 0,
+          "totalCalls": 94
+        },
+        {
+          "name": "Taylor Colter",
+          "firstName": "Taylor",
+          "scheduleAdherence": 99.15,
+          "cxRepOverall": 0,
+          "fcr": 0,
+          "overallExperience": 0,
+          "transfers": 0,
+          "transfersCount": 0,
+          "aht": 293,
+          "talkTime": 264,
+          "acw": 0,
+          "holdTime": 28,
+          "reliability": 0,
+          "overallSentiment": 66.7,
+          "positiveWord": 2.4,
+          "negativeWord": 97.6,
+          "managingEmotions": 100,
+          "surveyTotal": 1,
+          "totalCalls": 35
+        },
+        {
+          "name": "Alyssa Dimes",
+          "firstName": "Alyssa",
+          "scheduleAdherence": 92.69,
           "cxRepOverall": 50,
           "fcr": 50,
           "overallExperience": 50,
-          "aht": 688,
-          "talkTime": 508.531914893617,
-          "acw": 157.24822695035462,
-          "holdTime": 22.21985815602837,
-          "overallSentiment": 88.50709219858156,
-          "managingEmotions": 93.08794326241134,
-          "negativeWord": 84.07304964539007,
-          "positiveWord": 88.39078014184398
+          "transfers": 5.93,
+          "transfersCount": 7,
+          "aht": 559,
+          "talkTime": 397,
+          "acw": 59,
+          "holdTime": 103,
+          "reliability": 0,
+          "overallSentiment": 94.6,
+          "positiveWord": 98.6,
+          "negativeWord": 87.8,
+          "managingEmotions": 97.3,
+          "surveyTotal": 2,
+          "totalCalls": 118
+        },
+        {
+          "name": "Angelina Fierro",
+          "firstName": "Angelina",
+          "scheduleAdherence": 94.78,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 7.69,
+          "transfersCount": 6,
+          "aht": 803,
+          "talkTime": 523,
+          "acw": 279,
+          "holdTime": 1,
+          "reliability": 0,
+          "overallSentiment": 93.5,
+          "positiveWord": 99,
+          "negativeWord": 85.4,
+          "managingEmotions": 96.1,
+          "surveyTotal": 0,
+          "totalCalls": 78
+        },
+        {
+          "name": "Jenifer Henson",
+          "firstName": "Jenifer",
+          "scheduleAdherence": 95.13,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 50,
+          "transfers": 10,
+          "transfersCount": 15,
+          "aht": 441,
+          "talkTime": 412,
+          "acw": 0,
+          "holdTime": 29,
+          "reliability": 0,
+          "overallSentiment": 90.9,
+          "positiveWord": 95.2,
+          "negativeWord": 83,
+          "managingEmotions": 94.6,
+          "surveyTotal": 2,
+          "totalCalls": 150
+        },
+        {
+          "name": "Oceane Ingram",
+          "firstName": "Oceane",
+          "scheduleAdherence": 82.4,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 21.05,
+          "transfersCount": 4,
+          "aht": 825,
+          "talkTime": 362,
+          "acw": 438,
+          "holdTime": 25,
+          "reliability": 4,
+          "overallSentiment": 98.1,
+          "positiveWord": 100,
+          "negativeWord": 94.4,
+          "managingEmotions": 100,
+          "surveyTotal": 0,
+          "totalCalls": 19
+        },
+        {
+          "name": "Precious Johnson",
+          "firstName": "Precious",
+          "scheduleAdherence": 77.82,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "transfers": 10.07,
+          "transfersCount": 15,
+          "aht": 379,
+          "talkTime": 379,
+          "acw": 0,
+          "holdTime": 0,
+          "reliability": 8.5,
+          "overallSentiment": 93,
+          "positiveWord": 98.4,
+          "negativeWord": 84.1,
+          "managingEmotions": 96.7,
+          "surveyTotal": 1,
+          "totalCalls": 149
+        },
+        {
+          "name": "Pamela Muhammad",
+          "firstName": "Pamela",
+          "scheduleAdherence": 96.61,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 0,
+          "transfers": 54.35,
+          "transfersCount": 25,
+          "aht": 668,
+          "talkTime": 560,
+          "acw": 108,
+          "holdTime": 0,
+          "reliability": 8.5,
+          "overallSentiment": 84.7,
+          "positiveWord": 65.5,
+          "negativeWord": 92,
+          "managingEmotions": 96.6,
+          "surveyTotal": 1,
+          "totalCalls": 46
+        },
+        {
+          "name": "Scoticia Osborne",
+          "firstName": "Scoticia",
+          "scheduleAdherence": 93.26,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "transfers": 6.43,
+          "transfersCount": 9,
+          "aht": 459,
+          "talkTime": 370,
+          "acw": 87,
+          "holdTime": 2,
+          "reliability": 4,
+          "overallSentiment": 87.7,
+          "positiveWord": 80.4,
+          "negativeWord": 85.7,
+          "managingEmotions": 97,
+          "surveyTotal": 1,
+          "totalCalls": 140
+        },
+        {
+          "name": "Trevor Pedrowski",
+          "firstName": "Trevor",
+          "scheduleAdherence": 89.93,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "transfers": 9.32,
+          "transfersCount": 11,
+          "aht": 421,
+          "talkTime": 323,
+          "acw": 71,
+          "holdTime": 28,
+          "reliability": 0.12,
+          "overallSentiment": 80.7,
+          "positiveWord": 57.9,
+          "negativeWord": 87.4,
+          "managingEmotions": 96.9,
+          "surveyTotal": 0,
+          "totalCalls": 118
+        },
+        {
+          "name": "Teena Pokorski",
+          "firstName": "Teena",
+          "scheduleAdherence": 96.8,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "transfers": 8.16,
+          "transfersCount": 8,
+          "aht": 544,
+          "talkTime": 411,
+          "acw": 126,
+          "holdTime": 7,
+          "reliability": 0,
+          "overallSentiment": 95.3,
+          "positiveWord": 98.4,
+          "negativeWord": 91.5,
+          "managingEmotions": 96.1,
+          "surveyTotal": 1,
+          "totalCalls": 98
         }
       ],
       "metadata": {
-        "startDate": "2026-01-01",
-        "endDate": "2026-02-14",
-        "label": "YTD through Feb 14, 2026",
-        "periodType": "ytd",
-        "autoGeneratedYtd": true,
-        "sourcePeriodType": "week",
+        "startDate": "2026-02-15",
+        "endDate": "2026-02-21",
+        "label": "Week ending Feb 21, 2026",
+        "periodType": "week",
         "yearEndTargetProfile": "auto",
         "yearEndReviewYear": "2026",
-        "uploadedAt": "2026-02-21T04:32:24.241Z"
+        "uploadedAt": "2026-02-25T23:44:22.048Z"
       }
-    },
+    }
+  },
+  "ytdData": {
     "2025-01-01|2025-10-31": {
       "employees": [
         {
@@ -3407,6 +3387,378 @@
         "yearEndTargetProfile": "auto",
         "yearEndReviewYear": "2025",
         "uploadedAt": "2026-02-23T15:12:12.346Z"
+      }
+    },
+    "2026-01-01|2026-02-21": {
+      "employees": [
+        {
+          "name": "Marietta Bernal",
+          "firstName": "Marietta",
+          "transfersCount": 182,
+          "surveyTotal": 21,
+          "reliability": 0.15,
+          "totalCalls": 1774,
+          "scheduleAdherence": 94.62232243517477,
+          "transfers": 10.259780157835399,
+          "cxRepOverall": 70.23761904761905,
+          "fcr": 57.142380952380954,
+          "overallExperience": 57.142380952380954,
+          "aht": 390.7412626832018,
+          "talkTime": 389.9735062006764,
+          "acw": 0,
+          "holdTime": 0.8838782412626832,
+          "overallSentiment": 82.95090191657272,
+          "managingEmotions": 94.465107102593,
+          "negativeWord": 82.20332581736189,
+          "positiveWord": 72.18337091319054
+        },
+        {
+          "name": "Ekiecha Brabham",
+          "firstName": "Ekiecha",
+          "transfersCount": 90,
+          "surveyTotal": 12,
+          "reliability": 6.25,
+          "totalCalls": 1265,
+          "scheduleAdherence": 91.63920158102766,
+          "transfers": 7.11506719367589,
+          "cxRepOverall": 75,
+          "fcr": 58.33166666666667,
+          "overallExperience": 83.33333333333333,
+          "aht": 440.100395256917,
+          "talkTime": 284.4774703557312,
+          "acw": 134.55889328063242,
+          "holdTime": 21.099604743083002,
+          "overallSentiment": 85.16766798418973,
+          "managingEmotions": 95.70735177865613,
+          "negativeWord": 85.80031620553359,
+          "positiveWord": 74.03438735177866
+        },
+        {
+          "name": "Caylie Chirumbolo",
+          "firstName": "Caylie",
+          "transfersCount": 99,
+          "surveyTotal": 8,
+          "reliability": 1.6500000000000001,
+          "totalCalls": 1420,
+          "scheduleAdherence": 89.61321830985915,
+          "transfers": 6.971154929577464,
+          "cxRepOverall": 62.50125,
+          "fcr": 87.5,
+          "overallExperience": 50.00125,
+          "aht": 456.1169014084507,
+          "talkTime": 313.7661971830986,
+          "acw": 127.62394366197184,
+          "holdTime": 15.077464788732394,
+          "overallSentiment": 92.37640845070422,
+          "managingEmotions": 96.92147887323944,
+          "negativeWord": 89.58478873239436,
+          "positiveWord": 90.7056338028169
+        },
+        {
+          "name": "Darryn Coley",
+          "firstName": "Darryn",
+          "transfersCount": 213,
+          "surveyTotal": 1,
+          "reliability": 31.17,
+          "totalCalls": 1452,
+          "scheduleAdherence": 88.14583333333333,
+          "transfers": 14.67047520661157,
+          "cxRepOverall": 0,
+          "fcr": 100,
+          "overallExperience": 0,
+          "aht": 390.633608815427,
+          "talkTime": 237.73002754820936,
+          "acw": 132.81887052341597,
+          "holdTime": 20.389118457300274,
+          "overallSentiment": 81.96563360881544,
+          "managingEmotions": 96.51301652892562,
+          "negativeWord": 86.2457300275482,
+          "positiveWord": 63.10378787878788
+        },
+        {
+          "name": "Ronda Colis",
+          "firstName": "Ronda",
+          "transfersCount": 44,
+          "surveyTotal": 8,
+          "reliability": 2.5,
+          "totalCalls": 810,
+          "scheduleAdherence": 92.60458024691357,
+          "transfers": 5.43025925925926,
+          "cxRepOverall": 100,
+          "fcr": 75,
+          "overallExperience": 75,
+          "aht": 843.8024691358024,
+          "talkTime": 621.1148148148148,
+          "acw": 218.7395061728395,
+          "holdTime": 3.669135802469136,
+          "overallSentiment": 90.5067901234568,
+          "managingEmotions": 94.22283950617282,
+          "negativeWord": 83.10185185185185,
+          "positiveWord": 94.20296296296296
+        },
+        {
+          "name": "Taylor Colter",
+          "firstName": "Taylor",
+          "transfersCount": 0,
+          "surveyTotal": 1,
+          "reliability": 0.12,
+          "totalCalls": 525,
+          "scheduleAdherence": 98.50300952380952,
+          "transfers": 0,
+          "cxRepOverall": 0,
+          "fcr": 0,
+          "overallExperience": 0,
+          "aht": 283.3695238095238,
+          "talkTime": 273.84190476190474,
+          "acw": 0,
+          "holdTime": 9.036190476190477,
+          "overallSentiment": 66.88419047619048,
+          "managingEmotions": 100,
+          "negativeWord": 99.84,
+          "positiveWord": 1.5647286821705426
+        },
+        {
+          "name": "Alyssa Dimes",
+          "firstName": "Alyssa",
+          "transfersCount": 62,
+          "surveyTotal": 6,
+          "reliability": 0,
+          "totalCalls": 1081,
+          "scheduleAdherence": 92.36892691951896,
+          "transfers": 5.73522664199815,
+          "cxRepOverall": 83.33333333333333,
+          "fcr": 66.66666666666667,
+          "overallExperience": 83.33333333333333,
+          "aht": 588.63644773358,
+          "talkTime": 424.41720629047177,
+          "acw": 50.92784458834413,
+          "holdTime": 113.30527289546716,
+          "overallSentiment": 94.11433857539315,
+          "managingEmotions": 95.87816836262719,
+          "negativeWord": 88.2595744680851,
+          "positiveWord": 98.07641073080481
+        },
+        {
+          "name": "Trisha Erb",
+          "firstName": "Trisha",
+          "transfersCount": 39,
+          "surveyTotal": 5,
+          "reliability": 0,
+          "totalCalls": 424,
+          "scheduleAdherence": 93.8526179245283,
+          "transfers": 9.19620283018868,
+          "cxRepOverall": 100,
+          "fcr": 20,
+          "overallExperience": 100,
+          "aht": 663.9528301886793,
+          "talkTime": 453.03537735849056,
+          "acw": 207.39150943396226,
+          "holdTime": 3.525943396226415,
+          "overallSentiment": 93.30896226415092,
+          "managingEmotions": 94.29693396226413,
+          "negativeWord": 88.06037735849057,
+          "positiveWord": 97.60306603773584
+        },
+        {
+          "name": "Angelina Fierro",
+          "firstName": "Angelina",
+          "transfersCount": 80,
+          "surveyTotal": 8,
+          "reliability": 0,
+          "totalCalls": 1035,
+          "scheduleAdherence": 90.79457004830917,
+          "transfers": 7.728019323671497,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 87.5,
+          "aht": 696.3188405797101,
+          "talkTime": 515.2714975845411,
+          "acw": 179.3913043478261,
+          "holdTime": 1.3555555555555556,
+          "overallSentiment": 93.47024154589371,
+          "managingEmotions": 95.25855072463769,
+          "negativeWord": 87.78173913043477,
+          "positiveWord": 97.4063768115942
+        },
+        {
+          "name": "Jenifer Henson",
+          "firstName": "Jenifer",
+          "transfersCount": 120,
+          "surveyTotal": 8,
+          "reliability": 8.5,
+          "totalCalls": 1286,
+          "scheduleAdherence": 91.85267496111976,
+          "transfers": 9.330684292379473,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 62.5,
+          "aht": 475.65085536547434,
+          "talkTime": 457.68973561430795,
+          "acw": 0,
+          "holdTime": 18.124416796267496,
+          "overallSentiment": 88.93965785381027,
+          "managingEmotions": 93.72667185069984,
+          "negativeWord": 80.37550544323483,
+          "positiveWord": 92.68716951788493
+        },
+        {
+          "name": "Oceane Ingram",
+          "firstName": "Oceane",
+          "transfersCount": 37,
+          "surveyTotal": 2,
+          "reliability": 4,
+          "totalCalls": 297,
+          "scheduleAdherence": 85.24902356902356,
+          "transfers": 12.460505050505049,
+          "cxRepOverall": 100,
+          "fcr": 50,
+          "overallExperience": 100,
+          "aht": 556.2727272727273,
+          "talkTime": 270.84175084175087,
+          "acw": 247.34006734006735,
+          "holdTime": 38.52861952861953,
+          "overallSentiment": 95.67239057239057,
+          "managingEmotions": 95.41481481481482,
+          "negativeWord": 92.606734006734,
+          "positiveWord": 98.95218855218855
+        },
+        {
+          "name": "Precious Johnson",
+          "firstName": "Precious",
+          "transfersCount": 109,
+          "surveyTotal": 13,
+          "reliability": 18.509999999999998,
+          "totalCalls": 1423,
+          "scheduleAdherence": 87.4324595924104,
+          "transfers": 7.65975404075896,
+          "cxRepOverall": 100,
+          "fcr": 61.53692307692308,
+          "overallExperience": 100,
+          "aht": 389.75685172171467,
+          "talkTime": 389.0365425158117,
+          "acw": 0.9332396345748419,
+          "holdTime": 0,
+          "overallSentiment": 93.52888264230499,
+          "managingEmotions": 96.43548840477864,
+          "negativeWord": 85.59852424455377,
+          "positiveWord": 98.61426563598033
+        },
+        {
+          "name": "Pamela Muhammad",
+          "firstName": "Pamela",
+          "transfersCount": 379,
+          "surveyTotal": 8,
+          "reliability": 26.119999999999997,
+          "totalCalls": 1267,
+          "scheduleAdherence": 94.96428571428571,
+          "transfers": 29.912194159431728,
+          "cxRepOverall": 50,
+          "fcr": 37.5,
+          "overallExperience": 50,
+          "aht": 549.4269928966062,
+          "talkTime": 438.59273875295975,
+          "acw": 91.59194948697711,
+          "holdTime": 19.387529597474348,
+          "overallSentiment": 84.16795580110497,
+          "managingEmotions": 96.55730071033939,
+          "negativeWord": 88.51341752170482,
+          "positiveWord": 67.48445146014207
+        },
+        {
+          "name": "Scoticia Osborne",
+          "firstName": "Scoticia",
+          "transfersCount": 81,
+          "surveyTotal": 5,
+          "reliability": 8.6,
+          "totalCalls": 1147,
+          "scheduleAdherence": 92.39053182214472,
+          "transfers": 7.061822144725371,
+          "cxRepOverall": 100,
+          "fcr": 80,
+          "overallExperience": 100,
+          "aht": 450.95727986050565,
+          "talkTime": 397.9808195292066,
+          "acw": 51.06713164777681,
+          "holdTime": 1.9093286835222318,
+          "overallSentiment": 90.75605928509154,
+          "managingEmotions": 96.63278116826504,
+          "negativeWord": 86.61979075850043,
+          "positiveWord": 89.05771578029642
+        },
+        {
+          "name": "Teena Pokorski",
+          "firstName": "Teena",
+          "transfersCount": 111,
+          "surveyTotal": 16,
+          "reliability": 0,
+          "totalCalls": 1450,
+          "scheduleAdherence": 94.77969655172414,
+          "transfers": 7.654041379310346,
+          "cxRepOverall": 100,
+          "fcr": 93.75,
+          "overallExperience": 100,
+          "aht": 508.9579310344828,
+          "talkTime": 381.12,
+          "acw": 120.53586206896551,
+          "holdTime": 7.313103448275862,
+          "overallSentiment": 94.7829655172414,
+          "managingEmotions": 96.44048275862067,
+          "negativeWord": 90.36358620689656,
+          "positiveWord": 97.55806896551725
+        },
+        {
+          "name": "Trevor Pedrowski",
+          "firstName": "Trevor",
+          "transfersCount": 85,
+          "surveyTotal": 2,
+          "reliability": 0.12,
+          "totalCalls": 1134,
+          "scheduleAdherence": 89.37154320987655,
+          "transfers": 7.496005291005292,
+          "cxRepOverall": 100,
+          "fcr": 50,
+          "overallExperience": 100,
+          "aht": 473.0537918871252,
+          "talkTime": 371.78306878306876,
+          "acw": 81.84656084656085,
+          "holdTime": 19.349206349206348,
+          "overallSentiment": 82.09100529100529,
+          "managingEmotions": 94.18668430335097,
+          "negativeWord": 83.31684303350968,
+          "positiveWord": 68.73624338624339
+        },
+        {
+          "name": "Brittney Carroll",
+          "firstName": "Brittney",
+          "transfersCount": 11,
+          "surveyTotal": 2,
+          "reliability": 0.5,
+          "totalCalls": 319,
+          "scheduleAdherence": 92.033197492163,
+          "transfers": 3.44551724137931,
+          "cxRepOverall": 50,
+          "fcr": 50,
+          "overallExperience": 50,
+          "aht": 714.9090909090909,
+          "talkTime": 537.4670846394985,
+          "acw": 157.56739811912226,
+          "holdTime": 19.75862068965517,
+          "overallSentiment": 88.37868338557993,
+          "managingEmotions": 93.57648902821316,
+          "negativeWord": 82.47554858934168,
+          "positiveWord": 89.11097178683386
+        }
+      ],
+      "metadata": {
+        "startDate": "2026-01-01",
+        "endDate": "2026-02-21",
+        "label": "YTD through Feb 21, 2026",
+        "periodType": "ytd",
+        "autoGeneratedYtd": true,
+        "sourcePeriodType": "week",
+        "yearEndTargetProfile": "auto",
+        "yearEndReviewYear": "2026",
+        "uploadedAt": "2026-02-25T23:44:22.049Z"
       }
     }
   },
@@ -3906,9 +4258,10 @@
     ]
   },
   "myTeamMembers": {
-    "2026-02-08|2026-02-14": [
+    "2026-02-15|2026-02-21": [
       "Alyssa Dimes",
-      "Angelina Fierro"
+      "Angelina Fierro",
+      "Oceane Ingram"
     ]
   },
   "callCenterAverages": {
@@ -4023,11 +4376,147 @@
       "holdTime": 20,
       "reliability": 0,
       "lastUpdated": "2026-02-19T22:31:31.736Z"
+    },
+    "2026-02-15|2026-02-21": {
+      "adherence": 94.2,
+      "overallExperience": 86,
+      "repSatisfaction": 78,
+      "fcr": 68,
+      "transfers": 10.19,
+      "sentiment": 91.4,
+      "positiveWord": 89.7,
+      "negativeWord": 88,
+      "managingEmotions": 96,
+      "aht": 436,
+      "acw": 66,
+      "holdTime": 18,
+      "reliability": 1.47,
+      "lastUpdated": "2026-02-26T00:20:21.967Z"
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "",
-    "associates": {}
+    "selectedAssociate": "Alyssa Dimes",
+    "associates": {
+      "Alyssa Dimes": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Angelina Fierro": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Pamela Muhammad": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 26.12,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Oceane Ingram": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 4,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Precious Johnson": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 18.51,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Brittney Carroll": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.5,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Caylie Chirumbolo": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 1.65,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Darryn Coley": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 31.17,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Ekiecha Brabham": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 6.25,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Jenifer Henson": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 8.5,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Marietta Bernal": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.15,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Ronda Colis": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 2.5,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Scoticia Osborne": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 8.6,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Taylor Colter": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.12,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Teena Pokorski": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Trevor Pedrowski": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0.12,
+        "ptostMaxHours": 40,
+        "entries": []
+      },
+      "Trisha Erb": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": []
+      }
+    }
   },
   "yearEndAnnualGoalsStore": {
     "2025::Scoticia Osborne": {
@@ -4607,6 +5096,108 @@
         "status": "met",
         "note": ""
       }
+    },
+    "2026::Jenifer Henson": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2026::Darryn Coley": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
+    },
+    "2025::Darryn Coley": {
+      "safetyGoalAps": {
+        "status": "met",
+        "note": ""
+      },
+      "emergencySafetyHazardCalls": {
+        "status": "met",
+        "note": ""
+      },
+      "accSubstantiatedComplaints": {
+        "status": "met",
+        "note": ""
+      },
+      "phishingClicks": {
+        "status": "met",
+        "note": ""
+      },
+      "redFlagViolations": {
+        "status": "met",
+        "note": ""
+      },
+      "depositWaiverAccuracy": {
+        "status": "met",
+        "note": ""
+      },
+      "trainingCompletion": {
+        "status": "met",
+        "note": ""
+      },
+      "timeEntryCompliance": {
+        "status": "met",
+        "note": ""
+      }
     }
   },
   "yearEndDraftStore": {
@@ -4651,7 +5242,7 @@
       "copilotResponse": ""
     },
     "2025::Alyssa Dimes": {
-      "trackStatus": "on-track",
+      "trackStatus": "off-track",
       "positivesText": "After Call Work: 27s vs target 60s\nRep Satisfaction: 82.0% vs target 80.0%\nFirst Call Resolution: 76.0% vs target 70.0%\nAvoid Negative Words: 86.7% vs target 83.0%\nManaging Emotions: 95.7% vs target 95.0%\nReliability: 0.1 hrs vs target 16.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 91.7% vs target 93.0%\nTransfers: 20.1% vs target 6.0%\nAverage Handle Time: 563s vs target 440s\nHold Time: 119s vs target 30s\nOverall Experience: 75.5% vs target 84.0%\nOverall Sentiment: 86.8% vs target 88.0%",
       "managerContext": "Alyssa's notes. -\n\nNote, she said she met AHT, but during the review period, it doesn't look like she did.\n\n1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nI am most proud of meeting the goals of AHT, Work Ready in Seconds, Adherence and Manages Emotion. I am new to the Company and have worked hard to meet these goal. Through Phase 3 and Phase 4 training and transition, I have leveraged the APS Principle of Empower Each Other as our team continues to encourage one another to learn to tasks important to the function of APS and customer satisfaction. \n\nIn my time here I've handled 6,523 calls and as of 10/28 my AHT is 27 and maintained an adherence of 91.71%. I make an effort to manage my emotions while on calls with an updated score of 95.80% while avoiding negative word choice 86.80% of the time.\n\n\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nOne area they wanted me to make improvements in is my AHT time and my  ACW and Avoiding negative word choice. I have also tried to take more initiative in my calls by using empowerment where allowed. ",
@@ -4684,7 +5275,7 @@
       "positivesText": "Schedule Adherence: 93.2% vs target 93.0%\nAverage Handle Time: 400s vs target 440s\nHold Time: 2s vs target 30s\nAfter Call Work: 23s vs target 60s\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Transfers: 23.0% vs target 6.0%\nOverall Experience: 73.8% vs target 84.0%\nRep Satisfaction: 75.4% vs target 80.0%\nFirst Call Resolution: 64.6% vs target 70.0%\nOverall Sentiment: 83.7% vs target 88.0%\nPositive Word: 83.6% vs target 86.0%\nAnnual Goal Follow-up: Red Flag Violations: 0 violations (4)",
       "managerContext": "Mariettas - 1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nI AM COME A LONG WAY WHEN IT COMES TO UNDERSTANDING BUDGET BILLING AND HOW I HANDLE ANGRY CUSTOMERS.\n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nI FEEL I HAVE GROWN ON UNDERSTANDING HOW TO ASSIGN MY TO DO'S BETTER AND VERY COMFORTABLE REACHING OUT TO LEADERSHIP WHEN I NEED ASSISTANCE.",
-      "copilotResponse": "Box 1 - Significant Accomplishments:\nMarietta delivered several meaningful strengths this year, even with an overall performance rating of off track. She consistently exceeded key efficiency goals, including schedule adherence at 93.2% vs a 93.0% target, average handle time at 400s vs a 440s target, hold time at 2s vs a 30s target, and after call work at 23s vs a 60s target. Her commitment to safety and compliance was exceptional, meeting all APS annual safety goals, maintaining 100% accuracy on emergency safety hazard calls, achieving 0 ACC substantiated complaints, and recording 0 phishing email clicks. She also demonstrated growth in her development by becoming more confident in handling challenging customer interactions and proactively seeking support when needed. These accomplishments reflect steady progress in operational discipline and alignment with APS principles.\n\nBox 2 - Future Improvement Areas:\nTwo areas will have the greatest impact on Marietta’s overall performance next year. First, improving transfer rate performance is essential, as results of 23.0% vs a 6.0% target show a clear opportunity to strengthen ownership of calls and reduce unnecessary handoffs. Second, enhancing customer experience metrics, including overall experience at 73.8% vs an 84.0% target and first call resolution at 64.6% vs a 70.0% target, will help build stronger customer trust and elevate consistency across interactions.",
+      "copilotResponse": "Box 1 - Significant Accomplishments:\nMarietta delivered several meaningful strengths throughout the year, even with an overall performance rating of off track. She consistently exceeded key efficiency goals, including Schedule Adherence at 93.2% vs a 93.0% target, Average Handle Time at 400s vs a 440s target, Hold Time at 2s vs a 30s target, and After Call Work at 23s vs a 60s target. She also met all major APS annual goals, such as Safety Goal at APS, 100% accuracy on Emergency Safety Hazard Calls, 0 ACC Substantiated Complaints, and 0 clicks on phishing emails. Her growth in confidently handling budget billing conversations and navigating challenging customer interactions reflected her commitment to development and the APS Principles. She also demonstrated progress in organizing her work and seeking support when needed, which contributed positively to her overall performance.\n\nBox 2 - Future Improvement Areas:\nMarietta would benefit from strengthening her call quality and customer experience outcomes, particularly improving metrics such as Transfers at 23.0% vs a 6.0% target and Overall Experience at 73.8% vs an 84.0% target. She should also focus on enhancing First Call Resolution, which was 64.6% vs a 70.0% target, to reduce repeat contacts and improve customer satisfaction.",
       "performanceRating": "",
       "meritDetails": "",
       "bonusAmount": "",
@@ -4713,7 +5304,7 @@
       "verbalSummary": ""
     },
     "2025::Angelina Fierro": {
-      "trackStatus": "on-track",
+      "trackStatus": "on-track-successful",
       "positivesText": "Hold Time: 1s vs target 30s\nRep Satisfaction: 81.3% vs target 80.0%\nFirst Call Resolution: 78.7% vs target 70.0%\nOverall Sentiment: 91.3% vs target 88.0%\nPositive Word: 86.5% vs target 86.0%\nAvoid Negative Words: 91.5% vs target 83.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 22.3% vs target 6.0%\nAverage Handle Time: 532s vs target 440s\nAfter Call Work: 80s vs target 60s\nOverall Experience: 81.3% vs target 84.0%\nReliability: 28.7 hrs vs target 16.0 hrs",
       "managerContext": "",
@@ -4768,7 +5359,7 @@
       "verbalSummary": "Pamela, as we close out 2025, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\nAs part of this review, your results were measured against your peer group, and your overall performance metrics played a direct role in the final decision.\n\nYour overall performance rating is: Successful.\nYour merit increase details are: 2.47 to 24.85.\nYour incentive/bonus amount is: 3633.60."
     },
     "2025::Jenifer Henson": {
-      "trackStatus": "off-track",
+      "trackStatus": "on-track",
       "positivesText": "Hold Time: 18s vs target 30s\nAfter Call Work: 10s vs target 60s\nRep Satisfaction: 85.7% vs target 80.0%\nFirst Call Resolution: 76.8% vs target 70.0%\nOverall Sentiment: 90.5% vs target 88.0%\nPositive Word: 91.6% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.7% vs target 93.0%\nTransfers: 19.0% vs target 6.0%\nAverage Handle Time: 500s vs target 440s\nOverall Experience: 76.4% vs target 84.0%\nManaging Emotions: 94.6% vs target 95.0%\nReliability: 87.6 hrs vs target 16.0 hrs",
       "managerContext": "Jen's memo - 1. Think back to your business goals for 2024. Highlight the 2-3 business contributions you are most proud of and how you leveraged the APS Principles to achieve them.\t\nThe thing I am most proud of is being able to keep my AHT, ACH and ACW very low. I'm also happy that I was able to meet my goals for avoiding negative word choices, positive word choices and overall sentiment. I leveraged the APS Principles of Challenge respectfully and See the way forward to be able to achieve my goals. \n2. Think back to your development in 2024, share 1-2 examples of areas that you grew based on feedback from your leader and/or others.\t\nWith the help of my wonderful of my co-workers on my team, and amazing Leadership I have been able to Challenge myself to improve my AHT, adherence and managing my emotions. Which I know I will be able to Achieve.  ",
@@ -4790,7 +5381,7 @@
       "verbalSummary": ""
     },
     "2026::Ekiecha Brabham": {
-      "trackStatus": "on-track",
+      "trackStatus": "off-track",
       "positivesText": "Hold Time: 20s vs target 30s\nAvoid Negative Words: 86.1% vs target 83.0%\nManaging Emotions: 95.6% vs target 95.0%\nReliability: 6.3 hrs vs target 18.0 hrs\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 91.8% vs target 93.0%\nTransfers: 7.3% vs target 6.0%\nAverage Handle Time: 433s vs target 414s\nAfter Call Work: 136s vs target 60s\nOverall Experience: 81.8% vs target 84.0%\nRep Satisfaction: 72.7% vs target 82.0%",
       "managerContext": "",
@@ -4801,9 +5392,42 @@
       "verbalSummary": ""
     },
     "2026::Alyssa Dimes": {
-      "trackStatus": "on-track",
+      "trackStatus": "on-track-successful",
       "positivesText": "Transfers: 5.7% vs target 6.0%\nAfter Call Work: 50s vs target 60s\nOverall Experience: 100.0% vs target 84.0%\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 75.0% vs target 73.0%\nOverall Sentiment: 94.1% vs target 88.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
       "improvementsText": "Schedule Adherence: 92.3% vs target 93.0%\nAverage Handle Time: 592s vs target 414s\nHold Time: 115s vs target 30s",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2026::Jenifer Henson": {
+      "trackStatus": "on-track",
+      "positivesText": "Hold Time: 17s vs target 30s\nAfter Call Work: 0s vs target 60s\nRep Satisfaction: 100.0% vs target 82.0%\nFirst Call Resolution: 100.0% vs target 73.0%\nOverall Sentiment: 88.7% vs target 88.0%\nPositive Word: 92.4% vs target 86.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 91.4% vs target 93.0%\nTransfers: 9.2% vs target 6.0%\nAverage Handle Time: 480s vs target 414s\nOverall Experience: 66.7% vs target 84.0%\nAvoid Negative Words: 80.0% vs target 83.0%\nManaging Emotions: 93.6% vs target 95.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2026::Darryn Coley": {
+      "trackStatus": "off-track",
+      "positivesText": "Average Handle Time: 391s vs target 426s\nHold Time: 20s vs target 30s\nFirst Call Resolution: 100.0% vs target 73.0%\nAvoid Negative Words: 86.2% vs target 83.0%\nManaging Emotions: 96.5% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 88.1% vs target 93.0%\nTransfers: 14.7% vs target 6.0%\nAfter Call Work: 133s vs target 60s\nOverall Experience: 0.0% vs target 75.0%\nRep Satisfaction: 0.0% vs target 82.0%\nOverall Sentiment: 82.0% vs target 88.0%",
+      "managerContext": "",
+      "copilotResponse": "",
+      "performanceRating": "",
+      "meritDetails": "",
+      "bonusAmount": "",
+      "verbalSummary": ""
+    },
+    "2025::Darryn Coley": {
+      "trackStatus": "off-track",
+      "positivesText": "Average Handle Time: 380s vs target 440s\nHold Time: 10s vs target 30s\nFirst Call Resolution: 80.0% vs target 70.0%\nAvoid Negative Words: 89.1% vs target 83.0%\nManaging Emotions: 97.5% vs target 95.0%\nAnnual Goal Met: Safety Goal at APS: Meeting\nAnnual Goal Met: Emergency Safety Hazard Calls: 100% accuracy (No infractions)\nAnnual Goal Met: ACC Substantiated Complaints: 0 complaints\nAnnual Goal Met: Clicks on Phishing Emails: 0 clicks",
+      "improvementsText": "Schedule Adherence: 88.5% vs target 93.0%\nTransfers: 27.9% vs target 6.0%\nAfter Call Work: 128s vs target 60s\nOverall Experience: 60.0% vs target 75.0%\nRep Satisfaction: 73.3% vs target 80.0%\nOverall Sentiment: 87.1% vs target 88.0%",
       "managerContext": "",
       "copilotResponse": "",
       "performanceRating": "",
@@ -4813,95 +5437,105 @@
     }
   },
   "appStorageSnapshot": {
-    "devCoachingTool_teamMemberSelectorExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 4
-    },
-    "devCoachingTool_trendQueueLegendExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
-    },
-    "devCoachingTool_repoSyncLastSuccess": {
+    "devCoachingTool_coachingHistory": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 142
+      "itemCount": 1,
+      "byteLength": 280
     },
     "devCoachingTool_cloudSyncShared": {
       "valueType": "object",
       "itemCount": 6,
       "byteLength": 187
     },
-    "devCoachingTool_associateSentimentSnapshots": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 3940
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 4
     },
-    "devCoachingTool_sentimentPhraseDatabase": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 1730
-    },
-    "devCoachingTool_coachingHistory": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 280
-    },
-    "devCoachingTool_cloudSyncSettings": {
-      "valueType": "object",
-      "itemCount": 7,
-      "byteLength": 308
-    },
-    "devCoachingTool_weeklyData": {
+    "devCoachingTool_callCenterAverages": {
       "valueType": "object",
       "itemCount": 8,
-      "byteLength": 44431
+      "byteLength": 2241
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
       "byteLength": 9785
     },
+    "devCoachingTool_ytdData": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 15051
+    },
+    "devCoachingTool_sentimentPhraseDatabase": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 1730
+    },
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 6
+    },
+    "devCoachingTool_ptoTracker": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 2196
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 156
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 135
+    },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
-      "itemCount": 17,
-      "byteLength": 7151
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 60
+      "itemCount": 20,
+      "byteLength": 8404
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_debugLogs": {
+      "valueType": "array",
+      "itemCount": 50,
+      "byteLength": 7004
+    },
+    "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 3940
+    },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
-      "itemCount": 19,
-      "byteLength": 48856
+      "itemCount": 22,
+      "byteLength": 51449
     },
-    "devCoachingTool_callCenterAverages": {
+    "devCoachingTool_weeklyData": {
+      "valueType": "object",
+      "itemCount": 9,
+      "byteLength": 50208
+    },
+    "devCoachingTool_trendQueueLegendExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_cloudSyncSettings": {
       "valueType": "object",
       "itemCount": 7,
-      "byteLength": 1957
+      "byteLength": 308
     },
-    "devCoachingTool_ptoTracker": {
+    "devCoachingTool_myTeamMembers": {
       "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 40
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 128
-    },
-    "devCoachingTool_ytdData": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 15016
+      "itemCount": 1,
+      "byteLength": 76
     }
   }
 }
