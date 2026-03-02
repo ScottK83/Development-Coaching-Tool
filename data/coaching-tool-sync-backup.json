@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T18:41:41.509Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-03-02T18:44:04.271Z",
+  "reason": "call center averages updated",
   "sourceAppVersion": "2026.03.02.4",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4805,6 +4805,22 @@
       "holdTime": 20,
       "reliability": 0,
       "lastUpdated": "2026-02-19T22:31:31.736Z"
+    },
+    "2026-02-22|2026-02-28": {
+      "adherence": 93,
+      "overallExperience": 78,
+      "repSatisfaction": 85,
+      "fcr": 81,
+      "transfers": 8.89,
+      "sentiment": 91.4,
+      "positiveWord": 89.2,
+      "negativeWord": 89,
+      "managingEmotions": 96,
+      "aht": 441,
+      "acw": 67,
+      "holdTime": 17,
+      "reliability": 1.96,
+      "lastUpdated": "2026-03-02T18:44:03.111Z"
     }
   },
   "ptoTracker": {
@@ -5607,8 +5623,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 7,
-      "byteLength": 1957
+      "itemCount": 8,
+      "byteLength": 2238
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -5683,7 +5699,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 4,
-      "byteLength": 342
+      "byteLength": 326
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
