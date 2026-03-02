@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T17:37:39.629Z",
+  "generatedAt": "2026-03-02T17:37:44.556Z",
   "reason": "team members updated",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
@@ -4649,11 +4649,6 @@
       "Alyssa Dimes",
       "Angelina Fierro",
       "Oceane Ingram",
-      "Ronda Colis",
-      "Scoticia Osborne",
-      "Taylor Colter",
-      "Teena Pokorski",
-      "Trevor Pedrowski",
       "Trisha Erb"
     ]
   },
@@ -6075,7 +6070,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 174
+      "byteLength": 89
     },
     "devCoachingTool_coachingHistory": {
       "valueType": "object",
@@ -6100,7 +6095,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 158
+      "byteLength": 123
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
