@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.02.27.08'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.03.01.1'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -10817,6 +10817,14 @@ function renderEmployeesList() {
         return;
     }
 
+    const deleteWeekDropdown = document.getElementById('deleteWeekSelect');
+    let teamSelectionWeek = String(deleteWeekDropdown?.value || '').trim();
+    if (!teamSelectionWeek) {
+        const sortedWeeks = Object.keys(weeklyData || {}).sort().reverse();
+        teamSelectionWeek = sortedWeeks[0] || '';
+    }
+    const teamSelectionMembers = teamSelectionWeek ? getTeamMembersForWeek(teamSelectionWeek) : [];
+
     moduleApi.renderEmployeesList({
         container: document.getElementById('employeesList'),
         weeklyData,
@@ -10824,7 +10832,14 @@ function renderEmployeesList() {
         escapeHtml,
         getEmployeeNickname,
         onSaveName: saveEmployeePreferredName,
-        onDeleteEmployee: deleteEmployee
+        onDeleteEmployee: deleteEmployee,
+        teamSelectionWeek,
+        teamSelectionMembers,
+        onTeamSelectionChange: ({ weekKey, selectedMembers }) => {
+            const normalizedWeekKey = String(weekKey || '').trim();
+            if (!normalizedWeekKey) return;
+            setTeamMembersForWeek(normalizedWeekKey, Array.isArray(selectedMembers) ? selectedMembers : []);
+        }
     });
 }
 
@@ -10938,14 +10953,14 @@ function setAppVersionLabel(statusSuffix = '') {
         const lastSuccess = loadRepoSyncLastSuccess();
         const commit = String(lastSuccess?.commit || '').trim();
         const shortCommit = commit ? commit.slice(0, 7) : '';
-        const syncedAt = lastSuccess?.timestamp ? new Date(lastSuccess.timestamp).toLocaleString() : '';
+        const syncedAt = lastSuccess?.syncedAt ? new Date(lastSuccess.syncedAt).toLocaleString() : '';
 
         if (shortCommit && syncedAt) {
-            deployMarkerEl.textContent = `Deploy: ${APP_VERSION} • ${shortCommit} • ${syncedAt}`;
+            deployMarkerEl.textContent = `Deploy: ${shortCommit} • ${syncedAt}`;
         } else if (shortCommit) {
-            deployMarkerEl.textContent = `Deploy: ${APP_VERSION} • ${shortCommit}`;
+            deployMarkerEl.textContent = `Deploy: ${shortCommit}`;
         } else {
-            deployMarkerEl.textContent = `Deploy: ${APP_VERSION}`;
+            deployMarkerEl.textContent = 'Deploy: n/a';
         }
     }
 }

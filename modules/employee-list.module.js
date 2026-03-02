@@ -21,6 +21,9 @@
     function buildEmployeeRowHtml(name, preferredNames, options = {}) {
         const getEmployeeNickname = options.getEmployeeNickname || ((value) => value);
         const escapeHtml = options.escapeHtml || ((value) => String(value || ''));
+        const teamSelectionWeek = String(options.teamSelectionWeek || '').trim();
+        const selectedMembers = Array.isArray(options.teamSelectionMembers) ? options.teamSelectionMembers : [];
+        const isTeamSelected = !teamSelectionWeek || selectedMembers.length === 0 || selectedMembers.includes(name);
 
         const currentPreferred = preferredNames[name] || getEmployeeNickname(name);
         const defaultValue = preferredNames[name] || '';
@@ -29,7 +32,10 @@
         <div style="padding: 15px; border-bottom: 1px solid #eee; background: #fafafa;">
             <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                 <div style="flex: 1;">
-                    <strong style="color: #6a1b9a;">${name}</strong>
+                    <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" class="team-member-checkbox employee-row-team-checkbox" data-week="${escapeHtml(teamSelectionWeek)}" data-name="${escapeHtml(name)}" ${isTeamSelected ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+                        <strong style="color: #6a1b9a;">${name}</strong>
+                    </label>
                     <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Weekly Data Uploads</div>
                 </div>
                 <div style="flex: 1; min-width: 200px;">
@@ -84,6 +90,21 @@
                     options.onDeleteEmployee?.(target.dataset.name);
                 }
             });
+
+            container.addEventListener('change', (event) => {
+                const target = event.target;
+                if (!target || !target.classList || !target.classList.contains('team-member-checkbox')) return;
+
+                const weekKey = String(target.dataset.week || '').trim();
+                if (!weekKey) return;
+
+                const selectedMembers = Array.from(container.querySelectorAll(`.team-member-checkbox[data-week="${weekKey}"]:checked`))
+                    .map((checkbox) => String(checkbox.dataset.name || '').trim())
+                    .filter(Boolean);
+
+                options.onTeamSelectionChange?.({ weekKey, selectedMembers });
+            });
+
             container.dataset.employeeHandlersBound = 'true';
         }
     }

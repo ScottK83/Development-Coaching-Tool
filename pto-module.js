@@ -7,6 +7,7 @@ const PTOST_MAX_HOURS_DEFAULT = 40;
 const PTO_WEEK_DEFAULT_HOURS = 8;
 const PTO_TRACKING_YEAR = 2026;
 const PTO_LEGACY_ASSOCIATE_KEY = '__LEGACY_PTO__';
+const TEAM_MEMBERS_STORAGE_KEY = 'devCoachingTool_myTeamMembers';
 let ptoReliabilityWeekCache = [];
 
 function getDefaultPtoTracker() {
@@ -174,6 +175,7 @@ function savePtoStore(store) {
 
 function getWeeklyAssociates() {
     const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    const teamFilter = getPtoTeamSelectionFilter(weeklyData);
     const names = new Set();
 
     Object.entries(weeklyData).forEach(([weekKey, week]) => {
@@ -182,21 +184,95 @@ function getWeeklyAssociates() {
         const endDate = String(week?.metadata?.endDate || '').trim();
         if (!isPeriodInTrackingYear(startDate, endDate, weekKey)) return;
 
+        if (teamFilter?.weekKey && weekKey !== teamFilter.weekKey) {
+            return;
+        }
+
         const employees = Array.isArray(week.employees) ? week.employees : [];
         employees.forEach(employee => {
             const name = normalizeAssociateName(employee?.name);
-            if (name) names.add(name);
+            if (!name) return;
+            if (teamFilter?.allowedSet && !teamFilter.allowedSet.has(name)) return;
+            names.add(name);
         });
     });
 
-    return Array.from(names);
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
 function getAssociateOptions(store) {
+    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    const teamFilter = getPtoTeamSelectionFilter(weeklyData);
     const fromWeekly = getWeeklyAssociates();
     const fromPto = Object.keys(store.associates || {});
     const combined = new Set([...fromWeekly, ...fromPto]);
-    return Array.from(combined).sort((a, b) => a.localeCompare(b));
+    const options = Array.from(combined).filter(name => {
+        if (name === PTO_LEGACY_ASSOCIATE_KEY) return true;
+        if (!teamFilter?.allowedSet) return true;
+        return teamFilter.allowedSet.has(name);
+    });
+    return options.sort((a, b) => a.localeCompare(b));
+}
+
+function loadTeamMembersByWeek() {
+    try {
+        const raw = localStorage.getItem(TEAM_MEMBERS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_error) {
+        return {};
+    }
+}
+
+function getLatestTrackingWeekKey(weeklyData) {
+    const candidates = [];
+
+    Object.entries(weeklyData || {}).forEach(([weekKey, week]) => {
+        if (!week || typeof week !== 'object') return;
+        const startDate = String(week?.metadata?.startDate || '').trim();
+        const endDate = String(week?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, weekKey)) return;
+
+        const referenceDateText = endDate || startDate || String(weekKey).split('|')[1] || String(weekKey).split('|')[0] || '';
+        const referenceDate = parseIsoDateSafe(referenceDateText);
+
+        candidates.push({
+            weekKey,
+            referenceDate
+        });
+    });
+
+    if (!candidates.length) return '';
+
+    candidates.sort((a, b) => {
+        const aTime = a.referenceDate ? a.referenceDate.getTime() : 0;
+        const bTime = b.referenceDate ? b.referenceDate.getTime() : 0;
+        return bTime - aTime;
+    });
+
+    return String(candidates[0]?.weekKey || '').trim();
+}
+
+function getPtoTeamSelectionFilter(weeklyData) {
+    const latestWeekKey = getLatestTrackingWeekKey(weeklyData);
+    if (!latestWeekKey) return null;
+
+    const teamMembersByWeek = loadTeamMembersByWeek();
+    const selectedMembers = Array.isArray(teamMembersByWeek[latestWeekKey])
+        ? teamMembersByWeek[latestWeekKey].map(normalizeAssociateName).filter(Boolean)
+        : [];
+
+    if (!selectedMembers.length) {
+        return {
+            weekKey: latestWeekKey,
+            allowedSet: null
+        };
+    }
+
+    return {
+        weekKey: latestWeekKey,
+        allowedSet: new Set(selectedMembers)
+    };
 }
 
 function ensureAssociateTracker(store, associateName) {
