@@ -140,6 +140,8 @@ let repoSyncStorageHookInstalled = false;
 let repoSyncSuppressCounter = 0;
 let repoSyncHydrationInProgress = false;
 let repoSyncConflictPromptMutedUntil = 0;
+let repoSyncAutoPausedReason = '';
+let repoSyncAutoPausedExistingSummary = null;
 let teamFilterChangeHandlersBound = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
@@ -3872,10 +3874,52 @@ function queueRepoSync(reason = 'updated') {
     scheduleRepoSync(reason);
 }
 
+function isLocalSummaryCaughtUp(localSummary, baselineSummary) {
+    if (!localSummary || !baselineSummary) return false;
+
+    const localLatest = Number(localSummary.latestWeeklyEndMs || 0);
+    const baselineLatest = Number(baselineSummary.latestWeeklyEndMs || 0);
+    const localWeekly = Number(localSummary.weeklyPeriods || 0);
+    const baselineWeekly = Number(baselineSummary.weeklyPeriods || 0);
+    const localFootprint = Number(localSummary.footprintScore || 0);
+    const baselineFootprint = Number(baselineSummary.footprintScore || 0);
+
+    const latestCaughtUp = !baselineLatest || localLatest >= baselineLatest;
+    const weeklyCaughtUp = localWeekly >= baselineWeekly;
+    const footprintCaughtUp = localFootprint >= baselineFootprint;
+
+    return latestCaughtUp && (weeklyCaughtUp || footprintCaughtUp);
+}
+
+function clearRepoSyncAutoPause() {
+    repoSyncAutoPausedReason = '';
+    repoSyncAutoPausedExistingSummary = null;
+}
+
+function pauseRepoSyncForRegression(existingSummary = null) {
+    repoSyncAutoPausedReason = 'DATA_REGRESSION_GUARD';
+    repoSyncAutoPausedExistingSummary = existingSummary && typeof existingSummary === 'object'
+        ? existingSummary
+        : null;
+}
+
 function canQueueRepoSync() {
     if (repoSyncHydrationInProgress) return false;
     const config = loadCallListeningSyncConfig();
-    return !!(config.autoSyncEnabled && String(config.endpoint || '').trim());
+    const enabled = !!(config.autoSyncEnabled && String(config.endpoint || '').trim());
+    if (!enabled) return false;
+
+    if (repoSyncAutoPausedReason === 'DATA_REGRESSION_GUARD') {
+        const localSummary = summarizeLocalBackupFreshness();
+        if (isLocalSummaryCaughtUp(localSummary, repoSyncAutoPausedExistingSummary)) {
+            clearRepoSyncAutoPause();
+            setCallListeningSyncStatus('Auto-sync resumed after local data caught up.', 'info');
+            return true;
+        }
+        return false;
+    }
+
+    return true;
 }
 
 function scheduleRepoSync(reason) {
@@ -4157,6 +4201,7 @@ function getRepoSyncEndpointIfAllowed(config, forceSync) {
 
 function finalizeRepoSyncSuccess(reason, responseData) {
     repoSyncConflictPromptMutedUntil = 0;
+    clearRepoSyncAutoPause();
     const syncMeta = buildRepoSyncMeta(reason, responseData);
     saveRepoSyncLastSuccess(syncMeta);
     renderCallListeningLastSync(syncMeta);
@@ -4191,13 +4236,14 @@ async function maybeHandleRepoSyncConflict(error) {
     const now = Date.now();
 
     if (!interactive) {
+        pauseRepoSyncForRegression(existingSummary);
+
         if (now < repoSyncConflictPromptMutedUntil) {
             return true;
         }
 
         repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
-        setCallListeningSyncStatus('Sync paused: local profile is older than repo backup. Use Sync Now or Force Restore when ready.', 'error');
-        showToast('⚠️ Auto-sync paused to avoid overwrite prompts. Use Sync Now after re-upload or Force Restore.', 5000);
+        setCallListeningSyncStatus('Auto-sync paused while local profile rebuild is older than repo. It will resume when data catches up.', 'info');
         return true;
     }
 
@@ -4213,6 +4259,7 @@ async function maybeHandleRepoSyncConflict(error) {
 
     const shouldRestore = confirm(message);
     if (!shouldRestore) {
+        pauseRepoSyncForRegression(existingSummary);
         repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
         setCallListeningSyncStatus('Sync blocked (older local profile). Use Force Restore to match latest repo data.', 'error');
         return true;
@@ -4223,6 +4270,7 @@ async function maybeHandleRepoSyncConflict(error) {
         const restored = await tryAutoRestoreFromRepoBackupOnEmptyState();
         if (restored) {
             repoSyncConflictPromptMutedUntil = 0;
+            clearRepoSyncAutoPause();
             showToast('✅ Restored latest repo backup. Sync is now aligned.', 4000);
             setCallListeningSyncStatus('Restore complete. This browser now matches repo data.', 'success');
             setTimeout(() => window.location.reload(), 500);
