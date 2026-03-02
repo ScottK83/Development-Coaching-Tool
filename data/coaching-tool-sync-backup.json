@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T19:14:59.345Z",
+  "generatedAt": "2026-03-02T19:15:26.076Z",
   "reason": "weekly data updated",
   "sourceAppVersion": "2026.03.02.9",
   "weeklyData": {
@@ -3237,17 +3237,17 @@
         {
           "name": "Oceane Ingram",
           "firstName": "Oceane",
-          "scheduleAdherence": 84.48,
+          "scheduleAdherence": 84.5,
           "cxRepOverall": "",
           "fcr": "",
           "overallExperience": "",
           "overallExperienceTop3": "",
-          "transfers": 13.74,
+          "transfers": 13.7,
           "transfersCount": 0,
           "aht": 587,
           "talkTime": "",
           "acw": 314,
-          "holdTime": "",
+          "holdTime": 25,
           "reliability": 0,
           "overallSentiment": 95.7,
           "positiveWord": 96.8,
@@ -5715,7 +5715,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 4,
-      "byteLength": 326
+      "byteLength": 306
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
@@ -5740,7 +5740,7 @@
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 10,
-      "byteLength": 57470
+      "byteLength": 57468
     },
     "devCoachingTool_trendQueueLegendExpanded": {
       "valueType": "string",
