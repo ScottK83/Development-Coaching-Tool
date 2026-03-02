@@ -3511,16 +3511,20 @@ function initializeRepoSyncControls() {
         exportLedgerBtn.dataset.bound = 'true';
     }
     if (!syncEndpointInput.dataset.bound) {
-        syncEndpointInput.addEventListener('change', () => {
+        const persistEndpointConfig = () => {
             const nextConfig = getCallListeningSyncConfigFromUI();
             setAutoSyncEnabledStatus(nextConfig);
-        });
+        };
+        syncEndpointInput.addEventListener('change', persistEndpointConfig);
+        syncEndpointInput.addEventListener('input', persistEndpointConfig);
         syncEndpointInput.dataset.bound = 'true';
     }
     if (syncSecretInput && !syncSecretInput.dataset.bound) {
-        syncSecretInput.addEventListener('change', () => {
+        const persistSecretConfig = () => {
             getCallListeningSyncConfigFromUI();
-        });
+        };
+        syncSecretInput.addEventListener('change', persistSecretConfig);
+        syncSecretInput.addEventListener('input', persistSecretConfig);
         syncSecretInput.dataset.bound = 'true';
     }
     if (!autoSyncCheckbox.dataset.bound) {
