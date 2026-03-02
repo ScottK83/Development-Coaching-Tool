@@ -292,7 +292,7 @@
             transfersCount: findColumnIndex(['number of transfers', 'transfer count', 'xfer count']),
             aht: findColumnIndex(['aht', 'average handle', 'avg handle time', 'average handle time']),
             talkTime: findColumnIndex(['talk', 'talk time']),
-            holdTime: findColumnIndex(['hold', 'hold time']),
+            holdTime: findColumnIndex(['hold', 'hold time', 'avg hold', 'average hold', 'hold seconds', 'hold sec']),
             acw: findColumnIndex(['acw', 'after call', 'after call work', 'wrap time', 'wrap']),
             adherence: findColumnIndex(['adherence', 'schedule', 'schedule adherence', 'adherence %']),
             emotions: findColumnIndex(['managing emotions', 'emotion', 'manage emotions', 'manage emotion score', 'manageemotions', 'manageemotions score']),
@@ -337,6 +337,24 @@
             const value = cells[colIndex];
             return (value === null || value === undefined) ? '' : value;
         };
+
+        const normalizeRawCell = (value) => {
+            const text = String(value ?? '').replace(/\u00A0/g, ' ').trim();
+            if (!text || text === '(Blank)' || text === 'N/A') return null;
+
+            const cleaned = text.replace(/,/g, '');
+            if (cleaned.endsWith('%')) {
+                const pct = parseFloat(cleaned);
+                return Number.isNaN(pct) ? text : pct;
+            }
+
+            const numeric = Number(cleaned);
+            if (!Number.isNaN(numeric) && cleaned !== '') {
+                return numeric;
+            }
+
+            return text;
+        };
         
         const employees = [];
         
@@ -347,8 +365,12 @@
             
             let cells;
             try {
-                const parsed = parsePowerBIRow(rawRow);
-                cells = parsed;
+                if (rawRow.includes('\t')) {
+                    cells = rawRow.split('\t').map(normalizeRawCell);
+                } else {
+                    const parsed = parsePowerBIRow(rawRow);
+                    cells = parsed;
+                }
             } catch (error) {
                 continue;
             }
