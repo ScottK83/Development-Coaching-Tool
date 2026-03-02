@@ -8628,14 +8628,25 @@ function buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, teamSize) {
     return prompt;
 }
 
+function getFilteredEmployeesForPeriod(period, context = null) {
+    if (!period || !Array.isArray(period.employees)) return [];
+
+    const teamFilterContext = context || getTeamSelectionContext();
+    return period.employees.filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
+}
+
 function collectTeamTrendMetrics(period) {
+    const teamFilterContext = getTeamSelectionContext();
+    const filteredEmployees = getFilteredEmployeesForPeriod(period, teamFilterContext);
+    if (!filteredEmployees.length) return [];
+
     const teamMetrics = [];
 
     getMetricOrder().forEach(({ key }) => {
         const metricDef = METRICS_REGISTRY[key];
         if (!metricDef) return;
 
-        const values = period.employees
+        const values = filteredEmployees
             .map(emp => parseFloat(emp[key]))
             .filter(value => !Number.isNaN(value));
 
@@ -8667,10 +8678,14 @@ function buildTeamTrendAggregateEmployee(period) {
         return null;
     }
 
+    const teamFilterContext = getTeamSelectionContext();
+    const filteredEmployees = getFilteredEmployeesForPeriod(period, teamFilterContext);
+    if (!filteredEmployees.length) return null;
+
     const aggregate = { name: 'Team Combined', isTeamAggregate: true };
 
     getMetricOrder().forEach(({ key }) => {
-        const values = period.employees
+        const values = filteredEmployees
             .map(emp => parseFloat(emp?.[key]))
             .filter(value => !Number.isNaN(value));
 
@@ -8681,7 +8696,7 @@ function buildTeamTrendAggregateEmployee(period) {
         aggregate[key] = values.reduce((sum, value) => sum + value, 0) / values.length;
     });
 
-    const totalSurveyCount = period.employees
+    const totalSurveyCount = filteredEmployees
         .map(emp => {
             const surveyTotal = parseFloat(emp?.surveyTotal);
             if (!Number.isNaN(surveyTotal)) {
@@ -8696,7 +8711,7 @@ function buildTeamTrendAggregateEmployee(period) {
         aggregate.surveyTotal = totalSurveyCount;
     }
 
-    const totalCalls = period.employees
+    const totalCalls = filteredEmployees
         .map(emp => parseFloat(emp?.totalCalls))
         .filter(value => !Number.isNaN(value))
         .reduce((sum, value) => sum + value, 0);
@@ -8814,6 +8829,13 @@ function generateTeamTrendSummary() {
         return;
     }
 
+    const teamFilterContext = getTeamSelectionContext();
+    const filteredEmployees = getFilteredEmployeesForPeriod(period, teamFilterContext);
+    if (!filteredEmployees.length) {
+        showToast('No checked team members found for this period', 5000);
+        return;
+    }
+
     const periodMeta = period.metadata || {};
     const reviewYear = parseInt((periodMeta.endDate || '').split('-')[0], 10) || null;
     const teamMetrics = collectTeamTrendMetrics(period);
@@ -8832,11 +8854,11 @@ function generateTeamTrendSummary() {
     );
 
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
-    const teamPrompt = buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, period.employees.length);
+    const teamPrompt = buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, filteredEmployees.length);
     const teamSubject = `Trending Metrics - Team Summary - Week ending ${periodMeta.endDate || ''}`;
 
     const modal = createTeamTrendSummaryModal();
-    const panel = createTeamTrendSummaryPanel(periodLabel, period.employees.length, summaryBoxesHtml, teamPrompt);
+    const panel = createTeamTrendSummaryPanel(periodLabel, filteredEmployees.length, summaryBoxesHtml, teamPrompt);
 
     modal.appendChild(panel);
     document.body.appendChild(modal);
@@ -8857,9 +8879,13 @@ function generateAllTrendEmails() {
         return;
     }
     
-    const employeeNames = week.employees.map(emp => emp.name).filter(Boolean);
+    const teamFilterContext = getTeamSelectionContext();
+    const employeeNames = week.employees
+        .filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext))
+        .map(emp => emp.name)
+        .filter(Boolean);
     if (employeeNames.length === 0) {
-        showToast('No employees found for this period', 5000);
+        showToast('No checked team members found for this period', 5000);
         return;
     }
     
@@ -10942,8 +10968,9 @@ function buildTodaysFocusData() {
 
     const prevAverages = {};
     if (prevWeek?.employees) {
+        const previousEmployees = getFilteredEmployeesForPeriod(prevWeek, teamFilterContext);
         metricsToUse.forEach(key => {
-            const vals = prevWeek.employees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
+            const vals = previousEmployees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
             prevAverages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
         });
     }
@@ -10988,7 +11015,7 @@ function buildTodaysFocusData() {
         }
     });
 
-    const callouts = buildTodaysFocusCallouts(latestWeek, metricsToUse, averages);
+    const callouts = buildTodaysFocusCallouts(latestEmployees, metricsToUse, averages);
 
     return {
         latestKey,
@@ -11000,8 +11027,8 @@ function buildTodaysFocusData() {
     };
 }
 
-function buildTodaysFocusCallouts(latestWeek, metricsToUse, averages) {
-    const scores = latestWeek.employees.map(emp => {
+function buildTodaysFocusCallouts(employees, metricsToUse, averages) {
+    const scores = (employees || []).map(emp => {
         let wins = 0;
         metricsToUse.forEach(key => {
             const avg = averages[key];
