@@ -78,12 +78,6 @@ if ($currentVersion -eq $nextVersion) {
     exit 0
 }
 
-$todayDatePart = (Get-Date).ToString("yyyy.MM.dd")
-$currentVersionDate = $null
-if ($currentVersion -match "^(?<date>\d{4}\.\d{2}\.\d{2})\.\d+$") {
-    $currentVersionDate = $matches['date']
-}
-
 # Check if HEAD commit message is a version bump commit from pre-push
 $headCommitMsg = git log -1 --pretty=%B
 if ($headCommitMsg.Trim() -match "^chore: bump app version to") {
