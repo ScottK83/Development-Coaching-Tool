@@ -2287,8 +2287,8 @@ function bindDataAdminHandlers() {
     document.getElementById('selectAllTeamBtn')?.addEventListener('click', handleSelectAllTeamClick);
     document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
     document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
-    document.getElementById('toggleTeamMemberSelectorBtn')?.addEventListener('click', handleToggleTeamMemberSelectorClick);
-    applyTeamMemberSelectorState(loadTeamMemberSelectorExpandedPreference());
+    document.getElementById('toggleTeamMemberSelectorBtn')?.addEventListener('click', handleToggleTeamMembersEmployeesPanelClick);
+    applyTeamMembersEmployeesPanelState(loadTeamMembersEmployeesPanelExpandedPreference());
 
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
@@ -2611,7 +2611,7 @@ function handleLoadPastedDataClick() {
             syncWeeklyViewAfterPastedUpload(weekKey);
         }
 
-        alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage your team members in "📊 Manage Data" section.`);
+        alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage associates in "👥 Team Members & Employees" under "📊 Manage Data".`);
 
         setTimeout(() => {
             location.reload();
@@ -2924,52 +2924,53 @@ function handleDeselectAllTeamClick() {
 }
 
 function handleDeleteWeekSelectChange() {
-    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
-    const isExpanded = toggleBtn?.getAttribute('aria-expanded') === 'true';
+    const panelToggleButton = document.getElementById('toggleTeamMemberSelectorBtn');
+    const isExpanded = panelToggleButton?.getAttribute('aria-expanded') === 'true';
     if (isExpanded) {
         populateTeamMemberSelector();
     }
 }
 
-function applyTeamMemberSelectorState(isExpanded) {
-    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
-    const selectorBody = document.getElementById('teamMemberSelectorBody');
-    if (!toggleBtn || !selectorBody) return;
+function applyTeamMembersEmployeesPanelState(isExpanded) {
+    const panelToggleButton = document.getElementById('toggleTeamMemberSelectorBtn');
+    const panelBody = document.getElementById('teamMemberSelectorBody');
+    if (!panelToggleButton || !panelBody) return;
 
-    toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-    toggleBtn.textContent = isExpanded ? 'Hide Team Member Selection' : 'Show Team Member Selection';
-    selectorBody.style.display = isExpanded ? 'block' : 'none';
+    panelToggleButton.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    panelToggleButton.textContent = isExpanded ? 'Hide Team Members & Employees' : 'Show Team Members & Employees';
+    panelBody.style.display = isExpanded ? 'block' : 'none';
 
     if (isExpanded) {
         populateTeamMemberSelector();
+        renderEmployeesList();
     }
 }
 
-function loadTeamMemberSelectorExpandedPreference() {
+function loadTeamMembersEmployeesPanelExpandedPreference() {
     try {
         return localStorage.getItem(STORAGE_PREFIX + 'teamMemberSelectorExpanded') === 'true';
     } catch (error) {
-        console.error('Error loading team member selector preference:', error);
+        console.error('Error loading team members & employees panel preference:', error);
         return false;
     }
 }
 
-function saveTeamMemberSelectorExpandedPreference(isExpanded) {
+function saveTeamMembersEmployeesPanelExpandedPreference(isExpanded) {
     try {
         localStorage.setItem(STORAGE_PREFIX + 'teamMemberSelectorExpanded', isExpanded ? 'true' : 'false');
     } catch (error) {
-        console.error('Error saving team member selector preference:', error);
+        console.error('Error saving team members & employees panel preference:', error);
     }
 }
 
-function handleToggleTeamMemberSelectorClick() {
-    const toggleBtn = document.getElementById('toggleTeamMemberSelectorBtn');
-    if (!toggleBtn) return;
+function handleToggleTeamMembersEmployeesPanelClick() {
+    const panelToggleButton = document.getElementById('toggleTeamMemberSelectorBtn');
+    if (!panelToggleButton) return;
 
-    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    const isExpanded = panelToggleButton.getAttribute('aria-expanded') === 'true';
     const shouldExpand = !isExpanded;
-    applyTeamMemberSelectorState(shouldExpand);
-    saveTeamMemberSelectorExpandedPreference(shouldExpand);
+    applyTeamMembersEmployeesPanelState(shouldExpand);
+    saveTeamMembersEmployeesPanelExpandedPreference(shouldExpand);
 }
 
 function handleDeleteSelectedSentimentClick() {
