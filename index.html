@@ -1205,7 +1205,12 @@ Box 2 - Future Improvement Areas:
                     <h2>📌 Follow Up</h2>
                     <p style="color: #c62828; margin-bottom: 20px;">Use this section for follow-up to-dos and red flag coaching actions.</p>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ff8a65;">
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="showFollowUpPanelBtn" class="btn-secondary" style="background: #ef6c00; color: white;">📌 Follow-Up</button>
+                        <button type="button" id="showRedFlagPanelBtn" class="btn-secondary" style="background: #b0bec5; color: #263238;">🚩 Red Flag Coaching</button>
+                    </div>
+
+                    <div id="followUpPanel" style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ff8a65;">
                         <h3 style="color: #e65100; margin-top: 0;">🗂️ To-Do Follow Up</h3>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -1263,44 +1268,46 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
-                    <h3 style="color: #dc3545; margin-top: 0;">🚩 Red Flag Coaching</h3>
-                    <p style="color: #c62828; margin-bottom: 20px;">Generate coaching emails for compliance violations, such as not following Experian verification procedures.</p>
-                    
-                    <!-- Add New Red Flag Coaching -->
-                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
-                        <h3 style="color: #dc3545; margin-top: 0;">➕ Create Red Flag Coaching Email</h3>
+                    <div id="redFlagPanel" style="display: none;">
+                        <h3 style="color: #dc3545; margin-top: 0;">🚩 Red Flag Coaching</h3>
+                        <p style="color: #c62828; margin-bottom: 20px;">Generate coaching emails for compliance violations, such as not following Experian verification procedures.</p>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <label for="redFlagAssociateName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Associate Name:</label>
-                                <input type="text" id="redFlagAssociateName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                        <!-- Add New Red Flag Coaching -->
+                        <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
+                            <h3 style="color: #dc3545; margin-top: 0;">➕ Create Red Flag Coaching Email</h3>
+                        
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label for="redFlagAssociateName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Associate Name:</label>
+                                    <input type="text" id="redFlagAssociateName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label for="redFlagCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                                    <input type="text" id="redFlagCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label for="redFlagAccountNumber" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Account Number:</label>
+                                    <input type="text" id="redFlagAccountNumber" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
                             </div>
-                            <div>
-                                <label for="redFlagCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
-                                <input type="text" id="redFlagCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                        
+                            <div style="margin-bottom: 15px;">
+                                <label for="redFlagReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Red Flag Reason/Details:</label>
+                                <textarea id="redFlagReason" placeholder="You can paste comments or describe what happened (e.g., 'Failed KIQ (JAH ADDED WITHOUT ID)' or 'Added authorized user before receiving required Picture ID from Experian verification')" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+                                <small style="color: #666; display: block; margin-top: 5px;">Examples: "Failed KIQ (JAH ADDED WITHOUT ID)", "Added user without Picture ID", "Completed order before Experian verification"</small>
                             </div>
-                            <div>
-                                <label for="redFlagAccountNumber" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Account Number:</label>
-                                <input type="text" id="redFlagAccountNumber" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                            </div>
+                        
+                            <button type="button" id="generateRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Generate Red Flag Coaching Email</button>
                         </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label for="redFlagReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Red Flag Reason/Details:</label>
-                            <textarea id="redFlagReason" placeholder="You can paste comments or describe what happened (e.g., 'Failed KIQ (JAH ADDED WITHOUT ID)' or 'Added authorized user before receiving required Picture ID from Experian verification')" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px; font-size: 1em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
-                            <small style="color: #666; display: block; margin-top: 5px;">Examples: "Failed KIQ (JAH ADDED WITHOUT ID)", "Added user without Picture ID", "Completed order before Experian verification"</small>
-                        </div>
-                        
-                        <button type="button" id="generateRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Generate Red Flag Coaching Email</button>
-                    </div>
                     
-                    <!-- Email Preview -->
-                    <div id="redFlagEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
-                        <h3 style="color: #dc3545; margin-top: 0;">📧 Email Preview</h3>
-                        <div style="background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif;" id="redFlagEmailPreviewText"></div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="copyRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
-                            <button type="button" id="clearRedFlagEmailBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                        <!-- Email Preview -->
+                        <div id="redFlagEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #dc3545;">
+                            <h3 style="color: #dc3545; margin-top: 0;">📧 Email Preview</h3>
+                            <div style="background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif;" id="redFlagEmailPreviewText"></div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" id="copyRedFlagEmailBtn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
+                                <button type="button" id="clearRedFlagEmailBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>

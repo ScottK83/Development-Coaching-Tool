@@ -8,11 +8,14 @@ function initializeRedFlag() {
     document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
 
     document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
+    document.getElementById('showFollowUpPanelBtn')?.addEventListener('click', () => switchRedFlagMode('follow-up'));
+    document.getElementById('showRedFlagPanelBtn')?.addEventListener('click', () => switchRedFlagMode('red-flag'));
     document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
     document.getElementById('openFollowUpEmailBtn')?.addEventListener('click', openFollowUpEmailDraft);
     document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
     document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
 
+    switchRedFlagMode('follow-up');
     handleFollowUpTodoTypeChange();
 }
 
@@ -23,6 +26,36 @@ Next, submit a new To-Do clearly stating that you verified where the refund chec
 To validate the address, open the person record (the account may be inactive), then go to Correspondence Info. If no mailing address is listed, confirm the correct mailing address directly with the customer before resubmitting.`;
 
 let pendingFollowUpMailtoUrl = '';
+
+function switchRedFlagMode(mode) {
+    const showFollowUpBtn = document.getElementById('showFollowUpPanelBtn');
+    const showRedFlagBtn = document.getElementById('showRedFlagPanelBtn');
+    const followUpPanel = document.getElementById('followUpPanel');
+    const followUpPreview = document.getElementById('followUpEmailPreviewSection');
+    const redFlagPanel = document.getElementById('redFlagPanel');
+
+    const isFollowUp = mode !== 'red-flag';
+
+    if (followUpPanel) {
+        followUpPanel.style.display = isFollowUp ? 'block' : 'none';
+    }
+    if (followUpPreview) {
+        const hasPreview = Boolean(document.getElementById('followUpEmailPreviewText')?.textContent?.trim());
+        followUpPreview.style.display = isFollowUp && hasPreview ? 'block' : 'none';
+    }
+    if (redFlagPanel) {
+        redFlagPanel.style.display = isFollowUp ? 'none' : 'block';
+    }
+
+    if (showFollowUpBtn) {
+        showFollowUpBtn.style.background = isFollowUp ? '#ef6c00' : '#b0bec5';
+        showFollowUpBtn.style.color = isFollowUp ? 'white' : '#263238';
+    }
+    if (showRedFlagBtn) {
+        showRedFlagBtn.style.background = isFollowUp ? '#b0bec5' : '#dc3545';
+        showRedFlagBtn.style.color = isFollowUp ? '#263238' : 'white';
+    }
+}
 
 function handleFollowUpTodoTypeChange() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
