@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T17:34:25.552Z",
+  "generatedAt": "2026-03-02T17:34:28.303Z",
   "reason": "team members updated",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
@@ -3909,9 +3909,7 @@
     "2026-02-08|2026-02-14": [
       "Alyssa Dimes",
       "Angelina Fierro",
-      "Oceane Ingram",
-      "Trevor Pedrowski",
-      "Trisha Erb"
+      "Oceane Ingram"
     ]
   },
   "callCenterAverages": {
@@ -4874,7 +4872,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 108
+      "byteLength": 76
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
