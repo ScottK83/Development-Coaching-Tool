@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T05:49:50.333Z",
-  "reason": "storage set: devCoachingTool_teamMemberSelectorExpanded",
+  "generatedAt": "2026-03-02T05:49:55.810Z",
+  "reason": "team members updated",
   "sourceAppVersion": "2026.02.27.08",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4257,7 +4257,19 @@
       }
     ]
   },
-  "myTeamMembers": {},
+  "myTeamMembers": {
+    "2026-02-15|2026-02-21": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Jenifer Henson",
+      "Oceane Ingram",
+      "Precious Johnson",
+      "Pamela Muhammad",
+      "Scoticia Osborne",
+      "Trevor Pedrowski",
+      "Teena Pokorski"
+    ]
+  },
   "callCenterAverages": {
     "2026-02-08|2026-02-14": {
       "adherence": 94.2,
@@ -5484,7 +5496,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
+      "byteLength": 158
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -5523,8 +5535,8 @@
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+      "itemCount": 1,
+      "byteLength": 185
     }
   }
 }
