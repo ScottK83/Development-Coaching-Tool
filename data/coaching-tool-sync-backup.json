@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T06:45:51.247Z",
-  "reason": "storage set: devCoachingTool_uiNavState",
+  "generatedAt": "2026-03-02T06:46:00.388Z",
+  "reason": "storage set: devCoachingTool_trendQueueLegendExpanded",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5485,7 +5485,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 131
+      "byteLength": 135
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
@@ -5521,6 +5521,11 @@
       "valueType": "object",
       "itemCount": 9,
       "byteLength": 50208
+    },
+    "devCoachingTool_trendQueueLegendExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     },
     "devCoachingTool_cloudSyncSettings": {
       "valueType": "object",
