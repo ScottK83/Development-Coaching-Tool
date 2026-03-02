@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.03.01.1'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.03.02.1'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -3479,6 +3479,8 @@ function initializeRepoSyncControls() {
                         applyRepoBackupPayload(payload);
                     });
 
+                    saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
+
                     setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
                     showToast('✅ Local profile overwritten from repo backup.', 3500);
                     setTimeout(() => window.location.reload(), 500);
@@ -3705,12 +3707,14 @@ function buildRepoSyncHeaders(sharedSecret) {
 async function parseRepoSyncErrorResponse(response) {
     let details = '';
     let errorCode = '';
+    let parsedBody = null;
 
     try {
         const errorText = await response.text();
         details = errorText;
         try {
             const parsedError = JSON.parse(errorText);
+            parsedBody = parsedError;
             errorCode = String(parsedError?.code || '');
             if (parsedError?.error) {
                 details = String(parsedError.error);
@@ -3722,16 +3726,18 @@ async function parseRepoSyncErrorResponse(response) {
         details = '';
     }
 
-    return { details, errorCode };
+    return { details, errorCode, parsedBody };
 }
 
 function buildRepoSyncPayload(reason = 'updated') {
     const ptoTracker = window.DevCoachModules?.storage?.loadPtoTracker?.() || {};
+    const localDataSummary = summarizeLocalBackupFreshness();
 
     return {
         appVersion: APP_VERSION,
         reason,
         generatedAt: new Date().toISOString(),
+        localDataSummary,
         weeklyData: weeklyData || {},
         ytdData: ytdData || {},
         coachingHistory: coachingHistory || {},
@@ -3746,6 +3752,77 @@ function buildRepoSyncPayload(reason = 'updated') {
         appStorageSnapshot: getAllAppStorageSnapshot(),
         callListeningCsv: exportCallListeningLogsToCSV()
     };
+}
+
+function summarizeLocalBackupFreshness() {
+    const weeklyKeys = Object.keys(weeklyData || {});
+    const ytdKeys = Object.keys(ytdData || {});
+    const latestWeeklyEndMs = getLatestPeriodEndMsFromMap(weeklyData || {});
+
+    return {
+        generatedAt: new Date().toISOString(),
+        weeklyPeriods: weeklyKeys.length,
+        ytdPeriods: ytdKeys.length,
+        latestWeeklyEndDate: latestWeeklyEndMs ? new Date(latestWeeklyEndMs).toISOString().slice(0, 10) : null,
+        latestWeeklyEndMs,
+        footprintScore: getBackupFootprintScore({
+            weeklyData,
+            ytdData,
+            coachingHistory,
+            callListeningLogs,
+            associateSentimentSnapshots,
+            myTeamMembers
+        })
+    };
+}
+
+function getLatestPeriodEndMsFromMap(periodMap) {
+    if (!periodMap || typeof periodMap !== 'object') return 0;
+
+    let latest = 0;
+    Object.entries(periodMap).forEach(([periodKey, periodValue]) => {
+        const candidates = [];
+        const keyText = String(periodKey || '');
+        if (keyText.includes('|')) {
+            candidates.push(keyText.split('|')[1]);
+        }
+
+        const metadata = periodValue?.metadata || {};
+        candidates.push(metadata.endDate, metadata.weekEndingDate, metadata.weekEndDate, metadata.periodEndDate);
+
+        candidates.forEach(candidate => {
+            const parsed = Date.parse(String(candidate || '').trim());
+            if (!Number.isNaN(parsed)) {
+                latest = Math.max(latest, parsed);
+            }
+        });
+    });
+
+    return latest;
+}
+
+function getBackupFootprintScore(payload) {
+    const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
+        ? Object.keys(value).length
+        : 0;
+
+    const countNestedEntries = (value) => {
+        if (!value || typeof value !== 'object') return 0;
+        return Object.values(value).reduce((sum, item) => {
+            if (Array.isArray(item)) return sum + item.length;
+            if (item && typeof item === 'object') return sum + Object.keys(item).length;
+            return sum;
+        }, 0);
+    };
+
+    return (
+        countObjectKeys(payload?.weeklyData) * 100
+        + countObjectKeys(payload?.ytdData) * 100
+        + countNestedEntries(payload?.coachingHistory)
+        + countNestedEntries(payload?.callListeningLogs)
+        + countNestedEntries(payload?.associateSentimentSnapshots)
+        + countObjectKeys(payload?.myTeamMembers)
+    );
 }
 
 function queueRepoSync(reason = 'updated') {
@@ -3808,6 +3885,8 @@ async function fetchRepoBackupPayload() {
 
     urls.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
 
+    const payloadCandidates = [];
+
     for (const url of urls) {
         try {
             const response = await fetch(url, { cache: 'no-store' });
@@ -3815,14 +3894,45 @@ async function fetchRepoBackupPayload() {
 
             const payload = await response.json();
             if (payload && typeof payload === 'object') {
-                return payload;
+                payloadCandidates.push(payload);
             }
         } catch (error) {
             // Try next candidate URL
         }
     }
 
-    return null;
+    if (!payloadCandidates.length) return null;
+
+    const getFootprintScore = (payload) => {
+        const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
+            ? Object.keys(value).length
+            : 0;
+        const countNestedEntries = (value) => {
+            if (!value || typeof value !== 'object') return 0;
+            return Object.values(value).reduce((sum, item) => {
+                if (Array.isArray(item)) return sum + item.length;
+                if (item && typeof item === 'object') return sum + Object.keys(item).length;
+                return sum;
+            }, 0);
+        };
+
+        return (
+            countObjectKeys(payload?.weeklyData) * 100
+            + countObjectKeys(payload?.ytdData) * 100
+            + countNestedEntries(payload?.coachingHistory)
+            + countNestedEntries(payload?.callListeningLogs)
+            + countNestedEntries(payload?.associateSentimentSnapshots)
+            + countObjectKeys(payload?.myTeamMembers)
+        );
+    };
+
+    payloadCandidates.sort((a, b) => {
+        const timeDiff = parseTimeMs(b?.generatedAt) - parseTimeMs(a?.generatedAt);
+        if (timeDiff !== 0) return timeDiff;
+        return getFootprintScore(b) - getFootprintScore(a);
+    });
+
+    return payloadCandidates[0];
 }
 
 function coerceObject(value, fallback = {}) {
@@ -3933,18 +4043,46 @@ async function postRepoSyncPayload(endpoint, config, payload) {
 async function throwIfRepoSyncErrorResponse(response) {
     if (response.ok) return;
 
-    const { details, errorCode } = await parseRepoSyncErrorResponse(response);
+    const { details, errorCode, parsedBody } = await parseRepoSyncErrorResponse(response);
 
     if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
-        throw new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
+        const error = new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
+        error.code = errorCode;
+        error.responseStatus = response.status;
+        error.details = details;
+        error.payload = parsedBody;
+        throw error;
+    }
+
+    if (response.status === 409 && errorCode === 'DATA_REGRESSION_GUARD') {
+        const incomingSummary = parsedBody?.incomingSummary || null;
+        const existingSummary = parsedBody?.existingSummary || null;
+        const incomingDate = incomingSummary?.latestWeeklyEndDate || 'unknown';
+        const existingDate = existingSummary?.latestWeeklyEndDate || 'unknown';
+        const error = new Error(`Sync blocked: this device appears older (${incomingDate}) than repo (${existingDate}). Use Force Restore, then sync again.`);
+        error.code = errorCode;
+        error.responseStatus = response.status;
+        error.details = details;
+        error.payload = parsedBody;
+        throw error;
     }
 
     const normalizedDetails = String(details || '').toLowerCase();
     if (normalizedDetails.includes('repository rule violation') || normalizedDetails.includes('secret scanning')) {
-        throw new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
+        const error = new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
+        error.code = errorCode;
+        error.responseStatus = response.status;
+        error.details = details;
+        error.payload = parsedBody;
+        throw error;
     }
 
-    throw new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
+    const error = new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
+    error.code = errorCode;
+    error.responseStatus = response.status;
+    error.details = details;
+    error.payload = parsedBody;
+    throw error;
 }
 
 async function parseRepoSyncSuccessResponse(response) {
@@ -3959,7 +4097,8 @@ function buildRepoSyncMeta(reason, responseData) {
     return {
         syncedAt: new Date().toISOString(),
         reason,
-        commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || ''
+        commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || '',
+        backupSummary: responseData?.incomingSummary || null
     };
 }
 
@@ -3978,12 +4117,65 @@ function finalizeRepoSyncSuccess(reason, responseData) {
     const syncMeta = buildRepoSyncMeta(reason, responseData);
     saveRepoSyncLastSuccess(syncMeta);
     renderCallListeningLastSync(syncMeta);
-    setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}`, 'success');
+    const weeklyCount = Number(responseData?.incomingSummary?.weeklyPeriods || 0);
+    const ytdCount = Number(responseData?.incomingSummary?.ytdPeriods || 0);
+    const latestDate = String(responseData?.incomingSummary?.latestWeeklyEndDate || '').trim();
+    const suffix = latestDate
+        ? ` (${weeklyCount} weekly / ${ytdCount} YTD, latest ${latestDate})`
+        : ` (${weeklyCount} weekly / ${ytdCount} YTD)`;
+    setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}${suffix}`, 'success');
 }
 
 function handleRepoSyncFailure(error) {
     console.error('Repo sync failed:', error);
     setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
+}
+
+function formatSummaryLabel(summary) {
+    if (!summary || typeof summary !== 'object') return 'n/a';
+    const weekly = Number(summary.weeklyPeriods || 0);
+    const ytd = Number(summary.ytdPeriods || 0);
+    const latest = String(summary.latestWeeklyEndDate || '').trim() || 'unknown date';
+    return `${weekly} weekly / ${ytd} YTD (latest ${latest})`;
+}
+
+async function maybeHandleRepoSyncConflict(error) {
+    if (String(error?.code || '') !== 'DATA_REGRESSION_GUARD') {
+        return false;
+    }
+
+    const incomingSummary = error?.payload?.incomingSummary || null;
+    const existingSummary = error?.payload?.existingSummary || null;
+    const message = [
+        'Sync protected your newer repo backup.',
+        `This device: ${formatSummaryLabel(incomingSummary)}`,
+        `Repo backup: ${formatSummaryLabel(existingSummary)}`,
+        '',
+        'Restore repo backup to this device now?'
+    ].join('\n');
+
+    const shouldRestore = confirm(message);
+    if (!shouldRestore) {
+        setCallListeningSyncStatus('Sync blocked (older local profile). Use Force Restore to match latest repo data.', 'error');
+        return true;
+    }
+
+    try {
+        setCallListeningSyncStatus('Sync conflict detected. Restoring latest repo backup...', 'info');
+        const restored = await tryAutoRestoreFromRepoBackupOnEmptyState();
+        if (restored) {
+            showToast('✅ Restored latest repo backup. Sync is now aligned.', 4000);
+            setCallListeningSyncStatus('Restore complete. This browser now matches repo data.', 'success');
+            setTimeout(() => window.location.reload(), 500);
+            return true;
+        }
+    } catch (restoreError) {
+        console.error('Auto-restore after sync conflict failed:', restoreError);
+        setCallListeningSyncStatus(`Restore failed after sync conflict: ${restoreError.message}`, 'error');
+        return true;
+    }
+
+    return true;
 }
 
 async function requestValidatedRepoSyncResponse(endpoint, config, payload) {
@@ -4001,12 +4193,17 @@ async function syncRepoData(reason = 'updated', options = {}) {
 
     try {
         const payload = buildRepoSyncPayload(reason);
+        if (options?.allowDataRegression === true) {
+            payload.allowDataRegression = true;
+        }
 
         const response = await requestValidatedRepoSyncResponse(endpoint, config, payload);
 
         const responseData = await parseRepoSyncSuccessResponse(response);
         finalizeRepoSyncSuccess(reason, responseData);
     } catch (error) {
+        const handledConflict = await maybeHandleRepoSyncConflict(error);
+        if (handledConflict) return;
         handleRepoSyncFailure(error);
     }
 }

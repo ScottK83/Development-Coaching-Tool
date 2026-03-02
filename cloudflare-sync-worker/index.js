@@ -1,33 +1,43 @@
 export default {
   async fetch(request, env) {
+    const allowedOrigin = String(env.ALLOWED_ORIGIN || '').trim();
+
     if (request.method === 'OPTIONS') {
+      const requestOrigin = String(request.headers.get('origin') || '').trim();
+      const originAllowed = isAllowedOrigin(requestOrigin, allowedOrigin);
       return new Response(null, {
-        status: 204,
-        headers: corsHeaders()
+        status: originAllowed ? 204 : 403,
+        headers: corsHeaders(requestOrigin, allowedOrigin)
       });
     }
 
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', {
         status: 405,
-        headers: corsHeaders()
+        headers: corsHeaders(request.headers.get('origin'), allowedOrigin)
       });
+    }
+
+    const requestOrigin = String(request.headers.get('origin') || '').trim();
+    if (!isAllowedOrigin(requestOrigin, allowedOrigin)) {
+      return json({ error: 'Forbidden origin.' }, 403, corsHeaders(requestOrigin, allowedOrigin));
     }
 
     const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
     if (expectedSyncSecret) {
       const providedSyncSecret = String(request.headers.get('x-sync-secret') || '').trim();
       if (!providedSyncSecret || providedSyncSecret !== expectedSyncSecret) {
-        return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401);
+        return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401, corsHeaders(requestOrigin, allowedOrigin));
       }
     }
 
     if (!env.GH_TOKEN || !env.GH_OWNER || !env.GH_REPO) {
-      return json({ error: 'Missing worker secrets/config: GH_TOKEN, GH_OWNER, GH_REPO' }, 500);
+      return json({ error: 'Missing worker secrets/config: GH_TOKEN, GH_OWNER, GH_REPO' }, 500, corsHeaders(requestOrigin, allowedOrigin));
     }
 
     try {
       const body = await request.json();
+      const allowDataRegression = body?.allowDataRegression === true;
       const callListeningLogs = body?.callListeningLogs && typeof body.callListeningLogs === 'object'
         ? body.callListeningLogs
         : {};
@@ -70,13 +80,32 @@ export default {
       const incomingHasData = hasMeaningfulBackupData(fullBackupPayload);
       const existingBackup = await getRepoJsonFile(env, branch, fullBackupPath);
       const existingHasData = hasMeaningfulBackupData(existingBackup);
+      const incomingSummary = summarizeBackupFreshness(fullBackupPayload);
+      const existingSummary = summarizeBackupFreshness(existingBackup);
 
       if (!incomingHasData && existingHasData) {
         return json({
           ok: false,
           code: 'EMPTY_PAYLOAD_GUARD',
           error: 'Refusing to overwrite non-empty repo backup with an empty payload. Use a browser profile with synced data.'
-        }, 409);
+        }, 409, corsHeaders(requestOrigin, allowedOrigin));
+      }
+
+      const isRegression = isIncomingBackupRegression({
+        incomingHasData,
+        existingHasData,
+        incomingSummary,
+        existingSummary
+      });
+
+      if (!allowDataRegression && isRegression) {
+        return json({
+          ok: false,
+          code: 'DATA_REGRESSION_GUARD',
+          error: 'Incoming backup appears older or less complete than repo backup. Restore latest repo backup on this device before syncing.',
+          incomingSummary,
+          existingSummary
+        }, 409, corsHeaders(requestOrigin, allowedOrigin));
       }
 
       const csvContent = sanitizeCsvText(csvFromClient || buildCsvFromLogs(sanitizedCallListeningLogs));
@@ -114,30 +143,133 @@ export default {
         jsonCommit: jsonResult.commitSha,
         csvCommit: csvResult.commitSha,
         fullBackupCommit: fullBackupResult.commitSha,
-        generatedAt
-      });
+        generatedAt,
+        incomingSummary,
+        existingSummary
+      }, 200, corsHeaders(requestOrigin, allowedOrigin));
     } catch (error) {
-      return json({ error: error.message || 'Unexpected worker error' }, 500);
+      return json({ error: error.message || 'Unexpected worker error' }, 500, corsHeaders(request.headers.get('origin'), allowedOrigin));
     }
   }
 };
 
-function json(data, status = 200) {
+function json(data, status = 200, headers = corsHeaders()) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      ...corsHeaders(),
+      ...headers,
       'Content-Type': 'application/json'
     }
   });
 }
 
-function corsHeaders() {
+function corsHeaders(requestOrigin = '', allowedOrigin = '') {
+  const safeAllowedOrigin = String(allowedOrigin || '').trim();
+  const safeRequestOrigin = String(requestOrigin || '').trim();
+  const allowOrigin = safeAllowedOrigin || (safeRequestOrigin || '*');
+
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret'
+    'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret',
+    'Vary': 'Origin'
   };
+}
+
+function isAllowedOrigin(requestOrigin, allowedOrigin) {
+  const safeAllowed = String(allowedOrigin || '').trim();
+  if (!safeAllowed) return true;
+  return String(requestOrigin || '').trim() === safeAllowed;
+}
+
+function summarizeBackupFreshness(payload) {
+  const weeklyKeys = getObjectKeys(payload?.weeklyData);
+  const ytdKeys = getObjectKeys(payload?.ytdData);
+  const latestWeeklyEndMs = getLatestPeriodEndMs(payload?.weeklyData);
+
+  return {
+    generatedAt: payload?.generatedAt || null,
+    weeklyPeriods: weeklyKeys.length,
+    ytdPeriods: ytdKeys.length,
+    latestWeeklyEndDate: latestWeeklyEndMs ? new Date(latestWeeklyEndMs).toISOString().slice(0, 10) : null,
+    latestWeeklyEndMs,
+    footprintScore: getBackupFootprintScore(payload)
+  };
+}
+
+function isIncomingBackupRegression({ incomingHasData, existingHasData, incomingSummary, existingSummary }) {
+  if (!incomingHasData || !existingHasData) return false;
+
+  const incomingLatest = Number(incomingSummary?.latestWeeklyEndMs || 0);
+  const existingLatest = Number(existingSummary?.latestWeeklyEndMs || 0);
+
+  if (incomingLatest && existingLatest && incomingLatest < existingLatest) {
+    return true;
+  }
+
+  if (incomingLatest && existingLatest && incomingLatest === existingLatest) {
+    const incomingFootprint = Number(incomingSummary?.footprintScore || 0);
+    const existingFootprint = Number(existingSummary?.footprintScore || 0);
+    if (incomingFootprint > 0 && existingFootprint > 0 && incomingFootprint < existingFootprint) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getObjectKeys(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  return Object.keys(value);
+}
+
+function getLatestPeriodEndMs(periodMap) {
+  if (!periodMap || typeof periodMap !== 'object') return 0;
+
+  let latest = 0;
+  Object.entries(periodMap).forEach(([periodKey, periodValue]) => {
+    const candidates = [];
+    const keyText = String(periodKey || '');
+    if (keyText.includes('|')) {
+      candidates.push(keyText.split('|')[1]);
+    }
+
+    const metadata = periodValue?.metadata || {};
+    candidates.push(metadata.endDate, metadata.weekEndingDate, metadata.weekEndDate, metadata.periodEndDate);
+
+    candidates.forEach(candidate => {
+      const parsed = Date.parse(String(candidate || '').trim());
+      if (!Number.isNaN(parsed)) {
+        latest = Math.max(latest, parsed);
+      }
+    });
+  });
+
+  return latest;
+}
+
+function getBackupFootprintScore(payload) {
+  const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
+    ? Object.keys(value).length
+    : 0;
+
+  const countNestedEntries = (value) => {
+    if (!value || typeof value !== 'object') return 0;
+    return Object.values(value).reduce((sum, item) => {
+      if (Array.isArray(item)) return sum + item.length;
+      if (item && typeof item === 'object') return sum + Object.keys(item).length;
+      return sum;
+    }, 0);
+  };
+
+  return (
+    countObjectKeys(payload?.weeklyData) * 100
+    + countObjectKeys(payload?.ytdData) * 100
+    + countNestedEntries(payload?.coachingHistory)
+    + countNestedEntries(payload?.callListeningLogs)
+    + countNestedEntries(payload?.associateSentimentSnapshots)
+    + countObjectKeys(payload?.myTeamMembers)
+  );
 }
 
 function hasMeaningfulBackupData(payload) {

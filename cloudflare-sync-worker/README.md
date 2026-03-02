@@ -23,7 +23,9 @@ Push-Location cloudflare-sync-worker
 npx wrangler secret put GH_TOKEN
 # Paste a GitHub token with repo contents write access
 npx wrangler secret put SYNC_SHARED_SECRET
-# Optional but recommended: set a shared secret the app must send in X-Sync-Secret
+# Recommended: set a shared secret the app must send in X-Sync-Secret
+npx wrangler secret put ALLOWED_ORIGIN
+# Optional but recommended for private access: exact site origin allowed to call worker (example: https://your-site.pages.dev)
 npx wrangler deploy
 Pop-Location
 ```
@@ -44,6 +46,8 @@ Every save/update/delete in the app that writes tracked data now syncs to repo.
 - If Worker URL is blank, the app continues local-only storage.
 - If sync fails, the app shows the failure in the `callListeningSyncStatus` line but still keeps local data.
 - If worker secret auth is enabled and the app secret is wrong/missing, sync returns `401 Unauthorized`.
+- If `ALLOWED_ORIGIN` is set and request origin does not match exactly, sync returns `403 Forbidden`.
+- Worker now blocks stale/regressive payloads with `409 DATA_REGRESSION_GUARD` to prevent older browser profiles from overwriting newer repo data.
 
 ## Manual Smoke Test (Workflow Dispatch)
 
