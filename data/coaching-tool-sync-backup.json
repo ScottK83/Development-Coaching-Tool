@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T18:45:23.372Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-03-02T18:56:42.518Z",
+  "reason": "weekly data updated",
   "sourceAppVersion": "2026.03.02.4",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -3149,17 +3149,17 @@
         {
           "name": "Alyssa Dimes",
           "firstName": "Alyssa",
-          "scheduleAdherence": 94.48,
+          "scheduleAdherence": 94.5,
           "cxRepOverall": 100,
           "fcr": 100,
           "overallExperience": 100,
           "overallExperienceTop3": 100,
-          "transfers": 5.76,
+          "transfers": 5.8,
           "transfersCount": 0,
           "aht": 562,
           "talkTime": "",
           "acw": 45,
-          "holdTime": "",
+          "holdTime": 100,
           "reliability": 0,
           "overallSentiment": 90.7,
           "positiveWord": 97.4,
@@ -5740,7 +5740,7 @@
     "devCoachingTool_weeklyData": {
       "valueType": "object",
       "itemCount": 10,
-      "byteLength": 57474
+      "byteLength": 57473
     },
     "devCoachingTool_trendQueueLegendExpanded": {
       "valueType": "string",
