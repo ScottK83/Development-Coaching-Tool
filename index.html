@@ -1202,7 +1202,67 @@ Box 2 - Future Improvement Areas:
             <!-- Red Flag Coaching Section -->
             <section id="redFlagSection" style="display: none;">
                 <div class="form-section" style="background: #ffebee; border-left: 4px solid #dc3545;">
-                    <h2>🚩 Red Flag Coaching</h2>
+                    <h2>📌 Follow Up</h2>
+                    <p style="color: #c62828; margin-bottom: 20px;">Use this section for follow-up to-dos and red flag coaching actions.</p>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ff8a65;">
+                        <h3 style="color: #e65100; margin-top: 0;">🗂️ To-Do Follow Up</h3>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label for="followUpTodoType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">To-Do Type:</label>
+                                <select id="followUpTodoType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                    <option value="">-- Select a To-Do Type --</option>
+                                    <option value="refund-check-review">Refund Check Review</option>
+                                    <option value="other" disabled>Other To-Do Types (coming soon)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="followUpPersonName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Person Name:</label>
+                                <input type="text" id="followUpPersonName" placeholder="e.g., John Smith" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div id="refundCheckReviewFields" style="display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
+                                    <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                                    <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label for="followUpCustomerEmail" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Email:</label>
+                                    <input type="email" id="followUpCustomerEmail" placeholder="e.g., customer@email.com" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Reason To-Do Was Declined:</label>
+                                <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label for="followUpProcess" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
+                                <textarea id="followUpProcess" readonly style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;"></textarea>
+                            </div>
+
+                            <button type="button" id="sendFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Send Follow Up Email</button>
+                        </div>
+                    </div>
+
+                    <div id="followUpEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ff8a65;">
+                        <h3 style="color: #e65100; margin-top: 0;">📧 Follow Up Email Preview</h3>
+                        <div style="background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif;" id="followUpEmailPreviewText"></div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="copyFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
+                            <button type="button" id="clearFollowUpEmailBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                        </div>
+                    </div>
+
+                    <h3 style="color: #dc3545; margin-top: 0;">🚩 Red Flag Coaching</h3>
                     <p style="color: #c62828; margin-bottom: 20px;">Generate coaching emails for compliance violations, such as not following Experian verification procedures.</p>
                     
                     <!-- Add New Red Flag Coaching -->

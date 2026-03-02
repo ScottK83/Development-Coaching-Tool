@@ -6,6 +6,164 @@ function initializeRedFlag() {
     document.getElementById('generateRedFlagEmailBtn')?.addEventListener('click', generateRedFlagEmail);
     document.getElementById('copyRedFlagEmailBtn')?.addEventListener('click', copyRedFlagEmail);
     document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
+
+    document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
+    document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
+    document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
+    document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
+
+    handleFollowUpTodoTypeChange();
+}
+
+const REFUND_CHECK_REVIEW_PROCESS = `Rep didn’t verify in the To-Do that the mailing address was updated/verified in CCB. They are unable to proceed until this is validated.
+
+Next, submit a new To-Do clearly stating that you verified where the refund check will be mailed.
+
+To validate the address, open the person record (the account may be inactive), then go to Correspondence Info. If no mailing address is listed, confirm the correct mailing address directly with the customer before resubmitting.`;
+
+function handleFollowUpTodoTypeChange() {
+    const todoType = document.getElementById('followUpTodoType')?.value || '';
+    const refundFields = document.getElementById('refundCheckReviewFields');
+    const processArea = document.getElementById('followUpProcess');
+
+    if (!refundFields || !processArea) return;
+
+    const isRefundCheckReview = todoType === 'refund-check-review';
+    refundFields.style.display = isRefundCheckReview ? 'block' : 'none';
+
+    if (isRefundCheckReview) {
+        processArea.value = REFUND_CHECK_REVIEW_PROCESS;
+    } else {
+        processArea.value = '';
+    }
+}
+
+function buildApsEmailFromName(personName) {
+    const normalizedParts = String(personName || '')
+        .trim()
+        .split(/\s+/)
+        .map(part => part.replace(/[^a-zA-Z0-9'-]/g, ''))
+        .filter(Boolean);
+
+    if (normalizedParts.length === 0) return '';
+    return `${normalizedParts.join('.').toLowerCase()}@aps.com`;
+}
+
+function sendFollowUpEmail() {
+    const todoType = document.getElementById('followUpTodoType')?.value || '';
+    const personName = document.getElementById('followUpPersonName')?.value.trim() || '';
+    const customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
+    const customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
+    const customerEmail = document.getElementById('followUpCustomerEmail')?.value.trim() || '';
+    const declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
+    const correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
+
+    if (todoType !== 'refund-check-review') {
+        alert('⚠️ Please select "Refund Check Review" as the To-Do type.');
+        return;
+    }
+    if (!personName) {
+        alert('⚠️ Please enter the person name.');
+        return;
+    }
+    if (!customerName) {
+        alert('⚠️ Please enter the customer name.');
+        return;
+    }
+    if (!customerEmail) {
+        alert('⚠️ Please enter the customer email.');
+        return;
+    }
+    if (!declineReason) {
+        alert('⚠️ Please enter why the To-Do was declined.');
+        return;
+    }
+
+    const toEmail = buildApsEmailFromName(personName);
+    if (!toEmail) {
+        alert('⚠️ Could not build an APS email from the person name. Please enter a valid first and last name.');
+        return;
+    }
+
+    const subject = `Follow Up Required: Refund Check Review - ${customerName}`;
+    const body = `Hi ${personName},
+
+Your Refund Check Review To-Do was denied.
+
+Customer Information:
+- Customer Name: ${customerName}
+- Customer Account: ${customerAccount || 'Not provided'}
+- Customer Email: ${customerEmail}
+
+Reason for Denial:
+${declineReason}
+
+Correct Process:
+${correctProcess}
+
+Please complete the required validation steps and submit a new To-Do once confirmed.
+
+Thank you.`;
+
+    const previewText = `To: ${toEmail}\nSubject: ${subject}\n\n${body}`;
+    const previewSection = document.getElementById('followUpEmailPreviewSection');
+    const previewArea = document.getElementById('followUpEmailPreviewText');
+    if (previewSection && previewArea) {
+        previewArea.textContent = previewText;
+        previewSection.style.display = 'block';
+    }
+
+    const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+}
+
+function copyFollowUpEmail() {
+    const emailText = document.getElementById('followUpEmailPreviewText')?.textContent || '';
+
+    if (!emailText.trim()) {
+        alert('⚠️ No follow up email to copy yet.');
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = emailText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    const button = document.getElementById('copyFollowUpEmailBtn');
+    if (!button) return;
+
+    const originalText = button.textContent;
+    button.textContent = '✓ Copied!';
+    setTimeout(() => {
+        button.textContent = originalText;
+    }, 1200);
+}
+
+function clearFollowUpEmail() {
+    const todoType = document.getElementById('followUpTodoType');
+    const personName = document.getElementById('followUpPersonName');
+    const customerAccount = document.getElementById('followUpCustomerAccount');
+    const customerName = document.getElementById('followUpCustomerName');
+    const customerEmail = document.getElementById('followUpCustomerEmail');
+    const declineReason = document.getElementById('followUpDeclineReason');
+    const processArea = document.getElementById('followUpProcess');
+    const previewSection = document.getElementById('followUpEmailPreviewSection');
+    const previewText = document.getElementById('followUpEmailPreviewText');
+
+    if (todoType) todoType.value = '';
+    if (personName) personName.value = '';
+    if (customerAccount) customerAccount.value = '';
+    if (customerName) customerName.value = '';
+    if (customerEmail) customerEmail.value = '';
+    if (declineReason) declineReason.value = '';
+    if (processArea) processArea.value = '';
+    if (previewText) previewText.textContent = '';
+    if (previewSection) previewSection.style.display = 'none';
+
+    handleFollowUpTodoTypeChange();
 }
 
 function generateRedFlagEmail() {
