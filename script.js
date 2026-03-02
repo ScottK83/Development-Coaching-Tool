@@ -3481,6 +3481,7 @@ function initializeRepoSyncControls() {
     const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
     const openPtoExcelBtn = document.getElementById('openPtoExcelBtn');
     const uploadExcelBtn = document.getElementById('uploadExcelToRepoBtn');
+    const openRepoUploadsFolderBtn = document.getElementById('openRepoUploadsFolderBtn');
 
     if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
         return;
@@ -3557,6 +3558,12 @@ function initializeRepoSyncControls() {
             });
         });
         uploadExcelBtn.dataset.bound = 'true';
+    }
+    if (openRepoUploadsFolderBtn && !openRepoUploadsFolderBtn.dataset.bound) {
+        openRepoUploadsFolderBtn.addEventListener('click', () => {
+            openRepoUploadsFolder();
+        });
+        openRepoUploadsFolderBtn.dataset.bound = 'true';
     }
     if (!syncEndpointInput.dataset.bound) {
         const persistEndpointConfig = () => {
@@ -3690,6 +3697,11 @@ function openRepoExcelFile(fileName) {
     }
 
     window.open(fileUrl, '_blank');
+}
+
+function openRepoUploadsFolder() {
+    const uploadsFolderUrl = 'https://github.com/ScottK83/Development-Coaching-Tool/tree/main/data/uploads';
+    window.open(uploadsFolderUrl, '_blank');
 }
 
 async function fetchReferenceCsvFromWorkspaceOrRepo(fileName) {
