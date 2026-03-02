@@ -3241,11 +3241,15 @@ function enforceRepoAutoSyncEnabled() {
     const endpoint = String(current?.endpoint || '').trim() || defaults.endpoint;
     const normalized = {
         endpoint,
-        autoSyncEnabled: true,
+        autoSyncEnabled: current?.autoSyncEnabled === false ? false : true,
         sharedSecret: String(current?.sharedSecret || '').trim()
     };
 
-    if (current?.autoSyncEnabled !== true || String(current?.endpoint || '').trim() !== endpoint) {
+    const endpointChanged = String(current?.endpoint || '').trim() !== endpoint;
+    const autoSyncChanged = current?.autoSyncEnabled !== normalized.autoSyncEnabled;
+    const secretChanged = String(current?.sharedSecret || '').trim() !== normalized.sharedSecret;
+
+    if (endpointChanged || autoSyncChanged || secretChanged) {
         saveCallListeningSyncConfig(normalized);
     }
 
