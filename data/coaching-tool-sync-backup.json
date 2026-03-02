@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T17:37:28.978Z",
-  "reason": "storage set: devCoachingTool_teamMemberSelectorExpanded",
+  "generatedAt": "2026-03-02T17:37:39.629Z",
+  "reason": "team members updated",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -4644,7 +4644,19 @@
       }
     ]
   },
-  "myTeamMembers": {},
+  "myTeamMembers": {
+    "2026-02-22|2026-02-28": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Oceane Ingram",
+      "Ronda Colis",
+      "Scoticia Osborne",
+      "Taylor Colter",
+      "Teena Pokorski",
+      "Trevor Pedrowski",
+      "Trisha Erb"
+    ]
+  },
   "callCenterAverages": {
     "2026-02-08|2026-02-14": {
       "adherence": 94.2,
@@ -6010,20 +6022,10 @@
     }
   },
   "appStorageSnapshot": {
-    "devCoachingTool_coachingHistory": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 280
-    },
     "devCoachingTool_cloudSyncShared": {
       "valueType": "object",
       "itemCount": 6,
       "byteLength": 203
-    },
-    "devCoachingTool_teamMemberSelectorExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 4
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
@@ -6035,11 +6037,6 @@
       "itemCount": 12,
       "byteLength": 9785
     },
-    "devCoachingTool_ytdData": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 15202
-    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
@@ -6050,6 +6047,51 @@
       "itemCount": 4,
       "byteLength": 101
     },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 128
+    },
+    "devCoachingTool_callListeningLogs": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 3940
+    },
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 25
+    },
+    "devCoachingTool_cloudSyncSettings": {
+      "valueType": "object",
+      "itemCount": 6,
+      "byteLength": 274
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 174
+    },
+    "devCoachingTool_coachingHistory": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 280
+    },
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 4
+    },
+    "devCoachingTool_ytdData": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 15202
+    },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
       "itemCount": "",
@@ -6058,32 +6100,17 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 128
+      "byteLength": 158
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
       "itemCount": 27,
       "byteLength": 11335
     },
-    "devCoachingTool_callListeningLogs": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
     "devCoachingTool_debugLogs": {
       "valueType": "array",
       "itemCount": 50,
       "byteLength": 6957
-    },
-    "devCoachingTool_associateSentimentSnapshots": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 3940
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
@@ -6095,20 +6122,10 @@
       "itemCount": 10,
       "byteLength": 56739
     },
-    "devCoachingTool_employeePreferredNames": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
-    },
     "devCoachingTool_trendQueueLegendExpanded": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
-    },
-    "devCoachingTool_cloudSyncSettings": {
-      "valueType": "object",
-      "itemCount": 6,
-      "byteLength": 274
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
