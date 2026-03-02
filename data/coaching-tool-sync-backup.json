@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T17:52:59.550Z",
+  "generatedAt": "2026-03-02T17:53:04.335Z",
   "reason": "manual sync now",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
@@ -5673,7 +5673,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 142
+      "byteLength": 118
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
