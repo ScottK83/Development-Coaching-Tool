@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T19:15:26.076Z",
-  "reason": "weekly data updated",
+  "generatedAt": "2026-03-02T19:15:30.357Z",
+  "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": "2026.03.02.9",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5659,8 +5659,8 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 4,
-      "byteLength": 101
+      "itemCount": 5,
+      "byteLength": 126
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
