@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-02T18:08:23.910Z",
-  "reason": "manual sync now",
+  "generatedAt": "2026-03-02T18:08:36.929Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.03.02.1",
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5677,8 +5677,8 @@
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 142
+      "itemCount": 4,
+      "byteLength": 302
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
