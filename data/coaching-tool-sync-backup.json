@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-02T17:34:17.245Z",
+  "generatedAt": "2026-03-02T17:34:19.914Z",
   "reason": "team members updated",
   "sourceAppVersion": "2026.03.01.1",
   "weeklyData": {
@@ -3910,8 +3910,6 @@
       "Alyssa Dimes",
       "Angelina Fierro",
       "Oceane Ingram",
-      "Pamela Muhammad",
-      "Precious Johnson",
       "Ronda Colis",
       "Scoticia Osborne",
       "Taylor Colter",
@@ -4880,7 +4878,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 211
+      "byteLength": 174
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
