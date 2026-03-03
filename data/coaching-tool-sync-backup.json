@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-03T01:51:58.507Z",
+  "generatedAt": "2026-03-03T02:49:33.060Z",
   "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": "2026.03.02.20",
   "weeklyData": {
@@ -4691,6 +4691,11 @@
       "Alyssa Dimes",
       "Angelina Fierro",
       "Oceane Ingram"
+    ],
+    "2026-02-15|2026-02-21": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Oceane Ingram"
     ]
   },
   "callCenterAverages": {
@@ -5665,7 +5670,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 128
+      "byteLength": 122
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -5689,8 +5694,8 @@
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 135
+      "itemCount": 3,
+      "byteLength": 210
     },
     "devCoachingTool_coachingHistory": {
       "valueType": "object",
