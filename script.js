@@ -3618,21 +3618,12 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary);
 }
 
-function isExcelFileName(fileName) {
-    return /\.(xls|xlsx|xlsm|xlsb)$/i.test(String(fileName || '').trim());
-}
-
 async function uploadExcelFileToRepo() {
     const fileInput = document.getElementById('repoExcelUploadInput');
-    const selectedFile = fileInput?.files?.[0] || null;
+    const files = fileInput?.files ? Array.from(fileInput.files) : [];
 
-    if (!selectedFile) {
-        setRepoExcelUploadStatus('Select an Excel file first.', 'error');
-        return;
-    }
-
-    if (!isExcelFileName(selectedFile.name)) {
-        setRepoExcelUploadStatus('Only Excel files are supported (.xls, .xlsx, .xlsm, .xlsb).', 'error');
+    if (files.length === 0) {
+        setRepoExcelUploadStatus('Select one or more files first.', 'error');
         return;
     }
 
@@ -3643,38 +3634,48 @@ async function uploadExcelFileToRepo() {
         return;
     }
 
-    setRepoExcelUploadStatus(`Uploading ${selectedFile.name} to repo...`, 'info');
+    const results = [];
+    const errors = [];
 
-    try {
-        const fileBuffer = await selectedFile.arrayBuffer();
-        const fileContentBase64 = arrayBufferToBase64(fileBuffer);
+    for (const file of files) {
+        setRepoExcelUploadStatus(`Uploading ${file.name}${files.length > 1 ? ` (${results.length + errors.length + 1}/${files.length})` : ''}...`, 'info');
+        try {
+            const fileBuffer = await file.arrayBuffer();
+            const fileContentBase64 = arrayBufferToBase64(fileBuffer);
 
-        const response = await postRepoSyncPayload(endpoint, syncConfig, {
-            mode: 'uploadFile',
-            reason: `manual excel upload: ${selectedFile.name}`,
-            fileName: selectedFile.name,
-            fileContentBase64,
-            fileMimeType: selectedFile.type || ''
-        });
+            const response = await postRepoSyncPayload(endpoint, syncConfig, {
+                mode: 'uploadFile',
+                reason: `manual upload: ${file.name}`,
+                fileName: file.name,
+                fileContentBase64,
+                fileMimeType: file.type || ''
+            });
 
-        await throwIfRepoSyncErrorResponse(response);
-        const responseData = await parseRepoSyncSuccessResponse(response);
+            await throwIfRepoSyncErrorResponse(response);
+            const responseData = await parseRepoSyncSuccessResponse(response);
+            results.push(String(responseData?.path || file.name));
+        } catch (error) {
+            console.error(`Upload failed for ${file.name}:`, error);
+            errors.push(`${file.name}: ${error.message}`);
+        }
+    }
 
-        const savedPath = String(responseData?.path || '').trim();
+    if (fileInput) fileInput.value = '';
+
+    if (errors.length === 0) {
         setRepoExcelUploadStatus(
-            savedPath
-                ? `Uploaded to repo: ${savedPath}`
-                : `Uploaded ${selectedFile.name} to repo successfully.`,
+            files.length === 1
+                ? `Uploaded to repo: ${results[0]}`
+                : `Uploaded ${results.length} file(s) to repo successfully.`,
             'success'
         );
-        showToast('✅ Excel file uploaded to repo', 3000);
-        if (fileInput) {
-            fileInput.value = '';
-        }
-    } catch (error) {
-        console.error('Excel upload failed:', error);
-        setRepoExcelUploadStatus(`Upload failed: ${error.message}`, 'error');
-        showToast(`⚠️ Upload failed: ${error.message}`, 4500);
+        showToast(`✅ ${files.length === 1 ? 'File' : `${results.length} files`} uploaded to repo`, 3000);
+    } else if (results.length > 0) {
+        setRepoExcelUploadStatus(`${results.length} uploaded, ${errors.length} failed: ${errors.join('; ')}`, 'error');
+        showToast(`⚠️ Some uploads failed`, 4500);
+    } else {
+        setRepoExcelUploadStatus(`Upload failed: ${errors.join('; ')}`, 'error');
+        showToast(`⚠️ Upload failed: ${errors[0]}`, 4500);
     }
 }
 

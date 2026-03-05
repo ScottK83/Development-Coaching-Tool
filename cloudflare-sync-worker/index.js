@@ -417,9 +417,6 @@ async function handleUploadFileToRepo({ env, body, branch, dataDir }) {
     throw new Error('Missing or invalid fileName for uploadFile mode.');
   }
 
-  if (!isSupportedExcelFile(fileName)) {
-    throw new Error('Only Excel files are supported (.xls, .xlsx, .xlsm, .xlsb).');
-  }
 
   const base64Input = String(body?.fileContentBase64 || '').trim();
   const contentBase64 = normalizeBase64Content(base64Input);
@@ -429,7 +426,7 @@ async function handleUploadFileToRepo({ env, body, branch, dataDir }) {
 
   const uploadsDir = String(env.GH_UPLOADS_DIR || `${dataDir}/uploads`).trim() || `${dataDir}/uploads`;
   const path = `${uploadsDir}/${fileName}`;
-  const message = `chore(data): upload excel file ${fileName}`;
+  const message = `chore(data): upload file ${fileName}`;
 
   const result = await upsertRepoFileBase64({
     env,
@@ -461,9 +458,6 @@ function sanitizeUploadFileName(fileName) {
   return sanitized.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
 }
 
-function isSupportedExcelFile(fileName) {
-  return /\.(xls|xlsx|xlsm|xlsb)$/i.test(String(fileName || '').trim());
-}
 
 function normalizeBase64Content(value) {
   const cleaned = String(value || '').replace(/\s+/g, '');
