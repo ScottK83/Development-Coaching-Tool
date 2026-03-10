@@ -1222,6 +1222,7 @@ Box 2 - Future Improvement Areas:
 
                     <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="button" id="showFollowUpPanelBtn" class="btn-secondary" style="background: #ef6c00; color: white;">📌 Follow-Up</button>
+                        <button type="button" id="showSurveyFeedbackPanelBtn" class="btn-secondary" style="background: #b0bec5; color: #263238;">📊 Survey Feedback</button>
                         <button type="button" id="showRedFlagPanelBtn" class="btn-secondary" style="background: #b0bec5; color: #263238;">🚩 Red Flag Coaching</button>
                     </div>
 
@@ -1267,6 +1268,32 @@ Box 2 - Future Improvement Areas:
                             <button type="button" id="openFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📧 Open Email Draft</button>
                             <button type="button" id="copyFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
                             <button type="button" id="clearFollowUpEmailBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                        </div>
+                    </div>
+
+                    <div id="surveyFeedbackPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #78909c;">
+                        <h3 style="color: #37474f; margin-top: 0;">📊 Survey Feedback Coaching</h3>
+                        <p style="color: #546e7a; margin-bottom: 15px;">Paste raw survey ticket data below to extract key fields and generate a Copilot coaching prompt.</p>
+
+                        <div style="margin-bottom: 15px;">
+                            <label for="surveyRawData" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Paste Raw Survey Data:</label>
+                            <textarea id="surveyRawData" placeholder="Paste the full survey ticket text here..." style="width: 100%; padding: 10px; border: 2px solid #78909c; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 200px; resize: vertical; font-family: monospace;"></textarea>
+                        </div>
+
+                        <button type="button" id="parseSurveyBtn" style="background: #546e7a; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; margin-bottom: 15px;">🔍 Parse Survey Data</button>
+
+                        <div id="surveyExtractedSection" style="display: none; margin-bottom: 15px; padding: 15px; background: #f5f7f8; border-radius: 6px; border: 1px solid #cfd8dc;">
+                            <h4 style="color: #37474f; margin-top: 0; margin-bottom: 12px;">📋 Extracted Data</h4>
+                            <div id="surveyExtractedFields" style="font-size: 0.92em; line-height: 1.8; color: #333;"></div>
+                        </div>
+
+                        <div id="surveyPromptSection" style="display: none; margin-bottom: 15px;">
+                            <h4 style="color: #37474f; margin-top: 0; margin-bottom: 8px;">🤖 Copilot Prompt</h4>
+                            <textarea id="surveyPromptDisplay" readonly style="width: 100%; padding: 10px; border: 2px solid #78909c; border-radius: 4px; font-size: 0.9em; box-sizing: border-box; min-height: 160px; resize: vertical; background: #eceff1; color: #263238;"></textarea>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                                <button type="button" id="copySurveyPromptBtn" style="background: #546e7a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy & Open Copilot</button>
+                                <button type="button" id="clearSurveyBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear</button>
+                            </div>
                         </div>
                     </div>
 

@@ -114,6 +114,11 @@ function initializeRedFlag() {
 
     document.getElementById('followUpHistoryFilter')?.addEventListener('change', renderFollowUpHistory);
 
+    document.getElementById('showSurveyFeedbackPanelBtn')?.addEventListener('click', () => switchRedFlagMode('survey-feedback'));
+    document.getElementById('parseSurveyBtn')?.addEventListener('click', parseSurveyData);
+    document.getElementById('copySurveyPromptBtn')?.addEventListener('click', copySurveyPromptAndOpenCopilot);
+    document.getElementById('clearSurveyBtn')?.addEventListener('click', clearSurveyFeedback);
+
     populateFollowUpTodoTypeDropdown();
     populateFollowUpAssociateDropdown();
     switchRedFlagMode('follow-up');
@@ -247,20 +252,20 @@ function handleFollowUpProcessTypeChange() {
 
 function switchRedFlagMode(mode) {
     const showFollowUpBtn = document.getElementById('showFollowUpPanelBtn');
+    const showSurveyBtn = document.getElementById('showSurveyFeedbackPanelBtn');
     const showRedFlagBtn = document.getElementById('showRedFlagPanelBtn');
     const followUpPanel = document.getElementById('followUpPanel');
     const followUpPreview = document.getElementById('followUpEmailPreviewSection');
     const followUpHistory = document.getElementById('followUpHistoryPanel');
+    const surveyPanel = document.getElementById('surveyFeedbackPanel');
     const redFlagPanel = document.getElementById('redFlagPanel');
 
-    const isFollowUp = mode !== 'red-flag';
+    const isFollowUp = mode === 'follow-up';
+    const isSurvey = mode === 'survey-feedback';
+    const isRedFlag = mode === 'red-flag';
 
-    if (followUpPanel) {
-        followUpPanel.style.display = isFollowUp ? 'block' : 'none';
-    }
-    if (isFollowUp) {
-        populateFollowUpAssociateDropdown();
-    }
+    if (followUpPanel) followUpPanel.style.display = isFollowUp ? 'block' : 'none';
+    if (isFollowUp) populateFollowUpAssociateDropdown();
     if (followUpPreview) {
         const hasPreview = Boolean(document.getElementById('followUpEmailPreviewText')?.textContent?.trim());
         followUpPreview.style.display = isFollowUp && hasPreview ? 'block' : 'none';
@@ -269,17 +274,20 @@ function switchRedFlagMode(mode) {
         followUpHistory.style.display = isFollowUp ? 'block' : 'none';
         if (isFollowUp) renderFollowUpHistory();
     }
-    if (redFlagPanel) {
-        redFlagPanel.style.display = isFollowUp ? 'none' : 'block';
-    }
+    if (surveyPanel) surveyPanel.style.display = isSurvey ? 'block' : 'none';
+    if (redFlagPanel) redFlagPanel.style.display = isRedFlag ? 'block' : 'none';
 
     if (showFollowUpBtn) {
         showFollowUpBtn.style.background = isFollowUp ? '#ef6c00' : '#b0bec5';
         showFollowUpBtn.style.color = isFollowUp ? 'white' : '#263238';
     }
+    if (showSurveyBtn) {
+        showSurveyBtn.style.background = isSurvey ? '#546e7a' : '#b0bec5';
+        showSurveyBtn.style.color = isSurvey ? 'white' : '#263238';
+    }
     if (showRedFlagBtn) {
-        showRedFlagBtn.style.background = isFollowUp ? '#b0bec5' : '#dc3545';
-        showRedFlagBtn.style.color = isFollowUp ? '#263238' : 'white';
+        showRedFlagBtn.style.background = isRedFlag ? '#dc3545' : '#b0bec5';
+        showRedFlagBtn.style.color = isRedFlag ? '#263238' : 'white';
     }
 }
 
@@ -712,4 +720,152 @@ function clearRedFlagEmail() {
 
     document.getElementById('redFlagEmailPreviewSection').style.display = 'none';
     document.getElementById('redFlagEmailPreviewText').textContent = '';
+}
+
+// ============================================
+// SURVEY FEEDBACK COACHING
+// ============================================
+
+function parseSurveyData() {
+    const rawData = document.getElementById('surveyRawData')?.value.trim() || '';
+    if (!rawData) {
+        alert('⚠️ Please paste the raw survey ticket data first.');
+        return;
+    }
+
+    const extracted = extractSurveyFields(rawData);
+    displayExtractedSurveyData(extracted);
+    generateSurveyPrompt(extracted);
+}
+
+function extractSurveyFields(raw) {
+    const lines = raw.split('\n').map(l => l.trim());
+
+    function findField(patterns) {
+        for (const pattern of patterns) {
+            for (const line of lines) {
+                const regex = new RegExp(pattern + '\\s*[:\\-]?\\s*(.*)', 'i');
+                const match = line.match(regex);
+                if (match && match[1]?.trim()) return match[1].trim();
+            }
+        }
+        return '';
+    }
+
+    function findMultilineField(patterns) {
+        for (const pattern of patterns) {
+            for (let i = 0; i < lines.length; i++) {
+                const regex = new RegExp(pattern, 'i');
+                if (regex.test(lines[i])) {
+                    const sameLine = lines[i].replace(regex, '').replace(/^[\s:\-]+/, '').trim();
+                    if (sameLine) return sameLine;
+                    // Grab next non-empty lines
+                    const collected = [];
+                    for (let j = i + 1; j < lines.length && j < i + 5; j++) {
+                        if (!lines[j]) break;
+                        // Stop if it looks like another field label
+                        if (/^[A-Z][a-z].*:/.test(lines[j]) && !lines[j].startsWith(' ')) break;
+                        collected.push(lines[j]);
+                    }
+                    if (collected.length) return collected.join(' ');
+                }
+            }
+        }
+        return '';
+    }
+
+    return {
+        associateName: findField(['Associate Name', 'Advisor Name', 'Agent Name', 'Rep Name']),
+        associateId: findField(['Associate ID', 'Advisor ID', 'Agent ID', 'Rep ID', 'Employee ID']),
+        supervisorName: findField(['Supervisor', 'Leader Name', 'Supervisor\\/Leader', 'Manager Name', 'Team Lead']),
+        accountId: findField(['Account ID', 'Account Number', 'Account #', 'Acct ID', 'Account No']),
+        customerContactId: findField(['Customer Contact ID', 'Contact ID', 'Interaction ID', 'Case ID']),
+        contactDate: findField(['Contact Date', 'Date of Contact', 'Call Date', 'Interaction Date', 'Survey Date']),
+        overallRating: findField(['Overall Experience Rating', 'Overall Rating', 'Experience Rating', 'Overall Experience', 'OSAT', 'Overall Satisfaction']),
+        mainReason: findField(['Main Reason', 'Primary Reason', 'Reason for Contact', 'Contact Reason', 'Main Reason for Contact']),
+        specificReason: findField(['Specific Reason', 'Sub Reason', 'Detail Reason', 'Specific Reason for Contact']),
+        issueResolved: findField(['Was the Issue Resolved', 'Issue Resolved', 'Resolved', 'Was Issue Resolved', 'Resolution']),
+        fcrScore: findField(['FCR Score', 'First Contact Resolution', 'FCR', 'First Call Resolution']),
+        customerWords: findMultilineField(['Customer.s Own Words', 'Customer Comment', 'Verbatim', 'Open.?Ended Comment', 'Customer Feedback', 'Comments?']),
+        keyFailures: findMultilineField(['Key Failures? Observed', 'Failures? Observed', 'Key Failure', 'Areas? of Improvement', 'Coaching Opportunity', 'Failure Points?'])
+    };
+}
+
+function displayExtractedSurveyData(data) {
+    const section = document.getElementById('surveyExtractedSection');
+    const fieldsEl = document.getElementById('surveyExtractedFields');
+    if (!section || !fieldsEl) return;
+
+    const fields = [
+        { label: 'Associate Name', value: data.associateName },
+        { label: 'Associate ID', value: data.associateId },
+        { label: 'Supervisor/Leader Name', value: data.supervisorName },
+        { label: 'Account ID', value: data.accountId },
+        { label: 'Customer Contact ID', value: data.customerContactId },
+        { label: 'Contact Date', value: data.contactDate },
+        { label: 'Overall Experience Rating', value: data.overallRating },
+        { label: 'Main Reason for Contact', value: data.mainReason },
+        { label: 'Specific Reason for Contact', value: data.specificReason },
+        { label: 'Was the Issue Resolved?', value: data.issueResolved },
+        { label: 'FCR Score', value: data.fcrScore },
+        { label: "Customer's Own Words", value: data.customerWords },
+        { label: 'Key Failures Observed', value: data.keyFailures }
+    ];
+
+    fieldsEl.innerHTML = fields.map(f => {
+        const val = f.value || '<span style="color: #e65100; font-style: italic;">Not found — edit below if needed</span>';
+        const isPresent = Boolean(f.value);
+        return `<div style="margin-bottom: 6px;"><strong style="color: #37474f;">${escapeHtml(f.label)}:</strong> ${isPresent ? escapeHtml(val) : val}</div>`;
+    }).join('');
+
+    section.style.display = 'block';
+}
+
+function generateSurveyPrompt(data) {
+    const supervisor = data.supervisorName || '[Supervisor Name]';
+    const associate = data.associateName || '[Associate Name]';
+    const contactDate = data.contactDate || '[Contact Date]';
+    const rating = data.overallRating || '[Overall Rating]';
+    const mainReason = data.mainReason || '[Main Reason]';
+    const specificReason = data.specificReason || '[Specific Reason]';
+    const resolved = data.issueResolved || 'not resolved';
+    const customerWords = data.customerWords || '[Customer Comments]';
+    const failures = data.keyFailures || '[Key Failures Observed]';
+
+    const resolvedText = resolved.toLowerCase().includes('yes') ? 'The issue was resolved.' : 'The issue was not resolved.';
+
+    const prompt = `Write a professional coaching email from supervisor ${supervisor} to advisor ${associate} regarding a customer survey received on ${contactDate}. The customer rated their experience ${rating}. The customer contacted APS regarding ${mainReason} - ${specificReason}. ${resolvedText} The customer stated: "${customerWords}". The coaching focus should be on ${failures}. For each failure observed, include specific, actionable steps the advisor should take in future calls to prevent this from happening again. For example, if the advisor did not recap the call, instruct them to always summarize the interaction and next steps before ending the call. If the customer felt unheard, instruct the advisor to use active listening techniques such as repeating the customer's concern back to them before offering a solution. The tone should be supportive, direct, and professional — focused on growth and improvement, not punishment.`;
+
+    const promptDisplay = document.getElementById('surveyPromptDisplay');
+    const promptSection = document.getElementById('surveyPromptSection');
+
+    if (promptDisplay) promptDisplay.value = prompt;
+    if (promptSection) promptSection.style.display = 'block';
+}
+
+function copySurveyPromptAndOpenCopilot() {
+    const promptDisplay = document.getElementById('surveyPromptDisplay');
+    if (!promptDisplay?.value) return;
+
+    navigator.clipboard.writeText(promptDisplay.value).then(() => {
+        if (typeof showToast === 'function') {
+            showToast('✅ Prompt copied! Opening Copilot...', 2000);
+        }
+        window.open('https://copilot.microsoft.com', '_blank');
+    }).catch(() => {
+        promptDisplay.select();
+        alert('⚠️ Unable to copy. Please select and copy manually.');
+    });
+}
+
+function clearSurveyFeedback() {
+    const rawData = document.getElementById('surveyRawData');
+    const extractedSection = document.getElementById('surveyExtractedSection');
+    const promptSection = document.getElementById('surveyPromptSection');
+    const promptDisplay = document.getElementById('surveyPromptDisplay');
+
+    if (rawData) rawData.value = '';
+    if (promptDisplay) promptDisplay.value = '';
+    if (extractedSection) extractedSection.style.display = 'none';
+    if (promptSection) promptSection.style.display = 'none';
 }
