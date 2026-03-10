@@ -22,6 +22,7 @@
                 <button type="button" id="coachingEmailBtn" class="btn-secondary top-nav-btn" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
                 <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Follow Up">📌 FOLLOW UP</button>
                 <button type="button" id="ptoBtn" class="btn-secondary top-nav-btn" aria-label="PTO Tracker">🕒 PTO Tracker</button>
+                <button type="button" id="hotTipBtn" class="btn-secondary top-nav-btn" aria-label="Hot Tip of the Day" style="background: #f57c00; color: white;">🔥 Hot Tip</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Manage Data">🗄️ Manage Data</button>
             </div>
         </header>
@@ -1314,8 +1315,70 @@ Box 2 - Future Improvement Areas:
                 </div>
             </section>
 
+            <section id="hotTipSection" style="display: none;">
+                <div class="form-section" style="background: #fff3e0; border-left: 4px solid #f57c00;">
+                    <h2>🔥 Hot Tip of the Day</h2>
+                    <p style="color: #e65100; margin-bottom: 20px;">Create team tips using Copilot. Provide context, generate a prompt, paste Copilot's response, then send it to the team.</p>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffab91;">
+                        <h3 style="color: #e65100; margin-top: 0;">Step 1: Provide Context</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="hotTipTitle" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Tip Title / Topic:</label>
+                            <input type="text" id="hotTipTitle" placeholder="e.g., Always include installment count on PA billing requests" style="width: 100%; padding: 10px; border: 2px solid #ffab91; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="hotTipContext" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Situation / Context:</label>
+                            <textarea id="hotTipContext" placeholder="Describe what happened, why this tip matters, and any relevant details..." style="width: 100%; padding: 10px; border: 2px solid #ffab91; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 120px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="hotTipTone" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Tone:</label>
+                            <select id="hotTipTone" style="width: 100%; padding: 10px; border: 2px solid #ffab91; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                                <option value="friendly-reminder">Friendly Reminder</option>
+                                <option value="coaching">Coaching / Instructional</option>
+                                <option value="urgent">Urgent / Critical</option>
+                                <option value="celebratory">Celebratory / Positive</option>
+                            </select>
+                        </div>
+                        <button type="button" id="generateHotTipPromptBtn" style="background: #f57c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">🤖 Generate Copilot Prompt</button>
+                    </div>
+
+                    <div id="hotTipPromptSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffab91;">
+                        <h3 style="color: #e65100; margin-top: 0;">Step 2: Copy Prompt to Copilot</h3>
+                        <textarea id="hotTipPromptDisplay" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box; min-height: 150px; resize: vertical; background: #fafafa;"></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button type="button" id="copyHotTipPromptBtn" style="background: #f57c00; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">📋 Copy & Open Copilot</button>
+                        </div>
+                    </div>
+
+                    <div id="hotTipResponseSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffab91;">
+                        <h3 style="color: #e65100; margin-top: 0;">Step 3: Paste Copilot's Response</h3>
+                        <textarea id="hotTipCopilotResponse" placeholder="Paste the response from Copilot here..." style="width: 100%; padding: 10px; border: 2px solid #ffab91; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 200px; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button type="button" id="generateHotTipEmailBtn" style="background: #2e7d32; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📧 Generate Team Email</button>
+                        </div>
+                    </div>
+
+                    <div id="hotTipEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffab91;">
+                        <h3 style="color: #e65100; margin-top: 0;">📧 Hot Tip Email Preview</h3>
+                        <div id="hotTipEmailPreviewText" style="background: #f9f9f9; padding: 20px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif;"></div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="copyHotTipEmailBtn" style="background: #f57c00; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">📋 Copy Email</button>
+                            <button type="button" id="saveHotTipBtn" style="background: #2e7d32; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">💾 Save & Log Tip</button>
+                            <button type="button" id="clearHotTipBtn" style="background: #999; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 150px;">🗑️ Clear All</button>
+                        </div>
+                    </div>
+
+                    <div id="hotTipHistoryPanel" style="padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffe0b2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="color: #e65100; margin: 0;">📚 Tip Archive <span id="hotTipHistoryCount" style="font-size: 0.8em; color: #78909c;"></span></h3>
+                        </div>
+                        <div id="hotTipHistoryList"><p style="color: #999; text-align: center; padding: 12px;">No tips saved yet.</p></div>
+                    </div>
+                </div>
+            </section>
+
         </main>
-        
+
         <footer style="text-align: center; padding: 20px; color: #999; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 40px;">
             <span id="appVersion">Version: Loading...</span>
             <span style="margin: 0 8px; color: #ccc;">•</span>
@@ -1342,6 +1405,7 @@ Box 2 - Future Improvement Areas:
     <script src="tips-module.js"></script>
     <script src="pto-module.js"></script>
     <script src="red-flag-module.js"></script>
+    <script src="hot-tip-module.js"></script>
     
     <!-- New Modular Services -->
     <script src="modules/metrics.module.js"></script>

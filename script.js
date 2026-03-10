@@ -852,6 +852,12 @@ function restoreLastViewedSection() {
         return;
     }
 
+    if (sectionId === 'hotTipSection') {
+        showOnlySection('hotTipSection');
+        if (typeof initializeHotTip === 'function') initializeHotTip();
+        return;
+    }
+
     showOnlySection('coachingForm');
     initializeSection('coachingForm');
 }
@@ -2364,6 +2370,10 @@ function bindQuickActionHandlers() {
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
+    document.getElementById('hotTipBtn')?.addEventListener('click', () => {
+        showOnlySection('hotTipSection');
+        if (typeof initializeHotTip === 'function') initializeHotTip();
+    });
     document.getElementById('ptoBtn')?.addEventListener('click', () => {
         showOnlySection('ptoSection');
         initializePtoTracker();
@@ -3906,6 +3916,7 @@ function buildRepoSyncPayload(reason = 'updated') {
         callCenterAverages: loadCallCenterAverages() || {},
         ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
         followUpHistory: followUpHistory,
+        hotTipHistory: window.DevCoachModules?.storage?.loadHotTipHistory?.() || { entries: [] },
         yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
         yearEndDraftStore: loadYearEndDraftStore(),
         appStorageSnapshot: getAllAppStorageSnapshot(),
@@ -4174,6 +4185,12 @@ function applyRepoBackupPayload(payload) {
             ? payload.followUpHistory
             : { entries: [] };
         window.DevCoachModules.storage.saveFollowUpHistory(restoredFollowUpHistory);
+    }
+    if (window.DevCoachModules?.storage?.saveHotTipHistory) {
+        const restoredHotTipHistory = payload?.hotTipHistory && typeof payload.hotTipHistory === 'object'
+            ? payload.hotTipHistory
+            : { entries: [] };
+        window.DevCoachModules.storage.saveHotTipHistory(restoredHotTipHistory);
     }
 }
 

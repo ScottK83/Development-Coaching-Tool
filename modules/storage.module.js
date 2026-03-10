@@ -315,6 +315,31 @@
     }
 
     // ============================================
+    // HOT TIP HISTORY
+    // ============================================
+
+    function loadHotTipHistory() {
+        try {
+            const namespacedKey = STORAGE_PREFIX + 'hotTipHistory';
+            const saved = localStorage.getItem(namespacedKey);
+            return saved ? JSON.parse(saved) : { entries: [] };
+        } catch (error) {
+            console.error('Error loading hot tip history:', error);
+            return { entries: [] };
+        }
+    }
+
+    function saveHotTipHistory(data) {
+        try {
+            if (!saveWithSizeCheck('hotTipHistory', data || { entries: [] })) {
+                console.error('Failed to save hot tip history due to size');
+            }
+        } catch (error) {
+            console.error('Error saving hot tip history:', error);
+        }
+    }
+
+    // ============================================
     // PTO TRACKER
     // ============================================
 
@@ -376,6 +401,9 @@
         // Follow-up history
         loadFollowUpHistory,
         saveFollowUpHistory,
+        // Hot tip history
+        loadHotTipHistory,
+        saveHotTipHistory,
         // PTO
         loadPtoTracker,
         savePtoTracker,
