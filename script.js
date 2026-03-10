@@ -1181,21 +1181,12 @@ function copyDebugInfo() {
 }
 
 function fallbackCopyDebug(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-        document.execCommand('copy');
+    navigator.clipboard.writeText(text).then(() => {
         showToast('✅ Debug info copied to clipboard', 3000);
-    } catch (err) {
+    }).catch(err => {
         console.error('Failed to copy debug info:', err);
         showToast('⚠️ Unable to copy debug info', 3000);
-    } finally {
-        document.body.removeChild(textarea);
-    }
+    });
 }
 
 // ============================================
@@ -3286,9 +3277,8 @@ function enforceRepoAutoSyncEnabled() {
 
     const endpointChanged = String(current?.endpoint || '').trim() !== endpoint;
     const autoSyncChanged = current?.autoSyncEnabled !== normalized.autoSyncEnabled;
-    const secretChanged = String(current?.sharedSecret || '').trim() !== normalized.sharedSecret;
 
-    if (endpointChanged || autoSyncChanged || secretChanged) {
+    if (endpointChanged || autoSyncChanged) {
         saveCallListeningSyncConfig(normalized);
     }
 
@@ -6959,10 +6949,13 @@ function attachTrendTipsModalHandlers(options) {
 
     document.getElementById('copyPromptBtn').addEventListener('click', () => {
         const textarea = document.getElementById('copilotPromptDisplay');
-        textarea.select();
-        document.execCommand('copy');
-        showToast('✅ Prompt copied! Opening Copilot...', 2000);
-        window.open('https://copilot.microsoft.com', '_blank');
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            showToast('✅ Prompt copied! Opening Copilot...', 2000);
+            window.open('https://copilot.microsoft.com', '_blank');
+        }).catch(() => {
+            textarea.select();
+            showToast('⚠️ Unable to copy prompt', 2000);
+        });
     });
 
     const copySnapshotBtn = document.getElementById('copyTrendIntelligenceSnapshotBtn');
@@ -6972,13 +6965,7 @@ function attachTrendTipsModalHandlers(options) {
             navigator.clipboard.writeText(summaryText).then(() => {
                 showToast('✅ Intelligence snapshot copied', 2000);
             }).catch(() => {
-                const textarea = document.createElement('textarea');
-                textarea.value = summaryText;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast('✅ Intelligence snapshot copied', 2000);
+                showToast('⚠️ Unable to copy snapshot', 2000);
             });
         });
     }
@@ -9029,10 +9016,13 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
 
     document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('teamTrendPromptDisplay');
-        textarea.select();
-        document.execCommand('copy');
-        showToast('✅ Team prompt copied', 2000);
-        window.open('https://copilot.microsoft.com', '_blank');
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            showToast('✅ Team prompt copied', 2000);
+            window.open('https://copilot.microsoft.com', '_blank');
+        }).catch(() => {
+            textarea.select();
+            showToast('⚠️ Unable to copy team prompt', 2000);
+        });
     });
 
     document.getElementById('openTeamTrendEmailBtn')?.addEventListener('click', () => {
@@ -10492,20 +10482,11 @@ function copyTrendThisWeekPlan() {
     }
 
     const fallbackCopy = () => {
-        const area = document.createElement('textarea');
-        area.value = text;
-        area.setAttribute('readonly', 'true');
-        area.style.position = 'fixed';
-        area.style.left = '-9999px';
-        document.body.appendChild(area);
-        area.select();
-        const copied = document.execCommand('copy');
-        document.body.removeChild(area);
-        if (copied) {
+        navigator.clipboard.writeText(text).then(() => {
             showToast('✅ This Week Plan copied', 2800);
-        } else {
+        }).catch(() => {
             showToast('Unable to copy This Week Plan', 3000);
-        }
+        });
     };
 
     if (navigator.clipboard?.writeText) {
@@ -14363,8 +14344,9 @@ function generateCoachingPromptAndCopy() {
     window.latestCoachingSummaryData = summaryData;
 
     recordAndRenderCoachingEvent(employeeName, weekEnding || summaryData.periodLabel, coachedMetricKeys);
-    promptArea.select();
-    document.execCommand('copy');
+    navigator.clipboard.writeText(promptArea.value).catch(() => {
+        promptArea.select();
+    });
 
     showCoachingPromptCopiedState(button);
     revealCoachingOutlookSection();
@@ -15787,14 +15769,7 @@ function copySentimentSummary() {
         }, 2000);
         showToast('✅ Summary copied to clipboard', 2000);
     }).catch(() => {
-        // Fallback for older browsers
-        const textarea = document.createElement('textarea');
-        textarea.value = summaryText;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('✅ Summary copied to clipboard', 2000);
+        showToast('⚠️ Unable to copy summary', 2000);
     });
 }
 

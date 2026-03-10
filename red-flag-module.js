@@ -323,21 +323,17 @@ function copyFollowUpEmail() {
         return;
     }
 
-    const textarea = document.createElement('textarea');
-    textarea.value = emailText;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-
     const button = document.getElementById('copyFollowUpEmailBtn');
-    if (!button) return;
-
-    const originalText = button.textContent;
-    button.textContent = '✓ Copied!';
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 1200);
+    navigator.clipboard.writeText(emailText).then(() => {
+        if (!button) return;
+        const originalText = button.textContent;
+        button.textContent = '✓ Copied!';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 1200);
+    }).catch(() => {
+        alert('⚠️ Unable to copy email.');
+    });
 }
 
 function clearFollowUpEmail() {
@@ -471,23 +467,21 @@ function copyRedFlagEmail() {
         return;
     }
 
-    const textarea = document.createElement('textarea');
-    textarea.value = emailText;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-
     const button = document.getElementById('copyRedFlagEmailBtn');
-    const originalText = button.textContent;
-    button.textContent = '✓ Copied! Opening Outlook...';
+    navigator.clipboard.writeText(emailText).then(() => {
+        if (!button) return;
+        const originalText = button.textContent;
+        button.textContent = '✓ Copied! Opening Outlook...';
 
-    setTimeout(() => {
-        window.open('mailto:', '_blank');
         setTimeout(() => {
-            button.textContent = originalText;
+            window.open('mailto:', '_blank');
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 500);
         }, 500);
-    }, 500);
+    }).catch(() => {
+        alert('⚠️ Unable to copy email.');
+    });
 }
 
 function clearRedFlagEmail() {
