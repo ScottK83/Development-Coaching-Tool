@@ -741,53 +741,131 @@ function parseSurveyData() {
 function extractSurveyFields(raw) {
     const lines = raw.split('\n').map(l => l.trim());
 
+    // Find a field value — handles both "Label\tValue" (same line)
+    // and "Label\n\nValue" (label alone, value on next non-empty line)
     function findField(patterns) {
         for (const pattern of patterns) {
-            for (const line of lines) {
-                const regex = new RegExp(pattern + '\\s*[:\\-]?\\s*(.*)', 'i');
-                const match = line.match(regex);
-                if (match && match[1]?.trim()) return match[1].trim();
-            }
-        }
-        return '';
-    }
-
-    function findMultilineField(patterns) {
-        for (const pattern of patterns) {
             for (let i = 0; i < lines.length; i++) {
-                const regex = new RegExp(pattern, 'i');
-                if (regex.test(lines[i])) {
-                    const sameLine = lines[i].replace(regex, '').replace(/^[\s:\-]+/, '').trim();
-                    if (sameLine) return sameLine;
-                    // Grab next non-empty lines
-                    const collected = [];
-                    for (let j = i + 1; j < lines.length && j < i + 5; j++) {
-                        if (!lines[j]) break;
-                        // Stop if it looks like another field label
-                        if (/^[A-Z][a-z].*:/.test(lines[j]) && !lines[j].startsWith(' ')) break;
-                        collected.push(lines[j]);
+                const line = lines[i];
+
+                // Same-line: "Label\tValue" or "Label: Value" or "Label  Value"
+                const sameLineRegex = new RegExp(pattern + '[\\s:\\t]+(.+)', 'i');
+                const sameMatch = line.match(sameLineRegex);
+                if (sameMatch && sameMatch[1]?.trim()) {
+                    return sameMatch[1].trim();
+                }
+
+                // Next-line: "Label" on its own, value on next non-empty line
+                const labelRegex = new RegExp('^' + pattern + '[\\s?.:]*$', 'i');
+                if (labelRegex.test(line)) {
+                    for (let j = i + 1; j < lines.length && j < i + 3; j++) {
+                        if (lines[j]) return lines[j];
                     }
-                    if (collected.length) return collected.join(' ');
                 }
             }
         }
         return '';
     }
 
+    // Extract customer's own words from Q33 and Q35 responses
+    function findCustomerWords() {
+        const sections = [];
+
+        // Q33 — "Please tell me why it was [rating]?"
+        for (let i = 0; i < lines.length; i++) {
+            if (/Q33[.\s]|please tell me why/i.test(lines[i])) {
+                const collected = [];
+                for (let j = i + 1; j < lines.length; j++) {
+                    if (/^Q\d+[.\s]/i.test(lines[j])) break;
+                    if (lines[j]) collected.push(lines[j]);
+                }
+                if (collected.length) sections.push(collected.join(' '));
+                break;
+            }
+        }
+
+        // Q35 — "What is the primary reason why you feel the issue was not resolved?"
+        for (let i = 0; i < lines.length; i++) {
+            if (/Q35[.\s]|primary reason.*not resolved/i.test(lines[i])) {
+                for (let j = i + 1; j < lines.length; j++) {
+                    if (/^Q\d+[.\s]/i.test(lines[j])) break;
+                    if (lines[j]) {
+                        sections.push(lines[j]);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        return sections.join(' | ');
+    }
+
+    // Extract key failures from Q18 Group 2 "No" answers
+    function findKeyFailures() {
+        const failures = [];
+
+        const failureChecks = [
+            { pattern: /recap or summarize/i, label: 'Did not recap or summarize the conversation' },
+            { pattern: /clearly communicate.*next steps|next steps.*addressing/i, label: 'Did not communicate next steps' },
+            { pattern: /show concern for your needs/i, label: 'Did not show concern for customer needs' },
+            { pattern: /provide clear information/i, label: 'Did not provide clear information' },
+            { pattern: /address.*inquiry.*timely/i, label: 'Did not address inquiry in a timely manner' },
+            { pattern: /opportunities to ask questions/i, label: 'Did not give opportunities to ask questions' },
+            { pattern: /asked to provide.*same information/i, label: 'Customer had to repeat information' }
+        ];
+
+        for (let i = 0; i < lines.length; i++) {
+            for (const check of failureChecks) {
+                if (check.pattern.test(lines[i])) {
+                    // Check if "No" is on the same line (tab-separated) or the next non-empty line
+                    const sameLine = lines[i];
+                    if (/\tNo\s*$/i.test(sameLine) || /\bNo\s*$/i.test(sameLine)) {
+                        failures.push(check.label);
+                    } else {
+                        for (let j = i + 1; j < lines.length && j < i + 2; j++) {
+                            if (/^\s*No\s*$/i.test(lines[j])) {
+                                failures.push(check.label);
+                                break;
+                            }
+                            if (lines[j]) break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also grab Q35 reason if issue wasn't resolved
+        for (let i = 0; i < lines.length; i++) {
+            if (/Q35[.\s]|primary reason.*not resolved/i.test(lines[i])) {
+                for (let j = i + 1; j < lines.length; j++) {
+                    if (/^Q\d+[.\s]/i.test(lines[j])) break;
+                    if (lines[j]) {
+                        failures.push(lines[j]);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        return failures.join('; ');
+    }
+
     return {
-        associateName: findField(['Associate Name', 'Advisor Name', 'Agent Name', 'Rep Name']),
-        associateId: findField(['Associate ID', 'Advisor ID', 'Agent ID', 'Rep ID', 'Employee ID']),
-        supervisorName: findField(['Supervisor', 'Leader Name', 'Supervisor\\/Leader', 'Manager Name', 'Team Lead']),
-        accountId: findField(['Account ID', 'Account Number', 'Account #', 'Acct ID', 'Account No']),
-        customerContactId: findField(['Customer Contact ID', 'Contact ID', 'Interaction ID', 'Case ID']),
-        contactDate: findField(['Contact Date', 'Date of Contact', 'Call Date', 'Interaction Date', 'Survey Date']),
-        overallRating: findField(['Overall Experience Rating', 'Overall Rating', 'Experience Rating', 'Overall Experience', 'OSAT', 'Overall Satisfaction']),
-        mainReason: findField(['Main Reason', 'Primary Reason', 'Reason for Contact', 'Contact Reason', 'Main Reason for Contact']),
-        specificReason: findField(['Specific Reason', 'Sub Reason', 'Detail Reason', 'Specific Reason for Contact']),
-        issueResolved: findField(['Was the Issue Resolved', 'Issue Resolved', 'Resolved', 'Was Issue Resolved', 'Resolution']),
-        fcrScore: findField(['FCR Score', 'First Contact Resolution', 'FCR', 'First Call Resolution']),
-        customerWords: findMultilineField(['Customer.s Own Words', 'Customer Comment', 'Verbatim', 'Open.?Ended Comment', 'Customer Feedback', 'Comments?']),
-        keyFailures: findMultilineField(['Key Failures? Observed', 'Failures? Observed', 'Key Failure', 'Areas? of Improvement', 'Coaching Opportunity', 'Failure Points?'])
+        associateName: findField(['Advisor Name', 'AgentName', 'Agent Name', 'Associate Name']),
+        associateId: findField(['Agent ID', 'agentid', 'Associate ID', 'Employee ID']),
+        supervisorName: findField(['Leader Name', 'LeaderName', 'Supervisor Name', 'Supervisor']),
+        accountId: findField(['Account ID', 'accountid', 'Account Number']),
+        customerContactId: findField(['Customer Contact ID', 'customercontactid', 'Contact ID']),
+        contactDate: findField(['Contact Date', 'contactdate']),
+        overallRating: findField(['Overall Experience Rating']),
+        mainReason: findField(['Main Reason for Contact', 'Main Reason']),
+        specificReason: findField(['Specific Reason for Contact', 'Specific Reason', 'Detail_Reason']),
+        issueResolved: findField(['Was your issue resolved', 'Was Issue Resolved', 'Issue Resolved']),
+        fcrScore: findField(['FCR']),
+        customerWords: findCustomerWords(),
+        keyFailures: findKeyFailures()
     };
 }
 
