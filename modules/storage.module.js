@@ -173,7 +173,66 @@
         try {
             const namespacedKey = STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY;
             const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : {};
+            let loaded = saved ? JSON.parse(saved) : {};
+
+            // Migrate old format (object with timeframe keys) to new format (array)
+            Object.keys(loaded).forEach(employeeName => {
+                const employeeData = loaded[employeeName];
+
+                if (employeeData && typeof employeeData === 'object' && !Array.isArray(employeeData)) {
+                    const migratedArray = [];
+                    Object.entries(employeeData).forEach(([timeframeKey, snapshot]) => {
+                        const [start, end] = timeframeKey.split('_');
+
+                        if (snapshot.positive || snapshot.negative || snapshot.emotions) {
+                            snapshot = {
+                                associateName: employeeName,
+                                timeframeStart: start,
+                                timeframeEnd: end,
+                                savedAt: snapshot.savedAt || new Date().toISOString(),
+                                scores: {
+                                    positiveWord: snapshot.positive?.percentage || 0,
+                                    negativeWord: snapshot.negative?.percentage || 0,
+                                    managingEmotions: snapshot.emotions?.percentage || 0
+                                },
+                                calls: {
+                                    positiveTotal: snapshot.positive?.totalCalls || 0,
+                                    positiveDetected: snapshot.positive?.callsDetected || 0,
+                                    negativeTotal: snapshot.negative?.totalCalls || 0,
+                                    negativeDetected: snapshot.negative?.callsDetected || 0,
+                                    emotionsTotal: snapshot.emotions?.totalCalls || 0,
+                                    emotionsDetected: snapshot.emotions?.callsDetected || 0
+                                },
+                                topPhrases: {
+                                    positiveA: snapshot.positive?.phrases || [],
+                                    negativeA: snapshot.negative?.phrases?.filter(p => p.speaker === 'A') || [],
+                                    negativeC: snapshot.negative?.phrases?.filter(p => p.speaker === 'C') || [],
+                                    emotions: snapshot.emotions?.phrases || []
+                                },
+                                suggestions: snapshot.suggestions || {}
+                            };
+                        } else {
+                            if (!snapshot.timeframeStart) snapshot.timeframeStart = start;
+                            if (!snapshot.timeframeEnd) snapshot.timeframeEnd = end;
+                            if (!snapshot.associateName) snapshot.associateName = employeeName;
+                            if (!snapshot.savedAt) snapshot.savedAt = new Date().toISOString();
+                        }
+
+                        migratedArray.push(snapshot);
+                    });
+
+                    loaded[employeeName] = migratedArray;
+                }
+            });
+
+            // Save migrated data back if migration occurred
+            const needsSave = Object.values(loaded).some(data => Array.isArray(data));
+            if (needsSave) {
+                localStorage.setItem(namespacedKey, JSON.stringify(loaded));
+                console.log('💾 Saved migrated sentiment data to localStorage');
+            }
+
+            return loaded;
         } catch (error) {
             console.error('Error loading associate sentiment snapshots:', error);
             return {};

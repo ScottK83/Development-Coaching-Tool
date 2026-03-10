@@ -27,6 +27,21 @@
     }
 
     /**
+     * Escape HTML special characters to prevent XSS
+     * @param {unknown} text
+     * @returns {string}
+     */
+    function escapeHtml(text) {
+        const str = String(text ?? '');
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    /**
      * @param {string} subject
      * @param {string} bodyText
      * @returns {void}
@@ -46,6 +61,7 @@
     window.DevCoachModules.sharedUtils = {
         toNonEmptyString,
         joinWithConjunction,
+        escapeHtml,
         openMailtoDraft
     };
 })();

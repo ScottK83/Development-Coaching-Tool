@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dev Coach - Smoke Test</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { font-size: 1.4em; }
+        .pass { color: #2e7d32; }
+        .fail { color: #c62828; }
+        .result { padding: 4px 0; font-family: monospace; font-size: 0.9em; }
+        #summary { margin-top: 20px; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 1.1em; }
+        .summary-pass { background: #e8f5e9; color: #2e7d32; }
+        .summary-fail { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <h1>Development Coaching Tool - Smoke Test</h1>
+    <div id="results"></div>
+    <div id="summary"></div>
+
+    <!-- Stub out DOM elements that modules may query on load -->
+    <div id="debugPanel" style="display:none"></div>
+    <div id="errorMonitorBadge" style="display:none"></div>
+
+    <!-- Load modules in same order as index.html -->
+    <script src="modules/metrics-registry.module.js"></script>
+    <script src="modules/storage.module.js"></script>
+    <script src="modules/data-parsing.module.js"></script>
+    <script src="modules/metric-profiles.module.js"></script>
+    <script src="modules/state.module.js"></script>
+    <script src="modules/error-monitor.module.js"></script>
+    <script src="modules/shared-utils.module.js"></script>
+    <script src="modules/tips.module.js"></script>
+    <script src="modules/pto.module.js"></script>
+    <script src="modules/red-flag.module.js"></script>
+    <script src="modules/hot-tip.module.js"></script>
+    <script src="modules/navigation.module.js"></script>
+    <script src="modules/debug.module.js"></script>
+    <script src="modules/team-filter.module.js"></script>
+    <script src="modules/repo-sync.module.js"></script>
+    <script src="modules/on-off-tracker.module.js"></script>
+    <script src="modules/coaching-email.module.js"></script>
+    <script src="modules/year-end-comments.module.js"></script>
+    <script src="modules/executive-summary.module.js"></script>
+    <script src="modules/metric-trends.module.js"></script>
+    <script src="modules/metrics.module.js"></script>
+    <script src="modules/sentiment.module.js"></script>
+    <script src="modules/year-end.module.js"></script>
+    <script src="modules/ui-utils.module.js"></script>
+    <script src="modules/email.module.js"></script>
+    <script src="modules/coaching-analysis.module.js"></script>
+    <script src="modules/coaching.module.js"></script>
+    <script src="modules/call-listening.module.js"></script>
+    <script src="modules/employee-list.module.js"></script>
+    <script src="modules/trend-intelligence.module.js"></script>
+    <script src="modules/trend-coaching-email.module.js"></script>
+    <script src="modules/copilot-prompt.module.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        let passed = 0;
+        let failed = 0;
+
+        function check(label, condition) {
+            const ok = !!condition;
+            if (ok) passed++; else failed++;
+            const div = document.createElement('div');
+            div.className = 'result ' + (ok ? 'pass' : 'fail');
+            div.textContent = (ok ? 'PASS' : 'FAIL') + '  ' + label;
+            results.appendChild(div);
+        }
+
+        // 1. Check DevCoachModules namespace exists
+        check('window.DevCoachModules exists', window.DevCoachModules);
+
+        // 2. Check each expected module registered
+        const expectedModules = [
+            'metricsRegistry', 'storage', 'dataParsing', 'metricProfiles', 'state',
+            'errorMonitor', 'sharedUtils', 'navigation', 'debug', 'teamFilter',
+            'repoSync', 'onOffTracker', 'coachingEmail', 'yearEndComments',
+            'executiveSummary', 'metricTrends', 'metrics', 'sentiment', 'yearEnd',
+            'uiUtils', 'emailFormatter', 'coachingAnalysis', 'coaching',
+            'callListening', 'employeeList', 'trendIntelligence',
+            'trendCoachingEmail', 'copilotPrompt'
+        ];
+
+        for (const mod of expectedModules) {
+            check(`Module registered: DevCoachModules.${mod}`, window.DevCoachModules[mod]);
+        }
+
+        // 3. Check METRICS_REGISTRY is available globally
+        check('METRICS_REGISTRY is global', window.METRICS_REGISTRY);
+        check('METRICS_REGISTRY has scheduleAdherence', window.METRICS_REGISTRY?.scheduleAdherence);
+        check('METRICS_REGISTRY has 14 metrics', Object.keys(window.METRICS_REGISTRY || {}).length === 14);
+
+        // 4. Spot-check some key window globals set by modules
+        const keyGlobals = [
+            'escapeHtml', 'generateSentimentSummary', 'initializeMetricTrends',
+            'renderExecutiveSummary', 'normalizePhraseList'
+        ];
+
+        // These globals are provided by script.js delegation wrappers, not modules directly
+        const scriptJsGlobals = [
+            'parsePastedData', 'validatePastedData',
+            'showOnlySection', 'addDebugEntry', 'queueRepoSync'
+        ];
+        for (const fn of scriptJsGlobals) {
+            check(`DevCoachModules provides ${fn} (script.js sets window global)`,
+                typeof window.DevCoachModules?.dataParsing?.[fn] === 'function' ||
+                typeof window.DevCoachModules?.navigation?.[fn] === 'function' ||
+                typeof window.DevCoachModules?.debug?.[fn] === 'function' ||
+                typeof window.DevCoachModules?.repoSync?.[fn] === 'function');
+        }
+
+        for (const fn of keyGlobals) {
+            check(`window.${fn} is a function`, typeof window[fn] === 'function');
+        }
+
+        // 5. Quick functional test: escapeHtml
+        if (typeof window.escapeHtml === 'function') {
+            const escaped = window.escapeHtml('<b>test&"quote</b>');
+            check('escapeHtml works correctly', escaped.includes('&lt;') && escaped.includes('&amp;'));
+        }
+
+        // Summary
+        const total = passed + failed;
+        summary.className = failed === 0 ? 'summary-pass' : 'summary-fail';
+        summary.textContent = `${passed}/${total} checks passed` + (failed ? ` (${failed} failed)` : ' - All clear!');
+    </script>
+</body>
+</html>
