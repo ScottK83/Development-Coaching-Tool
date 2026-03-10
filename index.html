@@ -995,6 +995,10 @@ Box 2 - Future Improvement Areas:
                                     <option value="ptost">PTOST</option>
                                     <option value="pto-planned">PTO Planned</option>
                                     <option value="pto-unplanned">PTO Unplanned</option>
+                                    <option value="vto-pto">VTO-PTO</option>
+                                    <option value="tardy">Tardy</option>
+                                    <option value="tardy-ptost">Tardy (PTOST)</option>
+                                    <option value="ncns">No Call No Show</option>
                                 </select>
                             </div>
                             <div>
@@ -1005,6 +1009,17 @@ Box 2 - Future Improvement Areas:
                         <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
                             <button type="button" id="ptoAddEntryBtn" class="btn-primary">➕ Add Entry</button>
                         </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #d4e6f1;">
+                        <h3 style="color: #2c5f8a; margin-top: 0;">Import from Verint</h3>
+                        <p style="color: #5a6a68; font-size: 0.92em; margin-bottom: 12px;">Paste the full Verint "Time Off Summary" report. The parser reads the <strong>Time Off Activities</strong> section and auto-maps categories (Pre Planned, Same Day, PTOST, VTO, Tardy, NCNS, etc.).</p>
+                        <textarea id="ptoVerintPaste" rows="8" placeholder="Paste Verint Time Off Summary here..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical;"></textarea>
+                        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                            <button type="button" id="ptoVerintImportBtn" class="btn-primary" style="background: #2c5f8a;">Import Verint Data</button>
+                            <span style="color: #666; font-size: 0.85em;">Duplicates are automatically skipped.</span>
+                        </div>
+                        <div id="ptoVerintResults"></div>
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
@@ -1028,6 +1043,10 @@ Box 2 - Future Improvement Areas:
                                     <option value="ptost">PTOST</option>
                                     <option value="pto-planned">PTO Planned</option>
                                     <option value="pto-unplanned">PTO Unplanned</option>
+                                    <option value="vto-pto">VTO-PTO</option>
+                                    <option value="tardy">Tardy</option>
+                                    <option value="tardy-ptost">Tardy (PTOST)</option>
+                                    <option value="ncns">No Call No Show</option>
                                 </select>
                             </div>
                         </div>

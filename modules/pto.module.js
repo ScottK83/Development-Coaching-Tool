@@ -2,12 +2,24 @@
 // PTO / TIME-OFF TRACKER (HOURS-BASED, PER ASSOCIATE)
 // ============================================
 
-const PTO_POLICY_UNPLANNED_LIMIT_HOURS = 16;
 const PTOST_MAX_HOURS_DEFAULT = 40;
 const PTO_WEEK_DEFAULT_HOURS = 8;
 const PTO_TRACKING_YEAR = 2026;
 const PTO_LEGACY_ASSOCIATE_KEY = '__LEGACY_PTO__';
 const TEAM_MEMBERS_STORAGE_KEY = 'devCoachingTool_myTeamMembers';
+const PTO_CARRYOVER_CAP_HOURS = 120;
+
+const PTO_DISCIPLINE_LADDER = [
+    { threshold: 16, level: 'Verbal Warning' },
+    { threshold: 24, level: 'Written Reminder' },
+    { threshold: 32, level: 'Written Warning' },
+    { threshold: 40, level: 'DMS' }
+];
+
+const PTO_VALID_TYPES = [
+    'ptost', 'pto-planned', 'pto-unplanned',
+    'vto-pto', 'tardy', 'tardy-ptost', 'ncns'
+];
 let ptoReliabilityWeekCache = [];
 
 function getDefaultPtoTracker() {
@@ -35,7 +47,7 @@ function normalizeHours(value) {
 
 function normalizePtoType(type) {
     const value = String(type || '').trim().toLowerCase();
-    if (value === 'ptost' || value === 'pto-planned' || value === 'pto-unplanned') return value;
+    if (PTO_VALID_TYPES.includes(value)) return value;
     return 'pto-unplanned';
 }
 
@@ -338,38 +350,73 @@ function getSelectedAssociateAndTracker(createIfMissing = true) {
     };
 }
 
+function getDisciplineLevel(unplannedHours) {
+    let current = null;
+    let next = PTO_DISCIPLINE_LADDER[0] || null;
+    for (let i = PTO_DISCIPLINE_LADDER.length - 1; i >= 0; i--) {
+        if (unplannedHours >= PTO_DISCIPLINE_LADDER[i].threshold) {
+            current = PTO_DISCIPLINE_LADDER[i];
+            next = PTO_DISCIPLINE_LADDER[i + 1] || null;
+            break;
+        }
+    }
+    if (!current) {
+        next = PTO_DISCIPLINE_LADDER[0] || null;
+    }
+    return { current, next };
+}
+
 function calculatePtoStats(data) {
     const entries = getTrackedEntries(data);
-    const totalPtostUsed = entries
-        .filter(entry => entry.type === 'ptost')
-        .reduce((sum, entry) => sum + normalizeHours(entry.hours), 0);
-    const totalPtoPlannedUsed = entries
-        .filter(entry => entry.type === 'pto-planned')
-        .reduce((sum, entry) => sum + normalizeHours(entry.hours), 0);
-    const totalPtoUnplannedUsed = entries
-        .filter(entry => entry.type === 'pto-unplanned')
+
+    const sumByType = (types) => entries
+        .filter(entry => types.includes(entry.type))
         .reduce((sum, entry) => sum + normalizeHours(entry.hours), 0);
 
+    const totalPtostUsed = sumByType(['ptost', 'tardy-ptost']);
+    const totalPtoPlannedUsed = sumByType(['pto-planned']);
+    const totalPtoUnplannedUsed = sumByType(['pto-unplanned', 'ncns']);
+    const totalVtoPtoUsed = sumByType(['vto-pto']);
+    const totalTardyUsed = sumByType(['tardy']);
+    const totalTardyPtostUsed = sumByType(['tardy-ptost']);
+    const totalNcnsUsed = sumByType(['ncns']);
+
     const totalPtoAvailable = normalizeHours(data.carriedOverHours) + normalizeHours(data.earnedThisYearHours);
-    const totalPtoUsed = totalPtoPlannedUsed + totalPtoUnplannedUsed;
+    const totalPtoUsed = totalPtoPlannedUsed + totalPtoUnplannedUsed + totalVtoPtoUsed + totalTardyUsed;
     const remainingPtoHours = Math.max(0, totalPtoAvailable - totalPtoUsed);
     const ptostRemainingHours = Math.max(0, normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT) - totalPtostUsed);
 
+    const scheduledEntries = entries.filter(entry => {
+        const entryDate = parseIsoDateSafe(entry.date);
+        return entryDate && entryDate > new Date();
+    });
+    const scheduledHours = scheduledEntries.reduce((sum, entry) => sum + normalizeHours(entry.hours), 0);
+
     const reliabilityFromMetrics = normalizeHours(data.reliabilityHoursAgainst);
-    const effectiveUnplannedReliabilityHours = Math.max(totalPtoUnplannedUsed, reliabilityFromMetrics);
-    const attendancePolicyTriggered = effectiveUnplannedReliabilityHours > PTO_POLICY_UNPLANNED_LIMIT_HOURS;
+    const sameDayHours = totalPtoUnplannedUsed + totalPtostUsed;
+    const effectiveUnplannedReliabilityHours = Math.max(sameDayHours, reliabilityFromMetrics);
+    const discipline = getDisciplineLevel(effectiveUnplannedReliabilityHours);
+
+    const carryoverExceeds = normalizeHours(data.carriedOverHours) > PTO_CARRYOVER_CAP_HOURS;
 
     return {
         totalPtostUsed,
         totalPtoPlannedUsed,
         totalPtoUnplannedUsed,
+        totalVtoPtoUsed,
+        totalTardyUsed,
+        totalTardyPtostUsed,
+        totalNcnsUsed,
         totalPtoAvailable,
         totalPtoUsed,
         remainingPtoHours,
+        scheduledHours,
         ptostRemainingHours,
         reliabilityFromMetrics,
         effectiveUnplannedReliabilityHours,
-        attendancePolicyTriggered
+        discipline,
+        carryoverExceeds,
+        sameDayHours
     };
 }
 
@@ -731,23 +778,25 @@ function appendEntryWithTypePolicy(data, date, hours, type, notes = '', showPoli
         });
     };
 
-    if (normalizedType !== 'ptost') {
+    const isPtostType = normalizedType === 'ptost' || normalizedType === 'tardy-ptost';
+    if (!isPtostType) {
         pushEntry(normalizedType, normalizedHours, notes);
         return;
     }
 
+    const overflowType = normalizedType === 'tardy-ptost' ? 'tardy' : 'pto-unplanned';
     const stats = calculatePtoStats(data);
     const ptostRemaining = Math.max(0, normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT) - stats.totalPtostUsed);
     if (ptostRemaining <= 0) {
-        pushEntry('pto-unplanned', normalizedHours, notes ? `${notes} (auto-converted from PTOST: exhausted)` : 'auto-converted from PTOST: exhausted');
-        if (showPolicyToasts) showToast('PTOST exhausted. Entry saved as PTO unplanned.', 4000);
+        pushEntry(overflowType, normalizedHours, notes ? `${notes} (auto-converted from PTOST: exhausted)` : 'auto-converted from PTOST: exhausted');
+        if (showPolicyToasts) showToast('PTOST exhausted. Entry saved as ' + overflowType + '.', 4000);
         return;
     }
 
     if (normalizedHours > ptostRemaining) {
-        pushEntry('ptost', ptostRemaining, notes);
-        pushEntry('pto-unplanned', normalizedHours - ptostRemaining, notes ? `${notes} (overflow after PTOST exhausted)` : 'overflow after PTOST exhausted');
-        if (showPolicyToasts) showToast('Entry split: remaining PTOST used, overflow saved as PTO unplanned.', 4500);
+        pushEntry(normalizedType, ptostRemaining, notes);
+        pushEntry(overflowType, normalizedHours - ptostRemaining, notes ? `${notes} (overflow after PTOST exhausted)` : 'overflow after PTOST exhausted');
+        if (showPolicyToasts) showToast('Entry split: remaining PTOST used, overflow saved as ' + overflowType + '.', 4500);
         return;
     }
 
@@ -970,6 +1019,189 @@ function populatePtoAssociateSelect() {
     updatePtoInputsFromTracker('', null);
 }
 
+// ============================================
+// VERINT PASTE PARSER
+// ============================================
+
+const VERINT_TYPE_MAP = {
+    'pre planned absence': 'pto-planned',
+    'pplo gt 48 hrs': 'pto-planned',
+    'pplo lt 48 hrs': 'pto-planned',
+    'same day': 'pto-unplanned',
+    'same day - full ptost': 'ptost',
+    'same day - partial ptost': 'ptost',
+    'same day - partial': 'pto-unplanned',
+    'same day - no call no show': 'ncns',
+    'tardy eq gt 6 min': 'tardy',
+    'tardy eq gt 6 min ptost': 'tardy-ptost',
+    'tardy lt 6 min': 'tardy',
+    'vto-pto': 'vto-pto'
+};
+
+function parseVerintActivityDate(dateStr) {
+    // Parses "1/7/2026 4:40 PM" -> "2026-01-07"
+    const match = String(dateStr || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (!match) return null;
+    const month = String(match[1]).padStart(2, '0');
+    const day = String(match[2]).padStart(2, '0');
+    return `${match[3]}-${month}-${day}`;
+}
+
+function parseVerintPaste(rawText) {
+    const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
+    const entries = [];
+    const skipped = [];
+
+    // Find the "Time Off Activities" section
+    let inActivities = false;
+    let headerFound = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (/^time off activities$/i.test(line)) {
+            inActivities = true;
+            continue;
+        }
+
+        if (inActivities && !headerFound && /^from\s/i.test(line)) {
+            headerFound = true;
+            continue;
+        }
+
+        if (inActivities && /^(total time off|time off requests)/i.test(line)) {
+            break;
+        }
+
+        if (!inActivities || !headerFound) continue;
+
+        // Each activity is: Type \n From \n To \n Hours
+        // But in pasted text it may be on one line or split across lines
+        // The pattern from the paste: "Category\nDate1\nDate2\nHours"
+        // Or sometimes: "Category" then tab-separated "From To Hours"
+
+        // Try to match a known category name
+        const lowerLine = line.toLowerCase();
+        let matchedCategory = null;
+        for (const [verintName] of Object.entries(VERINT_TYPE_MAP)) {
+            if (lowerLine === verintName || lowerLine.startsWith(verintName + '\t')) {
+                matchedCategory = verintName;
+                break;
+            }
+        }
+
+        if (!matchedCategory) continue;
+
+        // Look ahead for From, To, Hours on subsequent lines
+        const remaining = line.substring(matchedCategory.length).trim();
+        let fromStr = '', toStr = '', hoursStr = '';
+
+        if (remaining) {
+            // Tab-separated on same line: "Pre Planned Absence\t1/7/2026 4:40 PM\t1/7/2026 6:00 PM\t1.33"
+            const parts = remaining.split('\t').map(s => s.trim()).filter(Boolean);
+            if (parts.length >= 3) {
+                fromStr = parts[0];
+                toStr = parts[1];
+                hoursStr = parts[2];
+            } else if (parts.length >= 1) {
+                fromStr = parts[0];
+                toStr = (lines[i + 1] || '').trim();
+                hoursStr = (lines[i + 2] || '').trim();
+                i += 2;
+            }
+        } else {
+            fromStr = (lines[i + 1] || '').trim();
+            toStr = (lines[i + 2] || '').trim();
+            hoursStr = (lines[i + 3] || '').trim();
+            i += 3;
+        }
+
+        const date = parseVerintActivityDate(fromStr);
+        const hours = parseFloat(hoursStr);
+
+        if (!date || !Number.isFinite(hours) || hours <= 0) {
+            skipped.push({ category: matchedCategory, from: fromStr, to: toStr, hours: hoursStr, reason: 'Could not parse date/hours' });
+            continue;
+        }
+
+        entries.push({
+            date,
+            hours: normalizeHours(hours),
+            type: VERINT_TYPE_MAP[matchedCategory],
+            verintCategory: matchedCategory,
+            notes: `Verint: ${matchedCategory}`
+        });
+    }
+
+    return { entries, skipped };
+}
+
+function importVerintEntries() {
+    const context = getSelectedAssociateAndTracker(true);
+    if (!context.associateName || !context.tracker) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const textarea = document.getElementById('ptoVerintPaste');
+    const rawText = textarea?.value || '';
+    if (!rawText.trim()) {
+        showToast('Paste Verint data first', 3000);
+        return;
+    }
+
+    const { entries, skipped } = parseVerintPaste(rawText);
+
+    if (!entries.length) {
+        showToast(`No entries parsed. ${skipped.length ? skipped.length + ' skipped.' : 'Check paste format.'}`, 4000);
+        return;
+    }
+
+    // Deduplicate against existing entries (same date + type + hours)
+    const existing = new Set(
+        context.tracker.entries.map(e => `${e.date}|${e.type}|${normalizeHours(e.hours)}`)
+    );
+
+    let added = 0;
+    let dupes = 0;
+    entries.forEach(entry => {
+        const key = `${entry.date}|${entry.type}|${entry.hours}`;
+        if (existing.has(key)) {
+            dupes++;
+            return;
+        }
+        existing.add(key);
+        appendEntryWithTypePolicy(context.tracker, entry.date, entry.hours, entry.type, entry.notes, false);
+        added++;
+    });
+
+    savePtoStore(context.store);
+    refreshPtoAssociateOptionFlags();
+    renderPtoSummary(context.tracker, context.associateName);
+    renderPtoEntries(context.tracker, context.associateName);
+
+    const resultParts = [`Imported ${added} entries`];
+    if (dupes > 0) resultParts.push(`${dupes} duplicates skipped`);
+    if (skipped.length > 0) resultParts.push(`${skipped.length} could not be parsed`);
+    showToast(resultParts.join(', '), 5000);
+
+    // Show results summary
+    const resultsEl = document.getElementById('ptoVerintResults');
+    if (resultsEl) {
+        let html = `<div style="padding:8px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;">
+            <strong>${added} entries imported</strong>${dupes ? `, ${dupes} duplicates skipped` : ''}${skipped.length ? `, ${skipped.length} unparseable` : ''}
+        </div>`;
+        if (skipped.length) {
+            html += `<div style="padding:8px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:4px;font-size:0.9em;">
+                <strong>Skipped:</strong><br>${skipped.map(s => `${s.category}: ${s.from} — ${s.reason}`).join('<br>')}
+            </div>`;
+        }
+        resultsEl.innerHTML = html;
+    }
+
+    if (textarea) textarea.value = '';
+}
+
 function initializePtoTracker() {
     const select = document.getElementById('ptoAssociateSelect');
     const reliabilityWeekSelect = document.getElementById('ptoReliabilityWeekSelect');
@@ -1077,6 +1309,12 @@ function initializePtoTracker() {
         copyBtn.addEventListener('click', copyPtoEmail);
         copyBtn.dataset.bound = 'true';
     }
+
+    const verintImportBtn = document.getElementById('ptoVerintImportBtn');
+    if (verintImportBtn && !verintImportBtn.dataset.bound) {
+        verintImportBtn.addEventListener('click', importVerintEntries);
+        verintImportBtn.dataset.bound = 'true';
+    }
 }
 
 function addPtoEntry() {
@@ -1132,18 +1370,44 @@ function renderPtoSummary(data, associateName = '') {
     if (!summary) return;
 
     const stats = calculatePtoStats(data);
-    const policyStatus = stats.attendancePolicyTriggered
-        ? `🔴 Attendance policy active (PTO unplanned ${stats.effectiveUnplannedReliabilityHours.toFixed(2)}h > ${PTO_POLICY_UNPLANNED_LIMIT_HOURS}h)`
-        : `🟢 Attendance policy not triggered (PTO unplanned ${stats.effectiveUnplannedReliabilityHours.toFixed(2)}h of ${PTO_POLICY_UNPLANNED_LIMIT_HOURS}h)`;
+    const displayName = associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName;
+
+    // Discipline ladder status
+    let disciplineHtml = '';
+    if (stats.discipline.current) {
+        const level = stats.discipline.current;
+        disciplineHtml = `<span style="color:#dc3545;font-weight:700;">&#x1F534; ${level.level} (${stats.sameDayHours.toFixed(2)}h at ${level.threshold}h threshold)</span>`;
+        if (stats.discipline.next) {
+            const hoursToNext = normalizeHours(stats.discipline.next.threshold - stats.sameDayHours);
+            disciplineHtml += `<br><span style="color:#856404;font-size:0.9em;">Next: ${stats.discipline.next.level} in ${hoursToNext.toFixed(2)}h</span>`;
+        }
+    } else if (stats.discipline.next) {
+        const hoursToNext = normalizeHours(stats.discipline.next.threshold - stats.sameDayHours);
+        disciplineHtml = `<span style="color:#198754;">&#x1F7E2; No discipline triggered (${stats.sameDayHours.toFixed(2)}h same-day, ${hoursToNext.toFixed(2)}h until ${stats.discipline.next.level})</span>`;
+    } else {
+        disciplineHtml = `<span style="color:#198754;">&#x1F7E2; No discipline triggered</span>`;
+    }
+
+    // Carryover cap warning
+    let carryoverNote = '';
+    if (stats.carryoverExceeds) {
+        carryoverNote = ` <span style="color:#dc3545;font-weight:600;">(exceeds ${PTO_CARRYOVER_CAP_HOURS}h cap!)</span>`;
+    }
+
+    // NCNS flag
+    let ncnsHtml = '';
+    if (stats.totalNcnsUsed > 0) {
+        ncnsHtml = `<br><strong style="color:#dc3545;">&#x26A0; No Call No Show:</strong> <span style="color:#dc3545;font-weight:700;">${stats.totalNcnsUsed.toFixed(2)}h — Needs WFM correction</span>`;
+    }
 
     summary.innerHTML = `
-        <strong>Associate:</strong> ${associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName}<br>
-        <strong>PTO Available:</strong> ${stats.totalPtoAvailable.toFixed(2)}h (Carryover ${normalizeHours(data.carriedOverHours).toFixed(2)}h + Earned ${normalizeHours(data.earnedThisYearHours).toFixed(2)}h)<br>
-        <strong>PTO Used:</strong> ${stats.totalPtoUsed.toFixed(2)}h (Planned ${stats.totalPtoPlannedUsed.toFixed(2)}h, Unplanned ${stats.totalPtoUnplannedUsed.toFixed(2)}h)<br>
-        <strong>PTO Remaining:</strong> ${stats.remainingPtoHours.toFixed(2)}h<br>
+        <strong>Associate:</strong> ${displayName}<br>
+        <strong>PTO Available:</strong> ${stats.totalPtoAvailable.toFixed(2)}h (Carryover ${normalizeHours(data.carriedOverHours).toFixed(2)}h${carryoverNote} + Earned ${normalizeHours(data.earnedThisYearHours).toFixed(2)}h)<br>
+        <strong>PTO Used:</strong> ${stats.totalPtoUsed.toFixed(2)}h (Planned ${stats.totalPtoPlannedUsed.toFixed(2)}h, Unplanned ${stats.totalPtoUnplannedUsed.toFixed(2)}h, VTO ${stats.totalVtoPtoUsed.toFixed(2)}h, Tardy ${stats.totalTardyUsed.toFixed(2)}h)<br>
+        <strong>PTO Remaining:</strong> ${stats.remainingPtoHours.toFixed(2)}h${stats.scheduledHours > 0 ? ` (${stats.scheduledHours.toFixed(2)}h scheduled future)` : ''}<br>
         <strong>PTOST:</strong> ${stats.totalPtostUsed.toFixed(2)}h used / ${normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT).toFixed(2)}h (${stats.ptostRemainingHours.toFixed(2)}h remaining)<br>
         <strong>Reliability Hours Against:</strong> ${stats.reliabilityFromMetrics.toFixed(2)}h<br>
-        <strong>Status:</strong> ${policyStatus}
+        <strong>Same-Day Discipline:</strong> ${disciplineHtml}${ncnsHtml}
     `;
 }
 
@@ -1157,26 +1421,41 @@ function renderPtoEntries(data, associateName = '') {
     }
 
     const typeLabel = (type) => {
-        if (type === 'ptost') return 'PTOST';
-        if (type === 'pto-planned') return 'PTO Planned';
-        return 'PTO Unplanned';
+        const labels = {
+            'ptost': 'PTOST',
+            'pto-planned': 'PTO Planned',
+            'pto-unplanned': 'PTO Unplanned',
+            'vto-pto': 'VTO-PTO',
+            'tardy': 'Tardy',
+            'tardy-ptost': 'Tardy (PTOST)',
+            'ncns': 'No Call No Show'
+        };
+        return labels[type] || 'PTO Unplanned';
     };
+
+    const typeOptions = PTO_VALID_TYPES.map(t =>
+        `<option value="${t}">${typeLabel(t)}</option>`
+    ).join('');
 
     const rows = data.entries
         .slice()
         .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
         .map(entry => {
-            const noteText = entry.notes ? ` • ${entry.notes}` : '';
+            const noteText = entry.notes ? ` &bull; ${entry.notes}` : '';
+            const isNcns = entry.type === 'ncns';
+            const borderColor = isNcns ? '#f5c6cb' : '#e5f3f0';
+            const bgColor = isNcns ? '#fff5f5' : '#f9fffd';
+            const ncnsBadge = isNcns ? ' <span style="background:#dc3545;color:#fff;padding:1px 6px;border-radius:3px;font-size:0.8em;font-weight:700;">NCNS — Flag for WFM</span>' : '';
             return `
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid #e5f3f0; border-radius: 6px; background: #f9fffd;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid ${borderColor}; border-radius: 6px; background: ${bgColor};">
                     <div>
-                        <strong>${entry.date}</strong> — ${normalizeHours(entry.hours).toFixed(2)}h • <strong>${typeLabel(entry.type)}</strong>${noteText}
+                        <strong>${entry.date}</strong> — ${normalizeHours(entry.hours).toFixed(2)}h &bull; <strong>${typeLabel(entry.type)}</strong>${ncnsBadge}${noteText}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <select data-entry-type-id="${entry.id}" style="padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <option value="ptost" ${entry.type === 'ptost' ? 'selected' : ''}>PTOST</option>
-                            <option value="pto-planned" ${entry.type === 'pto-planned' ? 'selected' : ''}>PTO Planned</option>
-                            <option value="pto-unplanned" ${entry.type === 'pto-unplanned' ? 'selected' : ''}>PTO Unplanned</option>
+                            ${PTO_VALID_TYPES.map(t =>
+                                `<option value="${t}" ${entry.type === t ? 'selected' : ''}>${typeLabel(t)}</option>`
+                            ).join('')}
                         </select>
                         <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
                     </div>
@@ -1208,33 +1487,38 @@ function generatePtoEmail() {
     if (!output) return;
 
     const stats = calculatePtoStats(data);
-    const policyLine = stats.attendancePolicyTriggered
-        ? `Attendance policy status: ACTIVE (PTO unplanned ${stats.effectiveUnplannedReliabilityHours.toFixed(2)}h > ${PTO_POLICY_UNPLANNED_LIMIT_HOURS}h)`
-        : `Attendance policy status: Not active (PTO unplanned ${stats.effectiveUnplannedReliabilityHours.toFixed(2)}h of ${PTO_POLICY_UNPLANNED_LIMIT_HOURS}h)`;
+    const disciplineLine = stats.discipline.current
+        ? `Same-Day Discipline: ${stats.discipline.current.level} (${stats.sameDayHours.toFixed(2)}h at ${stats.discipline.current.threshold}h threshold)`
+        : `Same-Day Discipline: Not triggered (${stats.sameDayHours.toFixed(2)}h same-day hours)`;
 
-    const typeLabel = (type) => {
-        if (type === 'ptost') return 'PTOST';
-        if (type === 'pto-planned') return 'PTO Planned';
-        return 'PTO Unplanned';
+    const emailTypeLabel = (type) => {
+        const labels = {
+            'ptost': 'PTOST', 'pto-planned': 'PTO Planned', 'pto-unplanned': 'PTO Unplanned',
+            'vto-pto': 'VTO-PTO', 'tardy': 'Tardy', 'tardy-ptost': 'Tardy (PTOST)', 'ncns': 'No Call No Show'
+        };
+        return labels[type] || 'PTO Unplanned';
     };
 
     const entryLines = data.entries
         .slice()
         .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-        .map(entry => `- ${entry.date}: ${normalizeHours(entry.hours).toFixed(2)}h (${typeLabel(entry.type)})${entry.notes ? ` - ${entry.notes}` : ''}`)
+        .map(entry => `- ${entry.date}: ${normalizeHours(entry.hours).toFixed(2)}h (${emailTypeLabel(entry.type)})${entry.type === 'ncns' ? ' ** NCNS - Needs WFM correction **' : ''}${entry.notes ? ` - ${entry.notes}` : ''}`)
         .join('\n');
 
+    const displayName = context.associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : context.associateName;
+
     output.value = `Hello,\n\n` +
-        `Here is the current PTO/time-off attendance snapshot for ${context.associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : context.associateName}.\n\n` +
+        `Here is the current PTO/time-off attendance snapshot for ${displayName}.\n\n` +
         `Carryover hours: ${normalizeHours(data.carriedOverHours).toFixed(2)}h\n` +
         `Earned this year: ${normalizeHours(data.earnedThisYearHours).toFixed(2)}h\n` +
         `Total PTO available: ${stats.totalPtoAvailable.toFixed(2)}h\n` +
         `PTO planned used: ${stats.totalPtoPlannedUsed.toFixed(2)}h\n` +
         `PTO unplanned used: ${stats.totalPtoUnplannedUsed.toFixed(2)}h\n` +
+        `VTO-PTO used: ${stats.totalVtoPtoUsed.toFixed(2)}h\n` +
+        `Tardy: ${stats.totalTardyUsed.toFixed(2)}h\n` +
         `PTO remaining: ${stats.remainingPtoHours.toFixed(2)}h\n` +
         `PTOST used: ${stats.totalPtostUsed.toFixed(2)}h of ${normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT).toFixed(2)}h\n` +
-        `Reliability hours against: ${stats.reliabilityFromMetrics.toFixed(2)}h\n` +
-        `${policyLine}\n\n` +
+        `${disciplineLine}\n\n` +
         `Time-off entries:\n${entryLines || '- No entries recorded'}\n\n` +
         `Please review and let me know if any entries should be adjusted.\n\n` +
         `Thank you.`;
