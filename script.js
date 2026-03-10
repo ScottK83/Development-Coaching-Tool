@@ -3233,7 +3233,8 @@ function getDefaultCallListeningSyncConfig() {
     return {
         endpoint: 'https://dev-coaching-sync.scottk.workers.dev',
         autoSyncEnabled: true,
-        sharedSecret: ''
+        sharedSecret: '',
+        isWorkPc: false
     };
 }
 
@@ -3245,7 +3246,8 @@ function loadCallListeningSyncConfig() {
         return {
             endpoint: typeof parsed?.endpoint === 'string' ? parsed.endpoint : defaults.endpoint,
             autoSyncEnabled: typeof parsed?.autoSyncEnabled === 'boolean' ? parsed.autoSyncEnabled : defaults.autoSyncEnabled,
-            sharedSecret: typeof parsed?.sharedSecret === 'string' ? parsed.sharedSecret : defaults.sharedSecret
+            sharedSecret: typeof parsed?.sharedSecret === 'string' ? parsed.sharedSecret : defaults.sharedSecret,
+            isWorkPc: typeof parsed?.isWorkPc === 'boolean' ? parsed.isWorkPc : defaults.isWorkPc
         };
     } catch (error) {
         console.error('Error loading call listening sync config:', error);
@@ -3257,7 +3259,8 @@ function saveCallListeningSyncConfig(config) {
     const safeConfig = {
         endpoint: String(config?.endpoint || '').trim(),
         autoSyncEnabled: Boolean(config?.autoSyncEnabled),
-        sharedSecret: String(config?.sharedSecret || '').trim()
+        sharedSecret: String(config?.sharedSecret || '').trim(),
+        isWorkPc: Boolean(config?.isWorkPc)
     };
     try {
         withRepoSyncSuppressed(() => {
@@ -3277,7 +3280,8 @@ function enforceRepoAutoSyncEnabled() {
     const normalized = {
         endpoint,
         autoSyncEnabled: current?.autoSyncEnabled === false ? false : true,
-        sharedSecret: String(current?.sharedSecret || '').trim()
+        sharedSecret: String(current?.sharedSecret || '').trim(),
+        isWorkPc: Boolean(current?.isWorkPc)
     };
 
     const endpointChanged = String(current?.endpoint || '').trim() !== endpoint;
@@ -3473,7 +3477,7 @@ async function runWithButtonBusyState(button, busyText, action) {
 
 function initializeRepoSyncControls() {
     const syncEndpointInput = document.getElementById('callListeningSyncEndpoint');
-    const syncSecretInput = document.getElementById('callListeningSyncSecret');
+    const isWorkPcCheckbox = document.getElementById('callListeningIsWorkPc');
     const autoSyncCheckbox = document.getElementById('callListeningAutoSyncEnabled');
     const syncNowBtn = document.getElementById('syncNowBtn');
     const forceRestoreBtn = document.getElementById('forceRestoreRepoBtn');
@@ -3489,13 +3493,18 @@ function initializeRepoSyncControls() {
 
     const syncConfig = loadCallListeningSyncConfig();
     syncEndpointInput.value = syncConfig.endpoint || '';
-    if (syncSecretInput) syncSecretInput.value = syncConfig.sharedSecret || '';
+    if (isWorkPcCheckbox) isWorkPcCheckbox.checked = syncConfig.isWorkPc || false;
     autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
     setAutoSyncEnabledStatus(syncConfig);
     renderCallListeningLastSync();
 
     if (!syncNowBtn.dataset.bound) {
         syncNowBtn.addEventListener('click', async () => {
+            const currentConfig = loadCallListeningSyncConfig();
+            if (!currentConfig.isWorkPc) {
+                showToast('⚠️ Sync is disabled — this is not marked as your Work PC.', 3500);
+                return;
+            }
             await runWithButtonBusyState(syncNowBtn, '⏳ Syncing...', async () => {
                 getCallListeningSyncConfigFromUI();
                 await syncRepoData('manual sync now', { force: true });
@@ -3553,6 +3562,11 @@ function initializeRepoSyncControls() {
     }
     if (uploadExcelBtn && !uploadExcelBtn.dataset.bound) {
         uploadExcelBtn.addEventListener('click', async () => {
+            const currentConfig = loadCallListeningSyncConfig();
+            if (!currentConfig.isWorkPc) {
+                showToast('⚠️ Upload is disabled — this is not marked as your Work PC.', 3500);
+                return;
+            }
             await runWithButtonBusyState(uploadExcelBtn, '⏳ Uploading...', async () => {
                 await uploadExcelFileToRepo();
             });
@@ -3574,13 +3588,11 @@ function initializeRepoSyncControls() {
         syncEndpointInput.addEventListener('input', persistEndpointConfig);
         syncEndpointInput.dataset.bound = 'true';
     }
-    if (syncSecretInput && !syncSecretInput.dataset.bound) {
-        const persistSecretConfig = () => {
+    if (isWorkPcCheckbox && !isWorkPcCheckbox.dataset.bound) {
+        isWorkPcCheckbox.addEventListener('change', () => {
             getCallListeningSyncConfigFromUI();
-        };
-        syncSecretInput.addEventListener('change', persistSecretConfig);
-        syncSecretInput.addEventListener('input', persistSecretConfig);
-        syncSecretInput.dataset.bound = 'true';
+        });
+        isWorkPcCheckbox.dataset.bound = 'true';
     }
     if (!autoSyncCheckbox.dataset.bound) {
         autoSyncCheckbox.addEventListener('change', () => {
@@ -3767,9 +3779,10 @@ async function exportIntelligenceLedgerWorkbook() {
 
 function getCallListeningSyncConfigFromUI() {
     const endpoint = document.getElementById('callListeningSyncEndpoint')?.value || '';
-    const sharedSecret = document.getElementById('callListeningSyncSecret')?.value || '';
     const autoSyncEnabled = document.getElementById('callListeningAutoSyncEnabled')?.checked ?? true;
-    return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret });
+    const isWorkPc = document.getElementById('callListeningIsWorkPc')?.checked ?? false;
+    const existing = loadCallListeningSyncConfig();
+    return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret: existing.sharedSecret, isWorkPc });
 }
 
 function summarizeStorageValue(rawValue) {
@@ -4015,6 +4028,7 @@ function pauseRepoSyncForRegression(existingSummary = null) {
 function canQueueRepoSync() {
     if (repoSyncHydrationInProgress) return false;
     const config = loadCallListeningSyncConfig();
+    if (!config.isWorkPc) return false;
     const enabled = !!(config.autoSyncEnabled && String(config.endpoint || '').trim());
     if (!enabled) return false;
 

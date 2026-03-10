@@ -788,8 +788,11 @@ Box 2 - Future Improvement Areas:
                             </label>
                         </div>
                         <div style="margin-top: 10px;">
-                            <label for="callListeningSyncSecret" style="font-weight: bold; display: block; margin-bottom: 6px; color: #333;">Sync Shared Secret (optional):</label>
-                            <input type="password" id="callListeningSyncSecret" placeholder="Set only if Worker enforces SYNC_SHARED_SECRET" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                            <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: #333; cursor: pointer;">
+                                <input type="checkbox" id="callListeningIsWorkPc">
+                                This is my Work PC (source of truth)
+                            </label>
+                            <p style="margin: 4px 0 0 26px; font-size: 0.82em; color: #78909c;">When checked, this PC can push data changes to the repo. When unchecked, you can only view/restore data.</p>
                         </div>
                         <div id="callListeningSyncStatus" style="margin-top: 8px; font-size: 0.85em; color: #546e7a;"></div>
                         <div id="callListeningLastSync" style="margin-top: 4px; font-size: 0.82em; color: #37474f;"></div>
