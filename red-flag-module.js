@@ -2,61 +2,70 @@
 // RED FLAG COACHING FUNCTIONALITY
 // ============================================
 
-function initializeRedFlag() {
-    document.getElementById('generateRedFlagEmailBtn')?.addEventListener('click', generateRedFlagEmail);
-    document.getElementById('copyRedFlagEmailBtn')?.addEventListener('click', copyRedFlagEmail);
-    document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
+// ============================================
+// DATA-DRIVEN TODO TYPE REGISTRY
+// ============================================
 
-    document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
-    document.getElementById('followUpProcessType')?.addEventListener('change', handleFollowUpProcessTypeChange);
-    document.getElementById('followUpBillingProcessType')?.addEventListener('change', handleFollowUpBillingProcessTypeChange);
-    document.getElementById('showFollowUpPanelBtn')?.addEventListener('click', () => switchRedFlagMode('follow-up'));
-    document.getElementById('showRedFlagPanelBtn')?.addEventListener('click', () => switchRedFlagMode('red-flag'));
-    document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
-    document.getElementById('sendFollowUpBillingEmailBtn')?.addEventListener('click', sendFollowUpEmail);
-    document.getElementById('openFollowUpEmailBtn')?.addEventListener('click', openFollowUpEmailDraft);
-    document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
-    document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
-
-    populateFollowUpAssociateDropdown();
-    switchRedFlagMode('follow-up');
-    handleFollowUpTodoTypeChange();
-}
-
-const REFUND_CHECK_REVIEW_PROCESS = `Rep didn’t verify in the To-Do that the mailing address was updated/verified in CCB. They are unable to proceed until this is validated.
-
-Next, submit a new To-Do clearly stating that you verified where the refund check will be mailed.
-
-To validate the address, open the person record (the account may be inactive), then go to Correspondence Info. If no mailing address is listed, confirm the correct mailing address directly with the customer before resubmitting.`;
-
-const FOLLOW_UP_PROCESS_LIBRARY = {
-    'rep-did-not-verify': `Before submitting the To-Do, verify and document where the refund check will be mailed.
+const FOLLOW_UP_TODO_TYPES = {
+    'refund-check-review': {
+        label: 'Refund Check Review',
+        defaultProcess: 'rep-did-not-verify',
+        processOptions: [
+            {
+                value: 'rep-did-not-verify',
+                label: "Rep didn't verify address/details in To-Do",
+                declineReason: "The To-Do was declined because the mailing address was not verified or documented in the submission.",
+                process: `Before submitting the To-Do, verify and document where the refund check will be mailed.
 
 In CCB, open the person record and review Correspondence Info. If the account is inactive or no address is listed, confirm the mailing address directly with the customer.
 
-Resubmit the To-Do with clear notes that state the address was validated and where the check should be sent.`,
-    'missing-validation': `Complete all required validation steps before resubmitting the To-Do.
+Resubmit the To-Do with clear notes that state the address was validated and where the check should be sent.`
+            },
+            {
+                value: 'missing-validation',
+                label: 'Missing required validation before resubmission',
+                declineReason: "The To-Do was declined because required validation steps were not completed before submission.",
+                process: `Complete all required validation steps before resubmitting the To-Do.
 
 Confirm the customer details in CCB, verify mailing instructions, and ensure all policy checks are completed.
 
-Update the new To-Do with clear confirmation notes so the reviewer can approve without additional follow-up.`,
-    'insufficient-notes': `Resubmit the To-Do with complete, specific notes.
+Update the new To-Do with clear confirmation notes so the reviewer can approve without additional follow-up.`
+            },
+            {
+                value: 'insufficient-notes',
+                label: 'To-Do notes were incomplete/unclear',
+                declineReason: "The To-Do was declined because the notes did not provide enough detail to process the request.",
+                process: `Resubmit the To-Do with complete, specific notes.
 
 Your notes should clearly state what was reviewed, what was verified, and the final mailing destination for the refund check.
 
 Detailed documentation helps avoid delays and supports faster approval.`
-};
-
-const GENERAL_BILLING_PROCESS_LIBRARY = {
-    'missing-installment-count': `The General Billing Request To-Do was declined because it did not include the number of installments for the payment arrangement.
+            },
+            { value: 'other', label: 'Other (custom)', declineReason: '', process: '' }
+        ]
+    },
+    'general-billing-request': {
+        label: 'General Billing Request',
+        defaultProcess: 'missing-installment-count',
+        processOptions: [
+            {
+                value: 'missing-installment-count',
+                label: 'Missing number of installments',
+                declineReason: "The General Billing Request To-Do was declined because it did not include the number of installments for the payment arrangement.",
+                process: `The General Billing Request To-Do was declined because it did not include the number of installments for the payment arrangement.
 
 When submitting a PA on an old balance, always include:
 - The total balance being arranged
 - The number of installments requested
 - The installment amount
 
-Resubmit the To-Do with the installment count and amount clearly stated in the notes.`,
-    'missing-pa-details': `The General Billing Request To-Do was declined because it was missing required payment arrangement details.
+Resubmit the To-Do with the installment count and amount clearly stated in the notes.`
+            },
+            {
+                value: 'missing-pa-details',
+                label: 'Missing or incomplete PA details',
+                declineReason: "The General Billing Request To-Do was declined because it was missing required payment arrangement details.",
+                process: `The General Billing Request To-Do was declined because it was missing required payment arrangement details.
 
 Ensure the To-Do includes:
 - The reason a General Billing To-Do is needed (e.g., pending start, old balance)
@@ -64,8 +73,13 @@ Ensure the To-Do includes:
 - The number of installments and payment schedule
 - Any relevant account notes or context
 
-Resubmit with all required details so the request can be processed without follow-up.`,
-    'insufficient-billing-notes': `The General Billing Request To-Do was declined because the notes did not provide enough information to process the request.
+Resubmit with all required details so the request can be processed without follow-up.`
+            },
+            {
+                value: 'insufficient-billing-notes',
+                label: 'Billing notes were incomplete/unclear',
+                declineReason: "The General Billing Request To-Do was declined because the notes did not provide enough information to process the request.",
+                process: `The General Billing Request To-Do was declined because the notes did not provide enough information to process the request.
 
 Include clear, specific notes that explain:
 - What action is being requested and why
@@ -73,15 +87,170 @@ Include clear, specific notes that explain:
 - Any special circumstances (e.g., pending start, account status)
 
 Detailed notes help avoid delays and support faster processing.`
+            },
+            { value: 'other', label: 'Other (custom)', declineReason: '', process: '' }
+        ]
+    }
 };
 
 let pendingFollowUpMailtoUrl = '';
+let lastAutoDeclineReason = '';
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+function initializeRedFlag() {
+    document.getElementById('generateRedFlagEmailBtn')?.addEventListener('click', generateRedFlagEmail);
+    document.getElementById('copyRedFlagEmailBtn')?.addEventListener('click', copyRedFlagEmail);
+    document.getElementById('clearRedFlagEmailBtn')?.addEventListener('click', clearRedFlagEmail);
+
+    document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
+    document.getElementById('showFollowUpPanelBtn')?.addEventListener('click', () => switchRedFlagMode('follow-up'));
+    document.getElementById('showRedFlagPanelBtn')?.addEventListener('click', () => switchRedFlagMode('red-flag'));
+    document.getElementById('openFollowUpEmailBtn')?.addEventListener('click', openFollowUpEmailDraft);
+    document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
+    document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
+
+    document.getElementById('followUpHistoryFilter')?.addEventListener('change', renderFollowUpHistory);
+
+    populateFollowUpTodoTypeDropdown();
+    populateFollowUpAssociateDropdown();
+    switchRedFlagMode('follow-up');
+    renderFollowUpHistory();
+}
+
+// ============================================
+// TODO TYPE DROPDOWN (DATA-DRIVEN)
+// ============================================
+
+function populateFollowUpTodoTypeDropdown() {
+    const select = document.getElementById('followUpTodoType');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Select a To-Do Type --</option>';
+    Object.entries(FOLLOW_UP_TODO_TYPES).forEach(([key, config]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = config.label;
+        select.appendChild(option);
+    });
+}
+
+// ============================================
+// DYNAMIC FIELDS RENDERING
+// ============================================
+
+function renderFollowUpFields(todoTypeKey) {
+    const container = document.getElementById('followUpDynamicFields');
+    if (!container) return;
+
+    const config = FOLLOW_UP_TODO_TYPES[todoTypeKey];
+    if (!config) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const processOptionsHtml = config.processOptions.map(opt =>
+        `<option value="${opt.value}">${opt.label}</option>`
+    ).join('');
+
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
+                <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+            </div>
+            <div>
+                <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Reason To-Do Was Declined:</label>
+            <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
+            <select id="followUpProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
+                <option value="">-- Select Correct Process --</option>
+                ${processOptionsHtml}
+            </select>
+            <textarea id="followUpProcess" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
+        </div>
+
+        <button type="button" id="sendFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📝 Build Follow Up Draft</button>
+    `;
+
+    // Bind dynamic event listeners
+    document.getElementById('followUpProcessType')?.addEventListener('change', handleFollowUpProcessTypeChange);
+    document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
+
+    // Set default process and trigger auto-populate
+    const processSelect = document.getElementById('followUpProcessType');
+    if (processSelect && config.defaultProcess) {
+        processSelect.value = config.defaultProcess;
+        handleFollowUpProcessTypeChange();
+    }
+}
+
+// ============================================
+// EVENT HANDLERS
+// ============================================
+
+function handleFollowUpTodoTypeChange() {
+    const todoType = document.getElementById('followUpTodoType')?.value || '';
+    lastAutoDeclineReason = '';
+    renderFollowUpFields(todoType);
+}
+
+function handleFollowUpProcessTypeChange() {
+    const todoType = document.getElementById('followUpTodoType')?.value || '';
+    const processTypeValue = document.getElementById('followUpProcessType')?.value || '';
+    const processArea = document.getElementById('followUpProcess');
+    const declineArea = document.getElementById('followUpDeclineReason');
+    if (!processArea) return;
+
+    const config = FOLLOW_UP_TODO_TYPES[todoType];
+    if (!config) return;
+
+    const option = config.processOptions.find(o => o.value === processTypeValue);
+
+    if (!processTypeValue) {
+        processArea.value = '';
+        return;
+    }
+
+    if (processTypeValue === 'other') {
+        if (!processArea.value.trim()) {
+            processArea.value = 'Enter the correct process details for this follow-up.';
+        }
+    } else if (option) {
+        processArea.value = option.process;
+    }
+
+    // Auto-populate decline reason if not user-edited
+    if (declineArea && option) {
+        const currentReason = declineArea.value.trim();
+        if (!currentReason || currentReason === lastAutoDeclineReason) {
+            declineArea.value = option.declineReason;
+            lastAutoDeclineReason = option.declineReason;
+        }
+    }
+}
+
+// ============================================
+// FOLLOW-UP PANEL MODE SWITCHING
+// ============================================
 
 function switchRedFlagMode(mode) {
     const showFollowUpBtn = document.getElementById('showFollowUpPanelBtn');
     const showRedFlagBtn = document.getElementById('showRedFlagPanelBtn');
     const followUpPanel = document.getElementById('followUpPanel');
     const followUpPreview = document.getElementById('followUpEmailPreviewSection');
+    const followUpHistory = document.getElementById('followUpHistoryPanel');
     const redFlagPanel = document.getElementById('redFlagPanel');
 
     const isFollowUp = mode !== 'red-flag';
@@ -95,6 +264,10 @@ function switchRedFlagMode(mode) {
     if (followUpPreview) {
         const hasPreview = Boolean(document.getElementById('followUpEmailPreviewText')?.textContent?.trim());
         followUpPreview.style.display = isFollowUp && hasPreview ? 'block' : 'none';
+    }
+    if (followUpHistory) {
+        followUpHistory.style.display = isFollowUp ? 'block' : 'none';
+        if (isFollowUp) renderFollowUpHistory();
     }
     if (redFlagPanel) {
         redFlagPanel.style.display = isFollowUp ? 'none' : 'block';
@@ -142,75 +315,9 @@ function populateFollowUpAssociateDropdown() {
     }
 }
 
-function handleFollowUpTodoTypeChange() {
-    const todoType = document.getElementById('followUpTodoType')?.value || '';
-    const refundFields = document.getElementById('refundCheckReviewFields');
-    const billingFields = document.getElementById('generalBillingRequestFields');
-    const processType = document.getElementById('followUpProcessType');
-    const processArea = document.getElementById('followUpProcess');
-    const billingProcessType = document.getElementById('followUpBillingProcessType');
-    const billingProcessArea = document.getElementById('followUpBillingProcess');
-
-    if (refundFields) refundFields.style.display = todoType === 'refund-check-review' ? 'block' : 'none';
-    if (billingFields) billingFields.style.display = todoType === 'general-billing-request' ? 'block' : 'none';
-
-    if (todoType === 'refund-check-review') {
-        if (processType && !processType.value) {
-            processType.value = 'rep-did-not-verify';
-        }
-        handleFollowUpProcessTypeChange();
-    } else if (todoType === 'general-billing-request') {
-        if (billingProcessType && !billingProcessType.value) {
-            billingProcessType.value = 'missing-installment-count';
-        }
-        handleFollowUpBillingProcessTypeChange();
-    } else {
-        if (processType) processType.value = '';
-        if (processArea) processArea.value = '';
-        if (billingProcessType) billingProcessType.value = '';
-        if (billingProcessArea) billingProcessArea.value = '';
-    }
-}
-
-function handleFollowUpProcessTypeChange() {
-    const processType = document.getElementById('followUpProcessType')?.value || '';
-    const processArea = document.getElementById('followUpProcess');
-    if (!processArea) return;
-
-    if (!processType) {
-        processArea.value = '';
-        return;
-    }
-
-    if (processType === 'other') {
-        if (!processArea.value.trim()) {
-            processArea.value = 'Enter the correct process details for this follow-up.';
-        }
-        return;
-    }
-
-    processArea.value = FOLLOW_UP_PROCESS_LIBRARY[processType] || REFUND_CHECK_REVIEW_PROCESS;
-}
-
-function handleFollowUpBillingProcessTypeChange() {
-    const processType = document.getElementById('followUpBillingProcessType')?.value || '';
-    const processArea = document.getElementById('followUpBillingProcess');
-    if (!processArea) return;
-
-    if (!processType) {
-        processArea.value = '';
-        return;
-    }
-
-    if (processType === 'other') {
-        if (!processArea.value.trim()) {
-            processArea.value = 'Enter the correct process details for this follow-up.';
-        }
-        return;
-    }
-
-    processArea.value = GENERAL_BILLING_PROCESS_LIBRARY[processType] || '';
-}
+// ============================================
+// EMAIL BUILDING
+// ============================================
 
 function buildApsEmailFromName(personName) {
     const normalizedParts = String(personName || '')
@@ -236,26 +343,18 @@ function sendFollowUpEmail() {
         return;
     }
 
-    let customerAccount, customerName, declineReason, processType, correctProcess, todoLabel;
-
-    if (todoType === 'refund-check-review') {
-        customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
-        customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
-        declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
-        processType = document.getElementById('followUpProcessType')?.value || '';
-        correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
-        todoLabel = 'Refund Check Review';
-    } else if (todoType === 'general-billing-request') {
-        customerAccount = document.getElementById('followUpBillingCustomerAccount')?.value.trim() || '';
-        customerName = document.getElementById('followUpBillingCustomerName')?.value.trim() || '';
-        declineReason = document.getElementById('followUpBillingDeclineReason')?.value.trim() || '';
-        processType = document.getElementById('followUpBillingProcessType')?.value || '';
-        correctProcess = document.getElementById('followUpBillingProcess')?.value.trim() || '';
-        todoLabel = 'General Billing Request';
-    } else {
+    const config = FOLLOW_UP_TODO_TYPES[todoType];
+    if (!config) {
         alert('⚠️ Unsupported To-Do type.');
         return;
     }
+
+    const todoLabel = config.label;
+    const customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
+    const customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
+    const declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
+    const processType = document.getElementById('followUpProcessType')?.value || '';
+    const correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
 
     if (!customerName) {
         alert('⚠️ Please enter the customer name.');
@@ -304,7 +403,143 @@ Thank you.`;
     }
 
     pendingFollowUpMailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Log to follow-up history
+    logFollowUpEntry({
+        associateName,
+        todoType,
+        todoLabel,
+        processType,
+        customerName,
+        customerAccount,
+        declineReason,
+        correctProcess
+    });
 }
+
+// ============================================
+// FOLLOW-UP HISTORY
+// ============================================
+
+function loadFollowUpHistory() {
+    return window.DevCoachModules?.storage?.loadFollowUpHistory?.() || { entries: [] };
+}
+
+function saveFollowUpHistory(data) {
+    window.DevCoachModules?.storage?.saveFollowUpHistory?.(data);
+}
+
+function logFollowUpEntry(details) {
+    const history = loadFollowUpHistory();
+    if (!Array.isArray(history.entries)) {
+        history.entries = [];
+    }
+
+    const entry = {
+        id: `fu_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        associateName: details.associateName,
+        todoType: details.todoType,
+        todoLabel: details.todoLabel,
+        processType: details.processType,
+        customerName: details.customerName,
+        customerAccount: details.customerAccount,
+        declineReason: details.declineReason,
+        correctProcess: details.correctProcess,
+        sentAt: new Date().toISOString(),
+        status: 'pending'
+    };
+
+    history.entries.unshift(entry);
+
+    // Cap at 200 entries
+    if (history.entries.length > 200) {
+        history.entries = history.entries.slice(0, 200);
+    }
+
+    saveFollowUpHistory(history);
+    renderFollowUpHistory();
+
+    if (typeof queueCallListeningRepoSync === 'function') {
+        queueCallListeningRepoSync('follow-up sent');
+    }
+}
+
+function toggleFollowUpStatus(entryId) {
+    const history = loadFollowUpHistory();
+    if (!Array.isArray(history.entries)) return;
+
+    const entry = history.entries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    entry.status = entry.status === 'pending' ? 'resolved' : 'pending';
+    saveFollowUpHistory(history);
+    renderFollowUpHistory();
+
+    if (typeof queueCallListeningRepoSync === 'function') {
+        queueCallListeningRepoSync('follow-up status updated');
+    }
+}
+
+function renderFollowUpHistory() {
+    const panel = document.getElementById('followUpHistoryPanel');
+    const listEl = document.getElementById('followUpHistoryList');
+    const countEl = document.getElementById('followUpHistoryCount');
+    if (!panel || !listEl) return;
+
+    const history = loadFollowUpHistory();
+    const entries = Array.isArray(history.entries) ? history.entries : [];
+
+    if (entries.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const filterValue = document.getElementById('followUpHistoryFilter')?.value || 'all';
+    const filtered = filterValue === 'all' ? entries : entries.filter(e => e.status === filterValue);
+
+    const pendingCount = entries.filter(e => e.status === 'pending').length;
+    const resolvedCount = entries.filter(e => e.status === 'resolved').length;
+
+    if (countEl) {
+        countEl.textContent = `(${pendingCount} pending, ${resolvedCount} resolved)`;
+    }
+
+    panel.style.display = 'block';
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<p style="color: #999; text-align: center; padding: 12px;">No follow-ups match this filter.</p>';
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(entry => {
+        const date = entry.sentAt ? new Date(entry.sentAt).toLocaleDateString() : 'Unknown';
+        const isPending = entry.status === 'pending';
+        const statusColor = isPending ? '#ef6c00' : '#2e7d32';
+        const statusBg = isPending ? '#fff3e0' : '#e8f5e9';
+        const statusLabel = isPending ? 'Pending' : 'Resolved';
+        const rowOpacity = isPending ? '1' : '0.75';
+        const reasonPreview = String(entry.declineReason || '').slice(0, 80) + (String(entry.declineReason || '').length > 80 ? '...' : '');
+
+        return `<div style="padding: 10px 12px; border-bottom: 1px solid #eee; opacity: ${rowOpacity}; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
+            <div>
+                <div style="font-weight: 600; color: #333; font-size: 0.95em;">${escapeHtml(entry.associateName)} — ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
+                <div style="font-size: 0.82em; color: #666; margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}) — ${date}</div>
+                <div style="font-size: 0.8em; color: #888; margin-top: 2px; font-style: italic;">${escapeHtml(reasonPreview)}</div>
+            </div>
+            <button onclick="toggleFollowUpStatus('${entry.id}')" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 999px; padding: 4px 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; white-space: nowrap;">${statusLabel}</button>
+        </div>`;
+    }).join('');
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ============================================
+// EMAIL ACTIONS
+// ============================================
 
 function openFollowUpEmailDraft() {
     if (!pendingFollowUpMailtoUrl) {
@@ -339,38 +574,23 @@ function copyFollowUpEmail() {
 function clearFollowUpEmail() {
     const todoType = document.getElementById('followUpTodoType');
     const personName = document.getElementById('followUpPersonName');
-    const customerAccount = document.getElementById('followUpCustomerAccount');
-    const customerName = document.getElementById('followUpCustomerName');
-    const declineReason = document.getElementById('followUpDeclineReason');
-    const processType = document.getElementById('followUpProcessType');
-    const processArea = document.getElementById('followUpProcess');
     const previewSection = document.getElementById('followUpEmailPreviewSection');
     const previewText = document.getElementById('followUpEmailPreviewText');
 
     if (todoType) todoType.value = '';
     if (personName) personName.value = '';
-    if (customerAccount) customerAccount.value = '';
-    if (customerName) customerName.value = '';
-    if (declineReason) declineReason.value = '';
-    if (processType) processType.value = '';
-    if (processArea) processArea.value = '';
     if (previewText) previewText.textContent = '';
     if (previewSection) previewSection.style.display = 'none';
     pendingFollowUpMailtoUrl = '';
+    lastAutoDeclineReason = '';
 
-    const billingAccount = document.getElementById('followUpBillingCustomerAccount');
-    const billingName = document.getElementById('followUpBillingCustomerName');
-    const billingReason = document.getElementById('followUpBillingDeclineReason');
-    const billingProcessType = document.getElementById('followUpBillingProcessType');
-    const billingProcessArea = document.getElementById('followUpBillingProcess');
-    if (billingAccount) billingAccount.value = '';
-    if (billingName) billingName.value = '';
-    if (billingReason) billingReason.value = '';
-    if (billingProcessType) billingProcessType.value = '';
-    if (billingProcessArea) billingProcessArea.value = '';
-
-    handleFollowUpTodoTypeChange();
+    const container = document.getElementById('followUpDynamicFields');
+    if (container) container.innerHTML = '';
 }
+
+// ============================================
+// RED FLAG COACHING
+// ============================================
 
 function generateRedFlagEmail() {
     const associateName = document.getElementById('redFlagAssociateName').value.trim();

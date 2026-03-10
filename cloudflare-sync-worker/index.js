@@ -92,6 +92,7 @@ export default {
         myTeamMembers: sanitizeForRepo(body?.myTeamMembers && typeof body.myTeamMembers === 'object' ? body.myTeamMembers : {}),
         callCenterAverages: sanitizeForRepo(body?.callCenterAverages && typeof body.callCenterAverages === 'object' ? body.callCenterAverages : {}),
         ptoTracker: sanitizeForRepo(body?.ptoTracker && typeof body.ptoTracker === 'object' ? body.ptoTracker : { entries: [] }),
+        followUpHistory: sanitizeForRepo(body?.followUpHistory && typeof body.followUpHistory === 'object' ? body.followUpHistory : { entries: [] }),
         yearEndAnnualGoalsStore: sanitizeForRepo(body?.yearEndAnnualGoalsStore && typeof body.yearEndAnnualGoalsStore === 'object' ? body.yearEndAnnualGoalsStore : {}),
         yearEndDraftStore: sanitizeForRepo(body?.yearEndDraftStore && typeof body.yearEndDraftStore === 'object' ? body.yearEndDraftStore : {}),
         appStorageSnapshot: sanitizeForRepo(body?.appStorageSnapshot && typeof body.appStorageSnapshot === 'object' ? body.appStorageSnapshot : {})

@@ -1232,8 +1232,6 @@ Box 2 - Future Improvement Areas:
                                 <label for="followUpTodoType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">To-Do Type:</label>
                                 <select id="followUpTodoType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
                                     <option value="">-- Select a To-Do Type --</option>
-                                    <option value="refund-check-review">Refund Check Review</option>
-                                    <option value="general-billing-request">General Billing Request</option>
                                 </select>
                             </div>
                             <div>
@@ -1244,69 +1242,21 @@ Box 2 - Future Improvement Areas:
                             </div>
                         </div>
 
-                        <div id="refundCheckReviewFields" style="display: none;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                <div>
-                                    <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
-                                    <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                </div>
-                                <div>
-                                    <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
-                                    <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                </div>
-                            </div>
+                        <div id="followUpDynamicFields"></div>
+                    </div>
 
-                            <div style="margin-bottom: 15px;">
-                                <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Reason To-Do Was Declined:</label>
-                                <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
-                            </div>
-
-                            <div style="margin-bottom: 15px;">
-                                <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
-                                <select id="followUpProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
-                                    <option value="">-- Select Correct Process --</option>
-                                    <option value="rep-did-not-verify">Rep didn’t verify address/details in To-Do</option>
-                                    <option value="missing-validation">Missing required validation before resubmission</option>
-                                    <option value="insufficient-notes">To-Do notes were incomplete/unclear</option>
-                                    <option value="other">Other (custom)</option>
+                    <div id="followUpHistoryPanel" style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ffab91; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="color: #e65100; margin: 0;">📋 Follow-Up History <span id="followUpHistoryCount" style="font-size: 0.8em; color: #78909c;"></span></h3>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="followUpHistoryFilter" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85em;">
+                                    <option value="all">All</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="resolved">Resolved</option>
                                 </select>
-                                <textarea id="followUpProcess" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
                             </div>
-
-                            <button type="button" id="sendFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📝 Build Follow Up Draft</button>
                         </div>
-
-                        <div id="generalBillingRequestFields" style="display: none;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                <div>
-                                    <label for="followUpBillingCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
-                                    <input type="text" id="followUpBillingCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                </div>
-                                <div>
-                                    <label for="followUpBillingCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
-                                    <input type="text" id="followUpBillingCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                </div>
-                            </div>
-
-                            <div style="margin-bottom: 15px;">
-                                <label for="followUpBillingDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Reason To-Do Was Declined:</label>
-                                <textarea id="followUpBillingDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
-                            </div>
-
-                            <div style="margin-bottom: 15px;">
-                                <label for="followUpBillingProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
-                                <select id="followUpBillingProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
-                                    <option value="">-- Select Correct Process --</option>
-                                    <option value="missing-installment-count">Missing number of installments</option>
-                                    <option value="missing-pa-details">Missing or incomplete PA details</option>
-                                    <option value="insufficient-billing-notes">Billing notes were incomplete/unclear</option>
-                                    <option value="other">Other (custom)</option>
-                                </select>
-                                <textarea id="followUpBillingProcess" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
-                            </div>
-
-                            <button type="button" id="sendFollowUpBillingEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📝 Build Follow Up Draft</button>
-                        </div>
+                        <div id="followUpHistoryList" style="max-height: 400px; overflow-y: auto;"></div>
                     </div>
 
                     <div id="followUpEmailPreviewSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #ff8a65;">

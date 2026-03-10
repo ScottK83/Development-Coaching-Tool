@@ -3889,6 +3889,8 @@ function buildRepoSyncPayload(reason = 'updated') {
     const ptoTracker = window.DevCoachModules?.storage?.loadPtoTracker?.() || {};
     const localDataSummary = summarizeLocalBackupFreshness();
 
+    const followUpHistory = window.DevCoachModules?.storage?.loadFollowUpHistory?.() || { entries: [] };
+
     return {
         appVersion: APP_VERSION,
         reason,
@@ -3903,6 +3905,7 @@ function buildRepoSyncPayload(reason = 'updated') {
         myTeamMembers: myTeamMembers || {},
         callCenterAverages: loadCallCenterAverages() || {},
         ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
+        followUpHistory: followUpHistory,
         yearEndAnnualGoalsStore: loadYearEndAnnualGoalsStore(),
         yearEndDraftStore: loadYearEndDraftStore(),
         appStorageSnapshot: getAllAppStorageSnapshot(),
@@ -4166,6 +4169,12 @@ function applyRepoBackupPayload(payload) {
     }
     saveYearEndAnnualGoalsStore(coerceObject(payload?.yearEndAnnualGoalsStore));
     saveYearEndDraftStore(coerceObject(payload?.yearEndDraftStore));
+    if (window.DevCoachModules?.storage?.saveFollowUpHistory) {
+        const restoredFollowUpHistory = payload?.followUpHistory && typeof payload.followUpHistory === 'object'
+            ? payload.followUpHistory
+            : { entries: [] };
+        window.DevCoachModules.storage.saveFollowUpHistory(restoredFollowUpHistory);
+    }
 }
 
 function loadRepoBackupAppliedAt() {

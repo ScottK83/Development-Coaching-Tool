@@ -289,6 +289,35 @@
         }
     }
 
+    // ============================================
+    // FOLLOW-UP HISTORY
+    // ============================================
+
+    function loadFollowUpHistory() {
+        try {
+            const namespacedKey = STORAGE_PREFIX + 'followUpHistory';
+            const saved = localStorage.getItem(namespacedKey);
+            return saved ? JSON.parse(saved) : { entries: [] };
+        } catch (error) {
+            console.error('Error loading follow-up history:', error);
+            return { entries: [] };
+        }
+    }
+
+    function saveFollowUpHistory(data) {
+        try {
+            if (!saveWithSizeCheck('followUpHistory', data || { entries: [] })) {
+                console.error('Failed to save follow-up history due to size');
+            }
+        } catch (error) {
+            console.error('Error saving follow-up history:', error);
+        }
+    }
+
+    // ============================================
+    // PTO TRACKER
+    // ============================================
+
     function loadPtoTracker() {
         try {
             const namespacedKey = STORAGE_PREFIX + 'ptoTracker';
@@ -344,6 +373,9 @@
         saveUserTips,
         loadTipUsageHistory,
         saveTipUsageHistory,
+        // Follow-up history
+        loadFollowUpHistory,
+        saveFollowUpHistory,
         // PTO
         loadPtoTracker,
         savePtoTracker,
