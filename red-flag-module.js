@@ -9,9 +9,11 @@ function initializeRedFlag() {
 
     document.getElementById('followUpTodoType')?.addEventListener('change', handleFollowUpTodoTypeChange);
     document.getElementById('followUpProcessType')?.addEventListener('change', handleFollowUpProcessTypeChange);
+    document.getElementById('followUpBillingProcessType')?.addEventListener('change', handleFollowUpBillingProcessTypeChange);
     document.getElementById('showFollowUpPanelBtn')?.addEventListener('click', () => switchRedFlagMode('follow-up'));
     document.getElementById('showRedFlagPanelBtn')?.addEventListener('click', () => switchRedFlagMode('red-flag'));
     document.getElementById('sendFollowUpEmailBtn')?.addEventListener('click', sendFollowUpEmail);
+    document.getElementById('sendFollowUpBillingEmailBtn')?.addEventListener('click', sendFollowUpEmail);
     document.getElementById('openFollowUpEmailBtn')?.addEventListener('click', openFollowUpEmailDraft);
     document.getElementById('copyFollowUpEmailBtn')?.addEventListener('click', copyFollowUpEmail);
     document.getElementById('clearFollowUpEmailBtn')?.addEventListener('click', clearFollowUpEmail);
@@ -43,6 +45,34 @@ Update the new To-Do with clear confirmation notes so the reviewer can approve w
 Your notes should clearly state what was reviewed, what was verified, and the final mailing destination for the refund check.
 
 Detailed documentation helps avoid delays and supports faster approval.`
+};
+
+const GENERAL_BILLING_PROCESS_LIBRARY = {
+    'missing-installment-count': `The General Billing Request To-Do was declined because it did not include the number of installments for the payment arrangement.
+
+When submitting a PA on an old balance, always include:
+- The total balance being arranged
+- The number of installments requested
+- The installment amount
+
+Resubmit the To-Do with the installment count and amount clearly stated in the notes.`,
+    'missing-pa-details': `The General Billing Request To-Do was declined because it was missing required payment arrangement details.
+
+Ensure the To-Do includes:
+- The reason a General Billing To-Do is needed (e.g., pending start, old balance)
+- The total amount to be arranged
+- The number of installments and payment schedule
+- Any relevant account notes or context
+
+Resubmit with all required details so the request can be processed without follow-up.`,
+    'insufficient-billing-notes': `The General Billing Request To-Do was declined because the notes did not provide enough information to process the request.
+
+Include clear, specific notes that explain:
+- What action is being requested and why
+- All relevant dollar amounts, dates, and installment details
+- Any special circumstances (e.g., pending start, account status)
+
+Detailed notes help avoid delays and support faster processing.`
 };
 
 let pendingFollowUpMailtoUrl = '';
@@ -115,22 +145,30 @@ function populateFollowUpAssociateDropdown() {
 function handleFollowUpTodoTypeChange() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
     const refundFields = document.getElementById('refundCheckReviewFields');
+    const billingFields = document.getElementById('generalBillingRequestFields');
     const processType = document.getElementById('followUpProcessType');
     const processArea = document.getElementById('followUpProcess');
+    const billingProcessType = document.getElementById('followUpBillingProcessType');
+    const billingProcessArea = document.getElementById('followUpBillingProcess');
 
-    if (!refundFields || !processArea || !processType) return;
+    if (refundFields) refundFields.style.display = todoType === 'refund-check-review' ? 'block' : 'none';
+    if (billingFields) billingFields.style.display = todoType === 'general-billing-request' ? 'block' : 'none';
 
-    const isRefundCheckReview = todoType === 'refund-check-review';
-    refundFields.style.display = isRefundCheckReview ? 'block' : 'none';
-
-    if (isRefundCheckReview) {
-        if (!processType.value) {
+    if (todoType === 'refund-check-review') {
+        if (processType && !processType.value) {
             processType.value = 'rep-did-not-verify';
         }
         handleFollowUpProcessTypeChange();
+    } else if (todoType === 'general-billing-request') {
+        if (billingProcessType && !billingProcessType.value) {
+            billingProcessType.value = 'missing-installment-count';
+        }
+        handleFollowUpBillingProcessTypeChange();
     } else {
-        processType.value = '';
-        processArea.value = '';
+        if (processType) processType.value = '';
+        if (processArea) processArea.value = '';
+        if (billingProcessType) billingProcessType.value = '';
+        if (billingProcessArea) billingProcessArea.value = '';
     }
 }
 
@@ -154,6 +192,26 @@ function handleFollowUpProcessTypeChange() {
     processArea.value = FOLLOW_UP_PROCESS_LIBRARY[processType] || REFUND_CHECK_REVIEW_PROCESS;
 }
 
+function handleFollowUpBillingProcessTypeChange() {
+    const processType = document.getElementById('followUpBillingProcessType')?.value || '';
+    const processArea = document.getElementById('followUpBillingProcess');
+    if (!processArea) return;
+
+    if (!processType) {
+        processArea.value = '';
+        return;
+    }
+
+    if (processType === 'other') {
+        if (!processArea.value.trim()) {
+            processArea.value = 'Enter the correct process details for this follow-up.';
+        }
+        return;
+    }
+
+    processArea.value = GENERAL_BILLING_PROCESS_LIBRARY[processType] || '';
+}
+
 function buildApsEmailFromName(personName) {
     const normalizedParts = String(personName || '')
         .trim()
@@ -168,20 +226,37 @@ function buildApsEmailFromName(personName) {
 function sendFollowUpEmail() {
     const todoType = document.getElementById('followUpTodoType')?.value || '';
     const associateName = String(document.getElementById('followUpPersonName')?.value || '').trim();
-    const customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
-    const customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
-    const declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
-    const processType = document.getElementById('followUpProcessType')?.value || '';
-    const correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
 
-    if (todoType !== 'refund-check-review') {
-        alert('⚠️ Please select "Refund Check Review" as the To-Do type.');
+    if (!todoType) {
+        alert('⚠️ Please select a To-Do type.');
         return;
     }
     if (!associateName) {
         alert('⚠️ Please enter the associate name.');
         return;
     }
+
+    let customerAccount, customerName, declineReason, processType, correctProcess, todoLabel;
+
+    if (todoType === 'refund-check-review') {
+        customerAccount = document.getElementById('followUpCustomerAccount')?.value.trim() || '';
+        customerName = document.getElementById('followUpCustomerName')?.value.trim() || '';
+        declineReason = document.getElementById('followUpDeclineReason')?.value.trim() || '';
+        processType = document.getElementById('followUpProcessType')?.value || '';
+        correctProcess = document.getElementById('followUpProcess')?.value.trim() || '';
+        todoLabel = 'Refund Check Review';
+    } else if (todoType === 'general-billing-request') {
+        customerAccount = document.getElementById('followUpBillingCustomerAccount')?.value.trim() || '';
+        customerName = document.getElementById('followUpBillingCustomerName')?.value.trim() || '';
+        declineReason = document.getElementById('followUpBillingDeclineReason')?.value.trim() || '';
+        processType = document.getElementById('followUpBillingProcessType')?.value || '';
+        correctProcess = document.getElementById('followUpBillingProcess')?.value.trim() || '';
+        todoLabel = 'General Billing Request';
+    } else {
+        alert('⚠️ Unsupported To-Do type.');
+        return;
+    }
+
     if (!customerName) {
         alert('⚠️ Please enter the customer name.');
         return;
@@ -205,10 +280,10 @@ function sendFollowUpEmail() {
         return;
     }
 
-    const subject = `Follow Up Needed: Refund Check Review - ${customerName} (${customerAccount})`;
+    const subject = `Follow Up Needed: ${todoLabel} - ${customerName} (${customerAccount})`;
     const body = `Hi ${associateName},
 
-Your Refund Check Review To-Do for ${customerName} (Account ${customerAccount}) was declined.
+Your ${todoLabel} To-Do for ${customerName} (Account ${customerAccount}) was declined.
 
 What needs to be corrected:
 ${declineReason}
@@ -286,6 +361,17 @@ function clearFollowUpEmail() {
     if (previewText) previewText.textContent = '';
     if (previewSection) previewSection.style.display = 'none';
     pendingFollowUpMailtoUrl = '';
+
+    const billingAccount = document.getElementById('followUpBillingCustomerAccount');
+    const billingName = document.getElementById('followUpBillingCustomerName');
+    const billingReason = document.getElementById('followUpBillingDeclineReason');
+    const billingProcessType = document.getElementById('followUpBillingProcessType');
+    const billingProcessArea = document.getElementById('followUpBillingProcess');
+    if (billingAccount) billingAccount.value = '';
+    if (billingName) billingName.value = '';
+    if (billingReason) billingReason.value = '';
+    if (billingProcessType) billingProcessType.value = '';
+    if (billingProcessArea) billingProcessArea.value = '';
 
     handleFollowUpTodoTypeChange();
 }
