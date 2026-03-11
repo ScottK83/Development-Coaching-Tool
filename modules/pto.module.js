@@ -28,7 +28,8 @@ function getDefaultPtoTracker() {
         earnedThisYearHours: 0,
         reliabilityHoursAgainst: 0,
         ptostMaxHours: PTOST_MAX_HOURS_DEFAULT,
-        entries: []
+        entries: [],
+        payrollEntries: []
     };
 }
 
@@ -102,7 +103,8 @@ function migrateLegacyPtoTracker(rawData) {
         earnedThisYearHours: normalizeHours(source.earnedThisYearHours),
         reliabilityHoursAgainst: normalizeHours(source.reliabilityHoursAgainst),
         ptostMaxHours: normalizeHours(source.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT),
-        entries: []
+        entries: [],
+        payrollEntries: Array.isArray(source.payrollEntries) ? source.payrollEntries : []
     };
 
     if (!migrated.carriedOverHours && source.availableHours !== undefined) {
@@ -1202,6 +1204,346 @@ function importVerintEntries() {
     if (textarea) textarea.value = '';
 }
 
+// ============================================
+// PAYROLL PASTE PARSER
+// ============================================
+
+const PAYROLL_TRC_MAP = {
+    'pto': 'pto-planned',
+    'ptost': 'ptost',
+    'pto unscheduled': 'pto-unplanned'
+};
+
+function parsePayrollDate(dateStr) {
+    // Parses "01/07/2026" or "1/7/2026" -> "2026-01-07"
+    const match = String(dateStr || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return null;
+    const month = String(match[1]).padStart(2, '0');
+    const day = String(match[2]).padStart(2, '0');
+    return `${match[3]}-${month}-${day}`;
+}
+
+function parsePayrollPaste(rawText) {
+    const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
+    const entries = [];
+    const skipped = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Split by tab or comma (CSV format)
+        let cols;
+        if (line.includes('\t')) {
+            cols = line.split('\t').map(s => s.trim());
+        } else {
+            cols = line.split(',').map(s => s.trim());
+        }
+
+        // Skip header row and row-number prefixed rows
+        // Strip leading row number if present (e.g., "2\t12/23/2025\t...")
+        if (cols.length > 1 && /^\d+$/.test(cols[0]) && /\d{1,2}\/\d{1,2}\/\d{4}/.test(cols[1])) {
+            cols = cols.slice(1);
+        }
+
+        // Expect: Date, Day, Time_In, Lunch_In, Lunch_Out, Time_Out, TRC, Quantity, Status
+        // Or with row number stripped: same columns
+        // Find the date column
+        const dateCol = cols[0];
+        const date = parsePayrollDate(dateCol);
+        if (!date) continue;
+
+        // Find TRC and Quantity - they could be at various positions depending on empty columns
+        // TRC is the code column, Quantity is the hours
+        // In the CSV, empty time fields show as empty strings
+        // Columns: Date(0), Day(1), Time_In(2), Lunch_In(3), Lunch_Out(4), Time_Out(5), TRC(6), Quantity(7), Status(8)
+        let trc = '';
+        let quantity = '';
+        let status = '';
+
+        if (cols.length >= 9) {
+            trc = cols[6];
+            quantity = cols[7];
+            status = cols[8];
+        } else if (cols.length >= 7) {
+            // Shorter row - find the TRC by looking for known codes
+            for (let c = 2; c < cols.length; c++) {
+                const lower = cols[c].toLowerCase();
+                if (lower === 'reg' || lower === 'pto' || lower === 'ptost' || lower === 'pto unscheduled') {
+                    trc = cols[c];
+                    quantity = cols[c + 1] || '';
+                    status = cols[c + 2] || '';
+                    break;
+                }
+            }
+        }
+
+        if (!trc) continue;
+
+        const trcLower = trc.toLowerCase().trim();
+
+        // Skip REG entries - we only care about time off
+        if (trcLower === 'reg') continue;
+
+        // Skip header row
+        if (trcLower === 'trc') continue;
+
+        const mappedType = PAYROLL_TRC_MAP[trcLower];
+        if (!mappedType) {
+            skipped.push({ trc, date: dateCol, quantity, reason: `Unknown TRC code: ${trc}` });
+            continue;
+        }
+
+        const hours = parseFloat(quantity);
+        if (!Number.isFinite(hours) || hours <= 0) {
+            skipped.push({ trc, date: dateCol, quantity, reason: 'Invalid hours' });
+            continue;
+        }
+
+        entries.push({
+            date,
+            hours: normalizeHours(hours),
+            type: mappedType,
+            payrollTrc: trc.trim(),
+            status: String(status || '').trim(),
+            notes: `Payroll: ${trc.trim()}${status ? ' (' + status + ')' : ''}`
+        });
+    }
+
+    return { entries, skipped };
+}
+
+function importPayrollEntries() {
+    const context = getSelectedAssociateAndTracker(true);
+    if (!context.associateName || !context.tracker) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const textarea = document.getElementById('ptoPayrollPaste');
+    const rawText = textarea?.value || '';
+    if (!rawText.trim()) {
+        showToast('Paste payroll data first', 3000);
+        return;
+    }
+
+    const { entries, skipped } = parsePayrollPaste(rawText);
+
+    if (!entries.length) {
+        showToast(`No entries parsed. ${skipped.length ? skipped.length + ' skipped.' : 'Check paste format.'}`, 4000);
+        return;
+    }
+
+    // Store payroll entries separately for discrepancy comparison
+    if (!context.tracker.payrollEntries) {
+        context.tracker.payrollEntries = [];
+    }
+
+    // Deduplicate against existing payroll entries
+    const existing = new Set(
+        context.tracker.payrollEntries.map(e => `${e.date}|${e.payrollTrc}|${normalizeHours(e.hours)}`)
+    );
+
+    let added = 0;
+    let dupes = 0;
+    entries.forEach(entry => {
+        const key = `${entry.date}|${entry.payrollTrc}|${entry.hours}`;
+        if (existing.has(key)) {
+            dupes++;
+            return;
+        }
+        existing.add(key);
+        context.tracker.payrollEntries.push({
+            id: `payroll-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+            date: entry.date,
+            hours: entry.hours,
+            type: entry.type,
+            payrollTrc: entry.payrollTrc,
+            status: entry.status,
+            notes: entry.notes
+        });
+        added++;
+    });
+
+    savePtoStore(context.store);
+
+    const resultParts = [`Imported ${added} payroll entries`];
+    if (dupes > 0) resultParts.push(`${dupes} duplicates skipped`);
+    if (skipped.length > 0) resultParts.push(`${skipped.length} could not be parsed`);
+    showToast(resultParts.join(', '), 5000);
+
+    const resultsEl = document.getElementById('ptoPayrollResults');
+    if (resultsEl) {
+        let html = `<div style="padding:8px;border-radius:6px;background:#f0e8f5;color:#3e1f5e;margin-top:8px;">
+            <strong>${added} payroll entries imported</strong>${dupes ? `, ${dupes} duplicates skipped` : ''}${skipped.length ? `, ${skipped.length} unparseable` : ''}
+        </div>`;
+
+        // Show what was imported
+        if (added > 0) {
+            const summary = {};
+            entries.forEach(e => {
+                if (!existing.has(`COUNTED_${e.date}|${e.payrollTrc}|${e.hours}`)) {
+                    summary[e.payrollTrc] = (summary[e.payrollTrc] || 0) + e.hours;
+                }
+            });
+            const summaryLines = Object.entries(summary).map(([trc, hrs]) => `${trc}: ${hrs.toFixed(2)}h`).join(', ');
+            html += `<div style="padding:6px 8px;font-size:0.9em;color:#5a6a68;margin-top:4px;">${summaryLines}</div>`;
+        }
+
+        if (skipped.length) {
+            html += `<div style="padding:8px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:4px;font-size:0.9em;">
+                <strong>Skipped:</strong><br>${skipped.map(s => `${s.trc} on ${s.date}: ${s.reason}`).join('<br>')}
+            </div>`;
+        }
+        resultsEl.innerHTML = html;
+    }
+
+    if (textarea) textarea.value = '';
+}
+
+// ============================================
+// VERINT vs PAYROLL DISCREPANCY CHECK
+// ============================================
+
+function runDiscrepancyCheck() {
+    const context = getSelectedAssociateAndTracker(false);
+    if (!context.associateName || !context.tracker) {
+        showToast('Select an associate first', 3000);
+        return;
+    }
+
+    const resultsEl = document.getElementById('ptoDiscrepancyResults');
+    if (!resultsEl) return;
+
+    const tracker = context.tracker;
+    const verintEntries = getTrackedEntries(tracker).filter(e => (e.notes || '').startsWith('Verint:'));
+    const payrollEntries = Array.isArray(tracker.payrollEntries) ? tracker.payrollEntries.filter(e => {
+        const year = getYearFromIsoDateText(e.date);
+        return year === PTO_TRACKING_YEAR;
+    }) : [];
+
+    if (!verintEntries.length && !payrollEntries.length) {
+        resultsEl.innerHTML = '<div style="padding:10px;color:#856404;background:#fff3cd;border-radius:6px;">No Verint or Payroll data imported yet. Import both sources first.</div>';
+        return;
+    }
+
+    if (!verintEntries.length) {
+        resultsEl.innerHTML = '<div style="padding:10px;color:#856404;background:#fff3cd;border-radius:6px;">No Verint data imported yet. Import Verint data first.</div>';
+        return;
+    }
+
+    if (!payrollEntries.length) {
+        resultsEl.innerHTML = '<div style="padding:10px;color:#856404;background:#fff3cd;border-radius:6px;">No Payroll data imported yet. Import Payroll data first.</div>';
+        return;
+    }
+
+    // Build date-based lookup for both sources
+    // Verint: group by date, sum hours per date
+    const verintByDate = {};
+    verintEntries.forEach(e => {
+        if (!verintByDate[e.date]) verintByDate[e.date] = { totalHours: 0, entries: [] };
+        verintByDate[e.date].totalHours += normalizeHours(e.hours);
+        verintByDate[e.date].entries.push(e);
+    });
+
+    // Payroll: group by date, sum hours per date
+    const payrollByDate = {};
+    payrollEntries.forEach(e => {
+        if (!payrollByDate[e.date]) payrollByDate[e.date] = { totalHours: 0, entries: [] };
+        payrollByDate[e.date].totalHours += normalizeHours(e.hours);
+        payrollByDate[e.date].entries.push(e);
+    });
+
+    const allDates = new Set([...Object.keys(verintByDate), ...Object.keys(payrollByDate)]);
+    const sortedDates = Array.from(allDates).sort();
+
+    const discrepancies = [];
+    const matched = [];
+
+    sortedDates.forEach(date => {
+        const v = verintByDate[date];
+        const p = payrollByDate[date];
+
+        if (v && !p) {
+            discrepancies.push({
+                date,
+                issue: 'In Verint only',
+                verintHours: v.totalHours,
+                payrollHours: 0,
+                verintDetails: v.entries.map(e => `${e.type} ${normalizeHours(e.hours).toFixed(2)}h`).join(', '),
+                payrollDetails: '—',
+                severity: 'warning'
+            });
+        } else if (!v && p) {
+            discrepancies.push({
+                date,
+                issue: 'In Payroll only',
+                verintHours: 0,
+                payrollHours: p.totalHours,
+                verintDetails: '—',
+                payrollDetails: p.entries.map(e => `${e.payrollTrc} ${normalizeHours(e.hours).toFixed(2)}h`).join(', '),
+                severity: 'warning'
+            });
+        } else if (v && p) {
+            const vHours = normalizeHours(v.totalHours);
+            const pHours = normalizeHours(p.totalHours);
+            const diff = Math.abs(vHours - pHours);
+
+            if (diff > 0.01) {
+                discrepancies.push({
+                    date,
+                    issue: `Hours mismatch (${diff.toFixed(2)}h diff)`,
+                    verintHours: vHours,
+                    payrollHours: pHours,
+                    verintDetails: v.entries.map(e => `${e.type} ${normalizeHours(e.hours).toFixed(2)}h`).join(', '),
+                    payrollDetails: p.entries.map(e => `${e.payrollTrc} ${normalizeHours(e.hours).toFixed(2)}h`).join(', '),
+                    severity: diff >= 4 ? 'danger' : 'warning'
+                });
+            } else {
+                matched.push({ date, hours: vHours });
+            }
+        }
+    });
+
+    // Build summary
+    const verintTotal = verintEntries.reduce((s, e) => s + normalizeHours(e.hours), 0);
+    const payrollTotal = payrollEntries.reduce((s, e) => s + normalizeHours(e.hours), 0);
+    const totalDiff = Math.abs(verintTotal - payrollTotal);
+
+    let html = `<div style="padding:12px;border-radius:6px;background:${discrepancies.length ? '#fff5f5' : '#e8f5e9'};margin-top:8px;">
+        <strong>Summary:</strong> Verint ${verintTotal.toFixed(2)}h total | Payroll ${payrollTotal.toFixed(2)}h total | Diff: ${totalDiff.toFixed(2)}h<br>
+        <span style="font-size:0.9em;">${matched.length} dates matched, ${discrepancies.length} discrepancies found</span>
+    </div>`;
+
+    if (discrepancies.length) {
+        html += `<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:0.9em;">
+            <thead>
+                <tr style="background:#f8f9fa;text-align:left;">
+                    <th style="padding:8px;border:1px solid #dee2e6;">Date</th>
+                    <th style="padding:8px;border:1px solid #dee2e6;">Issue</th>
+                    <th style="padding:8px;border:1px solid #dee2e6;">Verint</th>
+                    <th style="padding:8px;border:1px solid #dee2e6;">Payroll</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        discrepancies.forEach(d => {
+            const rowBg = d.severity === 'danger' ? '#ffe0e0' : '#fff8e1';
+            html += `<tr style="background:${rowBg};">
+                <td style="padding:8px;border:1px solid #dee2e6;font-weight:600;">${d.date}</td>
+                <td style="padding:8px;border:1px solid #dee2e6;">${d.issue}</td>
+                <td style="padding:8px;border:1px solid #dee2e6;">${d.verintHours.toFixed(2)}h<br><span style="font-size:0.85em;color:#666;">${d.verintDetails}</span></td>
+                <td style="padding:8px;border:1px solid #dee2e6;">${d.payrollHours.toFixed(2)}h<br><span style="font-size:0.85em;color:#666;">${d.payrollDetails}</span></td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+    } else {
+        html += '<div style="padding:10px;color:#1b5e20;margin-top:8px;">All dates match between Verint and Payroll. No discrepancies found.</div>';
+    }
+
+    resultsEl.innerHTML = html;
+}
+
 function initializePtoTracker() {
     const select = document.getElementById('ptoAssociateSelect');
     const reliabilityWeekSelect = document.getElementById('ptoReliabilityWeekSelect');
@@ -1314,6 +1656,18 @@ function initializePtoTracker() {
     if (verintImportBtn && !verintImportBtn.dataset.bound) {
         verintImportBtn.addEventListener('click', importVerintEntries);
         verintImportBtn.dataset.bound = 'true';
+    }
+
+    const payrollImportBtn = document.getElementById('ptoPayrollImportBtn');
+    if (payrollImportBtn && !payrollImportBtn.dataset.bound) {
+        payrollImportBtn.addEventListener('click', importPayrollEntries);
+        payrollImportBtn.dataset.bound = 'true';
+    }
+
+    const discrepancyBtn = document.getElementById('ptoDiscrepancyBtn');
+    if (discrepancyBtn && !discrepancyBtn.dataset.bound) {
+        discrepancyBtn.addEventListener('click', runDiscrepancyCheck);
+        discrepancyBtn.dataset.bound = 'true';
     }
 }
 
