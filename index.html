@@ -947,156 +947,194 @@ Box 2 - Future Improvement Areas:
 
             <!-- PTO Tracker Section -->
             <section id="ptoSection" style="display: none;">
-                <div class="form-section" style="background: #e8f5f3; border-left: 4px solid #2f7a6d;">
-                    <h2>🕒 PTO / Time-Off Tracker</h2>
-                    <p style="color: #355; margin-bottom: 20px;">Track PTO hours with carryover + earned, log missed dates by PTO type, and flag attendance policy when PTO unplanned exceeds 16 hours.</p>
+                <div class="form-section" style="background: #f0f4f8; border-left: 4px solid #2f7a6d; padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">PTO / Time-Off Tracker</h2>
+                        <div id="ptoSyncHealthBadge" style="padding: 4px 12px; border-radius: 12px; font-size: 0.82em; font-weight: 600;"></div>
+                    </div>
 
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <label for="ptoAssociateSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Associate:</label>
-                        <select id="ptoAssociateSelect" style="width: 100%; max-width: 420px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <!-- Associate selector -->
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+                        <label for="ptoAssociateSelect" style="font-weight: 700; white-space: nowrap;">Associate:</label>
+                        <select id="ptoAssociateSelect" style="flex: 1; max-width: 400px; padding: 10px; border: 1px solid #c0cdd8; border-radius: 6px; font-size: 0.95em;">
                             <option value="">-- Choose an associate --</option>
                         </select>
                     </div>
 
                     <div id="ptoDetailsContainer" style="display: none;">
 
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-                            <div>
-                                <label for="ptoCarriedOverHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Carryover Hours:</label>
-                                <input type="number" id="ptoCarriedOverHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <!-- ===== DASHBOARD CARDS ===== -->
+                    <div id="ptoDashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px;"></div>
+
+                    <!-- Reliability source note -->
+                    <div id="ptoReliabilityDataSource" style="font-size: 0.82em; color: #6b7b8d; margin-bottom: 18px;"></div>
+
+                    <!-- ===== BALANCE SETUP (collapsible) ===== -->
+                    <details style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <summary style="padding: 14px 18px; cursor: pointer; font-weight: 700; color: #2f5f6d; font-size: 0.95em; user-select: none;">Balance Setup &amp; Configuration</summary>
+                        <div style="padding: 16px 18px; border-top: 1px solid #e8eff4;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                                <div>
+                                    <label for="ptoCarriedOverHours" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Carryover Hours</label>
+                                    <input type="number" id="ptoCarriedOverHours" step="0.25" min="0" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                                <div>
+                                    <label for="ptoEarnedThisYearHours" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Earned This Year</label>
+                                    <input type="number" id="ptoEarnedThisYearHours" step="0.25" min="0" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                                <div>
+                                    <label for="ptoReliabilityHoursAgainst" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Reliability Hours Against</label>
+                                    <input type="number" id="ptoReliabilityHoursAgainst" step="0.25" min="0" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
                             </div>
-                            <div>
-                                <label for="ptoEarnedThisYearHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Earned This Year (Hours):</label>
-                                <input type="number" id="ptoEarnedThisYearHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                    </details>
+
+                    <!-- ===== DATA IMPORT (collapsible) ===== -->
+                    <details style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <summary style="padding: 14px 18px; cursor: pointer; font-weight: 700; color: #2c5f8a; font-size: 0.95em; user-select: none;">Data Import (Verint &amp; Payroll)</summary>
+                        <div style="padding: 16px 18px; border-top: 1px solid #e8eff4;">
+                            <!-- Verint import -->
+                            <div style="margin-bottom: 18px;">
+                                <h4 style="color: #2c5f8a; margin: 0 0 8px 0; font-size: 0.92em;">Verint — Time Off Summary</h4>
+                                <textarea id="ptoVerintPaste" rows="5" placeholder="Paste Verint Time Off Summary here..." style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px; font-family: monospace; font-size: 0.83em; resize: vertical;"></textarea>
+                                <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
+                                    <button type="button" id="ptoVerintImportBtn" class="btn-primary" style="background: #2c5f8a; padding: 8px 16px; font-size: 0.9em;">Import Verint</button>
+                                    <span style="color: #888; font-size: 0.82em;">Duplicates auto-skipped</span>
+                                </div>
+                                <div id="ptoVerintResults"></div>
                             </div>
+                            <!-- Payroll import -->
                             <div>
-                                <label for="ptoReliabilityHoursAgainst" style="font-weight: bold; display: block; margin-bottom: 5px;">Reliability Hours Against (from metrics):</label>
-                                <input type="number" id="ptoReliabilityHoursAgainst" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <h4 style="color: #5a2c8a; margin: 0 0 8px 0; font-size: 0.92em;">Payroll — CSV / PDF Extract</h4>
+                                <textarea id="ptoPayrollPaste" rows="5" placeholder="Paste payroll CSV (tab or comma separated)..." style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px; font-family: monospace; font-size: 0.83em; resize: vertical;"></textarea>
+                                <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
+                                    <button type="button" id="ptoPayrollImportBtn" class="btn-primary" style="background: #5a2c8a; padding: 8px 16px; font-size: 0.9em;">Import Payroll</button>
+                                    <span style="color: #888; font-size: 0.82em;">Duplicates auto-skipped</span>
+                                </div>
+                                <div id="ptoPayrollResults"></div>
                             </div>
+                        </div>
+                    </details>
+
+                    <!-- ===== DISCREPANCY CHECK ===== -->
+                    <div style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <div style="padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: #8a2c2c; font-size: 0.95em;">Verint vs Payroll Discrepancy Check</span>
+                            <button type="button" id="ptoDiscrepancyBtn" class="btn-primary" style="background: #8a2c2c; padding: 7px 16px; font-size: 0.88em;">Run Check</button>
+                        </div>
+                        <div id="ptoDiscrepancyResults" style="padding: 0 18px 14px 18px;"></div>
+                    </div>
+
+                    <!-- ===== ADD ENTRY (collapsible) ===== -->
+                    <details style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <summary style="padding: 14px 18px; cursor: pointer; font-weight: 700; color: #2f7a6d; font-size: 0.95em; user-select: none;">Add Missed Time Entry</summary>
+                        <div style="padding: 16px 18px; border-top: 1px solid #e8eff4;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                                <div>
+                                    <label for="ptoEntryDate" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Date:</label>
+                                    <input type="date" id="ptoEntryDate" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                                <div>
+                                    <label for="ptoEntryHours" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Hours:</label>
+                                    <input type="number" id="ptoEntryHours" step="0.25" min="0" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                                <div>
+                                    <label for="ptoEntryType" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Type:</label>
+                                    <select id="ptoEntryType" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                        <option value="ptost">PTOST</option>
+                                        <option value="pto-planned">PTO Planned</option>
+                                        <option value="pto-unplanned">PTO Unplanned</option>
+                                        <option value="vto-pto">VTO-PTO</option>
+                                        <option value="tardy">Tardy</option>
+                                        <option value="tardy-ptost">Tardy (PTOST)</option>
+                                        <option value="ncns">No Call No Show</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="ptoEntryNotes" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Notes:</label>
+                                    <input type="text" id="ptoEntryNotes" placeholder="Optional" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <button type="button" id="ptoAddEntryBtn" class="btn-primary" style="padding: 8px 18px; font-size: 0.9em;">Add Entry</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- ===== RELIABILITY WEEK (collapsible) ===== -->
+                    <details style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <summary style="padding: 14px 18px; cursor: pointer; font-weight: 700; color: #2f7a6d; font-size: 0.95em; user-select: none;">Assign Reliability Week to Day(s)</summary>
+                        <div style="padding: 16px 18px; border-top: 1px solid #e8eff4;">
+                            <div id="ptoReliabilityWeekHint" style="color: #5a6a68; font-size: 0.9em; margin-bottom: 12px;"></div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label for="ptoReliabilityWeekSelect" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Week:</label>
+                                    <select id="ptoReliabilityWeekSelect" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                        <option value="">-- Choose a week --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="ptoWeekHoursPerDay" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Hours/Day:</label>
+                                    <input type="number" id="ptoWeekHoursPerDay" value="8" step="0.25" min="0" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                </div>
+                                <div>
+                                    <label for="ptoWeekEntryType" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Type:</label>
+                                    <select id="ptoWeekEntryType" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                                        <option value="ptost">PTOST</option>
+                                        <option value="pto-planned">PTO Planned</option>
+                                        <option value="pto-unplanned">PTO Unplanned</option>
+                                        <option value="vto-pto">VTO-PTO</option>
+                                        <option value="tardy">Tardy</option>
+                                        <option value="tardy-ptost">Tardy (PTOST)</option>
+                                        <option value="ncns">No Call No Show</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="ptoWeekEntryNotes" style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.9em; color: #445;">Notes:</label>
+                                <input type="text" id="ptoWeekEntryNotes" placeholder="Optional note for selected day(s)" style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px;">
+                            </div>
+                            <div id="ptoReliabilityWeekDays" style="margin-bottom: 8px;"></div>
+                            <div id="ptoReliabilitySelectionStatus" style="margin-bottom: 12px; color: #2f7a6d; font-size: 0.88em;"></div>
+                            <button type="button" id="ptoAddWeekDaysBtn" class="btn-secondary" style="background: #2f7a6d; color: white; padding: 8px 18px; font-size: 0.9em;">Add Selected Day(s)</button>
+                        </div>
+                    </details>
+
+                    <!-- ===== ENTRIES TABLE ===== -->
+                    <div style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <div style="padding: 14px 18px; border-bottom: 1px solid #e8eff4; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: #2f5f6d; font-size: 0.95em;">Time-Off Entries</span>
+                            <span id="ptoEntryCount" style="font-size: 0.82em; color: #888;"></span>
+                        </div>
+                        <div id="ptoEntries" style="padding: 12px 18px; display: grid; gap: 8px; max-height: 500px; overflow-y: auto;"></div>
+                    </div>
+
+                    <!-- ===== PAYROLL ENTRIES TABLE ===== -->
+                    <div style="margin-bottom: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <div style="padding: 14px 18px; border-bottom: 1px solid #e8eff4; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: #5a2c8a; font-size: 0.95em;">Payroll Entries</span>
+                            <span id="ptoPayrollEntryCount" style="font-size: 0.82em; color: #888;"></span>
+                        </div>
+                        <div id="ptoPayrollEntries" style="padding: 12px 18px; display: grid; gap: 6px; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+
+                    <!-- ===== EMAIL SECTION ===== -->
+                    <div style="background: #fff; border-radius: 10px; border: 1px solid #d0dce5; overflow: hidden;">
+                        <div style="padding: 14px 18px; border-bottom: 1px solid #e8eff4; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-weight: 700; color: #2f5f6d; font-size: 0.95em;">Attendance / PTO Email</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" id="ptoGenerateEmailBtn" class="btn-primary" style="background: #2f7a6d; padding: 7px 14px; font-size: 0.88em;">Generate Email</button>
+                                <button type="button" id="ptoCopyEmailBtn" class="btn-primary" style="background: #0d6efd; padding: 7px 14px; font-size: 0.88em;">Copy</button>
+                            </div>
+                        </div>
+                        <div style="padding: 14px 18px;">
+                            <textarea id="ptoEmailOutput" rows="8" style="width: 100%; padding: 10px; border: 1px solid #d0dce5; border-radius: 5px; font-size: 0.92em; line-height: 1.5; resize: vertical;"></textarea>
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Add Missed Time Entry</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-                            <div>
-                                <label for="ptoEntryDate" style="font-weight: bold; display: block; margin-bottom: 5px;">Date Missed:</label>
-                                <input type="date" id="ptoEntryDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                            <div>
-                                <label for="ptoEntryHours" style="font-weight: bold; display: block; margin-bottom: 5px;">Hours Missed:</label>
-                                <input type="number" id="ptoEntryHours" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="margin-top: 5px; color: #666; font-size: 0.85em;">Use decimal hours: 4.5 = 4h 30m, 4.75 = 4h 45m.</div>
-                            </div>
-                            <div>
-                                <label for="ptoEntryType" style="font-weight: bold; display: block; margin-bottom: 5px;">Type:</label>
-                                <select id="ptoEntryType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <option value="ptost">PTOST</option>
-                                    <option value="pto-planned">PTO Planned</option>
-                                    <option value="pto-unplanned">PTO Unplanned</option>
-                                    <option value="vto-pto">VTO-PTO</option>
-                                    <option value="tardy">Tardy</option>
-                                    <option value="tardy-ptost">Tardy (PTOST)</option>
-                                    <option value="ncns">No Call No Show</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="ptoEntryNotes" style="font-weight: bold; display: block; margin-bottom: 5px;">Notes:</label>
-                                <input type="text" id="ptoEntryNotes" placeholder="Optional note" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                        </div>
-                        <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="ptoAddEntryBtn" class="btn-primary">➕ Add Entry</button>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #d4e6f1;">
-                        <h3 style="color: #2c5f8a; margin-top: 0;">Import from Verint</h3>
-                        <p style="color: #5a6a68; font-size: 0.92em; margin-bottom: 12px;">Paste the full Verint "Time Off Summary" report. The parser reads the <strong>Time Off Activities</strong> section and auto-maps categories (Pre Planned, Same Day, PTOST, VTO, Tardy, NCNS, etc.).</p>
-                        <textarea id="ptoVerintPaste" rows="8" placeholder="Paste Verint Time Off Summary here..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical;"></textarea>
-                        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                            <button type="button" id="ptoVerintImportBtn" class="btn-primary" style="background: #2c5f8a;">Import Verint Data</button>
-                            <span style="color: #666; font-size: 0.85em;">Duplicates are automatically skipped.</span>
-                        </div>
-                        <div id="ptoVerintResults"></div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #e0d4f1;">
-                        <h3 style="color: #5a2c8a; margin-top: 0;">Import from Payroll</h3>
-                        <p style="color: #5a6a68; font-size: 0.92em; margin-bottom: 12px;">Paste the payroll CSV data (Date, Day, Time_In, ..., TRC, Quantity, Status). Only non-REG entries (PTO, PTOST, PTO Unscheduled) are imported. You can upload the PDF to Claude and ask it to extract as CSV.</p>
-                        <textarea id="ptoPayrollPaste" rows="8" placeholder="Paste payroll CSV data here (tab or comma separated)..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical;"></textarea>
-                        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                            <button type="button" id="ptoPayrollImportBtn" class="btn-primary" style="background: #5a2c8a;">Import Payroll Data</button>
-                            <span style="color: #666; font-size: 0.85em;">Duplicates are automatically skipped.</span>
-                        </div>
-                        <div id="ptoPayrollResults"></div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #f0d4d4;">
-                        <h3 style="color: #8a2c2c; margin-top: 0;">Verint vs Payroll Discrepancy Check</h3>
-                        <p style="color: #5a6a68; font-size: 0.92em; margin-bottom: 12px;">Compare imported Verint and Payroll data to find mismatches. Both sources must be imported first.</p>
-                        <button type="button" id="ptoDiscrepancyBtn" class="btn-primary" style="background: #8a2c2c;">Run Discrepancy Check</button>
-                        <div id="ptoDiscrepancyResults" style="margin-top: 10px;"></div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Assign Reliability Week to Day(s)</h3>
-                        <div id="ptoReliabilityWeekHint" style="color: #5a6a68; font-size: 0.92em; margin-bottom: 12px;"></div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 12px;">
-                            <div>
-                                <label for="ptoReliabilityWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Week with Reliability Hours:</label>
-                                <select id="ptoReliabilityWeekSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <option value="">-- Choose a week with reliability hours --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="ptoWeekHoursPerDay" style="font-weight: bold; display: block; margin-bottom: 5px;">Hours per Selected Day:</label>
-                                <input type="number" id="ptoWeekHoursPerDay" value="8" step="0.25" min="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="margin-top: 5px; color: #666; font-size: 0.85em;">Quarter-hour format (0.25 steps), e.g., 4.5 or 4.75.</div>
-                            </div>
-                            <div>
-                                <label for="ptoWeekEntryType" style="font-weight: bold; display: block; margin-bottom: 5px;">Reason Type:</label>
-                                <select id="ptoWeekEntryType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <option value="ptost">PTOST</option>
-                                    <option value="pto-planned">PTO Planned</option>
-                                    <option value="pto-unplanned">PTO Unplanned</option>
-                                    <option value="vto-pto">VTO-PTO</option>
-                                    <option value="tardy">Tardy</option>
-                                    <option value="tardy-ptost">Tardy (PTOST)</option>
-                                    <option value="ncns">No Call No Show</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: minmax(220px, 1fr); gap: 10px; margin-bottom: 10px;">
-                            <div>
-                                <label for="ptoWeekEntryNotes" style="font-weight: bold; display: block; margin-bottom: 5px;">Notes:</label>
-                                <input type="text" id="ptoWeekEntryNotes" placeholder="Optional note for selected day(s)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
-                        </div>
-                        <div id="ptoReliabilityWeekDays" style="margin-bottom: 8px;"></div>
-                        <div id="ptoReliabilitySelectionStatus" style="margin-bottom: 12px; color: #2f7a6d; font-size: 0.9em;"></div>
-                        <button type="button" id="ptoAddWeekDaysBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">➕ Add Selected Day(s)</button>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Summary</h3>
-                        <div id="ptoSummary" style="font-size: 0.95em; color: #355;"></div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Time-Off Entries</h3>
-                        <div id="ptoEntries" style="display: grid; gap: 10px;"></div>
-                    </div>
-
-                    <div style="padding: 15px; background: #ffffff; border-radius: 8px; border: 1px solid #cfe9e4;">
-                        <h3 style="color: #2f7a6d; margin-top: 0;">Attendance / PTO Email</h3>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                            <button type="button" id="ptoGenerateEmailBtn" class="btn-secondary" style="background: #2f7a6d; color: white;">✉️ Generate Email</button>
-                            <button type="button" id="ptoCopyEmailBtn" class="btn-secondary" style="background: #0d6efd; color: white;">📋 Copy Email</button>
-                        </div>
-                        <textarea id="ptoEmailOutput" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;"></textarea>
-                    </div>
+                    <!-- Hidden summary for backward compat -->
+                    <div id="ptoSummary" style="display: none;"></div>
 
                     </div>
                 </div>

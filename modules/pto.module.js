@@ -984,8 +984,10 @@ function updatePtoInputsFromTracker(associateName, tracker) {
             summary.innerHTML = '<span style="color: #666;">Select an associate to track PTO.</span>';
         }
         renderPtoEntries(getDefaultPtoTracker(), '');
+        renderPayrollEntries(getDefaultPtoTracker());
         populateReliabilityWeekSelector('');
         renderPtoReliabilitySourceNote('');
+        renderPtoSyncHealthBadge();
         if (output) output.value = '';
         return;
     }
@@ -994,6 +996,7 @@ function updatePtoInputsFromTracker(associateName, tracker) {
     populateReliabilityWeekSelector(associateName);
     renderPtoSummary(tracker, associateName);
     renderPtoEntries(tracker, associateName);
+    renderPtoSyncHealthBadge();
 }
 
 function populatePtoAssociateSelect() {
@@ -1721,100 +1724,212 @@ function deletePtoEntry(entryId) {
 
 function renderPtoSummary(data, associateName = '') {
     const summary = document.getElementById('ptoSummary');
-    if (!summary) return;
+    const dashboard = document.getElementById('ptoDashboard');
+    if (!dashboard) return;
 
     const stats = calculatePtoStats(data);
-    const displayName = associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : associateName;
 
-    // Discipline ladder status
-    let disciplineHtml = '';
+    // Build card helper
+    const card = (label, mainValue, subText, borderColor, bgColor, textColor = '#1a2a3a') => {
+        return `<div style="padding: 14px 16px; border-radius: 10px; background: ${bgColor}; border- 2px solid ${borderColor}; border-left: 4px solid ${borderColor};">
+            <div style="font-size: 0.78em; font-weight: 600; color: #6b7b8d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">${label}</div>
+            <div style="font-size: 1.5em; font-weight: 800; color: ${textColor}; line-height: 1.2;">${mainValue}</div>
+            <div style="font-size: 0.82em; color: #6b7b8d; margin-top: 4px;">${subText}</div>
+        </div>`;
+    };
+
+    // PTO Balance card
+    const ptoPercent = stats.totalPtoAvailable > 0 ? Math.round((stats.remainingPtoHours / stats.totalPtoAvailable) * 100) : 0;
+    const ptoBarColor = ptoPercent > 50 ? '#2f7a6d' : ptoPercent > 25 ? '#e6a817' : '#dc3545';
+    const ptoBar = `<div style="height:5px;background:#e0e7ed;border-radius:3px;margin-top:6px;"><div style="height:100%;width:${ptoPercent}%;background:${ptoBarColor};border-radius:3px;"></div></div>`;
+    const scheduledNote = stats.scheduledHours > 0 ? ` (${stats.scheduledHours.toFixed(1)}h scheduled)` : '';
+
+    // PTOST card
+    const ptostMax = normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT);
+    const ptostPercent = ptostMax > 0 ? Math.round((stats.ptostRemainingHours / ptostMax) * 100) : 0;
+    const ptostBarColor = ptostPercent > 50 ? '#2c5f8a' : ptostPercent > 25 ? '#e6a817' : '#dc3545';
+    const ptostBar = `<div style="height:5px;background:#e0e7ed;border-radius:3px;margin-top:6px;"><div style="height:100%;width:${ptostPercent}%;background:${ptostBarColor};border-radius:3px;"></div></div>`;
+
+    // Discipline card
+    let discLabel, discValue, discSub, discBorder, discBg, discColor;
     if (stats.discipline.current) {
-        const level = stats.discipline.current;
-        disciplineHtml = `<span style="color:#dc3545;font-weight:700;">&#x1F534; ${level.level} (${stats.sameDayHours.toFixed(2)}h at ${level.threshold}h threshold)</span>`;
+        const lvl = stats.discipline.current;
+        discLabel = 'DISCIPLINE';
+        discValue = lvl.level;
+        discSub = `${stats.sameDayHours.toFixed(1)}h same-day at ${lvl.threshold}h threshold`;
         if (stats.discipline.next) {
-            const hoursToNext = normalizeHours(stats.discipline.next.threshold - stats.sameDayHours);
-            disciplineHtml += `<br><span style="color:#856404;font-size:0.9em;">Next: ${stats.discipline.next.level} in ${hoursToNext.toFixed(2)}h</span>`;
+            discSub += ` | Next: ${stats.discipline.next.level} in ${normalizeHours(stats.discipline.next.threshold - stats.sameDayHours).toFixed(1)}h`;
         }
-    } else if (stats.discipline.next) {
-        const hoursToNext = normalizeHours(stats.discipline.next.threshold - stats.sameDayHours);
-        disciplineHtml = `<span style="color:#198754;">&#x1F7E2; No discipline triggered (${stats.sameDayHours.toFixed(2)}h same-day, ${hoursToNext.toFixed(2)}h until ${stats.discipline.next.level})</span>`;
+        discBorder = '#dc3545';
+        discBg = '#fff5f5';
+        discColor = '#dc3545';
     } else {
-        disciplineHtml = `<span style="color:#198754;">&#x1F7E2; No discipline triggered</span>`;
+        const hoursToNext = stats.discipline.next ? normalizeHours(stats.discipline.next.threshold - stats.sameDayHours) : 0;
+        discLabel = 'DISCIPLINE';
+        discValue = 'Clear';
+        discSub = `${stats.sameDayHours.toFixed(1)}h same-day` + (stats.discipline.next ? ` | ${hoursToNext.toFixed(1)}h until ${stats.discipline.next.level}` : '');
+        discBorder = '#2f7a6d';
+        discBg = '#f0faf7';
+        discColor = '#2f7a6d';
     }
 
-    // Carryover cap warning
-    let carryoverNote = '';
+    // Usage breakdown card
+    const usageLines = [];
+    if (stats.totalPtoPlannedUsed > 0) usageLines.push(`Planned: ${stats.totalPtoPlannedUsed.toFixed(1)}h`);
+    if (stats.totalPtoUnplannedUsed > 0) usageLines.push(`Unplanned: ${stats.totalPtoUnplannedUsed.toFixed(1)}h`);
+    if (stats.totalVtoPtoUsed > 0) usageLines.push(`VTO: ${stats.totalVtoPtoUsed.toFixed(1)}h`);
+    if (stats.totalTardyUsed > 0) usageLines.push(`Tardy: ${stats.totalTardyUsed.toFixed(1)}h`);
+    if (stats.totalNcnsUsed > 0) usageLines.push(`<span style="color:#dc3545;font-weight:700;">NCNS: ${stats.totalNcnsUsed.toFixed(1)}h</span>`);
+
+    // Discrepancy card
+    const verintEntries = getTrackedEntries(data).filter(e => (e.notes || '').startsWith('Verint:'));
+    const payrollEntries = Array.isArray(data.payrollEntries) ? data.payrollEntries.filter(e => getYearFromIsoDateText(e.date) === PTO_TRACKING_YEAR) : [];
+    let discrepCard = '';
+    if (verintEntries.length > 0 || payrollEntries.length > 0) {
+        const vCount = verintEntries.length;
+        const pCount = payrollEntries.length;
+        const vTotal = verintEntries.reduce((s, e) => s + normalizeHours(e.hours), 0);
+        const pTotal = payrollEntries.reduce((s, e) => s + normalizeHours(e.hours), 0);
+        const diff = Math.abs(vTotal - pTotal);
+        const hasBoth = vCount > 0 && pCount > 0;
+        const discBorderColor = !hasBoth ? '#e6a817' : diff > 0.01 ? '#dc3545' : '#2f7a6d';
+        const discBgColor = !hasBoth ? '#fffcf0' : diff > 0.01 ? '#fff5f5' : '#f0faf7';
+        const discTextColor = !hasBoth ? '#856404' : diff > 0.01 ? '#dc3545' : '#2f7a6d';
+        const mainVal = !hasBoth ? 'Incomplete' : diff > 0.01 ? `${diff.toFixed(1)}h diff` : 'Match';
+        const subVal = `Verint: ${vTotal.toFixed(1)}h (${vCount}) | Payroll: ${pTotal.toFixed(1)}h (${pCount})`;
+        discrepCard = card('VERINT vs PAYROLL', mainVal, subVal, discBorderColor, discBgColor, discTextColor);
+    }
+
+    // Carryover warning
+    let carryoverCard = '';
     if (stats.carryoverExceeds) {
-        carryoverNote = ` <span style="color:#dc3545;font-weight:600;">(exceeds ${PTO_CARRYOVER_CAP_HOURS}h cap!)</span>`;
+        carryoverCard = card('CARRYOVER', `${normalizeHours(data.carriedOverHours).toFixed(1)}h`, `Exceeds ${PTO_CARRYOVER_CAP_HOURS}h cap`, '#dc3545', '#fff5f5', '#dc3545');
     }
 
-    // NCNS flag
-    let ncnsHtml = '';
+    // NCNS card
+    let ncnsCard = '';
     if (stats.totalNcnsUsed > 0) {
-        ncnsHtml = `<br><strong style="color:#dc3545;">&#x26A0; No Call No Show:</strong> <span style="color:#dc3545;font-weight:700;">${stats.totalNcnsUsed.toFixed(2)}h — Needs WFM correction</span>`;
+        ncnsCard = card('NCNS ALERT', `${stats.totalNcnsUsed.toFixed(1)}h`, 'Needs WFM correction', '#dc3545', '#fff5f5', '#dc3545');
     }
 
-    summary.innerHTML = `
-        <strong>Associate:</strong> ${displayName}<br>
-        <strong>PTO Available:</strong> ${stats.totalPtoAvailable.toFixed(2)}h (Carryover ${normalizeHours(data.carriedOverHours).toFixed(2)}h${carryoverNote} + Earned ${normalizeHours(data.earnedThisYearHours).toFixed(2)}h)<br>
-        <strong>PTO Used:</strong> ${stats.totalPtoUsed.toFixed(2)}h (Planned ${stats.totalPtoPlannedUsed.toFixed(2)}h, Unplanned ${stats.totalPtoUnplannedUsed.toFixed(2)}h, VTO ${stats.totalVtoPtoUsed.toFixed(2)}h, Tardy ${stats.totalTardyUsed.toFixed(2)}h)<br>
-        <strong>PTO Remaining:</strong> ${stats.remainingPtoHours.toFixed(2)}h${stats.scheduledHours > 0 ? ` (${stats.scheduledHours.toFixed(2)}h scheduled future)` : ''}<br>
-        <strong>PTOST:</strong> ${stats.totalPtostUsed.toFixed(2)}h used / ${normalizeHours(data.ptostMaxHours || PTOST_MAX_HOURS_DEFAULT).toFixed(2)}h (${stats.ptostRemainingHours.toFixed(2)}h remaining)<br>
-        <strong>Reliability Hours Against:</strong> ${stats.reliabilityFromMetrics.toFixed(2)}h<br>
-        <strong>Same-Day Discipline:</strong> ${disciplineHtml}${ncnsHtml}
-    `;
+    dashboard.innerHTML =
+        card('PTO REMAINING', `${stats.remainingPtoHours.toFixed(1)}h`, `${stats.totalPtoUsed.toFixed(1)}h used of ${stats.totalPtoAvailable.toFixed(1)}h${scheduledNote}` + ptoBar, ptoBarColor, '#f8fcfb') +
+        card('PTOST', `${stats.ptostRemainingHours.toFixed(1)}h left`, `${stats.totalPtostUsed.toFixed(1)}h used of ${ptostMax.toFixed(0)}h` + ptostBar, ptostBarColor, '#f5f9fd') +
+        card(discLabel, discValue, discSub, discBorder, discBg, discColor) +
+        card('USAGE BREAKDOWN', `${stats.totalPtoUsed.toFixed(1)}h total`, usageLines.join(' | ') || 'No usage recorded', '#6b7b8d', '#f8f9fb') +
+        discrepCard +
+        ncnsCard +
+        carryoverCard;
+
+    // Also update hidden summary for email generation
+    if (summary) {
+        summary.dataset.statsJson = JSON.stringify(stats);
+    }
+}
+
+function renderPayrollEntries(data) {
+    const container = document.getElementById('ptoPayrollEntries');
+    const countEl = document.getElementById('ptoPayrollEntryCount');
+    if (!container) return;
+
+    const payrollEntries = Array.isArray(data.payrollEntries) ? data.payrollEntries.filter(e => getYearFromIsoDateText(e.date) === PTO_TRACKING_YEAR) : [];
+
+    if (countEl) countEl.textContent = payrollEntries.length ? `${payrollEntries.length} entries` : '';
+
+    if (!payrollEntries.length) {
+        container.innerHTML = '<div style="color:#888;font-size:0.9em;padding:4px 0;">No payroll entries imported yet.</div>';
+        return;
+    }
+
+    const sorted = payrollEntries.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const rows = sorted.map(entry => {
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:5px;background:#faf8fc;border:1px solid #e8e0f0;font-size:0.9em;">
+            <div><strong>${entry.date}</strong> &mdash; ${normalizeHours(entry.hours).toFixed(2)}h &bull; <span style="color:#5a2c8a;font-weight:600;">${entry.payrollTrc || entry.type}</span>${entry.status ? ` <span style="color:#888;font-size:0.85em;">(${entry.status})</span>` : ''}</div>
+            <button type="button" data-payroll-id="${entry.id}" style="background:#dc3545;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:0.85em;">Remove</button>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = rows;
+    container.querySelectorAll('button[data-payroll-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const context = getSelectedAssociateAndTracker(true);
+            if (!context.tracker) return;
+            context.tracker.payrollEntries = (context.tracker.payrollEntries || []).filter(e => e.id !== btn.dataset.payrollId);
+            savePtoStore(context.store);
+            renderPayrollEntries(context.tracker);
+            renderPtoSummary(context.tracker, context.associateName);
+        });
+    });
+}
+
+function ptoTypeLabel(type) {
+    const labels = {
+        'ptost': 'PTOST',
+        'pto-planned': 'PTO Planned',
+        'pto-unplanned': 'PTO Unplanned',
+        'vto-pto': 'VTO-PTO',
+        'tardy': 'Tardy',
+        'tardy-ptost': 'Tardy (PTOST)',
+        'ncns': 'NCNS'
+    };
+    return labels[type] || 'PTO Unplanned';
+}
+
+function ptoTypeBadgeColor(type) {
+    const colors = {
+        'ptost': { bg: '#e3f2fd', text: '#0d47a1' },
+        'pto-planned': { bg: '#e8f5e9', text: '#1b5e20' },
+        'pto-unplanned': { bg: '#fff3e0', text: '#e65100' },
+        'vto-pto': { bg: '#f3e5f5', text: '#6a1b9a' },
+        'tardy': { bg: '#fff8e1', text: '#f57f17' },
+        'tardy-ptost': { bg: '#fce4ec', text: '#880e4f' },
+        'ncns': { bg: '#ffebee', text: '#b71c1c' }
+    };
+    return colors[type] || { bg: '#f5f5f5', text: '#333' };
 }
 
 function renderPtoEntries(data, associateName = '') {
     const container = document.getElementById('ptoEntries');
+    const countEl = document.getElementById('ptoEntryCount');
     if (!container) return;
 
-    if (!data.entries.length) {
-        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">${associateName ? 'No time-off entries yet.' : 'Select an associate to view entries.'}</div>`;
+    const entries = getTrackedEntries(data);
+    if (countEl) countEl.textContent = entries.length ? `${entries.length} entries` : '';
+
+    if (!entries.length) {
+        container.innerHTML = `<div style="color:#888;font-size:0.9em;padding:4px 0;">${associateName ? 'No time-off entries yet.' : 'Select an associate to view entries.'}</div>`;
         return;
     }
 
-    const typeLabel = (type) => {
-        const labels = {
-            'ptost': 'PTOST',
-            'pto-planned': 'PTO Planned',
-            'pto-unplanned': 'PTO Unplanned',
-            'vto-pto': 'VTO-PTO',
-            'tardy': 'Tardy',
-            'tardy-ptost': 'Tardy (PTOST)',
-            'ncns': 'No Call No Show'
-        };
-        return labels[type] || 'PTO Unplanned';
-    };
-
-    const typeOptions = PTO_VALID_TYPES.map(t =>
-        `<option value="${t}">${typeLabel(t)}</option>`
-    ).join('');
-
-    const rows = data.entries
+    const rows = entries
         .slice()
         .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
         .map(entry => {
-            const noteText = entry.notes ? ` &bull; ${entry.notes}` : '';
+            const badgeColor = ptoTypeBadgeColor(entry.type);
             const isNcns = entry.type === 'ncns';
-            const borderColor = isNcns ? '#f5c6cb' : '#e5f3f0';
-            const bgColor = isNcns ? '#fff5f5' : '#f9fffd';
-            const ncnsBadge = isNcns ? ' <span style="background:#dc3545;color:#fff;padding:1px 6px;border-radius:3px;font-size:0.8em;font-weight:700;">NCNS — Flag for WFM</span>' : '';
-            return `
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid ${borderColor}; border-radius: 6px; background: ${bgColor};">
-                    <div>
-                        <strong>${entry.date}</strong> — ${normalizeHours(entry.hours).toFixed(2)}h &bull; <strong>${typeLabel(entry.type)}</strong>${ncnsBadge}${noteText}
+            const borderColor = isNcns ? '#f5c6cb' : '#e8eff4';
+            const bgColor = isNcns ? '#fff8f8' : '#fafcfe';
+            const ncnsBadge = isNcns ? ' <span style="background:#dc3545;color:#fff;padding:1px 6px;border-radius:3px;font-size:0.78em;font-weight:700;">WFM</span>' : '';
+            const noteText = entry.notes ? `<div style="font-size:0.82em;color:#8899a6;margin-top:2px;">${entry.notes}</div>` : '';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid ${borderColor};border-radius:6px;background:${bgColor};">
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-weight:700;font-size:0.9em;color:#1a2a3a;white-space:nowrap;">${entry.date}</span>
+                        <span style="font-weight:700;font-size:0.92em;">${normalizeHours(entry.hours).toFixed(2)}h</span>
+                        <span style="padding:2px 8px;border-radius:4px;font-size:0.78em;font-weight:700;background:${badgeColor.bg};color:${badgeColor.text};">${ptoTypeLabel(entry.type)}</span>
+                        ${ncnsBadge}
                     </div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <select data-entry-type-id="${entry.id}" style="padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            ${PTO_VALID_TYPES.map(t =>
-                                `<option value="${t}" ${entry.type === t ? 'selected' : ''}>${typeLabel(t)}</option>`
-                            ).join('')}
-                        </select>
-                        <button type="button" data-entry-id="${entry.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">Remove</button>
-                    </div>
+                    ${noteText}
                 </div>
-            `;
+                <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                    <select data-entry-type-id="${entry.id}" style="padding:5px 6px;border:1px solid #d0dce5;border-radius:4px;font-size:0.82em;">
+                        ${PTO_VALID_TYPES.map(t =>
+                            `<option value="${t}" ${entry.type === t ? 'selected' : ''}>${ptoTypeLabel(t)}</option>`
+                        ).join('')}
+                    </select>
+                    <button type="button" data-entry-id="${entry.id}" style="background:#dc3545;color:#fff;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:0.82em;">X</button>
+                </div>
+            </div>`;
         })
         .join('');
 
@@ -1827,6 +1942,9 @@ function renderPtoEntries(data, associateName = '') {
     container.querySelectorAll('button[data-entry-id]').forEach(btn => {
         btn.addEventListener('click', () => deletePtoEntry(btn.dataset.entryId));
     });
+
+    // Also render payroll entries
+    renderPayrollEntries(data);
 }
 
 function generatePtoEmail() {
@@ -1845,18 +1963,10 @@ function generatePtoEmail() {
         ? `Same-Day Discipline: ${stats.discipline.current.level} (${stats.sameDayHours.toFixed(2)}h at ${stats.discipline.current.threshold}h threshold)`
         : `Same-Day Discipline: Not triggered (${stats.sameDayHours.toFixed(2)}h same-day hours)`;
 
-    const emailTypeLabel = (type) => {
-        const labels = {
-            'ptost': 'PTOST', 'pto-planned': 'PTO Planned', 'pto-unplanned': 'PTO Unplanned',
-            'vto-pto': 'VTO-PTO', 'tardy': 'Tardy', 'tardy-ptost': 'Tardy (PTOST)', 'ncns': 'No Call No Show'
-        };
-        return labels[type] || 'PTO Unplanned';
-    };
-
     const entryLines = data.entries
         .slice()
         .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-        .map(entry => `- ${entry.date}: ${normalizeHours(entry.hours).toFixed(2)}h (${emailTypeLabel(entry.type)})${entry.type === 'ncns' ? ' ** NCNS - Needs WFM correction **' : ''}${entry.notes ? ` - ${entry.notes}` : ''}`)
+        .map(entry => `- ${entry.date}: ${normalizeHours(entry.hours).toFixed(2)}h (${ptoTypeLabel(entry.type)})${entry.type === 'ncns' ? ' ** NCNS - Needs WFM correction **' : ''}${entry.notes ? ` - ${entry.notes}` : ''}`)
         .join('\n');
 
     const displayName = context.associateName === PTO_LEGACY_ASSOCIATE_KEY ? 'Legacy PTO Data (migrated)' : context.associateName;
