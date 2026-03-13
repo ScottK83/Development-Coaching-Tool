@@ -362,22 +362,6 @@
         };
         
         const headerColumnCount = headers.length;
-        const detectedHeaderMatchCount = Object.values(colMapDetected)
-            .filter(index => Number.isInteger(index) && index >= 0).length;
-        const usePositionalFallback = detectedHeaderMatchCount <= 2;
-
-        const resolveColumnIndex = (mappedIndex, fallbackKey) => {
-            if (mappedIndex >= 0) return mappedIndex;
-
-            if (!usePositionalFallback) return -1;
-
-            const fallbackIndex = DEFAULT_COLUMN_INDEX[fallbackKey];
-            if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < headerColumnCount) {
-                return fallbackIndex;
-            }
-
-            return -1;
-        };
 
         const colMapDetected = {
             name: findColumnIndex(['name', 'employee', 'associate']),
@@ -431,6 +415,23 @@
             ]),
             surveyTotal: findColumnIndex(['oe survey', 'survey total', 'survey responses', 'total surveys', 'oesurvey total', 'oe survey total']),
             reliability: findColumnIndex(['reliability', 'reliability hours', 'reliability hrs', 'hours against'])
+        };
+
+        const detectedHeaderMatchCount = Object.values(colMapDetected)
+            .filter(index => Number.isInteger(index) && index >= 0).length;
+        const usePositionalFallback = detectedHeaderMatchCount <= 2;
+
+        const resolveColumnIndex = (mappedIndex, fallbackKey) => {
+            if (mappedIndex >= 0) return mappedIndex;
+
+            if (!usePositionalFallback) return -1;
+
+            const fallbackIndex = DEFAULT_COLUMN_INDEX[fallbackKey];
+            if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < headerColumnCount) {
+                return fallbackIndex;
+            }
+
+            return -1;
         };
 
         const colMap = {};
