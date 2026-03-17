@@ -1592,6 +1592,25 @@ function initializeDashboard() {
     window.DevCoachModules?.dashboard?.initializeDashboard?.();
 }
 
+function embedTeamSnapshot() {
+    const target = document.getElementById('embeddedTeamSnapshot');
+    const source = document.getElementById('teamSnapshotSection');
+    if (target && source && !target.hasChildNodes()) {
+        // Move the inner content from standalone section into the embedded container
+        while (source.firstChild) target.appendChild(source.firstChild);
+    }
+    if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
+}
+
+function embedPtoTracker() {
+    const target = document.getElementById('embeddedPto');
+    const source = document.getElementById('ptoSection');
+    if (target && source && !target.hasChildNodes()) {
+        while (source.firstChild) target.appendChild(source.firstChild);
+    }
+    if (typeof initializePtoTracker === 'function') initializePtoTracker();
+}
+
 function bindNavigationHandlers() {
     document.getElementById('dashboardBtn')?.addEventListener('click', () => {
         showOnlySection('dashboardSection');
@@ -1669,17 +1688,13 @@ function bindQuickActionHandlers() {
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
-    document.getElementById('hotTipBtn')?.addEventListener('click', () => {
-        showOnlySection('hotTipSection');
-        if (typeof initializeHotTip === 'function') initializeHotTip();
+    document.getElementById('subNavTeamSnapshot')?.addEventListener('click', () => {
+        showSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
+        embedTeamSnapshot();
     });
-    document.getElementById('teamSnapshotBtn')?.addEventListener('click', () => {
-        showOnlySection('teamSnapshotSection');
-        if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
-    });
-    document.getElementById('ptoBtn')?.addEventListener('click', () => {
-        showOnlySection('ptoSection');
-        initializePtoTracker();
+    document.getElementById('subNavPto')?.addEventListener('click', () => {
+        showSubSection('subSectionPto', 'subNavPto');
+        embedPtoTracker();
     });
 
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);

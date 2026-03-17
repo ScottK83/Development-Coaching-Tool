@@ -26,7 +26,7 @@
         if (activeButtonId === undefined) activeButtonId = null;
 
         // Hide all sub-sections
-        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening'];
+        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto'];
         subSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -39,17 +39,19 @@
         }
 
         // Update sub-nav button active states
-        var subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening'];
-        var selectedSubNavButton = activeButtonId || (
-            subSectionId === 'subSectionCoachingEmail' ? 'subNavCoachingEmail'
-                : subSectionId === 'subSectionYearEnd' ? 'subNavYearEnd'
-                    : subSectionId === 'subSectionOnOffTracker' ? 'subNavOnOffTracker'
-                    : subSectionId === 'subSectionSentiment' ? 'subNavSentiment'
-                        : subSectionId === 'subSectionMetricTrends' ? 'subNavMetricTrends'
-                            : subSectionId === 'subSectionTrendIntelligence' ? 'subNavTrendIntelligence'
-                                : subSectionId === 'subSectionCallListening' ? 'subNavCallListening'
-                                : ''
-        );
+        var subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening', 'subNavTeamSnapshot', 'subNavPto'];
+        var subSectionToButton = {
+            subSectionCoachingEmail: 'subNavCoachingEmail',
+            subSectionYearEnd: 'subNavYearEnd',
+            subSectionOnOffTracker: 'subNavOnOffTracker',
+            subSectionSentiment: 'subNavSentiment',
+            subSectionMetricTrends: 'subNavMetricTrends',
+            subSectionTrendIntelligence: 'subNavTrendIntelligence',
+            subSectionCallListening: 'subNavCallListening',
+            subSectionTeamSnapshot: 'subNavTeamSnapshot',
+            subSectionPto: 'subNavPto'
+        };
+        var selectedSubNavButton = activeButtonId || subSectionToButton[subSectionId] || '';
 
         subNavButtons.forEach(function(btnId) {
             var btn = document.getElementById(btnId);
@@ -147,6 +149,11 @@
         var state = loadUiNavState();
         var sectionId = state.sectionId || 'dashboardSection';
 
+        // Redirect old standalone section IDs to coaching sub-sections
+        if (sectionId === 'ptoSection') { sectionId = 'coachingEmailSection'; state.coachingSubSectionId = 'subSectionPto'; }
+        if (sectionId === 'hotTipSection') { sectionId = 'dashboardSection'; }
+        if (sectionId === 'teamSnapshotSection') { sectionId = 'coachingEmailSection'; state.coachingSubSectionId = 'subSectionTeamSnapshot'; }
+
         var coachingSubSectionToButton = {
             subSectionCoachingEmail: 'subNavCoachingEmail',
             subSectionYearEnd: 'subNavYearEnd',
@@ -154,7 +161,9 @@
             subSectionSentiment: 'subNavSentiment',
             subSectionMetricTrends: 'subNavMetricTrends',
             subSectionTrendIntelligence: 'subNavTrendIntelligence',
-            subSectionCallListening: 'subNavCallListening'
+            subSectionCallListening: 'subNavCallListening',
+            subSectionTeamSnapshot: 'subNavTeamSnapshot',
+            subSectionPto: 'subNavPto'
         };
 
         var manageDataSubSectionToButton = {
@@ -193,36 +202,6 @@
 
         if (sectionId === 'redFlagSection') {
             showOnlySection('redFlagSection');
-            return;
-        }
-
-        if (sectionId === 'ptoSection') {
-            showOnlySection('ptoSection');
-            if (typeof window.initializePtoTracker === 'function') {
-                window.initializePtoTracker();
-            } else if (typeof initializePtoTracker === 'function') {
-                initializePtoTracker();
-            }
-            return;
-        }
-
-        if (sectionId === 'hotTipSection') {
-            showOnlySection('hotTipSection');
-            if (typeof window.initializeHotTip === 'function') {
-                window.initializeHotTip();
-            } else if (typeof initializeHotTip === 'function') {
-                initializeHotTip();
-            }
-            return;
-        }
-
-        if (sectionId === 'teamSnapshotSection') {
-            showOnlySection('teamSnapshotSection');
-            if (typeof window.initializeTeamSnapshot === 'function') {
-                window.initializeTeamSnapshot();
-            } else if (typeof initializeTeamSnapshot === 'function') {
-                initializeTeamSnapshot();
-            }
             return;
         }
 

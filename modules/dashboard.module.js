@@ -190,12 +190,40 @@
         }
 
         // Associates meeting all targets
-        var stars = priorities.filter(function(p) { return false; }); // not in priorities
-        var allMeeting = [];
-        // We need the full list, not just priorities
         html += renderStarPerformers(teamStats.starNames);
 
+        // Hot Tip of the Day widget
+        html += renderHotTipWidget();
+
         container.innerHTML = html;
+    }
+
+    function getRandomTip() {
+        try {
+            var raw = localStorage.getItem('devCoachingTool_metricCoachingTips');
+            var tips = raw ? JSON.parse(raw) : {};
+            var allTips = [];
+            var keys = Object.keys(tips);
+            for (var i = 0; i < keys.length; i++) {
+                var metricTips = tips[keys[i]];
+                if (Array.isArray(metricTips)) {
+                    for (var j = 0; j < metricTips.length; j++) {
+                        if (metricTips[j]) allTips.push(metricTips[j]);
+                    }
+                }
+            }
+            if (!allTips.length) return null;
+            return allTips[Math.floor(Math.random() * allTips.length)];
+        } catch(e) { return null; }
+    }
+
+    function renderHotTipWidget() {
+        var tip = getRandomTip();
+        if (!tip) return '';
+        return '<div style="margin-top: 20px; padding: 14px 18px; background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%); ' +
+            'border-radius: 10px; border-left: 4px solid #f59e0b;">' +
+            '<div style="font-weight: 700; font-size: 0.95em; color: #92400e; margin-bottom: 6px;">\uD83D\uDD25 Tip of the Day</div>' +
+            '<div style="font-size: 0.88em; color: #78350f; line-height: 1.5;">' + escapeHtml(tip) + '</div></div>';
     }
 
     function renderStarPerformers(names) {
