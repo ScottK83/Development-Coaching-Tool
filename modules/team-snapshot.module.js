@@ -11,10 +11,11 @@
 
     // Key metrics to show in snapshot
     var SNAPSHOT_METRICS = [
-        'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
+        'scheduleAdherence',
         'transfers', 'aht', 'acw',
         'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
-        'reliability'
+        'reliability',
+        'cxRepOverall', 'fcr', 'overallExperience'
     ];
 
     // Short labels for the graphic header
