@@ -1506,8 +1506,8 @@ function bindUploadAndPasteHandlers() {
                     label.textContent = 'Date:';
                     hint.textContent = 'Select the date for this daily data.';
                 } else if (period === 'week') {
-                    label.textContent = 'Week Ending (Saturday):';
-                    hint.textContent = 'Week runs Sunday - Saturday';
+                    label.textContent = 'Week Ending (Sunday):';
+                    hint.textContent = 'Week runs Monday - Sunday';
                 } else if (period === 'month') {
                     label.textContent = 'Month Ending Date:';
                     hint.textContent = 'Last day of the month period.';
