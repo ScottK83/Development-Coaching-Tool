@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-17T21:59:34.478Z",
-  "reason": "upload to git",
+  "generatedAt": "2026-03-17T22:11:06.780Z",
+  "reason": "storage set: devCoachingTool_uiNavState",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -5674,7 +5674,7 @@
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
       "itemCount": 4,
-      "byteLength": 117
+      "byteLength": 116
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
@@ -5694,12 +5694,12 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 364
+      "byteLength": 321
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 132
+      "byteLength": 134
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
