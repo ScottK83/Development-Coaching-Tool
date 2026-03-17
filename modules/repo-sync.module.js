@@ -402,13 +402,10 @@
         const forcePushBtn = document.getElementById('forcePushToRepoBtn');
         if (forcePushBtn && !forcePushBtn.dataset.bound) {
             forcePushBtn.addEventListener('click', async () => {
-                const confirmed = confirm('Force push ALL local data to the repo, overwriting the existing backup?\n\nThis will replace the repo backup even if it has newer data. Are you sure?');
-                if (!confirmed) return;
-
-                await runWithButtonBusyState(forcePushBtn, 'Pushing...', async () => {
+                await runWithButtonBusyState(forcePushBtn, 'Uploading...', async () => {
                     getCallListeningSyncConfigFromUI();
-                    setCallListeningSyncStatus('Force pushing local data to repo (bypassing regression guard)...', 'info');
-                    await syncRepoData('force push to repo', { force: true, allowDataRegression: true });
+                    setCallListeningSyncStatus('Uploading local data to GIT...', 'info');
+                    await syncRepoData('upload to git', { force: true, allowDataRegression: true });
                 });
             });
             forcePushBtn.dataset.bound = 'true';
