@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-17T20:09:34.968Z",
+  "generatedAt": "2026-03-17T20:10:00.715Z",
   "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -5637,6 +5637,11 @@
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 14
+    },
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 4
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
