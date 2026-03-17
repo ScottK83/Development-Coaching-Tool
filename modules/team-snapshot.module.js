@@ -409,7 +409,9 @@
         }
 
         // Legend
-        var legendHtml = '<div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; align-items: center;">' +
+        var legendHtml = '<div style="display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; align-items: center; ' +
+            'padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">' +
+            '<span style="font-size: 0.72em; font-weight: 600; color: #334155; margin-right: 2px;">Legend:</span>' +
             '<span style="font-size: 0.72em; color: #475569;">' +
             '<span style="display: inline-block; width: 12px; height: 12px; background: #dcfce7; border: 1px solid #86efac; ' +
             'border-radius: 2px; vertical-align: middle; margin-right: 3px;"></span> Meeting Target</span>' +
@@ -417,9 +419,9 @@
             '<span style="display: inline-block; width: 12px; height: 12px; background: #fee2e2; border: 1px solid #fca5a5; ' +
             'border-radius: 2px; vertical-align: middle; margin-right: 3px;"></span> Below Target</span>' +
             '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="color: #16a34a; font-weight: 700;">+N</span> Above Center Avg (by how much)</span>' +
+            '<span style="color: #16a34a; font-weight: 700;">+2.1</span> = 2.1 above center avg</span>' +
             '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="color: #dc2626; font-weight: 700;">-N</span> Below Center Avg (by how much)</span>' +
+            '<span style="color: #dc2626; font-weight: 700;">-3.5</span> = 3.5 below center avg</span>' +
             '</div>';
 
         // Assemble the full graphic
