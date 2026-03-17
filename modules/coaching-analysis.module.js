@@ -123,7 +123,7 @@
         try {
             const toAddress = buildEmployeeEmail(employeeName);
             const mailtoLink = document.createElement('a');
-            mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?subject=${encodeURIComponent(emailSubject)}`;
+            mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}`;
             document.body.appendChild(mailtoLink);
             mailtoLink.click();
             document.body.removeChild(mailtoLink);

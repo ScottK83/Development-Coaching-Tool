@@ -51,7 +51,7 @@
         const safeBodyText = String(bodyText || '');
 
         const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(safeSubject)}&body=${encodeURIComponent(safeBodyText)}`;
+        mailtoLink.href = `mailto:?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(safeSubject)}&body=${encodeURIComponent(safeBodyText)}`;
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
