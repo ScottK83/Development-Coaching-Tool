@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.03.17.20'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.03.17.21'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -135,13 +135,7 @@ let coachingLatestWeekKey = null;
 let coachingHistory = {};
 let yearEndDraftContext = null;
 let callListeningLogs = {};
-let callListeningSyncTimer = null;
-let repoSyncStorageHookInstalled = false;
-let repoSyncSuppressCounter = 0;
-let repoSyncHydrationInProgress = false;
-let repoSyncConflictPromptMutedUntil = 0;
-let repoSyncAutoPausedReason = '';
-let repoSyncAutoPausedExistingSummary = null;
+// Repo sync state is managed by repo-sync.module.js (IIFE-scoped)
 let teamFilterChangeHandlersBound = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
@@ -2804,20 +2798,7 @@ function queueRepoSync(reason = 'updated') {
 }
 
 function isLocalSummaryCaughtUp(localSummary, baselineSummary) {
-    if (!localSummary || !baselineSummary) return false;
-
-    const localLatest = Number(localSummary.latestWeeklyEndMs || 0);
-    const baselineLatest = Number(baselineSummary.latestWeeklyEndMs || 0);
-    const localWeekly = Number(localSummary.weeklyPeriods || 0);
-    const baselineWeekly = Number(baselineSummary.weeklyPeriods || 0);
-    const localFootprint = Number(localSummary.footprintScore || 0);
-    const baselineFootprint = Number(baselineSummary.footprintScore || 0);
-
-    const latestCaughtUp = !baselineLatest || localLatest >= baselineLatest;
-    const weeklyCaughtUp = localWeekly >= baselineWeekly;
-    const footprintCaughtUp = localFootprint >= baselineFootprint;
-
-    return latestCaughtUp && (weeklyCaughtUp || footprintCaughtUp);
+    return window.DevCoachModules?.repoSync?.isLocalSummaryCaughtUp?.(localSummary, baselineSummary);
 }
 
 function clearRepoSyncAutoPause() {
@@ -2853,12 +2834,7 @@ function hasMeaningfulBackupData(payload) {
 }
 
 async function withRepoSyncHydrationLock(action) {
-    repoSyncHydrationInProgress = true;
-    try {
-        return await action();
-    } finally {
-        repoSyncHydrationInProgress = false;
-    }
+    return window.DevCoachModules?.repoSync?.withRepoSyncHydrationLock?.(action);
 }
 
 async function fetchRepoBackupPayload() {
@@ -3059,140 +3035,35 @@ async function parseRepoSyncSuccessResponse(response) {
 }
 
 function buildRepoSyncMeta(reason, responseData) {
-    return {
-        syncedAt: new Date().toISOString(),
-        reason,
-        commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || '',
-        backupSummary: responseData?.incomingSummary || null
-    };
+    return window.DevCoachModules?.repoSync?.buildRepoSyncMeta?.(reason, responseData);
 }
 
 function getRepoSyncEndpointIfAllowed(config, forceSync) {
-    const endpoint = String(config?.endpoint || '').trim();
-    if ((!config?.autoSyncEnabled && !forceSync) || !endpoint) {
-        if (forceSync && !endpoint) {
-            setCallListeningSyncStatus('Sync failed: add Worker URL first.', 'error');
-        }
-        return null;
-    }
-    return endpoint;
+    return window.DevCoachModules?.repoSync?.getRepoSyncEndpointIfAllowed?.(config, forceSync);
 }
 
 function finalizeRepoSyncSuccess(reason, responseData) {
-    repoSyncConflictPromptMutedUntil = 0;
-    clearRepoSyncAutoPause();
-    const syncMeta = buildRepoSyncMeta(reason, responseData);
-    saveRepoSyncLastSuccess(syncMeta);
-    renderCallListeningLastSync(syncMeta);
-    const weeklyCount = Number(responseData?.incomingSummary?.weeklyPeriods || 0);
-    const ytdCount = Number(responseData?.incomingSummary?.ytdPeriods || 0);
-    const latestDate = String(responseData?.incomingSummary?.latestWeeklyEndDate || '').trim();
-    const suffix = latestDate
-        ? ` (${weeklyCount} weekly / ${ytdCount} YTD, latest ${latestDate})`
-        : ` (${weeklyCount} weekly / ${ytdCount} YTD)`;
-    setCallListeningSyncStatus(`Last full-data sync: ${new Date().toLocaleString()}${suffix}`, 'success');
+    return window.DevCoachModules?.repoSync?.finalizeRepoSyncSuccess?.(reason, responseData);
 }
 
 function handleRepoSyncFailure(error) {
-    console.error('Repo sync failed:', error);
-    setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
+    return window.DevCoachModules?.repoSync?.handleRepoSyncFailure?.(error);
 }
 
 function formatSummaryLabel(summary) {
-    if (!summary || typeof summary !== 'object') return 'n/a';
-    const weekly = Number(summary.weeklyPeriods || 0);
-    const ytd = Number(summary.ytdPeriods || 0);
-    const latest = String(summary.latestWeeklyEndDate || '').trim() || 'unknown date';
-    return `${weekly} weekly / ${ytd} YTD (latest ${latest})`;
+    return window.DevCoachModules?.repoSync?.formatSummaryLabel?.(summary);
 }
 
 async function maybeHandleRepoSyncConflict(error) {
-    if (String(error?.code || '') !== 'DATA_REGRESSION_GUARD') {
-        return false;
-    }
-
-    const interactive = error?.interactive === true;
-    const now = Date.now();
-
-    if (!interactive) {
-        pauseRepoSyncForRegression(existingSummary);
-
-        if (now < repoSyncConflictPromptMutedUntil) {
-            return true;
-        }
-
-        repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
-        setCallListeningSyncStatus('Auto-sync paused while local profile rebuild is older than repo. It will resume when data catches up.', 'info');
-        return true;
-    }
-
-    const incomingSummary = error?.payload?.incomingSummary || null;
-    const existingSummary = error?.payload?.existingSummary || null;
-    const message = [
-        'Sync protected your newer repo backup.',
-        `This device: ${formatSummaryLabel(incomingSummary)}`,
-        `Repo backup: ${formatSummaryLabel(existingSummary)}`,
-        '',
-        'Restore repo backup to this device now?'
-    ].join('\n');
-
-    const shouldRestore = confirm(message);
-    if (!shouldRestore) {
-        pauseRepoSyncForRegression(existingSummary);
-        repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
-        setCallListeningSyncStatus('Sync blocked (older local profile). Use Force Restore to match latest repo data.', 'error');
-        return true;
-    }
-
-    try {
-        setCallListeningSyncStatus('Sync conflict detected. Restoring latest repo backup...', 'info');
-        const restored = await tryAutoRestoreFromRepoBackupOnEmptyState();
-        if (restored) {
-            repoSyncConflictPromptMutedUntil = 0;
-            clearRepoSyncAutoPause();
-            showToast('✅ Restored latest repo backup. Sync is now aligned.', 4000);
-            setCallListeningSyncStatus('Restore complete. This browser now matches repo data.', 'success');
-            setTimeout(() => window.location.reload(), 500);
-            return true;
-        }
-    } catch (restoreError) {
-        console.error('Auto-restore after sync conflict failed:', restoreError);
-        setCallListeningSyncStatus(`Restore failed after sync conflict: ${restoreError.message}`, 'error');
-        return true;
-    }
-
-    return true;
+    return window.DevCoachModules?.repoSync?.maybeHandleRepoSyncConflict?.(error);
 }
 
 async function requestValidatedRepoSyncResponse(endpoint, config, payload) {
-    const response = await postRepoSyncPayload(endpoint, config, payload);
-    await throwIfRepoSyncErrorResponse(response);
-    return response;
+    return window.DevCoachModules?.repoSync?.requestValidatedRepoSyncResponse?.(endpoint, config, payload);
 }
 
 async function syncRepoData(reason = 'updated', options = {}) {
-    const config = loadCallListeningSyncConfig();
-    const forceSync = options?.force === true;
-    const endpoint = getRepoSyncEndpointIfAllowed(config, forceSync);
-    if (!endpoint) return;
-    setCallListeningSyncStatus('Syncing all app data to repo...', 'info');
-
-    try {
-        const payload = buildRepoSyncPayload(reason);
-        if (options?.allowDataRegression === true) {
-            payload.allowDataRegression = true;
-        }
-
-        const response = await requestValidatedRepoSyncResponse(endpoint, config, payload);
-
-        const responseData = await parseRepoSyncSuccessResponse(response);
-        finalizeRepoSyncSuccess(reason, responseData);
-    } catch (error) {
-        error.interactive = forceSync;
-        const handledConflict = await maybeHandleRepoSyncConflict(error);
-        if (handledConflict) return;
-        handleRepoSyncFailure(error);
-    }
+    return window.DevCoachModules?.repoSync?.syncRepoData?.(reason, options);
 }
 
 function getCallListeningEntriesForEmployee(employeeName) {

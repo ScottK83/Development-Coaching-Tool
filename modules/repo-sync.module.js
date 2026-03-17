@@ -17,6 +17,8 @@
 
     const RETRY_MAX_ATTEMPTS = 3;
     const RETRY_BASE_DELAY_MS = 1000;
+    const SYNC_DEBOUNCE_MS = 5000;
+    const SYNC_ERROR_COOLDOWN_MS = 60000;
 
     function safeLoadJson(key) {
         try {
@@ -35,6 +37,7 @@
     let repoSyncAutoPausedReason = '';
     let repoSyncAutoPausedExistingSummary = null;
     let callListeningSyncTimer = null;
+    let repoSyncErrorCooldownUntil = 0;
 
     // ============================================
     // CONFIG HELPERS
@@ -985,6 +988,7 @@
 
     function canQueueRepoSync() {
         if (repoSyncHydrationInProgress) return false;
+        if (Date.now() < repoSyncErrorCooldownUntil) return false;
         const config = loadCallListeningSyncConfig();
         if (!config.isWorkPc) return false;
         const enabled = !!(config.autoSyncEnabled && String(config.endpoint || '').trim());
@@ -1011,7 +1015,7 @@
         setRepoSyncQueuedStatus();
         callListeningSyncTimer = setTimeout(() => {
             syncRepoData(reason);
-        }, 1200);
+        }, SYNC_DEBOUNCE_MS);
     }
 
     // ============================================
@@ -1290,7 +1294,9 @@
 
     function handleRepoSyncFailure(error) {
         console.error('Repo sync failed:', error);
-        setCallListeningSyncStatus(`Sync failed: ${error.message}`, 'error');
+        repoSyncErrorCooldownUntil = Date.now() + SYNC_ERROR_COOLDOWN_MS;
+        const cooldownSec = Math.round(SYNC_ERROR_COOLDOWN_MS / 1000);
+        setCallListeningSyncStatus(`Sync failed: ${error.message} — pausing auto-sync for ${cooldownSec}s`, 'error');
     }
 
     function formatSummaryLabel(summary) {
@@ -1391,6 +1397,7 @@
     async function syncRepoData(reason = 'updated', options = {}) {
         const config = loadCallListeningSyncConfig();
         const forceSync = options?.force === true;
+        if (forceSync) repoSyncErrorCooldownUntil = 0;
         const endpoint = getRepoSyncEndpointIfAllowed(config, forceSync);
         if (!endpoint) return;
         setCallListeningSyncStatus('Syncing all app data to repo...', 'info');
