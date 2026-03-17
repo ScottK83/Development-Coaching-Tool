@@ -89,9 +89,7 @@
         
         window.createTrendEmailImage?.(displayName, weekKey, period, employee, null, () => {
             const mailPeriodType = periodMeta.periodType === 'week' ? 'Weekly' : periodMeta.periodType === 'month' ? 'Monthly' : 'Weekly';
-            const mailPeriodLabel = periodMeta.periodType === 'week' ? 'Week' : periodMeta.periodType === 'month' ? 'Month' : 'Week';
-            const mailEndDate = periodMeta.endDate || 'unknown';
-            const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
+            const emailSubject = `${mailPeriodType} Check-in - ${displayName}`;
             
             openTrendEmailOutlook(emailSubject, employeeName);
             window.showToast?.('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below.', 4000);

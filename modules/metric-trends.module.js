@@ -1277,9 +1277,8 @@ function getTrendPeriodDisplay(periodType = 'week') {
 }
 
 function buildTrendEmailSubject(periodMeta, displayName) {
-    const { periodTypeTitle, periodLabel } = getTrendPeriodDisplay(periodMeta?.periodType);
-    const endDate = periodMeta?.endDate || 'unknown';
-    return `Trending Metrics - ${periodTypeTitle} - ${periodLabel} ending ${endDate} for ${displayName}`;
+    const { periodTypeTitle } = getTrendPeriodDisplay(periodMeta?.periodType);
+    return `${periodTypeTitle} Check-in - ${displayName}`;
 }
 
 function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tipsForTrending, allMetrics) {
@@ -3623,7 +3622,8 @@ function generateTeamTrendSummary() {
 
     const periodLabel = periodMeta.label || (periodMeta.endDate ? `Week ending ${formatDateMMDDYYYY(periodMeta.endDate)}` : 'this period');
     const teamPrompt = buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, filteredEmployees.length);
-    const teamSubject = `Trending Metrics - Team Summary - Week ending ${periodMeta.endDate || ''}`;
+    const periodTypeTitle = (periodMeta?.periodType === 'month') ? 'Monthly' : (periodMeta?.periodType === 'daily') ? 'Daily' : 'Weekly';
+    const teamSubject = `${periodTypeTitle} Team Summary`;
 
     const modal = createTeamTrendSummaryModal();
     const panel = createTeamTrendSummaryPanel(periodLabel, filteredEmployees.length, summaryBoxesHtml, teamPrompt);
