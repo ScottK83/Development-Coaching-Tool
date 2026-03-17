@@ -1536,14 +1536,53 @@ function bindUploadAndPasteHandlers() {
         }
     });
 
-    document.getElementById('toggleUploadAvgBtn')?.addEventListener('click', () => {
-        const container = document.getElementById('uploadCenterAvgContainer');
-        const btn = document.getElementById('toggleUploadAvgBtn');
-        if (container) {
-            const showing = container.style.display === 'none';
-            container.style.display = showing ? 'block' : 'none';
-            if (btn) btn.textContent = showing ? '📊 Center Averages (optional) ▼' : '📊 Center Averages (optional) ▶';
-        }
+    // Upload mode switcher: Employee Data vs Center Averages
+    document.querySelectorAll('.upload-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const empPanel = document.getElementById('uploadEmployeePanel');
+            const avgPanel = document.getElementById('uploadCenterAvgPanel');
+            const empBtn = document.getElementById('uploadModeEmployee');
+            const avgBtn = document.getElementById('uploadModeCenterAvg');
+            const isEmployee = btn.id === 'uploadModeEmployee';
+            if (empPanel) empPanel.style.display = isEmployee ? 'block' : 'none';
+            if (avgPanel) avgPanel.style.display = isEmployee ? 'none' : 'block';
+            if (empBtn) { empBtn.style.background = isEmployee ? '#28a745' : 'white'; empBtn.style.borderColor = isEmployee ? '#28a745' : '#ddd'; empBtn.style.color = isEmployee ? 'white' : '#666'; }
+            if (avgBtn) { avgBtn.style.background = isEmployee ? 'white' : '#1565c0'; avgBtn.style.borderColor = isEmployee ? '#ddd' : '#1565c0'; avgBtn.style.color = isEmployee ? '#666' : 'white'; }
+        });
+    });
+
+    // Center avg period type buttons
+    document.querySelectorAll('.upload-avg-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.upload-avg-period-btn').forEach(b => {
+                b.style.background = 'white'; b.style.borderColor = '#ddd'; b.style.color = '#666'; b.style.fontWeight = 'normal';
+            });
+            btn.style.background = '#1565c0'; btn.style.borderColor = '#1565c0'; btn.style.color = 'white'; btn.style.fontWeight = 'bold';
+            const period = btn.dataset.period;
+            const label = document.getElementById('avgWeekEndingLabel');
+            if (label) {
+                label.textContent = period === 'daily' ? 'Date:' : period === 'month' ? 'Month Ending Date:' : period === 'ytd' ? 'YTD Ending Date:' : 'Week Ending (Saturday):';
+            }
+        });
+    });
+
+    // Save center averages button
+    document.getElementById('saveCenterAvgBtn')?.addEventListener('click', () => {
+        const dateInput = document.getElementById('avgWeekEndingDate');
+        if (!dateInput?.value) { alert('Please select a date.'); return; }
+        const endDate = dateInput.value;
+        const activePeriodBtn = document.querySelector('.upload-avg-period-btn[style*="1565c0"]');
+        const periodType = activePeriodBtn?.dataset?.period || 'week';
+        let startDate;
+        if (periodType === 'daily') startDate = endDate;
+        else if (periodType === 'month') { const d = new Date(endDate + 'T12:00:00'); d.setDate(1); startDate = d.toISOString().split('T')[0]; }
+        else if (periodType === 'ytd') { startDate = endDate.slice(0, 4) + '-01-01'; }
+        else { const d = new Date(endDate + 'T12:00:00'); d.setDate(d.getDate() - 6); startDate = d.toISOString().split('T')[0]; }
+        const weekKey = `${startDate}|${endDate}`;
+        const avgData = readUploadCenterAverages();
+        if (!avgData) { alert('Please enter at least one center average value.'); return; }
+        setCallCenterAverageForPeriod(weekKey, avgData);
+        showToast(`✅ Center averages saved for ${weekKey}`, 4000);
     });
 
     document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModal);

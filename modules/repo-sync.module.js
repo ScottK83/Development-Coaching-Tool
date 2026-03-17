@@ -1116,23 +1116,36 @@
     }
 
     function applyRepoBackupPayload(payload) {
-        window.weeklyData = coerceObject(payload?.weeklyData);
-        window.ytdData = coerceObject(payload?.ytdData);
-        window.coachingHistory = coerceObject(payload?.coachingHistory);
-        window.callListeningLogs = coerceObject(payload?.callListeningLogs);
-        window.sentimentPhraseDatabase = coerceNullableObject(payload?.sentimentPhraseDatabase);
-        window.associateSentimentSnapshots = coerceObject(payload?.associateSentimentSnapshots);
-        window.myTeamMembers = coerceObject(payload?.myTeamMembers);
-
-        window.saveWeeklyData();
-        window.saveYtdData();
-        window.saveCoachingHistory();
-        window.saveCallListeningLogs(false, 'restored from repo backup');
-        window.saveSentimentPhraseDatabase();
-        window.saveAssociateSentimentSnapshots();
-        window.normalizeTeamMembersForExistingWeeks();
-        window.saveTeamMembers();
-        window.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
+        // Write directly to localStorage via storage module to avoid let/window mismatch
+        const storage = window.DevCoachModules?.storage;
+        if (storage) {
+            storage.saveWeeklyData(coerceObject(payload?.weeklyData));
+            storage.saveYtdData(coerceObject(payload?.ytdData));
+            storage.saveCoachingHistory(coerceObject(payload?.coachingHistory));
+            storage.saveCallListeningLogs(coerceObject(payload?.callListeningLogs));
+            storage.saveSentimentPhraseDatabase(coerceNullableObject(payload?.sentimentPhraseDatabase));
+            storage.saveAssociateSentimentSnapshots(coerceObject(payload?.associateSentimentSnapshots));
+            storage.saveTeamMembers(coerceObject(payload?.myTeamMembers));
+            storage.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
+        } else {
+            // Fallback to window functions
+            window.weeklyData = coerceObject(payload?.weeklyData);
+            window.ytdData = coerceObject(payload?.ytdData);
+            window.coachingHistory = coerceObject(payload?.coachingHistory);
+            window.callListeningLogs = coerceObject(payload?.callListeningLogs);
+            window.sentimentPhraseDatabase = coerceNullableObject(payload?.sentimentPhraseDatabase);
+            window.associateSentimentSnapshots = coerceObject(payload?.associateSentimentSnapshots);
+            window.myTeamMembers = coerceObject(payload?.myTeamMembers);
+            window.saveWeeklyData();
+            window.saveYtdData();
+            window.saveCoachingHistory();
+            window.saveCallListeningLogs(false, 'restored from repo backup');
+            window.saveSentimentPhraseDatabase();
+            window.saveAssociateSentimentSnapshots();
+            window.normalizeTeamMembersForExistingWeeks();
+            window.saveTeamMembers();
+            window.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
+        }
         if (window.DevCoachModules?.storage?.savePtoTracker) {
             const restoredPtoTracker = coerceObject(payload?.ptoTracker);
             window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);

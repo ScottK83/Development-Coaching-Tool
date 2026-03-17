@@ -42,9 +42,16 @@
                     
                     <!-- Upload Metrics Container -->
                     <div id="pasteDataContainer" class="upload-container">
-                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload Metrics Data</h3>
+                        <h3 style="color: #28a745; margin-top: 0;">📤 Upload Data</h3>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                            <button type="button" id="uploadModeEmployee" class="upload-mode-btn" style="flex: 1; padding: 10px; border: 2px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">👥 Employee Data</button>
+                            <button type="button" id="uploadModeCenterAvg" class="upload-mode-btn" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">📊 Center Averages</button>
+                        </div>
+
+                        <div id="uploadEmployeePanel">
                         <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Copy/Paste the data from PowerBI into the box below. Enter date range. You'll manage your team in the Manage Data section.</p>
-                        
+
                         <div style="margin-bottom: 15px;">
                             <label style="font-weight: bold; display: block; margin-bottom: 5px;">PowerBI Data:</label>
                             <textarea id="pasteDataTextarea" placeholder="Paste data here (Ctrl+V)..." style="width: 100%; min-height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; resize: vertical;"></textarea>
@@ -72,29 +79,6 @@
                             <div style="margin-top: 6px; color: #666; font-size: 0.85em;">Use this when uploading year-end data that should follow 2025 targets.</div>
                         </div>
                         
-                        <div style="margin-bottom: 15px;">
-                            <button type="button" id="toggleUploadAvgBtn" style="background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-weight: bold; font-size: 0.9em; color: #444;">📊 Center Averages (optional) ▶</button>
-                            <div id="uploadCenterAvgContainer" style="display: none; margin-top: 10px; padding: 12px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px;">
-                                <p style="color: #666; font-size: 0.85em; margin: 0 0 10px 0;">Enter center averages here and they'll be saved with this upload period. These flow to Metric Trends, Team Snapshot, and all analysis.</p>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
-                                    <div><label style="font-size: 0.8em; color: #555;">Adherence</label><input type="number" id="uploadAvgAdherence" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Overall Experience</label><input type="number" id="uploadAvgOverallExperience" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Rep Satisfaction</label><input type="number" id="uploadAvgRepSatisfaction" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">FCR</label><input type="number" id="uploadAvgFCR" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Transfers</label><input type="number" id="uploadAvgTransfers" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Sentiment</label><input type="number" id="uploadAvgSentiment" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Positive Word</label><input type="number" id="uploadAvgPositiveWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Negative Word</label><input type="number" id="uploadAvgNegativeWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Managing Emotions</label><input type="number" id="uploadAvgManagingEmotions" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">AHT</label><input type="number" id="uploadAvgAHT" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">ACW</label><input type="number" id="uploadAvgACW" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Hold Time</label><input type="number" id="uploadAvgHoldTime" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Reliability (Total hrs)</label><input type="number" id="uploadAvgReliability" step="0.1" placeholder="hrs" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                    <div><label style="font-size: 0.8em; color: #555;">Center Headcount</label><input type="number" id="uploadAvgHeadcount" value="144" step="1" placeholder="144" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 10px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 200px;">
                                 <label id="pasteWeekEndingLabel" for="pasteWeekEndingDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Week Ending (Saturday):</label>
@@ -108,6 +92,47 @@
                                 <button type="button" id="testPastedDataBtn" class="btn-secondary" style="background: #1565c0; color: white; padding: 8px 20px; white-space: nowrap; font-weight: bold;">🧪 Test Upload (No Save)</button>
                             </div>
                         </div>
+                        </div><!-- end uploadEmployeePanel -->
+
+                        <div id="uploadCenterAvgPanel" style="display: none;">
+                            <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Enter center averages for a period. These flow to Metric Trends, Team Snapshot, and all analysis tools.</p>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period Type:</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button type="button" class="upload-avg-period-btn" data-period="daily" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Daily</button>
+                                    <button type="button" class="upload-avg-period-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #1565c0; background: #1565c0; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Week</button>
+                                    <button type="button" class="upload-avg-period-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
+                                    <button type="button" class="upload-avg-period-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; align-items: end; margin-bottom: 15px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label id="avgWeekEndingLabel" for="avgWeekEndingDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Week Ending (Saturday):</label>
+                                    <input type="date" id="avgWeekEndingDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 15px;">
+                                <div><label style="font-size: 0.8em; color: #555;">Adherence</label><input type="number" id="uploadAvgAdherence" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Overall Experience</label><input type="number" id="uploadAvgOverallExperience" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Rep Satisfaction</label><input type="number" id="uploadAvgRepSatisfaction" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">FCR</label><input type="number" id="uploadAvgFCR" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Transfers</label><input type="number" id="uploadAvgTransfers" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Sentiment</label><input type="number" id="uploadAvgSentiment" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Positive Word</label><input type="number" id="uploadAvgPositiveWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Negative Word</label><input type="number" id="uploadAvgNegativeWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Managing Emotions</label><input type="number" id="uploadAvgManagingEmotions" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">AHT</label><input type="number" id="uploadAvgAHT" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">ACW</label><input type="number" id="uploadAvgACW" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Hold Time</label><input type="number" id="uploadAvgHoldTime" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Reliability (Total hrs)</label><input type="number" id="uploadAvgReliability" step="0.1" placeholder="hrs" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                                <div><label style="font-size: 0.8em; color: #555;">Center Headcount</label><input type="number" id="uploadAvgHeadcount" value="144" step="1" placeholder="144" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
+                            </div>
+
+                            <button type="button" id="saveCenterAvgBtn" style="background: #1565c0; color: white; border: none; border-radius: 4px; padding: 10px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">💾 Save Center Averages</button>
+                        </div><!-- end uploadCenterAvgPanel -->
                     </div>
                     <!-- Success message -->
                     <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">
