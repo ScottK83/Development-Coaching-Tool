@@ -436,6 +436,8 @@
         }).join('');
 
         // Build team avg row (computed from employee data)
+        var centerAvgs = snapshotData.centerAvgs;
+        var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
         var teamAvgCells = visibleMetrics.map(function(key) {
             var sum = 0;
             var count = 0;
@@ -446,17 +448,52 @@
                     count++;
                 }
             });
+            if (count === 0) {
+                return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
+                    'color: #7c3aed; background: #f5f3ff; border-bottom: 2px solid #c4b5fd;">--</td>';
+            }
+            var avg = sum / count;
             var metrics = getMetrics();
-            var display = count > 0 ? (metrics.formatMetricValue?.(key, sum / count) || String(Math.round((sum / count) * 10) / 10)) : '--';
+            var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
+
+            // Check target
+            var def = registry[key];
+            var target = def?.target;
+            var meetsTarget = target ? (metrics.isMetricMeetingTarget?.(key, avg, target.value) || false) : null;
+
+            // Check vs center avg
+            var centerVal = centerAvgs[key];
+            var isReverse = metrics.isReverseMetric?.(key) || false;
+            var beatsCenterAvg = (hasCenterAvgs && centerVal !== undefined && !isNaN(centerVal))
+                ? (isReverse ? avg <= centerVal : avg >= centerVal)
+                : null;
+
+            // Determine colors: green if meets target, red if not, purple if no target
+            var bg, color;
+            if (meetsTarget === true) {
+                bg = '#dcfce7'; color = '#166534';
+            } else if (meetsTarget === false) {
+                bg = '#fee2e2'; color = '#991b1b';
+            } else {
+                bg = '#f5f3ff'; color = '#7c3aed';
+            }
+
+            // Add center avg comparison indicator
+            var indicator = '';
+            if (beatsCenterAvg === true) {
+                indicator = '<br><span style="font-size: 0.65em; color: #16a34a;">\u25B2 above ctr</span>';
+            } else if (beatsCenterAvg === false) {
+                indicator = '<br><span style="font-size: 0.65em; color: #dc2626;">\u25BC below ctr</span>';
+            }
+
             return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
-                'color: #7c3aed; background: #f5f3ff; border-bottom: 2px solid #c4b5fd;">' + escapeHtml(display) + '</td>';
+                'color: ' + color + '; background: ' + bg + '; border-bottom: 2px solid #c4b5fd;">' +
+                escapeHtml(display) + indicator + '</td>';
         }).join('');
         var teamAvgRow = '<tr><td style="padding: 5px 10px; font-weight: 700; font-size: 0.8em; color: #7c3aed; ' +
             'background: #f5f3ff; border-bottom: 2px solid #c4b5fd; white-space: nowrap;">Team Avg</td>' + teamAvgCells + '</tr>';
 
         // Build center avg row
-        var centerAvgs = snapshotData.centerAvgs;
-        var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
         var centerRow = '';
         if (hasCenterAvgs) {
             var centerCells = visibleMetrics.map(function(key) {
