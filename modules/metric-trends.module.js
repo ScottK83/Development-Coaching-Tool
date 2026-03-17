@@ -274,15 +274,22 @@ function populateTrendPeriodDropdown() {
 
     trendPeriodSelect.innerHTML = options;
 
+    // Restore last selected period
+    const savedPeriod = localStorage.getItem('devCoachingTool_lastTrendPeriod');
+    if (savedPeriod && filteredPeriods.includes(savedPeriod)) {
+        trendPeriodSelect.value = savedPeriod;
+        populateEmployeeDropdownForPeriod(savedPeriod);
+    }
+
     // Add change listener to filter employees by selected period
     if (!trendPeriodSelect.dataset.bound) {
         trendPeriodSelect.addEventListener('change', (e) => {
-            populateEmployeeDropdownForPeriod(e.target.value);
+            const val = e.target.value;
+            if (val) localStorage.setItem('devCoachingTool_lastTrendPeriod', val);
+            populateEmployeeDropdownForPeriod(val);
         });
         trendPeriodSelect.dataset.bound = 'true';
     }
-
-
 }
 
 function initializeEmployeeDropdown() {
