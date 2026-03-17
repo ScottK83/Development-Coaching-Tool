@@ -559,16 +559,20 @@ function updateTrendButtonsVisibility() {
 }
 
 function applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn) {
+    const coachingFollowupBtn = document.getElementById('generateCoachingFollowupBtn');
     if (selectedValue === '') {
         if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'none';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
         if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
     } else if (selectedValue === 'ALL') {
         if (generateTrendBtn) generateTrendBtn.style.display = 'none';
+        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'none';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
         if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'block';
     } else {
         if (generateTrendBtn) generateTrendBtn.style.display = 'block';
+        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'block';
         if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
         if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
     }
@@ -657,6 +661,11 @@ function setupMetricTrendsListeners() {
         console.error('generateTrendBtn element not found!');
     } else {
         generateTrendBtn.addEventListener('click', generateTrendEmail);
+    }
+
+    const coachingFollowupBtn = document.getElementById('generateCoachingFollowupBtn');
+    if (coachingFollowupBtn) {
+        coachingFollowupBtn.addEventListener('click', generateCoachingFollowup);
     }
 
     if (!generateAllTrendBtn) {
@@ -1202,7 +1211,25 @@ function generateTrendEmail() {
     const { period, periodMeta, employee, prevEmployee } = trendContext;
 
     const displayName = getTrendEmailDisplayName(employeeName, nickname);
-    showToast('ℹ️ Creating email image...', 3000);
+    showToast('ℹ️ Creating metrics image...', 3000);
+
+    createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
+        const emailSubject = buildTrendEmailSubject(periodMeta, displayName);
+        openTrendEmailOutlook(emailSubject, employeeName);
+        showToast('📧 Metrics image copied! Paste into the email body.', 4000);
+    });
+}
+
+function generateCoachingFollowup() {
+    const selection = getTrendEmailSelection();
+    if (!selection) return;
+    const { employeeName, weekKey, nickname } = selection;
+
+    const trendContext = resolveTrendEmailContext(employeeName, weekKey);
+    if (!trendContext) return;
+    const { period, periodMeta, employee } = trendContext;
+
+    const displayName = getTrendEmailDisplayName(employeeName, nickname);
 
     const {
         weakestMetric,
@@ -1213,8 +1240,11 @@ function generateTrendEmail() {
     } = buildTrendEmailAnalysisBundle(employee, weekKey, period);
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
 
-    createTrendEmailImage(displayName, weekKey, period, employee, prevEmployee, () => {
-        handleTrendEmailImageReady(
+    const emailSubject = `Coaching Follow-up - ${displayName}`;
+    openTrendEmailOutlook(emailSubject, employeeName);
+
+    if (weakestMetric || trendingMetric || (allMetrics && allMetrics.length > 0)) {
+        showTrendsWithTipsPanel(
             employeeName,
             displayName,
             weakestMetric,
@@ -1223,10 +1253,12 @@ function generateTrendEmail() {
             tipsForTrending,
             weekKey,
             periodMeta,
+            emailSubject,
             sentimentSnapshot,
             allMetrics
         );
-    });
+    }
+    showToast('📧 Coaching follow-up email opening. Use the CoPilot prompt to draft your message.', 4000);
 }
 
 function buildEmployeeEmail(employeeName) {
@@ -3708,6 +3740,7 @@ function generateAllTrendEmails() {
         getTrendEmailSelection,
         getTrendEmailDisplayName,
         generateTrendEmail,
+        generateCoachingFollowup,
         openTrendEmailOutlook,
         getTrendPeriodDisplay,
         buildTrendEmailSubject,
