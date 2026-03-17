@@ -1562,6 +1562,10 @@ function bindQuickActionHandlers() {
         showOnlySection('hotTipSection');
         if (typeof initializeHotTip === 'function') initializeHotTip();
     });
+    document.getElementById('teamSnapshotBtn')?.addEventListener('click', () => {
+        showOnlySection('teamSnapshotSection');
+        if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
+    });
     document.getElementById('ptoBtn')?.addEventListener('click', () => {
         showOnlySection('ptoSection');
         initializePtoTracker();

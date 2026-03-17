@@ -23,6 +23,7 @@
                 <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Follow Up">📌 FOLLOW UP</button>
                 <button type="button" id="ptoBtn" class="btn-secondary top-nav-btn" aria-label="PTO Tracker">🕒 PTO Tracker</button>
                 <button type="button" id="hotTipBtn" class="btn-secondary top-nav-btn" aria-label="Hot Tip of the Day" style="background: #f57c00; color: white;">🔥 Hot Tip</button>
+                <button type="button" id="teamSnapshotBtn" class="btn-secondary top-nav-btn" aria-label="Team Snapshot" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white;">📊 Team Snapshot</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Manage Data">🗄️ Manage Data</button>
             </div>
         </header>
@@ -1479,6 +1480,44 @@ Box 2 - Future Improvement Areas:
                 </div>
             </section>
 
+            <!-- ============================================ -->
+            <!-- TEAM SNAPSHOT SECTION -->
+            <!-- ============================================ -->
+            <section id="teamSnapshotSection" style="display: none;">
+                <div class="form-section" style="background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); border-left: 4px solid #2563eb;">
+                    <h2>📊 Team Performance Snapshot</h2>
+                    <p style="color: #1e40af; margin-bottom: 20px;">Generate shareable performance graphics for your team chat. Select a period, review data, enter center averages, and create a visual snapshot.</p>
+
+                    <!-- Step 1: Select Period -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #93c5fd;">
+                        <h3 style="color: #1e40af; margin-top: 0;">Step 1: Select Period</h3>
+                        <select id="snapshotPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #93c5fd; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            <option value="">-- Select a period --</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Review Data & Enter Center Averages -->
+                    <div id="snapshotDataGrid" style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #93c5fd;">
+                        <p style="color: #94a3b8; text-align: center; padding: 20px;">Select a period above to preview team data.</p>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div id="snapshotGenerateArea" style="display: none; margin-bottom: 20px; text-align: center;">
+                        <p style="font-size: 0.85em; color: #64748b; margin-bottom: 10px;">Enter center averages in the blue row above (optional), then generate your snapshot.</p>
+                        <button type="button" id="snapshotGenerateBtn" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 14px 32px; cursor: pointer; font-weight: 700; font-size: 1.05em; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); transition: all 0.3s ease;">📊 Generate Team Snapshot</button>
+                    </div>
+
+                    <!-- Snapshot Output -->
+                    <div id="snapshotGraphicContainer" style="margin-bottom: 16px;"></div>
+
+                    <!-- Export Buttons -->
+                    <div id="snapshotExportBtns" style="display: none; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                        <button type="button" id="snapshotCopyBtn" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; border: none; border-radius: 6px; padding: 12px 24px; cursor: pointer; font-weight: 600; font-size: 0.95em; flex: 1; min-width: 180px; max-width: 280px;">📋 Copy to Clipboard (Paste in Teams)</button>
+                        <button type="button" id="snapshotDownloadBtn" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; border-radius: 6px; padding: 12px 24px; cursor: pointer; font-weight: 600; font-size: 0.95em; flex: 1; min-width: 180px; max-width: 280px;">💾 Download as Image</button>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
         <footer style="text-align: center; padding: 20px; color: #999; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 40px;">
@@ -1534,7 +1573,8 @@ Box 2 - Future Improvement Areas:
     <script src="modules/trend-intelligence.module.js"></script>
     <script src="modules/trend-coaching-email.module.js"></script>
     <script src="modules/copilot-prompt.module.js"></script>
-    
+    <script src="modules/team-snapshot.module.js"></script>
+
     <!-- Main Application -->
     <script>
         (function loadAppScriptWithCacheBust() {

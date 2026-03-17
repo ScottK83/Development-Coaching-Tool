@@ -216,6 +216,16 @@
             return;
         }
 
+        if (sectionId === 'teamSnapshotSection') {
+            showOnlySection('teamSnapshotSection');
+            if (typeof window.initializeTeamSnapshot === 'function') {
+                window.initializeTeamSnapshot();
+            } else if (typeof initializeTeamSnapshot === 'function') {
+                initializeTeamSnapshot();
+            }
+            return;
+        }
+
         showOnlySection('coachingForm');
         initializeSection('coachingForm');
     }
