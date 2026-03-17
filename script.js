@@ -6480,14 +6480,16 @@ function setAppVersionLabel(statusSuffix = '') {
 
     const deployMarkerEl = document.getElementById('deployMarker');
     if (deployMarkerEl) {
-        const lastSuccess = loadRepoSyncLastSuccess();
-        const commit = String(lastSuccess?.commit || '').trim();
-        const shortCommit = commit ? commit.slice(0, 7) : '';
-        if (shortCommit) {
-            deployMarkerEl.textContent = `Deploy: ${shortCommit}`;
-        } else {
-            deployMarkerEl.textContent = 'Deploy: n/a';
-        }
+        fetch('https://api.github.com/repos/ScottK83/Development-Coaching-Tool/commits/main', { headers: { Accept: 'application/vnd.github.v3+json' } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.sha) {
+                    deployMarkerEl.textContent = `Deploy: ${data.sha.slice(0, 7)}`;
+                } else {
+                    deployMarkerEl.textContent = 'Deploy: n/a';
+                }
+            })
+            .catch(() => { deployMarkerEl.textContent = 'Deploy: n/a'; });
     }
 
     const lastSyncFooterEl = document.getElementById('lastSyncFooter');
