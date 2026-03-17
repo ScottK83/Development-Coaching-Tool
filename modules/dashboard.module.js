@@ -65,6 +65,7 @@
             var key = keys[i];
             var def = registry[key];
             if (!def || !def.target) continue;
+            if (key === 'transfersCount') continue;
 
             var value = emp[key];
             var num = parseFloat(value);
