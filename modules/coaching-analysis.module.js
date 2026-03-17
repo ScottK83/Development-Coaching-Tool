@@ -93,7 +93,7 @@
             const mailEndDate = periodMeta.endDate || 'unknown';
             const emailSubject = `Trending Metrics - ${mailPeriodType} - ${mailPeriodLabel} ending ${mailEndDate} for ${displayName}`;
             
-            openTrendEmailOutlook(emailSubject);
+            openTrendEmailOutlook(emailSubject, employeeName);
             window.showToast?.('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below.', 4000);
             
             if (weakestMetric || trendingMetric) {
@@ -102,10 +102,30 @@
         });
     }
 
-    function openTrendEmailOutlook(emailSubject) {
+    function buildEmployeeEmail(name) {
+        if (!name || name === 'Team') return '';
+        var n = String(name).trim();
+        var first, last;
+        if (n.indexOf(',') !== -1) {
+            var parts = n.split(',');
+            last = parts[0].trim();
+            first = (parts[1] || '').trim();
+        } else {
+            var parts = n.split(/\s+/);
+            first = parts[0] || '';
+            last = parts.slice(1).join(' ');
+        }
+        if (!first || !last) return '';
+        first = first.split(/\s+/)[0].toLowerCase();
+        last = last.split(/\s+/)[0].toLowerCase();
+        return first + '.' + last + '@aps.com';
+    }
+
+    function openTrendEmailOutlook(emailSubject, employeeName) {
         try {
+            const toAddress = buildEmployeeEmail(employeeName);
             const mailtoLink = document.createElement('a');
-            mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+            mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?subject=${encodeURIComponent(emailSubject)}`;
             document.body.appendChild(mailtoLink);
             mailtoLink.click();
             document.body.removeChild(mailtoLink);

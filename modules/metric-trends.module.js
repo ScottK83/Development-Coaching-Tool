@@ -1122,7 +1122,7 @@ function handleTrendEmailImageReady(
         console.log('Opening Outlook with subject:', emailSubject);
     }
 
-    openTrendEmailOutlook(emailSubject);
+    openTrendEmailOutlook(emailSubject, employeeName);
     showToast('📧 Outlook opening... Image is copied to clipboard. Paste into email body, then use the prompt below for coaching text.', 4000);
 
     if (weakestMetric || trendingMetric) {
@@ -1229,13 +1229,36 @@ function generateTrendEmail() {
     });
 }
 
-function openTrendEmailOutlook(emailSubject) {
+function buildEmployeeEmail(employeeName) {
+    if (!employeeName || employeeName === 'Team') return '';
+    var name = String(employeeName).trim();
+    var first, last;
+    if (name.indexOf(',') !== -1) {
+        // "Last, First" format
+        var parts = name.split(',');
+        last = parts[0].trim();
+        first = (parts[1] || '').trim();
+    } else {
+        // "First Last" format
+        var parts = name.split(/\s+/);
+        first = parts[0] || '';
+        last = parts.slice(1).join(' ');
+    }
+    if (!first || !last) return '';
+    // Take only the first word of each (handle middle names, suffixes)
+    first = first.split(/\s+/)[0].toLowerCase();
+    last = last.split(/\s+/)[0].toLowerCase();
+    return first + '.' + last + '@aps.com';
+}
+
+function openTrendEmailOutlook(emailSubject, employeeName) {
     /**
      * Open Outlook/mail client with trend email
      */
     try {
+        const toAddress = buildEmployeeEmail(employeeName);
         const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}`;
+        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?subject=${encodeURIComponent(emailSubject)}`;
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
