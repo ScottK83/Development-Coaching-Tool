@@ -1116,7 +1116,7 @@ function readUploadCenterAverages() {
             if (!isNaN(val)) {
                 if (key === 'reliability') {
                     const headcount = parseFloat(document.getElementById('uploadAvgHeadcount')?.value) || 144;
-                    val = (val / headcount) * 100;
+                    val = Math.round((val / headcount) * 100) / 100;
                 }
                 result[key] = val;
                 hasAny = true;

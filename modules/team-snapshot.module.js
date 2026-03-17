@@ -156,7 +156,7 @@
         var registry = getRegistry();
         var cells = SNAPSHOT_METRICS.map(function(key) {
             var unit = registry[key]?.unit || '%';
-            var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? 'Total hrs' : '0.0';
+            var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? '0.0' : '0.0';
             return '<td style="padding: 4px;"><input type="text" id="snapCenterAvg_' + key + '" ' +
                 'placeholder="' + placeholder + '" ' +
                 'style="width: 60px; padding: 4px; text-align: center; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85em;" /></td>';
@@ -202,15 +202,12 @@
 
     function readCenterAvgInputs() {
         var avgs = {};
-        var headcount = parseInt(document.getElementById('snapCenterHeadcount')?.value, 10) || 0;
 
         SNAPSHOT_METRICS.forEach(function(key) {
             var input = document.getElementById('snapCenterAvg_' + key);
             if (input && input.value.trim() !== '') {
                 var val = parseFloat(input.value.trim());
-                if (key === 'reliability' && headcount > 0 && !isNaN(val)) {
-                    avgs[key] = Math.round((val / headcount) * 100) / 100;
-                } else {
+                if (!isNaN(val)) {
                     avgs[key] = val;
                 }
             }
