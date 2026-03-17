@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-17T23:30:06.841Z",
-  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
+  "generatedAt": "2026-03-17T23:30:14.844Z",
+  "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -6839,8 +6839,8 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 132
+      "itemCount": 6,
+      "byteLength": 162
     },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
@@ -6855,7 +6855,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 345
+      "byteLength": 364
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
