@@ -40,6 +40,32 @@
         return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) || String(text || '');
     }
 
+    function getWeeklyData() {
+        // Try the live global first, fall back to loading from storage
+        var storage = window.DevCoachModules?.storage;
+        if (storage?.loadWeeklyData) return storage.loadWeeklyData();
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    }
+
+    function getYtdData() {
+        var storage = window.DevCoachModules?.storage;
+        if (storage?.loadYtdData) return storage.loadYtdData();
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    }
+
+    function getMyTeamMembers() {
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    }
+
     // ============================================
     // DATA RETRIEVAL
     // ============================================
@@ -49,8 +75,8 @@
      */
     function getAvailablePeriods() {
         var periods = [];
-        var weeklyData = window.weeklyData || {};
-        var ytdData = window.ytdData || {};
+        var weeklyData = getWeeklyData();
+        var ytdData = getYtdData();
 
         Object.keys(weeklyData).forEach(function(key) {
             var data = weeklyData[key];
@@ -89,7 +115,7 @@
      * Get employees for a given period key
      */
     function getEmployeesForPeriod(periodKey, source) {
-        var dataSource = source === 'ytd' ? (window.ytdData || {}) : (window.weeklyData || {});
+        var dataSource = source === 'ytd' ? getYtdData() : getWeeklyData();
         var periodData = dataSource[periodKey];
         if (!periodData) return [];
         return periodData.employees || [];
@@ -99,7 +125,7 @@
      * Get team members filter for a period
      */
     function getTeamFilter(periodKey) {
-        var myTeamMembers = window.myTeamMembers || {};
+        var myTeamMembers = getMyTeamMembers();
         return myTeamMembers[periodKey] || [];
     }
 
