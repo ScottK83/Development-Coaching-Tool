@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-17T23:31:13.944Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-03-17T23:31:18.913Z",
+  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -6855,7 +6855,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 364
+      "byteLength": 345
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
