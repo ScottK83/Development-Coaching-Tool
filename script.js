@@ -4169,50 +4169,7 @@ const AVERAGE_FORM_FIELD_MAP = {
     reliability: 'avgReliability'
 };
 
-    // Save Call Center Averages button
-    document.getElementById('saveAvgBtn')?.addEventListener('click', () => {
-        const weekKey = document.getElementById('avgUploadedDataSelect')?.value;
-        
-        if (!weekKey) {
-            alert('⚠️ Please select a period first');
-            return;
-        }
-        
-        const averageData = readAveragesFromForm();
-        
-        setCallCenterAverageForPeriod(weekKey, averageData);
-        clearUnsavedChanges();
-        showToast('✅ Call center averages saved!', 3000);
-    });
-
-    // Copy from Previous Week button
-    document.getElementById('copyPreviousAvgBtn')?.addEventListener('click', () => {
-        const currentWeekKey = document.getElementById('avgUploadedDataSelect')?.value;
-        
-        if (!currentWeekKey) {
-            alert('⚠️ Please select a period first');
-            return;
-        }
-        
-        const previousWeekKey = getPreviousWeekKey(currentWeekKey);
-        if (!previousWeekKey) {
-            alert('ℹ️ No previous week found');
-            return;
-        }
-
-        const previousAverages = getCallCenterAverageForPeriod(previousWeekKey);
-        
-        if (!previousAverages || Object.keys(previousAverages).length === 0) {
-            alert('ℹ️ No averages found for previous week');
-            return;
-        }
-        
-        // Copy all values
-        applyAveragesToForm(previousAverages);
-        
-        markUnsavedChanges();
-        showToast('✅ Copied from previous week! Click Save to apply.', 4000);
-    });
+    // Save/Copy handlers are in metric-trends.module.js (initializeMetricTrends)
 
 const TREND_METRIC_MAPPINGS = {
     scheduleAdherence: 'scheduleAdherence',
