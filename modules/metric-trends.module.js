@@ -1220,6 +1220,77 @@ function generateTrendEmail() {
     });
 }
 
+function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta) {
+    const firstName = displayName.split(/[,\s]/)[0];
+    const lines = [];
+
+    lines.push(`Hi ${firstName},`);
+    lines.push('');
+    lines.push('Following up on your metrics for this period. Here are some areas I wanted to highlight:');
+    lines.push('');
+
+    // Strengths
+    const strengths = Array.isArray(allMetrics)
+        ? allMetrics.filter(m => m && m.meetsTarget)
+        : [];
+    if (strengths.length > 0) {
+        lines.push('WHAT IS GOING WELL:');
+        for (let i = 0; i < Math.min(strengths.length, 4); i++) {
+            const s = strengths[i];
+            lines.push(`  - ${s.label}: ${s.displayValue || s.employeeValue} (target met)`);
+        }
+        lines.push('');
+    }
+
+    // Focus areas
+    const focusAreas = [];
+    if (weakestMetric) focusAreas.push({ metric: weakestMetric, tips: tipsForWeakest || [] });
+    if (trendingMetric && trendingMetric.metricKey !== weakestMetric?.metricKey) {
+        focusAreas.push({ metric: trendingMetric, tips: tipsForTrending || [] });
+    }
+    const belowTarget = Array.isArray(allMetrics)
+        ? allMetrics.filter(m => m && !m.meetsTarget)
+        : [];
+    for (const m of belowTarget) {
+        if (focusAreas.length >= 3) break;
+        if (!focusAreas.some(f => f.metric?.metricKey === m.metricKey)) {
+            focusAreas.push({ metric: m, tips: [] });
+        }
+    }
+
+    if (focusAreas.length > 0) {
+        lines.push('AREAS TO FOCUS ON:');
+        for (const area of focusAreas) {
+            const m = area.metric;
+            const targetPrefix = m.targetType === 'min' ? '>=' : '<=';
+            lines.push(`  - ${m.label}: Currently ${m.displayValue || m.employeeValue}, target is ${targetPrefix} ${m.target}`);
+            if (area.tips.length > 0) {
+                lines.push(`    Tip: ${area.tips[0]}`);
+            }
+        }
+        lines.push('');
+    }
+
+    lines.push('Let me know if you have any questions or want to discuss any of these further.');
+    lines.push('');
+    lines.push('Thanks,');
+
+    return lines.join('\n');
+}
+
+function openCoachingFollowupEmail(emailSubject, employeeName, emailBody) {
+    try {
+        const toAddress = buildEmployeeEmail(employeeName);
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+    } catch(e) {
+        console.error('Error opening mailto:', e);
+    }
+}
+
 function generateCoachingFollowup() {
     const selection = getTrendEmailSelection();
     if (!selection) return;
@@ -1241,7 +1312,8 @@ function generateCoachingFollowup() {
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
 
     const emailSubject = `Coaching Follow-up - ${displayName}`;
-    openTrendEmailOutlook(emailSubject, employeeName);
+    const emailBody = buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta);
+    openCoachingFollowupEmail(emailSubject, employeeName, emailBody);
 
     if (weakestMetric || trendingMetric || (allMetrics && allMetrics.length > 0)) {
         showTrendsWithTipsPanel(
@@ -1258,7 +1330,7 @@ function generateCoachingFollowup() {
             allMetrics
         );
     }
-    showToast('📧 Coaching follow-up email opening. Use the CoPilot prompt to draft your message.', 4000);
+    showToast('📧 Coaching email drafted. Edit as needed before sending.', 4000);
 }
 
 function buildEmployeeEmail(employeeName) {

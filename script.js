@@ -1839,7 +1839,7 @@ function handleUploadMoreDataClick() {
     document.getElementById('uploadSuccessMessage').style.display = 'none';
     document.getElementById('pasteDataTextarea').value = '';
     document.getElementById('pasteWeekEndingDate').value = '';
-    showOnlySection('uploadSection');
+    showOnlySection('coachingForm');
 }
 
 function handleDeleteEmployeeYearClick() {
@@ -2093,7 +2093,7 @@ function handleLoadPastedDataClick() {
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';
 
-        showOnlySection('coachingSection');
+        showOnlySection('coachingForm');
 
         if (periodType !== 'ytd') {
             syncWeeklyViewAfterPastedUpload(weekKey);
