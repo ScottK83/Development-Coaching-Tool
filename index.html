@@ -18,6 +18,7 @@
             <h1>Development Coaching Tool</h1>
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
             <div class="top-nav-buttons flex-row-center" style="margin-top: 15px;">
+                <button type="button" id="dashboardBtn" class="btn-secondary top-nav-btn" aria-label="Dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">📋 Dashboard</button>
                 <button type="button" id="homeBtn" class="btn-secondary top-nav-btn" aria-label="Home - Upload Data">🏠 Home (Upload Data)</button>
                 <button type="button" id="coachingEmailBtn" class="btn-secondary top-nav-btn" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
                 <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Follow Up">📌 FOLLOW UP</button>
@@ -29,6 +30,13 @@
         </header>
 
         <main>
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" style="display: none;">
+                <div id="dashboardContent">
+                    <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading dashboard...</p>
+                </div>
+            </section>
+
             <!-- Upload Section -->
             <form id="coachingForm">
                 <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
@@ -1639,6 +1647,7 @@ Box 2 - Future Improvement Areas:
     <script src="modules/trend-coaching-email.module.js"></script>
     <script src="modules/copilot-prompt.module.js"></script>
     <script src="modules/team-snapshot.module.js"></script>
+    <script src="modules/dashboard.module.js"></script>
 
     <!-- Main Application -->
     <script>

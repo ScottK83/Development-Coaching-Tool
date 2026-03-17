@@ -1588,7 +1588,15 @@ function bindUploadAndPasteHandlers() {
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
 }
 
+function initializeDashboard() {
+    window.DevCoachModules?.dashboard?.initializeDashboard?.();
+}
+
 function bindNavigationHandlers() {
+    document.getElementById('dashboardBtn')?.addEventListener('click', () => {
+        showOnlySection('dashboardSection');
+        initializeDashboard();
+    });
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');

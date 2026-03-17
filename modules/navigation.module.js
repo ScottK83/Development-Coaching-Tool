@@ -110,7 +110,7 @@
 
     function getDefaultUiNavState() {
         return {
-            sectionId: 'coachingForm',
+            sectionId: 'dashboardSection',
             coachingSubSectionId: 'subSectionCoachingEmail',
             manageDataSubSectionId: 'subSectionTeamData'
         };
@@ -145,7 +145,7 @@
 
     function restoreLastViewedSection() {
         var state = loadUiNavState();
-        var sectionId = state.sectionId || 'coachingForm';
+        var sectionId = state.sectionId || 'dashboardSection';
 
         var coachingSubSectionToButton = {
             subSectionCoachingEmail: 'subNavCoachingEmail',
@@ -226,8 +226,18 @@
             return;
         }
 
-        showOnlySection('coachingForm');
-        initializeSection('coachingForm');
+        if (sectionId === 'dashboardSection') {
+            showOnlySection('dashboardSection');
+            if (typeof window.initializeDashboard === 'function') {
+                window.initializeDashboard();
+            }
+            return;
+        }
+
+        showOnlySection('dashboardSection');
+        if (typeof window.initializeDashboard === 'function') {
+            window.initializeDashboard();
+        }
     }
 
     /**
