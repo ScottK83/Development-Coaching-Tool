@@ -354,13 +354,26 @@
         var now = new Date();
         var dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-        // Smart exclude: only show metrics where at least one employee has data
-        var visibleMetrics = SNAPSHOT_METRICS.filter(function(key) {
-            return snapshotData.rows.some(function(row) {
+        // Smart column ordering: metrics with real data first, all-zero metrics pushed to end
+        var metricsWithData = [];
+        var metricsAllZero = [];
+        SNAPSHOT_METRICS.forEach(function(key) {
+            var hasNonZero = snapshotData.rows.some(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                return cell && cell.hasValue && cell.value !== 0;
+            });
+            var hasAnyValue = snapshotData.rows.some(function(row) {
                 var cell = row.cells.find(function(c) { return c.metricKey === key; });
                 return cell && cell.hasValue;
             });
+            if (hasNonZero) {
+                metricsWithData.push(key);
+            } else if (hasAnyValue) {
+                metricsAllZero.push(key);  // all zeros — push to end
+            }
+            // no data at all — excluded entirely
         });
+        var visibleMetrics = metricsWithData.concat(metricsAllZero);
 
         // Build header row
         var headerCells = visibleMetrics.map(function(key) {
@@ -607,11 +620,11 @@
         var periodKey = parts.slice(0, -1).join('|'); // rejoin in case key contains |
         var source = parts[parts.length - 1];
 
-        // Load existing center averages into the input fields
-        loadCenterAvgInputs(periodKey);
-
-        // Pre-populate the data grid preview
+        // Pre-populate the data grid preview (rebuilds center avg inputs)
         renderDataEntryGrid(periodKey, source);
+
+        // Load existing center averages into the input fields (must be after grid render)
+        loadCenterAvgInputs(periodKey);
     }
 
     // ============================================
