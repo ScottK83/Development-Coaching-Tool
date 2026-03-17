@@ -244,12 +244,12 @@
         }
 
         const when = new Date(data.syncedAt).toLocaleString();
-        const details = [data.reason, data.commit].filter(Boolean).join(' • ');
+        const dirLabel = data.direction === 'retrieve' ? '⬇️ Retrieved' : data.direction === 'upload' ? '⬆️ Uploaded' : '🔄 Synced';
         if (el) {
-            el.textContent = `Last successful sync: ${when}${details ? ` (${details})` : ''}`;
+            el.textContent = `Last sync: ${dirLabel} ${when}`;
         }
         if (lastSyncFooterEl) {
-            lastSyncFooterEl.textContent = `Last Sync: ${when}`;
+            lastSyncFooterEl.textContent = `${dirLabel} ${when}`;
         }
     }
 
@@ -362,7 +362,7 @@
                 }
                 await runWithButtonBusyState(syncNowBtn, 'Syncing...', async () => {
                     getCallListeningSyncConfigFromUI();
-                    await syncRepoData('manual sync now', { force: true });
+                    await syncRepoData('manual sync now', { force: true, allowDataRegression: true });
                 });
             });
             syncNowBtn.dataset.bound = 'true';
@@ -376,16 +376,21 @@
                     setCallListeningSyncStatus('Restoring from repo backup (overwrite local)...', 'info');
 
                     try {
+                        setCallListeningSyncStatus('Fetching backup from repo...', 'info');
                         const payload = await fetchRepoBackupPayload();
                         if (!hasMeaningfulBackupData(payload)) {
-                            throw new Error('No repo backup data found to restore.');
+                            throw new Error('No repo backup data found to restore. The backup file may be empty or missing.');
                         }
+                        setCallListeningSyncStatus('Applying backup data...', 'info');
 
                         await withRepoSyncHydrationLock(async () => {
                             applyRepoBackupPayload(payload);
                         });
 
                         saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
+                        clearRepoSyncAutoPause();
+                        repoSyncConflictPromptMutedUntil = 0;
+                        saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
 
                         setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
                         showToast('Local profile overwritten from repo backup.', 3500);
@@ -1215,10 +1220,11 @@
     // SYNC EXECUTION (with retry logic)
     // ============================================
 
-    function buildRepoSyncMeta(reason, responseData) {
+    function buildRepoSyncMeta(reason, responseData, direction) {
         return {
             syncedAt: new Date().toISOString(),
             reason,
+            direction: direction || 'upload',
             commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || '',
             backupSummary: responseData?.incomingSummary || null
         };
@@ -1235,10 +1241,10 @@
         return endpoint;
     }
 
-    function finalizeRepoSyncSuccess(reason, responseData) {
+    function finalizeRepoSyncSuccess(reason, responseData, direction) {
         repoSyncConflictPromptMutedUntil = 0;
         clearRepoSyncAutoPause();
-        const syncMeta = buildRepoSyncMeta(reason, responseData);
+        const syncMeta = buildRepoSyncMeta(reason, responseData, direction || 'upload');
         saveRepoSyncLastSuccess(syncMeta);
         renderCallListeningLastSync(syncMeta);
         const weeklyCount = Number(responseData?.incomingSummary?.weeklyPeriods || 0);

@@ -1097,6 +1097,41 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
     saveCallCenterAverages(averages);
 }
 
+function readUploadCenterAverages() {
+    const UPLOAD_AVG_FIELDS = {
+        adherence: 'uploadAvgAdherence',
+        overallExperience: 'uploadAvgOverallExperience',
+        repSatisfaction: 'uploadAvgRepSatisfaction',
+        fcr: 'uploadAvgFCR',
+        transfers: 'uploadAvgTransfers',
+        sentiment: 'uploadAvgSentiment',
+        positiveWord: 'uploadAvgPositiveWord',
+        negativeWord: 'uploadAvgNegativeWord',
+        managingEmotions: 'uploadAvgManagingEmotions',
+        aht: 'uploadAvgAHT',
+        acw: 'uploadAvgACW',
+        holdTime: 'uploadAvgHoldTime',
+        reliability: 'uploadAvgReliability'
+    };
+    const result = {};
+    let hasAny = false;
+    for (const [key, inputId] of Object.entries(UPLOAD_AVG_FIELDS)) {
+        const el = document.getElementById(inputId);
+        if (el && el.value.trim() !== '') {
+            let val = parseFloat(el.value);
+            if (!isNaN(val)) {
+                if (key === 'reliability') {
+                    const headcount = parseFloat(document.getElementById('uploadAvgHeadcount')?.value) || 144;
+                    val = (val / headcount) * 100;
+                }
+                result[key] = val;
+                hasAny = true;
+            }
+        }
+    }
+    return hasAny ? result : null;
+}
+
 function getEmployeeNickname(fullName) {
     if (!fullName) return '';
     
@@ -1496,7 +1531,18 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('showUploadMetricsBtn')?.addEventListener('click', () => {
         const container = document.getElementById('pasteDataContainer');
         if (container) {
-            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+            const isHidden = window.getComputedStyle(container).display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+        }
+    });
+
+    document.getElementById('toggleUploadAvgBtn')?.addEventListener('click', () => {
+        const container = document.getElementById('uploadCenterAvgContainer');
+        const btn = document.getElementById('toggleUploadAvgBtn');
+        if (container) {
+            const showing = container.style.display === 'none';
+            container.style.display = showing ? 'block' : 'none';
+            if (btn) btn.textContent = showing ? '📊 Center Averages (optional) ▼' : '📊 Center Averages (optional) ▶';
         }
     });
 
@@ -1983,6 +2029,12 @@ function handleLoadPastedDataClick() {
         saveWeeklyData();
         saveYtdData();
 
+        // Save center averages if any were entered on the upload form
+        const uploadAvgData = readUploadCenterAverages();
+        if (uploadAvgData) {
+            setCallCenterAverageForPeriod(weekKey, uploadAvgData);
+        }
+
         populateDeleteWeekDropdown();
         populateUploadedDataDropdown();
         populateTeamMemberSelector();
@@ -1996,11 +2048,7 @@ function handleLoadPastedDataClick() {
             syncWeeklyViewAfterPastedUpload(weekKey);
         }
 
-        alert(`✅ Loaded ${employees.length} employees for ${label}!\n\nManage associates in "👥 Team Members & Employees" under "📊 Manage Data".`);
-
-        setTimeout(() => {
-            location.reload();
-        }, 500);
+        showToast(`✅ Loaded ${employees.length} employees for ${label}`, 4000);
     } catch (error) {
         console.error('Error parsing pasted data:', error);
         alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
