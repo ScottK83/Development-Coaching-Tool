@@ -166,16 +166,26 @@
         }
     }
 
+    // Only these keys represent meaningful data changes worth syncing to GitHub
+    const SYNCABLE_STORAGE_KEYS = new Set([
+        STORAGE_PREFIX + 'weeklyData',
+        STORAGE_PREFIX + 'ytdData',
+        STORAGE_PREFIX + 'coachingHistory',
+        STORAGE_PREFIX + 'myTeamMembers',
+        STORAGE_PREFIX + 'callCenterAverages',
+        STORAGE_PREFIX + 'callListeningLogs',
+        STORAGE_PREFIX + 'yearEndDraftEntries',
+        STORAGE_PREFIX + 'yearEndAnnualGoals',
+        STORAGE_PREFIX + 'employeePreferredNames',
+        STORAGE_PREFIX + 'userCustomTips',
+        STORAGE_PREFIX + 'sentimentPhraseDatabase',
+        STORAGE_PREFIX + 'associateSentimentSnapshots',
+        STORAGE_PREFIX + 'executiveSummaryNotes',
+        STORAGE_PREFIX + 'ptoTracker'
+    ]);
+
     function shouldSyncForStorageKey(key) {
-        const storageKey = String(key || '');
-        if (!storageKey || !storageKey.startsWith(STORAGE_PREFIX)) return false;
-
-        const ignoredKeys = new Set([
-            CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY,
-            REPO_SYNC_LAST_SUCCESS_STORAGE_KEY
-        ]);
-
-        return !ignoredKeys.has(storageKey);
+        return SYNCABLE_STORAGE_KEYS.has(String(key || ''));
     }
 
     function installRepoSyncStorageHooks() {
