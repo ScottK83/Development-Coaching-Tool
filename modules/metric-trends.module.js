@@ -674,7 +674,7 @@ function displayMetricsPreview(employeeName, weekKey) {
 
     const surveyTotal = Number.isFinite(parseInt(employee.surveyTotal, 10)) ? parseInt(employee.surveyTotal, 10) : 0;
     const periodType = String(periodData?.metadata?.periodType || 'period').toLowerCase();
-    const periodTypeLabel = periodType === 'week' ? 'week' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : periodType === 'ytd' ? 'YTD period' : 'period';
+    const periodTypeLabel = periodType === 'daily' ? 'day' : periodType === 'week' ? 'week' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : periodType === 'ytd' ? 'YTD period' : 'period';
     const periodLabel = String(periodData?.metadata?.label || weekKey || '').trim();
     if (metricsPreviewSurveyCount) {
         metricsPreviewSurveyCount.textContent = `Surveys in loaded ${periodTypeLabel}: ${surveyTotal}${periodLabel ? ` • ${periodLabel}` : ''}`;
@@ -1223,9 +1223,9 @@ function openTrendEmailOutlook(emailSubject) {
 
 function getTrendPeriodDisplay(periodType = 'week') {
     const normalized = String(periodType || 'week').toLowerCase();
-    const periodTypeText = normalized === 'month' ? 'month' : normalized === 'quarter' ? 'quarter' : normalized === 'ytd' ? 'ytd' : 'week';
-    const periodTypeTitle = normalized === 'month' ? 'Monthly' : normalized === 'quarter' ? 'Quarterly' : normalized === 'ytd' ? 'YTD' : 'Weekly';
-    const periodLabel = normalized === 'month' ? 'Month' : normalized === 'quarter' ? 'Quarter' : normalized === 'ytd' ? 'YTD' : 'Week';
+    const periodTypeText = normalized === 'daily' ? 'daily' : normalized === 'month' ? 'month' : normalized === 'quarter' ? 'quarter' : normalized === 'ytd' ? 'ytd' : 'week';
+    const periodTypeTitle = normalized === 'daily' ? 'Daily' : normalized === 'month' ? 'Monthly' : normalized === 'quarter' ? 'Quarterly' : normalized === 'ytd' ? 'YTD' : 'Weekly';
+    const periodLabel = normalized === 'daily' ? 'Day' : normalized === 'month' ? 'Month' : normalized === 'quarter' ? 'Quarter' : normalized === 'ytd' ? 'YTD' : 'Week';
     return { periodTypeText, periodTypeTitle, periodLabel };
 }
 
@@ -1993,7 +1993,7 @@ function resolveTrendDirectionDisplay(associateValue, previousValue, isReverse, 
     }
 
     const changeValue = formatMetricValue(metricKey, absDiff);
-    const periodLabel = periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
+    const periodLabel = periodType === 'daily' ? 'day' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
     const sign = trendDiff > 0 ? '+' : '-';
     const directionEmoji = trendDiff > 0 ? '📈' : '📉';
 
