@@ -1278,7 +1278,8 @@ function getTrendPeriodDisplay(periodType = 'week') {
 
 function buildTrendEmailSubject(periodMeta, displayName) {
     const { periodTypeTitle } = getTrendPeriodDisplay(periodMeta?.periodType);
-    return `${periodTypeTitle} Check-in - ${displayName}`;
+    const endDate = periodMeta?.endDate || '';
+    return `${periodTypeTitle} Trend Email - ${displayName} (Week Ending ${endDate})`;
 }
 
 function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tipsForTrending, allMetrics) {
