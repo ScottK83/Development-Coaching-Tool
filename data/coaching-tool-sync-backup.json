@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-17T23:29:04.082Z",
-  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
+  "generatedAt": "2026-03-17T23:29:11.004Z",
+  "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -6839,8 +6839,8 @@
     },
     "devCoachingTool_employeeNicknames": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
+      "itemCount": 2,
+      "byteLength": 49
     },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
