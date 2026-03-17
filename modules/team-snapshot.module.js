@@ -435,6 +435,25 @@
                 cells + '</tr>';
         }).join('');
 
+        // Build team avg row (computed from employee data)
+        var teamAvgCells = visibleMetrics.map(function(key) {
+            var sum = 0;
+            var count = 0;
+            snapshotData.rows.forEach(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                if (cell && cell.hasValue && cell.value !== 0) {
+                    sum += cell.value;
+                    count++;
+                }
+            });
+            var metrics = getMetrics();
+            var display = count > 0 ? (metrics.formatMetricValue?.(key, sum / count) || String(Math.round((sum / count) * 10) / 10)) : '--';
+            return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
+                'color: #7c3aed; background: #f5f3ff; border-bottom: 2px solid #c4b5fd;">' + escapeHtml(display) + '</td>';
+        }).join('');
+        var teamAvgRow = '<tr><td style="padding: 5px 10px; font-weight: 700; font-size: 0.8em; color: #7c3aed; ' +
+            'background: #f5f3ff; border-bottom: 2px solid #c4b5fd; white-space: nowrap;">Team Avg</td>' + teamAvgCells + '</tr>';
+
         // Build center avg row
         var centerAvgs = snapshotData.centerAvgs;
         var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
@@ -509,7 +528,7 @@
             '<table style="width: 100%; border-collapse: collapse; border-spacing: 0;">' +
             '<thead><tr><th style="padding: 6px 10px; text-align: left; font-size: 0.75em; font-weight: 700; ' +
             'color: #475569; border-bottom: 2px solid #cbd5e1;">Associate</th>' + headerCells + '</tr></thead>' +
-            '<tbody>' + targetRow + dataRows + centerRow + '</tbody>' +
+            '<tbody>' + targetRow + dataRows + teamAvgRow + centerRow + '</tbody>' +
             '</table></div>' +
             // Legend
             legendHtml +
