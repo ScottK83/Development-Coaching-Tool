@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-17T23:31:51.358Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-03-17T23:31:56.346Z",
+  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
   "sourceAppVersion": null,
   "callListeningLogs": {}
 }
