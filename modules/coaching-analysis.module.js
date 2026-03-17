@@ -24,9 +24,12 @@
         }
         
         // Get current period data (weekly only)
-        const period = window.weeklyData?.[weekKey];
+        const storage = window.DevCoachModules?.storage;
+        const weeklyData = storage?.loadWeeklyData?.() || {};
+        const ytdData = storage?.loadYtdData?.() || {};
+        const period = weeklyData[weekKey];
         if (!period) {
-            if (window.ytdData?.[weekKey]) {
+            if (ytdData[weekKey]) {
                 window.showToast?.('YTD period selected. Please select a weekly period for Metric Trends.', 5000);
             } else {
                 window.showToast?.('No data found for this period', 5000);
@@ -71,7 +74,8 @@
         
         if (selectedSentiment) {
             const [startDate, endDate] = selectedSentiment.split('|');
-            const snapshots = window.associateSentimentSnapshots?.[employeeName];
+            const allSnapshots = storage?.loadAssociateSentimentSnapshots?.() || {};
+            const snapshots = allSnapshots[employeeName];
             
             if (snapshots && Array.isArray(snapshots)) {
                 const matchingSnapshot = snapshots.find(s => 

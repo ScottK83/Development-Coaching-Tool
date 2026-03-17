@@ -110,10 +110,11 @@
     // ============================================
 
     function buildDebugSnapshot() {
-        const weeklyData = window.weeklyData;
-        const ytdData = window.ytdData;
-        const currentPeriodType = window.currentPeriodType;
-        const currentPeriod = window.currentPeriod;
+        const storage = window.DevCoachModules?.storage;
+        const weeklyData = storage?.loadWeeklyData?.() || {};
+        const ytdData = storage?.loadYtdData?.() || {};
+        const currentPeriodType = window.currentPeriodType || 'unknown';
+        const currentPeriod = window.currentPeriod || null;
 
         return {
             url: window.location.href,

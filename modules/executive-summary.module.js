@@ -18,7 +18,7 @@
     // ============================================
 
     function getWeeklyData() {
-        return window.weeklyData || {};
+        return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     }
 
     function getMetricsRegistry() {

@@ -21,11 +21,12 @@
     }
 
     function getMyTeamMembers() {
-        return window.myTeamMembers || {};
+        const storage = getStorage();
+        return storage?.loadTeamMembers?.() || {};
     }
 
     function getWeeklyData() {
-        return window.weeklyData || {};
+        return getStorage()?.loadWeeklyData?.() || {};
     }
 
     // ============================================
@@ -33,29 +34,19 @@
     // ============================================
 
     function loadTeamMembers() {
-        try {
-            const storage = getStorage();
-            if (storage?.loadTeamMembers) {
-                window.myTeamMembers = storage.loadTeamMembers();
-            } else {
-                const saved = localStorage.getItem('devCoachingTool_myTeamMembers');
-                window.myTeamMembers = saved ? JSON.parse(saved) : {};
-            }
-        } catch (error) {
-            console.error('Error loading team members:', error);
-            window.myTeamMembers = {};
-        }
+        // No-op: getMyTeamMembers() now reads directly from storage each time
     }
 
-    function saveTeamMembers() {
+    function saveTeamMembers(data) {
         try {
+            const toSave = data || getMyTeamMembers();
             const storage = getStorage();
             if (storage?.saveWithSizeCheck) {
-                if (!storage.saveWithSizeCheck('myTeamMembers', getMyTeamMembers())) {
+                if (!storage.saveWithSizeCheck('myTeamMembers', toSave)) {
                     console.error('Failed to save team members due to size');
                 }
             } else if (storage?.saveTeamMembers) {
-                storage.saveTeamMembers(getMyTeamMembers());
+                storage.saveTeamMembers(toSave);
             }
             if (typeof window.queueRepoSync === 'function') {
                 window.queueRepoSync('team members updated');
@@ -72,7 +63,6 @@
     function setTeamMembersForWeek(weekKey, memberNames) {
         var members = getMyTeamMembers();
         members[weekKey] = memberNames;
-        window.myTeamMembers = members;
         saveTeamMembers();
         notifyTeamFilterChanged();
     }

@@ -18,6 +18,13 @@
     const RETRY_MAX_ATTEMPTS = 3;
     const RETRY_BASE_DELAY_MS = 1000;
 
+    function safeLoadJson(key) {
+        try {
+            const raw = localStorage.getItem(STORAGE_PREFIX + key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    }
+
     // ============================================
     // INTERNAL STATE
     // ============================================
@@ -270,10 +277,10 @@
             `Last Sync: ${syncedAt}`,
             `Team Filter Week: ${teamContext.weekKey || 'none'}`,
             `Team Filter Mode: ${teamContext.isFiltering ? `${teamContext.selectedMembers.length} selected` : 'all associates'}`,
-            `Current Period Type: ${window.currentPeriodType || 'unknown'}`,
+            `Current Period Type: ${safeLoadJson('currentPeriodType') || window.currentPeriodType || 'unknown'}`,
             `Current Period: ${window.currentPeriod || 'none'}`,
-            `Weekly Periods Loaded: ${Object.keys(window.weeklyData || {}).length}`,
-            `YTD Periods Loaded: ${Object.keys(window.ytdData || {}).length}`
+            `Weekly Periods Loaded: ${Object.keys(window.DevCoachModules?.storage?.loadWeeklyData?.() || {}).length}`,
+            `YTD Periods Loaded: ${Object.keys(window.DevCoachModules?.storage?.loadYtdData?.() || {}).length}`
         ].join('\n');
     }
 
@@ -307,7 +314,7 @@
     }
 
     function getTotalCallListeningLogCount() {
-        const callListeningLogs = window.callListeningLogs || {};
+        const callListeningLogs = safeLoadJson('callListeningLogs') || {};
         return Object.values(callListeningLogs).reduce((count, entries) => {
             return count + (Array.isArray(entries) ? entries.length : 0);
         }, 0);
@@ -691,14 +698,14 @@
     function getMeaningfulLocalDataSources() {
         const storage = window.DevCoachModules?.storage;
         return [
-            window.weeklyData,
-            window.ytdData,
-            window.coachingHistory,
-            window.callListeningLogs,
-            window.associateSentimentSnapshots,
-            window.myTeamMembers,
+            storage?.loadWeeklyData?.() || null,
+            storage?.loadYtdData?.() || null,
+            storage?.loadCoachingHistory?.() || null,
+            safeLoadJson('callListeningLogs'),
+            storage?.loadAssociateSentimentSnapshots?.() || null,
+            storage?.loadTeamMembers?.() || null,
             storage?.loadPtoTracker?.() || null,
-            window.loadCallCenterAverages?.() || null,
+            storage?.loadCallCenterAverages?.() || null,
             window.loadYearEndAnnualGoalsStore?.() || null,
             window.loadYearEndDraftStore?.() || null
         ];
@@ -842,14 +849,14 @@
             reason,
             generatedAt: new Date().toISOString(),
             localDataSummary,
-            weeklyData: window.weeklyData || {},
-            ytdData: window.ytdData || {},
-            coachingHistory: window.coachingHistory || {},
-            callListeningLogs: window.callListeningLogs || {},
-            sentimentPhraseDatabase: window.sentimentPhraseDatabase || null,
-            associateSentimentSnapshots: window.associateSentimentSnapshots || {},
-            myTeamMembers: window.myTeamMembers || {},
-            callCenterAverages: window.loadCallCenterAverages?.() || {},
+            weeklyData: storage?.loadWeeklyData?.() || {},
+            ytdData: storage?.loadYtdData?.() || {},
+            coachingHistory: storage?.loadCoachingHistory?.() || {},
+            callListeningLogs: safeLoadJson('callListeningLogs') || {},
+            sentimentPhraseDatabase: storage?.loadSentimentPhraseDatabase?.() || null,
+            associateSentimentSnapshots: storage?.loadAssociateSentimentSnapshots?.() || {},
+            myTeamMembers: storage?.loadTeamMembers?.() || {},
+            callCenterAverages: storage?.loadCallCenterAverages?.() || {},
             ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
             followUpHistory: followUpHistory,
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
@@ -861,8 +868,9 @@
     }
 
     function summarizeLocalBackupFreshness() {
-        const weeklyDataRef = window.weeklyData || {};
-        const ytdDataRef = window.ytdData || {};
+        const storage = window.DevCoachModules?.storage;
+        const weeklyDataRef = storage?.loadWeeklyData?.() || {};
+        const ytdDataRef = storage?.loadYtdData?.() || {};
         const weeklyKeys = Object.keys(weeklyDataRef);
         const ytdKeys = Object.keys(ytdDataRef);
         const latestWeeklyEndMs = getLatestPeriodEndMsFromMap(weeklyDataRef);
@@ -874,12 +882,12 @@
             latestWeeklyEndDate: latestWeeklyEndMs ? new Date(latestWeeklyEndMs).toISOString().slice(0, 10) : null,
             latestWeeklyEndMs,
             footprintScore: getBackupFootprintScore({
-                weeklyData: window.weeklyData,
-                ytdData: window.ytdData,
-                coachingHistory: window.coachingHistory,
-                callListeningLogs: window.callListeningLogs,
-                associateSentimentSnapshots: window.associateSentimentSnapshots,
-                myTeamMembers: window.myTeamMembers
+                weeklyData: weeklyDataRef,
+                ytdData: ytdDataRef,
+                coachingHistory: storage?.loadCoachingHistory?.() || {},
+                callListeningLogs: safeLoadJson('callListeningLogs') || {},
+                associateSentimentSnapshots: storage?.loadAssociateSentimentSnapshots?.() || {},
+                myTeamMembers: storage?.loadTeamMembers?.() || {}
             })
         };
     }
@@ -1116,36 +1124,34 @@
     }
 
     function applyRepoBackupPayload(payload) {
-        // Write directly to localStorage via storage module to avoid let/window mismatch
+        // Write directly to localStorage to avoid let/window mismatch
+        // (script.js uses `let` vars which aren't on window, so window.saveX() would save empty data)
         const storage = window.DevCoachModules?.storage;
-        if (storage) {
-            storage.saveWeeklyData(coerceObject(payload?.weeklyData));
-            storage.saveYtdData(coerceObject(payload?.ytdData));
-            storage.saveCoachingHistory(coerceObject(payload?.coachingHistory));
-            storage.saveCallListeningLogs(coerceObject(payload?.callListeningLogs));
-            storage.saveSentimentPhraseDatabase(coerceNullableObject(payload?.sentimentPhraseDatabase));
-            storage.saveAssociateSentimentSnapshots(coerceObject(payload?.associateSentimentSnapshots));
-            storage.saveTeamMembers(coerceObject(payload?.myTeamMembers));
-            storage.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
-        } else {
-            // Fallback to window functions
-            window.weeklyData = coerceObject(payload?.weeklyData);
-            window.ytdData = coerceObject(payload?.ytdData);
-            window.coachingHistory = coerceObject(payload?.coachingHistory);
-            window.callListeningLogs = coerceObject(payload?.callListeningLogs);
-            window.sentimentPhraseDatabase = coerceNullableObject(payload?.sentimentPhraseDatabase);
-            window.associateSentimentSnapshots = coerceObject(payload?.associateSentimentSnapshots);
-            window.myTeamMembers = coerceObject(payload?.myTeamMembers);
-            window.saveWeeklyData();
-            window.saveYtdData();
-            window.saveCoachingHistory();
-            window.saveCallListeningLogs(false, 'restored from repo backup');
-            window.saveSentimentPhraseDatabase();
-            window.saveAssociateSentimentSnapshots();
-            window.normalizeTeamMembersForExistingWeeks();
-            window.saveTeamMembers();
-            window.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
-        }
+        const prefix = 'devCoachingTool_';
+
+        if (storage?.saveWeeklyData) storage.saveWeeklyData(coerceObject(payload?.weeklyData));
+        else localStorage.setItem(prefix + 'weeklyData', JSON.stringify(coerceObject(payload?.weeklyData)));
+
+        if (storage?.saveYtdData) storage.saveYtdData(coerceObject(payload?.ytdData));
+        else localStorage.setItem(prefix + 'ytdData', JSON.stringify(coerceObject(payload?.ytdData)));
+
+        if (storage?.saveCoachingHistory) storage.saveCoachingHistory(coerceObject(payload?.coachingHistory));
+        else localStorage.setItem(prefix + 'coachingHistory', JSON.stringify(coerceObject(payload?.coachingHistory)));
+
+        // saveCallListeningLogs not in storage module — write directly
+        localStorage.setItem(prefix + 'callListeningLogs', JSON.stringify(coerceObject(payload?.callListeningLogs)));
+
+        if (storage?.saveSentimentPhraseDatabase) storage.saveSentimentPhraseDatabase(coerceNullableObject(payload?.sentimentPhraseDatabase));
+        else localStorage.setItem(prefix + 'sentimentPhraseDatabase', JSON.stringify(coerceNullableObject(payload?.sentimentPhraseDatabase)));
+
+        if (storage?.saveAssociateSentimentSnapshots) storage.saveAssociateSentimentSnapshots(coerceObject(payload?.associateSentimentSnapshots));
+        else localStorage.setItem(prefix + 'associateSentimentSnapshots', JSON.stringify(coerceObject(payload?.associateSentimentSnapshots)));
+
+        if (storage?.saveTeamMembers) storage.saveTeamMembers(coerceObject(payload?.myTeamMembers));
+        else localStorage.setItem(prefix + 'myTeamMembers', JSON.stringify(coerceObject(payload?.myTeamMembers)));
+
+        if (storage?.saveCallCenterAverages) storage.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
+        else localStorage.setItem(prefix + 'callCenterAverages', JSON.stringify(coerceObject(payload?.callCenterAverages)));
         if (window.DevCoachModules?.storage?.savePtoTracker) {
             const restoredPtoTracker = coerceObject(payload?.ptoTracker);
             window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);
