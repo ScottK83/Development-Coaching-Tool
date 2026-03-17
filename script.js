@@ -6404,10 +6404,10 @@ function setAppVersionLabel(statusSuffix = '') {
                 if (data?.sha) {
                     deployMarkerEl.textContent = `Deploy: ${data.sha.slice(0, 7)}`;
                 } else {
-                    deployMarkerEl.textContent = 'Deploy: n/a';
+                    deployMarkerEl.textContent = `Deploy: v${APP_VERSION}`;
                 }
             })
-            .catch(() => { deployMarkerEl.textContent = 'Deploy: n/a'; });
+            .catch(() => { deployMarkerEl.textContent = `Deploy: v${APP_VERSION}`; });
     }
 
     const lastSyncFooterEl = document.getElementById('lastSyncFooter');
