@@ -9,10 +9,12 @@
 
     var STORAGE_PREFIX = 'devCoachingTool_';
 
-    // Key metrics to show in snapshot (compact set for readability)
+    // Key metrics to show in snapshot
     var SNAPSHOT_METRICS = [
         'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
-        'transfers', 'aht', 'acw', 'overallSentiment', 'reliability'
+        'transfers', 'aht', 'acw',
+        'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
+        'reliability'
     ];
 
     // Short labels for the graphic header
@@ -25,6 +27,9 @@
         aht: 'AHT',
         acw: 'ACW',
         overallSentiment: 'Sent',
+        positiveWord: '+Word',
+        negativeWord: '-Word',
+        managingEmotions: 'Emot',
         reliability: 'Rel'
     };
 
@@ -170,6 +175,7 @@
         if (!avg) return;
 
         // Map center avg keys to our metric keys
+        // Storage uses: adherence, repSatisfaction, sentiment (from AVERAGE_FORM_FIELD_MAP)
         var keyMap = {
             scheduleAdherence: avg.adherence ?? avg.scheduleAdherence,
             cxRepOverall: avg.repSatisfaction ?? avg.cxRepOverall,
@@ -179,6 +185,9 @@
             aht: avg.aht,
             acw: avg.acw,
             overallSentiment: avg.sentiment ?? avg.overallSentiment,
+            positiveWord: avg.positiveWord,
+            negativeWord: avg.negativeWord,
+            managingEmotions: avg.managingEmotions,
             reliability: avg.reliability
         };
 
@@ -345,8 +354,16 @@
         var now = new Date();
         var dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
+        // Smart exclude: only show metrics where at least one employee has data
+        var visibleMetrics = SNAPSHOT_METRICS.filter(function(key) {
+            return snapshotData.rows.some(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                return cell && cell.hasValue;
+            });
+        });
+
         // Build header row
-        var headerCells = SNAPSHOT_METRICS.map(function(key) {
+        var headerCells = visibleMetrics.map(function(key) {
             var def = registry[key];
             return '<th style="padding: 6px 4px; font-size: 0.7em; font-weight: 700; color: #475569; text-align: center; ' +
                 'border-bottom: 2px solid #cbd5e1; white-space: nowrap;">' +
@@ -356,7 +373,8 @@
         // Build data rows
         var dataRows = snapshotData.rows.map(function(row, idx) {
             var bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-            var cells = row.cells.map(function(cell) {
+            var filteredCells = row.cells.filter(function(c) { return visibleMetrics.indexOf(c.metricKey) !== -1; });
+            var cells = filteredCells.map(function(cell) {
                 var bg = '#ffffff';
                 var color = '#334155';
                 var indicator = '';
@@ -408,7 +426,7 @@
         var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
         var centerRow = '';
         if (hasCenterAvgs) {
-            var centerCells = SNAPSHOT_METRICS.map(function(key) {
+            var centerCells = visibleMetrics.map(function(key) {
                 var val = centerAvgs[key];
                 var metrics = getMetrics();
                 var display = (val !== undefined && !isNaN(val)) ? (metrics.formatMetricValue?.(key, val) || String(val)) : '--';
@@ -420,7 +438,7 @@
         }
 
         // Build target row
-        var targetCells = SNAPSHOT_METRICS.map(function(key) {
+        var targetCells = visibleMetrics.map(function(key) {
             var def = registry[key];
             var target = def?.target;
             if (!target) return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: #64748b; background: #f1f5f9;">--</td>';
@@ -737,14 +755,14 @@
 
     function loadSampleData() {
         var sampleEmployees = [
-            { name: 'Anderson, Mike', firstName: 'Mike', scheduleAdherence: 95.2, cxRepOverall: 84.1, fcr: 76.3, overallExperience: 78.0, transfers: 4.8, aht: 410, acw: 52, overallSentiment: 91.2, reliability: 12.0 },
-            { name: 'Baker, Sarah', firstName: 'Sarah', scheduleAdherence: 88.4, cxRepOverall: 79.5, fcr: 68.2, overallExperience: 71.0, transfers: 7.1, aht: 445, acw: 65, overallSentiment: 86.0, reliability: 20.5 },
-            { name: 'Clark, James', firstName: 'James', scheduleAdherence: 96.1, cxRepOverall: 88.3, fcr: 81.5, overallExperience: 82.0, transfers: 3.2, aht: 388, acw: 48, overallSentiment: 93.8, reliability: 8.0 },
-            { name: 'Davis, Emily', firstName: 'Emily', scheduleAdherence: 91.7, cxRepOverall: 82.6, fcr: 74.1, overallExperience: 76.0, transfers: 5.9, aht: 432, acw: 58, overallSentiment: 89.4, reliability: 15.0 },
-            { name: 'Evans, Chris', firstName: 'Chris', scheduleAdherence: 93.5, cxRepOverall: 76.8, fcr: 70.5, overallExperience: 68.0, transfers: 8.3, aht: 468, acw: 72, overallSentiment: 84.1, reliability: 22.0 },
-            { name: 'Foster, Lisa', firstName: 'Lisa', scheduleAdherence: 97.3, cxRepOverall: 90.2, fcr: 79.8, overallExperience: 80.0, transfers: 2.9, aht: 395, acw: 44, overallSentiment: 95.1, reliability: 6.0 },
-            { name: 'Garcia, Alex', firstName: 'Alex', scheduleAdherence: 89.8, cxRepOverall: 81.0, fcr: 72.0, overallExperience: 73.0, transfers: 6.5, aht: 440, acw: 62, overallSentiment: 87.5, reliability: 18.0 },
-            { name: 'Harris, Tom', firstName: 'Tom', scheduleAdherence: 94.6, cxRepOverall: 85.7, fcr: 75.9, overallExperience: 77.0, transfers: 5.1, aht: 415, acw: 55, overallSentiment: 90.8, reliability: 10.0 }
+            { name: 'Anderson, Mike', firstName: 'Mike', scheduleAdherence: 95.2, cxRepOverall: 84.1, fcr: 76.3, overallExperience: 78.0, transfers: 4.8, aht: 410, acw: 52, overallSentiment: 91.2, positiveWord: 92.0, negativeWord: 88.5, managingEmotions: 96.1, reliability: 12.0 },
+            { name: 'Baker, Sarah', firstName: 'Sarah', scheduleAdherence: 88.4, cxRepOverall: 79.5, fcr: 68.2, overallExperience: 71.0, transfers: 7.1, aht: 445, acw: 65, overallSentiment: 86.0, positiveWord: 84.2, negativeWord: 80.1, managingEmotions: 93.5, reliability: 20.5 },
+            { name: 'Clark, James', firstName: 'James', scheduleAdherence: 96.1, cxRepOverall: 88.3, fcr: 81.5, overallExperience: 82.0, transfers: 3.2, aht: 388, acw: 48, overallSentiment: 93.8, positiveWord: 95.1, negativeWord: 90.2, managingEmotions: 97.8, reliability: 8.0 },
+            { name: 'Davis, Emily', firstName: 'Emily', scheduleAdherence: 91.7, cxRepOverall: 82.6, fcr: 74.1, overallExperience: 76.0, transfers: 5.9, aht: 432, acw: 58, overallSentiment: 89.4, positiveWord: 88.0, negativeWord: 85.3, managingEmotions: 95.2, reliability: 15.0 },
+            { name: 'Evans, Chris', firstName: 'Chris', scheduleAdherence: 93.5, cxRepOverall: 76.8, fcr: 70.5, overallExperience: 68.0, transfers: 8.3, aht: 468, acw: 72, overallSentiment: 84.1, positiveWord: 82.5, negativeWord: 78.9, managingEmotions: 91.0, reliability: 22.0 },
+            { name: 'Foster, Lisa', firstName: 'Lisa', scheduleAdherence: 97.3, cxRepOverall: 90.2, fcr: 79.8, overallExperience: 80.0, transfers: 2.9, aht: 395, acw: 44, overallSentiment: 95.1, positiveWord: 96.3, negativeWord: 91.8, managingEmotions: 98.5, reliability: 6.0 },
+            { name: 'Garcia, Alex', firstName: 'Alex', scheduleAdherence: 89.8, cxRepOverall: 81.0, fcr: 72.0, overallExperience: 73.0, transfers: 6.5, aht: 440, acw: 62, overallSentiment: 87.5, positiveWord: 86.1, negativeWord: 83.0, managingEmotions: 94.0, reliability: 18.0 },
+            { name: 'Harris, Tom', firstName: 'Tom', scheduleAdherence: 94.6, cxRepOverall: 85.7, fcr: 75.9, overallExperience: 77.0, transfers: 5.1, aht: 415, acw: 55, overallSentiment: 90.8, positiveWord: 90.0, negativeWord: 86.7, managingEmotions: 96.0, reliability: 10.0 }
         ];
 
         var sampleCenterAvgs = {
@@ -756,6 +774,9 @@
             aht: 420,
             acw: 57,
             overallSentiment: 89.5,
+            positiveWord: 88.0,
+            negativeWord: 85.0,
+            managingEmotions: 95.5,
             reliability: 14.0
         };
 
