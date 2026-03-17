@@ -415,9 +415,16 @@ function getPreviousWeekKey(currentWeekKey) {
 
 function readAveragesFromForm() {
     const averageData = {};
+    const headcount = parseInt(document.getElementById('avgCenterHeadcount')?.value, 10) || 0;
+
     Object.entries(AVERAGE_FORM_FIELD_MAP).forEach(([avgKey, inputId]) => {
         const parsed = parseFloat(document.getElementById(inputId)?.value);
-        averageData[avgKey] = Number.isFinite(parsed) ? parsed : 0;
+        if (avgKey === 'reliability' && headcount > 0 && Number.isFinite(parsed)) {
+            // Auto-divide total center hours by headcount
+            averageData[avgKey] = Math.round((parsed / headcount) * 100) / 100;
+        } else {
+            averageData[avgKey] = Number.isFinite(parsed) ? parsed : 0;
+        }
     });
     return averageData;
 }
@@ -567,7 +574,24 @@ function applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAll
     }
 }
 
+function updateReliabilityCalcPreview() {
+    const calcDiv = document.getElementById('avgReliabilityCalc');
+    if (!calcDiv) return;
+    const totalHours = parseFloat(document.getElementById('avgReliability')?.value);
+    const headcount = parseInt(document.getElementById('avgCenterHeadcount')?.value, 10);
+    if (Number.isFinite(totalHours) && headcount > 0) {
+        const perPerson = (totalHours / headcount).toFixed(2);
+        calcDiv.textContent = `= ${perPerson} hrs/person (${totalHours} ÷ ${headcount})`;
+    } else {
+        calcDiv.textContent = '';
+    }
+}
+
 function setupMetricTrendsListeners() {
+    // Live preview for reliability ÷ headcount
+    document.getElementById('avgReliability')?.addEventListener('input', updateReliabilityCalcPreview);
+    document.getElementById('avgCenterHeadcount')?.addEventListener('input', updateReliabilityCalcPreview);
+
     // Add event listeners to period type radio buttons
     const periodTypeRadios = document.querySelectorAll('input[name="trendPeriodType"]');
     periodTypeRadios.forEach(radio => {

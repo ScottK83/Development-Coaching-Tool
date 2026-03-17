@@ -55,8 +55,9 @@
         Object.keys(weeklyData).forEach(function(key) {
             var data = weeklyData[key];
             var meta = data?.metadata || {};
-            var label = meta.label || formatPeriodLabel(key, 'week');
-            periods.push({ key: key, label: label, type: 'week', source: 'weekly' });
+            var pType = meta.periodType || 'week';
+            var label = meta.label || formatPeriodLabel(key, pType);
+            periods.push({ key: key, label: label, type: pType, source: 'weekly' });
         });
 
         Object.keys(ytdData).forEach(function(key) {
@@ -123,14 +124,18 @@
         var registry = getRegistry();
         var cells = SNAPSHOT_METRICS.map(function(key) {
             var unit = registry[key]?.unit || '%';
-            var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? '0.0' : '0.0';
+            var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? 'Total hrs' : '0.0';
             return '<td style="padding: 4px;"><input type="text" id="snapCenterAvg_' + key + '" ' +
                 'placeholder="' + placeholder + '" ' +
                 'style="width: 60px; padding: 4px; text-align: center; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85em;" /></td>';
         }).join('');
 
         return '<tr style="background: #e3f2fd;">' +
-            '<td style="padding: 6px 8px; font-weight: 600; color: #1565c0; white-space: nowrap;">Center Avg</td>' +
+            '<td style="padding: 6px 8px; font-weight: 600; color: #1565c0; white-space: nowrap;">' +
+            'Center Avg<br><span style="font-size: 0.7em; font-weight: 400; color: #1976d2;">' +
+            'Headcount: <input type="number" id="snapCenterHeadcount" value="144" min="1" ' +
+            'style="width: 45px; padding: 2px; text-align: center; border: 1px solid #90caf9; border-radius: 3px; font-size: 0.85em;" />' +
+            '</span></td>' +
             cells + '</tr>';
     }
 
@@ -161,10 +166,17 @@
 
     function readCenterAvgInputs() {
         var avgs = {};
+        var headcount = parseInt(document.getElementById('snapCenterHeadcount')?.value, 10) || 0;
+
         SNAPSHOT_METRICS.forEach(function(key) {
             var input = document.getElementById('snapCenterAvg_' + key);
             if (input && input.value.trim() !== '') {
-                avgs[key] = parseFloat(input.value.trim());
+                var val = parseFloat(input.value.trim());
+                if (key === 'reliability' && headcount > 0 && !isNaN(val)) {
+                    avgs[key] = Math.round((val / headcount) * 100) / 100;
+                } else {
+                    avgs[key] = val;
+                }
             }
         });
         return avgs;

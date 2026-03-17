@@ -643,8 +643,14 @@ Box 2 - Future Improvement Areas:
                                     <input type="number" id="avgHoldTime" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
                                 </div>
                                 <div>
-                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Reliability (hours):</label>
-                                    <input type="number" id="avgReliability" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Reliability (total hours):</label>
+                                    <input type="number" id="avgReliability" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;" placeholder="Total center hours">
+                                    <div id="avgReliabilityCalc" style="font-size: 0.78em; color: #7b1fa2; margin-top: 3px;"></div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em;">Center Headcount:</label>
+                                    <input type="number" id="avgCenterHeadcount" step="1" min="1" value="144" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;" placeholder="# of associates">
+                                    <div style="font-size: 0.78em; color: #666; margin-top: 3px;">Used to calculate per-person reliability</div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 10px; margin-top: 12px;">
