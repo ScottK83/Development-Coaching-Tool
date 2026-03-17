@@ -300,10 +300,10 @@ async function renderTipsManagement() {
         document.getElementById('categoriesSelector').value = '';
     }
 
-    document.getElementById('newMetricBtn').addEventListener('click', switchToCreateMode);
-    document.getElementById('backToManageBtn').addEventListener('click', switchToManageMode);
+    document.getElementById('newMetricBtn')?.addEventListener('click', switchToCreateMode);
+    document.getElementById('backToManageBtn')?.addEventListener('click', switchToManageMode);
 
-    document.getElementById('createMetricBtn').addEventListener('click', async () => {
+    document.getElementById('createMetricBtn')?.addEventListener('click', async () => {
         const nameInput = document.getElementById('newMetricName');
         const tipInput = document.getElementById('newMetricTip');
         const metricName = nameInput.value.trim();
@@ -341,7 +341,7 @@ async function renderTipsManagement() {
         await renderTipsManagement();
     });
 
-    document.getElementById('categoriesSelector').addEventListener('change', async (e) => {
+    document.getElementById('categoriesSelector')?.addEventListener('change', async (e) => {
         const metricKey = e.target.value;
         const displayArea = document.getElementById('tipsDisplayArea');
 

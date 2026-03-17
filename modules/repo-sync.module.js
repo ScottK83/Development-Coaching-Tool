@@ -1123,41 +1123,54 @@
         return value && typeof value === 'object' ? value : null;
     }
 
+    function safeSaveToStorage(key, data) {
+        try {
+            const json = JSON.stringify(data);
+            if (json.length > 4 * 1024 * 1024) {
+                console.warn(`Skipping save for ${key}: payload exceeds 4MB (${(json.length / 1024 / 1024).toFixed(1)}MB)`);
+                return false;
+            }
+            localStorage.setItem(STORAGE_PREFIX + key, json);
+            return true;
+        } catch (e) {
+            console.error(`Failed to save ${key} to localStorage:`, e.message);
+            return false;
+        }
+    }
+
     function applyRepoBackupPayload(payload) {
         // Write directly to localStorage to avoid let/window mismatch
         // (script.js uses `let` vars which aren't on window, so window.saveX() would save empty data)
         const storage = window.DevCoachModules?.storage;
-        const prefix = 'devCoachingTool_';
 
         if (storage?.saveWeeklyData) storage.saveWeeklyData(coerceObject(payload?.weeklyData));
-        else localStorage.setItem(prefix + 'weeklyData', JSON.stringify(coerceObject(payload?.weeklyData)));
+        else safeSaveToStorage('weeklyData', coerceObject(payload?.weeklyData));
 
         if (storage?.saveYtdData) storage.saveYtdData(coerceObject(payload?.ytdData));
-        else localStorage.setItem(prefix + 'ytdData', JSON.stringify(coerceObject(payload?.ytdData)));
+        else safeSaveToStorage('ytdData', coerceObject(payload?.ytdData));
 
         if (storage?.saveCoachingHistory) storage.saveCoachingHistory(coerceObject(payload?.coachingHistory));
-        else localStorage.setItem(prefix + 'coachingHistory', JSON.stringify(coerceObject(payload?.coachingHistory)));
+        else safeSaveToStorage('coachingHistory', coerceObject(payload?.coachingHistory));
 
-        // saveCallListeningLogs not in storage module — write directly
-        localStorage.setItem(prefix + 'callListeningLogs', JSON.stringify(coerceObject(payload?.callListeningLogs)));
+        safeSaveToStorage('callListeningLogs', coerceObject(payload?.callListeningLogs));
 
         if (storage?.saveSentimentPhraseDatabase) storage.saveSentimentPhraseDatabase(coerceNullableObject(payload?.sentimentPhraseDatabase));
-        else localStorage.setItem(prefix + 'sentimentPhraseDatabase', JSON.stringify(coerceNullableObject(payload?.sentimentPhraseDatabase)));
+        else safeSaveToStorage('sentimentPhraseDatabase', coerceNullableObject(payload?.sentimentPhraseDatabase));
 
         if (storage?.saveAssociateSentimentSnapshots) storage.saveAssociateSentimentSnapshots(coerceObject(payload?.associateSentimentSnapshots));
-        else localStorage.setItem(prefix + 'associateSentimentSnapshots', JSON.stringify(coerceObject(payload?.associateSentimentSnapshots)));
+        else safeSaveToStorage('associateSentimentSnapshots', coerceObject(payload?.associateSentimentSnapshots));
 
         if (storage?.saveTeamMembers) storage.saveTeamMembers(coerceObject(payload?.myTeamMembers));
-        else localStorage.setItem(prefix + 'myTeamMembers', JSON.stringify(coerceObject(payload?.myTeamMembers)));
+        else safeSaveToStorage('myTeamMembers', coerceObject(payload?.myTeamMembers));
 
         if (storage?.saveCallCenterAverages) storage.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
-        else localStorage.setItem(prefix + 'callCenterAverages', JSON.stringify(coerceObject(payload?.callCenterAverages)));
-        if (window.DevCoachModules?.storage?.savePtoTracker) {
-            const restoredPtoTracker = coerceObject(payload?.ptoTracker);
-            window.DevCoachModules.storage.savePtoTracker(restoredPtoTracker);
+        else safeSaveToStorage('callCenterAverages', coerceObject(payload?.callCenterAverages));
+
+        if (storage?.savePtoTracker) {
+            storage.savePtoTracker(coerceObject(payload?.ptoTracker));
         }
-        window.saveYearEndAnnualGoalsStore(coerceObject(payload?.yearEndAnnualGoalsStore));
-        window.saveYearEndDraftStore(coerceObject(payload?.yearEndDraftStore));
+        window.saveYearEndAnnualGoalsStore?.(coerceObject(payload?.yearEndAnnualGoalsStore));
+        window.saveYearEndDraftStore?.(coerceObject(payload?.yearEndDraftStore));
         if (window.DevCoachModules?.storage?.saveFollowUpHistory) {
             const restoredFollowUpHistory = payload?.followUpHistory && typeof payload.followUpHistory === 'object'
                 ? payload.followUpHistory

@@ -1502,8 +1502,9 @@ function attachTrendTipsModalHandlers(options) {
         periodLabel
     } = options;
 
-    document.getElementById('copyPromptBtn').addEventListener('click', () => {
+    document.getElementById('copyPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('copilotPromptDisplay');
+        if (!textarea) return;
         navigator.clipboard.writeText(textarea.value).then(() => {
             showToast('✅ Prompt copied! Opening Copilot...', 2000);
             window.open('https://copilot.microsoft.com', '_blank');
@@ -1525,7 +1526,7 @@ function attachTrendTipsModalHandlers(options) {
         });
     }
 
-    document.getElementById('logTrendCoachingBtn').addEventListener('click', () => {
+    document.getElementById('logTrendCoachingBtn')?.addEventListener('click', () => {
         const userNotesText = document.getElementById('trendCoachingNotes').value.trim();
         const finalPrompt = userNotesText
             ? buildTrendCoachingPrompt(
@@ -1557,13 +1558,13 @@ function attachTrendTipsModalHandlers(options) {
         document.getElementById('copilotPromptDisplay').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    document.getElementById('skipTrendCoachingBtn').addEventListener('click', () => {
-        document.body.removeChild(modal);
+    document.getElementById('skipTrendCoachingBtn')?.addEventListener('click', () => {
+        if (modal.parentNode) modal.parentNode.removeChild(modal);
     });
 
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
+        if (e.target === modal && modal.parentNode) {
+            modal.parentNode.removeChild(modal);
         }
     });
 }

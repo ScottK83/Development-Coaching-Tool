@@ -787,9 +787,13 @@
     // ============================================
 
     function getExecutiveSummaryNotesStore() {
-        return localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes')
-            ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes'))
-            : {};
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes');
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            console.error('Failed to parse executiveSummaryNotes:', e);
+            return {};
+        }
     }
 
     function bindExecutiveSummaryNotesInputs(selector, noteKey, associate, employeeNotes) {
@@ -963,7 +967,13 @@
 
     function getCenterAverageForWeek(weekKey) {
         // Load call center averages from localStorage
-        var callCenterAverages = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages') ? JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages')) : {};
+        var callCenterAverages = {};
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
+            if (raw) callCenterAverages = JSON.parse(raw);
+        } catch (e) {
+            console.error('Failed to parse callCenterAverages:', e);
+        }
         var avg = callCenterAverages[weekKey];
 
         if (!avg || Object.keys(avg).length === 0) {
