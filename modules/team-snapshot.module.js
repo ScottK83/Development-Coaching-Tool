@@ -208,9 +208,12 @@
                     meetsTarget = metrics.isMetricMeetingTarget?.(metricKey, numValue, target.value) || false;
                 }
 
+                var avgDelta = null;
                 if (hasValue && centerAvg !== undefined && !isNaN(centerAvg)) {
                     var isReverse = metrics.isReverseMetric?.(metricKey) || false;
                     aboveAvg = isReverse ? (numValue <= centerAvg) : (numValue >= centerAvg);
+                    // Delta: positive = good direction, negative = bad direction
+                    avgDelta = isReverse ? (centerAvg - numValue) : (numValue - centerAvg);
                 }
 
                 var displayValue = hasValue ? metrics.formatMetricValue?.(metricKey, numValue) || String(numValue) : 'N/A';
@@ -221,7 +224,8 @@
                     displayValue: displayValue,
                     hasValue: hasValue,
                     meetsTarget: meetsTarget,
-                    aboveAvg: aboveAvg
+                    aboveAvg: aboveAvg,
+                    avgDelta: avgDelta
                 };
             });
 
@@ -328,10 +332,24 @@
                         color = '#991b1b';
                     }
 
-                    if (cell.aboveAvg === true) {
-                        indicator = ' <span style="color: #16a34a; font-size: 0.75em; font-weight: 700;">&#9650;</span>';
-                    } else if (cell.aboveAvg === false) {
-                        indicator = ' <span style="color: #dc2626; font-size: 0.75em; font-weight: 700;">&#9660;</span>';
+                    if (cell.avgDelta !== null && cell.avgDelta !== undefined) {
+                        var deltaAbs = Math.abs(cell.avgDelta);
+                        var registry = getRegistry();
+                        var unit = registry[cell.metricKey]?.unit || '%';
+                        var deltaStr;
+                        if (unit === 'sec') {
+                            deltaStr = Math.round(deltaAbs) + 's';
+                        } else if (unit === 'hrs') {
+                            deltaStr = deltaAbs.toFixed(1) + 'h';
+                        } else {
+                            deltaStr = deltaAbs.toFixed(1);
+                        }
+
+                        if (cell.aboveAvg === true) {
+                            indicator = '<br><span style="color: #16a34a; font-size: 0.65em; font-weight: 700;">+' + deltaStr + '</span>';
+                        } else if (cell.aboveAvg === false) {
+                            indicator = '<br><span style="color: #dc2626; font-size: 0.65em; font-weight: 700;">-' + deltaStr + '</span>';
+                        }
                     }
                 }
 
@@ -399,9 +417,9 @@
             '<span style="display: inline-block; width: 12px; height: 12px; background: #fee2e2; border: 1px solid #fca5a5; ' +
             'border-radius: 2px; vertical-align: middle; margin-right: 3px;"></span> Below Target</span>' +
             '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="color: #16a34a; font-weight: 700;">&#9650;</span> Above Center Avg</span>' +
+            '<span style="color: #16a34a; font-weight: 700;">+N</span> Above Center Avg (by how much)</span>' +
             '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="color: #dc2626; font-weight: 700;">&#9660;</span> Below Center Avg</span>' +
+            '<span style="color: #dc2626; font-weight: 700;">-N</span> Below Center Avg (by how much)</span>' +
             '</div>';
 
         // Assemble the full graphic
@@ -717,13 +735,15 @@
                 if (hasValue && target) {
                     meetsTarget = metrics.isMetricMeetingTarget?.(metricKey, numValue, target.value) || false;
                 }
+                var avgDelta = null;
                 if (hasValue && centerAvg !== undefined) {
                     var isReverse = metrics.isReverseMetric?.(metricKey) || false;
                     aboveAvg = isReverse ? (numValue <= centerAvg) : (numValue >= centerAvg);
+                    avgDelta = isReverse ? (centerAvg - numValue) : (numValue - centerAvg);
                 }
                 var displayValue = hasValue ? (metrics.formatMetricValue?.(metricKey, numValue) || String(numValue)) : 'N/A';
 
-                return { metricKey: metricKey, value: numValue, displayValue: displayValue, hasValue: hasValue, meetsTarget: meetsTarget, aboveAvg: aboveAvg };
+                return { metricKey: metricKey, value: numValue, displayValue: displayValue, hasValue: hasValue, meetsTarget: meetsTarget, aboveAvg: aboveAvg, avgDelta: avgDelta };
             });
             return { name: emp.firstName, fullName: emp.name, cells: cells };
         });
