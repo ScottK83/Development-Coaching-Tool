@@ -48,6 +48,22 @@ export default {
       const branch = env.GH_BRANCH || 'main';
       const dataDir = env.GH_DATA_DIR || 'data';
 
+      if (mode === 'retrieve') {
+        const backupPath = `${dataDir}/coaching-tool-sync-backup.json`;
+        const fileRes = await fetch(`https://api.github.com/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${backupPath}?ref=${branch}`, {
+          headers: {
+            Authorization: `token ${env.GH_TOKEN}`,
+            Accept: 'application/vnd.github.v3.raw',
+            'User-Agent': 'CloudflareWorker'
+          }
+        });
+        if (!fileRes.ok) {
+          return json({ ok: false, error: `Failed to fetch backup from repo: HTTP ${fileRes.status}` }, fileRes.status, corsHeaders(requestOrigin, allowedOrigin));
+        }
+        const backupData = await fileRes.json();
+        return json({ ok: true, mode: 'retrieve', payload: backupData, generatedAt: backupData?.generatedAt || null }, 200, corsHeaders(requestOrigin, allowedOrigin));
+      }
+
       if (mode === 'uploadFile') {
         const uploadResult = await handleUploadFileToRepo({
           env,

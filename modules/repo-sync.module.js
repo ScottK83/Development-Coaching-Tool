@@ -1021,15 +1021,38 @@
     async function fetchRepoBackupPayload() {
         const origin = window?.location?.origin;
         const timestamp = Date.now();
-        const urls = [];
+        const payloadCandidates = [];
 
+        // Try Worker endpoint first (bypasses firewall restrictions on raw.githubusercontent.com)
+        try {
+            const config = loadCallListeningSyncConfig();
+            const endpoint = config?.endpoint;
+            if (endpoint) {
+                const headers = { 'Content-Type': 'application/json' };
+                const secret = config?.syncSecret;
+                if (secret) headers['x-sync-secret'] = secret;
+                const workerResponse = await fetch(endpoint, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ mode: 'retrieve' })
+                });
+                if (workerResponse.ok) {
+                    const workerData = await workerResponse.json();
+                    if (workerData?.ok && workerData?.payload && typeof workerData.payload === 'object') {
+                        payloadCandidates.push(workerData.payload);
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Worker retrieve failed, falling back to direct URLs:', error.message);
+        }
+
+        // Fallback: try direct URLs
+        const urls = [];
         if (origin && origin !== 'null') {
             urls.push(`${origin}/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
         }
-
         urls.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
-
-        const payloadCandidates = [];
 
         for (const url of urls) {
             try {
