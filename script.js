@@ -1670,11 +1670,6 @@ function bindManageDataNavigationHandlers() {
         }
         renderTipsManagement();
     });
-    document.getElementById('subNavSentimentKeywords')?.addEventListener('click', () => {
-        showManageDataSubSection('subSectionSentimentKeywords');
-        renderSentimentDatabasePanel();
-    });
-
     document.getElementById('openDebugFromManageBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');
         renderDebugPanel();

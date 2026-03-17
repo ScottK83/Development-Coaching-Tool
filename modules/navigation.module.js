@@ -77,7 +77,7 @@
      */
     function showManageDataSubSection(subSectionId) {
         // Hide all sub-sections
-        var subSections = ['subSectionTeamData', 'subSectionCoachingTips', 'subSectionSentimentKeywords'];
+        var subSections = ['subSectionTeamData', 'subSectionCoachingTips'];
         subSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -90,7 +90,7 @@
         }
 
         // Update sub-nav button active states
-        var subNavButtons = ['subNavTeamData', 'subNavCoachingTips', 'subNavSentimentKeywords'];
+        var subNavButtons = ['subNavTeamData', 'subNavCoachingTips'];
         subNavButtons.forEach(function(btnId) {
             var btn = document.getElementById(btnId);
             if (btn) {
@@ -168,8 +168,7 @@
 
         var manageDataSubSectionToButton = {
             subSectionTeamData: 'subNavTeamData',
-            subSectionCoachingTips: 'subNavCoachingTips',
-            subSectionSentimentKeywords: 'subNavSentimentKeywords'
+            subSectionCoachingTips: 'subNavCoachingTips'
         };
 
         if (sectionId === 'coachingEmailSection') {
