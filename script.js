@@ -1159,7 +1159,9 @@ function getActivePeriodContext() {
     
     // Determine friendly time reference based on period type
     let timeReference = 'this period';
-    if (currentPeriodType === 'week') {
+    if (currentPeriodType === 'daily') {
+        timeReference = 'today';
+    } else if (currentPeriodType === 'week') {
         timeReference = 'this week';
     } else if (currentPeriodType === 'month') {
         timeReference = 'this month';
@@ -1466,6 +1468,28 @@ function bindUploadAndPasteHandlers() {
                     button.style.color = '#666';
                 }
             });
+            // Update date label based on period type
+            const period = btn.dataset.period;
+            const label = document.getElementById('pasteWeekEndingLabel');
+            const hint = document.getElementById('pasteWeekEndingHint');
+            if (label && hint) {
+                if (period === 'daily') {
+                    label.textContent = 'Date:';
+                    hint.textContent = 'Select the date for this daily data.';
+                } else if (period === 'week') {
+                    label.textContent = 'Week Ending (Saturday):';
+                    hint.textContent = 'Week runs Sunday - Saturday';
+                } else if (period === 'month') {
+                    label.textContent = 'Month Ending Date:';
+                    hint.textContent = 'Last day of the month period.';
+                } else if (period === 'quarter') {
+                    label.textContent = 'Quarter Ending Date:';
+                    hint.textContent = 'Last day of the quarter period.';
+                } else if (period === 'ytd') {
+                    label.textContent = 'YTD Ending Date:';
+                    hint.textContent = 'Last day of the YTD period.';
+                }
+            }
         });
     });
 
@@ -1777,6 +1801,7 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
     const end = new Date(endDate);
     const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
+    if (daysDiff <= 1) return 'daily';
     if (daysDiff >= 26 && daysDiff <= 33) return 'month';
     if (daysDiff >= 88 && daysDiff <= 95) return 'quarter';
     if (daysDiff >= 180) return 'ytd';
@@ -1806,7 +1831,9 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
     const yearEndReviewYear = selectedYearEndProfile === 'auto' ? autoReviewYear : selectedYearEndProfile;
 
     let label;
-    if (periodType === 'week') {
+    if (periodType === 'daily') {
+        label = `Daily: ${normalizedEndDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (periodType === 'week') {
         label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'month') {
         label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
@@ -1897,9 +1924,20 @@ function handleLoadPastedDataClick() {
     }
 
     const endDate = weekEndingDate;
-    const endDateObj = new Date(weekEndingDate);
-    endDateObj.setDate(endDateObj.getDate() - 6);
-    const startDate = endDateObj.toISOString().split('T')[0];
+
+    // Check if Daily is selected before calculating start date
+    const selectedDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
+    const isDailySelected = !!selectedDailyBtn;
+
+    let startDate;
+    if (isDailySelected) {
+        startDate = endDate; // Daily: start = end (same day)
+    } else {
+        const endDateObj = new Date(weekEndingDate);
+        endDateObj.setDate(endDateObj.getDate() - 6);
+        startDate = endDateObj.toISOString().split('T')[0];
+    }
 
     const detectedPeriodType = detectUploadPeriodTypeByRange(startDate, endDate);
     const periodType = resolveSelectedUploadPeriodType(detectedPeriodType);
@@ -1988,16 +2026,29 @@ function handleTestPastedDataClick() {
     let endDate = weekEndingDate;
     let startDate = '';
 
+    // Check if Daily is selected
+    const testDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
+    const isTestDaily = !!testDailyBtn;
+
     if (weekEndingDate) {
-        const endDateObj = new Date(weekEndingDate);
-        endDateObj.setDate(endDateObj.getDate() - 6);
-        startDate = endDateObj.toISOString().split('T')[0];
+        if (isTestDaily) {
+            startDate = weekEndingDate;
+        } else {
+            const endDateObj = new Date(weekEndingDate);
+            endDateObj.setDate(endDateObj.getDate() - 6);
+            startDate = endDateObj.toISOString().split('T')[0];
+        }
     } else {
         const today = new Date();
         endDate = today.toISOString().split('T')[0];
-        const startDateObj = new Date(today);
-        startDateObj.setDate(startDateObj.getDate() - 6);
-        startDate = startDateObj.toISOString().split('T')[0];
+        if (isTestDaily) {
+            startDate = endDate;
+        } else {
+            const startDateObj = new Date(today);
+            startDateObj.setDate(startDateObj.getDate() - 6);
+            startDate = startDateObj.toISOString().split('T')[0];
+        }
     }
 
     try {

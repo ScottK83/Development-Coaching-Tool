@@ -80,7 +80,7 @@
     function formatPeriodLabel(key, type) {
         var parts = key.split('|');
         var endDate = parts[0] || '';
-        var prefix = type === 'week' ? 'Week ending' : type === 'month' ? 'Month ending' : 'YTD ending';
+        var prefix = type === 'daily' ? 'Daily:' : type === 'week' ? 'Week ending' : type === 'month' ? 'Month ending' : 'YTD ending';
         return prefix + ' ' + endDate;
     }
 
