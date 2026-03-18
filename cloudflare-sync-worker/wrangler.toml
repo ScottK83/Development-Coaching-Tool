@@ -11,4 +11,4 @@ GH_UPLOADS_DIR = "data/uploads"
 
 [[kv_namespaces]]
 binding = "COACHING_DATA"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "04f2f1b2ce5b46ef9c4c371a5ac2ddfc"
