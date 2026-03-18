@@ -412,9 +412,14 @@
                         repoSyncConflictPromptMutedUntil = 0;
                         saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
 
-                        setCallListeningSyncStatus('Restore complete. Reloading with restored profile...', 'success');
-                        showToast('Local profile overwritten from repo backup.', 3500);
-                        setTimeout(() => window.location.reload(), 500);
+                        // Verify data was actually saved
+                        const verifyWeekly = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
+                        const verifyKeys = verifyWeekly ? Object.keys(JSON.parse(verifyWeekly)).length : 0;
+                        console.log(`[Repo Restore] Verification: weeklyData has ${verifyKeys} periods in localStorage`);
+
+                        setCallListeningSyncStatus(`Restore complete (${verifyKeys} periods). Reloading...`, 'success');
+                        showToast(`Restored ${verifyKeys} weekly periods from repo backup.`, 3500);
+                        setTimeout(() => window.location.reload(), 3000);
                     } catch (error) {
                         console.error('Force restore failed:', error);
                         setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');
@@ -1066,7 +1071,14 @@
                 if (workerResponse.ok) {
                     const workerData = await workerResponse.json();
                     if (workerData?.ok && workerData?.payload && typeof workerData.payload === 'object') {
-                        payloadCandidates.push(workerData.payload);
+                        const wp = workerData.payload;
+                        // Only use Worker payload if it actually has data
+                        if (wp.weeklyData && Object.keys(wp.weeklyData).length > 0) {
+                            payloadCandidates.push(wp);
+                            console.log('[Repo Restore] Worker returned payload with', Object.keys(wp.weeklyData).length, 'weekly periods');
+                        } else {
+                            console.warn('[Repo Restore] Worker returned empty payload, skipping');
+                        }
                     }
                 }
             }
