@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-18T01:03:33.030Z",
-  "reason": "pto tracker updated",
+  "generatedAt": "2026-03-18T01:03:38.028Z",
+  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -6902,7 +6902,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 324
+      "byteLength": 287
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
