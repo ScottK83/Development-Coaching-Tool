@@ -58,14 +58,14 @@ const isSuppressed = (msg) => {
 };
 
 if (!DEBUG) {
-    const originalError = console.error;
+    let lastErrorCapture = null;
     console.log = () => {};
     console.warn = () => {};
     console.error = (...args) => {
         const msg = args.join(' ');
         if (isSuppressed(msg)) return;
-        lastError = { message: msg, timestamp: new Date().toISOString() };
-        localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastError));
+        lastErrorCapture = { message: msg, timestamp: new Date().toISOString() };
+        try { localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastErrorCapture)); } catch(_e) {}
     };
 } else {
     // DEBUG mode: suppress annoyances, keep real errors
@@ -938,6 +938,7 @@ function downloadCoachingHistoryCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     
     showToast(`✅ Downloaded ${filename}`, 3000);
 }
@@ -969,6 +970,7 @@ function exportToExcel() {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(downloadLink.getAttribute('href'));
     
     const weekCount = Object.keys(weeklyData || {}).length;
     const sentimentCount = Object.keys(associateSentimentSnapshots || {}).reduce((sum, emp) => sum + (associateSentimentSnapshots[emp]?.length || 0), 0);
@@ -1089,6 +1091,26 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
         lastUpdated: new Date().toISOString()
     };
     saveCallCenterAverages(averages);
+}
+
+function migrateReliabilityCenterAverages() {
+    try {
+        const averages = loadCallCenterAverages();
+        let changed = false;
+        for (const [key, avg] of Object.entries(averages)) {
+            if (avg?.reliability > 20) {
+                // This was saved as raw total or *100 — divide by 144
+                avg.reliability = Math.round((avg.reliability / 144) * 100) / 100;
+                changed = true;
+            }
+        }
+        if (changed) {
+            saveCallCenterAverages(averages);
+            console.log('[Migration] Fixed reliability center averages (divided by headcount)');
+        }
+    } catch (e) {
+        console.warn('[Migration] Failed to fix reliability:', e.message);
+    }
 }
 
 function readUploadCenterAverages() {
@@ -3170,6 +3192,7 @@ function downloadCallListeningLogsCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     showToast(`✅ Downloaded ${filename}`, 3000);
 }
@@ -6339,6 +6362,7 @@ async function initApp() {
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
+    migrateReliabilityCenterAverages();
     loadTeamMembers();
     bindTeamFilterChangeHandlers();
     notifyTeamFilterChanged();
