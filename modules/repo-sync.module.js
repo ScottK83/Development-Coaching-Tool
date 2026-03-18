@@ -418,8 +418,9 @@
                         console.log(`[Repo Restore] Verification: weeklyData has ${verifyKeys} periods in localStorage`);
 
                         setCallListeningSyncStatus(`Restore complete (${verifyKeys} periods). Reloading...`, 'success');
-                        showToast(`Restored ${verifyKeys} weekly periods from repo backup.`, 3500);
-                        setTimeout(() => window.location.reload(), 3000);
+                        showToast(`Restored ${verifyKeys} weekly periods. Reloading...`, 3500);
+                        // Force a true hard reload to re-read localStorage into memory
+                        setTimeout(() => window.location.reload(true), 1500);
                     } catch (error) {
                         console.error('Force restore failed:', error);
                         setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');

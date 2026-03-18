@@ -6345,6 +6345,14 @@ async function initApp() {
 
     const restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
     if (restoredFromRepo) {
+        // Re-load all in-memory variables from localStorage after restore
+        weeklyData = loadWeeklyData();
+        ytdData = loadYtdData();
+        coachingHistory = loadCoachingHistory();
+        callListeningLogs = loadCallListeningLogs();
+        sentimentPhraseDatabase = loadSentimentPhraseDatabase();
+        associateSentimentSnapshots = loadAssociateSentimentSnapshots();
+        loadTeamMembers();
         showToast('✅ Restored synced data for this browser profile.', 4000);
         notifyTeamFilterChanged();
     }
