@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-18T00:13:58.575Z",
-  "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
+  "generatedAt": "2026-03-18T00:14:08.361Z",
+  "reason": "call center averages updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -6005,6 +6005,22 @@
       "holdTime": 12,
       "reliability": 170.11805555555554,
       "lastUpdated": "2026-03-17T23:02:41.967Z"
+    },
+    "2026-01-01|2026-03-15": {
+      "adherence": 94.16,
+      "overallExperience": 74.49,
+      "repSatisfaction": 81.36,
+      "fcr": 70.66,
+      "transfers": 7.04,
+      "sentiment": 91.3,
+      "positiveWord": 89.3,
+      "negativeWord": 88.7,
+      "managingEmotions": 95.9,
+      "aht": 444,
+      "acw": 66,
+      "holdTime": 16,
+      "reliability": 9.56,
+      "lastUpdated": "2026-03-18T00:14:03.371Z"
     }
   },
   "ptoTracker": {
@@ -6823,8 +6839,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 13,
-      "byteLength": 3673
+      "itemCount": 14,
+      "byteLength": 3970
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
