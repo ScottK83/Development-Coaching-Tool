@@ -1051,97 +1051,60 @@
     // ============================================
 
     async function fetchRepoBackupPayload() {
-        const origin = window?.location?.origin;
-        const timestamp = Date.now();
-        const payloadCandidates = [];
-
-        // Try Worker endpoint first (bypasses firewall restrictions on raw.githubusercontent.com)
+        // Primary: fetch from Worker (KV-backed)
         try {
             const config = loadCallListeningSyncConfig();
             const endpoint = config?.endpoint;
             if (endpoint) {
                 const headers = { 'Content-Type': 'application/json' };
-                const secret = config?.syncSecret;
+                const secret = config?.sharedSecret;
                 if (secret) headers['x-sync-secret'] = secret;
-                const workerResponse = await fetch(endpoint, {
+                console.log('[Repo Restore] Fetching from Worker:', endpoint);
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({ mode: 'retrieve' })
                 });
-                if (workerResponse.ok) {
-                    const workerData = await workerResponse.json();
-                    if (workerData?.ok && workerData?.payload && typeof workerData.payload === 'object') {
-                        const wp = workerData.payload;
-                        // Only use Worker payload if it actually has data
-                        if (wp.weeklyData && Object.keys(wp.weeklyData).length > 0) {
-                            payloadCandidates.push(wp);
-                            console.log('[Repo Restore] Worker returned payload with', Object.keys(wp.weeklyData).length, 'weekly periods');
-                        } else {
-                            console.warn('[Repo Restore] Worker returned empty payload, skipping');
-                        }
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data?.ok && data?.payload && typeof data.payload === 'object') {
+                        const payload = data.payload;
+                        const weekCount = Object.keys(payload.weeklyData || {}).length;
+                        console.log(`[Repo Restore] Worker returned payload: ${weekCount} weekly periods, generated ${payload.generatedAt}`);
+                        if (weekCount > 0) return payload;
+                        console.warn('[Repo Restore] Worker payload has no weekly data');
+                    } else {
+                        console.warn('[Repo Restore] Worker returned:', data?.error || 'no payload');
                     }
+                } else {
+                    console.warn('[Repo Restore] Worker HTTP', response.status);
                 }
             }
         } catch (error) {
-            console.warn('Worker retrieve failed, falling back to direct URLs:', error.message);
+            console.warn('[Repo Restore] Worker fetch failed:', error.message);
         }
 
-        // Fallback: try direct URLs
-        const urls = [];
-        if (origin && origin !== 'null') {
-            urls.push(`${origin}/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
-        }
-        urls.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
-
-        for (const url of urls) {
+        // Fallback: try GitHub raw (in case Worker KV is empty/not yet migrated)
+        const fallbackUrls = [
+            `https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${Date.now()}`
+        ];
+        for (const url of fallbackUrls) {
             try {
+                console.log('[Repo Restore] Trying fallback:', url);
                 const response = await fetch(url, { cache: 'no-store' });
                 if (!response.ok) continue;
-
                 const payload = await response.json();
-                if (payload && typeof payload === 'object') {
-                    payloadCandidates.push(payload);
+                if (payload && Object.keys(payload.weeklyData || {}).length > 0) {
+                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData).length, 'periods');
+                    return payload;
                 }
             } catch (error) {
-                // Try next candidate URL
+                console.warn('[Repo Restore] Fallback failed:', error.message);
             }
         }
 
-        if (!payloadCandidates.length) return null;
-
-        const getFootprintScore = (payload) => {
-            const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
-                ? Object.keys(value).length
-                : 0;
-            const countNestedEntries = (value) => {
-                if (!value || typeof value !== 'object') return 0;
-                return Object.values(value).reduce((sum, item) => {
-                    if (Array.isArray(item)) return sum + item.length;
-                    if (item && typeof item === 'object') return sum + Object.keys(item).length;
-                    return sum;
-                }, 0);
-            };
-
-            return (
-                countObjectKeys(payload?.weeklyData) * 100
-                + countObjectKeys(payload?.ytdData) * 100
-                + countNestedEntries(payload?.coachingHistory)
-                + countNestedEntries(payload?.callListeningLogs)
-                + countNestedEntries(payload?.associateSentimentSnapshots)
-                + countObjectKeys(payload?.myTeamMembers)
-            );
-        };
-
-        payloadCandidates.sort((a, b) => {
-            const timeDiff = parseTimeMs(b?.generatedAt) - parseTimeMs(a?.generatedAt);
-            if (timeDiff !== 0) return timeDiff;
-            return getFootprintScore(b) - getFootprintScore(a);
-        });
-
-        const best = payloadCandidates[0];
-        console.log(`[Repo Restore] Fetched ${payloadCandidates.length} candidate(s). Best has keys:`, Object.keys(best || {}));
-        console.log('[Repo Restore] weeklyData periods:', Object.keys(best?.weeklyData || {}).length);
-        return best;
+        console.error('[Repo Restore] All sources failed');
+        return null;
     }
 
     function coerceObject(value, fallback = {}) {
