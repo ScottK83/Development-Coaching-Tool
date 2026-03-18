@@ -1126,7 +1126,10 @@
             return getFootprintScore(b) - getFootprintScore(a);
         });
 
-        return payloadCandidates[0];
+        const best = payloadCandidates[0];
+        console.log(`[Repo Restore] Fetched ${payloadCandidates.length} candidate(s). Best has keys:`, Object.keys(best || {}));
+        console.log('[Repo Restore] weeklyData periods:', Object.keys(best?.weeklyData || {}).length);
+        return best;
     }
 
     function coerceObject(value, fallback = {}) {
@@ -1153,50 +1156,42 @@
     }
 
     function applyRepoBackupPayload(payload) {
-        // Write directly to localStorage to avoid let/window mismatch
-        // (script.js uses `let` vars which aren't on window, so window.saveX() would save empty data)
-        const storage = window.DevCoachModules?.storage;
+        // Write directly to localStorage to guarantee data persistence
+        const keys = {
+            weeklyData: coerceObject(payload?.weeklyData),
+            ytdData: coerceObject(payload?.ytdData),
+            coachingHistory: coerceObject(payload?.coachingHistory),
+            callListeningLogs: coerceObject(payload?.callListeningLogs),
+            sentimentPhraseDatabase: coerceNullableObject(payload?.sentimentPhraseDatabase),
+            associateSentimentSnapshots: coerceObject(payload?.associateSentimentSnapshots),
+            myTeamMembers: coerceObject(payload?.myTeamMembers),
+            callCenterAverages: coerceObject(payload?.callCenterAverages),
+            ptoTracker: coerceObject(payload?.ptoTracker),
+            yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
+            yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
+            employeePreferredNames: coerceObject(payload?.employeePreferredNames)
+        };
 
-        if (storage?.saveWeeklyData) storage.saveWeeklyData(coerceObject(payload?.weeklyData));
-        else safeSaveToStorage('weeklyData', coerceObject(payload?.weeklyData));
+        console.log('[Repo Restore] Applying payload with keys:', Object.keys(payload || {}));
+        console.log('[Repo Restore] weeklyData periods:', Object.keys(keys.weeklyData).length);
 
-        if (storage?.saveYtdData) storage.saveYtdData(coerceObject(payload?.ytdData));
-        else safeSaveToStorage('ytdData', coerceObject(payload?.ytdData));
-
-        if (storage?.saveCoachingHistory) storage.saveCoachingHistory(coerceObject(payload?.coachingHistory));
-        else safeSaveToStorage('coachingHistory', coerceObject(payload?.coachingHistory));
-
-        safeSaveToStorage('callListeningLogs', coerceObject(payload?.callListeningLogs));
-
-        if (storage?.saveSentimentPhraseDatabase) storage.saveSentimentPhraseDatabase(coerceNullableObject(payload?.sentimentPhraseDatabase));
-        else safeSaveToStorage('sentimentPhraseDatabase', coerceNullableObject(payload?.sentimentPhraseDatabase));
-
-        if (storage?.saveAssociateSentimentSnapshots) storage.saveAssociateSentimentSnapshots(coerceObject(payload?.associateSentimentSnapshots));
-        else safeSaveToStorage('associateSentimentSnapshots', coerceObject(payload?.associateSentimentSnapshots));
-
-        if (storage?.saveTeamMembers) storage.saveTeamMembers(coerceObject(payload?.myTeamMembers));
-        else safeSaveToStorage('myTeamMembers', coerceObject(payload?.myTeamMembers));
-
-        if (storage?.saveCallCenterAverages) storage.saveCallCenterAverages(coerceObject(payload?.callCenterAverages));
-        else safeSaveToStorage('callCenterAverages', coerceObject(payload?.callCenterAverages));
-
-        if (storage?.savePtoTracker) {
-            storage.savePtoTracker(coerceObject(payload?.ptoTracker));
+        let savedCount = 0;
+        for (const [key, data] of Object.entries(keys)) {
+            if (data === null || data === undefined) continue;
+            const ok = safeSaveToStorage(key, data);
+            if (ok) savedCount++;
+            else console.warn('[Repo Restore] Failed to save:', key);
         }
-        window.saveYearEndAnnualGoalsStore?.(coerceObject(payload?.yearEndAnnualGoalsStore));
-        window.saveYearEndDraftStore?.(coerceObject(payload?.yearEndDraftStore));
-        if (window.DevCoachModules?.storage?.saveFollowUpHistory) {
-            const restoredFollowUpHistory = payload?.followUpHistory && typeof payload.followUpHistory === 'object'
-                ? payload.followUpHistory
-                : { entries: [] };
-            window.DevCoachModules.storage.saveFollowUpHistory(restoredFollowUpHistory);
+
+        // Follow-up and hot tip history
+        if (payload?.followUpHistory && typeof payload.followUpHistory === 'object') {
+            safeSaveToStorage('followUpHistory', payload.followUpHistory);
         }
-        if (window.DevCoachModules?.storage?.saveHotTipHistory) {
-            const restoredHotTipHistory = payload?.hotTipHistory && typeof payload.hotTipHistory === 'object'
-                ? payload.hotTipHistory
-                : { entries: [] };
-            window.DevCoachModules.storage.saveHotTipHistory(restoredHotTipHistory);
+        if (payload?.hotTipHistory && typeof payload.hotTipHistory === 'object') {
+            safeSaveToStorage('hotTipHistory', payload.hotTipHistory);
         }
+
+        console.log(`[Repo Restore] Saved ${savedCount} data keys to localStorage`);
     }
 
     function loadRepoBackupAppliedAt() {
