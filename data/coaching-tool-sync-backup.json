@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-18T00:59:04.488Z",
+  "generatedAt": "2026-03-18T00:59:09.472Z",
   "reason": "storage set: devCoachingTool_associateSentimentSnapshots",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -6837,6 +6837,7 @@
       "verbalSummary": ""
     }
   },
+  "employeePreferredNames": {},
   "appStorageSnapshot": {
     "devCoachingTool_coachingHistory": {
       "valueType": "object",
