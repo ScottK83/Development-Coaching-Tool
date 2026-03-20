@@ -3339,6 +3339,9 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     // If no anchor and no extension periods, nothing to build
     if (!anchor && !allPeriods.length) return null;
 
+    // If anchor exists but no extension periods, no auto-YTD needed — the real YTD is the truth
+    if (anchor && !allPeriods.length) return null;
+
     // Step 3: If no anchor, pick best source type (original behavior)
     let extensionPeriods = allPeriods;
     let sourceType = 'mixed';
@@ -3450,11 +3453,9 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
 }
 
 function upsertAutoYtdForYear(year, uptoEndDateText) {
-    const aggregate = buildYtdAggregateForYear(year, uptoEndDateText);
-    if (!aggregate) return;
-
     const yearNum = parseInt(year, 10);
-    // Remove old auto-generated YTDs for this year (never touch real uploads)
+
+    // Always clean up old auto-generated YTDs for this year (never touch real uploads)
     Object.keys(ytdData || {}).forEach(existingKey => {
         const existing = ytdData[existingKey];
         const metadata = existing?.metadata || {};
@@ -3466,6 +3467,9 @@ function upsertAutoYtdForYear(year, uptoEndDateText) {
             delete ytdData[existingKey];
         }
     });
+
+    const aggregate = buildYtdAggregateForYear(year, uptoEndDateText);
+    if (!aggregate) return; // No auto-YTD needed (anchor exists with no extensions, or no data)
 
     // If a real YTD exists at this exact key, store auto with disambiguated key
     const existingEntry = ytdData[aggregate.key];
