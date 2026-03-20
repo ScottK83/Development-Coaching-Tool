@@ -698,7 +698,13 @@
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
 
-        // Auto-open Copilot with the prompt
+        // Auto-copy to clipboard
+        navigator.clipboard.writeText(prompt).then(function() {
+            var toast = window.DevCoachModules?.uiUtils?.showToast;
+            if (toast) toast('Prompt copied to clipboard! Paste into Copilot.', 3000);
+        }).catch(function() {});
+
+        // Auto-open Copilot
         if (typeof window.openCopilotWithPrompt === 'function') {
             window.openCopilotWithPrompt(prompt, 'Quick Check-in for ' + firstName);
         }
