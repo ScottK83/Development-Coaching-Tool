@@ -109,6 +109,26 @@
 
                             <div style="margin-bottom: 15px;">
                                 <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Period (from uploaded data):</label>
+                                <div id="avgPeriodTypeFilter" style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #1565c0; color: #fff; border: 2px solid #1565c0;">
+                                        <input type="radio" name="avgPeriodType" value="all" checked style="display: none;"> All
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                        <input type="radio" name="avgPeriodType" value="daily" style="display: none;"> Daily
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                        <input type="radio" name="avgPeriodType" value="week" style="display: none;"> Weekly
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                        <input type="radio" name="avgPeriodType" value="month" style="display: none;"> Monthly
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                        <input type="radio" name="avgPeriodType" value="custom" style="display: none;"> Custom
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                        <input type="radio" name="avgPeriodType" value="ytd" style="display: none;"> YTD
+                                    </label>
+                                </div>
                                 <select id="avgPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #1565c0; border-radius: 4px; font-size: 1em; box-sizing: border-box; cursor: pointer;">
                                     <option value="">-- Select a period --</option>
                                 </select>
