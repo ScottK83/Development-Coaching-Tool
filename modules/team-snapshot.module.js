@@ -268,6 +268,15 @@
             });
         }
 
+        // Exclude absent employees (0 calls) if checkbox is checked
+        var excludeAbsent = document.getElementById('snapshotExcludeAbsent');
+        if (excludeAbsent && excludeAbsent.checked) {
+            employees = employees.filter(function(emp) {
+                var calls = parseInt(emp.totalCalls);
+                return !isNaN(calls) && calls > 0;
+            });
+        }
+
         // Sort by name
         employees.sort(function(a, b) {
             return (a.name || '').localeCompare(b.name || '');
@@ -334,7 +343,10 @@
         var metrics = getMetrics();
         var metricMissCount = {};
 
+        // Only consider metrics that have a defined target
         SNAPSHOT_METRICS.forEach(function(key) {
+            var def = registry[key];
+            if (!def?.target) return; // skip metrics with no target
             metricMissCount[key] = { total: 0, missing: 0 };
         });
 
@@ -444,6 +456,8 @@
                             deltaStr = Math.round(deltaAbs) + 's';
                         } else if (unit === 'hrs') {
                             deltaStr = deltaAbs.toFixed(1) + 'h';
+                        } else if (unit === '#') {
+                            deltaStr = Math.round(deltaAbs).toString();
                         } else {
                             deltaStr = deltaAbs.toFixed(1);
                         }
@@ -697,6 +711,8 @@
                         deltaStr = Math.round(deltaAbs) + 's';
                     } else if (unit === 'hrs') {
                         deltaStr = deltaAbs.toFixed(1) + 'h';
+                    } else if (unit === '#') {
+                        deltaStr = Math.round(deltaAbs).toString();
                     } else {
                         deltaStr = deltaAbs.toFixed(1) + '%';
                     }
@@ -750,6 +766,7 @@
             var deltaStr;
             if (unit === 'sec') { deltaStr = Math.round(deltaAbs) + 's'; }
             else if (unit === 'hrs') { deltaStr = deltaAbs.toFixed(1) + 'h'; }
+            else if (unit === '#') { deltaStr = Math.round(deltaAbs).toString(); }
             else { deltaStr = deltaAbs.toFixed(1) + '%'; }
 
             var arrow, fontColor, bg;
