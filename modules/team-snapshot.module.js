@@ -871,19 +871,56 @@
     // PERIOD SELECTOR
     // ============================================
 
-    function populatePeriodDropdown() {
+    var _allPeriods = [];
+
+    function populatePeriodDropdown(filterType) {
         var select = document.getElementById('snapshotPeriodSelect');
         if (!select) return;
 
-        var periods = getAvailablePeriods();
-        select.innerHTML = '<option value="">-- Select a period --</option>';
+        // Cache periods on first call
+        if (!filterType || _allPeriods.length === 0) {
+            _allPeriods = getAvailablePeriods();
+        }
 
-        periods.forEach(function(p) {
+        var type = filterType || 'all';
+        var filtered = type === 'all' ? _allPeriods : _allPeriods.filter(function(p) {
+            return p.type === type;
+        });
+
+        select.innerHTML = '<option value="">-- Select a period (' + filtered.length + ' available) --</option>';
+
+        filtered.forEach(function(p) {
             var opt = document.createElement('option');
             opt.value = p.key + '|' + p.source;
             opt.textContent = p.label;
             select.appendChild(opt);
         });
+    }
+
+    function onPeriodTypeChange(e) {
+        var radio = e.target;
+        if (!radio || radio.type !== 'radio') return;
+
+        var filterType = radio.value;
+        populatePeriodDropdown(filterType);
+
+        // Style the active pill
+        var container = document.getElementById('snapshotPeriodTypeFilter');
+        if (container) {
+            var labels = container.querySelectorAll('label');
+            labels.forEach(function(label) {
+                var input = label.querySelector('input');
+                if (input && input.checked) {
+                    label.style.background = '#3b82f6';
+                    label.style.color = '#fff';
+                    label.style.borderColor = '#3b82f6';
+                } else {
+                    label.style.background = '#f1f5f9';
+                    label.style.color = '#475569';
+                    label.style.borderColor = '#e2e8f0';
+                }
+            });
+        }
     }
 
     function onPeriodChange() {
@@ -994,7 +1031,15 @@
     // ============================================
 
     function initializeTeamSnapshot() {
+        _allPeriods = []; // reset cache on re-init
         populatePeriodDropdown();
+
+        // Bind period type radio filter
+        var periodTypeFilter = document.getElementById('snapshotPeriodTypeFilter');
+        if (periodTypeFilter) {
+            periodTypeFilter.removeEventListener('change', onPeriodTypeChange);
+            periodTypeFilter.addEventListener('change', onPeriodTypeChange);
+        }
 
         // Bind event listeners
         var periodSelect = document.getElementById('snapshotPeriodSelect');

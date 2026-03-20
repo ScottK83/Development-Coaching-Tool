@@ -1586,6 +1586,23 @@ Box 2 - Future Improvement Areas:
                     <!-- Step 1: Select Period -->
                     <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 2px solid #93c5fd;">
                         <h3 style="color: #1e40af; margin-top: 0;">Step 1: Select Period</h3>
+                        <div id="snapshotPeriodTypeFilter" style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: 600; background: #3b82f6; color: #fff; border: 2px solid #3b82f6;">
+                                <input type="radio" name="snapshotPeriodType" value="all" checked style="display: none;"> All
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                <input type="radio" name="snapshotPeriodType" value="daily" style="display: none;"> Daily
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                <input type="radio" name="snapshotPeriodType" value="week" style="display: none;"> Weekly
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                <input type="radio" name="snapshotPeriodType" value="month" style="display: none;"> Monthly
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
+                                <input type="radio" name="snapshotPeriodType" value="ytd" style="display: none;"> YTD
+                            </label>
+                        </div>
                         <select id="snapshotPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #93c5fd; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
                             <option value="">-- Select a period --</option>
                         </select>
