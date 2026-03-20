@@ -1140,6 +1140,14 @@
         }
 
         modal.style.display = 'flex';
+
+        // Close on overlay click (outside modal content)
+        if (!modal.dataset.overlayBound) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeUploadSentimentModal();
+            });
+            modal.dataset.overlayBound = 'true';
+        }
     }
 
     function closeUploadSentimentModal() {
