@@ -80,20 +80,22 @@
             return configuredScore;
         }
 
+        // Fallback thresholds (used when no RATING_BANDS configured for the year)
+        // Uses >= for min-type and <= for max-type, matching getRatingScore logic
         if (metricKey === 'aht') {
-            return value <= 419 ? 3 : (value <= 460 ? 2 : 1);
+            return value <= 414 ? 3 : (value <= 434 ? 2 : 1);
         }
         if (metricKey === 'scheduleAdherence') {
             return value >= 94.5 ? 3 : (value >= 92.5 ? 2 : 1);
         }
         if (metricKey === 'overallSentiment') {
-            return value >= 90.1 ? 3 : (value >= 87.5 ? 2 : 1);
+            return value >= 90 ? 3 : (value >= 87.5 ? 2 : 1);
         }
         if (metricKey === 'cxRepOverall') {
-            return value > 82 ? 3 : (value >= 79.5 ? 2 : 1);
+            return value >= 84 ? 3 : (value >= 81.5 ? 2 : 1);
         }
         if (metricKey === 'reliability') {
-            return value > 24.1 ? 1 : (value >= 16.1 ? 2 : 3);
+            return value <= 18 ? 3 : (value <= 24 ? 2 : 1);
         }
 
         return null;
