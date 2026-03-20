@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-20T19:01:13.379Z",
+  "generatedAt": "2026-03-20T19:06:26.785Z",
   "reason": "manual footer sync",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -7455,6 +7455,26 @@
       "Oceane Ingram",
       "Robert Berrelleza",
       "Sabrina Gage"
+    ],
+    "2026-03-19|2026-03-19": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Betty Yanez",
+      "Christi Martinez-Sharp",
+      "Desiree Clark",
+      "Destiny Cervantez",
+      "Erica Kallestewa",
+      "Esperanza Palomera",
+      "Esther Ramos",
+      "Jadyn Flowers",
+      "James Garcia",
+      "Johnathan Padilla",
+      "Kamella Dash",
+      "Kristin Villela",
+      "Matrece Muldrow",
+      "Oceane Ingram",
+      "Robert Berrelleza",
+      "Sabrina Gage"
     ]
   },
   "callCenterAverages": {
@@ -7689,7 +7709,7 @@
       "negativeWord": 89.7,
       "managingEmotions": 96,
       "reliability": 0.23,
-      "lastUpdated": "2026-03-20T19:00:53.294Z"
+      "lastUpdated": "2026-03-20T19:01:29.009Z"
     },
     "2026-03-18|2026-03-18": {
       "adherence": 94.6,
@@ -8608,7 +8628,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 122
+      "byteLength": 127
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
@@ -8657,8 +8677,8 @@
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 343
+      "itemCount": 2,
+      "byteLength": 685
     }
   }
 }
