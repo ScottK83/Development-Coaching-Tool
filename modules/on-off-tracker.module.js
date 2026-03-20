@@ -668,7 +668,9 @@
                     var targetVal = actualTarget.value;
                     var gapToTarget = Math.abs(m.val - targetVal);
                     targetText = 'company target is ' + targetVal + ' ' + m.unit;
-                    if (actualTarget.type === 'min') {
+                    if (k === 'reliability') {
+                        gapText = 'currently ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' over target. This is about Verint coding and pre-scheduling time off, not working harder';
+                    } else if (actualTarget.type === 'min') {
                         gapText = 'needs to improve by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
                     } else {
                         gapText = 'needs to reduce by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
@@ -676,7 +678,7 @@
                 }
                 // Add band as stretch/stepping stone
                 var stretchText = '';
-                if (band && m.val !== null) {
+                if (band && m.val !== null && k !== 'reliability') {
                     var band2Val = band.type === 'min' ? band.score2.min : band.score2.max;
                     var gapToBand2 = Math.abs(m.val - band2Val);
                     if (band.type === 'min') {

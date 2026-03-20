@@ -103,16 +103,10 @@ managingEmotions,Give yourself 30 seconds between difficult calls to reset menta
 managingEmotions,If customer is yelling - let them vent for 20-30 seconds then redirect calmly
 managingEmotions,Use 'we' language: 'Let's figure this out together' - creates partnership feeling
 managingEmotions,If you're getting triggered - put on hold for 10 seconds and breathe - then come back calm
-reliability,Set two alarms for your shift - one for wake up one for leave house time
-reliability,Have a backup plan for transportation issues - know your bus backup route
-reliability,If you're running late call supervisor as soon as you know - not when you arrive
-reliability,Review your Verint time entries weekly - make sure PTOST is coded correctly
-reliability,Use PTOST for first 40 hours of unplanned time off - code it in Verint ahead of time
-reliability,Schedule planned time off weeks in advance - don't wait until last minute
-reliability,If you're sick - call out at least 2 hours before shift - don't text
-reliability,Keep track of your PTOST usage - don't be surprised when you run out
-reliability,Set recurring calendar reminders for your regular shifts - avoid forgetting
-reliability,If you have consistent late issues - talk to supervisor about schedule adjustment before it becomes disciplinary
+reliability,Review your Verint time entries to make sure you're marked correctly - coding errors can inflate your hours
+reliability,Pre-schedule any planned time off in advance so it doesn't count against reliability
+reliability,If time off is listed as Same Day use PTOST - you're given 40 hours of PTOST so use them
+reliability,Alert your supervisor if you see any discrepancies in your reliability hours - they can investigate and get corrections made
 cxRepOverall,Listen for the REAL issue behind the question - sometimes billing question is actually payment plan need
 cxRepOverall,End every call with specific next steps - don't leave customer wondering what happens next
 cxRepOverall,Follow up on promises - if you said you'd call back - call back
