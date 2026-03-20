@@ -698,8 +698,10 @@
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
 
-        var toast = window.DevCoachModules?.uiUtils?.showToast;
-        if (toast) toast('Check-in prompt generated! Copy and paste into Copilot.', 3000);
+        // Auto-open Copilot with the prompt
+        if (typeof window.openCopilotWithPrompt === 'function') {
+            window.openCopilotWithPrompt(prompt, 'Quick Check-in for ' + firstName);
+        }
     }
 
     /* ── Team Summary ── */
