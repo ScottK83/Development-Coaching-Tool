@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-20T18:31:40.106Z",
+  "generatedAt": "2026-03-20T19:01:13.379Z",
   "reason": "manual footer sync",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -7682,15 +7682,14 @@
     "2026-03-19|2026-03-19": {
       "adherence": 94.27,
       "transfers": 8.41,
+      "aht": 412,
+      "acw": 54,
       "sentiment": 91.5,
       "positiveWord": 88.8,
       "negativeWord": 89.7,
       "managingEmotions": 96,
-      "aht": 412,
-      "acw": 54,
-      "holdTime": 12,
       "reliability": 0.23,
-      "lastUpdated": "2026-03-20T18:30:08.028Z"
+      "lastUpdated": "2026-03-20T19:00:53.294Z"
     },
     "2026-03-18|2026-03-18": {
       "adherence": 94.6,
@@ -7707,6 +7706,38 @@
       "holdTime": 11,
       "reliability": 0.26,
       "lastUpdated": "2026-03-20T18:31:34.069Z"
+    },
+    "2026-03-17|2026-03-17": {
+      "adherence": 94.38,
+      "overallExperience": 80,
+      "repSatisfaction": 86.67,
+      "fcr": 86.67,
+      "transfers": 8.07,
+      "sentiment": 91.5,
+      "positiveWord": 89.3,
+      "negativeWord": 89.8,
+      "managingEmotions": 95.4,
+      "aht": 304,
+      "acw": 52,
+      "holdTime": 13,
+      "reliability": 0.32,
+      "lastUpdated": "2026-03-20T18:37:03.915Z"
+    },
+    "2026-03-15|2026-03-15": {
+      "adherence": 96.34,
+      "overallExperience": 100,
+      "repSatisfaction": 100,
+      "fcr": 100,
+      "transfers": 1.69,
+      "sentiment": 91.1,
+      "positiveWord": 87.7,
+      "negativeWord": 87.9,
+      "managingEmotions": 97.6,
+      "aht": 413,
+      "acw": 57,
+      "holdTime": 8,
+      "reliability": 0.09,
+      "lastUpdated": "2026-03-20T18:38:19.689Z"
     }
   },
   "ptoTracker": {
@@ -8526,8 +8557,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 16,
-      "byteLength": 4455
+      "itemCount": 18,
+      "byteLength": 5025
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -8572,7 +8603,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 281
+      "byteLength": 286
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -8618,6 +8649,11 @@
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
+    },
+    "devCoachingTool_lastError": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 236
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
