@@ -694,12 +694,23 @@
         results.forEach(function(r, idx) {
             var bg = idx % 2 === 0 ? '#fff' : '#fafafa';
             var scores = r.result.scores || {};
+            var values = r.result.values || {};
 
-            function scoreCell(score) {
-                if (score === null) return '<td style="padding: 6px; text-align: center; color: #999; border-bottom: 1px solid #eee;">--</td>';
+            function formatVal(val, unit) {
+                if (val === null || val === undefined) return '--';
+                if (unit === 'sec') return Math.round(val) + 's';
+                if (unit === 'hrs') return val.toFixed(1) + 'h';
+                return val.toFixed(1) + '%';
+            }
+
+            function scoreCell(score, val, unit) {
+                var valDisplay = formatVal(val, unit);
+                if (score === null) return '<td style="padding: 4px 6px; text-align: center; color: #999; border-bottom: 1px solid #eee;"><div style="font-size: 0.75em; color: #999;">' + valDisplay + '</div><div>--</div></td>';
                 var cellBg = score === 3 ? '#00b050' : score === 2 ? '#f0de87' : '#ff1a1a';
                 var cellColor = score === 2 ? '#333' : '#fff';
-                return '<td style="padding: 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' + score + '</td>';
+                return '<td style="padding: 4px 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' +
+                    '<div style="font-size: 0.75em; font-weight: 400; opacity: 0.85;">' + valDisplay + '</div>' +
+                    '<div>' + score + '</div></td>';
             }
 
             var statusBg, statusColor;
@@ -711,11 +722,11 @@
 
             html += '<tr style="background: ' + bg + ';">' +
                 '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid #eee; white-space: nowrap;">' + r.firstName + '</td>' +
-                scoreCell(scores.aht) +
-                scoreCell(scores.adherence) +
-                scoreCell(scores.sentiment) +
-                scoreCell(scores.associateOverall) +
-                scoreCell(scores.reliability) +
+                scoreCell(scores.aht, values.aht, 'sec') +
+                scoreCell(scores.adherence, values.adherence, '%') +
+                scoreCell(scores.sentiment, values.sentiment, '%') +
+                scoreCell(scores.associateOverall, values.associateOverall, '%') +
+                scoreCell(scores.reliability, values.reliability, 'hrs') +
                 '<td style="padding: 6px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; color: #4a148c;">' + avgDisplay + '</td>' +
                 '<td style="padding: 6px 10px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; ' +
                 'background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 4px; font-size: 0.8em;">' + r.result.trackLabel + '</td>' +
