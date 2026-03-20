@@ -1847,6 +1847,11 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
     const end = new Date(endDate);
     const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
+    // Check if it starts on Jan 1 — likely YTD
+    const startMonth = start.getMonth();
+    const startDay = start.getDate();
+    if (startMonth === 0 && startDay === 1 && daysDiff >= 14) return 'ytd';
+
     if (daysDiff <= 1) return 'daily';
     if (daysDiff >= 26 && daysDiff <= 33) return 'month';
     if (daysDiff >= 88 && daysDiff <= 95) return 'quarter';
@@ -1855,22 +1860,15 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
 }
 
 function resolveSelectedUploadPeriodType(detectedPeriodType) {
-    // If custom is already selected, keep it
-    const customBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
-    if (customBtn) return 'custom';
-
-    const periodButtons = document.querySelectorAll('.upload-period-btn');
-    periodButtons.forEach(btn => {
-        if (btn.dataset.period === detectedPeriodType) {
-            btn.click();
-        }
-    });
-
+    // Respect the user's explicit selection — don't auto-override
     const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[style*="background:#28a745"]') ||
-        document.querySelector('.upload-period-btn[data-period="week"]');
-    return selectedBtn ? selectedBtn.dataset.period : detectedPeriodType;
+        document.querySelector('.upload-period-btn[style*="background:#28a745"]');
+    if (selectedBtn) {
+        return selectedBtn.dataset.period;
+    }
+
+    // No button selected, use detection
+    return detectedPeriodType;
 }
 
 function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile) {
