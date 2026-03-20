@@ -717,13 +717,36 @@ function initializeDefaultTips() {
 }
 
 function getMetricTips(metricName) {
+    // Load base tips (server/default)
+    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+    const allBaseTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
+    var baseTips = (allBaseTips[metricName] || []).slice();
+
+    // Apply server tip modifications (edits and deletions)
+    try {
+        const modifications = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
+        const deletions = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
+        const metricMods = modifications[metricName] || {};
+        const metricDels = deletions[metricName] || [];
+
+        // Apply edits
+        Object.keys(metricMods).forEach(function(idx) {
+            var i = parseInt(idx, 10);
+            if (i >= 0 && i < baseTips.length) {
+                baseTips[i] = metricMods[idx];
+            }
+        });
+
+        // Remove deleted tips (iterate in reverse to preserve indices)
+        if (Array.isArray(metricDels)) {
+            var delsSet = new Set(metricDels.map(Number));
+            baseTips = baseTips.filter(function(_, i) { return !delsSet.has(i); });
+        }
+    } catch(e) {}
+
+    // Append user custom tips
     const userTips = loadUserTips();
     const userTipsForMetric = userTips[metricName] || [];
-    if (userTipsForMetric.length > 0) {
-        return userTipsForMetric;
-    }
 
-    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
-    const allTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
-    return allTips[metricName] || [];
+    return baseTips.concat(userTipsForMetric);
 }
