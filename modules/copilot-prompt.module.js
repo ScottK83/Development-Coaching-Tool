@@ -57,8 +57,11 @@
             'Overall Sentiment': 'overallSentiment',
             'Positive Word': 'positiveWord',
             'Avoid Negative Word': 'negativeWord',
+            'Avoid Negative Words': 'negativeWord',
+            'Negative Word': 'negativeWord',
             'Managing Emotions': 'managingEmotions',
             'Avg Handle Time': 'aht',
+            'Average Handle Time': 'aht',
             'After Call Work': 'acw',
             'Hold Time': 'holdTime',
             'Reliability': 'reliability'
@@ -219,8 +222,11 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
         nav.clipboard.writeText(prompt).then(() => {
             context.alert?.('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
             win.open('https://copilot.microsoft.com', '_blank');
-            doc.getElementById('copilotOutputSection').style.display = 'block';
-            doc.getElementById('copilotOutputSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const outputSection = doc.getElementById('copilotOutputSection');
+            if (outputSection) {
+                outputSection.style.display = 'block';
+                outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
             showToast('✅ Prompt copied! Paste into CoPilot, then paste the result back here.');
         }).catch(err => {
             context.console?.error?.('Failed to copy:', err);
@@ -268,8 +274,8 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
             let verintText = `Coaching Session with ${firstName} - ${date}\n\n`;
 
             if (winsLabels.length > 0) {
-                verintText += `I recognized ${firstName} for their strong performance in ${joinWithConjunction(winsLabels)} `;
-                verintText += '. Encouraged them to keep up the great work in these areas.\n\n';
+                verintText += `I recognized ${firstName} for their strong performance in ${joinWithConjunction(winsLabels)}.`;
+                verintText += ' Encouraged them to keep up the great work in these areas.\n\n';
             } else {
                 verintText += `We discussed ${firstName}'s current performance and acknowledged their efforts to improve.\n\n`;
             }
@@ -295,9 +301,10 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
             }
 
             const outputElement = doc.getElementById('verintSummaryOutput');
-            outputElement.value = verintText;
+            if (outputElement) outputElement.value = verintText;
 
-            doc.getElementById('verintSummarySection').style.display = 'block';
+            const summarySection = doc.getElementById('verintSummarySection');
+            if (summarySection) summarySection.style.display = 'block';
 
             nav.clipboard.writeText(verintText).then(() => {
                 showToast('✅ Verint coaching notes copied to clipboard!', 3000);
@@ -307,8 +314,9 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
             });
         } else {
             const outputElement = doc.getElementById('verintSummaryOutput');
-            outputElement.value = `No coaching history found for ${selectedEmployeeId}. Generate a coaching email first.`;
-            doc.getElementById('verintSummarySection').style.display = 'block';
+            if (outputElement) outputElement.value = `No coaching history found for ${selectedEmployeeId}. Generate a coaching email first.`;
+            const summarySection = doc.getElementById('verintSummarySection');
+            if (summarySection) summarySection.style.display = 'block';
         }
     }
 

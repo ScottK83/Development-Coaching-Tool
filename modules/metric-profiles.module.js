@@ -28,6 +28,7 @@
             managingEmotions: { type: 'min', value: 95 },
             aht: { type: 'max', value: 426 },
             acw: { type: 'max', value: 60 },
+            holdTime: { type: 'max', value: 30 },
             reliability: { type: 'max', value: 18 }
         }
     };

@@ -73,8 +73,8 @@
         12: CANONICAL_SCHEMA.SENTIMENT_PERCENT,
         13: CANONICAL_SCHEMA.FCR_PERCENT,
         14: CANONICAL_SCHEMA.CX_REP_OVERALL,
-        15: CANONICAL_SCHEMA.CX_REP_OVERALL,
-        16: CANONICAL_SCHEMA.CX_REP_OVERALL,
+        15: 'CXRepSatisfaction',
+        16: 'CXRepFCR',
         17: CANONICAL_SCHEMA.OVERALL_EXPERIENCE,
         18: CANONICAL_SCHEMA.SURVEY_TOTAL,
         19: 'TotalIn-OfficeShrink%',
@@ -213,7 +213,8 @@
         }
         
         if (parsed > 100) {
-            return 0;
+            // Values over 100 are likely raw numbers (not percentages) — pass through
+            return parseFloat(parsed.toFixed(2));
         }
         
         return parseFloat(parsed.toFixed(2));

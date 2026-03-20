@@ -84,7 +84,9 @@
          * Set state (immutable update)
          */
         setState(updates, metadata = {}) {
-            const prevState = JSON.parse(JSON.stringify(this.state));
+            // Snapshot state WITHOUT history to prevent exponential memory growth
+            const { history, ...stateWithoutHistory } = this.state;
+            const prevState = JSON.parse(JSON.stringify(stateWithoutHistory));
             
             // Apply updates
             this.deepMerge(this.state, updates);
@@ -152,9 +154,14 @@
             if (this.state.history.past.length === 0) return false;
             
             const prevState = this.state.history.past.pop();
-            this.state.history.future.unshift(JSON.parse(JSON.stringify(this.state)));
+            // Snapshot current state (without history) for the future stack
+            const { history, ...currentWithoutHistory } = this.state;
+            this.state.history.future.unshift(JSON.parse(JSON.stringify(currentWithoutHistory)));
             
+            // Restore previous state but preserve current history stack
+            const currentHistory = this.state.history;
             Object.assign(this.state, prevState);
+            this.state.history = currentHistory;
             this.notifySubscribers({ action: 'undo', newState: this.state });
             return true;
         }
@@ -166,9 +173,14 @@
             if (this.state.history.future.length === 0) return false;
             
             const nextState = this.state.history.future.shift();
-            this.state.history.past.push(JSON.parse(JSON.stringify(this.state)));
+            // Snapshot current state (without history) for the past stack
+            const { history, ...currentWithoutHistory } = this.state;
+            this.state.history.past.push(JSON.parse(JSON.stringify(currentWithoutHistory)));
             
+            // Restore next state but preserve current history stack
+            const currentHistory = this.state.history;
             Object.assign(this.state, nextState);
+            this.state.history = currentHistory;
             this.notifySubscribers({ action: 'redo', newState: this.state });
             return true;
         }
@@ -187,7 +199,9 @@
         saveToStorage() {
             try {
                 const key = 'devCoachAppState_' + (this.state.session.userId || 'default');
-                localStorage.setItem(key, JSON.stringify(this.state));
+                // Exclude history from persistence to avoid localStorage bloat
+                const { history, ...stateWithoutHistory } = this.state;
+                localStorage.setItem(key, JSON.stringify(stateWithoutHistory));
             } catch (e) {
                 console.error('Failed to save state:', e);
             }
@@ -232,6 +246,9 @@
                 if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
                     if (!target[key]) target[key] = {};
                     this.deepMerge(target[key], source[key]);
+                } else if (Array.isArray(source[key])) {
+                    // Clone arrays to prevent external mutation leaking into state
+                    target[key] = [...source[key]];
                 } else {
                     target[key] = source[key];
                 }

@@ -63,7 +63,7 @@
     function setTeamMembersForWeek(weekKey, memberNames) {
         var members = getMyTeamMembers();
         members[weekKey] = memberNames;
-        saveTeamMembers();
+        saveTeamMembers(members);
         notifyTeamFilterChanged();
     }
 

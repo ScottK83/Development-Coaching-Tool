@@ -176,10 +176,12 @@
             let loaded = saved ? JSON.parse(saved) : {};
 
             // Migrate old format (object with timeframe keys) to new format (array)
+            let didMigrate = false;
             Object.keys(loaded).forEach(employeeName => {
                 const employeeData = loaded[employeeName];
 
                 if (employeeData && typeof employeeData === 'object' && !Array.isArray(employeeData)) {
+                    didMigrate = true;
                     const migratedArray = [];
                     Object.entries(employeeData).forEach(([timeframeKey, snapshot]) => {
                         const [start, end] = timeframeKey.split('_');
@@ -226,8 +228,7 @@
             });
 
             // Save migrated data back if migration occurred
-            const needsSave = Object.values(loaded).some(data => Array.isArray(data));
-            if (needsSave) {
+            if (didMigrate) {
                 localStorage.setItem(namespacedKey, JSON.stringify(loaded));
                 console.log('💾 Saved migrated sentiment data to localStorage');
             }

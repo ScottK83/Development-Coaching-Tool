@@ -34,14 +34,14 @@
                 <div style="flex: 1;">
                     <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" class="team-member-checkbox employee-row-team-checkbox" data-week="${escapeHtml(teamSelectionWeek)}" data-name="${escapeHtml(name)}" ${isTeamSelected ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
-                        <strong style="color: #6a1b9a;">${name}</strong>
+                        <strong style="color: #6a1b9a;">${escapeHtml(name)}</strong>
                     </label>
                     <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Weekly Data Uploads</div>
                 </div>
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
-                    <input type="text" id="prefName_${escapeHtml(name)}" value="${defaultValue}" placeholder="${getEmployeeNickname(name)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
-                    <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${currentPreferred}</strong></div>
+                    <input type="text" id="prefName_${escapeHtml(name)}" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(getEmployeeNickname(name))}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                    <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${escapeHtml(currentPreferred)}</strong></div>
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button class="saveEmployeeNameBtn" data-name="${escapeHtml(name)}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>

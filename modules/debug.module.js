@@ -201,12 +201,19 @@
     }
 
     function fallbackCopyDebug(text) {
-        navigator.clipboard.writeText(text).then(() => {
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
             showToast('\u2705 Debug info copied to clipboard', 3000);
-        }).catch(err => {
+        } catch (err) {
             console.error('Failed to copy debug info:', err);
             showToast('\u26a0\ufe0f Unable to copy debug info', 3000);
-        });
+        }
     }
 
     // Helper: resolve showToast from global scope

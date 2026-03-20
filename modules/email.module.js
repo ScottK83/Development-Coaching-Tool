@@ -133,15 +133,16 @@
      * Format email body with metrics
      */
     function formatEmailBody(employeeName, weekKey, period, metrics) {
+        const esc = window.DevCoachModules?.sharedUtils?.escapeHtml || (t => String(t ?? ''));
         let body = `<h2>Trending Metrics Report</h2>\n`;
-        body += `<p>Employee: <strong>${employeeName}</strong></p>\n`;
-        body += `<p>Period: <strong>${period.metadata?.endDate || 'Latest'}</strong></p>\n\n`;
+        body += `<p>Employee: <strong>${esc(employeeName)}</strong></p>\n`;
+        body += `<p>Period: <strong>${esc(period.metadata?.endDate || 'Latest')}</strong></p>\n\n`;
         
         body += `<h3>Performance Summary</h3>\n`;
         body += `<ul>\n`;
         
         metrics?.forEach(metric => {
-            body += `  <li><strong>${metric.label}:</strong> ${metric.value}</li>\n`;
+            body += `  <li><strong>${esc(metric.label)}:</strong> ${esc(metric.value)}</li>\n`;
         });
         
         body += `</ul>\n`;

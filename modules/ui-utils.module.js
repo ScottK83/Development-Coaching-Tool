@@ -65,10 +65,12 @@
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         `;
-        content.innerHTML = `
-            <div style="width: 40px; height: 40px; border: 4px solid #f0f0f0; border-top: 4px solid #2196F3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
-            <p>${message}</p>
-        `;
+        const spinnerIcon = document.createElement('div');
+        spinnerIcon.style.cssText = 'width: 40px; height: 40px; border: 4px solid #f0f0f0; border-top: 4px solid #2196F3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;';
+        const messageEl = document.createElement('p');
+        messageEl.textContent = message;
+        content.appendChild(spinnerIcon);
+        content.appendChild(messageEl);
         
         spinner.innerHTML = '';
         spinner.appendChild(content);
@@ -112,6 +114,7 @@
      */
     function showDialog(title, content, buttons = []) {
         const backdrop = document.createElement('div');
+        backdrop.className = 'devcoach-dialog-backdrop';
         backdrop.style.cssText = `
             position: fixed;
             top: 0;
@@ -142,7 +145,7 @@
         
         const contentEl = document.createElement('div');
         if (typeof content === 'string') {
-            contentEl.innerHTML = content;
+            contentEl.textContent = content;
         } else {
             contentEl.appendChild(content);
         }
@@ -182,7 +185,7 @@
      * Hide dialog
      */
     function hideDialog() {
-        const dialogs = document.querySelectorAll('[style*="position: fixed"][style*="rgba(0,0,0,0.5)"]');
+        const dialogs = document.querySelectorAll('.devcoach-dialog-backdrop');
         dialogs.forEach(d => d.remove());
     }
 

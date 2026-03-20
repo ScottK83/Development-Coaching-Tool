@@ -1731,7 +1731,7 @@ function renderPtoSummary(data, associateName = '') {
 
     // Build card helper
     const card = (label, mainValue, subText, borderColor, bgColor, textColor = '#1a2a3a') => {
-        return `<div style="padding: 14px 16px; border-radius: 10px; background: ${bgColor}; border- 2px solid ${borderColor}; border-left: 4px solid ${borderColor};">
+        return `<div style="padding: 14px 16px; border-radius: 10px; background: ${bgColor}; border: 2px solid ${borderColor}; border-left: 4px solid ${borderColor};">
             <div style="font-size: 0.78em; font-weight: 600; color: #6b7b8d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">${label}</div>
             <div style="font-size: 1.5em; font-weight: 800; color: ${textColor}; line-height: 1.2;">${mainValue}</div>
             <div style="font-size: 0.82em; color: #6b7b8d; margin-top: 4px;">${subText}</div>

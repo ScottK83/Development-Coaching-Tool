@@ -26,7 +26,8 @@ export default {
     const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
     if (expectedSyncSecret) {
       const providedSyncSecret = String(request.headers.get('x-sync-secret') || '').trim();
-      if (!providedSyncSecret || providedSyncSecret !== expectedSyncSecret) {
+      // Use constant-time comparison to prevent timing attacks
+      if (!providedSyncSecret || !timingSafeEqual(providedSyncSecret, expectedSyncSecret)) {
         return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401, corsHeaders(requestOrigin, allowedOrigin));
       }
     }
@@ -177,8 +178,17 @@ function json(data, status = 200, headers = corsHeaders()) {
 function corsHeaders(requestOrigin = '', allowedOrigin = '') {
   const safeAllowed = String(allowedOrigin || '').trim();
   const safeRequest = String(requestOrigin || '').trim();
+  // Never fall back to wildcard — require explicit ALLOWED_ORIGIN configuration
+  const origin = safeAllowed || (safeRequest ? safeRequest : '');
+  if (!origin) {
+    return {
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret',
+      'Vary': 'Origin'
+    };
+  }
   return {
-    'Access-Control-Allow-Origin': safeAllowed || safeRequest || '*',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret',
     'Vary': 'Origin'
@@ -187,8 +197,30 @@ function corsHeaders(requestOrigin = '', allowedOrigin = '') {
 
 function isAllowedOrigin(requestOrigin, allowedOrigin) {
   const safeAllowed = String(allowedOrigin || '').trim();
-  if (!safeAllowed) return true;
+  // Default-deny: if ALLOWED_ORIGIN is not configured, reject all origins
+  if (!safeAllowed) return false;
   return String(requestOrigin || '').trim() === safeAllowed;
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks
+ */
+function timingSafeEqual(a, b) {
+  const strA = String(a);
+  const strB = String(b);
+  if (strA.length !== strB.length) {
+    // Still do a comparison to avoid length-based timing leak
+    let result = strA.length ^ strB.length;
+    for (let i = 0; i < strA.length; i++) {
+      result |= strA.charCodeAt(i) ^ (strB.charCodeAt(i % strB.length) || 0);
+    }
+    return result === 0;
+  }
+  let result = 0;
+  for (let i = 0; i < strA.length; i++) {
+    result |= strA.charCodeAt(i) ^ strB.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 // ============================================
@@ -344,15 +376,41 @@ async function upsertRepoFile({ env, branch, path, message, content }) {
   }
 }
 
+/**
+ * Upload a file using pre-encoded base64 content (binary-safe, no double-encoding)
+ */
+async function upsertRepoFileBase64({ env, branch, path, message, contentBase64 }) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const sha = await getExistingFileSha(env, branch, path);
+      const payload = { message, content: contentBase64, branch };
+      if (sha) payload.sha = sha;
+      const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return { commitSha: result?.commit?.sha || null };
+    } catch (e) {
+      if (attempt < 3 && String(e.message || '').toLowerCase().includes('409')) {
+        await new Promise(r => setTimeout(r, attempt * 250));
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 async function handleUploadFileToRepo({ env, body, branch, dataDir }) {
   const rawFileName = String(body?.fileName || '').trim();
   const fileName = rawFileName.split(/[\\/]/).pop().trim()
-    .replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^-+|--+$/g, '');
+    .replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^-+/g, '').replace(/-+$/g, '');
   if (!fileName) throw new Error('Missing or invalid fileName.');
   const contentBase64 = String(body?.fileContentBase64 || '').replace(/\s+/g, '');
   if (!contentBase64) throw new Error('Missing fileContentBase64.');
   const uploadsDir = String(env.GH_UPLOADS_DIR || `${dataDir}/uploads`).trim();
   const path = `${uploadsDir}/${fileName}`;
-  const result = await upsertRepoFile({ env, branch, path, message: `chore(data): upload file ${fileName}`, content: atob(contentBase64) });
+  // Pass base64 content directly to avoid double-encode corruption with binary files
+  const result = await upsertRepoFileBase64({ env, branch, path, message: `chore(data): upload file ${fileName}`, contentBase64 });
   return { fileName, path, commitSha: result.commitSha };
 }

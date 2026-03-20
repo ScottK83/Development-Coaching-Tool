@@ -1002,7 +1002,8 @@
                 syncSentimentSnapshotDateInputsFromReports();
 
                 // Show success status
-                statusDiv.textContent = `✅ Parsed ${report.phrases.length} sentiment phrase(s) from ${report.speakers.size} speaker(s)`;
+                const speakerCount = report.speakers ? (report.speakers.size ?? report.speakers.length ?? 0) : 0;
+                statusDiv.textContent = `✅ Parsed ${report.phrases.length} sentiment phrase(s) from ${speakerCount} speaker(s)`;
                 statusDiv.style.color = '#4CAF50';
 
                 // Close modal

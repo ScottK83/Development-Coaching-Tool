@@ -10,7 +10,8 @@
     var STORAGE_PREFIX = 'devCoachingTool_';
 
     function escapeHtml(text) {
-        return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) || String(text || '');
+        var str = String(text ?? '');
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     function getWeeklyData() {

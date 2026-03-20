@@ -56,7 +56,7 @@
             label: 'Transfers',
             icon: '🔄',
             target: { type: 'max', value: 6 },
-            unit: '%',
+            unit: '#',
             columnIndex: 2,
             chartType: 'bar',
             chartColor: '#FF9800',

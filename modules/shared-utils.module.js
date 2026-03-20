@@ -42,6 +42,17 @@
     }
 
     /**
+     * Get the configured CC email address for coaching emails
+     */
+    function getCoachingCcEmail() {
+        try {
+            return localStorage.getItem('devCoachingTool_ccEmail') || '';
+        } catch (_e) {
+            return '';
+        }
+    }
+
+    /**
      * @param {string} subject
      * @param {string} bodyText
      * @returns {void}
@@ -49,9 +60,11 @@
     function openMailtoDraft(subject, bodyText) {
         const safeSubject = String(subject || '');
         const safeBodyText = String(bodyText || '');
+        const ccEmail = getCoachingCcEmail();
 
         const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(safeSubject)}&body=${encodeURIComponent(safeBodyText)}`;
+        const ccParam = ccEmail ? `cc=${encodeURIComponent(ccEmail)}&` : '';
+        mailtoLink.href = `mailto:?${ccParam}subject=${encodeURIComponent(safeSubject)}&body=${encodeURIComponent(safeBodyText)}`;
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
@@ -62,6 +75,7 @@
         toNonEmptyString,
         joinWithConjunction,
         escapeHtml,
-        openMailtoDraft
+        openMailtoDraft,
+        getCoachingCcEmail
     };
 })();

@@ -123,8 +123,10 @@
     function openTrendEmailOutlook(emailSubject, employeeName) {
         try {
             const toAddress = buildEmployeeEmail(employeeName);
+            const ccEmail = window.DevCoachModules?.sharedUtils?.getCoachingCcEmail?.() || '';
             const mailtoLink = document.createElement('a');
-            mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}`;
+            const ccParam = ccEmail ? `cc=${encodeURIComponent(ccEmail)}&` : '';
+            mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?${ccParam}subject=${encodeURIComponent(emailSubject)}`;
             document.body.appendChild(mailtoLink);
             mailtoLink.click();
             document.body.removeChild(mailtoLink);
@@ -137,8 +139,10 @@
      * Build coaching prompt for CoPilot email generation
      */
     function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
-        if (typeof window.buildTrendCoachingPrompt === 'function') {
-            return window.buildTrendCoachingPrompt(
+        // Delegate to metric-trends module if available (it has the richer implementation)
+        const trendModule = window.DevCoachModules?.metricTrends;
+        if (trendModule?.buildTrendCoachingPrompt && trendModule.buildTrendCoachingPrompt !== buildTrendCoachingPrompt) {
+            return trendModule.buildTrendCoachingPrompt(
                 displayName,
                 weakestMetric,
                 trendingMetric,
@@ -228,8 +232,10 @@
      * Analyze trend metrics for coaching
      */
     function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null) {
-        if (typeof window.analyzeTrendMetrics === 'function') {
-            return window.analyzeTrendMetrics(employeeData, centerAverages, reviewYear);
+        // Delegate to metric-trends module if available (it has the richer implementation)
+        const trendModule = window.DevCoachModules?.metricTrends;
+        if (trendModule?.analyzeTrendMetrics && trendModule.analyzeTrendMetrics !== analyzeTrendMetrics) {
+            return trendModule.analyzeTrendMetrics(employeeData, centerAverages, reviewYear);
         }
 
         const allMetrics = [];

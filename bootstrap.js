@@ -4,8 +4,7 @@
 // 1. Disable console warnings globally
 const BLOCKED_PATTERNS = [
     /source.*map/i,
-    /\.map/i,
-    /json\.parse/i,
+    /\.map$/i,
     /chart\.umd/i,
     /lib-chart/i
 ];
@@ -51,7 +50,3 @@ window.addEventListener('unhandledrejection', function(event) {
     }
 }, true);
 
-// 5. Block at resource loading level
-window.addEventListener('beforeunload', function() {
-    // Clean up any pending map requests
-}, false);

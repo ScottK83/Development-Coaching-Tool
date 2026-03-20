@@ -43,7 +43,8 @@
     }
 
     function escapeHtml(text) {
-        return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) || String(text || '');
+        var str = String(text ?? '');
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     function getWeeklyData() {
@@ -578,6 +579,225 @@
     }
 
     // ============================================
+    // SCORECARD (simplified center avg comparison)
+    // ============================================
+
+    function generateScorecard() {
+        var select = document.getElementById('snapshotPeriodSelect');
+        if (!select || !select.value) {
+            alert('Please select a period first.');
+            return;
+        }
+
+        var parts = select.value.split('|');
+        var source = parts[parts.length - 1];
+        var periodKey = parts.slice(0, -1).join('|');
+
+        var periods = getAvailablePeriods();
+        var period = periods.find(function(p) { return p.key === periodKey && p.source === source; });
+        var periodLabel = period ? period.label : periodKey;
+
+        var snapshotData = assembleSnapshotData(periodKey, source);
+        renderScorecardGraphic(snapshotData, periodLabel);
+    }
+
+    function renderScorecardGraphic(snapshotData, periodLabel) {
+        var container = document.getElementById('snapshotGraphicContainer');
+        if (!container) return;
+
+        var registry = getRegistry();
+        var metrics = getMetrics();
+        var centerAvgs = snapshotData.centerAvgs;
+        var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+        if (!hasCenterAvgs) {
+            container.innerHTML = '<div style="padding: 30px; text-align: center; color: #dc2626; font-weight: 600;">No center averages entered. Fill in the Center Avg row above first.</div>';
+            return;
+        }
+
+        // Only show metrics that have center avg data AND employee data
+        var visibleMetrics = SNAPSHOT_METRICS.filter(function(key) {
+            if (centerAvgs[key] === undefined || isNaN(centerAvgs[key])) return false;
+            return snapshotData.rows.some(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                return cell && cell.hasValue && cell.value !== 0;
+            });
+        });
+
+        if (visibleMetrics.length === 0) {
+            container.innerHTML = '<div style="padding: 30px; text-align: center; color: #dc2626; font-weight: 600;">No matching metrics with center averages to compare.</div>';
+            return;
+        }
+
+        // Header cells
+        var headerCells = visibleMetrics.map(function(key) {
+            var def = registry[key];
+            return '<th style="padding: 8px 6px; font-size: 0.75em; font-weight: 700; color: #1e293b; text-align: center; ' +
+                'border-bottom: 3px solid #3b82f6; background: #f0f9ff;">' +
+                SHORT_LABELS[key] + '</th>';
+        }).join('');
+
+        // Data rows - just value + arrow/delta
+        var dataRows = snapshotData.rows.map(function(row, idx) {
+            var bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+            var cells = visibleMetrics.map(function(key) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                if (!cell || !cell.hasValue) {
+                    return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; color: #94a3b8; ' +
+                        'border-bottom: 1px solid #e2e8f0;">--</td>';
+                }
+
+                var unit = registry[key]?.unit || '%';
+                var deltaStr = '';
+                var arrow = '';
+                var bg = bgColor;
+                var fontColor = '#334155';
+
+                if (cell.avgDelta !== null && cell.avgDelta !== undefined) {
+                    var deltaAbs = Math.abs(cell.avgDelta);
+                    if (unit === 'sec') {
+                        deltaStr = Math.round(deltaAbs) + 's';
+                    } else if (unit === 'hrs') {
+                        deltaStr = deltaAbs.toFixed(1) + 'h';
+                    } else {
+                        deltaStr = deltaAbs.toFixed(1) + '%';
+                    }
+
+                    if (cell.aboveAvg === true) {
+                        arrow = '<span style="color: #16a34a; font-weight: 800; font-size: 1.1em;">\u25B2</span>';
+                        bg = '#f0fdf4';
+                        fontColor = '#166534';
+                    } else if (cell.aboveAvg === false) {
+                        arrow = '<span style="color: #dc2626; font-weight: 800; font-size: 1.1em;">\u25BC</span>';
+                        bg = '#fef2f2';
+                        fontColor = '#991b1b';
+                    }
+                }
+
+                return '<td style="padding: 6px 4px; text-align: center; border-bottom: 1px solid #e2e8f0; background: ' + bg + ';">' +
+                    '<div style="font-size: 0.85em; font-weight: 600; color: ' + fontColor + ';">' + escapeHtml(cell.displayValue) + '</div>' +
+                    (arrow ? '<div style="font-size: 0.75em; line-height: 1.2;">' + arrow + ' <span style="color: ' + fontColor + '; font-weight: 700;">' + deltaStr + '</span></div>' : '') +
+                    '</td>';
+            }).join('');
+
+            return '<tr style="background: ' + bgColor + ';">' +
+                '<td style="padding: 8px 12px; font-weight: 700; font-size: 0.9em; color: #1e293b; ' +
+                'border-bottom: 1px solid #e2e8f0; white-space: nowrap;">' + escapeHtml(row.name) + '</td>' +
+                cells + '</tr>';
+        }).join('');
+
+        // Team average row
+        var teamAvgCells = visibleMetrics.map(function(key) {
+            var sum = 0;
+            var count = 0;
+            snapshotData.rows.forEach(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                if (cell && cell.hasValue && cell.value !== 0) {
+                    sum += cell.value;
+                    count++;
+                }
+            });
+            if (count === 0) {
+                return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; font-weight: 700; ' +
+                    'color: #7c3aed; background: #f5f3ff; border-top: 3px solid #7c3aed;">--</td>';
+            }
+            var avg = sum / count;
+            var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
+            var centerVal = centerAvgs[key];
+            var isReverse = metrics.isReverseMetric?.(key) || false;
+            var beats = isReverse ? (avg <= centerVal) : (avg >= centerVal);
+            var delta = isReverse ? (centerVal - avg) : (avg - centerVal);
+            var unit = registry[key]?.unit || '%';
+            var deltaAbs = Math.abs(delta);
+            var deltaStr;
+            if (unit === 'sec') { deltaStr = Math.round(deltaAbs) + 's'; }
+            else if (unit === 'hrs') { deltaStr = deltaAbs.toFixed(1) + 'h'; }
+            else { deltaStr = deltaAbs.toFixed(1) + '%'; }
+
+            var arrow, fontColor, bg;
+            if (beats) {
+                arrow = '<span style="color: #16a34a; font-weight: 800; font-size: 1.1em;">\u25B2</span>';
+                fontColor = '#166534'; bg = '#dcfce7';
+            } else {
+                arrow = '<span style="color: #dc2626; font-weight: 800; font-size: 1.1em;">\u25BC</span>';
+                fontColor = '#991b1b'; bg = '#fee2e2';
+            }
+
+            return '<td style="padding: 6px 4px; text-align: center; font-weight: 700; ' +
+                'background: ' + bg + '; border-top: 3px solid #7c3aed;">' +
+                '<div style="font-size: 0.85em; color: ' + fontColor + ';">' + escapeHtml(display) + '</div>' +
+                '<div style="font-size: 0.75em; line-height: 1.2;">' + arrow + ' <span style="color: ' + fontColor + '; font-weight: 700;">' + deltaStr + '</span></div>' +
+                '</td>';
+        }).join('');
+
+        // Center avg row (reference)
+        var centerCells = visibleMetrics.map(function(key) {
+            var val = centerAvgs[key];
+            var display = (val !== undefined && !isNaN(val)) ? (metrics.formatMetricValue?.(key, val) || String(val)) : '--';
+            return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; font-weight: 600; ' +
+                'color: #1565c0; background: #e3f2fd; border-top: 2px solid #90caf9;">' + escapeHtml(display) + '</td>';
+        }).join('');
+
+        // Count above/below for summary
+        var aboveCount = 0, belowCount = 0;
+        visibleMetrics.forEach(function(key) {
+            var sum = 0, count = 0;
+            snapshotData.rows.forEach(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === key; });
+                if (cell && cell.hasValue && cell.value !== 0) { sum += cell.value; count++; }
+            });
+            if (count === 0) return;
+            var avg = sum / count;
+            var centerVal = centerAvgs[key];
+            var isReverse = metrics.isReverseMetric?.(key) || false;
+            var beats = isReverse ? (avg <= centerVal) : (avg >= centerVal);
+            if (beats) aboveCount++; else belowCount++;
+        });
+
+        var summaryText = aboveCount + ' of ' + visibleMetrics.length + ' metrics above center average';
+        var summaryColor = belowCount === 0 ? '#16a34a' : belowCount <= 2 ? '#d97706' : '#dc2626';
+
+        // Assemble
+        var html = '<div id="snapshotExportArea" style="background: #ffffff; border-radius: 12px; padding: 20px; ' +
+            'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; max-width: 900px; ' +
+            'box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">' +
+            // Title
+            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; ' +
+            'padding-bottom: 10px; border-bottom: 3px solid #f59e0b;">' +
+            '<div><div style="font-size: 1.2em; font-weight: 800; color: #1e293b;">\u26A1 Team vs Center Average</div>' +
+            '<div style="font-size: 0.85em; color: #64748b; margin-top: 2px;">' + escapeHtml(periodLabel) + '</div></div>' +
+            '<div style="text-align: right;"><div style="font-size: 0.75em; color: #94a3b8;">' + escapeHtml(dateStr) + '</div>' +
+            '<div style="font-size: 0.82em; font-weight: 700; color: ' + summaryColor + '; margin-top: 2px;">' + summaryText + '</div></div></div>' +
+            // Table
+            '<div style="overflow-x: auto;">' +
+            '<table style="width: 100%; border-collapse: collapse; border-spacing: 0;">' +
+            '<thead><tr><th style="padding: 8px 12px; text-align: left; font-size: 0.8em; font-weight: 700; ' +
+            'color: #1e293b; border-bottom: 3px solid #3b82f6; background: #f0f9ff;">Name</th>' + headerCells + '</tr></thead>' +
+            '<tbody>' + dataRows +
+            '<tr><td style="padding: 8px 12px; font-weight: 800; font-size: 0.9em; color: #7c3aed; ' +
+            'background: #f5f3ff; border-top: 3px solid #7c3aed; white-space: nowrap;">Team Avg</td>' + teamAvgCells + '</tr>' +
+            '<tr><td style="padding: 8px 12px; font-weight: 700; font-size: 0.85em; color: #1565c0; ' +
+            'background: #e3f2fd; border-top: 2px solid #90caf9; white-space: nowrap;">Center Avg</td>' + centerCells + '</tr>' +
+            '</tbody></table></div>' +
+            // Legend
+            '<div style="display: flex; gap: 16px; margin-top: 10px; padding: 8px 12px; background: #f8fafc; ' +
+            'border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">' +
+            '<span style="font-size: 0.75em; font-weight: 600; color: #334155;">Legend:</span>' +
+            '<span style="font-size: 0.75em; color: #16a34a; font-weight: 700;">\u25B2 Above center avg</span>' +
+            '<span style="font-size: 0.75em; color: #dc2626; font-weight: 700;">\u25BC Below center avg</span>' +
+            '<span style="font-size: 0.75em; color: #64748b;">Delta shows distance from center average</span>' +
+            '</div></div>';
+
+        container.innerHTML = html;
+
+        // Show the export buttons
+        var exportBtns = document.getElementById('snapshotExportBtns');
+        if (exportBtns) exportBtns.style.display = 'flex';
+    }
+
+    // ============================================
     // EXPORT TO IMAGE
     // ============================================
 
@@ -801,6 +1021,12 @@
             copyBtn.addEventListener('click', copySnapshotToClipboard);
         }
 
+        var scorecardBtn = document.getElementById('scorecardGenerateBtn');
+        if (scorecardBtn) {
+            scorecardBtn.removeEventListener('click', generateScorecard);
+            scorecardBtn.addEventListener('click', generateScorecard);
+        }
+
         var sampleBtn = document.getElementById('snapshotSampleDataBtn');
         if (sampleBtn) {
             sampleBtn.removeEventListener('click', loadSampleData);
@@ -891,6 +1117,7 @@
     window.DevCoachModules.teamSnapshot = {
         initializeTeamSnapshot: initializeTeamSnapshot,
         generateSnapshot: generateSnapshot,
+        generateScorecard: generateScorecard,
         exportSnapshotAsImage: exportSnapshotAsImage,
         copySnapshotToClipboard: copySnapshotToClipboard,
         populatePeriodDropdown: populatePeriodDropdown,
