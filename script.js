@@ -5838,6 +5838,29 @@ async function initApp() {
     enforceRepoAutoSyncEnabled();
     initializeRepoSyncControls();
     bindDiagnosticsCopyAction();
+    // Footer quick sync button
+    const footerSyncBtn = document.getElementById('footerSyncBtn');
+    if (footerSyncBtn) {
+        footerSyncBtn.addEventListener('click', async () => {
+            const repoSync = window.DevCoachModules?.repoSync;
+            const config = repoSync?.loadCallListeningSyncConfig?.();
+            if (!config?.isWorkPc) {
+                showToast('Sync is disabled — not marked as Work PC.', 3500);
+                return;
+            }
+            footerSyncBtn.disabled = true;
+            footerSyncBtn.textContent = 'Syncing...';
+            try {
+                await repoSync.syncRepoData('manual footer sync', { force: true, allowDataRegression: true });
+                showToast('Sync complete!', 3000);
+            } catch (e) {
+                showToast('Sync failed: ' + (e.message || e), 4000);
+            } finally {
+                footerSyncBtn.disabled = false;
+                footerSyncBtn.textContent = 'Sync Now';
+            }
+        });
+    }
     installRepoSyncStorageHooks();
     renderCallListeningLastSync();
     
