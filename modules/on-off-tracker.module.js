@@ -535,7 +535,27 @@
 
         var teamSummaryBtn = document.getElementById('onOffTeamSummaryBtn');
         if (teamSummaryBtn) {
-            _bindElementOnce(teamSummaryBtn, 'click', generateTeamOnOffSummary);
+            _bindElementOnce(teamSummaryBtn, 'click', function() {
+                generateTeamOnOffSummary();
+                var toggle = document.getElementById('onOffTeamSummaryToggle');
+                var container = document.getElementById('onOffTeamSummaryContainer');
+                if (toggle && container) {
+                    toggle.style.display = 'inline-block';
+                    toggle.textContent = 'Hide Summary';
+                    container.style.display = 'block';
+                }
+            });
+        }
+
+        var teamSummaryToggle = document.getElementById('onOffTeamSummaryToggle');
+        if (teamSummaryToggle) {
+            _bindElementOnce(teamSummaryToggle, 'click', function() {
+                var container = document.getElementById('onOffTeamSummaryContainer');
+                if (!container) return;
+                var hidden = container.style.display === 'none';
+                container.style.display = hidden ? 'block' : 'none';
+                teamSummaryToggle.textContent = hidden ? 'Hide Summary' : 'Show Summary';
+            });
         }
 
         var checkinBtn = document.getElementById('onOffCheckinBtn');
@@ -609,7 +629,7 @@
         }
 
         var result = calculateYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
-        var firstName = employeeName.split(' ')[0] || employeeName;
+        var firstName = (typeof window.getEmployeeNickname === 'function' ? window.getEmployeeNickname(employeeName) : '') || employeeName.split(' ')[0] || employeeName;
         var registry = window.METRICS_REGISTRY || {};
         var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
 
