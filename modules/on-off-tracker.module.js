@@ -731,8 +731,7 @@
             function scoreCell(score, val, unit, metricKey) {
                 var valDisplay = formatVal(val, unit);
                 if (score === null) return '<td style="padding: 4px 6px; text-align: center; color: #999; border-bottom: 1px solid #eee;"><div style="font-size: 0.75em; color: #999;">' + valDisplay + '</div><div>--</div></td>';
-                // Colorblind-friendly: use blue for good, orange for mid, keep white text on dark bg
-                var cellBg = score === 3 ? '#1565c0' : score === 2 ? '#f0de87' : '#e65100';
+                var cellBg = score === 3 ? '#00b050' : score === 2 ? '#f0de87' : '#d4544a';
                 var cellColor = score === 2 ? '#333' : '#fff';
                 var gapHint = buildGapHint(score, val, metricKey, unit);
                 return '<td style="padding: 4px 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' +
