@@ -1312,7 +1312,12 @@ function bindUploadAndPasteHandlers() {
             const period = btn.dataset.period;
             const label = document.getElementById('pasteWeekEndingLabel');
             const hint = document.getElementById('pasteWeekEndingHint');
+            const customStartContainer = document.getElementById('customStartDateContainer');
             if (label && hint) {
+                // Show/hide custom start date picker
+                if (customStartContainer) {
+                    customStartContainer.style.display = period === 'custom' ? 'block' : 'none';
+                }
                 if (period === 'daily') {
                     label.textContent = 'Date:';
                     hint.textContent = 'Select the date for this daily data.';
@@ -1328,6 +1333,9 @@ function bindUploadAndPasteHandlers() {
                 } else if (period === 'ytd') {
                     label.textContent = 'YTD Ending Date:';
                     hint.textContent = 'Last day of the YTD period.';
+                } else if (period === 'custom') {
+                    label.textContent = 'End Date:';
+                    hint.textContent = 'Select your custom date range.';
                 }
             }
         });
@@ -1717,6 +1725,11 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
 }
 
 function resolveSelectedUploadPeriodType(detectedPeriodType) {
+    // If custom is already selected, keep it
+    const customBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
+    if (customBtn) return 'custom';
+
     const periodButtons = document.querySelectorAll('.upload-period-btn');
     periodButtons.forEach(btn => {
         if (btn.dataset.period === detectedPeriodType) {
@@ -1750,6 +1763,8 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
         label = `Q${quarter} ${startDateObj.getFullYear()}`;
     } else if (periodType === 'ytd') {
         label = `YTD through ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (periodType === 'custom') {
+        label = `${startDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     }
 
     return {
@@ -1832,13 +1847,26 @@ function handleLoadPastedDataClick() {
 
     const endDate = weekEndingDate;
 
-    // Check if Daily is selected before calculating start date
+    // Check which period type button is selected
     const selectedDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
         document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
+    const selectedCustomBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
     const isDailySelected = !!selectedDailyBtn;
+    const isCustomSelected = !!selectedCustomBtn;
 
     let startDate;
-    if (isDailySelected) {
+    if (isCustomSelected) {
+        startDate = document.getElementById('pasteStartDate')?.value;
+        if (!startDate) {
+            alert('⚠️ Please select a start date for your custom range.');
+            return;
+        }
+        if (startDate > endDate) {
+            alert('⚠️ Start date cannot be after end date.');
+            return;
+        }
+    } else if (isDailySelected) {
         startDate = endDate; // Daily: start = end (same day)
     } else {
         const endDateObj = new Date(weekEndingDate);
@@ -1872,12 +1900,36 @@ function handleLoadPastedDataClick() {
         }
 
         const weekKey = `${startDate}|${endDate}`;
+
+        // Check if data already exists for this period and warn about what's missing/changing
+        const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
+        const existingData = targetStore[weekKey];
+        if (existingData && existingData.employees && existingData.employees.length > 0) {
+            const existingCount = existingData.employees.length;
+            const newCount = employees.length;
+            // Check which metrics the new upload has that old didn't, and vice versa
+            const metricKeys = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+            const metricLabels = { scheduleAdherence: 'Adherence', cxRepOverall: 'RepSat', fcr: 'FCR', overallExperience: 'OE', transfers: 'Transfers', aht: 'AHT', overallSentiment: 'Sentiment', positiveWord: '+Word', negativeWord: '-Word', managingEmotions: 'Emotions', reliability: 'Reliability' };
+            const hasData = (emps, key) => emps.some(e => e[key] !== '' && e[key] !== 0 && e[key] !== null && e[key] !== undefined);
+            const oldHas = metricKeys.filter(k => hasData(existingData.employees, k));
+            const newHas = metricKeys.filter(k => hasData(employees, k));
+            const newlyAdded = newHas.filter(k => !oldHas.includes(k)).map(k => metricLabels[k]);
+            const willLose = oldHas.filter(k => !newHas.includes(k)).map(k => metricLabels[k]);
+
+            let overwriteMsg = `⚠️ Data already exists for this period (${existingCount} employees).\n\nNew upload: ${newCount} employees.\n`;
+            if (newlyAdded.length) overwriteMsg += `\n✅ New metrics being added: ${newlyAdded.join(', ')}`;
+            if (willLose.length) overwriteMsg += `\n❌ Metrics that will be LOST (not in new data): ${willLose.join(', ')}`;
+            if (!newlyAdded.length && !willLose.length) overwriteMsg += `\nMetrics are the same — data values will be updated.`;
+            overwriteMsg += `\n\nOverwrite existing data?`;
+
+            if (!confirm(overwriteMsg)) return;
+        }
+
         const yearEndProfileSelect = document.getElementById('uploadYearEndProfile');
         const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
         const uploadContext = buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile);
         const { label, normalizedEndDate, metadata } = uploadContext;
 
-        const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
         targetStore[weekKey] = {
             employees,
             metadata
@@ -1935,13 +1987,18 @@ function handleTestPastedDataClick() {
     let endDate = weekEndingDate;
     let startDate = '';
 
-    // Check if Daily is selected
+    // Check if Daily or Custom is selected
     const testDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
         document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
+    const testCustomBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
     const isTestDaily = !!testDailyBtn;
+    const isTestCustom = !!testCustomBtn;
 
     if (weekEndingDate) {
-        if (isTestDaily) {
+        if (isTestCustom) {
+            startDate = document.getElementById('pasteStartDate')?.value || weekEndingDate;
+        } else if (isTestDaily) {
             startDate = weekEndingDate;
         } else {
             const endDateObj = new Date(weekEndingDate);
@@ -1951,7 +2008,9 @@ function handleTestPastedDataClick() {
     } else {
         const today = new Date();
         endDate = today.toISOString().split('T')[0];
-        if (isTestDaily) {
+        if (isTestCustom) {
+            startDate = document.getElementById('pasteStartDate')?.value || endDate;
+        } else if (isTestDaily) {
             startDate = endDate;
         } else {
             const startDateObj = new Date(today);
