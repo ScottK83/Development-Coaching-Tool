@@ -537,6 +537,21 @@
         if (teamSummaryBtn) {
             _bindElementOnce(teamSummaryBtn, 'click', generateTeamOnOffSummary);
         }
+
+        var checkinBtn = document.getElementById('onOffCheckinBtn');
+        if (checkinBtn) {
+            _bindElementOnce(checkinBtn, 'click', generateQuickCheckinPrompt);
+        }
+        var checkinCopyBtn = document.getElementById('onOffCheckinCopyBtn');
+        if (checkinCopyBtn) {
+            _bindElementOnce(checkinCopyBtn, 'click', function() {
+                var text = document.getElementById('onOffCheckinText')?.textContent || '';
+                navigator.clipboard.writeText(text).then(function() {
+                    var toast = window.DevCoachModules?.uiUtils?.showToast;
+                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
+                });
+            });
+        }
     }
 
     function updateOnOffTrackerDisplay() {
@@ -572,6 +587,119 @@
         status.textContent = `On/Off tracker calculated for ${employeeName} (${reviewYear}).`;
         status.style.display = 'block';
         panel.style.display = 'block';
+    }
+
+    /* ── Quick Check-in Prompt ── */
+
+    function generateQuickCheckinPrompt() {
+        var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
+        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
+        var output = document.getElementById('onOffCheckinOutput');
+        var textEl = document.getElementById('onOffCheckinText');
+
+        if (!employeeName || !reviewYear) {
+            alert('Please select an associate first.');
+            return;
+        }
+
+        var latestPeriod = _getLatestYearPeriodForEmployee(employeeName, reviewYear);
+        if (!latestPeriod) {
+            alert('No data found for ' + employeeName + '.');
+            return;
+        }
+
+        var result = calculateYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
+        var firstName = employeeName.split(' ')[0] || employeeName;
+        var registry = window.METRICS_REGISTRY || {};
+        var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+
+        // Build metrics context
+        var metricMap = {
+            aht: { key: 'aht', label: 'AHT', val: result.values.aht, score: result.scores.aht, unit: 'seconds' },
+            adherence: { key: 'scheduleAdherence', label: 'Adherence', val: result.values.adherence, score: result.scores.adherence, unit: '%' },
+            sentiment: { key: 'overallSentiment', label: 'Overall Sentiment', val: result.values.sentiment, score: result.scores.sentiment, unit: '%' },
+            associateOverall: { key: 'cxRepOverall', label: 'Associate Overall (Surveys)', val: result.values.associateOverall, score: result.scores.associateOverall, unit: '%' },
+            reliability: { key: 'reliability', label: 'Reliability', val: result.values.reliability, score: result.scores.reliability, unit: 'hours' }
+        };
+
+        var focusAreas = [];
+        var strengths = [];
+
+        Object.keys(metricMap).forEach(function(k) {
+            var m = metricMap[k];
+            if (m.score === null) return;
+            if (m.score <= 1) {
+                // Get tips
+                var tips = [];
+                if (typeof window.getRandomTipsForMetric === 'function') {
+                    tips = window.getRandomTipsForMetric(m.key, 2) || [];
+                }
+                if (!tips.length) {
+                    var def = registry[m.key];
+                    if (def?.defaultTip) tips = [def.defaultTip];
+                }
+                // Get target
+                var band = ratingBands[m.key];
+                var targetText = '';
+                if (band) {
+                    targetText = band.type === 'min'
+                        ? 'goal is ' + band.score2.min + m.unit
+                        : 'goal is ' + band.score2.max + ' ' + m.unit;
+                }
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, tips: tips });
+            } else if (m.score === 2) {
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', tips: [], isClose: true });
+            } else {
+                strengths.push({ label: m.label, val: m.val, unit: m.unit });
+            }
+        });
+
+        // Build the prompt
+        var prompt = 'You are a call center supervisor sending a quick, encouraging Teams message to ' + firstName + '.\n\n';
+        prompt += 'IMPORTANT RULES:\n';
+        prompt += '- Do NOT mention scores, ratings, "on track", "off track", or rating averages\n';
+        prompt += '- Do NOT mention that you are using a tool or data system\n';
+        prompt += '- Keep it casual, warm, and brief (3-5 sentences max for the main message)\n';
+        prompt += '- Frame everything as growth opportunities, not deficiencies\n';
+        prompt += '- Sound like a real person typing in Teams chat, not a formal email\n\n';
+
+        prompt += 'CONTEXT (use to inform tone, do not quote directly):\n';
+
+        if (strengths.length) {
+            prompt += '\nStrengths to acknowledge:\n';
+            strengths.forEach(function(s) {
+                prompt += '- ' + s.label + ': ' + s.val + ' ' + s.unit + ' (excellent)\n';
+            });
+        }
+
+        if (focusAreas.length) {
+            prompt += '\nAreas to focus the message on:\n';
+            focusAreas.forEach(function(f) {
+                var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
+                var line = '- ' + f.label + ': currently ' + valText;
+                if (f.targetText) line += ', ' + f.targetText;
+                if (f.isClose) line += ' (close to goal, just needs a nudge)';
+                prompt += line + '\n';
+                if (f.tips && f.tips.length) {
+                    f.tips.forEach(function(tip) {
+                        prompt += '  Coaching tip: ' + tip + '\n';
+                    });
+                }
+            });
+        }
+
+        prompt += '\nWrite a Teams message that:\n';
+        prompt += '1. Starts with a brief positive acknowledgment of what they\'re doing well\n';
+        prompt += '2. Naturally transitions to the focal area(s) they should work on\n';
+        prompt += '3. Includes a specific, actionable suggestion from the coaching tips\n';
+        prompt += '4. Ends with encouragement\n';
+        prompt += '5. Feels like a quick check-in, not a performance review\n';
+
+        if (textEl) textEl.textContent = prompt;
+        if (output) output.style.display = 'block';
+
+        var toast = window.DevCoachModules?.uiUtils?.showToast;
+        if (toast) toast('Check-in prompt generated! Copy and paste into Copilot.', 3000);
     }
 
     /* ── Team Summary ── */
@@ -866,6 +994,7 @@
         resolveOnOffTrackerFactsSummaryText,
         initializeOnOffTracker,
         updateOnOffTrackerDisplay,
-        generateTeamOnOffSummary
+        generateTeamOnOffSummary,
+        generateQuickCheckinPrompt
     };
 })();

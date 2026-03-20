@@ -469,6 +469,16 @@ Box 2 - Future Improvement Areas:
                                 <div id="onOffTrackerSummary" style="color: #4a148c; font-weight: bold; margin-bottom: 8px;"></div>
                                 <div id="onOffTrackerDetails" style="margin: 0; color: #4a148c;"></div>
                             </div>
+                            <div style="text-align: center; margin-top: 12px;">
+                                <button type="button" id="onOffCheckinBtn" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-weight: 700; font-size: 0.95em;">💬 Generate Quick Check-in (Teams Message via Copilot)</button>
+                            </div>
+                            <div id="onOffCheckinOutput" style="display: none; margin-top: 12px; padding: 14px; background: #f0f9ff; border: 1px solid #93c5fd; border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 700; color: #1e40af; font-size: 0.9em;">Copilot Prompt</span>
+                                    <button type="button" id="onOffCheckinCopyBtn" style="background: #16a34a; color: white; border: none; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 0.85em;">Copy to Clipboard</button>
+                                </div>
+                                <pre id="onOffCheckinText" style="white-space: pre-wrap; font-size: 0.85em; color: #334155; margin: 0; max-height: 300px; overflow-y: auto;"></pre>
+                            </div>
                         </div>
                     </div>
                     <!-- End On/Off Tracker Sub-section -->
