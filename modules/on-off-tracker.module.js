@@ -775,8 +775,7 @@
             var avgDisplay = r.result.ratingAverage !== null ? r.result.ratingAverage.toFixed(2) : '--';
 
             html += '<tr style="background: ' + bg + ';">' +
-                '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid #eee; white-space: nowrap;">' + r.firstName +
-                    '<div style="font-size: 0.6em; font-weight: 400; color: #888;">' + r.sourceLabel + '</div></td>' +
+                '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid #eee; white-space: nowrap;">' + r.firstName + '</td>' +
                 scoreCell(scores.aht, values.aht, 'sec', 'aht') +
                 scoreCell(scores.adherence, values.adherence, '%', 'scheduleAdherence') +
                 scoreCell(scores.sentiment, values.sentiment, '%', 'overallSentiment') +
