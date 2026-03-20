@@ -638,17 +638,39 @@
                     var def = registry[m.key];
                     if (def?.defaultTip) tips = [def.defaultTip];
                 }
-                // Get target
+                // Get target and gap
                 var band = ratingBands[m.key];
                 var targetText = '';
+                var gapText = '';
                 if (band) {
-                    targetText = band.type === 'min'
-                        ? 'goal is ' + band.score2.min + m.unit
-                        : 'goal is ' + band.score2.max + ' ' + m.unit;
+                    var target2 = band.type === 'min' ? band.score2.min : band.score2.max;
+                    var target3 = band.type === 'min' ? band.score3.min : band.score3.max;
+                    targetText = 'goal is ' + target2 + ' ' + m.unit;
+                    if (m.val !== null) {
+                        var gap2 = Math.abs(m.val - target2);
+                        var gap3 = Math.abs(m.val - target3);
+                        if (band.type === 'min') {
+                            gapText = 'needs to improve by ' + gap2.toFixed(1) + ' ' + m.unit + ' to meet goal';
+                        } else {
+                            gapText = 'needs to reduce by ' + gap2.toFixed(1) + ' ' + m.unit + ' to meet goal';
+                        }
+                    }
                 }
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, tips: tips });
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, gapText: gapText, tips: tips });
             } else if (m.score === 2) {
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', tips: [], isClose: true });
+                // Close to goal - calculate gap to score 3
+                var band2 = ratingBands[m.key];
+                var gapText2 = '';
+                if (band2 && m.val !== null) {
+                    var target3b = band2.type === 'min' ? band2.score3.min : band2.score3.max;
+                    var gap3b = Math.abs(m.val - target3b);
+                    if (band2.type === 'min') {
+                        gapText2 = 'just ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional';
+                    } else {
+                        gapText2 = 'just ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional';
+                    }
+                }
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, tips: [], isClose: true });
             } else {
                 strengths.push({ label: m.label, val: m.val, unit: m.unit });
             }
@@ -679,7 +701,8 @@
                 var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
                 var line = '- ' + f.label + ': currently ' + valText;
                 if (f.targetText) line += ', ' + f.targetText;
-                if (f.isClose) line += ' (close to goal, just needs a nudge)';
+                if (f.gapText) line += ' (' + f.gapText + ')';
+                if (f.isClose) line += ' [close to goal, just needs a nudge]';
                 prompt += line + '\n';
                 if (f.tips && f.tips.length) {
                     f.tips.forEach(function(tip) {
@@ -692,9 +715,10 @@
         prompt += '\nWrite a Teams message that:\n';
         prompt += '1. Starts with a brief positive acknowledgment of what they\'re doing well\n';
         prompt += '2. Naturally transitions to the focal area(s) they should work on\n';
-        prompt += '3. Includes a specific, actionable suggestion from the coaching tips\n';
-        prompt += '4. Ends with encouragement\n';
-        prompt += '5. Feels like a quick check-in, not a performance review\n';
+        prompt += '3. Tells them EXACTLY how far they are from the goal using the gap numbers above (e.g. "If you can shave off 134 seconds on your handle time..." or "Bring your adherence up just 2.4%...")\n';
+        prompt += '4. Includes a specific, actionable suggestion from the coaching tips\n';
+        prompt += '5. Ends with encouragement\n';
+        prompt += '6. Feels like a quick check-in, not a performance review\n';
 
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
