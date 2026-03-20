@@ -882,6 +882,41 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
     saveCallCenterAverages(averages);
 }
 
+function populateCenterAvgPeriodDropdown() {
+    const select = document.getElementById('avgPeriodSelect');
+    if (!select) return;
+
+    const periods = [];
+    const wData = typeof weeklyData !== 'undefined' ? weeklyData : {};
+    const yData = typeof ytdData !== 'undefined' ? ytdData : {};
+
+    Object.keys(wData).forEach(key => {
+        const meta = wData[key]?.metadata || {};
+        const label = meta.label || key;
+        periods.push({ key: key, label: label, sortKey: key.split('|')[0] || '' });
+    });
+    Object.keys(yData).forEach(key => {
+        const meta = yData[key]?.metadata || {};
+        const label = meta.label || key;
+        periods.push({ key: key, label: label, sortKey: key.split('|')[0] || '' });
+    });
+
+    // Sort newest first
+    periods.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+
+    // Check which periods already have center averages
+    const allAvgs = loadCallCenterAverages();
+
+    select.innerHTML = '<option value="">-- Select a period --</option>';
+    periods.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.key;
+        const hasAvg = allAvgs[p.key] && Object.keys(allAvgs[p.key]).length > 0;
+        opt.textContent = p.label + (hasAvg ? ' ✅' : '');
+        select.appendChild(opt);
+    });
+}
+
 function migrateReliabilityCenterAverages() {
     try {
         const averages = loadCallCenterAverages();
@@ -1364,34 +1399,58 @@ function bindUploadAndPasteHandlers() {
         });
     });
 
-    // Center avg period type buttons
-    document.querySelectorAll('.upload-avg-period-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.upload-avg-period-btn').forEach(b => {
-                b.style.background = 'white'; b.style.borderColor = '#ddd'; b.style.color = '#666'; b.style.fontWeight = 'normal';
+    // Center avg period dropdown - populate from uploaded data
+    populateCenterAvgPeriodDropdown();
+
+    // When period is selected, load any existing center averages into the form
+    document.getElementById('avgPeriodSelect')?.addEventListener('change', () => {
+        const select = document.getElementById('avgPeriodSelect');
+        const note = document.getElementById('avgPeriodExistingNote');
+        if (!select?.value) { if (note) note.style.display = 'none'; return; }
+        const weekKey = select.value;
+        const existing = getCallCenterAverageForPeriod(weekKey);
+        if (existing && Object.keys(existing).length > 0) {
+            // Load existing values into the form
+            const fieldMap = {
+                adherence: 'uploadAvgAdherence', scheduleAdherence: 'uploadAvgAdherence',
+                overallExperience: 'uploadAvgOverallExperience',
+                repSatisfaction: 'uploadAvgRepSatisfaction', cxRepOverall: 'uploadAvgRepSatisfaction',
+                fcr: 'uploadAvgFCR',
+                transfers: 'uploadAvgTransfers',
+                sentiment: 'uploadAvgSentiment', overallSentiment: 'uploadAvgSentiment',
+                positiveWord: 'uploadAvgPositiveWord',
+                negativeWord: 'uploadAvgNegativeWord', avoidNegativeWord: 'uploadAvgNegativeWord',
+                managingEmotions: 'uploadAvgManagingEmotions',
+                aht: 'uploadAvgAHT',
+                acw: 'uploadAvgACW',
+                holdTime: 'uploadAvgHoldTime',
+                reliability: 'uploadAvgReliability',
+                headcount: 'uploadAvgHeadcount'
+            };
+            // Clear all fields first
+            Object.values(fieldMap).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            // Fill with existing values
+            Object.entries(existing).forEach(([key, val]) => {
+                const fieldId = fieldMap[key];
+                if (fieldId && val !== undefined && val !== null) {
+                    const el = document.getElementById(fieldId);
+                    if (el) el.value = val;
+                }
             });
-            btn.style.background = '#1565c0'; btn.style.borderColor = '#1565c0'; btn.style.color = 'white'; btn.style.fontWeight = 'bold';
-            const period = btn.dataset.period;
-            const label = document.getElementById('avgWeekEndingLabel');
-            if (label) {
-                label.textContent = period === 'daily' ? 'Date:' : period === 'month' ? 'Month Ending Date:' : period === 'ytd' ? 'YTD Ending Date:' : 'Week Ending (Saturday):';
-            }
-        });
+            if (note) { note.textContent = '✅ Existing center averages loaded. Edit and save to update.'; note.style.display = 'block'; note.style.color = '#16a34a'; }
+        } else {
+            // Clear all fields
+            ['uploadAvgAdherence','uploadAvgOverallExperience','uploadAvgRepSatisfaction','uploadAvgFCR','uploadAvgTransfers','uploadAvgSentiment','uploadAvgPositiveWord','uploadAvgNegativeWord','uploadAvgManagingEmotions','uploadAvgAHT','uploadAvgACW','uploadAvgHoldTime','uploadAvgReliability'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const hc = document.getElementById('uploadAvgHeadcount'); if (hc) hc.value = '144';
+            if (note) { note.textContent = 'No center averages saved for this period yet.'; note.style.display = 'block'; note.style.color = '#666'; }
+        }
     });
 
     // Save center averages button
     document.getElementById('saveCenterAvgBtn')?.addEventListener('click', () => {
-        const dateInput = document.getElementById('avgWeekEndingDate');
-        if (!dateInput?.value) { alert('Please select a date.'); return; }
-        const endDate = dateInput.value;
-        const activePeriodBtn = document.querySelector('.upload-avg-period-btn[style*="1565c0"]');
-        const periodType = activePeriodBtn?.dataset?.period || 'week';
-        let startDate;
-        if (periodType === 'daily') startDate = endDate;
-        else if (periodType === 'month') { const d = new Date(endDate + 'T12:00:00'); d.setDate(1); startDate = d.toISOString().split('T')[0]; }
-        else if (periodType === 'ytd') { startDate = endDate.slice(0, 4) + '-01-01'; }
-        else { const d = new Date(endDate + 'T12:00:00'); d.setDate(d.getDate() - 6); startDate = d.toISOString().split('T')[0]; }
-        const weekKey = `${startDate}|${endDate}`;
+        const select = document.getElementById('avgPeriodSelect');
+        if (!select?.value) { alert('Please select a period first.'); return; }
+        const weekKey = select.value;
         const avgData = readUploadCenterAverages();
         if (!avgData) { alert('Please enter at least one center average value.'); return; }
         setCallCenterAverageForPeriod(weekKey, avgData);

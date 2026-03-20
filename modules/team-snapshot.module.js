@@ -218,6 +218,39 @@
         return avgs;
     }
 
+    /**
+     * Save center averages from snapshot inputs back to storage
+     * so they cascade through the entire app.
+     */
+    function saveCenterAvgsToStorage(periodKey, centerAvgs) {
+        if (!periodKey || !centerAvgs || Object.keys(centerAvgs).length === 0) return;
+
+        // Map snapshot metric keys to storage format
+        var storageAvg = {};
+        if (centerAvgs.scheduleAdherence !== undefined) storageAvg.adherence = centerAvgs.scheduleAdherence;
+        if (centerAvgs.cxRepOverall !== undefined) storageAvg.repSatisfaction = centerAvgs.cxRepOverall;
+        if (centerAvgs.fcr !== undefined) storageAvg.fcr = centerAvgs.fcr;
+        if (centerAvgs.overallExperience !== undefined) storageAvg.overallExperience = centerAvgs.overallExperience;
+        if (centerAvgs.transfers !== undefined) storageAvg.transfers = centerAvgs.transfers;
+        if (centerAvgs.aht !== undefined) storageAvg.aht = centerAvgs.aht;
+        if (centerAvgs.acw !== undefined) storageAvg.acw = centerAvgs.acw;
+        if (centerAvgs.overallSentiment !== undefined) storageAvg.sentiment = centerAvgs.overallSentiment;
+        if (centerAvgs.positiveWord !== undefined) storageAvg.positiveWord = centerAvgs.positiveWord;
+        if (centerAvgs.negativeWord !== undefined) storageAvg.negativeWord = centerAvgs.negativeWord;
+        if (centerAvgs.managingEmotions !== undefined) storageAvg.managingEmotions = centerAvgs.managingEmotions;
+        if (centerAvgs.reliability !== undefined) storageAvg.reliability = centerAvgs.reliability;
+        storageAvg.lastUpdated = new Date().toISOString();
+
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
+            var all = raw ? JSON.parse(raw) : {};
+            all[periodKey] = storageAvg;
+            localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(all));
+        } catch(e) {
+            console.error('Failed to save center averages from snapshot:', e);
+        }
+    }
+
     // ============================================
     // SNAPSHOT DATA ASSEMBLY
     // ============================================
@@ -600,6 +633,7 @@
         var periodLabel = period ? period.label : periodKey;
 
         var snapshotData = assembleSnapshotData(periodKey, source);
+        saveCenterAvgsToStorage(periodKey, snapshotData.centerAvgs);
         renderScorecardGraphic(snapshotData, periodLabel);
     }
 
@@ -1025,6 +1059,7 @@
         var periodLabel = period ? period.label : periodKey;
 
         var snapshotData = assembleSnapshotData(periodKey, source);
+        saveCenterAvgsToStorage(periodKey, snapshotData.centerAvgs);
         renderSnapshotGraphic(snapshotData, periodLabel);
     }
 
