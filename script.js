@@ -2174,6 +2174,17 @@ function handleTestPastedDataClick() {
             ? `<div style="margin-top: 8px; color: #8a6d1f;"><strong>Warnings:</strong><br>${qualityWarnings.join('<br>')}</div>`
             : '';
 
+        // Spot-check: show parsed values for first 5 employees
+        const spotCheckKeys = ['aht', 'scheduleAdherence', 'overallSentiment', 'overallExperience', 'cxRepOverall', 'reliability', 'totalCalls', 'surveyTotal'];
+        const spotCheckHtml = employees.slice(0, 5).map(emp => {
+            const vals = spotCheckKeys.map(k => {
+                const v = emp[k];
+                const label = k === 'scheduleAdherence' ? 'Adh' : k === 'overallSentiment' ? 'Sent' : k === 'overallExperience' ? 'OE' : k === 'cxRepOverall' ? 'RepSat' : k === 'totalCalls' ? 'Calls' : k === 'surveyTotal' ? 'Surveys' : k.toUpperCase();
+                return `${label}:${v === '' || v === null || v === undefined ? '--' : v}`;
+            }).join(' | ');
+            return `<div style="font-size: 0.85em; margin: 2px 0;"><strong>${emp.firstName || emp.name}</strong>: ${vals}</div>`;
+        }).join('');
+
         if (preview) {
             preview.style.display = 'block';
             preview.style.background = '#d4edda';
@@ -2185,6 +2196,7 @@ function handleTestPastedDataClick() {
                 👥 Employees parsed: ${employees.length}<br>
                 👤 Sample: ${sampleNames}${employees.length > 5 ? '...' : ''}<br>
                 <div style="margin-top: 8px;"><strong>Metric coverage:</strong><br>${metricCoverage}</div>
+                <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; color: #333;"><strong>Spot check (parsed values):</strong><br>${spotCheckHtml}</div>
                 ${qualityHtml}
             `;
         }
