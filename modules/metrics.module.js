@@ -131,29 +131,27 @@
         return isNaN(value) ? 0 : value;
     }
 
+    // getCenterAverageForWeek: canonical version is in executive-summary.module.js
+    // This stub delegates to avoid breaking callers before exec-summary loads
     function getCenterAverageForWeek(weekKey) {
-        if (!weekKey) return null;
-        const weekData = window.devCoachingData?.weeks?.[weekKey];
-        if (!weekData) return null;
-        return weekData.centerAvg || null;
+        if (window.getCenterAverageForWeek && window.getCenterAverageForWeek !== getCenterAverageForWeek) {
+            return window.getCenterAverageForWeek(weekKey);
+        }
+        return null;
     }
 
+    // getMetricOrder: canonical version is in metric-trends.module.js
+    // This delegates to the registry for accurate unit types
     function getMetricOrder() {
+        var registry = window.METRICS_REGISTRY || {};
         return [
-            { key: 'scheduleAdherence', label: 'Schedule Adherence', unit: '%' },
-            { key: 'cxRepOverall', label: 'CX Rep Overall', unit: '%' },
-            { key: 'fcr', label: 'FCR', unit: '%' },
-            { key: 'overallExperience', label: 'Overall Experience', unit: '%' },
-            { key: 'overallSentiment', label: 'Overall Sentiment', unit: '%' },
-            { key: 'positiveWord', label: 'Positive Word', unit: '#' },
-            { key: 'negativeWord', label: 'Negative Word', unit: '#' },
-            { key: 'managingEmotions', label: 'Managing Emotions', unit: '#' },
-            { key: 'transfers', label: 'Transfers', unit: '#' },
-            { key: 'aht', label: 'AHT', unit: 'sec' },
-            { key: 'acw', label: 'ACW', unit: 'sec' },
-            { key: 'holdTime', label: 'Hold Time', unit: 'sec' },
-            { key: 'reliability', label: 'Reliability', unit: '#' }
-        ];
+            'scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience',
+            'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
+            'transfers', 'aht', 'acw', 'holdTime', 'reliability'
+        ].map(function(key) {
+            var def = registry[key];
+            return { key: key, label: def?.label || key, unit: def?.unit || '%' };
+        });
     }
 
     // Export all functions

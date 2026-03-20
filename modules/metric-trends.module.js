@@ -21,8 +21,9 @@
         reliability: 'avgReliability'
     };
 
+    // Maps registry metric keys → center average storage keys
     const TREND_METRIC_MAPPINGS = {
-        scheduleAdherence: 'scheduleAdherence',
+        scheduleAdherence: 'adherence',
         overallExperience: 'overallExperience',
         cxRepOverall: 'repSatisfaction',
         fcr: 'fcr',
@@ -55,7 +56,9 @@ function initializeMetricTrends() {
     const avgWeekSunday = document.getElementById('avgWeekSunday');
 
     // Auto-calculate Sunday when Monday changes (safe date parsing)
-    avgWeekMonday?.addEventListener('change', (e) => {
+    if (avgWeekMonday && !avgWeekMonday.dataset.bound) {
+    avgWeekMonday.dataset.bound = 'true';
+    avgWeekMonday.addEventListener('change', (e) => {
         const dateStr = e.target.value;
         if (!dateStr || !avgWeekSunday) return;
 
@@ -69,6 +72,7 @@ function initializeMetricTrends() {
             avgWeekSunday.value = sunday.toISOString().split('T')[0];
         }
     });
+    }
 
     // Toggle metrics form visibility
     const avgMetricsForm = document.getElementById('avgMetricsForm');
@@ -112,7 +116,10 @@ function initializeMetricTrends() {
     setupMetricTrendsListeners();
 
     // Inline listener: Save Call Center Averages button
-    document.getElementById('saveAvgBtn')?.addEventListener('click', () => {
+    const saveAvgBtn = document.getElementById('saveAvgBtn');
+    if (saveAvgBtn && !saveAvgBtn.dataset.bound) {
+    saveAvgBtn.dataset.bound = 'true';
+    saveAvgBtn.addEventListener('click', () => {
         const weekKey = document.getElementById('avgUploadedDataSelect')?.value;
 
         if (!weekKey) {
@@ -126,9 +133,13 @@ function initializeMetricTrends() {
         clearUnsavedChanges();
         showToast('✅ Call center averages saved!', 3000);
     });
+    }
 
     // Inline listener: Copy from Previous Week button
-    document.getElementById('copyPreviousAvgBtn')?.addEventListener('click', () => {
+    const copyPreviousAvgBtn = document.getElementById('copyPreviousAvgBtn');
+    if (copyPreviousAvgBtn && !copyPreviousAvgBtn.dataset.bound) {
+    copyPreviousAvgBtn.dataset.bound = 'true';
+    copyPreviousAvgBtn.addEventListener('click', () => {
         const currentWeekKey = document.getElementById('avgUploadedDataSelect')?.value;
 
         if (!currentWeekKey) {
@@ -155,6 +166,7 @@ function initializeMetricTrends() {
         markUnsavedChanges();
         showToast('✅ Copied from previous week! Click Save to apply.', 4000);
     });
+    }
 }
 
 function renderCallCenterAverageTargets() {
@@ -763,9 +775,6 @@ function displayMetricsPreview(employeeName, weekKey) {
         if (target !== undefined && targetType) {
             const targetSymbol = targetType === 'min' ? '≥' : '≤';
             targetHint = ` (Target: ${targetSymbol} ${target}${metric.unit})`;
-            if (metric.key === 'overallSentiment') {
-                targetHint = ' (Target 88%)';
-            }
         }
 
         html += `
