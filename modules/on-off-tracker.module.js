@@ -700,7 +700,8 @@
         prompt += '- Keep it casual, warm, and brief (3-5 sentences max for the main message)\n';
         prompt += '- Frame everything as growth opportunities, not deficiencies\n';
         prompt += '- Sound like a real person typing in Teams chat, not a formal email\n';
-        prompt += '- Do NOT use em dashes (—) anywhere. Use commas or periods instead.\n\n';
+        prompt += '- Do NOT use em dashes (—) anywhere. Use commas or periods instead.\n';
+        prompt += '- Include 1-2 relevant emojis to keep it friendly and casual\n\n';
 
         prompt += 'CONTEXT (use to inform tone, do not quote directly):\n';
 
