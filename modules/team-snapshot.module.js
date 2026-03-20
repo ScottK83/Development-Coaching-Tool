@@ -11,7 +11,7 @@
 
     // Key metrics to show in snapshot
     var SNAPSHOT_METRICS = [
-        'scheduleAdherence',
+        'totalCalls', 'scheduleAdherence',
         'transfers', 'transfersCount', 'aht', 'acw',
         'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
         'reliability',
@@ -20,6 +20,7 @@
 
     // Short labels for the graphic header
     var SHORT_LABELS = {
+        totalCalls: 'Calls',
         scheduleAdherence: 'Adh',
         cxRepOverall: 'CX Rep',
         fcr: 'FCR',

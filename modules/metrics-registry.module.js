@@ -62,6 +62,17 @@
             chartColor: '#FF9800',
             defaultTip: "Transfers: You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience."
         },
+        totalCalls: {
+            key: 'totalCalls',
+            label: 'Total Calls Answered',
+            icon: '📞',
+            target: null,
+            unit: '',
+            columnIndex: 1,
+            chartType: 'bar',
+            chartColor: '#546E7A',
+            defaultTip: "Total Calls Answered: Your call volume for the period."
+        },
         transfersCount: {
             key: 'transfersCount',
             label: 'Number of Transfers',
