@@ -12,7 +12,7 @@
     // Key metrics to show in snapshot
     var SNAPSHOT_METRICS = [
         'scheduleAdherence',
-        'transfers', 'aht', 'acw',
+        'transfers', 'transfersCount', 'aht', 'acw',
         'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
         'reliability',
         'cxRepOverall', 'fcr', 'overallExperience'
@@ -24,7 +24,8 @@
         cxRepOverall: 'CX Rep',
         fcr: 'FCR',
         overallExperience: 'Exp',
-        transfers: 'Xfer',
+        transfers: 'Xfer%',
+        transfersCount: '#Xfer',
         aht: 'AHT',
         acw: 'ACW',
         overallSentiment: 'Sent',
