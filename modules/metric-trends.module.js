@@ -3267,7 +3267,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
         })
         .filter(item => {
             if (!item.endDate) return false;
-            if (!['week', 'month', 'quarter'].includes(item.periodType)) return false;
+            if (!['daily', 'week', 'month', 'quarter', 'custom'].includes(item.periodType)) return false;
             if (item.endDate.getFullYear() !== yearNum) return false;
             return item.endDate <= uptoEndDate;
         })
@@ -3275,9 +3275,9 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
 
     if (!sourcePeriods.length) return null;
 
-    const sourceType = sourcePeriods.some(item => item.periodType === 'week')
-        ? 'week'
-        : (sourcePeriods.some(item => item.periodType === 'month') ? 'month' : 'quarter');
+    // Pick the best available source type: prefer week > month > quarter > custom > daily
+    const sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+    const sourceType = sourceTypePriority.find(type => sourcePeriods.some(item => item.periodType === type)) || sourcePeriods[0]?.periodType;
     const selectedPeriods = sourcePeriods.filter(item => item.periodType === sourceType);
     if (!selectedPeriods.length) return null;
 

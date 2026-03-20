@@ -6585,7 +6585,9 @@ function buildYearPeriodCandidate(sourceName, periodKey, period, requestedName, 
         return null;
     }
 
-    const priority = ((sourceName === 'ytdData' || metadata.periodType === 'ytd') ? 2 : 1)
+    // YTD data should strongly outweigh daily/weekly for year-end calculations
+    const isYtd = sourceName === 'ytdData' || metadata.periodType === 'ytd';
+    const priority = (isYtd ? 100 : 1)
         + (Number.isInteger(explicitReviewYear) && explicitReviewYear === reviewYear ? 2 : 0);
 
     return {
@@ -6621,7 +6623,12 @@ function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
 
     if (!candidates.length) return null;
 
+    // Sort: YTD always wins (priority 100+), then by newest date, then by priority
     candidates.sort((a, b) => {
+        // If one is YTD and the other isn't, YTD wins
+        if (a.priority >= 100 && b.priority < 100) return -1;
+        if (b.priority >= 100 && a.priority < 100) return 1;
+        // Within same tier, newest date first
         if (a.endDate.getTime() !== b.endDate.getTime()) {
             return b.endDate.getTime() - a.endDate.getTime();
         }
