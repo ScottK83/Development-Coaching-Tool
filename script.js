@@ -1807,9 +1807,8 @@ function buildMetricsUploadQualityWarnings(employees) {
     const acwPresentCount = safeEmployees.filter(emp => Number.isFinite(parseFloat(emp?.acw))).length;
 
     const warnings = [];
-    if (holdBlankCount === safeEmployees.length && (ahtPresentCount > 0 || acwPresentCount > 0)) {
-        warnings.push('Hold Time is blank for all associates. This source export may not include a hold-time column; if expected, verify the Hold header in source data.');
-    } else if (holdBlankRatio >= 0.65 && (ahtPresentCount > 0 || acwPresentCount > 0)) {
+    // If hold time is blank for ALL employees, the source view simply doesn't have it (e.g. Advisors View) — skip warning
+    if (holdBlankRatio >= 0.65 && holdBlankCount < safeEmployees.length && (ahtPresentCount > 0 || acwPresentCount > 0)) {
         warnings.push(`Hold Time is blank for ${holdBlankCount}/${safeEmployees.length} associates. Please confirm source column mapping before save.`);
     }
 
