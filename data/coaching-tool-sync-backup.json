@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-20T18:15:14.917Z",
-  "reason": "upload to git",
+  "generatedAt": "2026-03-20T18:31:40.106Z",
+  "reason": "manual footer sync",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -7678,6 +7678,35 @@
       "holdTime": 16,
       "reliability": 9.56,
       "lastUpdated": "2026-03-18T00:14:03.371Z"
+    },
+    "2026-03-19|2026-03-19": {
+      "adherence": 94.27,
+      "transfers": 8.41,
+      "sentiment": 91.5,
+      "positiveWord": 88.8,
+      "negativeWord": 89.7,
+      "managingEmotions": 96,
+      "aht": 412,
+      "acw": 54,
+      "holdTime": 12,
+      "reliability": 0.23,
+      "lastUpdated": "2026-03-20T18:30:08.028Z"
+    },
+    "2026-03-18|2026-03-18": {
+      "adherence": 94.6,
+      "overallExperience": 83.33,
+      "repSatisfaction": 91.67,
+      "fcr": 75,
+      "transfers": 9.27,
+      "sentiment": 91.5,
+      "positiveWord": 90.1,
+      "negativeWord": 88.1,
+      "managingEmotions": 96.2,
+      "aht": 403,
+      "acw": 47,
+      "holdTime": 11,
+      "reliability": 0.26,
+      "lastUpdated": "2026-03-20T18:31:34.069Z"
     }
   },
   "ptoTracker": {
@@ -8497,8 +8526,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 14,
-      "byteLength": 3929
+      "itemCount": 16,
+      "byteLength": 4455
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -8548,7 +8577,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 127
+      "byteLength": 122
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
