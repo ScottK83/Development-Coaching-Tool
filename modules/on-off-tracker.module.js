@@ -725,7 +725,8 @@
                     var gap3 = band.type === 'min' ? (band.score3.min - val) : (val - band.score3.max);
                     hints.push(sign + formatGap(gap3, unit) + ' to 3');
                 }
-                return hints.length ? '<div style="font-size: 0.6em; line-height: 1.2; margin-top: 1px; font-weight: 400; color: #555;">' + hints.join(' | ') + '</div>' : '';
+                var hintColor = score === 2 ? '#666' : 'rgba(255,255,255,0.9)';
+                return hints.length ? '<div style="font-size: 0.6em; line-height: 1.2; margin-top: 1px; font-weight: 400; color: ' + hintColor + ';">' + hints.join(' | ') + '</div>' : '';
             }
 
             function scoreCell(score, val, unit, metricKey) {
@@ -735,7 +736,7 @@
                 var cellColor = score === 2 ? '#333' : '#fff';
                 var gapHint = buildGapHint(score, val, metricKey, unit);
                 return '<td style="padding: 4px 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' +
-                    '<div style="font-size: 0.75em; font-weight: 400; opacity: 0.85;">' + valDisplay + '</div>' +
+                    '<div style="font-size: 0.75em; font-weight: 400;">' + valDisplay + '</div>' +
                     '<div>' + score + '</div>' + gapHint + '</td>';
             }
 
