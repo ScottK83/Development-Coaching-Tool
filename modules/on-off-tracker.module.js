@@ -638,39 +638,55 @@
                     var def = registry[m.key];
                     if (def?.defaultTip) tips = [def.defaultTip];
                 }
-                // Get target and gap
+                // Get target (from TARGETS_BY_YEAR) and rating band thresholds
+                var targets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+                var actualTarget = targets[m.key];
                 var band = ratingBands[m.key];
                 var targetText = '';
                 var gapText = '';
-                if (band) {
-                    var target2 = band.type === 'min' ? band.score2.min : band.score2.max;
-                    var target3 = band.type === 'min' ? band.score3.min : band.score3.max;
-                    targetText = 'goal is ' + target2 + ' ' + m.unit;
-                    if (m.val !== null) {
-                        var gap2 = Math.abs(m.val - target2);
-                        var gap3 = Math.abs(m.val - target3);
-                        if (band.type === 'min') {
-                            gapText = 'needs to improve by ' + gap2.toFixed(1) + ' ' + m.unit + ' to meet goal';
-                        } else {
-                            gapText = 'needs to reduce by ' + gap2.toFixed(1) + ' ' + m.unit + ' to meet goal';
-                        }
+                if (actualTarget && m.val !== null) {
+                    var targetVal = actualTarget.value;
+                    var gapToTarget = Math.abs(m.val - targetVal);
+                    targetText = 'company target is ' + targetVal + ' ' + m.unit;
+                    if (actualTarget.type === 'min') {
+                        gapText = 'needs to improve by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
+                    } else {
+                        gapText = 'needs to reduce by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
                     }
                 }
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, gapText: gapText, tips: tips });
+                // Add band as stretch/stepping stone
+                var stretchText = '';
+                if (band && m.val !== null) {
+                    var band2Val = band.type === 'min' ? band.score2.min : band.score2.max;
+                    var gapToBand2 = Math.abs(m.val - band2Val);
+                    if (band.type === 'min') {
+                        stretchText = 'even improving by just ' + gapToBand2.toFixed(1) + ' ' + m.unit + ' (to ' + band2Val + ') would be a great first step';
+                    } else {
+                        stretchText = 'even reducing by just ' + gapToBand2.toFixed(1) + ' ' + m.unit + ' (to ' + band2Val + ') would be a great first step';
+                    }
+                }
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, gapText: gapText, stretchText: stretchText, tips: tips });
             } else if (m.score === 2) {
-                // Close to goal - calculate gap to score 3
+                // At score 2 - show gap to score 3 (exceptional)
                 var band2 = ratingBands[m.key];
+                var targets2 = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+                var actualTarget2 = targets2[m.key];
                 var gapText2 = '';
+                var stretchText2 = '';
+                // Check if meeting actual target
+                if (actualTarget2 && m.val !== null) {
+                    var meetsTarget = actualTarget2.type === 'min' ? (m.val >= actualTarget2.value) : (m.val <= actualTarget2.value);
+                    if (!meetsTarget) {
+                        var gapT = Math.abs(m.val - actualTarget2.value);
+                        gapText2 = 'just ' + gapT.toFixed(1) + ' ' + m.unit + ' from company target of ' + actualTarget2.value;
+                    }
+                }
                 if (band2 && m.val !== null) {
                     var target3b = band2.type === 'min' ? band2.score3.min : band2.score3.max;
                     var gap3b = Math.abs(m.val - target3b);
-                    if (band2.type === 'min') {
-                        gapText2 = 'just ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional';
-                    } else {
-                        gapText2 = 'just ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional';
-                    }
+                    stretchText2 = 'only ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional (' + target3b + ')';
                 }
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, tips: [], isClose: true });
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, stretchText: stretchText2, tips: [], isClose: true });
             } else {
                 strengths.push({ label: m.label, val: m.val, unit: m.unit });
             }
@@ -702,8 +718,9 @@
                 var line = '- ' + f.label + ': currently ' + valText;
                 if (f.targetText) line += ', ' + f.targetText;
                 if (f.gapText) line += ' (' + f.gapText + ')';
-                if (f.isClose) line += ' [close to goal, just needs a nudge]';
                 prompt += line + '\n';
+                if (f.stretchText) prompt += '  Stretch goal: ' + f.stretchText + '\n';
+                if (f.isClose) prompt += '  (close to goal, just needs a nudge)\n';
                 if (f.tips && f.tips.length) {
                     f.tips.forEach(function(tip) {
                         prompt += '  Coaching tip: ' + tip + '\n';
