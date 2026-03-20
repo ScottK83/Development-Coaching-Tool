@@ -353,6 +353,7 @@
         snapshotData.rows.forEach(function(row) {
             row.cells.forEach(function(cell) {
                 if (!cell.hasValue) return;
+                if (!metricMissCount[cell.metricKey]) return; // skip metrics with no target
                 metricMissCount[cell.metricKey].total++;
                 if (!cell.meetsTarget) {
                     metricMissCount[cell.metricKey].missing++;

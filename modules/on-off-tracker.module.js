@@ -509,6 +509,11 @@
 
         bindOnOffTrackerHandlers(employeeSelect, reviewYearInput, calculateBtn);
         resetOnOffTrackerPanel(panel, factsSummary, summary, details);
+
+        var teamSummaryBtn = document.getElementById('onOffTeamSummaryBtn');
+        if (teamSummaryBtn) {
+            _bindElementOnce(teamSummaryBtn, 'click', generateTeamOnOffSummary);
+        }
     }
 
     function updateOnOffTrackerDisplay() {
@@ -544,6 +549,192 @@
         status.textContent = `On/Off tracker calculated for ${employeeName} (${reviewYear}).`;
         status.style.display = 'block';
         panel.style.display = 'block';
+    }
+
+    /* ── Team Summary ── */
+
+    function generateTeamOnOffSummary() {
+        var container = document.getElementById('onOffTeamSummaryContainer');
+        if (!container) return;
+
+        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value || String(new Date().getFullYear());
+        var employees = _getYearEndEmployees();
+
+        if (!employees.length) {
+            container.innerHTML = '<p style="color: #999; text-align: center;">No employees found. Upload data first.</p>';
+            return;
+        }
+
+        var metricLabels = { aht: 'AHT', adherence: 'Adherence', sentiment: 'Sentiment', associateOverall: 'Assoc Overall', reliability: 'Reliability' };
+        var results = [];
+
+        employees.forEach(function(name) {
+            var latestPeriod = _getLatestYearPeriodForEmployee(name, reviewYear);
+            if (!latestPeriod) return;
+            var result = calculateYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
+            var firstName = name.split(' ')[0] || name;
+            // Determine which metrics scored 1 (off track metrics)
+            var offMetrics = [];
+            var metCount = 0;
+            if (result.scores) {
+                Object.keys(result.scores).forEach(function(k) {
+                    if (result.scores[k] !== null) {
+                        if (result.scores[k] >= 2) metCount++;
+                        if (result.scores[k] === 1) offMetrics.push(metricLabels[k] || k);
+                    }
+                });
+            }
+            results.push({
+                name: name,
+                firstName: firstName,
+                result: result,
+                offMetrics: offMetrics,
+                meetingCount: metCount
+            });
+        });
+
+        if (!results.length) {
+            container.innerHTML = '<p style="color: #999; text-align: center;">No ' + reviewYear + ' data found for any team member.</p>';
+            return;
+        }
+
+        // Group by meeting count (5, 4, 3, 2, 1, 0)
+        var groups = { 5: [], 4: [], 3: [], 2: [], 1: [], 0: [] };
+        var offTrack = [];
+        var onTrackSuccessful = [];
+        var onTrackExceptional = [];
+
+        results.forEach(function(r) {
+            var bucket = Math.min(r.meetingCount, 5);
+            if (!groups[bucket]) groups[bucket] = [];
+            groups[bucket].push(r);
+            if (r.result.trackStatusValue === 'off-track') offTrack.push(r);
+            else if (r.result.trackStatusValue === 'on-track-exceptional') onTrackExceptional.push(r);
+            else onTrackSuccessful.push(r);
+        });
+
+        // Build summary HTML
+        var html = '<div style="background: #fff; border-radius: 12px; padding: 20px; border: 2px solid #6a1b9a; ' +
+            'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">';
+
+        // Header
+        html += '<div style="border-bottom: 3px solid #6a1b9a; padding-bottom: 10px; margin-bottom: 16px;">' +
+            '<div style="font-size: 1.2em; font-weight: 800; color: #4a148c;">Team On/Off Track Summary (' + reviewYear + ')</div>' +
+            '<div style="font-size: 0.85em; color: #666; margin-top: 4px;">' + results.length + ' associates evaluated</div></div>';
+
+        // Status counts bar
+        html += '<div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">';
+        html += '<div style="flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; background: #00b050; color: white; text-align: center;">' +
+            '<div style="font-size: 1.8em; font-weight: 800;">' + onTrackExceptional.length + '</div>' +
+            '<div style="font-size: 0.8em; font-weight: 600;">Exceptional</div></div>';
+        html += '<div style="flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; background: #c8f7c5; color: #2e7d32; text-align: center; border: 2px solid #66bb6a;">' +
+            '<div style="font-size: 1.8em; font-weight: 800;">' + onTrackSuccessful.length + '</div>' +
+            '<div style="font-size: 0.8em; font-weight: 600;">Successful</div></div>';
+        html += '<div style="flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; background: #ff1a1a; color: white; text-align: center;">' +
+            '<div style="font-size: 1.8em; font-weight: 800;">' + offTrack.length + '</div>' +
+            '<div style="font-size: 0.8em; font-weight: 600;">Off Track</div></div>';
+        html += '</div>';
+
+        // Off Track detail (who and why)
+        if (offTrack.length > 0) {
+            html += '<div style="margin-bottom: 16px; padding: 14px; background: #fff5f5; border-radius: 8px; border-left: 4px solid #ff1a1a;">';
+            html += '<div style="font-weight: 700; color: #c62828; margin-bottom: 8px; font-size: 0.95em;">Off Track (' + offTrack.length + ')</div>';
+            offTrack.forEach(function(r) {
+                var avgText = r.result.ratingAverage !== null ? ' (avg: ' + r.result.ratingAverage.toFixed(2) + ')' : '';
+                html += '<div style="padding: 6px 0; border-bottom: 1px solid #ffcdd2; font-size: 0.9em;">' +
+                    '<span style="font-weight: 600; color: #b71c1c;">' + r.firstName + '</span>' + avgText +
+                    (r.offMetrics.length ? ' — <span style="color: #e53935;">' + r.offMetrics.join(', ') + '</span>' : '') +
+                    '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Meeting count breakdown
+        html += '<div style="margin-bottom: 16px;">';
+        html += '<div style="font-weight: 700; color: #4a148c; margin-bottom: 10px; font-size: 0.95em;">Metrics Meeting Goal (score 2+)</div>';
+
+        [5, 4, 3, 2, 1, 0].forEach(function(count) {
+            var group = groups[count] || [];
+            if (!group.length) return;
+            var bgColor = count >= 4 ? '#e8f5e9' : count >= 3 ? '#fff8e1' : '#ffebee';
+            var borderColor = count >= 4 ? '#66bb6a' : count >= 3 ? '#ffa726' : '#ef5350';
+            var label = count === 5 ? 'All 5 metrics' : count + ' of 5 metrics';
+            var names = group.map(function(r) { return r.firstName; }).join(', ');
+
+            html += '<div style="padding: 10px 14px; margin-bottom: 6px; background: ' + bgColor + '; border-left: 4px solid ' + borderColor + '; border-radius: 4px;">' +
+                '<span style="font-weight: 700; font-size: 0.9em;">' + label + '</span>' +
+                '<span style="color: #666; font-size: 0.85em;"> (' + group.length + ')</span>' +
+                '<div style="font-size: 0.85em; color: #555; margin-top: 4px;">' + names + '</div></div>';
+        });
+
+        html += '</div>';
+
+        // Full table
+        html += '<div style="overflow-x: auto;">';
+        html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">';
+        html += '<thead><tr style="background: #f3e5f5;">' +
+            '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Name</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">AHT</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Adh</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Sent</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Assoc</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Rel</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Avg</th>' +
+            '<th style="padding: 8px; text-align: center; border-bottom: 2px solid #6a1b9a; color: #4a148c;">Status</th>' +
+            '</tr></thead><tbody>';
+
+        // Sort: off track first, then by rating avg ascending
+        results.sort(function(a, b) {
+            var aOff = a.result.trackStatusValue === 'off-track' ? 0 : 1;
+            var bOff = b.result.trackStatusValue === 'off-track' ? 0 : 1;
+            if (aOff !== bOff) return aOff - bOff;
+            return (a.result.ratingAverage || 0) - (b.result.ratingAverage || 0);
+        });
+
+        results.forEach(function(r, idx) {
+            var bg = idx % 2 === 0 ? '#fff' : '#fafafa';
+            var scores = r.result.scores || {};
+
+            function scoreCell(score) {
+                if (score === null) return '<td style="padding: 6px; text-align: center; color: #999; border-bottom: 1px solid #eee;">--</td>';
+                var cellBg = score === 3 ? '#00b050' : score === 2 ? '#f0de87' : '#ff1a1a';
+                var cellColor = score === 2 ? '#333' : '#fff';
+                return '<td style="padding: 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' + score + '</td>';
+            }
+
+            var statusBg, statusColor;
+            if (r.result.trackStatusValue === 'off-track') { statusBg = '#ff1a1a'; statusColor = '#fff'; }
+            else if (r.result.trackStatusValue === 'on-track-exceptional') { statusBg = '#00b050'; statusColor = '#fff'; }
+            else { statusBg = '#c8f7c5'; statusColor = '#2e7d32'; }
+
+            var avgDisplay = r.result.ratingAverage !== null ? r.result.ratingAverage.toFixed(2) : '--';
+
+            html += '<tr style="background: ' + bg + ';">' +
+                '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid #eee; white-space: nowrap;">' + r.firstName + '</td>' +
+                scoreCell(scores.aht) +
+                scoreCell(scores.adherence) +
+                scoreCell(scores.sentiment) +
+                scoreCell(scores.associateOverall) +
+                scoreCell(scores.reliability) +
+                '<td style="padding: 6px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; color: #4a148c;">' + avgDisplay + '</td>' +
+                '<td style="padding: 6px 10px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; ' +
+                'background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 4px; font-size: 0.8em;">' + r.result.trackLabel + '</td>' +
+                '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Legend
+        html += '<div style="display: flex; gap: 12px; margin-top: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; flex-wrap: wrap; font-size: 0.75em;">' +
+            '<span style="font-weight: 600; color: #334155;">Scores:</span>' +
+            '<span><span style="display: inline-block; width: 14px; height: 14px; background: #00b050; border-radius: 2px; vertical-align: middle;"></span> 3 = Exceptional</span>' +
+            '<span><span style="display: inline-block; width: 14px; height: 14px; background: #f0de87; border-radius: 2px; vertical-align: middle;"></span> 2 = Successful</span>' +
+            '<span><span style="display: inline-block; width: 14px; height: 14px; background: #ff1a1a; border-radius: 2px; vertical-align: middle;"></span> 1 = Off Track</span>' +
+            '</div>';
+
+        html += '</div>';
+
+        container.innerHTML = html;
     }
 
     /* ── Export ── */
@@ -582,6 +773,7 @@
         bindOnOffTrackerHandlers,
         resolveOnOffTrackerFactsSummaryText,
         initializeOnOffTracker,
-        updateOnOffTrackerDisplay
+        updateOnOffTrackerDisplay,
+        generateTeamOnOffSummary
     };
 })();
