@@ -221,37 +221,56 @@
 
     /* ── Score table building ── */
 
+    function buildGapToNextText(score, val, bandConfig) {
+        if (score === null || score === 3 || val === null || !bandConfig) return '';
+        var hints = [];
+        if (bandConfig.type === 'min') {
+            if (score === 1) hints.push('+' + (bandConfig.score2.min - val).toFixed(1) + ' to score 2');
+            if (score <= 2) hints.push('+' + (bandConfig.score3.min - val).toFixed(1) + ' to score 3');
+        } else {
+            if (score === 1) hints.push('-' + (val - bandConfig.score2.max).toFixed(1) + ' to score 2');
+            if (score <= 2) hints.push('-' + (val - bandConfig.score3.max).toFixed(1) + ' to score 3');
+        }
+        return hints.join(' | ');
+    }
+
     function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
+        var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
         return [
             {
                 label: 'AHT',
                 valueText: result.values.aht === null ? 'N/A' : _formatMetricDisplay('aht', result.values.aht),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'aht', 'aht', 'aht', reviewYear, periodMetadata),
-                score: result.scores.aht
+                score: result.scores.aht,
+                gapText: buildGapToNextText(result.scores.aht, result.values.aht, ratingBands.aht)
             },
             {
                 label: 'Adherence',
                 valueText: result.values.adherence === null ? 'N/A' : _formatMetricDisplay('scheduleAdherence', result.values.adherence),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence', reviewYear, periodMetadata),
-                score: result.scores.adherence
+                score: result.scores.adherence,
+                gapText: buildGapToNextText(result.scores.adherence, result.values.adherence, ratingBands.scheduleAdherence)
             },
             {
                 label: 'Overall Sentiment',
                 valueText: result.values.sentiment === null ? 'N/A' : _formatMetricDisplay('overallSentiment', result.values.sentiment),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
-                score: result.scores.sentiment
+                score: result.scores.sentiment,
+                gapText: buildGapToNextText(result.scores.sentiment, result.values.sentiment, ratingBands.overallSentiment)
             },
             {
                 label: 'Associate Overall (Surveys)',
                 valueText: result.values.associateOverall === null ? 'N/A' : _formatMetricDisplay('overallExperience', result.values.associateOverall),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'overallExperience', reviewYear, periodMetadata),
-                score: result.scores.associateOverall
+                score: result.scores.associateOverall,
+                gapText: buildGapToNextText(result.scores.associateOverall, result.values.associateOverall, ratingBands.cxRepOverall)
             },
             {
                 label: 'Reliability',
                 valueText: result.values.reliability === null ? 'N/A' : _formatMetricDisplay('reliability', result.values.reliability),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'reliability', 'reliability', 'reliability', reviewYear, periodMetadata),
-                score: result.scores.reliability
+                score: result.scores.reliability,
+                gapText: buildGapToNextText(result.scores.reliability, result.values.reliability, ratingBands.reliability)
             }
         ];
     }
@@ -295,6 +314,7 @@
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.goalText}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getOnOffScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7; font-size: 0.85em; color: #555;">${row.gapText || (row.score === 3 ? '✓' : '')}</td>
                         </tr>
                     `).join('');
     }
@@ -321,17 +341,18 @@
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Annual Goal</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Gap to Next</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${rowsHtml}
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Rating Average</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="3">${ratingText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="4">${ratingText}</td>
                     </tr>
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Overall Status</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="3">${statusText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="4">${statusText}</td>
                     </tr>
                 </tbody>
             </table>
@@ -759,6 +780,33 @@
                 'background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 4px; font-size: 0.8em;">' + r.result.trackLabel + '</td>' +
                 '</tr>';
         });
+
+        // Team average row
+        var avgValues = { aht: 0, adherence: 0, sentiment: 0, associateOverall: 0, reliability: 0 };
+        var avgCounts = { aht: 0, adherence: 0, sentiment: 0, associateOverall: 0, reliability: 0 };
+        var totalRatingAvg = 0, ratingCount = 0;
+        results.forEach(function(r) {
+            var v = r.result.values || {};
+            ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'].forEach(function(k) {
+                if (v[k] !== null && v[k] !== undefined) { avgValues[k] += v[k]; avgCounts[k]++; }
+            });
+            if (r.result.ratingAverage !== null) { totalRatingAvg += r.result.ratingAverage; ratingCount++; }
+        });
+
+        function teamAvgCell(key, unit) {
+            if (avgCounts[key] === 0) return '<td style="padding: 6px; text-align: center; font-weight: 700; background: #ede7f6; color: #4a148c; border-top: 3px solid #6a1b9a;">--</td>';
+            var avg = avgValues[key] / avgCounts[key];
+            var display = unit === 'sec' ? Math.round(avg) + 's' : unit === 'hrs' ? avg.toFixed(1) + 'h' : avg.toFixed(1) + '%';
+            return '<td style="padding: 6px; text-align: center; font-weight: 700; background: #ede7f6; color: #4a148c; border-top: 3px solid #6a1b9a;">' + display + '</td>';
+        }
+
+        var teamRatingAvg = ratingCount > 0 ? (totalRatingAvg / ratingCount).toFixed(2) : '--';
+        html += '<tr>' +
+            '<td style="padding: 6px 8px; font-weight: 800; background: #ede7f6; color: #4a148c; border-top: 3px solid #6a1b9a;">Team Avg</td>' +
+            teamAvgCell('aht', 'sec') + teamAvgCell('adherence', '%') + teamAvgCell('sentiment', '%') +
+            teamAvgCell('associateOverall', '%') + teamAvgCell('reliability', 'hrs') +
+            '<td style="padding: 6px; text-align: center; font-weight: 700; background: #ede7f6; color: #4a148c; border-top: 3px solid #6a1b9a;">' + teamRatingAvg + '</td>' +
+            '<td style="padding: 6px; background: #ede7f6; border-top: 3px solid #6a1b9a;"></td></tr>';
 
         html += '</tbody></table></div>';
 

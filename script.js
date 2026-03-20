@@ -5945,6 +5945,8 @@ async function initApp() {
         sentimentPhraseDatabase = loadSentimentPhraseDatabase();
         associateSentimentSnapshots = loadAssociateSentimentSnapshots();
         loadTeamMembers();
+        cleanupStaleAutoYtds(); // re-run after restore to remove stale auto-YTDs from backup
+        saveYtdData(); // persist the cleanup
         showToast('✅ Restored synced data for this browser profile.', 4000);
         notifyTeamFilterChanged();
     }
