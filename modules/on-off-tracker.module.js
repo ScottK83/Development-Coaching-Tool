@@ -696,6 +696,8 @@
             var scores = r.result.scores || {};
             var values = r.result.values || {};
 
+            var bands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+
             function formatVal(val, unit) {
                 if (val === null || val === undefined) return '--';
                 if (unit === 'sec') return Math.round(val) + 's';
@@ -703,14 +705,50 @@
                 return val.toFixed(1) + '%';
             }
 
-            function scoreCell(score, val, unit) {
+            function formatGap(gap, unit) {
+                if (unit === 'sec') return Math.round(Math.abs(gap)) + 's';
+                if (unit === 'hrs') return Math.abs(gap).toFixed(1) + 'h';
+                return Math.abs(gap).toFixed(1) + '%';
+            }
+
+            function buildGapHint(score, val, metricKey, unit) {
+                if (score === null || score === 3 || val === null) return '';
+                var band = bands[metricKey];
+                if (!band) return '';
+                var hints = [];
+                if (band.type === 'min') {
+                    // Higher is better
+                    if (score === 1) {
+                        var need2 = band.score2.min - val;
+                        hints.push('<span style="color: #b8860b;">need +' + formatGap(need2, unit) + ' for 2</span>');
+                    }
+                    if (score <= 2) {
+                        var need3 = band.score3.min - val;
+                        hints.push('<span style="color: #1b5e20;">need +' + formatGap(need3, unit) + ' for 3</span>');
+                    }
+                } else {
+                    // Lower is better
+                    if (score === 1) {
+                        var need2 = val - band.score2.max;
+                        hints.push('<span style="color: #b8860b;">need -' + formatGap(need2, unit) + ' for 2</span>');
+                    }
+                    if (score <= 2) {
+                        var need3 = val - band.score3.max;
+                        hints.push('<span style="color: #1b5e20;">need -' + formatGap(need3, unit) + ' for 3</span>');
+                    }
+                }
+                return hints.length ? '<div style="font-size: 0.65em; line-height: 1.3; margin-top: 2px;">' + hints.join('<br>') + '</div>' : '';
+            }
+
+            function scoreCell(score, val, unit, metricKey) {
                 var valDisplay = formatVal(val, unit);
                 if (score === null) return '<td style="padding: 4px 6px; text-align: center; color: #999; border-bottom: 1px solid #eee;"><div style="font-size: 0.75em; color: #999;">' + valDisplay + '</div><div>--</div></td>';
                 var cellBg = score === 3 ? '#00b050' : score === 2 ? '#f0de87' : '#ff1a1a';
                 var cellColor = score === 2 ? '#333' : '#fff';
+                var gapHint = buildGapHint(score, val, metricKey, unit);
                 return '<td style="padding: 4px 6px; text-align: center; font-weight: 700; background: ' + cellBg + '; color: ' + cellColor + '; border-bottom: 1px solid #eee;">' +
                     '<div style="font-size: 0.75em; font-weight: 400; opacity: 0.85;">' + valDisplay + '</div>' +
-                    '<div>' + score + '</div></td>';
+                    '<div>' + score + '</div>' + gapHint + '</td>';
             }
 
             var statusBg, statusColor;
@@ -722,11 +760,11 @@
 
             html += '<tr style="background: ' + bg + ';">' +
                 '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid #eee; white-space: nowrap;">' + r.firstName + '</td>' +
-                scoreCell(scores.aht, values.aht, 'sec') +
-                scoreCell(scores.adherence, values.adherence, '%') +
-                scoreCell(scores.sentiment, values.sentiment, '%') +
-                scoreCell(scores.associateOverall, values.associateOverall, '%') +
-                scoreCell(scores.reliability, values.reliability, 'hrs') +
+                scoreCell(scores.aht, values.aht, 'sec', 'aht') +
+                scoreCell(scores.adherence, values.adherence, '%', 'scheduleAdherence') +
+                scoreCell(scores.sentiment, values.sentiment, '%', 'overallSentiment') +
+                scoreCell(scores.associateOverall, values.associateOverall, '%', 'cxRepOverall') +
+                scoreCell(scores.reliability, values.reliability, 'hrs', 'reliability') +
                 '<td style="padding: 6px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; color: #4a148c;">' + avgDisplay + '</td>' +
                 '<td style="padding: 6px 10px; text-align: center; font-weight: 700; border-bottom: 1px solid #eee; ' +
                 'background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 4px; font-size: 0.8em;">' + r.result.trackLabel + '</td>' +
