@@ -84,7 +84,7 @@
      */
     function showManageDataSubSection(subSectionId) {
         // Hide all sub-sections
-        var subSections = ['subSectionTeamData', 'subSectionCoachingTips'];
+        var subSections = ['subSectionTeamData', 'subSectionCoachingTips', 'subSectionDeleteData'];
         subSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -97,7 +97,7 @@
         }
 
         // Update sub-nav button active states
-        var subNavButtons = ['subNavTeamData', 'subNavCoachingTips'];
+        var subNavButtons = ['subNavTeamData', 'subNavCoachingTips', 'subNavDeleteData'];
         subNavButtons.forEach(function(btnId) {
             var btn = document.getElementById(btnId);
             if (btn) {

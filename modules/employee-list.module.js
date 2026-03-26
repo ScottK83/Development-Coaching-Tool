@@ -7,9 +7,19 @@
      */
     function getEmployeesFromWeeklyData(weeklyData) {
         const employeeSet = new Set();
-        Object.values(weeklyData || {}).forEach(week => {
-            if (week?.employees) {
-                week.employees.forEach(emp => {
+        // Check weekly data
+        Object.values(weeklyData || {}).forEach(period => {
+            if (period?.employees) {
+                period.employees.forEach(emp => {
+                    if (emp?.name) employeeSet.add(emp.name);
+                });
+            }
+        });
+        // Also check YTD data
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        Object.values(ytd).forEach(period => {
+            if (period?.employees) {
+                period.employees.forEach(emp => {
                     if (emp?.name) employeeSet.add(emp.name);
                 });
             }
@@ -36,7 +46,7 @@
                         <input type="checkbox" class="team-member-checkbox employee-row-team-checkbox" data-week="${escapeHtml(teamSelectionWeek)}" data-name="${escapeHtml(name)}" ${isTeamSelected ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
                         <strong style="color: #6a1b9a;">${escapeHtml(name)}</strong>
                     </label>
-                    <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Weekly Data Uploads</div>
+                    <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Uploaded Data</div>
                 </div>
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
@@ -77,8 +87,14 @@
             preferredNames = {};
         }
 
-        container.innerHTML = `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` +
-            employees.map(name => buildEmployeeRowHtml(name, preferredNames, options)).join('');
+        container.innerHTML =
+            `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` +
+            `<div style="padding: 12px 15px; background: #fff; border-bottom: 1px solid #ddd;">` +
+            `<input type="text" id="employeeSearchInput" placeholder="Search by name..." style="width: 100%; padding: 10px 14px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box;">` +
+            `</div>` +
+            `<div id="employeeListRows">` +
+            employees.map(name => buildEmployeeRowHtml(name, preferredNames, options)).join('') +
+            `</div>`;
 
         if (!container.dataset.employeeHandlersBound) {
             container.addEventListener('click', (event) => {
@@ -106,6 +122,19 @@
             });
 
             container.dataset.employeeHandlersBound = 'true';
+        }
+
+        // Search filter
+        const searchInput = document.getElementById('employeeSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = searchInput.value.toLowerCase().trim();
+                const rows = container.querySelectorAll('#employeeListRows > div');
+                rows.forEach(function(row) {
+                    const name = (row.querySelector('strong')?.textContent || '').toLowerCase();
+                    row.style.display = !query || name.includes(query) ? '' : 'none';
+                });
+            });
         }
     }
 

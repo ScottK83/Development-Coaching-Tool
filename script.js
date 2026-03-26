@@ -1604,6 +1604,11 @@ function bindManageDataNavigationHandlers() {
         }
         renderTipsManagement();
     });
+    document.getElementById('subNavDeleteData')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionDeleteData');
+        populateDeleteWeekDropdown();
+        populateDeleteSentimentDropdown();
+    });
     document.getElementById('openDebugFromManageBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');
         renderDebugPanel();

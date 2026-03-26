@@ -82,11 +82,13 @@
 
     function getLatestTeamSelectionWeekKey() {
         var weeklyData = getWeeklyData();
-        var weekKeys = Object.keys(weeklyData);
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var weekKeys = Object.keys(weeklyData).concat(Object.keys(ytd));
         if (!weekKeys.length) return '';
 
+        var allData = Object.assign({}, weeklyData, ytd);
         var getEndTimestamp = function(weekKey) {
-            var metadataEnd = String(weeklyData?.[weekKey]?.metadata?.endDate || '').trim();
+            var metadataEnd = String(allData?.[weekKey]?.metadata?.endDate || '').trim();
             var fallbackEnd = String(weekKey || '').split('|')[1] || String(weekKey || '').split('|')[0] || '';
             var candidate = metadataEnd || fallbackEnd;
             var parsed = candidate ? new Date(candidate) : new Date(NaN);
@@ -102,7 +104,8 @@
     function getTeamSelectionWeekKey() {
         var dropdownWeek = String(document.getElementById('deleteWeekSelect')?.value || '').trim();
         var weeklyData = getWeeklyData();
-        if (dropdownWeek && weeklyData?.[dropdownWeek]) return dropdownWeek;
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        if (dropdownWeek && (weeklyData?.[dropdownWeek] || ytd?.[dropdownWeek])) return dropdownWeek;
         return getLatestTeamSelectionWeekKey();
     }
 
@@ -113,8 +116,10 @@
     function getTeamSelectionContext() {
         var weekKey = getTeamSelectionWeekKey();
         var weeklyData = getWeeklyData();
-        var employeesForWeek = Array.isArray(weeklyData?.[weekKey]?.employees)
-            ? weeklyData[weekKey].employees.map(function(emp) { return String(emp?.name || '').trim(); }).filter(Boolean)
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var periodData = weeklyData?.[weekKey] || ytd?.[weekKey];
+        var employeesForWeek = Array.isArray(periodData?.employees)
+            ? periodData.employees.map(function(emp) { return String(emp?.name || '').trim(); }).filter(Boolean)
             : [];
         var selectedMembers = weekKey
             ? getTeamMembersForWeek(weekKey).map(function(name) { return String(name || '').trim(); }).filter(Boolean)
@@ -155,7 +160,7 @@
 
         var context = getTeamSelectionContext();
         if (!context.weekKey) {
-            chip.textContent = 'Active Team Filter: No weekly data loaded';
+            chip.textContent = 'Active Team Filter: No data loaded';
             chip.style.background = '#eceff1';
             chip.style.color = '#455a64';
             return;

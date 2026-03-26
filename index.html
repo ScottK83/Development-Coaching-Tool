@@ -889,6 +889,7 @@ Box 2 - Future Improvement Areas:
                     <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                         <button type="button" id="subNavTeamData" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Data</button>
                         <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                        <button type="button" id="subNavDeleteData" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗑️ Delete Data</button>
                     </div>
                     
                     <!-- Team Data Sub-section -->
@@ -996,15 +997,25 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
+                    </div>
+                    <!-- End Team Data Sub-section -->
+                    
+                    <!-- Coaching Tips Sub-section -->
+                    <div id="subSectionCoachingTips" style="display: none;">
+                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Coaching tips content will appear here when you click the Coaching Tips button above.</p>
+                    </div>
+
+                    <!-- Delete Data Sub-section -->
+                    <div id="subSectionDeleteData" style="display: none;">
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #ff9800;">
-                        <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Week</h3>
+                        <h3 style="color: #ff9800; margin-top: 0;">🗑️ Delete Individual Period</h3>
                         <div style="margin-bottom: 15px;">
-                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Week to Delete:</label>
+                            <label for="deleteWeekSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #856404;">Select Period to Delete:</label>
                             <select id="deleteWeekSelect" style="width: 100%; padding: 12px; border: 2px solid #ff9800; border-radius: 4px; font-size: 1em; cursor: pointer;">
-                                <option value="">-- Choose a week --</option>
+                                <option value="">-- Choose a period --</option>
                             </select>
                         </div>
-                        <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Week</button>
+                        <button type="button" id="deleteSelectedWeekBtn" class="btn-secondary" style="background: #ff9800; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Period</button>
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #26a69a;">
@@ -1017,18 +1028,12 @@ Box 2 - Future Improvement Areas:
                         </div>
                         <button type="button" id="deleteSelectedSentimentBtn" class="btn-secondary" style="background: #26a69a; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Sentiment</button>
                     </div>
-                    
+
                     <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
                         <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
-                        <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data and coaching history. This action cannot be undone!</p>
+                        <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data, coaching history, and sync backup. This action cannot be undone!</p>
                         <button type="button" id="deleteAllDataBtn" class="btn-secondary" style="background: #dc3545; color: white; font-size: 1.1em; padding: 12px 24px;">⚠️ Delete All Data</button>
                     </div>
-                    </div>
-                    <!-- End Team Data Sub-section -->
-                    
-                    <!-- Coaching Tips Sub-section -->
-                    <div id="subSectionCoachingTips" style="display: none;">
-                        <p style="color: #666; font-style: italic; margin-bottom: 20px;">Coaching tips content will appear here when you click the Coaching Tips button above.</p>
                     </div>
                     
                     <!-- Sentiment Keywords Sub-section -->
