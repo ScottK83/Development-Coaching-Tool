@@ -407,7 +407,7 @@
                             applyRepoBackupPayload(payload);
                         });
 
-                        saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
+                        saveRepoBackupAppliedAt(new Date().toISOString());
                         clearRepoSyncAutoPause();
                         repoSyncConflictPromptMutedUntil = 0;
                         saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
@@ -1228,7 +1228,7 @@
             applyRepoBackupPayload(payload);
         });
 
-        saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
+        saveRepoBackupAppliedAt(new Date().toISOString());
 
         return true;
     }

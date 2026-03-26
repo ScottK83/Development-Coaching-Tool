@@ -3003,7 +3003,7 @@ async function tryAutoRestoreFromRepoBackupOnEmptyState() {
         applyRepoBackupPayload(payload);
     });
 
-    saveRepoBackupAppliedAt(payload?.generatedAt || new Date().toISOString());
+    saveRepoBackupAppliedAt(new Date().toISOString());
 
     return true;
 }
