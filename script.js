@@ -4038,9 +4038,11 @@ function getTrendComparisonBuckets(keys, periodType) {
 function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     if (!employeeName || !Array.isArray(periodKeys) || periodKeys.length === 0) return null;
 
-    const sums = {};
-    const counts = {};
     const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+    const cumulativeMetrics = new Set(['reliability']);
+    const weightedSums = {};
+    const weightedCounts = {};
+    const cumulativeSums = {};
     let periodsIncluded = 0;
 
     periodKeys.forEach(weekKey => {
@@ -4049,17 +4051,29 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
         if (!employee) return;
 
         periodsIncluded += 1;
-        const surveyTotal = Number.isInteger(parseInt(employee?.surveyTotal, 10))
-            ? parseInt(employee.surveyTotal, 10)
-            : 0;
+        const tc = parseInt(employee?.totalCalls, 10);
+        const st = parseInt(employee?.surveyTotal, 10);
 
         Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-            if (surveyBackedMetrics.has(metricKey) && surveyTotal <= 0) return;
+            if (surveyBackedMetrics.has(metricKey) && (!Number.isInteger(st) || st <= 0)) return;
 
             const value = parseFloat(employee[metricKey]);
             if (Number.isNaN(value)) return;
-            sums[metricKey] = (sums[metricKey] || 0) + value;
-            counts[metricKey] = (counts[metricKey] || 0) + 1;
+
+            if (cumulativeMetrics.has(metricKey)) {
+                cumulativeSums[metricKey] = (cumulativeSums[metricKey] || 0) + value;
+            } else {
+                let w = 1;
+                if (surveyBackedMetrics.has(metricKey)) {
+                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                } else {
+                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                }
+                if (w > 0) {
+                    weightedSums[metricKey] = (weightedSums[metricKey] || 0) + value * w;
+                    weightedCounts[metricKey] = (weightedCounts[metricKey] || 0) + w;
+                }
+            }
         });
     });
 
@@ -4071,8 +4085,14 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
         periodKeys: [...periodKeys]
     };
 
-    Object.keys(sums).forEach(metricKey => {
-        aggregate[metricKey] = sums[metricKey] / counts[metricKey];
+    Object.keys(weightedSums).forEach(metricKey => {
+        if (weightedCounts[metricKey] > 0) {
+            aggregate[metricKey] = weightedSums[metricKey] / weightedCounts[metricKey];
+        }
+    });
+
+    Object.keys(cumulativeSums).forEach(metricKey => {
+        aggregate[metricKey] = cumulativeSums[metricKey];
     });
 
     return aggregate;

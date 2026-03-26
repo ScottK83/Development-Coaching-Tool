@@ -36,6 +36,40 @@
         reliability: 'Rel'
     };
 
+    var SURVEY_WEIGHTED_SNAP = { cxRepOverall: true, fcr: true, overallExperience: true };
+    var CUMULATIVE_SNAP = { reliability: true };
+
+    /**
+     * Compute weighted team average for a metric across snapshot rows.
+     * Rate metrics: weighted by totalCalls or surveyTotal.
+     * Cumulative metrics (reliability): summed.
+     * Returns null if no data.
+     */
+    function computeTeamMetricValue(rows, metricKey) {
+        if (CUMULATIVE_SNAP[metricKey]) {
+            var sum = 0, hasData = false;
+            rows.forEach(function(row) {
+                var cell = row.cells.find(function(c) { return c.metricKey === metricKey; });
+                if (cell && cell.hasValue && cell.value !== 0) { sum += cell.value; hasData = true; }
+            });
+            return hasData ? sum : null;
+        }
+
+        var wSum = 0, wCount = 0;
+        rows.forEach(function(row) {
+            var cell = row.cells.find(function(c) { return c.metricKey === metricKey; });
+            if (!cell || !cell.hasValue || cell.value === 0) return;
+            var w = 1;
+            if (SURVEY_WEIGHTED_SNAP[metricKey]) {
+                w = row.surveyTotal > 0 ? row.surveyTotal : 0;
+            } else {
+                w = row.totalCalls > 0 ? row.totalCalls : 1;
+            }
+            if (w > 0) { wSum += cell.value * w; wCount += w; }
+        });
+        return wCount > 0 ? wSum / wCount : null;
+    }
+
     function getMetrics() {
         return window.DevCoachModules?.metrics || {};
     }
@@ -322,6 +356,8 @@
             return {
                 name: emp.firstName || emp.name?.split(',')[0]?.trim() || emp.name || 'Unknown',
                 fullName: emp.name || 'Unknown',
+                totalCalls: parseInt(emp.totalCalls, 10) || 0,
+                surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
                 cells: cells
             };
         });
@@ -487,20 +523,11 @@
         var centerAvgs = snapshotData.centerAvgs;
         var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
         var teamAvgCells = visibleMetrics.map(function(key) {
-            var sum = 0;
-            var count = 0;
-            snapshotData.rows.forEach(function(row) {
-                var cell = row.cells.find(function(c) { return c.metricKey === key; });
-                if (cell && cell.hasValue && cell.value !== 0) {
-                    sum += cell.value;
-                    count++;
-                }
-            });
-            if (count === 0) {
+            var avg = computeTeamMetricValue(snapshotData.rows, key);
+            if (avg === null) {
                 return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
                     'color: #7c3aed; background: #f5f3ff; border-bottom: 2px solid #c4b5fd;">--</td>';
             }
-            var avg = sum / count;
             var metrics = getMetrics();
             var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
 
@@ -743,20 +770,11 @@
 
         // Team average row
         var teamAvgCells = visibleMetrics.map(function(key) {
-            var sum = 0;
-            var count = 0;
-            snapshotData.rows.forEach(function(row) {
-                var cell = row.cells.find(function(c) { return c.metricKey === key; });
-                if (cell && cell.hasValue && cell.value !== 0) {
-                    sum += cell.value;
-                    count++;
-                }
-            });
-            if (count === 0) {
+            var avg = computeTeamMetricValue(snapshotData.rows, key);
+            if (avg === null) {
                 return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; font-weight: 700; ' +
                     'color: #7c3aed; background: #f5f3ff; border-top: 3px solid #7c3aed;">--</td>';
             }
-            var avg = sum / count;
             var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
             var centerVal = centerAvgs[key];
             var isReverse = metrics.isReverseMetric?.(key) || false;
@@ -797,13 +815,8 @@
         // Count above/below for summary
         var aboveCount = 0, belowCount = 0;
         visibleMetrics.forEach(function(key) {
-            var sum = 0, count = 0;
-            snapshotData.rows.forEach(function(row) {
-                var cell = row.cells.find(function(c) { return c.metricKey === key; });
-                if (cell && cell.hasValue && cell.value !== 0) { sum += cell.value; count++; }
-            });
-            if (count === 0) return;
-            var avg = sum / count;
+            var avg = computeTeamMetricValue(snapshotData.rows, key);
+            if (avg === null) return;
             var centerVal = centerAvgs[key];
             var isReverse = metrics.isReverseMetric?.(key) || false;
             var beats = isReverse ? (avg <= centerVal) : (avg >= centerVal);
