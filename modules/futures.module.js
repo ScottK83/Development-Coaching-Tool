@@ -66,25 +66,33 @@
 
     /**
      * Get the best available YTD value for an employee on a metric.
-     * Uses getLatestYearPeriodForEmployee (same as On/Off tracker) to
-     * prioritise real YTD uploads > auto-YTD > latest weekly data.
+     * Unlike On/Off tracker (which always prefers manual YTD uploads),
+     * Futures picks the candidate with the most recent end date —
+     * because for forward projections, recency matters most.
      */
     function getBestYtdValueForEmployee(employeeName, metricKey, currentYear) {
-        // Try the same resolution the On/Off tracker uses
-        if (typeof window.getLatestYearPeriodForEmployee === 'function') {
-            var best = window.getLatestYearPeriodForEmployee(employeeName, currentYear);
-            if (best) {
-                var source = best.sourceName === 'ytdData' ? _getYtdData() : _getWeeklyData();
-                var period = source[best.periodKey];
-                if (period && period.employees) {
-                    var emp = period.employees.find(function (e) { return e.name === employeeName; });
-                    if (emp) {
-                        var val = parseFloat(emp[metricKey]);
-                        if (!isNaN(val)) {
-                            var label = period.metadata?.label || best.periodKey;
-                            return { value: val, source: label };
-                        }
-                    }
+        if (typeof window.collectYearPeriodCandidatesForEmployee !== 'function') return null;
+
+        var candidates = window.collectYearPeriodCandidatesForEmployee(employeeName, currentYear);
+        if (!candidates || !candidates.length) return null;
+
+        // Sort by most recent end date first (recency wins for projections)
+        candidates.sort(function (a, b) {
+            var aTime = a.endDate ? a.endDate.getTime() : 0;
+            var bTime = b.endDate ? b.endDate.getTime() : 0;
+            if (aTime !== bTime) return bTime - aTime;
+            // Tie-break: prefer YTD sources over weekly for same date
+            return b.priority - a.priority;
+        });
+
+        // Try candidates in order until we find one with this metric
+        for (var i = 0; i < candidates.length; i++) {
+            var c = candidates[i];
+            var emp = c.employeeRecord;
+            if (emp) {
+                var val = parseFloat(emp[metricKey]);
+                if (!isNaN(val)) {
+                    return { value: val, source: c.label };
                 }
             }
         }
