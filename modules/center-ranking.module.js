@@ -246,26 +246,70 @@
             html += '</div></div>';
         }
 
+        // Store data for re-sorting
+        _lastRankingData = data;
+        _currentSort = { key: 'composite', dir: 'asc' };
+
         // Full ranking table
-        html += '<div style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: #1a1a2e;">Full Center Rankings</h4>';
-        html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Ranked by average position across all 5 metrics. Each metric shows the value and individual rank (#).</p>';
-        html += '<div style="overflow-x: auto;">';
+        html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).</p>';
+        html += '</div>';
+
+        container.innerHTML = html;
+        renderRankingTable('composite', 'asc');
+    }
+
+    var _lastRankingData = null;
+    var _currentSort = { key: 'composite', dir: 'asc' };
+
+    var SORT_COLUMNS = [
+        { key: 'composite', label: 'Avg Rank', getValue: function(r) { return r.compositeScore; }, reverse: false },
+        { key: 'score', label: 'Score', getValue: function(r) { return r.ratingAverage; }, reverse: true },
+        { key: 'aht', label: 'AHT', getValue: function(r) { return r.values.aht; }, reverse: false },
+        { key: 'adherence', label: 'Adherence', getValue: function(r) { return r.values.adherence; }, reverse: true },
+        { key: 'sentiment', label: 'Sentiment', getValue: function(r) { return r.values.sentiment; }, reverse: true },
+        { key: 'associateOverall', label: 'Assoc Overall', getValue: function(r) { return r.values.associateOverall; }, reverse: true },
+        { key: 'reliability', label: 'Reliability', getValue: function(r) { return r.reliability; }, reverse: false }
+    ];
+
+    function renderRankingTable(sortKey, sortDir) {
+        var wrapper = document.getElementById('centerRankingTableWrapper');
+        if (!wrapper || !_lastRankingData) return;
+        var data = _lastRankingData;
+
+        // Sort rankings
+        var col = SORT_COLUMNS.find(function(c) { return c.key === sortKey; });
+        var sorted = data.rankings.slice().sort(function(a, b) {
+            var aVal = col ? col.getValue(a) : a.compositeScore;
+            var bVal = col ? col.getValue(b) : b.compositeScore;
+            aVal = aVal !== null && aVal !== undefined ? aVal : (sortDir === 'asc' ? Infinity : -Infinity);
+            bVal = bVal !== null && bVal !== undefined ? bVal : (sortDir === 'asc' ? Infinity : -Infinity);
+            return sortDir === 'asc' ? (aVal - bVal) : (bVal - aVal);
+        });
+
+        var thStyle = 'padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none;';
+        var arrow = function(key) {
+            if (key !== sortKey) return ' <span style="opacity: 0.3;">&#8597;</span>';
+            return sortDir === 'asc' ? ' <span style="color: #1565c0;">&#9650;</span>' : ' <span style="color: #1565c0;">&#9660;</span>';
+        };
+
+        var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 0.85em;">';
         html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd; width: 40px;">Rank</th>';
-        html += '<th style="padding: 8px 5px; text-align: left; border-bottom: 2px solid #ddd; min-width: 120px;">Name</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Avg Rank</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Score</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">AHT</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Adherence</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Sentiment</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Assoc Overall</th>';
-        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Reliability</th>';
+        html += '<th style="' + thStyle + ' width: 40px;">#</th>';
+        html += '<th style="' + thStyle + ' text-align: left; min-width: 120px;">Name</th>';
+        html += '<th class="rank-sort-header" data-sort="composite" style="' + thStyle + '">Avg Rank' + arrow('composite') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="score" style="' + thStyle + '">Score' + arrow('score') + '</th>';
+        html += '<th style="' + thStyle + '">Status</th>';
+        html += '<th class="rank-sort-header" data-sort="aht" style="' + thStyle + '">AHT' + arrow('aht') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="adherence" style="' + thStyle + '">Adherence' + arrow('adherence') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="sentiment" style="' + thStyle + '">Sentiment' + arrow('sentiment') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">Assoc Overall' + arrow('associateOverall') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Reliability' + arrow('reliability') + '</th>';
         html += '</tr></thead><tbody>';
 
-        data.rankings.forEach(function (r) {
+        sorted.forEach(function (r, idx) {
             var isTeam = data.teamMembers.has(r.name);
             var rowBg = isTeam ? '#e8eaf6' : (r.rank % 2 === 0 ? '#fafafa' : '#fff');
             var fontWeight = isTeam ? 'bold' : 'normal';
@@ -281,8 +325,8 @@
 
             html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
-            // Rank
-            html += '<td style="padding: 8px; text-align: center; font-size: 1.1em; font-weight: bold;">' + r.rank + '</td>';
+            // Row number
+            html += '<td style="padding: 8px; text-align: center; font-size: 1.1em; font-weight: bold;">' + (idx + 1) + '</td>';
 
             // Name (highlight team members)
             html += '<td style="padding: 8px;">';
@@ -327,9 +371,34 @@
         });
 
         html += '</tbody></table>';
-        html += '</div></div>';
+        html += '</div>';
 
-        container.innerHTML = html;
+        // Keep the header content, replace just the table area
+        var existingHeader = wrapper.querySelector('h4');
+        var existingDesc = wrapper.querySelector('p');
+        wrapper.innerHTML = '';
+        if (existingHeader) wrapper.appendChild(existingHeader);
+        if (existingDesc) wrapper.appendChild(existingDesc);
+        var tableDiv = document.createElement('div');
+        tableDiv.innerHTML = html;
+        wrapper.appendChild(tableDiv.firstChild);
+
+        // Bind sort headers
+        wrapper.querySelectorAll('.rank-sort-header').forEach(function(th) {
+            th.addEventListener('click', function() {
+                var newKey = th.dataset.sort;
+                var col = SORT_COLUMNS.find(function(c) { return c.key === newKey; });
+                var defaultDir = col && col.reverse ? 'desc' : 'asc';
+                var newDir;
+                if (_currentSort.key === newKey) {
+                    newDir = _currentSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    newDir = defaultDir;
+                }
+                _currentSort = { key: newKey, dir: newDir };
+                renderRankingTable(newKey, newDir);
+            });
+        });
     }
 
     /* ── Module export ── */
