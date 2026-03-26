@@ -257,11 +257,20 @@
         } catch(e) { return endDate; }
     }
 
+    function getYtdData() {
+        var storage = window.DevCoachModules?.storage;
+        if (storage?.loadYtdData) return storage.loadYtdData() || {};
+        try {
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    }
+
     function initializeDashboard() {
         var container = document.getElementById('dashboardContent');
         if (!container) return;
 
-        var wData = getWeeklyData();
+        var wData = Object.assign({}, getWeeklyData(), getYtdData());
         var weekKey = getLatestWeekKey(wData);
 
         if (!weekKey) {

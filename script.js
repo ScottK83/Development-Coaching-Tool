@@ -943,49 +943,6 @@ function calculateCenterAveragesFromEmployees(employees) {
     return Object.keys(result).length > 0 ? result : null;
 }
 
-var _centerAvgAllPeriods = [];
-
-function populateCenterAvgPeriodDropdown(filterType) {
-    const select = document.getElementById('avgPeriodSelect');
-    if (!select) return;
-
-    // Build full list on first call or when no filter specified
-    if (!filterType || _centerAvgAllPeriods.length === 0) {
-        _centerAvgAllPeriods = [];
-        const wData = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        const yData = typeof ytdData !== 'undefined' ? ytdData : {};
-
-        Object.keys(wData).forEach(key => {
-            const meta = wData[key]?.metadata || {};
-            const label = meta.label || key;
-            const pType = meta.periodType || 'week';
-            _centerAvgAllPeriods.push({ key: key, label: label, type: pType, sortKey: key.split('|')[0] || '' });
-        });
-        Object.keys(yData).forEach(key => {
-            const meta = yData[key]?.metadata || {};
-            const label = meta.label || key;
-            const pType = meta.periodType || 'ytd';
-            _centerAvgAllPeriods.push({ key: key, label: label, type: pType, sortKey: key.split('|')[0] || '' });
-        });
-
-        _centerAvgAllPeriods.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
-    }
-
-    const type = filterType || 'all';
-    const filtered = type === 'all' ? _centerAvgAllPeriods : _centerAvgAllPeriods.filter(p => p.type === type);
-
-    // Check which periods already have center averages
-    const allAvgs = loadCallCenterAverages();
-
-    select.innerHTML = '<option value="">-- Select a period (' + filtered.length + ' available) --</option>';
-    filtered.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.key;
-        const hasAvg = allAvgs[p.key] && Object.keys(allAvgs[p.key]).length > 0;
-        opt.textContent = p.label + (hasAvg ? ' \u2705' : '');
-        select.appendChild(opt);
-    });
-}
 
 function migrateReliabilityCenterAverages() {
     try {
@@ -1047,41 +1004,6 @@ function cleanupStaleAutoYtds() {
     } catch (e) {
         console.warn('[Startup] Auto-YTD cleanup failed:', e.message);
     }
-}
-
-function readUploadCenterAverages() {
-    const UPLOAD_AVG_FIELDS = {
-        adherence: 'uploadAvgAdherence',
-        overallExperience: 'uploadAvgOverallExperience',
-        repSatisfaction: 'uploadAvgRepSatisfaction',
-        fcr: 'uploadAvgFCR',
-        transfers: 'uploadAvgTransfers',
-        sentiment: 'uploadAvgSentiment',
-        positiveWord: 'uploadAvgPositiveWord',
-        negativeWord: 'uploadAvgNegativeWord',
-        managingEmotions: 'uploadAvgManagingEmotions',
-        aht: 'uploadAvgAHT',
-        acw: 'uploadAvgACW',
-        holdTime: 'uploadAvgHoldTime',
-        reliability: 'uploadAvgReliability'
-    };
-    const result = {};
-    let hasAny = false;
-    for (const [key, inputId] of Object.entries(UPLOAD_AVG_FIELDS)) {
-        const el = document.getElementById(inputId);
-        if (el && el.value.trim() !== '') {
-            let val = parseFloat(el.value);
-            if (!isNaN(val)) {
-                if (key === 'reliability') {
-                    const headcount = parseFloat(document.getElementById('uploadAvgHeadcount')?.value) || 144;
-                    val = Math.round((val / headcount) * 100) / 100;
-                }
-                result[key] = val;
-                hasAny = true;
-            }
-        }
-    }
-    return hasAny ? result : null;
 }
 
 function getEmployeeNickname(fullName) {
@@ -3463,9 +3385,10 @@ function populateDeleteWeekDropdown() {
     if (!dropdown) return;
 
     dropdown.innerHTML = '<option value="">-- Choose a week --</option>';
-    
-    const weeks = Object.keys(weeklyData).map(weekKey => {
-        const weekData = weeklyData[weekKey];
+
+    const allData = Object.assign({}, weeklyData, ytdData);
+    const weeks = Object.keys(allData).map(weekKey => {
+        const weekData = allData[weekKey];
         const endDateStr = weekKey.split('|')[1];
         // Parse date safely to avoid timezone issues
         const [year, month, day] = endDateStr.split('-').map(Number);
@@ -3672,16 +3595,16 @@ function populateTeamMemberSelector() {
     
     if (!selectedWeek) {
         // Use the most recent week if none selected
-        const weeks = Object.keys(weeklyData).sort().reverse();
+        const weeks = Object.keys(weeklyData).concat(Object.keys(ytdData || {})).sort().reverse();
         selectedWeek = weeks[0];
     }
-    
-    if (!selectedWeek || !weeklyData[selectedWeek]) {
+
+    if (!selectedWeek || !(weeklyData[selectedWeek] || (ytdData && ytdData[selectedWeek]))) {
         selector.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No data available</div>';
         return;
     }
-    
-    const employees = weeklyData[selectedWeek].employees || [];
+
+    const employees = (weeklyData[selectedWeek] || ytdData[selectedWeek]).employees || [];
     const selectedMembers = getTeamMembersForWeek(selectedWeek);
     
     if (employees.length === 0) {
@@ -5501,6 +5424,7 @@ function renderTrendVisualizations() {
         });
     });
 }
+window.renderTrendVisualizations = renderTrendVisualizations;
 
 async function generateTrendCoachingEmail() {
     const delegated = window.DevCoachModules?.trendCoachingEmail?.generateTrendCoachingEmail;
@@ -6179,11 +6103,12 @@ if (document.readyState === 'loading') {
 // -----------------------------------------------------------------------------
 
 function getLatestWeekKeyForCoaching() {
-    const weekKeys = Object.keys(weeklyData || {});
+    const weekKeys = Object.keys(weeklyData || {}).concat(Object.keys(ytdData || {}));
     if (weekKeys.length === 0) return null;
 
     const getEndDate = (weekKey) => {
-        const metaEnd = weeklyData[weekKey]?.metadata?.endDate;
+        const period = weeklyData[weekKey] || ytdData[weekKey];
+        const metaEnd = period?.metadata?.endDate;
         if (metaEnd) return new Date(metaEnd);
         const parts = weekKey.split('|');
         const endDate = parts[1] || parts[0];
@@ -6222,7 +6147,7 @@ function populateCoachingEmployeeSelectOptions(select, employees) {
 }
 
 function getCoachingLatestPeriodEmployees(coachingWeekKey) {
-    const latestWeek = weeklyData[coachingWeekKey];
+    const latestWeek = weeklyData[coachingWeekKey] || ytdData[coachingWeekKey];
     const teamFilterContext = getTeamSelectionContext();
     const employees = (latestWeek.employees || [])
         .filter(emp => emp && emp.name)

@@ -463,12 +463,17 @@
     // RENDER EXECUTIVE SUMMARY
     // ============================================
 
+    function getYtdData() {
+        return window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    }
+
     function renderExecutiveSummary() {
         var container = document.getElementById('executiveSummaryContainer');
         if (!container) return;
 
         var weeklyData = getWeeklyData();
-        var allWeeks = Object.keys(weeklyData);
+        var ytdDataLocal = getYtdData();
+        var allWeeks = Object.keys(weeklyData).concat(Object.keys(ytdDataLocal));
 
         if (allWeeks.length === 0) {
             container.innerHTML = '<p style="color: #666; font-style: italic;">No data uploaded yet. Upload some weekly data to see the executive summary!</p>';
