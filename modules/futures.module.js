@@ -65,37 +65,63 @@
     }
 
     /**
-     * Get the best available YTD value for an employee on a metric.
-     * Unlike On/Off tracker (which always prefers manual YTD uploads),
-     * Futures picks the candidate with the most recent end date —
-     * because for forward projections, recency matters most.
+     * Get the YTD average for an employee on a metric.
+     * Computes the real average from all weekly data for the current year.
+     * Falls back to YTD uploads only when no weekly data exists.
      */
-    function getBestYtdValueForEmployee(employeeName, metricKey, currentYear) {
-        if (typeof window.collectYearPeriodCandidatesForEmployee !== 'function') return null;
+    function getBestYtdValueForEmployee(employeeName, metricKey, currentYear, yearKeys) {
+        // Primary: calculate average from all weekly data for the year
+        var wData = _getWeeklyData();
+        var sum = 0;
+        var count = 0;
 
-        var candidates = window.collectYearPeriodCandidatesForEmployee(employeeName, currentYear);
-        if (!candidates || !candidates.length) return null;
-
-        // Sort by most recent end date first (recency wins for projections)
-        candidates.sort(function (a, b) {
-            var aTime = a.endDate ? a.endDate.getTime() : 0;
-            var bTime = b.endDate ? b.endDate.getTime() : 0;
-            if (aTime !== bTime) return bTime - aTime;
-            // Tie-break: prefer YTD sources over weekly for same date
-            return b.priority - a.priority;
+        yearKeys.forEach(function (weekKey) {
+            var period = wData[weekKey];
+            if (!period || !period.employees) return;
+            period.employees.forEach(function (emp) {
+                if (emp.name === employeeName) {
+                    var val = parseFloat(emp[metricKey]);
+                    if (!isNaN(val)) {
+                        sum += val;
+                        count++;
+                    }
+                }
+            });
         });
 
-        // Try candidates in order until we find one with this metric
-        for (var i = 0; i < candidates.length; i++) {
-            var c = candidates[i];
-            var emp = c.employeeRecord;
-            if (emp) {
-                var val = parseFloat(emp[metricKey]);
-                if (!isNaN(val)) {
-                    return { value: val, source: c.label };
-                }
-            }
+        if (count > 0) {
+            return { value: sum / count, count: count, source: count + ' weeks averaged' };
         }
+
+        // Fallback: check YTD uploads if employee has no weekly data
+        var ytd = _getYtdData();
+        var bestVal = null;
+        var bestDate = 0;
+        var bestLabel = '';
+
+        Object.keys(ytd).forEach(function (periodKey) {
+            var period = ytd[periodKey];
+            var meta = period?.metadata || {};
+            var endStr = meta.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
+            var endDate = endStr ? new Date(endStr) : null;
+            if (!endDate || isNaN(endDate) || endDate.getFullYear() !== currentYear) return;
+
+            (period.employees || []).forEach(function (emp) {
+                if (emp.name === employeeName) {
+                    var val = parseFloat(emp[metricKey]);
+                    if (!isNaN(val) && endDate.getTime() > bestDate) {
+                        bestVal = val;
+                        bestDate = endDate.getTime();
+                        bestLabel = meta.label || periodKey;
+                    }
+                }
+            });
+        });
+
+        if (bestVal !== null) {
+            return { value: bestVal, count: 1, source: bestLabel };
+        }
+
         return null;
     }
 
@@ -158,7 +184,7 @@
                 var targetConfig = targets[metricKey];
                 if (!targetConfig) return;
 
-                var bestData = getBestYtdValueForEmployee(empName, metricKey, currentYear);
+                var bestData = getBestYtdValueForEmployee(empName, metricKey, currentYear, weekInfo.yearKeys);
                 if (!bestData) return;
 
                 var currentAvg = bestData.value;
