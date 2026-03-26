@@ -40,7 +40,7 @@
 
 function initializeMetricTrends() {
     // Check if data exists for trend generation
-    const allWeeks = Object.keys(weeklyData);
+    const allWeeks = Object.keys(weeklyData).concat(Object.keys(typeof ytdData !== 'undefined' ? ytdData : {}));
     const statusDiv = document.getElementById('metricTrendsStatus');
 
     if (allWeeks.length === 0) {
@@ -426,7 +426,7 @@ function applyAveragesToForm(source) {
 }
 
 function getPreviousWeekKey(currentWeekKey) {
-    const allKeys = Object.keys(weeklyData).sort();
+    const allKeys = Object.keys(weeklyData).concat(Object.keys(typeof ytdData !== 'undefined' ? ytdData : {})).sort();
     const currentIndex = allKeys.indexOf(currentWeekKey);
     if (currentIndex <= 0) return null;
     return allKeys[currentIndex - 1] || null;

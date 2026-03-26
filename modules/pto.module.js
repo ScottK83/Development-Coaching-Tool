@@ -211,6 +211,23 @@ function getWeeklyAssociates() {
         });
     });
 
+    // Also check ytdData for associates not found in weeklyData
+    const ytdDataLocal = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    Object.entries(ytdDataLocal).forEach(([periodKey, period]) => {
+        if (!period || typeof period !== 'object') return;
+        const startDate = String(period?.metadata?.startDate || '').trim();
+        const endDate = String(period?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, periodKey)) return;
+
+        const employees = Array.isArray(period.employees) ? period.employees : [];
+        employees.forEach(employee => {
+            const name = normalizeAssociateName(employee?.name);
+            if (!name) return;
+            if (teamFilter?.allowedSet && !teamFilter.allowedSet.has(name)) return;
+            names.add(name);
+        });
+    });
+
     return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
@@ -252,6 +269,23 @@ function getLatestTrackingWeekKey(weeklyData) {
 
         candidates.push({
             weekKey,
+            referenceDate
+        });
+    });
+
+    // Also check ytdData periods
+    const ytdDataLocal = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    Object.entries(ytdDataLocal).forEach(([periodKey, period]) => {
+        if (!period || typeof period !== 'object') return;
+        const startDate = String(period?.metadata?.startDate || '').trim();
+        const endDate = String(period?.metadata?.endDate || '').trim();
+        if (!isPeriodInTrackingYear(startDate, endDate, periodKey)) return;
+
+        const referenceDateText = endDate || startDate || String(periodKey).split('|')[1] || String(periodKey).split('|')[0] || '';
+        const referenceDate = parseIsoDateSafe(referenceDateText);
+
+        candidates.push({
+            weekKey: periodKey,
             referenceDate
         });
     });
@@ -641,6 +675,37 @@ function buildReliabilityWeeksForAssociate(associateName) {
             weekDates
         });
     });
+
+    // If no weekly data found, fall back to ytdData so YTD-only users see something
+    if (!weeks.length) {
+        const ytdDataLocal = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+        Object.entries(ytdDataLocal).forEach(([periodKey, period]) => {
+            if (!period || typeof period !== 'object') return;
+
+            const startDate = String(period?.metadata?.startDate || '').trim();
+            const endDate = String(period?.metadata?.endDate || '').trim();
+            if (!isPeriodInTrackingYear(startDate, endDate, periodKey)) return;
+
+            const employees = Array.isArray(period.employees) ? period.employees : [];
+            const employee = employees.find(item => normalizeAssociateName(item?.name) === normalizedAssociate);
+            if (!employee) return;
+
+            const reliabilityHours = normalizeHours(employee.reliability);
+            if (reliabilityHours <= 0) return;
+
+            const startEnd = getWeekStartEndFromPeriod(periodKey, period);
+            const weekDates = getWeekDates(startEnd.startDate, startEnd.endDate);
+            if (!weekDates.length) return;
+
+            weeks.push({
+                weekKey: periodKey,
+                startDate: startEnd.startDate,
+                endDate: startEnd.endDate,
+                reliabilityHours,
+                weekDates
+            });
+        });
+    }
 
     weeks.sort((a, b) => (b.endDate || '').localeCompare(a.endDate || ''));
     return weeks;

@@ -561,11 +561,12 @@ Generate the coaching email for ${preferredName} now.`;
     // -- Initialization helpers ------------------------------------------------
 
     function getLatestWeekKeyForCoaching() {
-        const weekKeys = Object.keys(weeklyData || {});
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const weekKeys = Object.keys(weeklyData || {}).concat(Object.keys(ytd));
         if (weekKeys.length === 0) return null;
 
         const getEndDate = (weekKey) => {
-            const metaEnd = weeklyData[weekKey]?.metadata?.endDate;
+            const metaEnd = (weeklyData[weekKey] || ytd[weekKey])?.metadata?.endDate;
             if (metaEnd) return new Date(metaEnd);
             const parts = weekKey.split('|');
             const endDate = parts[1] || parts[0];
@@ -604,7 +605,8 @@ Generate the coaching email for ${preferredName} now.`;
     }
 
     function getCoachingLatestPeriodEmployees(coachingWeekKey) {
-        const latestWeek = weeklyData[coachingWeekKey];
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const latestWeek = weeklyData[coachingWeekKey] || ytd[coachingWeekKey];
         const teamFilterContext = getTeamSelectionContext();
         const employees = (latestWeek.employees || [])
             .filter(emp => emp && emp.name)
@@ -658,14 +660,15 @@ Generate the coaching email for ${preferredName} now.`;
 
         resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn);
 
-        if (!weeklyData || Object.keys(weeklyData).length === 0) {
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        if ((!weeklyData || Object.keys(weeklyData).length === 0) && Object.keys(ytd).length === 0) {
             status.textContent = 'No data available. Upload data first to generate coaching emails.';
             status.style.display = 'block';
             return;
         }
 
         coachingLatestWeekKey = getLatestWeekKeyForCoaching();
-        if (!coachingLatestWeekKey || !weeklyData[coachingLatestWeekKey]) {
+        if (!coachingLatestWeekKey || !(weeklyData[coachingLatestWeekKey] || ytd[coachingLatestWeekKey])) {
             status.textContent = 'Unable to find the latest data period.';
             status.style.display = 'block';
             return;

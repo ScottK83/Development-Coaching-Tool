@@ -128,13 +128,15 @@
          */
         var currentYear = new Date().getFullYear();
         var weeklyData = getWeeklyData();
+        var ytdDataLocal = getYtdData();
+        var allData = Object.assign({}, weeklyData, ytdDataLocal);
         var isCumulative = CUMULATIVE_METRICS[metricKey];
         var isSurveyWeighted = SURVEY_WEIGHTED_METRICS[metricKey];
 
         // Filter to one source type to avoid double-counting overlapping periods
         var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
-        Object.entries(weeklyData).forEach(function(entry) {
+        Object.entries(allData).forEach(function(entry) {
             var weekData = entry[1];
             var meta = weekData?.metadata || {};
             var endDateStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
@@ -231,11 +233,13 @@
             String(previousPeriodEnd.getMonth() + 1).padStart(2, '0') + '-' +
             String(previousPeriodEnd.getDate()).padStart(2, '0');
 
-        var sortedKeys = Object.keys(weeklyData).sort().reverse();
+        var ytdDataLocal = getYtdData();
+        var sortedKeys = Object.keys(weeklyData).concat(Object.keys(ytdDataLocal)).sort().reverse();
         for (var i = 0; i < sortedKeys.length; i++) {
             var key = sortedKeys[i];
             if (!key.includes(prevEndStr)) continue;
-            var metadata = weeklyData[key]?.metadata || {};
+            var allData = Object.assign({}, weeklyData, ytdDataLocal);
+            var metadata = allData[key]?.metadata || {};
             var keyPeriodType = metadata.periodType || 'week';
             if (keyPeriodType !== periodType) continue;
             return key;
