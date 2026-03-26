@@ -48,29 +48,106 @@
         });
     }
 
-    /**
-     * Calculate Q1 average for an employee on a given metric
-     */
-    function getQ1Average(employeeName, metricKey, q1Keys) {
-        var wData = _getWeeklyData();
-        var sum = 0;
-        var count = 0;
+    // Metrics weighted by surveyTotal (not totalCalls)
+    var SURVEY_WEIGHTED = new Set(['cxRepOverall', 'fcr', 'overallExperience']);
+    // Cumulative metrics that should be summed, not averaged
+    var CUMULATIVE_METRICS = new Set(['reliability']);
 
+    /**
+     * Aggregate Q1 data for all employees from weekly data.
+     * Uses weighted averages for rate metrics, sums for cumulative metrics.
+     * Filters to one source type to avoid double-counting overlapping periods.
+     */
+    function aggregateQ1Data(q1Keys) {
+        var wData = _getWeeklyData();
+
+        // Filter to one source type (prefer 'week')
+        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var periodsByType = {};
         q1Keys.forEach(function (weekKey) {
             var period = wData[weekKey];
+            if (!period) return;
+            var pType = period.metadata?.periodType || 'week';
+            if (!periodsByType[pType]) periodsByType[pType] = [];
+            periodsByType[pType].push(weekKey);
+        });
+
+        var chosenType = null;
+        for (var i = 0; i < sourceTypePriority.length; i++) {
+            if (periodsByType[sourceTypePriority[i]] && periodsByType[sourceTypePriority[i]].length > 0) {
+                chosenType = sourceTypePriority[i];
+                break;
+            }
+        }
+        var filteredKeys = chosenType ? periodsByType[chosenType] : q1Keys;
+
+        var empAgg = {};
+
+        filteredKeys.forEach(function (weekKey) {
+            var period = wData[weekKey];
             if (!period || !period.employees) return;
+
             period.employees.forEach(function (emp) {
-                if (emp.name === employeeName) {
-                    var val = parseFloat(emp[metricKey]);
-                    if (!isNaN(val)) {
-                        sum += val;
-                        count++;
-                    }
+                if (!emp || !emp.name) return;
+
+                if (!empAgg[emp.name]) {
+                    empAgg[emp.name] = {
+                        name: emp.name,
+                        totalCalls: 0,
+                        surveyTotal: 0,
+                        reliability: 0,
+                        weightedSums: {},
+                        weightedCounts: {}
+                    };
                 }
+
+                var agg = empAgg[emp.name];
+                var tc = parseInt(emp.totalCalls, 10);
+                var st = parseInt(emp.surveyTotal, 10);
+
+                agg.totalCalls += Number.isInteger(tc) ? tc : 0;
+                agg.surveyTotal += Number.isInteger(st) ? st : 0;
+
+                var rel = parseFloat(emp.reliability);
+                if (Number.isFinite(rel)) agg.reliability += rel;
+
+                Q1_METRICS.forEach(function (mk) {
+                    if (CUMULATIVE_METRICS.has(mk)) return; // handled above
+                    var val = parseFloat(emp[mk]);
+                    if (!Number.isFinite(val)) return;
+
+                    var weight = 1;
+                    if (SURVEY_WEIGHTED.has(mk)) {
+                        weight = Number.isInteger(st) && st > 0 ? st : 0;
+                    } else {
+                        weight = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                    }
+                    if (weight <= 0) return;
+
+                    agg.weightedSums[mk] = (agg.weightedSums[mk] || 0) + (val * weight);
+                    agg.weightedCounts[mk] = (agg.weightedCounts[mk] || 0) + weight;
+                });
             });
         });
 
-        return count > 0 ? { value: sum / count, count: count } : null;
+        // Finalize weighted averages
+        var result = {};
+        Object.keys(empAgg).forEach(function (name) {
+            var agg = empAgg[name];
+            var emp = { name: name, reliability: agg.reliability, totalCalls: agg.totalCalls };
+
+            Q1_METRICS.forEach(function (mk) {
+                if (CUMULATIVE_METRICS.has(mk)) return;
+                var totalWeight = agg.weightedCounts[mk] || 0;
+                if (totalWeight > 0) {
+                    emp[mk] = agg.weightedSums[mk] / totalWeight;
+                }
+            });
+
+            result[name] = emp;
+        });
+
+        return { employees: result, periodCount: filteredKeys.length };
     }
 
     /**
@@ -142,8 +219,15 @@
         var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
         var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
 
+        // Aggregate Q1 data with proper weighted averages and sums
+        var q1Agg = aggregateQ1Data(q1Keys);
+        var aggEmployees = q1Agg.employees;
+
         var results = [];
         teamMembers.forEach(function (empName) {
+            var aggEmp = aggEmployees[empName];
+            if (!aggEmp) return;
+
             var strengths = [];
             var improvements = [];
             var metrics = {};
@@ -152,30 +236,33 @@
                 var targetConfig = targets[metricKey];
                 if (!targetConfig) return;
 
-                var avg = getQ1Average(empName, metricKey, q1Keys);
-                if (!avg) return;
+                var isCumulative = CUMULATIVE_METRICS.has(metricKey);
+                var metricValue = isCumulative ? aggEmp.reliability : aggEmp[metricKey];
+                if (metricValue === undefined || metricValue === null) return;
 
                 var isReverse = targetConfig.type === 'max';
-                var meetsTarget = isReverse ? (avg.value <= targetConfig.value) : (avg.value >= targetConfig.value);
+                var meetsTarget = isReverse ? (metricValue <= targetConfig.value) : (metricValue >= targetConfig.value);
 
                 var weeklyVals = getWeeklyValues(empName, metricKey, q1Keys);
-                var trend = calculateTrend(weeklyVals, isReverse);
+                // Trend is per-week values (not cumulative), so still meaningful for rate metrics
+                var trend = isCumulative ? { direction: 'stable', delta: 0 } : calculateTrend(weeklyVals, isReverse);
 
                 var bandConfig = ratingBands[metricKey];
                 var exceedTarget = null;
                 var isExceeding = false;
                 if (bandConfig) {
                     exceedTarget = isReverse ? bandConfig.score3.max : bandConfig.score3.min;
-                    isExceeding = isReverse ? (avg.value <= exceedTarget) : (avg.value >= exceedTarget);
+                    isExceeding = isReverse ? (metricValue <= exceedTarget) : (metricValue >= exceedTarget);
                 }
 
                 var gap = isReverse
-                    ? targetConfig.value - avg.value
-                    : avg.value - targetConfig.value;
+                    ? targetConfig.value - metricValue
+                    : metricValue - targetConfig.value;
 
                 var metricData = {
-                    average: avg.value,
-                    weeksOfData: avg.count,
+                    average: metricValue,
+                    isCumulative: isCumulative,
+                    weeksOfData: q1Agg.periodCount,
                     target: targetConfig.value,
                     exceedTarget: exceedTarget,
                     meetsTarget: meetsTarget,

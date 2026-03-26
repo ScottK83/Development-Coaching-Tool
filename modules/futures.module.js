@@ -78,9 +78,32 @@
      */
     function aggregateFromWeeklyData(yearKeys) {
         var wData = _getWeeklyData();
+
+        // Filter to one source type to avoid double-counting overlapping periods
+        // (e.g., weekly + monthly/quarterly covering the same timeframe).
+        // Matches buildYtdAggregateForYear's sourceTypePriority logic.
+        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var periodsByType = {};
+        yearKeys.forEach(function (weekKey) {
+            var period = wData[weekKey];
+            if (!period) return;
+            var pType = period.metadata?.periodType || 'week';
+            if (!periodsByType[pType]) periodsByType[pType] = [];
+            periodsByType[pType].push(weekKey);
+        });
+
+        var chosenType = null;
+        for (var i = 0; i < sourceTypePriority.length; i++) {
+            if (periodsByType[sourceTypePriority[i]] && periodsByType[sourceTypePriority[i]].length > 0) {
+                chosenType = sourceTypePriority[i];
+                break;
+            }
+        }
+        var filteredKeys = chosenType ? periodsByType[chosenType] : yearKeys;
+
         var empAgg = {}; // { name: { totalCalls, surveyTotal, reliability, weightedSums, weightedCounts } }
 
-        yearKeys.forEach(function (weekKey) {
+        filteredKeys.forEach(function (weekKey) {
             var period = wData[weekKey];
             if (!period || !period.employees) return;
 
@@ -144,8 +167,9 @@
             employees.push(result);
         });
 
+        var sourceLabel = filteredKeys.length + ' ' + (chosenType || 'period') + (filteredKeys.length !== 1 ? 's' : '') + ' aggregated';
         return employees.length > 0
-            ? { employees: employees, source: yearKeys.length + ' weeks aggregated' }
+            ? { employees: employees, source: sourceLabel, periodCount: filteredKeys.length, periodType: chosenType }
             : null;
     }
 
@@ -190,9 +214,16 @@
         }
 
         // Aggregate directly from weekly data (proper weighted averages + sums)
+        // Filters to one source type to avoid double-counting overlapping periods
         var ytdResult = aggregateFromWeeklyData(weekInfo.yearKeys);
         var ytdEmployees = ytdResult ? ytdResult.employees : [];
         var ytdSource = ytdResult ? ytdResult.source : '';
+
+        // Use the actual filtered period count for projection math
+        if (ytdResult && ytdResult.periodCount) {
+            weekInfo.weeksCompleted = ytdResult.periodCount;
+            weekInfo.weeksRemaining = Math.max(0, weekInfo.totalWeeks - weekInfo.weeksCompleted);
+        }
 
         var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
         var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
