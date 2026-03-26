@@ -131,44 +131,59 @@
         var isCumulative = CUMULATIVE_METRICS[metricKey];
         var isSurveyWeighted = SURVEY_WEIGHTED_METRICS[metricKey];
 
+        // Filter to one source type to avoid double-counting overlapping periods
+        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var periodsByType = {};
+        Object.entries(weeklyData).forEach(function(entry) {
+            var weekData = entry[1];
+            var meta = weekData?.metadata || {};
+            var endDateStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
+            var endYear = parseInt(String(endDateStr).split('-')[0], 10);
+            if (endYear !== currentYear) return;
+            var pType = meta.periodType || 'week';
+            if (!periodsByType[pType]) periodsByType[pType] = [];
+            periodsByType[pType].push(entry);
+        });
+        var chosenType = null;
+        for (var ti = 0; ti < sourceTypePriority.length; ti++) {
+            if (periodsByType[sourceTypePriority[ti]] && periodsByType[sourceTypePriority[ti]].length > 0) {
+                chosenType = sourceTypePriority[ti];
+                break;
+            }
+        }
+        var filteredEntries = chosenType ? periodsByType[chosenType] : [];
+
         var weightedSum = 0;
         var totalWeight = 0;
         var cumulativeSum = 0;
         var periodCount = 0;
 
-        Object.entries(weeklyData).forEach(function(entry) {
-            var weekKey = entry[0];
+        filteredEntries.forEach(function(entry) {
             var weekData = entry[1];
-            var parts = weekKey.split('|');
-            var endDateStr = parts[1] || '';
-            var endYear = parseInt(endDateStr.split('-')[0], 10);
-
-            if (endYear === currentYear) {
-                (weekData.employees || []).forEach(function(emp) {
-                    if (emp.name === employeeName) {
-                        var value = parseFloat(emp[metricKey]);
-                        if (!isNaN(value)) {
-                            periodCount++;
-                            if (isCumulative) {
-                                cumulativeSum += value;
+            (weekData.employees || []).forEach(function(emp) {
+                if (emp.name === employeeName) {
+                    var value = parseFloat(emp[metricKey]);
+                    if (!isNaN(value)) {
+                        periodCount++;
+                        if (isCumulative) {
+                            cumulativeSum += value;
+                        } else {
+                            var w = 1;
+                            if (isSurveyWeighted) {
+                                var st = parseInt(emp.surveyTotal, 10);
+                                w = Number.isInteger(st) && st > 0 ? st : 0;
                             } else {
-                                var w = 1;
-                                if (isSurveyWeighted) {
-                                    var st = parseInt(emp.surveyTotal, 10);
-                                    w = Number.isInteger(st) && st > 0 ? st : 0;
-                                } else {
-                                    var tc = parseInt(emp.totalCalls, 10);
-                                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
-                                }
-                                if (w > 0) {
-                                    weightedSum += value * w;
-                                    totalWeight += w;
-                                }
+                                var tc = parseInt(emp.totalCalls, 10);
+                                w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                            }
+                            if (w > 0) {
+                                weightedSum += value * w;
+                                totalWeight += w;
                             }
                         }
                     }
-                });
-            }
+                }
+            });
         });
 
         if (isCumulative && periodCount > 0) {
@@ -275,15 +290,34 @@
 
         var teamFilterContext = getTeamSelectionContext();
 
+        // Filter to one source type to avoid double-counting overlapping periods
+        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var periodsByType = {};
         allWeeks.forEach(function(weekKey) {
             var week = weeklyData[weekKey];
-            if (!week || !week.employees) return;
-
-            var metadataEndDate = week?.metadata?.endDate;
+            if (!week) return;
+            var meta = week.metadata || {};
+            var metadataEndDate = meta.endDate;
             var fallbackEndDate = weekKey.includes('|') ? weekKey.split('|')[1] : '';
             var endDateText = metadataEndDate || fallbackEndDate;
             var endYear = parseInt(String(endDateText || '').slice(0, 4), 10);
             if (!Number.isInteger(endYear) || endYear !== activeYear) return;
+            var pType = meta.periodType || 'week';
+            if (!periodsByType[pType]) periodsByType[pType] = [];
+            periodsByType[pType].push(weekKey);
+        });
+        var chosenType = null;
+        for (var ti = 0; ti < sourceTypePriority.length; ti++) {
+            if (periodsByType[sourceTypePriority[ti]] && periodsByType[sourceTypePriority[ti]].length > 0) {
+                chosenType = sourceTypePriority[ti];
+                break;
+            }
+        }
+        var filteredWeeks = chosenType ? periodsByType[chosenType] : [];
+
+        filteredWeeks.forEach(function(weekKey) {
+            var week = weeklyData[weekKey];
+            if (!week || !week.employees) return;
 
             metrics.totalWeeks += 1;
 
