@@ -88,7 +88,12 @@
         }
 
         container.innerHTML =
-            `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a;">Total Employees: ${employees.length}</div>` +
+            `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">` +
+            `<span>Total Employees: ${employees.length}</span>` +
+            `<div style="display: flex; gap: 6px;">` +
+            `<button type="button" id="checkAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #4caf50; background: #e8f5e9; color: #2e7d32; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Check All</button>` +
+            `<button type="button" id="uncheckAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #c62828; background: #fbe9e7; color: #c62828; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Uncheck All</button>` +
+            `</div></div>` +
             `<div style="padding: 12px 15px; background: #fff; border-bottom: 1px solid #ddd;">` +
             `<input type="text" id="employeeSearchInput" placeholder="Search by name..." style="width: 100%; padding: 10px 14px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box;">` +
             `</div>` +
@@ -123,6 +128,27 @@
 
             container.dataset.employeeHandlersBound = 'true';
         }
+
+        // Check All / Uncheck All
+        const checkAllBtn = document.getElementById('checkAllEmployeesBtn');
+        const uncheckAllBtn = document.getElementById('uncheckAllEmployeesBtn');
+        const toggleAll = function(checked) {
+            const checkboxes = container.querySelectorAll('.team-member-checkbox');
+            checkboxes.forEach(function(cb) { cb.checked = checked; });
+            // Fire the team selection change with updated list
+            const firstCb = checkboxes[0];
+            if (firstCb) {
+                const weekKey = String(firstCb.dataset.week || '').trim();
+                if (weekKey) {
+                    const selectedMembers = checked
+                        ? Array.from(checkboxes).map(cb => String(cb.dataset.name || '').trim()).filter(Boolean)
+                        : [];
+                    options.onTeamSelectionChange?.({ weekKey, selectedMembers });
+                }
+            }
+        };
+        if (checkAllBtn) checkAllBtn.addEventListener('click', function() { toggleAll(true); });
+        if (uncheckAllBtn) uncheckAllBtn.addEventListener('click', function() { toggleAll(false); });
 
         // Search filter
         const searchInput = document.getElementById('employeeSearchInput');
