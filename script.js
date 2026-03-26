@@ -1545,21 +1545,37 @@ function bindNavigationHandlers() {
         showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
     });
-    document.getElementById('subNavYearEnd')?.addEventListener('click', () => {
-        showSubSection('subSectionYearEnd', 'subNavYearEnd');
-        initializeYearEndComments();
+
+    // Consolidated: Performance (On/Off + Rankings + Futures)
+    document.getElementById('subNavPerformance')?.addEventListener('click', () => {
+        showSubSection('subSectionPerformance', 'subNavPerformance');
+        activateInnerTab('perf-inner-tab', 'subSectionOnOffTracker', 'perfInnerContent', initializeOnOffTracker);
     });
-    document.getElementById('subNavOnOffTracker')?.addEventListener('click', () => {
-        showSubSection('subSectionOnOffTracker', 'subNavOnOffTracker');
-        initializeOnOffTracker();
+
+    // Consolidated: Trends (Intelligence + Metric Charts)
+    document.getElementById('subNavTrends')?.addEventListener('click', () => {
+        showSubSection('subSectionTrends', 'subNavTrends');
+        activateInnerTab('trends-inner-tab', 'subSectionTrendIntelligence', 'trendsInnerContent', function() {
+            handleSubNavTrendIntelligenceClick(true);
+        });
     });
-    document.getElementById('subNavSentiment')?.addEventListener('click', handleSubNavSentimentClick);
-    document.getElementById('subNavMetricTrends')?.addEventListener('click', handleSubNavMetricTrendsClick);
-    document.getElementById('subNavTrendIntelligence')?.addEventListener('click', handleSubNavTrendIntelligenceClick);
-    document.getElementById('subNavCallListening')?.addEventListener('click', () => {
-        showSubSection('subSectionCallListening', 'subNavCallListening');
-        initializeCallListeningSection();
+
+    // Consolidated: Review Prep (Quarterly + Year-End)
+    document.getElementById('subNavReviewPrep')?.addEventListener('click', () => {
+        showSubSection('subSectionReviewPrep', 'subNavReviewPrep');
+        activateInnerTab('review-inner-tab', 'subSectionQ1Review', 'reviewInnerContent', function() {
+            if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
+        });
     });
+
+    // Consolidated: More Tools (Call Listening, Sentiment, PTO)
+    document.getElementById('subNavMoreTools')?.addEventListener('click', () => {
+        showSubSection('subSectionMoreTools', 'subNavMoreTools');
+        activateInnerTab('more-inner-tab', 'subSectionCallListening', 'moreInnerContent', initializeCallListeningSection);
+    });
+
+    // Inner tab click handlers for all consolidated sections
+    bindInnerTabHandlers();
 }
 
 function bindManageDataNavigationHandlers() {
@@ -1604,22 +1620,6 @@ function bindQuickActionHandlers() {
     document.getElementById('subNavTeamSnapshot')?.addEventListener('click', () => {
         showSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
         embedTeamSnapshot();
-    });
-    document.getElementById('subNavPto')?.addEventListener('click', () => {
-        showSubSection('subSectionPto', 'subNavPto');
-        embedPtoTracker();
-    });
-    document.getElementById('subNavFutures')?.addEventListener('click', () => {
-        showSubSection('subSectionFutures', 'subNavFutures');
-        if (typeof window.renderFutures === 'function') window.renderFutures();
-    });
-    document.getElementById('subNavQ1Review')?.addEventListener('click', () => {
-        showSubSection('subSectionQ1Review', 'subNavQ1Review');
-        if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
-    });
-    document.getElementById('subNavCenterRanking')?.addEventListener('click', () => {
-        showSubSection('subSectionCenterRanking', 'subNavCenterRanking');
-        if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
     });
 
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);
@@ -1703,8 +1703,82 @@ function handlePasteDataTextareaInput(event) {
     }
 }
 
-function handleSubNavMetricTrendsClick() {
-    showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
+// ============================================
+// CONSOLIDATED TAB INNER NAVIGATION
+// ============================================
+
+var INNER_TAB_INIT_MAP = {
+    subSectionOnOffTracker: function() { initializeOnOffTracker(); },
+    subSectionCenterRanking: function() { if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking(); },
+    subSectionFutures: function() { if (typeof window.renderFutures === 'function') window.renderFutures(); },
+    subSectionTrendIntelligence: function() { handleSubNavTrendIntelligenceClick(true); },
+    subSectionMetricTrends: function() { handleSubNavMetricTrendsClick(true); },
+    subSectionQ1Review: function() { if (typeof window.renderQ1Review === 'function') window.renderQ1Review(); },
+    subSectionYearEnd: function() { initializeYearEndComments(); },
+    subSectionCallListening: function() { initializeCallListeningSection(); },
+    subSectionSentiment: function() { handleSubNavSentimentClick(true); },
+    subSectionPto: function() { embedPtoTracker(); }
+};
+
+function activateInnerTab(tabClass, targetId, contentContainerId, initFn) {
+    // Move target sub-section into the content container
+    var container = document.getElementById(contentContainerId);
+    var target = document.getElementById(targetId);
+    if (!container || !target) return;
+
+    // Hide any currently shown sub-section in this container
+    Array.from(container.children).forEach(function(child) {
+        child.style.display = 'none';
+    });
+
+    // Move target into container if not already there
+    if (target.parentElement !== container) {
+        container.appendChild(target);
+    }
+    target.style.display = 'block';
+
+    // Update inner tab button styles
+    document.querySelectorAll('.' + tabClass).forEach(function(btn) {
+        if (btn.dataset.target === targetId) {
+            btn.style.background = btn.closest('#subSectionPerformance') ? '#1565c0' :
+                btn.closest('#subSectionTrends') ? '#9c27b0' :
+                btn.closest('#subSectionReviewPrep') ? '#d84315' : '#546e7a';
+            btn.style.color = 'white';
+        } else {
+            btn.style.background = '#e0e0e0';
+            btn.style.color = '#555';
+        }
+    });
+
+    // Initialize
+    if (typeof initFn === 'function') initFn();
+}
+
+function bindInnerTabHandlers() {
+    ['perf-inner-tab', 'trends-inner-tab', 'review-inner-tab', 'more-inner-tab'].forEach(function(tabClass) {
+        document.querySelectorAll('.' + tabClass).forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var targetId = btn.dataset.target;
+                var contentId = btn.closest('[id^="subSection"]')?.querySelector('[id$="InnerContent"]')?.id;
+                if (!contentId) {
+                    // Determine content container from tab class
+                    var map = {
+                        'perf-inner-tab': 'perfInnerContent',
+                        'trends-inner-tab': 'trendsInnerContent',
+                        'review-inner-tab': 'reviewInnerContent',
+                        'more-inner-tab': 'moreInnerContent'
+                    };
+                    contentId = map[tabClass];
+                }
+                var initFn = INNER_TAB_INIT_MAP[targetId];
+                activateInnerTab(tabClass, targetId, contentId, initFn);
+            });
+        });
+    });
+}
+
+function handleSubNavMetricTrendsClick(skipShowSubSection) {
+    if (!skipShowSubSection) showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
     const metricTrendsSection = document.getElementById('metricTrendsSection');
     const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
     if (metricTrendsSection && subSectionMetricTrends) {
@@ -1737,8 +1811,8 @@ function ensureTrendIntelligenceMounted() {
     }
 }
 
-function handleSubNavTrendIntelligenceClick() {
-    showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
+function handleSubNavTrendIntelligenceClick(skipShowSubSection) {
+    if (!skipShowSubSection) showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
     ensureTrendIntelligenceMounted();
     renderExecutiveSummary();
 
@@ -1794,8 +1868,8 @@ function handleDeleteEmployeeYearClick() {
     deleteEmployeeDataByYear(employeeName, reviewYear);
 }
 
-function handleSubNavSentimentClick() {
-    showSubSection('subSectionSentiment', 'subNavSentiment');
+function handleSubNavSentimentClick(skipShowSubSection) {
+    if (!skipShowSubSection) showSubSection('subSectionSentiment', 'subNavSentiment');
 
     const sentimentSection = document.getElementById('sentimentSection');
     const subSectionSentiment = document.getElementById('subSectionSentiment');

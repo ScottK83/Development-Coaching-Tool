@@ -173,19 +173,13 @@
                     <h2>💌 Coaching & Analysis</h2>
                     
                     <!-- Sub-navigation -->
-                    <div class="sub-nav">
-                        <button type="button" id="subNavCallListening" class="btn-secondary" style="background: #455a64; color: white;">🎧 Call Listening</button>
-                        <button type="button" id="subNavCenterRanking" class="btn-secondary" style="background: #0d47a1; color: white;">🏆 Center Ranking</button>
-                        <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
-                        <button type="button" id="subNavFutures" class="btn-secondary" style="background: #00897b; color: white;">🔮 Futures</button>
-                        <button type="button" id="subNavMetricTrends" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
-                        <button type="button" id="subNavOnOffTracker" class="btn-secondary" style="background: #6a1b9a; color: white;">📍 On/Off</button>
-                        <button type="button" id="subNavPto" class="btn-secondary" style="background: #2f7a6d; color: white;">🕒 PTO Tracker</button>
-                        <button type="button" id="subNavQ1Review" class="btn-secondary" style="background: #d84315; color: white;">📋 Q1 Prep</button>
-                        <button type="button" id="subNavSentiment" class="btn-secondary" style="background: #00acc1; color: white;">💬 Sentiment</button>
-                        <button type="button" id="subNavTeamSnapshot" class="btn-secondary" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white;">📊 Team Snapshot</button>
-                        <button type="button" id="subNavTrendIntelligence" class="btn-secondary" style="background: #ff9800; color: white;">📊 Trend Intelligence</button>
-                        <button type="button" id="subNavYearEnd" class="btn-secondary" style="background: #5e35b1; color: white;">🗓️ Year-End</button>
+                    <div class="sub-nav" style="border-bottom: 2px solid #7c4dff; gap: 8px;">
+                        <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white; font-size: 0.9em; padding: 8px 16px;">💌 Coaching</button>
+                        <button type="button" id="subNavTeamSnapshot" class="btn-secondary" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📊 Snapshot</button>
+                        <button type="button" id="subNavPerformance" class="btn-secondary" style="background: #1565c0; color: white; font-size: 0.9em; padding: 8px 16px;">🏆 Performance</button>
+                        <button type="button" id="subNavTrends" class="btn-secondary" style="background: #9c27b0; color: white; font-size: 0.9em; padding: 8px 16px;">📈 Trends</button>
+                        <button type="button" id="subNavReviewPrep" class="btn-secondary" style="background: #d84315; color: white; font-size: 0.9em; padding: 8px 16px;">📋 Review Prep</button>
+                        <button type="button" id="subNavMoreTools" class="btn-secondary" style="background: #546e7a; color: white; font-size: 0.9em; padding: 8px 16px;">🔧 More</button>
                     </div>
 
                     <!-- Coaching Email Sub-section -->
@@ -560,10 +554,48 @@ Box 2 - Future Improvement Areas:
 
                     <!-- Q1 Review Prep Sub-section -->
                     <div id="subSectionQ1Review" style="display: none;">
-                        <p style="color: #bf360c; margin-bottom: 20px;">Prepare for Q1 performance conversations with data-driven talking points and CoPilot-generated conversation guides.</p>
+                        <p style="color: #bf360c; margin-bottom: 20px;">Prepare for quarterly performance conversations with data-driven talking points and CoPilot-generated conversation guides.</p>
                         <div id="q1ReviewContent">
-                            <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading Q1 review prep...</p>
+                            <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading review prep...</p>
                         </div>
+                    </div>
+
+                    <!-- Consolidated: Performance (On/Off + Rankings + Futures) -->
+                    <div id="subSectionPerformance" style="display: none;">
+                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                            <button type="button" class="perf-inner-tab" data-target="subSectionOnOffTracker" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #1565c0; color: white;">📍 Score Card</button>
+                            <button type="button" class="perf-inner-tab" data-target="subSectionCenterRanking" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🏆 Rankings</button>
+                            <button type="button" class="perf-inner-tab" data-target="subSectionFutures" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🔮 Futures</button>
+                        </div>
+                        <div id="perfInnerContent"></div>
+                    </div>
+
+                    <!-- Consolidated: Trends (Metric Trends + Trend Intelligence) -->
+                    <div id="subSectionTrends" style="display: none;">
+                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                            <button type="button" class="trends-inner-tab" data-target="subSectionTrendIntelligence" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #9c27b0; color: white;">🧠 Intelligence</button>
+                            <button type="button" class="trends-inner-tab" data-target="subSectionMetricTrends" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">📈 Metric Charts</button>
+                        </div>
+                        <div id="trendsInnerContent"></div>
+                    </div>
+
+                    <!-- Consolidated: Review Prep (Q1/Q2/Q3/Q4 + Year-End) -->
+                    <div id="subSectionReviewPrep" style="display: none;">
+                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                            <button type="button" class="review-inner-tab" data-target="subSectionQ1Review" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #d84315; color: white;">📋 Quarterly</button>
+                            <button type="button" class="review-inner-tab" data-target="subSectionYearEnd" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🗓️ Year-End</button>
+                        </div>
+                        <div id="reviewInnerContent"></div>
+                    </div>
+
+                    <!-- Consolidated: More Tools (Call Listening, Sentiment, PTO) -->
+                    <div id="subSectionMoreTools" style="display: none;">
+                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                            <button type="button" class="more-inner-tab" data-target="subSectionCallListening" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #546e7a; color: white;">🎧 Call Listening</button>
+                            <button type="button" class="more-inner-tab" data-target="subSectionSentiment" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">💬 Sentiment</button>
+                            <button type="button" class="more-inner-tab" data-target="subSectionPto" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🕒 PTO</button>
+                        </div>
+                        <div id="moreInnerContent"></div>
                     </div>
 
                 </div>

@@ -26,7 +26,7 @@
         if (activeButtonId === undefined) activeButtonId = null;
 
         // Hide all sub-sections
-        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto', 'subSectionFutures', 'subSectionQ1Review', 'subSectionCenterRanking'];
+        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto', 'subSectionFutures', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionPerformance', 'subSectionTrends', 'subSectionReviewPrep', 'subSectionMoreTools'];
         subSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -39,7 +39,7 @@
         }
 
         // Update sub-nav button active states
-        var subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening', 'subNavTeamSnapshot', 'subNavPto', 'subNavFutures', 'subNavQ1Review', 'subNavCenterRanking'];
+        var subNavButtons = ['subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavPerformance', 'subNavTrends', 'subNavReviewPrep', 'subNavMoreTools'];
         var subSectionToButton = {
             subSectionCoachingEmail: 'subNavCoachingEmail',
             subSectionYearEnd: 'subNavYearEnd',
@@ -50,9 +50,13 @@
             subSectionCallListening: 'subNavCallListening',
             subSectionTeamSnapshot: 'subNavTeamSnapshot',
             subSectionPto: 'subNavPto',
-            subSectionFutures: 'subNavFutures',
-            subSectionQ1Review: 'subNavQ1Review',
-            subSectionCenterRanking: 'subNavCenterRanking'
+            subSectionFutures: 'subNavPerformance',
+            subSectionQ1Review: 'subNavReviewPrep',
+            subSectionCenterRanking: 'subNavPerformance',
+            subSectionPerformance: 'subNavPerformance',
+            subSectionTrends: 'subNavTrends',
+            subSectionReviewPrep: 'subNavReviewPrep',
+            subSectionMoreTools: 'subNavMoreTools'
         };
         var selectedSubNavButton = activeButtonId || subSectionToButton[subSectionId] || '';
 
@@ -167,9 +171,13 @@
             subSectionCallListening: 'subNavCallListening',
             subSectionTeamSnapshot: 'subNavTeamSnapshot',
             subSectionPto: 'subNavPto',
-            subSectionFutures: 'subNavFutures',
-            subSectionQ1Review: 'subNavQ1Review',
-            subSectionCenterRanking: 'subNavCenterRanking'
+            subSectionFutures: 'subNavPerformance',
+            subSectionQ1Review: 'subNavReviewPrep',
+            subSectionCenterRanking: 'subNavPerformance',
+            subSectionPerformance: 'subNavPerformance',
+            subSectionTrends: 'subNavTrends',
+            subSectionReviewPrep: 'subNavReviewPrep',
+            subSectionMoreTools: 'subNavMoreTools'
         };
 
         var manageDataSubSectionToButton = {
