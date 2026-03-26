@@ -237,11 +237,41 @@
         var wData = _getWeeklyData();
         var latestKey = weekInfo.yearKeys.length > 0 ? weekInfo.yearKeys[weekInfo.yearKeys.length - 1] : null;
 
-        // Get team members from latest week
+        // Get team members from latest period (weekly or YTD)
         var teamMembers = [];
-        if (latestKey && wData[latestKey]) {
-            var members = _getTeamMembersForWeek(latestKey);
-            var allEmps = (wData[latestKey].employees || []).map(function (e) { return e.name; });
+        var teamSourcePeriod = latestKey && wData[latestKey] ? wData[latestKey] : null;
+
+        // Fall back to YTD data if no weekly data
+        if (!teamSourcePeriod) {
+            var yData = _getYtdData();
+            var bestYtdKey = null;
+            var bestYtdDate = 0;
+            Object.keys(yData).forEach(function (k) {
+                var meta = yData[k]?.metadata || {};
+                var endStr = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
+                var endYear = parseInt(String(endStr).split('-')[0], 10);
+                if (endYear !== currentYear) return;
+                var d = new Date(endStr);
+                if (!isNaN(d) && d.getTime() > bestYtdDate) {
+                    bestYtdDate = d.getTime();
+                    bestYtdKey = k;
+                }
+            });
+            if (bestYtdKey) {
+                teamSourcePeriod = yData[bestYtdKey];
+                latestKey = bestYtdKey;
+            }
+        }
+
+        if (teamSourcePeriod) {
+            var teamFilter = window.DevCoachModules?.teamFilter;
+            var filterKey = latestKey;
+            if (teamFilter?.getTeamSelectionContext) {
+                var ctx = teamFilter.getTeamSelectionContext();
+                if (ctx.weekKey) filterKey = ctx.weekKey;
+            }
+            var members = _getTeamMembersForWeek(filterKey);
+            var allEmps = (teamSourcePeriod.employees || []).map(function (e) { return e.name; });
             teamMembers = members.length > 0 ? allEmps.filter(function (n) { return members.includes(n); }) : allEmps;
         }
         // Sort alphabetically by first name
@@ -378,7 +408,7 @@
         var weekInfo = data.weekInfo;
 
         if (data.employees.length === 0) {
-            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No data available. Upload weekly data to see projections.</p>';
+            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No data available. Upload data to see projections.</p>';
             return;
         }
 
