@@ -400,6 +400,17 @@
         html += '</select>';
         html += '</div>';
 
+        // Timeframe toggle
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">';
+        html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Show targets as:</label>';
+        html += '<div style="display: flex; gap: 8px;">';
+        ['Daily', 'Weekly', 'Monthly'].forEach(function (label) {
+            var val = label.toLowerCase();
+            var isDefault = val === 'weekly';
+            html += '<button type="button" class="futures-timeframe-btn" data-timeframe="' + val + '" style="padding: 8px 18px; border: 2px solid ' + (isDefault ? '#4caf50' : '#ddd') + '; background: ' + (isDefault ? '#4caf50' : 'white') + '; color: ' + (isDefault ? 'white' : '#666') + '; border-radius: 4px; cursor: pointer; font-weight: bold;">' + label + '</button>';
+        });
+        html += '</div></div>';
+
         // Content area
         html += '<div id="futuresTableContainer"></div>';
 
@@ -409,15 +420,29 @@
         var select = document.getElementById('futuresEmployeeSelect');
         if (select) {
             select.addEventListener('change', function () {
-                renderFuturesTable(data, select.value);
+                var tf = document.querySelector('.futures-timeframe-btn[style*="background: rgb(76, 175, 80)"]')?.dataset?.timeframe || 'weekly';
+                renderFuturesTable(data, select.value, tf);
             });
         }
 
+        // Bind timeframe buttons
+        document.querySelectorAll('.futures-timeframe-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.futures-timeframe-btn').forEach(function (b) {
+                    b.style.background = 'white'; b.style.color = '#666'; b.style.borderColor = '#ddd';
+                });
+                btn.style.background = '#4caf50'; btn.style.color = 'white'; btn.style.borderColor = '#4caf50';
+                var empVal = document.getElementById('futuresEmployeeSelect')?.value || '__all__';
+                renderFuturesTable(data, empVal, btn.dataset.timeframe);
+            });
+        });
+
         // Initial render
-        renderFuturesTable(data, '__all__');
+        renderFuturesTable(data, '__all__', 'weekly');
     }
 
-    function renderFuturesTable(data, selectedEmployee) {
+    function renderFuturesTable(data, selectedEmployee, timeframe) {
+        timeframe = timeframe || 'weekly';
         var tableContainer = document.getElementById('futuresTableContainer');
         if (!tableContainer) return;
 
@@ -448,8 +473,9 @@
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">YTD</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Target</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e8f5e9;">Need to Meet</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e3f2fd;">Need to Exceed</th>';
+            var tfLabel = timeframe === 'daily' ? 'Avg/Day' : timeframe === 'monthly' ? 'Avg/Month' : 'Avg/Week';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e8f5e9;">Meet (' + tfLabel + ')</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e3f2fd;">Exceed (' + tfLabel + ')</th>';
             html += '</tr></thead><tbody>';
 
             var metricKeys = Object.keys(emp.metrics);
@@ -494,18 +520,24 @@
                 }
                 html += '<td style="padding: 8px; text-align: center;"><span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; color: white; background: ' + statusColor + ';">' + statusText + '</span></td>';
 
+                // Timeframe divisor for cumulative budgets
+                var weeksLeft = data.weekInfo.weeksRemaining;
+                var tfDivisor = timeframe === 'daily' ? (weeksLeft * 5) : timeframe === 'monthly' ? (weeksLeft / 4.33) : weeksLeft;
+                var tfSuffix = timeframe === 'daily' ? '/day' : timeframe === 'monthly' ? '/mo' : '/wk';
+
                 // Required to meet
                 html += '<td style="padding: 8px; text-align: center; background: rgba(232,245,233,0.3);">';
                 if (m.isCumulative) {
                     if (m.currentlyMeeting) {
-                        html += '<span style="color: #2e7d32; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.budgetRemaining) + ' remaining</span>';
+                        var meetBudgetPer = tfDivisor > 0 ? m.budgetRemaining / tfDivisor : 0;
+                        html += '<span style="color: #2e7d32; font-weight: bold;">' + _formatMetricDisplay(metricKey, meetBudgetPer) + tfSuffix + ' left</span>';
                     } else {
                         html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyMeeting) {
                     html += '<span style="color: #2e7d32; font-weight: bold;">On track</span>';
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
-                    html += '<span style="color: #e65100; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + '</span>';
+                    html += '<span style="color: #e65100; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
                 } else if (m.requiredToMeet !== null && !m.meetAchievable) {
                     html += '<span style="color: #c62828; font-size: 0.85em;">Not achievable</span>';
                 } else {
@@ -519,14 +551,15 @@
                     html += '<span style="color: #999; font-size: 0.85em;">No band</span>';
                 } else if (m.isCumulative) {
                     if (m.currentlyExceeding) {
-                        html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.exceedBudgetRemaining) + ' remaining</span>';
+                        var excBudgetPer = tfDivisor > 0 ? m.exceedBudgetRemaining / tfDivisor : 0;
+                        html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, excBudgetPer) + tfSuffix + ' left</span>';
                     } else {
                         html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyExceeding) {
                     html += '<span style="color: #1565c0; font-weight: bold;">On track</span>';
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
-                    html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + '</span>';
+                    html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
                 } else if (m.requiredToExceed !== null && !m.exceedAchievable) {
                     html += '<span style="color: #c62828; font-size: 0.85em;">Not achievable</span>';
                 } else {
