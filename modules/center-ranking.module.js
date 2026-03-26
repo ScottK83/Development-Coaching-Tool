@@ -224,17 +224,18 @@
         html += '<h4 style="margin-top: 0; color: #1a1a2e;">Full Center Rankings</h4>';
         html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Ranked by average position across all 5 metrics. Each metric shows the value and individual rank (#).</p>';
         html += '<div style="overflow-x: auto;">';
-        html += '<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.88em;">';
+        html += '<table style="width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 0.85em;">';
         html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd; width: 45px;">Rank</th>';
-        html += '<th style="padding: 8px 6px; text-align: left; border-bottom: 2px solid #ddd; min-width: 130px;">Name</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Avg Rank</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">AHT</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Adherence</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Sentiment</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Assoc Overall</th>';
-        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Reliability</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd; width: 40px;">Rank</th>';
+        html += '<th style="padding: 8px 5px; text-align: left; border-bottom: 2px solid #ddd; min-width: 120px;">Name</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Avg Rank</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Score</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">AHT</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Adherence</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Sentiment</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Assoc Overall</th>';
+        html += '<th style="padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd;">Reliability</th>';
         html += '</tr></thead><tbody>';
 
         data.rankings.forEach(function (r) {
@@ -262,10 +263,13 @@
             html += _escapeHtml(r.name) + '</td>';
 
             // Composite average rank
-            html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
+            html += '<td style="padding: 6px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
+
+            // 1-3 Score (rating average)
+            html += '<td style="padding: 6px; text-align: center; font-weight: bold; color: ' + statusColor + ';">' + r.ratingAverage.toFixed(2) + '</td>';
 
             // Status badge
-            html += '<td style="padding: 8px; text-align: center;"><span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; background: ' + statusColor + ';">';
+            html += '<td style="padding: 6px; text-align: center;"><span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.75em; font-weight: bold; color: white; background: ' + statusColor + ';">';
             if (r.trackStatusValue === 'on-track-exceptional') html += 'Exceptional';
             else if (r.trackStatusValue === 'on-track-successful') html += 'Successful';
             else html += 'Off Track';
@@ -285,8 +289,11 @@
                 var color = mp.score !== null ? scoreColor(mp.score) : '#333';
                 var metricRank = r.metricRanks?.[mp.rankKey] || '?';
                 var rankColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
-                html += '<td style="padding: 6px; text-align: center; color: ' + color + ';">' +
-                    display + ' <span style="font-size: 0.75em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
+                var scoreBadge = mp.score !== null
+                    ? '<span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; color: white; background: ' + scoreColor(mp.score) + '; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
+                    : '';
+                html += '<td style="padding: 5px; text-align: center; color: ' + color + '; white-space: nowrap;">' +
+                    scoreBadge + display + ' <span style="font-size: 0.72em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';
