@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.03.20.38'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.03.26.39'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1639,6 +1639,14 @@ function bindQuickActionHandlers() {
     document.getElementById('subNavPto')?.addEventListener('click', () => {
         showSubSection('subSectionPto', 'subNavPto');
         embedPtoTracker();
+    });
+    document.getElementById('subNavFutures')?.addEventListener('click', () => {
+        showSubSection('subSectionFutures', 'subNavFutures');
+        if (typeof window.renderFutures === 'function') window.renderFutures();
+    });
+    document.getElementById('subNavQ1Review')?.addEventListener('click', () => {
+        showSubSection('subSectionQ1Review', 'subNavQ1Review');
+        if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
     });
 
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);

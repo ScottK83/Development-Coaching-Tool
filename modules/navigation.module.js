@@ -26,7 +26,7 @@
         if (activeButtonId === undefined) activeButtonId = null;
 
         // Hide all sub-sections
-        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto'];
+        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto', 'subSectionFutures', 'subSectionQ1Review'];
         subSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -39,7 +39,7 @@
         }
 
         // Update sub-nav button active states
-        var subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening', 'subNavTeamSnapshot', 'subNavPto'];
+        var subNavButtons = ['subNavCoachingEmail', 'subNavYearEnd', 'subNavOnOffTracker', 'subNavSentiment', 'subNavMetricTrends', 'subNavTrendIntelligence', 'subNavCallListening', 'subNavTeamSnapshot', 'subNavPto', 'subNavFutures', 'subNavQ1Review'];
         var subSectionToButton = {
             subSectionCoachingEmail: 'subNavCoachingEmail',
             subSectionYearEnd: 'subNavYearEnd',
@@ -49,7 +49,9 @@
             subSectionTrendIntelligence: 'subNavTrendIntelligence',
             subSectionCallListening: 'subNavCallListening',
             subSectionTeamSnapshot: 'subNavTeamSnapshot',
-            subSectionPto: 'subNavPto'
+            subSectionPto: 'subNavPto',
+            subSectionFutures: 'subNavFutures',
+            subSectionQ1Review: 'subNavQ1Review'
         };
         var selectedSubNavButton = activeButtonId || subSectionToButton[subSectionId] || '';
 
@@ -163,7 +165,9 @@
             subSectionTrendIntelligence: 'subNavTrendIntelligence',
             subSectionCallListening: 'subNavCallListening',
             subSectionTeamSnapshot: 'subNavTeamSnapshot',
-            subSectionPto: 'subNavPto'
+            subSectionPto: 'subNavPto',
+            subSectionFutures: 'subNavFutures',
+            subSectionQ1Review: 'subNavQ1Review'
         };
 
         var manageDataSubSectionToButton = {

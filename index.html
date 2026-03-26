@@ -234,6 +234,8 @@
                         <button type="button" id="subNavPto" class="btn-secondary" style="background: #2f7a6d; color: white;">🕒 PTO Tracker</button>
                         <button type="button" id="subNavYearEnd" class="btn-secondary" style="background: #5e35b1; color: white;">🗓️ Year-End</button>
                         <button type="button" id="subNavOnOffTracker" class="btn-secondary" style="background: #6a1b9a; color: white;">📍 On/Off</button>
+                        <button type="button" id="subNavFutures" class="btn-secondary" style="background: #00897b; color: white;">🔮 Futures</button>
+                        <button type="button" id="subNavQ1Review" class="btn-secondary" style="background: #d84315; color: white;">📋 Q1 Prep</button>
                     </div>
 
                     <!-- Coaching Email Sub-section -->
@@ -588,6 +590,22 @@ Box 2 - Future Improvement Areas:
                     <!-- PTO Tracker Sub-section (embedded from standalone) -->
                     <div id="subSectionPto" style="display: none;">
                         <div id="embeddedPto"></div>
+                    </div>
+
+                    <!-- Futures Projection Sub-section -->
+                    <div id="subSectionFutures" style="display: none;">
+                        <p style="color: #00695c; margin-bottom: 20px;">See what your team members need to average for the rest of the year to meet or exceed goals.</p>
+                        <div id="futuresContent">
+                            <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading futures projections...</p>
+                        </div>
+                    </div>
+
+                    <!-- Q1 Review Prep Sub-section -->
+                    <div id="subSectionQ1Review" style="display: none;">
+                        <p style="color: #bf360c; margin-bottom: 20px;">Prepare for Q1 performance conversations with data-driven talking points and CoPilot-generated conversation guides.</p>
+                        <div id="q1ReviewContent">
+                            <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading Q1 review prep...</p>
+                        </div>
                     </div>
 
                 </div>
@@ -1726,6 +1744,8 @@ Box 2 - Future Improvement Areas:
     <script src="modules/trend-coaching-email.module.js"></script>
     <script src="modules/copilot-prompt.module.js"></script>
     <script src="modules/team-snapshot.module.js"></script>
+    <script src="modules/futures.module.js"></script>
+    <script src="modules/q1-review.module.js"></script>
     <script src="modules/dashboard.module.js"></script>
 
     <!-- Main Application -->
