@@ -156,8 +156,15 @@
         // Assign overall rank
         rankings.forEach(function (r, i) { r.rank = i + 1; });
 
-        // Identify team members
+        // Identify team members — check weekly keys first, fall back to YTD/any key
         var latestKey = _getLatestWeeklyKey();
+        if (!latestKey) {
+            // Try team filter module's resolution which checks ytdData too
+            var teamFilter = window.DevCoachModules?.teamFilter;
+            if (teamFilter?.getTeamSelectionContext) {
+                latestKey = teamFilter.getTeamSelectionContext().weekKey || '';
+            }
+        }
         var teamMembers = latestKey ? _getTeamMembersForWeek(latestKey) : [];
         var teamSet = new Set(teamMembers);
 
