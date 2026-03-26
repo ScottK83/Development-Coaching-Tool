@@ -8,30 +8,8 @@
     /**
      * Show toast notification
      */
-    function showToast(message, duration = 5000) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.setAttribute('role', 'status');
-        toast.setAttribute('aria-live', 'polite');
-        toast.setAttribute('aria-atomic', 'true');
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #28a745;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            font-size: 14px;
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
+    function showToast(message, duration) {
+        if (typeof window.showToast === 'function') return window.showToast(message, duration);
     }
 
     /**

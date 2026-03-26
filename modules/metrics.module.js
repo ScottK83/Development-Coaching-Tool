@@ -85,27 +85,9 @@
         return metric?.target?.value || 0;
     }
 
-    function metricMeetsTarget(metricKey, value) {
-        const def = METRICS_REGISTRY?.[metricKey];
-        if (!def || value === undefined || value === null || value === '') return false;
-        const target = def.target?.value ?? getMetricTarget(metricKey);
-        if (isReverseMetric(metricKey)) {
-            return value <= target;
-        }
-        return value >= target;
-    }
-
-    function metricGapToTarget(metricKey, value) {
-        const def = METRICS_REGISTRY?.[metricKey];
-        const target = def?.target?.value ?? getMetricTarget(metricKey);
-        if (value === undefined || value === null || value === '') return 0;
-        return isReverseMetric(metricKey) ? (value - target) : (target - value);
-    }
-
-    function metricDelta(metricKey, current, previous) {
-        if (current === undefined || previous === undefined) return 0;
-        return isReverseMetric(metricKey) ? (previous - current) : (current - previous);
-    }
+    function metricMeetsTarget(key, value) { return typeof window.metricMeetsTarget === 'function' ? window.metricMeetsTarget(key, value) : false; }
+    function metricGapToTarget(key, value) { return typeof window.metricGapToTarget === 'function' ? window.metricGapToTarget(key, value) : 0; }
+    function metricDelta(key, current, previous) { return typeof window.metricDelta === 'function' ? window.metricDelta(key, current, previous) : 0; }
 
     function getMetricSeverity(metricKey, value) {
         const gap = Math.abs(metricGapToTarget(metricKey, value));

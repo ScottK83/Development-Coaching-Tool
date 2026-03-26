@@ -539,10 +539,10 @@ function renderFollowUpHistory() {
     }).join('');
 }
 
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+function escapeHtml(text) {
+    var mod = window.DevCoachModules?.sharedUtils;
+    if (mod?.escapeHtml) return mod.escapeHtml(text);
+    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ============================================

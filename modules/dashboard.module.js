@@ -10,8 +10,9 @@
     var STORAGE_PREFIX = 'devCoachingTool_';
 
     function escapeHtml(text) {
-        var str = String(text ?? '');
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        var mod = window.DevCoachModules?.sharedUtils;
+        if (mod?.escapeHtml) return mod.escapeHtml(text);
+        return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     function getWeeklyData() {
@@ -248,13 +249,7 @@
     }
 
     function formatWeekLabel(weekKey) {
-        var parts = weekKey.split('|');
-        var endDate = parts[1] || parts[0] || '';
-        if (!endDate) return weekKey;
-        try {
-            var d = new Date(endDate + 'T12:00:00');
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        } catch(e) { return endDate; }
+        return typeof window.formatWeekLabel === 'function' ? window.formatWeekLabel(weekKey) : weekKey;
     }
 
     function getYtdData() {

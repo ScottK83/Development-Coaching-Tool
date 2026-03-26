@@ -6103,22 +6103,8 @@ if (document.readyState === 'loading') {
 // -----------------------------------------------------------------------------
 
 function getLatestWeekKeyForCoaching() {
-    const weekKeys = Object.keys(weeklyData || {}).concat(Object.keys(ytdData || {}));
-    if (weekKeys.length === 0) return null;
-
-    const getEndDate = (weekKey) => {
-        const period = weeklyData[weekKey] || ytdData[weekKey];
-        const metaEnd = period?.metadata?.endDate;
-        if (metaEnd) return new Date(metaEnd);
-        const parts = weekKey.split('|');
-        const endDate = parts[1] || parts[0];
-        return new Date(endDate);
-    };
-
-    return weekKeys.reduce((latest, key) => {
-        if (!latest) return key;
-        return getEndDate(key) > getEndDate(latest) ? key : latest;
-    }, null);
+    var mod = window.DevCoachModules?.coachingEmail;
+    return mod?.getLatestWeekKeyForCoaching ? mod.getLatestWeekKeyForCoaching() : null;
 }
 
 function resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn) {
