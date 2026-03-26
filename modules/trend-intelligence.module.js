@@ -76,12 +76,36 @@
             const centerValue = centerAvg[metricKey];
             if (centerValue === undefined || centerValue === null || centerValue === '') return;
 
-            const values = filteredEmployees
-                .map(emp => parseFloat(emp[metricKey]))
-                .filter(v => !Number.isNaN(v) && v !== null && v !== undefined);
-            if (values.length === 0) return;
+            const isCumulative = metricKey === 'reliability';
+            const isSurveyWeighted = metricKey === 'cxRepOverall' || metricKey === 'fcr' || metricKey === 'overallExperience';
 
-            const teamAvg = values.reduce((sum, v) => sum + v, 0) / values.length;
+            let teamAvg;
+            if (isCumulative) {
+                // Cumulative metrics: sum across team
+                teamAvg = filteredEmployees.reduce((sum, emp) => {
+                    const v = parseFloat(emp[metricKey]);
+                    return sum + (Number.isFinite(v) ? v : 0);
+                }, 0);
+                if (teamAvg === 0 && !filteredEmployees.some(emp => Number.isFinite(parseFloat(emp[metricKey])))) return;
+            } else {
+                // Rate metrics: weighted average by totalCalls or surveyTotal
+                let wSum = 0, wCount = 0;
+                filteredEmployees.forEach(emp => {
+                    const v = parseFloat(emp[metricKey]);
+                    if (!Number.isFinite(v)) return;
+                    const tc = parseInt(emp.totalCalls, 10);
+                    const st = parseInt(emp.surveyTotal, 10);
+                    let w = 1;
+                    if (isSurveyWeighted) {
+                        w = Number.isInteger(st) && st > 0 ? st : 0;
+                    } else {
+                        w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                    }
+                    if (w > 0) { wSum += v * w; wCount += w; }
+                });
+                if (wCount === 0) return;
+                teamAvg = wSum / wCount;
+            }
             const numericCenter = parseFloat(centerValue);
             if (Number.isNaN(teamAvg) || Number.isNaN(numericCenter)) return;
 

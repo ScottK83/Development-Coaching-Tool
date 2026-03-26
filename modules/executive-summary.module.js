@@ -115,16 +115,26 @@
     // YEARLY AVERAGE / PREVIOUS PERIOD DATA
     // ============================================
 
+    // Cumulative metrics should be summed, not averaged
+    var CUMULATIVE_METRICS = { reliability: true };
+    // Survey-weighted metrics use surveyTotal as weight instead of totalCalls
+    var SURVEY_WEIGHTED_METRICS = { cxRepOverall: true, fcr: true, overallExperience: true };
+
     function getYearlyAverageForEmployee(employeeName, metricKey) {
         /**
-         * Calculate employee's yearly average (Jan 1 - current date) for a specific metric
+         * Calculate employee's yearly value (Jan 1 - current date) for a specific metric.
+         * Uses weighted averages for rate metrics, sums for cumulative metrics.
          * Returns: { value: number, count: number } or null if no data
          */
         var currentYear = new Date().getFullYear();
         var weeklyData = getWeeklyData();
+        var isCumulative = CUMULATIVE_METRICS[metricKey];
+        var isSurveyWeighted = SURVEY_WEIGHTED_METRICS[metricKey];
 
-        var sums = {};
-        var counts = {};
+        var weightedSum = 0;
+        var totalWeight = 0;
+        var cumulativeSum = 0;
+        var periodCount = 0;
 
         Object.entries(weeklyData).forEach(function(entry) {
             var weekKey = entry[0];
@@ -133,25 +143,40 @@
             var endDateStr = parts[1] || '';
             var endYear = parseInt(endDateStr.split('-')[0], 10);
 
-            // Only include data from current year up to today
             if (endYear === currentYear) {
                 (weekData.employees || []).forEach(function(emp) {
                     if (emp.name === employeeName) {
                         var value = parseFloat(emp[metricKey]);
                         if (!isNaN(value)) {
-                            sums[metricKey] = (sums[metricKey] || 0) + value;
-                            counts[metricKey] = (counts[metricKey] || 0) + 1;
+                            periodCount++;
+                            if (isCumulative) {
+                                cumulativeSum += value;
+                            } else {
+                                var w = 1;
+                                if (isSurveyWeighted) {
+                                    var st = parseInt(emp.surveyTotal, 10);
+                                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                                } else {
+                                    var tc = parseInt(emp.totalCalls, 10);
+                                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                                }
+                                if (w > 0) {
+                                    weightedSum += value * w;
+                                    totalWeight += w;
+                                }
+                            }
                         }
                     }
                 });
             }
         });
 
-        if (counts[metricKey] && counts[metricKey] > 0) {
-            return {
-                value: parseFloat((sums[metricKey] / counts[metricKey]).toFixed(2)),
-                count: counts[metricKey]
-            };
+        if (isCumulative && periodCount > 0) {
+            return { value: parseFloat(cumulativeSum.toFixed(2)), count: periodCount };
+        }
+
+        if (totalWeight > 0) {
+            return { value: parseFloat((weightedSum / totalWeight).toFixed(2)), count: periodCount };
         }
 
         return null;
@@ -233,13 +258,19 @@
         var metrics = {
             totalWeeks: 0,
             totalEmployees: new Set(),
-            averagesByMetric: {},
+            averagesByMetric: {},   // kept for backward compat (flat arrays)
+            weightedSums: {},       // for proper weighted averaging
+            weightedCounts: {},
+            cumulativeSums: {},     // for cumulative metrics like reliability
             activeYear: activeYear,
             selectedAssociate: selectedAssociate
         };
 
         metricKeys.forEach(function(metricKey) {
             metrics.averagesByMetric[metricKey] = [];
+            metrics.weightedSums[metricKey] = 0;
+            metrics.weightedCounts[metricKey] = 0;
+            metrics.cumulativeSums[metricKey] = 0;
         });
 
         var teamFilterContext = getTeamSelectionContext();
@@ -263,10 +294,28 @@
 
                 metrics.totalEmployees.add(emp.name);
 
+                var tc = parseInt(emp.totalCalls, 10);
+                var st = parseInt(emp.surveyTotal, 10);
+
                 metricKeys.forEach(function(metricKey) {
                     var value = parseFloat(emp[metricKey]);
                     if (!Number.isFinite(value)) return;
                     metrics.averagesByMetric[metricKey].push(value);
+
+                    if (CUMULATIVE_METRICS[metricKey]) {
+                        metrics.cumulativeSums[metricKey] += value;
+                    } else {
+                        var w = 1;
+                        if (SURVEY_WEIGHTED_METRICS[metricKey]) {
+                            w = Number.isInteger(st) && st > 0 ? st : 0;
+                        } else {
+                            w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                        }
+                        if (w > 0) {
+                            metrics.weightedSums[metricKey] += value * w;
+                            metrics.weightedCounts[metricKey] += w;
+                        }
+                    }
                 });
             });
         });
@@ -286,7 +335,14 @@
                 averages[metricKey] = null;
                 return;
             }
-            averages[metricKey] = values.reduce(function(sum, value) { return sum + value; }, 0) / values.length;
+            if (CUMULATIVE_METRICS[metricKey]) {
+                averages[metricKey] = metrics.cumulativeSums[metricKey] || 0;
+            } else if (metrics.weightedCounts[metricKey] > 0) {
+                averages[metricKey] = metrics.weightedSums[metricKey] / metrics.weightedCounts[metricKey];
+            } else {
+                // Fallback to simple average if no weights available
+                averages[metricKey] = values.reduce(function(sum, value) { return sum + value; }, 0) / values.length;
+            }
         });
         return averages;
     }
@@ -727,27 +783,42 @@
     // ============================================
 
     function calculateExecutiveSummaryYtdAverages(periods) {
-        var sums = {
-            scheduleAdherence: { total: 0, count: 0 },
-            overallExperience: { total: 0, count: 0 },
-            fcr: { total: 0, count: 0 },
-            transfers: { total: 0, count: 0 }
-        };
+        var metricKeys = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers'];
+        var weightedSums = {};
+        var weightedCounts = {};
+
+        metricKeys.forEach(function(mk) {
+            weightedSums[mk] = 0;
+            weightedCounts[mk] = 0;
+        });
 
         periods.forEach(function(period) {
             if (!period.employee) return;
+            var tc = parseInt(period.employee.totalCalls, 10);
+            var st = parseInt(period.employee.surveyTotal, 10);
 
-            Object.keys(sums).forEach(function(metricKey) {
+            metricKeys.forEach(function(metricKey) {
                 var value = period.employee[metricKey];
                 if (value === undefined || value === null || value === '') return;
-                sums[metricKey].total += parseFloat(value);
-                sums[metricKey].count += 1;
+                var numVal = parseFloat(value);
+                if (isNaN(numVal)) return;
+
+                var w = 1;
+                if (SURVEY_WEIGHTED_METRICS[metricKey]) {
+                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                } else {
+                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                }
+                if (w > 0) {
+                    weightedSums[metricKey] += numVal * w;
+                    weightedCounts[metricKey] += w;
+                }
             });
         });
 
         var average = function(metricKey) {
-            return sums[metricKey].count > 0
-                ? (sums[metricKey].total / sums[metricKey].count).toFixed(1)
+            return weightedCounts[metricKey] > 0
+                ? (weightedSums[metricKey] / weightedCounts[metricKey]).toFixed(1)
                 : 0;
         };
 

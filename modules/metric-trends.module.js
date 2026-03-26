@@ -3605,19 +3605,43 @@ function collectTeamTrendMetrics(period) {
     const filteredEmployees = getFilteredEmployeesForPeriod(period, teamFilterContext);
     if (!filteredEmployees.length) return [];
 
+    const SURVEY_WEIGHTED = { cxRepOverall: true, fcr: true, overallExperience: true };
     const teamMetrics = [];
 
     getMetricOrder().forEach(({ key }) => {
         const metricDef = METRICS_REGISTRY[key];
         if (!metricDef) return;
 
-        const values = filteredEmployees
-            .map(emp => parseFloat(emp[key]))
-            .filter(value => !Number.isNaN(value));
+        let teamValue;
+        if (key === 'reliability') {
+            // Cumulative: sum across team
+            let sum = 0, hasData = false;
+            filteredEmployees.forEach(emp => {
+                const v = parseFloat(emp[key]);
+                if (Number.isFinite(v)) { sum += v; hasData = true; }
+            });
+            if (!hasData) return;
+            teamValue = sum;
+        } else {
+            // Rate metrics: weighted average
+            let wSum = 0, wCount = 0;
+            filteredEmployees.forEach(emp => {
+                const v = parseFloat(emp[key]);
+                if (!Number.isFinite(v)) return;
+                const tc = parseInt(emp.totalCalls, 10);
+                const st = parseInt(emp.surveyTotal, 10);
+                let w = 1;
+                if (SURVEY_WEIGHTED[key]) {
+                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                } else {
+                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                }
+                if (w > 0) { wSum += v * w; wCount += w; }
+            });
+            if (wCount === 0) return;
+            teamValue = wSum / wCount;
+        }
 
-        if (values.length === 0) return;
-
-        const teamValue = values.reduce((sum, value) => sum + value, 0) / values.length;
         const target = getMetricTrendTarget(key);
         const targetType = getMetricTrendTargetType(key);
         const meetsTarget = targetType === 'min' ? teamValue >= target : teamValue <= target;
@@ -3647,20 +3671,10 @@ function buildTeamTrendAggregateEmployee(period) {
     const filteredEmployees = getFilteredEmployeesForPeriod(period, teamFilterContext);
     if (!filteredEmployees.length) return null;
 
+    const SURVEY_WEIGHTED = { cxRepOverall: true, fcr: true, overallExperience: true };
     const aggregate = { name: 'Team Combined', isTeamAggregate: true };
 
-    getMetricOrder().forEach(({ key }) => {
-        const values = filteredEmployees
-            .map(emp => parseFloat(emp?.[key]))
-            .filter(value => !Number.isNaN(value));
-
-        if (values.length === 0) {
-            return;
-        }
-
-        aggregate[key] = values.reduce((sum, value) => sum + value, 0) / values.length;
-    });
-
+    // First compute totalCalls and surveyTotal (needed for weighting)
     const totalSurveyCount = filteredEmployees
         .map(emp => {
             const surveyTotal = parseFloat(emp?.surveyTotal);
@@ -3684,6 +3698,36 @@ function buildTeamTrendAggregateEmployee(period) {
     if (totalCalls > 0) {
         aggregate.totalCalls = totalCalls;
     }
+
+    // Compute metrics with proper weighting
+    getMetricOrder().forEach(({ key }) => {
+        if (key === 'reliability') {
+            // Cumulative: sum across team
+            let sum = 0, hasData = false;
+            filteredEmployees.forEach(emp => {
+                const v = parseFloat(emp?.[key]);
+                if (Number.isFinite(v)) { sum += v; hasData = true; }
+            });
+            if (hasData) aggregate[key] = sum;
+        } else {
+            // Rate metrics: weighted average
+            let wSum = 0, wCount = 0;
+            filteredEmployees.forEach(emp => {
+                const v = parseFloat(emp?.[key]);
+                if (!Number.isFinite(v)) return;
+                const tc = parseInt(emp?.totalCalls, 10);
+                const st = parseInt(emp?.surveyTotal, 10);
+                let w = 1;
+                if (SURVEY_WEIGHTED[key]) {
+                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                } else {
+                    w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                }
+                if (w > 0) { wSum += v * w; wCount += w; }
+            });
+            if (wCount > 0) aggregate[key] = wSum / wCount;
+        }
+    });
 
     return aggregate;
 }
