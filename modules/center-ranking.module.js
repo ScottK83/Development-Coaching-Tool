@@ -290,25 +290,25 @@
             return sortDir === 'asc' ? (aVal - bVal) : (bVal - aVal);
         });
 
-        var thStyle = 'padding: 8px 5px; text-align: center; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none;';
+        var thStyle = 'padding: 6px 3px; text-align: center; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none; font-size: 0.85em;';
         var arrow = function(key) {
             if (key !== sortKey) return ' <span style="opacity: 0.3;">&#8597;</span>';
             return sortDir === 'asc' ? ' <span style="color: #1565c0;">&#9650;</span>' : ' <span style="color: #1565c0;">&#9660;</span>';
         };
 
-        var html = '<div style="overflow-x: auto;">';
-        html += '<table style="width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 0.85em;">';
+        var html = '<div>';
+        html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="' + thStyle + ' width: 40px;">#</th>';
-        html += '<th style="' + thStyle + ' text-align: left; min-width: 120px;">Name</th>';
-        html += '<th class="rank-sort-header" data-sort="composite" style="' + thStyle + '">Avg Rank' + arrow('composite') + '</th>';
+        html += '<th style="' + thStyle + ' width: 30px;">#</th>';
+        html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
+        html += '<th class="rank-sort-header" data-sort="composite" style="' + thStyle + '">Avg' + arrow('composite') + '</th>';
         html += '<th class="rank-sort-header" data-sort="score" style="' + thStyle + '">Score' + arrow('score') + '</th>';
         html += '<th style="' + thStyle + '">Status</th>';
         html += '<th class="rank-sort-header" data-sort="aht" style="' + thStyle + '">AHT' + arrow('aht') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="adherence" style="' + thStyle + '">Adherence' + arrow('adherence') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="sentiment" style="' + thStyle + '">Sentiment' + arrow('sentiment') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">Assoc Overall' + arrow('associateOverall') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Reliability' + arrow('reliability') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="adherence" style="' + thStyle + '">Adh' + arrow('adherence') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="sentiment" style="' + thStyle + '">Sent' + arrow('sentiment') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">Assoc' + arrow('associateOverall') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Rel' + arrow('reliability') + '</th>';
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r, idx) {
@@ -328,21 +328,21 @@
             html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
             // Row number
-            html += '<td style="padding: 8px; text-align: center; font-size: 1.1em; font-weight: bold;">' + (idx + 1) + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
 
             // Name (highlight team members)
-            html += '<td style="padding: 8px;">';
+            html += '<td style="padding: 4px 3px; white-space: nowrap;">';
             if (isTeam) html += '<span style="color: #1565c0;">&#9733; </span>';
             html += _escapeHtml(r.name) + '</td>';
 
             // Composite average rank
-            html += '<td style="padding: 6px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
 
             // 1-3 Score (rating average)
-            html += '<td style="padding: 6px; text-align: center; font-weight: bold; color: ' + statusColor + ';">' + r.ratingAverage.toFixed(2) + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + statusColor + ';">' + r.ratingAverage.toFixed(2) + '</td>';
 
             // Status badge
-            html += '<td style="padding: 6px; text-align: center;"><span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.75em; font-weight: bold; color: white; background: ' + statusColor + ';">';
+            html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: white; background: ' + statusColor + ';">';
             if (r.trackStatusValue === 'on-track-exceptional') html += 'Exceptional';
             else if (r.trackStatusValue === 'on-track-successful') html += 'Successful';
             else html += 'Off Track';
@@ -370,7 +370,7 @@
                 if (mp.rankKey === 'associateOverall' && r.surveyTotal > 0) {
                     surveyBadge = ' <span style="font-size: 0.68em; color: #888;">(' + r.surveyTotal + ')</span>';
                 }
-                html += '<td style="padding: 5px; text-align: center; color: ' + color + '; white-space: nowrap;">' +
+                html += '<td style="padding: 4px 3px; text-align: center; color: ' + color + '; white-space: nowrap;">' +
                     scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
             });
 
