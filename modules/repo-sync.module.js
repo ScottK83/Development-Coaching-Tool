@@ -1071,9 +1071,10 @@
                     if (data?.ok && data?.payload && typeof data.payload === 'object') {
                         const payload = data.payload;
                         const weekCount = Object.keys(payload.weeklyData || {}).length;
-                        console.log(`[Repo Restore] Worker returned payload: ${weekCount} weekly periods, generated ${payload.generatedAt}`);
-                        if (weekCount > 0) return payload;
-                        console.warn('[Repo Restore] Worker payload has no weekly data');
+                        const ytdCount = Object.keys(payload.ytdData || {}).length;
+                        console.log(`[Repo Restore] Worker returned payload: ${weekCount} weekly, ${ytdCount} ytd periods, generated ${payload.generatedAt}`);
+                        if (weekCount > 0 || ytdCount > 0) return payload;
+                        console.warn('[Repo Restore] Worker payload has no data');
                     } else {
                         console.warn('[Repo Restore] Worker returned:', data?.error || 'no payload');
                     }
@@ -1095,8 +1096,8 @@
                 const response = await fetch(url, { cache: 'no-store' });
                 if (!response.ok) continue;
                 const payload = await response.json();
-                if (payload && Object.keys(payload.weeklyData || {}).length > 0) {
-                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData).length, 'periods');
+                if (payload && (Object.keys(payload.weeklyData || {}).length > 0 || Object.keys(payload.ytdData || {}).length > 0)) {
+                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData || {}).length, 'weekly,', Object.keys(payload.ytdData || {}).length, 'ytd periods');
                     return payload;
                 }
             } catch (error) {
