@@ -177,7 +177,7 @@
      * Calculate trend direction: improving, declining, or stable
      */
     function calculateTrend(values, isReverse) {
-        if (values.length < 2) return { direction: 'stable', delta: 0 };
+        if (values.length < 3) return { direction: 'insufficient', delta: 0 };
 
         // Compare first half average to second half average
         var mid = Math.floor(values.length / 2);
@@ -555,7 +555,10 @@
 
             // Trend
             var trendText, trendColor;
-            if (md.trend.direction === 'improving') {
+            if (md.trend.direction === 'insufficient') {
+                trendText = '&mdash;';
+                trendColor = '#aaa';
+            } else if (md.trend.direction === 'improving') {
                 trendText = '&#9650; Improving';
                 trendColor = '#2e7d32';
             } else if (md.trend.direction === 'declining') {
