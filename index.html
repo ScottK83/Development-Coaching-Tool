@@ -51,7 +51,6 @@
 
                         <div style="display: flex; gap: 8px; margin-bottom: 15px;">
                             <button type="button" id="uploadModeEmployee" class="upload-mode-btn" style="flex: 1; padding: 10px; border: 2px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">👥 Employee Data</button>
-                            <button type="button" id="uploadModeCenterAvg" class="upload-mode-btn" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">📊 Center Averages</button>
                         </div>
 
                         <div id="uploadEmployeePanel">
@@ -104,56 +103,6 @@
                         </div>
                         </div><!-- end uploadEmployeePanel -->
 
-                        <div id="uploadCenterAvgPanel" style="display: none;">
-                            <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Enter center averages for a period. These flow to Metric Trends, Team Snapshot, and all analysis tools.</p>
-
-                            <div style="margin-bottom: 15px;">
-                                <label style="font-weight: bold; display: block; margin-bottom: 8px;">Select Period (from uploaded data):</label>
-                                <div id="avgPeriodTypeFilter" style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #1565c0; color: #fff; border: 2px solid #1565c0;">
-                                        <input type="radio" name="avgPeriodType" value="all" checked style="display: none;"> All
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
-                                        <input type="radio" name="avgPeriodType" value="daily" style="display: none;"> Daily
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
-                                        <input type="radio" name="avgPeriodType" value="week" style="display: none;"> Weekly
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
-                                        <input type="radio" name="avgPeriodType" value="month" style="display: none;"> Monthly
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
-                                        <input type="radio" name="avgPeriodType" value="custom" style="display: none;"> Custom
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600; background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0;">
-                                        <input type="radio" name="avgPeriodType" value="ytd" style="display: none;"> YTD
-                                    </label>
-                                </div>
-                                <select id="avgPeriodSelect" style="width: 100%; padding: 10px; border: 2px solid #1565c0; border-radius: 4px; font-size: 1em; box-sizing: border-box; cursor: pointer;">
-                                    <option value="">-- Select a period --</option>
-                                </select>
-                                <div id="avgPeriodExistingNote" style="margin-top: 6px; font-size: 0.85em; color: #666; display: none;"></div>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 15px;">
-                                <div><label style="font-size: 0.8em; color: #555;">Adherence</label><input type="number" id="uploadAvgAdherence" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Overall Experience</label><input type="number" id="uploadAvgOverallExperience" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Rep Satisfaction</label><input type="number" id="uploadAvgRepSatisfaction" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">FCR</label><input type="number" id="uploadAvgFCR" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Transfers</label><input type="number" id="uploadAvgTransfers" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Sentiment</label><input type="number" id="uploadAvgSentiment" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Positive Word</label><input type="number" id="uploadAvgPositiveWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Negative Word</label><input type="number" id="uploadAvgNegativeWord" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Managing Emotions</label><input type="number" id="uploadAvgManagingEmotions" step="0.1" placeholder="%" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">AHT</label><input type="number" id="uploadAvgAHT" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">ACW</label><input type="number" id="uploadAvgACW" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Hold Time</label><input type="number" id="uploadAvgHoldTime" step="1" placeholder="sec" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Reliability (Total hrs)</label><input type="number" id="uploadAvgReliability" step="0.1" placeholder="hrs" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                                <div><label style="font-size: 0.8em; color: #555;">Center Headcount</label><input type="number" id="uploadAvgHeadcount" value="144" step="1" placeholder="144" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em;"></div>
-                            </div>
-
-                            <button type="button" id="saveCenterAvgBtn" style="background: #1565c0; color: white; border: none; border-radius: 4px; padding: 10px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">💾 Save Center Averages</button>
-                        </div><!-- end uploadCenterAvgPanel -->
                     </div>
                     <!-- Success message -->
                     <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #155724;">

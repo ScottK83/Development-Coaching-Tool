@@ -1496,98 +1496,6 @@ function bindUploadAndPasteHandlers() {
         }
     });
 
-    // Upload mode switcher: Employee Data vs Center Averages
-    document.querySelectorAll('.upload-mode-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const empPanel = document.getElementById('uploadEmployeePanel');
-            const avgPanel = document.getElementById('uploadCenterAvgPanel');
-            const empBtn = document.getElementById('uploadModeEmployee');
-            const avgBtn = document.getElementById('uploadModeCenterAvg');
-            const isEmployee = btn.id === 'uploadModeEmployee';
-            if (empPanel) empPanel.style.display = isEmployee ? 'block' : 'none';
-            if (avgPanel) avgPanel.style.display = isEmployee ? 'none' : 'block';
-            if (empBtn) { empBtn.style.background = isEmployee ? '#28a745' : 'white'; empBtn.style.borderColor = isEmployee ? '#28a745' : '#ddd'; empBtn.style.color = isEmployee ? 'white' : '#666'; }
-            if (avgBtn) { avgBtn.style.background = isEmployee ? 'white' : '#1565c0'; avgBtn.style.borderColor = isEmployee ? '#ddd' : '#1565c0'; avgBtn.style.color = isEmployee ? '#666' : 'white'; }
-        });
-    });
-
-    // Center avg period dropdown - populate from uploaded data
-    _centerAvgAllPeriods = []; // reset cache
-    populateCenterAvgPeriodDropdown();
-
-    // Center avg period type filter pills
-    const avgPeriodTypeFilter = document.getElementById('avgPeriodTypeFilter');
-    if (avgPeriodTypeFilter) {
-        avgPeriodTypeFilter.addEventListener('change', function(e) {
-            const radio = e.target;
-            if (!radio || radio.type !== 'radio') return;
-            populateCenterAvgPeriodDropdown(radio.value);
-            // Style active pill
-            avgPeriodTypeFilter.querySelectorAll('label').forEach(function(label) {
-                const input = label.querySelector('input');
-                if (input && input.checked) {
-                    label.style.background = '#1565c0'; label.style.color = '#fff'; label.style.borderColor = '#1565c0';
-                } else {
-                    label.style.background = '#f1f5f9'; label.style.color = '#475569'; label.style.borderColor = '#e2e8f0';
-                }
-            });
-        });
-    }
-
-    // When period is selected, load any existing center averages into the form
-    document.getElementById('avgPeriodSelect')?.addEventListener('change', () => {
-        const select = document.getElementById('avgPeriodSelect');
-        const note = document.getElementById('avgPeriodExistingNote');
-        if (!select?.value) { if (note) note.style.display = 'none'; return; }
-        const weekKey = select.value;
-        const existing = getCallCenterAverageForPeriod(weekKey);
-        if (existing && Object.keys(existing).length > 0) {
-            // Load existing values into the form
-            const fieldMap = {
-                adherence: 'uploadAvgAdherence', scheduleAdherence: 'uploadAvgAdherence',
-                overallExperience: 'uploadAvgOverallExperience',
-                repSatisfaction: 'uploadAvgRepSatisfaction', cxRepOverall: 'uploadAvgRepSatisfaction',
-                fcr: 'uploadAvgFCR',
-                transfers: 'uploadAvgTransfers',
-                sentiment: 'uploadAvgSentiment', overallSentiment: 'uploadAvgSentiment',
-                positiveWord: 'uploadAvgPositiveWord',
-                negativeWord: 'uploadAvgNegativeWord', avoidNegativeWord: 'uploadAvgNegativeWord',
-                managingEmotions: 'uploadAvgManagingEmotions',
-                aht: 'uploadAvgAHT',
-                acw: 'uploadAvgACW',
-                holdTime: 'uploadAvgHoldTime',
-                reliability: 'uploadAvgReliability',
-                headcount: 'uploadAvgHeadcount'
-            };
-            // Clear all fields first
-            Object.values(fieldMap).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-            // Fill with existing values
-            Object.entries(existing).forEach(([key, val]) => {
-                const fieldId = fieldMap[key];
-                if (fieldId && val !== undefined && val !== null) {
-                    const el = document.getElementById(fieldId);
-                    if (el) el.value = val;
-                }
-            });
-            if (note) { note.textContent = '✅ Existing center averages loaded. Edit and save to update.'; note.style.display = 'block'; note.style.color = '#16a34a'; }
-        } else {
-            // Clear all fields
-            ['uploadAvgAdherence','uploadAvgOverallExperience','uploadAvgRepSatisfaction','uploadAvgFCR','uploadAvgTransfers','uploadAvgSentiment','uploadAvgPositiveWord','uploadAvgNegativeWord','uploadAvgManagingEmotions','uploadAvgAHT','uploadAvgACW','uploadAvgHoldTime','uploadAvgReliability'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-            const hc = document.getElementById('uploadAvgHeadcount'); if (hc) hc.value = '144';
-            if (note) { note.textContent = 'No center averages saved for this period yet.'; note.style.display = 'block'; note.style.color = '#666'; }
-        }
-    });
-
-    // Save center averages button
-    document.getElementById('saveCenterAvgBtn')?.addEventListener('click', () => {
-        const select = document.getElementById('avgPeriodSelect');
-        if (!select?.value) { alert('Please select a period first.'); return; }
-        const weekKey = select.value;
-        const avgData = readUploadCenterAverages();
-        if (!avgData) { alert('Please enter at least one center average value.'); return; }
-        setCallCenterAverageForPeriod(weekKey, avgData);
-        showToast(`✅ Center averages saved for ${weekKey}`, 4000);
-    });
 
     document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModal);
     document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
@@ -2143,14 +2051,8 @@ function handleLoadPastedDataClick() {
         saveWeeklyData();
         saveYtdData();
 
-        // Save center averages if any were entered on the upload form
-        const uploadAvgData = readUploadCenterAverages();
-        if (uploadAvgData) {
-            setCallCenterAverageForPeriod(weekKey, uploadAvgData);
-        }
-
-        // Auto-detect full center upload (30+ employees) and calculate center averages
-        if (employees.length >= 30 && !uploadAvgData) {
+        // Auto-calculate center averages when uploading 30+ employees
+        if (employees.length >= 30) {
             const autoAvg = calculateCenterAveragesFromEmployees(employees);
             if (autoAvg) {
                 setCallCenterAverageForPeriod(weekKey, autoAvg);
