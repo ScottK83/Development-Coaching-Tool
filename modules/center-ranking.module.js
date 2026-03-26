@@ -15,6 +15,12 @@
     function _getLatestWeeklyKey() {
         return typeof window.getLatestWeeklyKey === 'function' ? window.getLatestWeeklyKey() : null;
     }
+    function _getWeeklyData() {
+        return typeof weeklyData !== 'undefined' ? weeklyData : {};
+    }
+    function _getYtdData() {
+        return typeof ytdData !== 'undefined' ? ytdData : {};
+    }
 
     /**
      * Score an employee using the On/Off track 5-metric system.
@@ -44,8 +50,8 @@
      */
     function buildCenterRankings() {
         var currentYear = new Date().getFullYear();
-        var weeklyData = typeof window.weeklyData !== 'undefined' ? window.weeklyData : {};
-        var ytdData = typeof window.ytdData !== 'undefined' ? window.ytdData : {};
+        var wData = _getWeeklyData();
+        var yData = _getYtdData();
 
         // Find the period with the most employees (likely a full center upload)
         var bestPeriod = null;
@@ -54,7 +60,7 @@
         var bestKey = '';
 
         // Check YTD data first (source of truth)
-        Object.entries(ytdData).forEach(function (entry) {
+        Object.entries(yData).forEach(function (entry) {
             var key = entry[0];
             var period = entry[1];
             var meta = period?.metadata || {};
@@ -71,7 +77,7 @@
         });
 
         // Check weekly data if no YTD or weekly has more employees
-        Object.entries(weeklyData).forEach(function (entry) {
+        Object.entries(wData).forEach(function (entry) {
             var key = entry[0];
             var period = entry[1];
             var meta = period?.metadata || {};
