@@ -113,13 +113,47 @@
             });
         });
 
-        // Sort: highest ratingAverage first, reliability (lower = better) as tiebreaker
-        rankings.sort(function (a, b) {
-            if (b.ratingAverage !== a.ratingAverage) return b.ratingAverage - a.ratingAverage;
-            return a.reliability - b.reliability; // lower reliability hours = better
+        // Rank by each individual metric (lower rank = better)
+        var metricRankKeys = [
+            { key: 'aht', field: 'values.aht', reverse: true },         // lower AHT = better
+            { key: 'adherence', field: 'values.adherence', reverse: false }, // higher = better
+            { key: 'sentiment', field: 'values.sentiment', reverse: false }, // higher = better
+            { key: 'associateOverall', field: 'values.associateOverall', reverse: false }, // higher = better
+            { key: 'reliability', field: 'reliability', reverse: true }  // lower hours = better
+        ];
+
+        metricRankKeys.forEach(function (mk) {
+            // Sort a copy to determine ranks for this metric
+            var sorted = rankings.slice().sort(function (a, b) {
+                var aVal = mk.field.includes('.') ? a.values[mk.field.split('.')[1]] : a[mk.field];
+                var bVal = mk.field.includes('.') ? b.values[mk.field.split('.')[1]] : b[mk.field];
+                aVal = aVal !== null && aVal !== undefined ? aVal : (mk.reverse ? Infinity : -Infinity);
+                bVal = bVal !== null && bVal !== undefined ? bVal : (mk.reverse ? Infinity : -Infinity);
+                return mk.reverse ? (aVal - bVal) : (bVal - aVal);
+            });
+
+            // Assign metric rank to each employee
+            sorted.forEach(function (emp, idx) {
+                if (!emp.metricRanks) emp.metricRanks = {};
+                emp.metricRanks[mk.key] = idx + 1;
+            });
         });
 
-        // Assign ranks (handle ties)
+        // Composite rank = average of all 5 metric ranks (lower = better)
+        rankings.forEach(function (r) {
+            var ranks = r.metricRanks || {};
+            var sum = (ranks.aht || 0) + (ranks.adherence || 0) + (ranks.sentiment || 0) +
+                (ranks.associateOverall || 0) + (ranks.reliability || 0);
+            r.compositeScore = sum / 5;
+        });
+
+        // Sort by composite score (lower = better), reliability rank as tiebreaker
+        rankings.sort(function (a, b) {
+            if (a.compositeScore !== b.compositeScore) return a.compositeScore - b.compositeScore;
+            return (a.metricRanks?.reliability || 0) - (b.metricRanks?.reliability || 0);
+        });
+
+        // Assign overall rank
         rankings.forEach(function (r, i) { r.rank = i + 1; });
 
         // Identify team members
@@ -177,8 +211,8 @@
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
-                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">Rating: ' + r.ratingAverage.toFixed(2) + ' &mdash; ' + _escapeHtml(r.trackLabel) + '</div>';
-                html += '<div style="font-size: 0.8em; color: #888;">Reliability: ' + _formatMetricDisplay('reliability', r.reliability) + '</div>';
+                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Avg rank: ' + r.compositeScore.toFixed(1) + '</div>';
+                html += '<div style="font-size: 0.8em; color: #888;">Reliability: ' + _formatMetricDisplay('reliability', r.reliability) + ' (#' + (r.metricRanks?.reliability || '?') + ')</div>';
                 html += '</div>';
             });
 
@@ -188,18 +222,19 @@
         // Full ranking table
         html += '<div style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: #1a1a2e;">Full Center Rankings</h4>';
+        html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Ranked by average position across all 5 metrics. Each metric shows the value and individual rank (#).</p>';
         html += '<div style="overflow-x: auto;">';
-        html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+        html += '<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.88em;">';
         html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; width: 50px;">Rank</th>';
-        html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid #ddd;">Name</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Rating Avg</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">AHT</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Adherence</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Sentiment</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Assoc Overall</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Reliability</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd; width: 45px;">Rank</th>';
+        html += '<th style="padding: 8px 6px; text-align: left; border-bottom: 2px solid #ddd; min-width: 130px;">Name</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Avg Rank</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">AHT</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Adherence</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Sentiment</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Assoc Overall</th>';
+        html += '<th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #ddd;">Reliability</th>';
         html += '</tr></thead><tbody>';
 
         data.rankings.forEach(function (r) {
@@ -226,8 +261,8 @@
             if (isTeam) html += '<span style="color: #1565c0;">&#9733; </span>';
             html += _escapeHtml(r.name) + '</td>';
 
-            // Rating average
-            html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + r.ratingAverage.toFixed(2) + '</td>';
+            // Composite average rank
+            html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
 
             // Status badge
             html += '<td style="padding: 8px; text-align: center;"><span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; background: ' + statusColor + ';">';
@@ -238,18 +273,20 @@
 
             // Individual scores with values
             var metricPairs = [
-                { score: r.scores.aht, value: r.values.aht, key: 'aht' },
-                { score: r.scores.adherence, value: r.values.adherence, key: 'scheduleAdherence' },
-                { score: r.scores.sentiment, value: r.values.sentiment, key: 'overallSentiment' },
-                { score: r.scores.associateOverall, value: r.values.associateOverall, key: 'cxRepOverall' },
-                { score: null, value: r.reliability, key: 'reliability' }
+                { score: r.scores.aht, value: r.values.aht, key: 'aht', rankKey: 'aht' },
+                { score: r.scores.adherence, value: r.values.adherence, key: 'scheduleAdherence', rankKey: 'adherence' },
+                { score: r.scores.sentiment, value: r.values.sentiment, key: 'overallSentiment', rankKey: 'sentiment' },
+                { score: r.scores.associateOverall, value: r.values.associateOverall, key: 'cxRepOverall', rankKey: 'associateOverall' },
+                { score: null, value: r.reliability, key: 'reliability', rankKey: 'reliability' }
             ];
 
             metricPairs.forEach(function (mp) {
                 var display = mp.value !== null && mp.value !== undefined ? _formatMetricDisplay(mp.key, mp.value) : '--';
                 var color = mp.score !== null ? scoreColor(mp.score) : '#333';
-                var scoreBadge = mp.score !== null ? ' <span style="font-size: 0.7em; opacity: 0.7;">(' + mp.score + ')</span>' : '';
-                html += '<td style="padding: 8px; text-align: center; color: ' + color + ';">' + display + scoreBadge + '</td>';
+                var metricRank = r.metricRanks?.[mp.rankKey] || '?';
+                var rankColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
+                html += '<td style="padding: 6px; text-align: center; color: ' + color + ';">' +
+                    display + ' <span style="font-size: 0.75em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';
