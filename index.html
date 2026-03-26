@@ -226,6 +226,7 @@
                     <!-- Sub-navigation -->
                     <div class="sub-nav">
                         <button type="button" id="subNavCallListening" class="btn-secondary" style="background: #455a64; color: white;">🎧 Call Listening</button>
+                        <button type="button" id="subNavCenterRanking" class="btn-secondary" style="background: #0d47a1; color: white;">🏆 Center Ranking</button>
                         <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white;">💌 Coaching Email</button>
                         <button type="button" id="subNavFutures" class="btn-secondary" style="background: #00897b; color: white;">🔮 Futures</button>
                         <button type="button" id="subNavMetricTrends" class="btn-secondary" style="background: #9c27b0; color: white;">📈 Metric Trends</button>
@@ -590,6 +591,14 @@ Box 2 - Future Improvement Areas:
                     <!-- PTO Tracker Sub-section (embedded from standalone) -->
                     <div id="subSectionPto" style="display: none;">
                         <div id="embeddedPto"></div>
+                    </div>
+
+                    <!-- Center Ranking Sub-section -->
+                    <div id="subSectionCenterRanking" style="display: none;">
+                        <p style="color: #0d47a1; margin-bottom: 20px;">See where every employee ranks using the On/Off Track scoring system. Your team members are highlighted.</p>
+                        <div id="centerRankingContent">
+                            <p style="color: #94a3b8; text-align: center; padding: 40px;">Loading center rankings...</p>
+                        </div>
                     </div>
 
                     <!-- Futures Projection Sub-section -->
@@ -1744,6 +1753,7 @@ Box 2 - Future Improvement Areas:
     <script src="modules/trend-coaching-email.module.js"></script>
     <script src="modules/copilot-prompt.module.js"></script>
     <script src="modules/team-snapshot.module.js"></script>
+    <script src="modules/center-ranking.module.js"></script>
     <script src="modules/futures.module.js"></script>
     <script src="modules/q1-review.module.js"></script>
     <script src="modules/dashboard.module.js"></script>

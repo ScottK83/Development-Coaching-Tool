@@ -882,6 +882,67 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
     saveCallCenterAverages(averages);
 }
 
+function calculateCenterAveragesFromEmployees(employees) {
+    if (!employees || employees.length === 0) return null;
+
+    const surveyWeighted = { cxRepOverall: 'repSatisfaction', fcr: 'fcr', overallExperience: 'overallExperience' };
+    const rateMetrics = {
+        scheduleAdherence: 'adherence',
+        transfers: 'transfers',
+        overallSentiment: 'sentiment',
+        positiveWord: 'positiveWord',
+        negativeWord: 'negativeWord',
+        managingEmotions: 'managingEmotions',
+        aht: 'aht',
+        acw: 'acw',
+        holdTime: 'holdTime'
+    };
+
+    const wSums = {};
+    const wCounts = {};
+    const avgKeys = Object.assign({}, rateMetrics, surveyWeighted);
+    Object.values(avgKeys).forEach(k => { wSums[k] = 0; wCounts[k] = 0; });
+
+    let reliabilitySum = 0;
+    let reliabilityCount = 0;
+
+    employees.forEach(emp => {
+        const tc = parseInt(emp.totalCalls, 10);
+        const st = parseInt(emp.surveyTotal, 10);
+
+        // Rate metrics
+        Object.entries(rateMetrics).forEach(([empKey, avgKey]) => {
+            const v = parseFloat(emp[empKey]);
+            if (!Number.isFinite(v)) return;
+            const w = Number.isInteger(tc) && tc > 0 ? tc : 1;
+            wSums[avgKey] += v * w;
+            wCounts[avgKey] += w;
+        });
+
+        // Survey-weighted metrics
+        Object.entries(surveyWeighted).forEach(([empKey, avgKey]) => {
+            const v = parseFloat(emp[empKey]);
+            if (!Number.isFinite(v)) return;
+            const w = Number.isInteger(st) && st > 0 ? st : 0;
+            if (w > 0) { wSums[avgKey] += v * w; wCounts[avgKey] += w; }
+        });
+
+        // Reliability: average per employee (not sum)
+        const rel = parseFloat(emp.reliability);
+        if (Number.isFinite(rel)) { reliabilitySum += rel; reliabilityCount++; }
+    });
+
+    const result = {};
+    Object.values(avgKeys).forEach(k => {
+        if (wCounts[k] > 0) result[k] = Math.round((wSums[k] / wCounts[k]) * 100) / 100;
+    });
+    if (reliabilityCount > 0) {
+        result.reliability = Math.round((reliabilitySum / reliabilityCount) * 100) / 100;
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
+}
+
 var _centerAvgAllPeriods = [];
 
 function populateCenterAvgPeriodDropdown(filterType) {
@@ -1648,6 +1709,10 @@ function bindQuickActionHandlers() {
         showSubSection('subSectionQ1Review', 'subNavQ1Review');
         if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
     });
+    document.getElementById('subNavCenterRanking')?.addEventListener('click', () => {
+        showSubSection('subSectionCenterRanking', 'subNavCenterRanking');
+        if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
+    });
 
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);
     document.getElementById('copyDebugBtn')?.addEventListener('click', copyDebugInfo);
@@ -2082,6 +2147,15 @@ function handleLoadPastedDataClick() {
         const uploadAvgData = readUploadCenterAverages();
         if (uploadAvgData) {
             setCallCenterAverageForPeriod(weekKey, uploadAvgData);
+        }
+
+        // Auto-detect full center upload (30+ employees) and calculate center averages
+        if (employees.length >= 30 && !uploadAvgData) {
+            const autoAvg = calculateCenterAveragesFromEmployees(employees);
+            if (autoAvg) {
+                setCallCenterAverageForPeriod(weekKey, autoAvg);
+                showToast('📊 Center averages auto-calculated from ' + employees.length + ' employees', 4000);
+            }
         }
 
         populateDeleteWeekDropdown();
