@@ -56,6 +56,9 @@
     }
 
     var SURVEY_BACKED_METRICS = { cxRepOverall: true, fcr: true, overallExperience: true };
+    // Cumulative metrics don't make sense as coaching triggers —
+    // reliability is total hours for the year, not a weekly rate
+    var SKIP_ON_DASHBOARD = { transfersCount: true, reliability: true };
 
     function evaluateEmployee(emp) {
         var registry = window.METRICS_REGISTRY || {};
@@ -73,7 +76,7 @@
             var key = keys[i];
             var def = registry[key];
             if (!def || !def.target) continue;
-            if (key === 'transfersCount') continue;
+            if (SKIP_ON_DASHBOARD[key]) continue;
 
             // Don't flag survey metrics when there are no surveys
             if (SURVEY_BACKED_METRICS[key] && !hasSurveys) continue;
