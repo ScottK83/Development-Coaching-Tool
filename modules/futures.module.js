@@ -17,19 +17,10 @@
     function _formatMetricDisplay(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
-    function _metricMeetsTarget(metricKey, value) {
-        return typeof window.metricMeetsTarget === 'function' ? window.metricMeetsTarget(metricKey, value) : false;
-    }
-    function _isReverseMetric(metricKey) {
-        return typeof window.isReverseMetric === 'function' ? window.isReverseMetric(metricKey) : false;
-    }
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
         if (mod?.escapeHtml) return mod.escapeHtml(str);
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-    function _getRatingScore(metricKey, value, year) {
-        return typeof window.getMetricRatingScore === 'function' ? window.getMetricRatingScore(metricKey, value, year) : null;
     }
 
     // Metrics to project (the meaningful ones with targets)
@@ -38,6 +29,10 @@
         'transfers', 'overallSentiment', 'positiveWord', 'negativeWord',
         'managingEmotions', 'aht', 'acw', 'holdTime', 'reliability'
     ];
+
+    // Cumulative metrics are summed across periods, not averaged.
+    // The "need to average" projection doesn't apply — it's "budget remaining".
+    var CUMULATIVE_METRICS = new Set(['reliability']);
 
     /**
      * Estimate total weeks in the year and weeks completed based on uploaded data
@@ -51,7 +46,6 @@
         });
 
         var weeksCompleted = yearKeys.length;
-        // Estimate total weeks: 52 per year
         var totalWeeks = 52;
         var weeksRemaining = Math.max(0, totalWeeks - weeksCompleted);
 
@@ -65,37 +59,25 @@
     }
 
     /**
-     * Get the YTD average for an employee on a metric.
-     * Computes the real average from all weekly data for the current year.
-     * Falls back to YTD uploads only when no weekly data exists.
+     * Build a fresh YTD aggregate using the same logic as the rest of the app
+     * (buildYtdAggregateForYear): weighted averages for rate metrics,
+     * sums for cumulative metrics (reliability, totalCalls, etc.), and
+     * the anchor-extension pattern for real YTD uploads.
+     *
+     * Returns the aggregated employee array, or null.
      */
-    function getBestYtdValueForEmployee(employeeName, metricKey, currentYear, yearKeys) {
-        // Primary: calculate average from all weekly data for the year
-        var wData = _getWeeklyData();
-        var sum = 0;
-        var count = 0;
-
-        yearKeys.forEach(function (weekKey) {
-            var period = wData[weekKey];
-            if (!period || !period.employees) return;
-            period.employees.forEach(function (emp) {
-                if (emp.name === employeeName) {
-                    var val = parseFloat(emp[metricKey]);
-                    if (!isNaN(val)) {
-                        sum += val;
-                        count++;
-                    }
-                }
-            });
-        });
-
-        if (count > 0) {
-            return { value: sum / count, count: count, source: count + ' weeks averaged' };
+    function getAggregatedYtdEmployees(currentYear, latestEndDate) {
+        // Use buildYtdAggregateForYear — the single source of truth for YTD aggregation
+        if (typeof window.buildYtdAggregateForYear === 'function' && latestEndDate) {
+            var result = window.buildYtdAggregateForYear(currentYear, latestEndDate);
+            if (result && result.entry && result.entry.employees) {
+                return { employees: result.entry.employees, source: result.entry.metadata?.label || 'Auto YTD' };
+            }
         }
 
-        // Fallback: check YTD uploads if employee has no weekly data
+        // Fallback: check existing ytdData for the most recent entry
         var ytd = _getYtdData();
-        var bestVal = null;
+        var bestEntry = null;
         var bestDate = 0;
         var bestLabel = '';
 
@@ -105,21 +87,15 @@
             var endStr = meta.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
             var endDate = endStr ? new Date(endStr) : null;
             if (!endDate || isNaN(endDate) || endDate.getFullYear() !== currentYear) return;
-
-            (period.employees || []).forEach(function (emp) {
-                if (emp.name === employeeName) {
-                    var val = parseFloat(emp[metricKey]);
-                    if (!isNaN(val) && endDate.getTime() > bestDate) {
-                        bestVal = val;
-                        bestDate = endDate.getTime();
-                        bestLabel = meta.label || periodKey;
-                    }
-                }
-            });
+            if (endDate.getTime() > bestDate) {
+                bestEntry = period;
+                bestDate = endDate.getTime();
+                bestLabel = meta.label || periodKey;
+            }
         });
 
-        if (bestVal !== null) {
-            return { value: bestVal, count: 1, source: bestLabel };
+        if (bestEntry && bestEntry.employees) {
+            return { employees: bestEntry.employees, source: bestLabel };
         }
 
         return null;
@@ -127,13 +103,10 @@
 
     /**
      * Calculate what an employee needs to average for the rest of the year
-     * to hit a specific target.
-     *
-     * For "min" metrics: (target * totalWeeks - currentAvg * weeksCompleted) / weeksRemaining
-     * For "max" metrics: same formula (they need to be at or below target)
+     * to hit a specific target (for rate/averaged metrics only).
      */
     function calculateRequiredAverage(currentAvg, weeksCompleted, weeksRemaining, target) {
-        if (weeksRemaining <= 0) return null; // year is done
+        if (weeksRemaining <= 0) return null;
         var totalNeeded = target * (weeksCompleted + weeksRemaining);
         var currentTotal = currentAvg * weeksCompleted;
         var required = (totalNeeded - currentTotal) / weeksRemaining;
@@ -142,8 +115,6 @@
 
     /**
      * Determine if a required average is achievable
-     * For percentage metrics: must be between 0 and 100
-     * For time metrics: must be >= 0
      */
     function isAchievable(metricKey, requiredAvg) {
         var metric = window.METRICS_REGISTRY[metricKey];
@@ -162,7 +133,13 @@
         var wData = _getWeeklyData();
         var latestKey = weekInfo.yearKeys.length > 0 ? weekInfo.yearKeys[weekInfo.yearKeys.length - 1] : null;
 
-        // Get unique team member names from latest week
+        // Get the latest end date for aggregation
+        var latestEndDate = null;
+        if (latestKey) {
+            latestEndDate = latestKey.split('|')[1] || null;
+        }
+
+        // Get team members from latest week
         var teamMembers = [];
         if (latestKey && wData[latestKey]) {
             var members = _getTeamMembersForWeek(latestKey);
@@ -170,13 +147,29 @@
             teamMembers = members.length > 0 ? allEmps.filter(function (n) { return members.includes(n); }) : allEmps;
         }
 
+        // Get properly aggregated YTD data (same logic as rest of app)
+        var ytdResult = getAggregatedYtdEmployees(currentYear, latestEndDate);
+        var ytdEmployees = ytdResult ? ytdResult.employees : [];
+        var ytdSource = ytdResult ? ytdResult.source : '';
+
         var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
         var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
 
         var results = [];
         teamMembers.forEach(function (empName) {
+            // Find this employee in the aggregated YTD data
+            var ytdEmp = null;
+            for (var i = 0; i < ytdEmployees.length; i++) {
+                if (ytdEmployees[i].name === empName) {
+                    ytdEmp = ytdEmployees[i];
+                    break;
+                }
+            }
+            if (!ytdEmp) return;
+
             var empResult = {
                 name: empName,
+                dataSource: ytdSource,
                 metrics: {}
             };
 
@@ -184,13 +177,13 @@
                 var targetConfig = targets[metricKey];
                 if (!targetConfig) return;
 
-                var bestData = getBestYtdValueForEmployee(empName, metricKey, currentYear, weekInfo.yearKeys);
-                if (!bestData) return;
+                var val = parseFloat(ytdEmp[metricKey]);
+                if (isNaN(val)) return;
 
-                var currentAvg = bestData.value;
-                var dataSource = bestData.source;
+                var currentValue = val;
                 var meetTarget = targetConfig.value;
                 var isReverse = targetConfig.type === 'max';
+                var isCumulative = CUMULATIVE_METRICS.has(metricKey);
 
                 // Determine "exceed" target from rating bands (score 3)
                 var exceedTarget = meetTarget;
@@ -199,28 +192,50 @@
                     exceedTarget = isReverse ? bandConfig.score3.max : bandConfig.score3.min;
                 }
 
-                var requiredToMeet = calculateRequiredAverage(currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, meetTarget);
-                var requiredToExceed = calculateRequiredAverage(currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget);
+                var requiredToMeet = null;
+                var requiredToExceed = null;
+                var meetAchievable = null;
+                var exceedAchievable = null;
+                var currentlyMeeting, currentlyExceeding;
+                var budgetRemaining = null;
+                var exceedBudgetRemaining = null;
 
-                // Determine current status
-                var currentlyMeeting = isReverse ? (currentAvg <= meetTarget) : (currentAvg >= meetTarget);
-                var currentlyExceeding = bandConfig
-                    ? (isReverse ? (currentAvg <= exceedTarget) : (currentAvg >= exceedTarget))
-                    : currentlyMeeting;
+                if (isCumulative) {
+                    // Cumulative metrics (reliability): compare total used vs annual max
+                    currentlyMeeting = currentValue <= meetTarget;
+                    currentlyExceeding = bandConfig
+                        ? (currentValue <= exceedTarget)
+                        : currentlyMeeting;
+                    budgetRemaining = meetTarget - currentValue;
+                    exceedBudgetRemaining = bandConfig ? exceedTarget - currentValue : null;
+                } else {
+                    // Rate metrics: use weighted average projection
+                    currentlyMeeting = isReverse ? (currentValue <= meetTarget) : (currentValue >= meetTarget);
+                    currentlyExceeding = bandConfig
+                        ? (isReverse ? (currentValue <= exceedTarget) : (currentValue >= exceedTarget))
+                        : currentlyMeeting;
+
+                    requiredToMeet = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, meetTarget);
+                    requiredToExceed = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget);
+                    meetAchievable = requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null;
+                    exceedAchievable = requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null;
+                }
 
                 empResult.metrics[metricKey] = {
-                    currentAvg: currentAvg,
-                    dataSource: dataSource,
+                    currentAvg: currentValue,
                     meetTarget: meetTarget,
                     exceedTarget: exceedTarget,
                     requiredToMeet: requiredToMeet,
                     requiredToExceed: requiredToExceed,
-                    meetAchievable: requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null,
-                    exceedAchievable: requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null,
+                    meetAchievable: meetAchievable,
+                    exceedAchievable: exceedAchievable,
                     currentlyMeeting: currentlyMeeting,
                     currentlyExceeding: currentlyExceeding,
                     isReverse: isReverse,
-                    hasExceedBand: !!bandConfig
+                    hasExceedBand: !!bandConfig,
+                    isCumulative: isCumulative,
+                    budgetRemaining: budgetRemaining,
+                    exceedBudgetRemaining: exceedBudgetRemaining
                 };
             });
 
@@ -302,11 +317,8 @@
             html += '<div style="margin-bottom: 24px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<h3 style="margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #4caf50; padding-bottom: 8px;">' + _escapeHtml(emp.name) + '</h3>';
 
-            // Show data source if available
-            var firstMetric = Object.keys(emp.metrics)[0];
-            var source = firstMetric ? emp.metrics[firstMetric].dataSource : null;
-            if (source) {
-                html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(source) + '</p>';
+            if (emp.dataSource) {
+                html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
             }
 
             // Table
@@ -314,7 +326,7 @@
             html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
             html += '<thead><tr style="background: #f5f5f5;">';
             html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid #ddd;">Metric</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">YTD Avg</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">YTD</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Target</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e8f5e9;">Need to Meet</th>';
@@ -343,7 +355,7 @@
                 // Metric name
                 html += '<td style="padding: 8px; font-weight: 500;">' + icon + ' ' + _escapeHtml(label) + '</td>';
 
-                // Current YTD average
+                // Current YTD value
                 html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.currentAvg) + '</td>';
 
                 // Target
@@ -365,7 +377,13 @@
 
                 // Required to meet
                 html += '<td style="padding: 8px; text-align: center; background: rgba(232,245,233,0.3);">';
-                if (m.currentlyMeeting) {
+                if (m.isCumulative) {
+                    if (m.currentlyMeeting) {
+                        html += '<span style="color: #2e7d32; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.budgetRemaining) + ' remaining</span>';
+                    } else {
+                        html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
+                    }
+                } else if (m.currentlyMeeting) {
                     html += '<span style="color: #2e7d32; font-weight: bold;">On track</span>';
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
                     html += '<span style="color: #e65100; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + '</span>';
@@ -380,6 +398,12 @@
                 html += '<td style="padding: 8px; text-align: center; background: rgba(227,242,253,0.3);">';
                 if (!m.hasExceedBand) {
                     html += '<span style="color: #999; font-size: 0.85em;">No band</span>';
+                } else if (m.isCumulative) {
+                    if (m.currentlyExceeding) {
+                        html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.exceedBudgetRemaining) + ' remaining</span>';
+                    } else {
+                        html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
+                    }
                 } else if (m.currentlyExceeding) {
                     html += '<span style="color: #1565c0; font-weight: bold;">On track</span>';
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
@@ -408,7 +432,7 @@
                 else if (mm.currentlyMeeting) meetingCount++;
                 else {
                     belowCount++;
-                    if (mm.requiredToMeet !== null && !mm.meetAchievable) notAchievableCount++;
+                    if (!mm.isCumulative && mm.requiredToMeet !== null && !mm.meetAchievable) notAchievableCount++;
                 }
             });
 
