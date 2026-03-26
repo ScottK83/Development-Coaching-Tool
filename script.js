@@ -2303,14 +2303,14 @@ function handleDataFileInputChange(event) {
 }
 
 function handleDeleteAllDataClick() {
-    const weekCount = Object.keys(weeklyData).length;
-    if (weekCount === 0) {
-        alert('⚠️ No data to delete');
-        return;
-    }
-
-    const message = `⚠️ WARNING: This will permanently delete:\n\n` +
-        `📊 ${weekCount} week(s) of employee data\n\n` +
+    const message = `⚠️ WARNING: This will permanently delete ALL data:\n\n` +
+        `• All weekly, monthly, quarterly, and YTD uploads\n` +
+        `• Team member selections\n` +
+        `• Coaching history\n` +
+        `• Call center averages\n` +
+        `• Call listening logs\n` +
+        `• Sentiment data\n` +
+        `• All saved notes and preferences\n\n` +
         `This action CANNOT be undone!\n\n` +
         `Type "DELETE" to confirm:`;
 
@@ -2320,42 +2320,30 @@ function handleDeleteAllDataClick() {
         return;
     }
 
+    // Clear ALL localStorage keys with the app prefix
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(STORAGE_PREFIX)) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    // Reset all in-memory state
     weeklyData = {};
     ytdData = {};
     myTeamMembers = {};
     callListeningLogs = {};
-
-    localStorage.removeItem(STORAGE_PREFIX + 'weeklyData');
-    localStorage.removeItem(STORAGE_PREFIX + 'ytdData');
-    localStorage.removeItem(STORAGE_PREFIX + 'myTeamMembers');
-    localStorage.removeItem(STORAGE_PREFIX + 'callCenterAverages');
-    localStorage.removeItem(STORAGE_PREFIX + 'employeeNicknames');
-    localStorage.removeItem(STORAGE_PREFIX + 'employeePreferredNames');
-    localStorage.removeItem(STORAGE_PREFIX + 'coachingHistory');
-    localStorage.removeItem(STORAGE_PREFIX + 'callListeningLogs');
-    localStorage.removeItem(STORAGE_PREFIX + 'tipUsageHistory');
-    localStorage.removeItem(STORAGE_PREFIX + 'complianceLog');
-    localStorage.removeItem(STORAGE_PREFIX + 'executiveSummaryNotes');
-    localStorage.removeItem(STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY);
-    localStorage.removeItem(STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY);
-
+    coachingHistory = {};
     sentimentPhraseDatabase = null;
     associateSentimentSnapshots = {};
+    coachingLatestWeekKey = null;
+    yearEndDraftContext = null;
 
-    saveWeeklyData();
-    saveYtdData();
-    saveTeamMembers();
-    saveCallListeningLogs(true, 'cleared all data');
-
-    populateDeleteWeekDropdown();
-    populateDeleteEmployeeYearOptions();
-
-    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.style.display = 'none';
-    });
-
-    alert('✅ All data has been deleted (including call center averages and history)');
+    // Refresh the page for a clean state
+    alert('✅ All data has been deleted. The page will now reload.');
+    location.reload();
 }
 
 function handlePeriodTypeButtonClick(button) {
