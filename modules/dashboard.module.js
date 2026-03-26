@@ -54,6 +54,8 @@
         return name;
     }
 
+    var SURVEY_BACKED_METRICS = { cxRepOverall: true, fcr: true, overallExperience: true };
+
     function evaluateEmployee(emp) {
         var registry = window.METRICS_REGISTRY || {};
         var metrics = window.DevCoachModules?.metrics || {};
@@ -61,12 +63,19 @@
         var metCount = 0;
         var totalMetrics = 0;
 
+        // Skip survey-backed metrics when employee has no surveys
+        var surveyTotal = parseInt(emp.surveyTotal, 10);
+        var hasSurveys = Number.isInteger(surveyTotal) && surveyTotal > 0;
+
         var keys = Object.keys(registry);
         for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
             var def = registry[key];
             if (!def || !def.target) continue;
             if (key === 'transfersCount') continue;
+
+            // Don't flag survey metrics when there are no surveys
+            if (SURVEY_BACKED_METRICS[key] && !hasSurveys) continue;
 
             var value = emp[key];
             var num = parseFloat(value);
@@ -141,7 +150,7 @@
         // Header
         html += '<div style="margin-bottom: 20px;">' +
             '<h2 style="margin: 0 0 6px 0; font-size: 1.4em; color: #1e293b;">Dashboard</h2>' +
-            '<p style="margin: 0; color: #64748b; font-size: 0.9em;">Week ending ' + escapeHtml(weekLabel) + '</p></div>';
+            '<p style="margin: 0; color: #64748b; font-size: 0.9em;">' + escapeHtml(weekLabel) + '</p></div>';
 
         // Team summary bar
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">';
@@ -292,7 +301,13 @@
             starNames: meetingAll.map(function(e) { return e.firstName; }).sort()
         };
 
-        var weekLabel = formatWeekLabel(weekKey);
+        var periodMeta = wData[weekKey]?.metadata || {};
+        var periodType = periodMeta.periodType || 'week';
+        var periodTypeLabel = periodType === 'ytd' ? 'YTD' :
+            periodType === 'month' ? 'Monthly' :
+            periodType === 'quarter' ? 'Quarterly' :
+            periodType === 'daily' ? 'Daily' : 'Weekly';
+        var weekLabel = periodTypeLabel + ' data through ' + formatWeekLabel(weekKey);
         renderDashboard(container, needCoaching, teamStats, weekLabel);
     }
 
