@@ -58,47 +58,95 @@
         };
     }
 
+    // Metrics that should be weighted by surveyTotal instead of totalCalls
+    var SURVEY_WEIGHTED = new Set(['cxRepOverall', 'fcr', 'overallExperience']);
+
+    // Rate metrics that get weighted-averaged (matches buildYtdAggregateForYear)
+    var RATE_METRICS = new Set([
+        'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
+        'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
+        'negativeWord', 'positiveWord'
+    ]);
+
     /**
-     * Build a fresh YTD aggregate using the same logic as the rest of the app
-     * (buildYtdAggregateForYear): weighted averages for rate metrics,
-     * sums for cumulative metrics (reliability, totalCalls, etc.), and
-     * the anchor-extension pattern for real YTD uploads.
+     * Aggregate YTD values directly from weekly data uploads.
+     * Uses the same rules as buildYtdAggregateForYear but WITHOUT the
+     * anchor pattern, so it always reflects the actual weekly uploads.
      *
-     * Returns the aggregated employee array, or null.
+     * - Rate metrics: weighted average (by totalCalls or surveyTotal)
+     * - Cumulative metrics (reliability): summed
      */
-    function getAggregatedYtdEmployees(currentYear, latestEndDate) {
-        // Use buildYtdAggregateForYear — the single source of truth for YTD aggregation
-        if (typeof window.buildYtdAggregateForYear === 'function' && latestEndDate) {
-            var result = window.buildYtdAggregateForYear(currentYear, latestEndDate);
-            if (result && result.entry && result.entry.employees) {
-                return { employees: result.entry.employees, source: result.entry.metadata?.label || 'Auto YTD' };
-            }
-        }
+    function aggregateFromWeeklyData(yearKeys) {
+        var wData = _getWeeklyData();
+        var empAgg = {}; // { name: { totalCalls, surveyTotal, reliability, weightedSums, weightedCounts } }
 
-        // Fallback: check existing ytdData for the most recent entry
-        var ytd = _getYtdData();
-        var bestEntry = null;
-        var bestDate = 0;
-        var bestLabel = '';
+        yearKeys.forEach(function (weekKey) {
+            var period = wData[weekKey];
+            if (!period || !period.employees) return;
 
-        Object.keys(ytd).forEach(function (periodKey) {
-            var period = ytd[periodKey];
-            var meta = period?.metadata || {};
-            var endStr = meta.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
-            var endDate = endStr ? new Date(endStr) : null;
-            if (!endDate || isNaN(endDate) || endDate.getFullYear() !== currentYear) return;
-            if (endDate.getTime() > bestDate) {
-                bestEntry = period;
-                bestDate = endDate.getTime();
-                bestLabel = meta.label || periodKey;
-            }
+            period.employees.forEach(function (emp) {
+                if (!emp || !emp.name) return;
+
+                if (!empAgg[emp.name]) {
+                    empAgg[emp.name] = {
+                        name: emp.name,
+                        totalCalls: 0,
+                        surveyTotal: 0,
+                        reliability: 0,
+                        weightedSums: {},
+                        weightedCounts: {}
+                    };
+                }
+
+                var agg = empAgg[emp.name];
+                var tc = parseInt(emp.totalCalls, 10);
+                var st = parseInt(emp.surveyTotal, 10);
+
+                agg.totalCalls += Number.isInteger(tc) ? tc : 0;
+                agg.surveyTotal += Number.isInteger(st) ? st : 0;
+
+                // Reliability: sum (cumulative hours)
+                var rel = parseFloat(emp.reliability);
+                if (Number.isFinite(rel)) agg.reliability += rel;
+
+                // Rate metrics: accumulate weighted sums
+                RATE_METRICS.forEach(function (mk) {
+                    var val = parseFloat(emp[mk]);
+                    if (!Number.isFinite(val)) return;
+
+                    var weight = 1;
+                    if (SURVEY_WEIGHTED.has(mk)) {
+                        weight = Number.isInteger(st) && st > 0 ? st : 0;
+                    } else {
+                        weight = Number.isInteger(tc) && tc > 0 ? tc : 1;
+                    }
+                    if (weight <= 0) return;
+
+                    agg.weightedSums[mk] = (agg.weightedSums[mk] || 0) + (val * weight);
+                    agg.weightedCounts[mk] = (agg.weightedCounts[mk] || 0) + weight;
+                });
+            });
         });
 
-        if (bestEntry && bestEntry.employees) {
-            return { employees: bestEntry.employees, source: bestLabel };
-        }
+        // Finalize: compute weighted averages
+        var employees = [];
+        Object.keys(empAgg).forEach(function (name) {
+            var agg = empAgg[name];
+            var result = { name: name, reliability: agg.reliability, totalCalls: agg.totalCalls };
 
-        return null;
+            RATE_METRICS.forEach(function (mk) {
+                var totalWeight = agg.weightedCounts[mk] || 0;
+                if (totalWeight > 0) {
+                    result[mk] = agg.weightedSums[mk] / totalWeight;
+                }
+            });
+
+            employees.push(result);
+        });
+
+        return employees.length > 0
+            ? { employees: employees, source: yearKeys.length + ' weeks aggregated' }
+            : null;
     }
 
     /**
@@ -133,12 +181,6 @@
         var wData = _getWeeklyData();
         var latestKey = weekInfo.yearKeys.length > 0 ? weekInfo.yearKeys[weekInfo.yearKeys.length - 1] : null;
 
-        // Get the latest end date for aggregation
-        var latestEndDate = null;
-        if (latestKey) {
-            latestEndDate = latestKey.split('|')[1] || null;
-        }
-
         // Get team members from latest week
         var teamMembers = [];
         if (latestKey && wData[latestKey]) {
@@ -147,8 +189,8 @@
             teamMembers = members.length > 0 ? allEmps.filter(function (n) { return members.includes(n); }) : allEmps;
         }
 
-        // Get properly aggregated YTD data (same logic as rest of app)
-        var ytdResult = getAggregatedYtdEmployees(currentYear, latestEndDate);
+        // Aggregate directly from weekly data (proper weighted averages + sums)
+        var ytdResult = aggregateFromWeeklyData(weekInfo.yearKeys);
         var ytdEmployees = ytdResult ? ytdResult.employees : [];
         var ytdSource = ytdResult ? ytdResult.source : '';
 
