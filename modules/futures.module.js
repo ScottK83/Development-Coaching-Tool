@@ -65,28 +65,30 @@
     }
 
     /**
-     * Get current YTD average for an employee across all current-year weekly data
+     * Get the best available YTD value for an employee on a metric.
+     * Uses getLatestYearPeriodForEmployee (same as On/Off tracker) to
+     * prioritise real YTD uploads > auto-YTD > latest weekly data.
      */
-    function getYtdAverageForEmployee(employeeName, metricKey, yearKeys) {
-        var wData = _getWeeklyData();
-        var sum = 0;
-        var count = 0;
-
-        yearKeys.forEach(function (weekKey) {
-            var period = wData[weekKey];
-            if (!period || !period.employees) return;
-            period.employees.forEach(function (emp) {
-                if (emp.name === employeeName) {
-                    var val = parseFloat(emp[metricKey]);
-                    if (!isNaN(val)) {
-                        sum += val;
-                        count++;
+    function getBestYtdValueForEmployee(employeeName, metricKey, currentYear) {
+        // Try the same resolution the On/Off tracker uses
+        if (typeof window.getLatestYearPeriodForEmployee === 'function') {
+            var best = window.getLatestYearPeriodForEmployee(employeeName, currentYear);
+            if (best) {
+                var source = best.sourceName === 'ytdData' ? _getYtdData() : _getWeeklyData();
+                var period = source[best.periodKey];
+                if (period && period.employees) {
+                    var emp = period.employees.find(function (e) { return e.name === employeeName; });
+                    if (emp) {
+                        var val = parseFloat(emp[metricKey]);
+                        if (!isNaN(val)) {
+                            var label = period.metadata?.label || best.periodKey;
+                            return { value: val, source: label };
+                        }
                     }
                 }
-            });
-        });
-
-        return count > 0 ? { value: sum / count, count: count } : null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -148,10 +150,11 @@
                 var targetConfig = targets[metricKey];
                 if (!targetConfig) return;
 
-                var ytdAvg = getYtdAverageForEmployee(empName, metricKey, weekInfo.yearKeys);
-                if (!ytdAvg) return;
+                var bestData = getBestYtdValueForEmployee(empName, metricKey, currentYear);
+                if (!bestData) return;
 
-                var currentAvg = ytdAvg.value;
+                var currentAvg = bestData.value;
+                var dataSource = bestData.source;
                 var meetTarget = targetConfig.value;
                 var isReverse = targetConfig.type === 'max';
 
@@ -173,7 +176,7 @@
 
                 empResult.metrics[metricKey] = {
                     currentAvg: currentAvg,
-                    weeksOfData: ytdAvg.count,
+                    dataSource: dataSource,
                     meetTarget: meetTarget,
                     exceedTarget: exceedTarget,
                     requiredToMeet: requiredToMeet,
@@ -264,6 +267,13 @@
         employees.forEach(function (emp) {
             html += '<div style="margin-bottom: 24px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<h3 style="margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #4caf50; padding-bottom: 8px;">' + _escapeHtml(emp.name) + '</h3>';
+
+            // Show data source if available
+            var firstMetric = Object.keys(emp.metrics)[0];
+            var source = firstMetric ? emp.metrics[firstMetric].dataSource : null;
+            if (source) {
+                html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(source) + '</p>';
+            }
 
             // Table
             html += '<div style="overflow-x: auto;">';
