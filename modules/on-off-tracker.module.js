@@ -419,7 +419,7 @@
         return `<div style="padding: 10px; border: 1px solid #e3d7f7; border-radius: 6px; background: #fff;">
                 <div style="font-weight: bold; color: #4a148c; margin-bottom: 4px;">${label}</div>
                 <div style="font-size: 0.85em; color: #1b5e20;">Score 3: \u2265 ${score3}</div>
-                <div style="font-size: 0.85em; color: #8d6e00;">Score 2: \u2265 ${score2} and &lt; ${score3}</div>
+                <div style="font-size: 0.85em; color: #8d6e00;">Score 2: &lt; ${score3} and \u2265 ${score2}</div>
                 <div style="font-size: 0.85em; color: #b71c1c;">Score 1: &lt; ${score2}</div>
             </div>`;
     }
