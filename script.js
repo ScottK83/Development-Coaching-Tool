@@ -3916,8 +3916,9 @@ function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
 // ============================================
 
 function getWeeklyKeysSorted() {
-    return Object.keys(weeklyData)
-        .map(key => ({ key, date: parseWeekKeyDate(key, weeklyData[key]) }))
+    const allData = Object.assign({}, weeklyData, ytdData);
+    return Object.keys(allData)
+        .map(key => ({ key, date: parseWeekKeyDate(key, allData[key]) }))
         .sort((a, b) => a.date - b.date)
         .map(item => item.key);
 }
