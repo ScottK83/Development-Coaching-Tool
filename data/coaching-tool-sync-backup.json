@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-26T19:42:09.312Z",
-  "reason": "manual footer sync",
+  "generatedAt": "2026-03-26T19:42:23.788Z",
+  "reason": "upload to git",
   "sourceAppVersion": null,
   "weeklyData": {
     "2025-12-28|2026-01-03": {
@@ -7406,7 +7406,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 126
+      "byteLength": 127
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
