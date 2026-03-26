@@ -2993,7 +2993,7 @@ async function tryAutoRestoreFromRepoBackupOnEmptyState() {
         }
 
         const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
-        const shouldRestore = confirm(`Newer synced backup found from ${remoteWhen}.\n\nRestore this backup on this PC now?\n\nChoose Cancel to keep current local data.`);
+        const shouldRestore = confirm(`Your data was updated on another computer on ${remoteWhen}.\n\nClick OK to sync this PC with that newer data.\nClick Cancel to keep this PC's current data as-is.`);
         if (!shouldRestore) {
             return false;
         }
