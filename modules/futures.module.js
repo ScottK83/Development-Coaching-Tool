@@ -244,6 +244,12 @@
             var allEmps = (wData[latestKey].employees || []).map(function (e) { return e.name; });
             teamMembers = members.length > 0 ? allEmps.filter(function (n) { return members.includes(n); }) : allEmps;
         }
+        // Sort alphabetically by first name
+        teamMembers.sort(function (a, b) {
+            var aFirst = (a || '').split(/[\s,]+/)[0].toLowerCase();
+            var bFirst = (b || '').split(/[\s,]+/)[0].toLowerCase();
+            return aFirst.localeCompare(bFirst);
+        });
 
         // Primary: use real YTD upload if available (source of truth)
         var ytdEmployees = [];
