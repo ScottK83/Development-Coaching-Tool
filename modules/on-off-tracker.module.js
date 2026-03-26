@@ -126,6 +126,8 @@
     function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
         const associateOverallPick = pickYearEndAssociateOverallValue(employeeRecord);
         const values = buildYearEndOnOffValues(employeeRecord, associateOverallPick);
+        const surveyTotal = parseInt(employeeRecord?.surveyTotal, 10);
+        const surveyCount = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : null;
 
         const scoreYear = parseInt(reviewYear, 10);
         const scores = buildYearEndOnOffScores(values, scoreYear);
@@ -140,7 +142,8 @@
                 ratingAverage: null,
                 trackLabel: 'Insufficient KPI data to calculate On/Off Track',
                 trackStatusValue: '',
-                associateOverallSource: associateOverallPick.source
+                associateOverallSource: associateOverallPick.source,
+                surveyCount: surveyCount
             };
         }
 
@@ -154,7 +157,8 @@
             ratingAverage,
             trackLabel,
             trackStatusValue,
-            associateOverallSource: associateOverallPick.source
+            associateOverallSource: associateOverallPick.source,
+            surveyCount: surveyCount
         };
     }
 
@@ -238,6 +242,10 @@
 
     function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
         var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+        var surveyLabel = 'Associate Overall (Surveys)';
+        if (result.surveyCount !== null && result.surveyCount !== undefined) {
+            surveyLabel = 'Associate Overall (' + result.surveyCount + ' survey' + (result.surveyCount !== 1 ? 's' : '') + ')';
+        }
         return [
             {
                 label: 'AHT',
@@ -261,7 +269,7 @@
                 gapText: buildGapToNextText(result.scores.sentiment, result.values.sentiment, ratingBands.overallSentiment)
             },
             {
-                label: 'Associate Overall (Surveys)',
+                label: surveyLabel,
                 valueText: result.values.associateOverall === null ? 'N/A' : _formatMetricDisplay('overallExperience', result.values.associateOverall),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'overallExperience', reviewYear, periodMetadata),
                 score: result.scores.associateOverall,
