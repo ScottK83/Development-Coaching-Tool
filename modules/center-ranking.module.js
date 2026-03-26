@@ -39,7 +39,8 @@
             trackStatusValue: result.trackStatusValue,
             scores: result.scores,
             values: result.values,
-            reliability: parseFloat(emp.reliability) || 0
+            reliability: parseFloat(emp.reliability) || 0,
+            surveyTotal: parseInt(emp.surveyTotal, 10) || 0
         };
     }
 
@@ -129,7 +130,8 @@
                 trackStatusValue: score.trackStatusValue,
                 scores: score.scores,
                 values: score.values,
-                reliability: score.reliability
+                reliability: score.reliability,
+                surveyTotal: score.surveyTotal
             });
         });
 
@@ -363,8 +365,13 @@
                 var scoreBadge = mp.score !== null
                     ? '<span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; color: white; background: ' + scoreColor(mp.score) + '; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
                     : '';
+                // Show survey count next to Assoc Overall
+                var surveyBadge = '';
+                if (mp.rankKey === 'associateOverall' && r.surveyTotal > 0) {
+                    surveyBadge = ' <span style="font-size: 0.68em; color: #888;">(' + r.surveyTotal + ')</span>';
+                }
                 html += '<td style="padding: 5px; text-align: center; color: ' + color + '; white-space: nowrap;">' +
-                    scoreBadge + display + ' <span style="font-size: 0.72em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
+                    scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';
