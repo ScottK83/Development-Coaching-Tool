@@ -6226,6 +6226,138 @@ function initializeCoachingEmail() {
     setCoachingLatestPeriodStatus(status, coachingLatestWeekKey, latestWeek);
     bindCoachingOutlookInputState(outlookBody, outlookBtn);
     bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn);
+    bindQuickCheckinHandlers();
+}
+
+// ============================================
+// QUICK CHECK-IN (Teams message: praise + focus)
+// ============================================
+
+async function generateQuickCheckin() {
+    const select = document.getElementById('coachingEmployeeSelect');
+    const output = document.getElementById('quickCheckinOutput');
+    const copyBtn = document.getElementById('copyQuickCheckinBtn');
+    if (!select || !output) return;
+
+    const employeeName = select.value;
+    if (!employeeName) {
+        alert('Please select an associate first.');
+        return;
+    }
+
+    const firstName = employeeName.split(/[\s,]+/)[0] || employeeName;
+
+    // Get employee data from the selected period
+    const employeeData = getEmployeeDataForPeriod(employeeName);
+    if (!employeeData) {
+        alert('No data found for this employee in the current period.');
+        return;
+    }
+
+    const periodContext = getActivePeriodContext();
+    const periodLabel = periodContext.periodLabel || 'this period';
+    const coachingEval = evaluateMetricsForCoaching(employeeData);
+    const celebrate = coachingEval.celebrate || [];
+    const needsCoaching = coachingEval.needsCoaching || [];
+
+    // Build praise section from top wins
+    let praiseText = '';
+    if (celebrate.length > 0) {
+        // Parse metric name and value from celebrate strings like "- Schedule Adherence: 99.2% (Goal: 95%)"
+        const topWins = celebrate.slice(0, 2);
+        const winDetails = topWins.map(w => {
+            const match = w.match(/^-\s*(.+?):\s*(.+?)(?:\s*\(Goal.*)?$/);
+            return match ? { metric: match[1], detail: match[2].trim() } : { metric: w.replace(/^-\s*/, ''), detail: '' };
+        });
+        if (winDetails.length === 1) {
+            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail}!`;
+        } else {
+            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail} and ${winDetails[1].metric} at ${winDetails[1].detail}!`;
+        }
+    } else {
+        praiseText = `I see you putting in the effort and I appreciate it!`;
+    }
+
+    // Build focus section from top coaching need + tip
+    let focusText = '';
+    if (needsCoaching.length > 0) {
+        const topFocus = needsCoaching[0];
+        const focusMatch = topFocus.match(/^-\s*(.+?):\s*(.+?)(?:\s*\(Goal.*)?$/);
+        const focusMetric = focusMatch ? focusMatch[1] : topFocus.replace(/^-\s*/, '');
+        const focusDetail = focusMatch ? focusMatch[2].trim() : '';
+
+        // Try to get a tip
+        const metricKeyMap = {
+            'Schedule Adherence': 'scheduleAdherence',
+            'CX Rep Overall': 'cxRepOverall',
+            'First Call Resolution': 'fcr',
+            'Overall Experience': 'overallExperience',
+            'Transfers': 'transfers',
+            'Overall Sentiment': 'overallSentiment',
+            'Positive Word': 'positiveWord',
+            'Avoid Negative Word': 'negativeWord',
+            'Avoid Negative Words': 'negativeWord',
+            'Negative Word': 'negativeWord',
+            'Managing Emotions': 'managingEmotions',
+            'Avg Handle Time': 'aht',
+            'Average Handle Time': 'aht',
+            'After Call Work': 'acw',
+            'Hold Time': 'holdTime',
+            'Reliability': 'reliability'
+        };
+
+        const metricKey = metricKeyMap[focusMetric];
+        let tipText = '';
+        if (metricKey) {
+            try {
+                const allTips = await (typeof loadServerTips === 'function' ? loadServerTips() : Promise.resolve({}));
+                const metricTips = allTips[metricKey] || [];
+                if (metricTips.length > 0) {
+                    const tip = typeof selectSmartTip === 'function'
+                        ? selectSmartTip({ employeeId: employeeName, metricKey, severity: 'medium', tips: metricTips })
+                        : metricTips[Math.floor(Math.random() * metricTips.length)];
+                    if (tip) tipText = tip;
+                }
+            } catch (e) { /* no tips available */ }
+        }
+
+        focusText = `Your focus this week should be ${focusMetric}${focusDetail ? ' (currently at ' + focusDetail + ')' : ''}.`;
+        if (tipText) {
+            focusText += ` Try this: ${tipText}`;
+        }
+    }
+
+    // Assemble the message
+    let message = `Hey ${firstName}! Your data for ${periodLabel} is looking great. ${praiseText}`;
+    if (focusText) {
+        message += `\n\n${focusText}`;
+    }
+    message += `\n\nKeep up the great work! Let me know if you need anything.`;
+
+    output.value = message;
+    output.style.display = 'block';
+    if (copyBtn) copyBtn.style.display = 'inline-block';
+
+    // Auto-copy
+    try {
+        await navigator.clipboard.writeText(message);
+        showToast('Quick check-in copied to clipboard!', 3000);
+    } catch (e) { /* user can click copy */ }
+}
+
+function bindQuickCheckinHandlers() {
+    const genBtn = document.getElementById('generateQuickCheckinBtn');
+    const copyBtn = document.getElementById('copyQuickCheckinBtn');
+    const output = document.getElementById('quickCheckinOutput');
+
+    if (genBtn) bindElementOnce(genBtn, 'click', generateQuickCheckin);
+    if (copyBtn && output) {
+        bindElementOnce(copyBtn, 'click', () => {
+            navigator.clipboard.writeText(output.value || '').then(() => {
+                showToast('Copied!', 2000);
+            });
+        });
+    }
 }
 
 function getCallListeningEmployeeOptions() {
