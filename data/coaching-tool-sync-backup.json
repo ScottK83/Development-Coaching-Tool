@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T01:44:24.032Z",
+  "generatedAt": "2026-03-27T01:44:43.445Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -42722,7 +42722,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "Alyssa Dimes",
+    "selectedAssociate": "James Garcia",
     "associates": {
       "⬭Robert Berrelleza⬬": {
         "carriedOverHours": 0,
@@ -46124,6 +46124,14 @@
         "ptostMaxHours": 40,
         "entries": [],
         "payrollEntries": []
+      },
+      "James Garcia": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 45.25,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": []
       }
     }
   },
@@ -46804,7 +46812,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 60736
+      "byteLength": 60882
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
