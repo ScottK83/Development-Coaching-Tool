@@ -1458,7 +1458,7 @@ function importPayrollExcel(file) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: '' });
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
 
             processPayrollExcelRows(rows);
         } catch (err) {
@@ -1665,27 +1665,58 @@ function cleanUnicodeControl(str) {
 }
 
 function parseExcelDate(raw) {
+    if (raw == null || raw === '') return null;
+
+    // Date object (from SheetJS raw:true)
+    if (raw instanceof Date && !isNaN(raw.getTime())) {
+        return raw.toISOString().slice(0, 10);
+    }
+
+    // Number — Excel serial number (days since 1900-01-01)
+    if (typeof raw === 'number' && raw > 40000 && raw < 60000) {
+        const date = new Date((raw - 25569) * 86400000);
+        if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+    }
+
+    const str = String(raw).trim();
+
     // "2026-01-02 00:00:00" or "2026-01-02"
-    const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
     if (isoMatch) return isoMatch[1];
+
     // "01/02/2026" or "1/2/2026" (4-digit year)
-    const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    const usMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (usMatch) return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`;
-    // "1/2/26" (2-digit year) — SheetJS raw:false format
-    const usShort = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+
+    // "1/2/26" (2-digit year)
+    const usShort = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
     if (usShort) {
         const yr = parseInt(usShort[3], 10);
         const fullYear = yr >= 50 ? 1900 + yr : 2000 + yr;
         return `${fullYear}-${String(usShort[1]).padStart(2, '0')}-${String(usShort[2]).padStart(2, '0')}`;
     }
-    // Excel serial number (days since 1900-01-01)
-    const serial = parseFloat(raw);
-    if (Number.isFinite(serial) && serial > 40000 && serial < 60000) {
-        const date = new Date((serial - 25569) * 86400000);
-        if (!isNaN(date.getTime())) {
-            return date.toISOString().slice(0, 10);
+
+    // "02-January-26" or "2-Jan-2026" (DD-MonthName-YY or DD-MonthName-YYYY)
+    const MONTHS = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+                     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+    const namedMatch = str.match(/^(\d{1,2})-([A-Za-z]+)-(\d{2,4})$/);
+    if (namedMatch) {
+        const monthKey = namedMatch[2].slice(0, 3).toLowerCase();
+        const month = MONTHS[monthKey];
+        if (month) {
+            let year = parseInt(namedMatch[3], 10);
+            if (year < 100) year = year >= 50 ? 1900 + year : 2000 + year;
+            return `${year}-${month}-${String(namedMatch[1]).padStart(2, '0')}`;
         }
     }
+
+    // Numeric string that looks like a serial number
+    const serial = parseFloat(str);
+    if (Number.isFinite(serial) && serial > 40000 && serial < 60000) {
+        const date = new Date((serial - 25569) * 86400000);
+        if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+    }
+
     return null;
 }
 
