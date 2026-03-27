@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T17:39:05.714Z",
+  "generatedAt": "2026-03-27T17:39:40.753Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -45307,7 +45307,14 @@
       "Robert Berrelleza",
       "Sabrina Gage"
     ],
-    "2026-03-20|2026-03-26": []
+    "2026-03-20|2026-03-26": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Desiree Clark",
+      "Destiny Cervantez",
+      "Kamella Dash",
+      "Robert Berrelleza"
+    ]
   },
   "callCenterAverages": {
     "2026-03-19|2026-03-25": {
@@ -49054,7 +49061,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 296
+      "byteLength": 288
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -49099,7 +49106,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 370
+      "byteLength": 473
     }
   }
 }
