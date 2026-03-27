@@ -18,7 +18,8 @@ const PTO_DISCIPLINE_LADDER = [
 
 const PTO_VALID_TYPES = [
     'ptost', 'pto-planned', 'pto-unplanned',
-    'vto-pto', 'tardy', 'tardy-ptost', 'ncns'
+    'vto-pto', 'tardy', 'tardy-ptost', 'ncns',
+    'std', 'fmlnp', 'brv', 'ppl', 'nop'
 ];
 let ptoReliabilityWeekCache = [];
 
@@ -1244,7 +1245,12 @@ function importVerintEntries() {
 const PAYROLL_TRC_MAP = {
     'pto': 'pto-planned',
     'ptost': 'ptost',
-    'pto unscheduled': 'pto-unplanned'
+    'pto unscheduled': 'pto-unplanned',
+    'std': 'std',
+    'fmlnp': 'fmlnp',
+    'brv': 'brv',
+    'ppl': 'ppl',
+    'nop': 'nop'
 };
 
 function parsePayrollDate(dateStr) {
@@ -1431,6 +1437,222 @@ function importPayrollEntries() {
     }
 
     if (textarea) textarea.value = '';
+}
+
+// ============================================
+// BULK PAYROLL EXCEL IMPORT (ALL EMPLOYEES)
+// ============================================
+
+function importPayrollExcel(file) {
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        showToast('Please upload an Excel file (.xlsx or .xls)', 4000);
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: '' });
+
+            processPayrollExcelRows(rows);
+        } catch (err) {
+            console.error('Payroll Excel import error:', err);
+            showToast('Failed to read Excel file. Check format and try again.', 5000);
+        }
+    };
+    reader.onerror = function() {
+        showToast('Failed to read file', 4000);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function processPayrollExcelRows(rows) {
+    // Find header row (contains "Emplid", "Name", "TRC", etc.)
+    let headerIdx = -1;
+    let colMap = {};
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        const row = rows[i];
+        if (!Array.isArray(row)) continue;
+        const lower = row.map(c => String(c || '').trim().toLowerCase());
+        const nameIdx = lower.indexOf('name');
+        const trcIdx = lower.indexOf('trc');
+        if (nameIdx >= 0 && trcIdx >= 0) {
+            headerIdx = i;
+            colMap = {
+                name: nameIdx,
+                date: lower.indexOf('date'),
+                trc: trcIdx,
+                quantity: lower.indexOf('quantity'),
+                status: lower.indexOf('status')
+            };
+            break;
+        }
+    }
+
+    if (headerIdx < 0) {
+        showToast('Could not find header row (expected Name, TRC, Quantity columns)', 5000);
+        return;
+    }
+
+    // Build a case-insensitive lookup of existing associate names
+    const store = loadPtoStore();
+    const existingNames = Object.keys(store.associates || {});
+    const nameLookup = {};
+    existingNames.forEach(n => { nameLookup[n.toLowerCase()] = n; });
+
+    // Also check weekly/ytd data for known names
+    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    const ytdDataLocal = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    const allData = Object.assign({}, weeklyData, ytdDataLocal);
+    Object.values(allData).forEach(period => {
+        if (!Array.isArray(period?.employees)) return;
+        period.employees.forEach(emp => {
+            const name = String(emp?.name || '').trim();
+            if (name && !nameLookup[name.toLowerCase()]) {
+                nameLookup[name.toLowerCase()] = name;
+            }
+        });
+    });
+
+    // Parse all non-REG rows grouped by employee
+    const byEmployee = {};
+    let skippedCount = 0;
+    let regCount = 0;
+
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!Array.isArray(row)) continue;
+
+        const rawName = cleanUnicodeControl(String(row[colMap.name] || '').trim());
+        if (!rawName) continue;
+
+        const rawTrc = cleanUnicodeControl(String(row[colMap.trc] || '').trim());
+        if (!rawTrc) continue;
+
+        const trcLower = rawTrc.toLowerCase();
+        if (trcLower === 'reg') { regCount++; continue; }
+        if (trcLower === 'trc') continue; // header repeat
+
+        const mappedType = PAYROLL_TRC_MAP[trcLower];
+        if (!mappedType) { skippedCount++; continue; }
+
+        const rawQty = cleanUnicodeControl(String(row[colMap.quantity] || '').trim());
+        const hours = parseFloat(rawQty);
+        if (!Number.isFinite(hours) || hours <= 0) { skippedCount++; continue; }
+
+        // Parse date — could be "2026-01-02 00:00:00", "2026-01-02", "01/02/2026", etc.
+        const rawDate = cleanUnicodeControl(String(row[colMap.date] || '').trim());
+        const isoDate = parseExcelDate(rawDate);
+        if (!isoDate) { skippedCount++; continue; }
+
+        // Check tracking year
+        const year = getYearFromIsoDateText(isoDate);
+        if (year !== PTO_TRACKING_YEAR) continue;
+
+        const rawStatus = cleanUnicodeControl(String(row[colMap.status] || '').trim());
+
+        // Resolve employee name: match to existing or title-case
+        const resolvedName = resolveEmployeeName(rawName, nameLookup);
+
+        if (!byEmployee[resolvedName]) byEmployee[resolvedName] = [];
+        byEmployee[resolvedName].push({
+            date: isoDate,
+            hours: normalizeHours(hours),
+            type: mappedType,
+            payrollTrc: rawTrc,
+            status: rawStatus,
+            notes: `Payroll: ${rawTrc}${rawStatus ? ' (' + rawStatus + ')' : ''}`
+        });
+    }
+
+    // Overwrite: clear all payroll entries for each employee found, then re-add
+    const employeeNames = Object.keys(byEmployee);
+    if (!employeeNames.length) {
+        showToast(`No time-off entries found in file. (${regCount} REG rows skipped${skippedCount ? ', ' + skippedCount + ' unparseable' : ''})`, 5000);
+        return;
+    }
+
+    if (!store.associates) store.associates = {};
+
+    let totalAdded = 0;
+    const summary = {};
+
+    employeeNames.forEach(name => {
+        if (!store.associates[name]) {
+            store.associates[name] = getDefaultPtoTracker();
+        }
+        // Clear existing payroll entries for this employee (full overwrite)
+        store.associates[name].payrollEntries = [];
+
+        // Add all parsed entries
+        byEmployee[name].forEach(entry => {
+            store.associates[name].payrollEntries.push({
+                id: `payroll-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                date: entry.date,
+                hours: entry.hours,
+                type: entry.type,
+                payrollTrc: entry.payrollTrc,
+                status: entry.status,
+                notes: entry.notes
+            });
+            totalAdded++;
+            summary[entry.payrollTrc] = (summary[entry.payrollTrc] || 0) + entry.hours;
+        });
+    });
+
+    savePtoStore(store);
+
+    const summaryLines = Object.entries(summary).map(([trc, hrs]) => `${trc}: ${hrs.toFixed(1)}h`).join(', ');
+    showToast(`Imported ${totalAdded} entries for ${employeeNames.length} employees. ${summaryLines}`, 6000);
+
+    // Show results in the payroll results area if visible
+    const resultsEl = document.getElementById('ptoPayrollResults');
+    if (resultsEl) {
+        resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;">
+            <strong>Excel Import Complete</strong><br>
+            ${totalAdded} entries across ${employeeNames.length} employees<br>
+            <span style="font-size:0.9em;">${summaryLines}</span>
+            ${skippedCount ? `<br><span style="font-size:0.85em;color:#856404;">${skippedCount} rows skipped (unknown TRC or bad data)</span>` : ''}
+        </div>`;
+    }
+
+    // Refresh current PTO view if an associate is selected
+    const context = getSelectedAssociateAndTracker(false);
+    if (context.associateName && context.tracker) {
+        renderPayrollEntries(context.tracker);
+        renderPtoSummary(context.tracker, context.associateName);
+    }
+    populatePtoAssociateSelect();
+}
+
+function cleanUnicodeControl(str) {
+    // Remove Unicode directional markers (LRE, PDF, LRM, etc.) that PeopleSoft injects
+    return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+}
+
+function parseExcelDate(raw) {
+    // "2026-01-02 00:00:00" or "2026-01-02"
+    const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+    // "01/02/2026" or "1/2/2026"
+    const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (usMatch) return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`;
+    return null;
+}
+
+function resolveEmployeeName(rawName, nameLookup) {
+    const lower = rawName.toLowerCase();
+    if (nameLookup[lower]) return nameLookup[lower];
+    // Title-case the name for new employees
+    const titleCased = rawName.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    nameLookup[lower] = titleCased;
+    return titleCased;
 }
 
 // ============================================
@@ -1697,6 +1919,23 @@ function initializePtoTracker() {
         payrollImportBtn.dataset.bound = 'true';
     }
 
+    const payrollExcelBtn = document.getElementById('ptoPayrollExcelBtn');
+    const payrollExcelInput = document.getElementById('ptoPayrollExcelInput');
+    if (payrollExcelBtn && payrollExcelInput && !payrollExcelBtn.dataset.bound) {
+        payrollExcelBtn.addEventListener('click', () => {
+            payrollExcelInput.value = '';
+            payrollExcelInput.click();
+        });
+        payrollExcelInput.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const fileNameEl = document.getElementById('ptoPayrollExcelFileName');
+            if (fileNameEl) fileNameEl.textContent = file.name;
+            importPayrollExcel(file);
+        });
+        payrollExcelBtn.dataset.bound = 'true';
+    }
+
     const discrepancyBtn = document.getElementById('ptoDiscrepancyBtn');
     if (discrepancyBtn && !discrepancyBtn.dataset.bound) {
         discrepancyBtn.addEventListener('click', runDiscrepancyCheck);
@@ -1900,9 +2139,14 @@ function ptoTypeLabel(type) {
         'vto-pto': 'VTO-PTO',
         'tardy': 'Tardy',
         'tardy-ptost': 'Tardy (PTOST)',
-        'ncns': 'NCNS'
+        'ncns': 'NCNS',
+        'std': 'Short-Term Disability',
+        'fmlnp': 'FMLA Non-Paid',
+        'brv': 'Bereavement',
+        'ppl': 'Paid Parental Leave',
+        'nop': 'No Pay'
     };
-    return labels[type] || 'PTO Unplanned';
+    return labels[type] || type.toUpperCase();
 }
 
 function ptoTypeBadgeColor(type) {
@@ -1913,7 +2157,12 @@ function ptoTypeBadgeColor(type) {
         'vto-pto': { bg: '#f3e5f5', text: '#6a1b9a' },
         'tardy': { bg: '#fff8e1', text: '#f57f17' },
         'tardy-ptost': { bg: '#fce4ec', text: '#880e4f' },
-        'ncns': { bg: '#ffebee', text: '#b71c1c' }
+        'ncns': { bg: '#ffebee', text: '#b71c1c' },
+        'std': { bg: '#e0f2f1', text: '#004d40' },
+        'fmlnp': { bg: '#fce4ec', text: '#880e4f' },
+        'brv': { bg: '#ede7f6', text: '#4a148c' },
+        'ppl': { bg: '#e8eaf6', text: '#1a237e' },
+        'nop': { bg: '#efebe9', text: '#3e2723' }
     };
     return colors[type] || { bg: '#f5f5f5', text: '#333' };
 }

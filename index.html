@@ -1141,15 +1141,25 @@ Box 2 - Future Improvement Areas:
                                 </div>
                                 <div id="ptoVerintResults"></div>
                             </div>
-                            <!-- Payroll import -->
+                            <!-- Payroll Excel upload (bulk, all employees) -->
+                            <div style="margin-bottom: 18px;">
+                                <h4 style="color: #5a2c8a; margin: 0 0 8px 0; font-size: 0.92em;">Payroll — Excel Upload (All Employees)</h4>
+                                <p style="color: #666; font-size: 0.83em; margin: 0 0 10px 0;">Upload PeopleSoft timecard report (.xlsx). Imports PTO, PTOST, STD, FMLA, BRV, PPL for all employees. Re-uploading overwrites previous payroll data.</p>
+                                <input type="file" id="ptoPayrollExcelInput" accept=".xlsx,.xls" style="display: none;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <button type="button" id="ptoPayrollExcelBtn" class="btn-primary" style="background: #5a2c8a; padding: 8px 16px; font-size: 0.9em;">Upload Payroll Excel</button>
+                                    <span id="ptoPayrollExcelFileName" style="color: #888; font-size: 0.82em;"></span>
+                                </div>
+                                <div id="ptoPayrollResults"></div>
+                            </div>
+                            <!-- Payroll paste (single employee) -->
                             <div>
-                                <h4 style="color: #5a2c8a; margin: 0 0 8px 0; font-size: 0.92em;">Payroll — CSV / PDF Extract</h4>
+                                <h4 style="color: #5a2c8a; margin: 0 0 8px 0; font-size: 0.92em;">Payroll — CSV / PDF Extract (Single Employee)</h4>
                                 <textarea id="ptoPayrollPaste" rows="5" placeholder="Paste payroll CSV (tab or comma separated)..." style="width: 100%; padding: 9px; border: 1px solid #d0dce5; border-radius: 5px; font-family: monospace; font-size: 0.83em; resize: vertical;"></textarea>
                                 <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
                                     <button type="button" id="ptoPayrollImportBtn" class="btn-primary" style="background: #5a2c8a; padding: 8px 16px; font-size: 0.9em;">Import Payroll</button>
                                     <span style="color: #888; font-size: 0.82em;">Duplicates auto-skipped</span>
                                 </div>
-                                <div id="ptoPayrollResults"></div>
                             </div>
                         </div>
                     </details>
