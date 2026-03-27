@@ -1611,8 +1611,8 @@ function processPayrollExcelRows(rows) {
     const summaryLines = Object.entries(summary).map(([trc, hrs]) => `${trc}: ${hrs.toFixed(1)}h`).join(', ');
     showToast(`Imported ${totalAdded} entries for ${employeeNames.length} employees. ${summaryLines}`, 6000);
 
-    // Show results in the payroll results area if visible
-    const resultsEl = document.getElementById('ptoPayrollResults');
+    // Show results in the Excel upload results area
+    const resultsEl = document.getElementById('ptoPayrollExcelResults');
     if (resultsEl) {
         resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;">
             <strong>Excel Import Complete</strong><br>
