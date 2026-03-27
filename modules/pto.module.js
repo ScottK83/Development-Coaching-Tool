@@ -1,12 +1,14 @@
+(function() {
+'use strict';
 // ============================================
 // PTO / PAYROLL TIME-OFF TRACKER (SIMPLIFIED)
 // Upload payroll Excel, view missed days per employee
 // ============================================
 
-const PTO_TRACKING_YEAR = 2026;
-const STORAGE_PREFIX = 'devCoachingTool_';
+var PTO_TRACKING_YEAR = 2026;
+var STORAGE_PREFIX = 'devCoachingTool_';
 
-const PAYROLL_TRC_MAP = {
+var PAYROLL_TRC_MAP = {
     'pto': 'PTO',
     'ptost': 'PTOST',
     'pto unscheduled': 'PTO Unsched',
@@ -17,7 +19,7 @@ const PAYROLL_TRC_MAP = {
     'nop': 'No Pay'
 };
 
-const TRC_COLORS = {
+var TRC_COLORS = {
     'PTO':             { bg: '#e8f5e9', text: '#1b5e20' },
     'PTOST':           { bg: '#e3f2fd', text: '#0d47a1' },
     'PTO Unsched':     { bg: '#fff3e0', text: '#e65100' },
@@ -481,3 +483,5 @@ function initializePtoTracker() {
 
 // Make initializePtoTracker globally accessible
 window.initializePtoTracker = initializePtoTracker;
+
+})();
