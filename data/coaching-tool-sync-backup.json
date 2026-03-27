@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T00:14:12.102Z",
+  "generatedAt": "2026-03-27T00:52:32.447Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -42731,593 +42731,24 @@
   "hotTipHistory": {
     "entries": []
   },
-  "yearEndAnnualGoalsStore": {
-    "2025::Scoticia Osborne": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "2"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Alyssa Dimes": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Scoticia Osborne": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "not-met",
-        "note": "2"
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Teena Pokorski": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "1"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Marietta Bernal": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "4"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Marietta Bernal": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Oceane Ingram": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Ronda Colis": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Angelina Fierro": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Caylie Chirumbolo": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Caylie Chirumbolo": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Taylor Colter": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Pamela Muhammad": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Jenifer Henson": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Ekiecha Brabham": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Ekiecha Brabham": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Alyssa Dimes": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    }
-  },
+  "yearEndAnnualGoalsStore": {},
   "yearEndDraftStore": {},
   "employeePreferredNames": {},
   "appStorageSnapshot": {
+    "devCoachingTool_coachingHistory": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
     "devCoachingTool_repoBackupAppliedAt": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 24
+    },
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 5
     },
     "devCoachingTool_followUpHistory": {
       "valueType": "object",
@@ -43332,72 +42763,32 @@
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
-      "byteLength": 9785
-    },
-    "devCoachingTool_callListeningSyncConfig": {
-      "valueType": "object",
-      "itemCount": 4,
-      "byteLength": 122
-    },
-    "devCoachingTool_sentimentPhraseDatabase": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 75
-    },
-    "devCoachingTool_employeeNicknames": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 50
-    },
-    "devCoachingTool_yearEndAnnualGoalsStore": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 127
-    },
-    "devCoachingTool_callListeningLogs": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_associateSentimentSnapshots": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_employeePreferredNames": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 343
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 28
-    },
-    "devCoachingTool_coachingHistory": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+      "byteLength": 9390
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 49009
     },
+    "devCoachingTool_callListeningSyncConfig": {
+      "valueType": "object",
+      "itemCount": 4,
+      "byteLength": 116
+    },
+    "devCoachingTool_sentimentPhraseDatabase": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 75
+    },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 6
+      "byteLength": 7
+    },
+    "devCoachingTool_yearEndAnnualGoalsStore": {
+      "valueType": "object",
+      "itemCount": 17,
+      "byteLength": 7151
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
@@ -43406,18 +42797,28 @@
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 125
+      "itemCount": 5,
+      "byteLength": 287
     },
-    "devCoachingTool_yearEndAnnualGoals": {
+    "devCoachingTool_uiNavState": {
       "valueType": "object",
-      "itemCount": 17,
-      "byteLength": 7151
+      "itemCount": 3,
+      "byteLength": 131
+    },
+    "devCoachingTool_callListeningLogs": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
     },
     "devCoachingTool_hotTipHistory": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 14
+    },
+    "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
@@ -43429,15 +42830,15 @@
       "itemCount": 14,
       "byteLength": 667862
     },
-    "devCoachingTool_trendQueueLegendExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
-    },
-    "devCoachingTool_lastError": {
+    "devCoachingTool_employeePreferredNames": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 228
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 343
     }
   }
 }
