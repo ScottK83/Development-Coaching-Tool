@@ -601,11 +601,11 @@ window.deleteTip = async function(metricKey, index) {
 
 const DEFAULT_METRIC_TIPS = {
     "Schedule Adherence": [
-        "Focus on being work-ready at the start of shift, after breaks, and after lunches.",
-        "Use alarms or reminders to stay aligned with your schedule throughout the day.",
-        "If something unexpected pulls you off schedule, communicate early.",
-        "Strong adherence helps keep call volume balanced for the team.",
-        "Building consistent habits now supports future shift flexibility."
+        "Set a phone alarm 2 minutes before your shift, breaks, and lunch end so you're logged in and ready right on time.",
+        "Log into your systems and open your tools before your shift starts so you're taking calls the moment the clock hits.",
+        "If you need to step away unexpectedly, message your supervisor immediately and put yourself in the correct aux code.",
+        "After break, don't stop at the vending machine or chat on the way back. Head straight to your desk and log in first.",
+        "Build a pre-shift checklist: headset on, systems open, water bottle filled, aux ready to switch. Do it the same way every day."
     ],
     "Rep Satisfaction": [
         "After resolving the issue, ask 'Is there anything else I can help with today?' to show you're not rushing them off the call.",
@@ -615,81 +615,81 @@ const DEFAULT_METRIC_TIPS = {
         "End every call with a brief recap: 'So just to confirm, we've taken care of [X] for you today.'"
     ],
     "First Call Resolution": [
-        "Fully understand the customer's need before taking action.",
-        "Use available tools to resolve issues in one interaction.",
-        "Clarify expectations so the customer knows what will happen next.",
-        "Confirm all questions are addressed before closing the call.",
-        "Strong ownership helps reduce repeat contacts."
+        "Before you start fixing the issue, ask 'Is there anything else going on with your account I should look at while I have you?' to catch everything in one call.",
+        "When you're unsure, use your resources (knowledge base, job aids) on the call rather than guessing. Getting it right the first time beats a callback.",
+        "Before ending the call, ask 'Does that fully resolve everything for you today?' to make sure nothing was missed.",
+        "If the fix involves a timeline (like a credit posting), tell them exactly when and what to expect so they don't call back to check.",
+        "When you see a related issue on the account (past due, pending order), proactively mention it. Fixing two things now prevents a second call later."
     ],
     "Overall Experience": [
-        "Set a positive tone early by explaining how you will help.",
-        "Clear explanations shape how the interaction is remembered.",
-        "Avoid rushed language so customers feel supported.",
-        "Summarize next steps before ending the call.",
-        "Reassurance helps create a positive overall experience."
+        "Open the call with 'I'd be happy to help you with that' instead of jumping straight into verification. It sets a welcoming tone.",
+        "When there's bad news, lead with what you CAN do: 'Here's what I can do for you right now' before explaining any limitations.",
+        "Avoid dead air. If you're researching, narrate: 'I'm pulling up your account now' or 'Let me check the latest notes here.'",
+        "Before ending, summarize clearly: 'So here's what we did today and what happens next.' Customers remember the ending most.",
+        "Match the customer's energy. If they're chatty, take a moment to connect. If they're in a hurry, get to the point quickly."
     ],
     "Transfers": [
-        "Take a moment to fully assess the customer's request before transferring.",
-        "Use available job aids and resources to resolve more calls independently.",
-        "Building confidence in handling issues reduces unnecessary transfers.",
-        "When a transfer is needed, clearly explain the reason to the customer.",
-        "Fewer transfers improve both customer experience and call flow."
+        "Before transferring, ask yourself: 'Can I find this answer using my tools or knowledge base?' Check your resources first.",
+        "If you're unsure but think you might be able to help, message a colleague or your supervisor to confirm before transferring.",
+        "When you do transfer, stay on the line for a warm handoff. Introduce the customer and explain what's already been done.",
+        "Keep a personal cheat sheet of which call types you CAN handle vs. which truly need another department.",
+        "After a transfer, note what the call was about. If you see the same type often, ask your supervisor for training on handling it yourself."
     ],
     "Overall Sentiment": [
-        "Lead the call with calm confidence.",
-        "A steady approach helps de-escalate tense situations.",
-        "Acknowledge emotions without taking them personally.",
-        "Respectful communication improves sentiment.",
-        "Staying composed supports better outcomes."
+        "When a customer is upset, pause and say 'I hear you, and I want to make sure we get this right' before jumping into problem-solving.",
+        "Lower your voice slightly and slow your pace when a customer raises theirs. It naturally de-escalates the conversation.",
+        "Avoid the word 'unfortunately.' Replace it with 'Here's what I can do' or 'What I'd recommend is...'",
+        "If the call is getting heated, say 'I understand this is frustrating. Let's work through this together.' It resets the dynamic.",
+        "After a tough call, take 10 seconds to breathe before answering the next one. Carrying frustration forward hurts your sentiment on the next call too."
     ],
     "Positive Word": [
-        "Emphasize what you can do for the customer.",
-        "Use affirming language throughout the interaction.",
-        "Reinforce helpful actions verbally.",
-        "Keep conversations solution-focused.",
-        "Intentional word choice shapes tone."
+        "Swap 'I can't do that' with 'What I can do is...' It says the same thing but the customer hears a solution, not a wall.",
+        "Use phrases like 'Great question,' 'Absolutely,' and 'Happy to help' naturally throughout the call. They add up.",
+        "When confirming actions, say 'I've taken care of that for you' instead of just 'Done.' It sounds more personal.",
+        "Thank the customer for specific things: 'Thanks for your patience while I looked into that' instead of a generic 'Thank you.'",
+        "Close with something warm and specific: 'I'm glad we got that sorted out for you today' instead of a flat 'Anything else?'"
     ],
     "Avoid Negative Words": [
-        "Replace limiting phrases with neutral or positive alternatives.",
-        "Focus on solutions rather than constraints.",
-        "Small wording changes can shift customer perception.",
-        "Practice positive phrasing consistently.",
-        "Clear communication builds trust."
+        "Replace 'You have to' with 'You'll want to' or 'The next step would be.' It removes the commanding tone.",
+        "Instead of 'That's not my department,' say 'Let me connect you with the team that specializes in this.'",
+        "Swap 'No, we can't' with 'Here's what we can offer instead.' Always redirect to the positive alternative.",
+        "Avoid 'The problem is...' and use 'What I'm seeing is...' It sounds investigative instead of blaming.",
+        "Don't say 'You should have called sooner.' Instead: 'I'm glad you reached out, let's take care of this now.'"
     ],
     "Managing Emotions": [
-        "You're doing great here! Keep maintaining composure even during challenging interactions.",
-        "Take a deep breath before responding to emotional customers.",
-        "Acknowledge the customer's feelings: 'I understand this is frustrating.'",
-        "Stay calm and professional, even if the customer is upset.",
-        "If needed, take a brief pause after difficult calls to reset."
+        "When you feel yourself getting frustrated, mute for 2 seconds, take a breath, then unmute and respond. That pause makes all the difference.",
+        "Remember: the customer is upset at the situation, not at you personally. Separating that mentally helps you stay steady.",
+        "If a customer is yelling, let them finish before responding. Then say calmly: 'I understand. Let me help fix this.'",
+        "Keep a 'reset phrase' ready for tough calls. Something like 'Let's start fresh and get this resolved for you.'",
+        "After a difficult interaction, stand up, stretch, or take a sip of water before the next call. A 15-second reset prevents emotional carry-over."
     ],
     "Average Handle Time": [
-        "Use confident ownership statements to guide the call.",
-        "Ask focused questions early to avoid rework later.",
-        "Navigate systems efficiently using common paths and shortcuts.",
-        "Balance efficiency with accuracy to avoid repeat work.",
-        "Confidence and structure naturally improve handle time."
+        "Open with a clear purpose question: 'What can I help you with today?' to avoid 2 minutes of back-and-forth figuring out the issue.",
+        "While the customer explains, start pulling up their account and navigating to the relevant screen. Multitask the listen + lookup.",
+        "Know your top 5 call types and have the steps memorized. If you handle 80% of calls without searching, your AHT drops naturally.",
+        "Avoid over-explaining. Once the issue is resolved, confirm and close. You don't need to re-explain the entire process.",
+        "If you're stuck and researching for more than 60 seconds, ask a teammate via chat rather than spending 3 minutes searching alone."
     ],
     "After Call Work": [
-        "Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy.",
-        "Have templates ready for common call types to speed up ACW.",
-        "Document as you go during the call when possible.",
-        "Be thorough but concise in your notes.",
-        "If you're spending too long, ask your supervisor for tips on streamlining."
+        "Type your notes while the customer is talking. Capture key details (account number, issue, resolution) during the call, not after.",
+        "Create shorthand for common dispositions. If you handle a billing call 20 times a day, have a template ready to paste.",
+        "Set a personal ACW target: aim to wrap up notes in 30 seconds or less. Time yourself for a few calls to build awareness.",
+        "If a call was complex, jot bullet points during the call and convert them to proper notes in ACW. Don't start from scratch.",
+        "Close out all tabs and screens from the previous call before the next one comes in. Clean workspace = faster documentation."
     ],
     "Hold Time": [
-        "Minimize hold time by gathering information upfront. It improves customer experience and efficiency.",
-        "Explain what you're doing when you place someone on hold.",
-        "Set realistic time expectations: 'This will take about 30 seconds.'",
-        "Check back every 30-45 seconds if research is taking longer.",
-        "If the hold will be long, offer to call the customer back instead."
+        "Before placing a hold, gather all the information you'll need upfront: account number, issue details, verification. Don't hold to ask for more info.",
+        "Tell the customer exactly what you're doing: 'I'm going to check your last 3 statements, this should take about 30 seconds.'",
+        "Check in every 30-45 seconds during long holds: 'Still researching, appreciate your patience. Almost there.'",
+        "If you know it'll take more than 2 minutes, offer a callback: 'I want to make sure I get this right. Can I call you back in 10 minutes?'",
+        "Keep your most-used resources bookmarked and organized. Faster lookups = shorter holds."
     ],
     "Reliability": [
-        "Plan ahead and submit time-off requests early.",
-        "Communicate promptly if something unexpected affects attendance.",
-        "Consistent reliability supports the entire team.",
-        "Strong attendance builds long-term flexibility.",
-        "Proactive planning prevents last-minute coverage issues."
+        "Submit PTO and time-off requests at least 2 weeks in advance when possible. Last-minute requests create coverage gaps for the team.",
+        "If you're running late, call or message your supervisor before your shift starts, not after. Early communication shows accountability.",
+        "Set up your morning routine so you arrive 10 minutes early. That buffer prevents most tardies from traffic, weather, or parking.",
+        "If you have recurring appointments, work with your supervisor to adjust your schedule rather than calling out each time.",
+        "Track your own attendance. If you notice a pattern (e.g., calling out on Mondays), address it proactively before it becomes a bigger issue."
     ]
 };
 
