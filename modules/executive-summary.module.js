@@ -397,14 +397,7 @@
 
         if (!Number.isFinite(averageValue)) return neutralStyle;
 
-        var onOffMetrics = new Set(['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall', 'reliability']);
-        if (onOffMetrics.has(metricKey)) {
-            var score = getYearEndOnOffScoreOrFallback(metricKey, averageValue, reviewYear);
-            if (score === 3) return { background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)', textColor: '#ffffff' };
-            if (score === 2) return { background: 'linear-gradient(135deg, #f0de87 0%, #e6c65a 100%)', textColor: '#222222' };
-            if (score === 1) return { background: 'linear-gradient(135deg, #c62828 0%, #ef5350 100%)', textColor: '#ffffff' };
-        }
-
+        // Use metric target (goal) for card color, not on/off tracker stretch bands
         if (metricMeetsTarget(metricKey, averageValue)) {
             return { background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)', textColor: '#ffffff' };
         }
