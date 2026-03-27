@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T01:43:59.720Z",
+  "generatedAt": "2026-03-27T01:44:24.032Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -42722,7 +42722,7 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "⬭Robert Berrelleza⬬",
+    "selectedAssociate": "Alyssa Dimes",
     "associates": {
       "⬭Robert Berrelleza⬬": {
         "carriedOverHours": 0,
@@ -46116,6 +46116,14 @@
             "notes": "Payroll: PTOST (Approved)"
           }
         ]
+      },
+      "Alyssa Dimes": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": []
       }
     }
   },
@@ -46796,7 +46804,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 60601
+      "byteLength": 60736
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
