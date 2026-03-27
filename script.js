@@ -3940,11 +3940,31 @@ function getWeeklyKeysSorted() {
 }
 
 function parseWeekKeyDate(weekKey, week) {
-    const label = week?.metadata?.label || week?.metadata?.weekEnding || week?.week_start || weekKey || '';
+    // Try metadata endDate first (most reliable, ISO format)
+    const endDate = week?.metadata?.endDate;
+    if (endDate) {
+        const parsed = Date.parse(endDate);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+
+    // Try parsing from the weekKey itself (format: "startDate|endDate")
+    const parts = (weekKey || '').split('|');
+    const keyEnd = parts[1] || parts[0] || '';
+    if (keyEnd) {
+        const parsed = Date.parse(keyEnd);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+
+    // Fallback: try label/weekEnding
+    const label = week?.metadata?.label || week?.metadata?.weekEnding || '';
     const match = label.match(/Week ending\s+(.+)$/i);
     const dateStr = match ? match[1] : label;
-    const parsed = Date.parse(dateStr);
-    return Number.isFinite(parsed) ? parsed : 0;
+    if (dateStr) {
+        const parsed = Date.parse(dateStr);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+
+    return 0;
 }
 
 function getLatestWeeklyKey() {
