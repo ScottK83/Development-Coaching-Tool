@@ -6325,12 +6325,12 @@ async function generateQuickCheckin() {
             return match ? { metric: match[1], detail: match[2].trim() } : { metric: w.replace(/^-\s*/, ''), detail: '' };
         });
         if (winDetails.length === 1) {
-            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail}!`;
+            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail}! \uD83D\uDD25`;
         } else {
-            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail} and ${winDetails[1].metric} at ${winDetails[1].detail}!`;
+            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail} and ${winDetails[1].metric} at ${winDetails[1].detail}! \uD83D\uDD25\uD83D\uDCAA`;
         }
     } else {
-        praiseText = `I see you putting in the effort and I appreciate it!`;
+        praiseText = `I see you putting in the effort and I appreciate it! \uD83D\uDE4C`;
     }
 
     // Build focus section from top coaching need + tip
@@ -6370,18 +6370,18 @@ async function generateQuickCheckin() {
             } catch (e) { /* no tips available */ }
         }
 
-        focusText = `Your focus this week should be ${focusMetric}${focusDetail ? ' (currently at ' + focusDetail + ')' : ''}.`;
+        focusText = `\uD83C\uDFAF Your focus this week should be ${focusMetric}${focusDetail ? ' (currently at ' + focusDetail + ')' : ''}.`;
         if (tipText) {
-            focusText += ` Try this: ${tipText}`;
+            focusText += ` \uD83D\uDCA1 Try this: ${tipText}`;
         }
     }
 
     // Assemble the message
-    let message = `Hey ${firstName}! Your data for ${periodLabel} is looking great. ${praiseText}`;
+    let message = `Hey ${firstName}! \uD83D\uDC4B Your data for ${periodLabel} is looking great. ${praiseText}`;
     if (focusText) {
         message += `\n\n${focusText}`;
     }
-    message += `\n\nKeep up the great work! Let me know if you need anything.`;
+    message += `\n\nKeep up the great work! \uD83D\uDE80 Let me know if you need anything.`;
 
     output.value = message;
     output.style.display = 'block';
