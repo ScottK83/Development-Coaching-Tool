@@ -1543,58 +1543,60 @@ Box 2 - Future Improvement Areas:
         </footer>
     </div>
 
-    <!-- Modular Components -->
-    <!-- Foundation Layer (No Dependencies) -->
-    <script src="modules/metrics-registry.module.js"></script>
-    <script src="modules/storage.module.js"></script>
-    <script src="modules/data-parsing.module.js"></script>
-    <script src="modules/metric-profiles.module.js"></script>
-    <script src="modules/error-monitor.module.js"></script>
-    <script src="modules/shared-utils.module.js"></script>
-    
-    <!-- Feature Modules -->
-    <script src="modules/tips.module.js"></script>
-    <script src="modules/pto.module.js"></script>
-    <script src="modules/red-flag.module.js"></script>
-    <script src="modules/hot-tip.module.js"></script>
-
-    <!-- Infrastructure Modules -->
-    <script src="modules/navigation.module.js"></script>
-    <script src="modules/debug.module.js"></script>
-    <script src="modules/team-filter.module.js"></script>
-    <script src="modules/repo-sync.module.js"></script>
-    <script src="modules/on-off-tracker.module.js"></script>
-    <script src="modules/coaching-email.module.js"></script>
-    <script src="modules/year-end-comments.module.js"></script>
-    <script src="modules/executive-summary.module.js"></script>
-    <script src="modules/metric-trends.module.js"></script>
-
-    <!-- New Modular Services -->
-    <script src="modules/metrics.module.js"></script>
-    <script src="modules/sentiment.module.js"></script>
-    <script src="modules/year-end.module.js"></script>
-    <script src="modules/ui-utils.module.js"></script>
-    <script src="modules/email.module.js"></script>
-    <script src="modules/coaching-analysis.module.js"></script>
-    <script src="modules/coaching.module.js"></script>
-    <script src="modules/call-listening.module.js"></script>
-    <script src="modules/employee-list.module.js"></script>
-    <script src="modules/trend-intelligence.module.js"></script>
-    <script src="modules/trend-coaching-email.module.js"></script>
-    <script src="modules/copilot-prompt.module.js"></script>
-    <script src="modules/team-snapshot.module.js"></script>
-    <script src="modules/center-ranking.module.js"></script>
-    <script src="modules/futures.module.js"></script>
-    <script src="modules/q1-review.module.js"></script>
-    <script src="modules/dashboard.module.js"></script>
-
-    <!-- Main Application -->
+    <!-- All scripts loaded dynamically with cache busting -->
     <script>
-        (function loadAppScriptWithCacheBust() {
-            const appScript = document.createElement('script');
-            appScript.src = `script.js?v=${Date.now()}`;
-            appScript.async = false;
-            document.body.appendChild(appScript);
+        (function loadAllScriptsWithCacheBust() {
+            var bust = Date.now();
+            var scripts = [
+                // Foundation Layer (No Dependencies)
+                'modules/metrics-registry.module.js',
+                'modules/storage.module.js',
+                'modules/data-parsing.module.js',
+                'modules/metric-profiles.module.js',
+                'modules/error-monitor.module.js',
+                'modules/shared-utils.module.js',
+                // Feature Modules
+                'modules/tips.module.js',
+                'modules/pto.module.js',
+                'modules/red-flag.module.js',
+                'modules/hot-tip.module.js',
+                // Infrastructure Modules
+                'modules/navigation.module.js',
+                'modules/debug.module.js',
+                'modules/team-filter.module.js',
+                'modules/repo-sync.module.js',
+                'modules/on-off-tracker.module.js',
+                'modules/coaching-email.module.js',
+                'modules/year-end-comments.module.js',
+                'modules/executive-summary.module.js',
+                'modules/metric-trends.module.js',
+                // Service Modules
+                'modules/metrics.module.js',
+                'modules/sentiment.module.js',
+                'modules/year-end.module.js',
+                'modules/ui-utils.module.js',
+                'modules/email.module.js',
+                'modules/coaching-analysis.module.js',
+                'modules/coaching.module.js',
+                'modules/call-listening.module.js',
+                'modules/employee-list.module.js',
+                'modules/trend-intelligence.module.js',
+                'modules/trend-coaching-email.module.js',
+                'modules/copilot-prompt.module.js',
+                'modules/team-snapshot.module.js',
+                'modules/center-ranking.module.js',
+                'modules/futures.module.js',
+                'modules/q1-review.module.js',
+                'modules/dashboard.module.js',
+                // Main Application
+                'script.js'
+            ];
+            scripts.forEach(function(src) {
+                var s = document.createElement('script');
+                s.src = src + '?v=' + bust;
+                s.async = false;
+                document.body.appendChild(s);
+            });
         })();
     </script>
 </body>
