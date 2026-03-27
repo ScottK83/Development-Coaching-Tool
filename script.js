@@ -6341,32 +6341,26 @@ async function generateQuickCheckin() {
         const focusMetric = focusMatch ? focusMatch[1] : topFocus.replace(/^-\s*/, '');
         const focusDetail = focusMatch ? focusMatch[2].trim() : '';
 
-        // Try to get a tip
-        const metricKeyMap = {
-            'Schedule Adherence': 'scheduleAdherence',
-            'CX Rep Overall': 'cxRepOverall',
-            'First Call Resolution': 'fcr',
-            'Overall Experience': 'overallExperience',
-            'Transfers': 'transfers',
-            'Overall Sentiment': 'overallSentiment',
-            'Positive Word': 'positiveWord',
-            'Avoid Negative Word': 'negativeWord',
-            'Avoid Negative Words': 'negativeWord',
-            'Negative Word': 'negativeWord',
-            'Managing Emotions': 'managingEmotions',
-            'Avg Handle Time': 'aht',
-            'Average Handle Time': 'aht',
-            'After Call Work': 'acw',
-            'Hold Time': 'holdTime',
-            'Reliability': 'reliability'
-        };
+        // Try to get a tip — build lookup from METRICS_REGISTRY labels
+        const metricKeyByLabel = {};
+        if (typeof METRICS_REGISTRY === 'object') {
+            Object.keys(METRICS_REGISTRY).forEach(k => {
+                const label = METRICS_REGISTRY[k]?.label;
+                if (label) metricKeyByLabel[label] = k;
+            });
+        }
+        // Add known aliases
+        metricKeyByLabel['Avoid Negative Words'] = 'negativeWord';
+        metricKeyByLabel['Avoid Negative Word'] = 'negativeWord';
+        metricKeyByLabel['CX Rep Overall'] = 'cxRepOverall';
 
-        const metricKey = metricKeyMap[focusMetric];
+        const metricKey = metricKeyByLabel[focusMetric];
         let tipText = '';
         if (metricKey) {
             try {
                 const allTips = await (typeof loadServerTips === 'function' ? loadServerTips() : Promise.resolve({}));
-                const metricTips = allTips[metricKey] || [];
+                // Tips are keyed by label (e.g. "Rep Satisfaction"), not metricKey
+                const metricTips = allTips[metricKey] || allTips[focusMetric] || [];
                 if (metricTips.length > 0) {
                     const tip = typeof selectSmartTip === 'function'
                         ? selectSmartTip({ employeeId: employeeName, metricKey, severity: 'medium', tips: metricTips })
