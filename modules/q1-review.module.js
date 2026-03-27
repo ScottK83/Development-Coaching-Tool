@@ -200,22 +200,68 @@
     }
 
     /**
-     * Build full Q1 review data for all team members
+     * Get the latest YTD period data if available
+     */
+    function getLatestYtdPeriod() {
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var keys = Object.keys(ytd);
+        if (!keys.length) return null;
+
+        var latest = keys.reduce(function (best, key) {
+            var endDate = ytd[key]?.metadata?.endDate || '';
+            var bestEnd = ytd[best]?.metadata?.endDate || '';
+            return endDate > bestEnd ? key : best;
+        });
+        return { key: latest, data: ytd[latest] };
+    }
+
+    /**
+     * Build full review data for all team members.
+     * Uses YTD data as primary source when available, falls back to Q1 weekly aggregation.
      */
     function buildQ1ReviewData() {
         var currentYear = new Date().getFullYear();
         var q1Keys = getQ1WeekKeys(currentYear);
         var wData = _getWeeklyData();
-        var latestKey = q1Keys.length > 0 ? q1Keys[q1Keys.length - 1] : null;
 
-        // Get team members from the latest Q1 week
-        var teamMembers = [];
-        if (latestKey && wData[latestKey]) {
-            var members = _getTeamMembersForWeek(latestKey);
-            var allEmps = (wData[latestKey].employees || []).map(function (e) { return e.name; });
-            teamMembers = members.length > 0 ? allEmps.filter(function (n) { return members.includes(n); }) : allEmps;
+        // Check for YTD data (preferred source of truth)
+        var ytdPeriod = getLatestYtdPeriod();
+        var hasYtdData = ytdPeriod && Array.isArray(ytdPeriod.data?.employees) && ytdPeriod.data.employees.length > 0;
+        var dataSource = hasYtdData ? 'ytd' : 'weekly';
+        var periodLabel = '';
+
+        if (hasYtdData) {
+            var meta = ytdPeriod.data.metadata || {};
+            var startDate = meta.startDate || '';
+            var endDate = meta.endDate || '';
+            periodLabel = startDate && endDate ? startDate + ' to ' + endDate : 'YTD';
         }
-        // Sort alphabetically by first name
+
+        // Get team members from the best available source
+        var teamFilterContext = (function() {
+            var tf = window.DevCoachModules?.teamFilter;
+            return tf?.getTeamSelectionContext ? tf.getTeamSelectionContext() : { isFiltering: false };
+        })();
+        var isIncluded = function(name) {
+            var tf = window.DevCoachModules?.teamFilter;
+            if (tf?.isAssociateIncludedByTeamFilter) return tf.isAssociateIncludedByTeamFilter(name, teamFilterContext);
+            return true;
+        };
+
+        var teamMembers = [];
+        if (hasYtdData) {
+            teamMembers = ytdPeriod.data.employees
+                .map(function (e) { return e.name; })
+                .filter(function (n) { return n && isIncluded(n); });
+        } else {
+            var latestKey = q1Keys.length > 0 ? q1Keys[q1Keys.length - 1] : null;
+            if (latestKey && wData[latestKey]) {
+                teamMembers = (wData[latestKey].employees || [])
+                    .map(function (e) { return e.name; })
+                    .filter(function (n) { return n && isIncluded(n); });
+            }
+        }
+
         teamMembers.sort(function (a, b) {
             var aFirst = (a || '').split(/[\s,]+/)[0].toLowerCase();
             var bFirst = (b || '').split(/[\s,]+/)[0].toLowerCase();
@@ -225,9 +271,17 @@
         var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
         var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
 
-        // Aggregate Q1 data with proper weighted averages and sums
-        var q1Agg = aggregateQ1Data(q1Keys);
-        var aggEmployees = q1Agg.employees;
+        // Build employee lookup: YTD data if available, else Q1 aggregation
+        var aggEmployees;
+        if (hasYtdData) {
+            aggEmployees = {};
+            ytdPeriod.data.employees.forEach(function (emp) {
+                if (emp && emp.name) aggEmployees[emp.name] = emp;
+            });
+        } else {
+            var q1Agg = aggregateQ1Data(q1Keys);
+            aggEmployees = q1Agg.employees;
+        }
 
         var results = [];
         teamMembers.forEach(function (empName) {
@@ -302,21 +356,33 @@
                 return d >= q1Start && d <= q1End;
             });
 
+            // On/Off Tracker score
+            var onOffResult = null;
+            var onOffMod = window.DevCoachModules?.onOffTracker;
+            if (onOffMod?.calculateYearEndOnOffMirror && aggEmp) {
+                onOffResult = onOffMod.calculateYearEndOnOffMirror(aggEmp, currentYear);
+            }
+
             results.push({
                 name: empName,
                 metrics: metrics,
                 strengths: strengths,
                 improvements: improvements,
                 q1CoachingCount: q1Coachings.length,
-                lastCoached: q1Coachings.length > 0 ? q1Coachings[0].generatedAt : null
+                lastCoached: q1Coachings.length > 0 ? q1Coachings[0].generatedAt : null,
+                onOffResult: onOffResult
             });
         });
+
+        var periodsUsed = hasYtdData ? 1 : q1Keys.length;
 
         return {
             year: currentYear,
             q1Keys: q1Keys,
-            weeksInQ1: q1Keys.length,
-            employees: results
+            weeksInQ1: hasYtdData ? periodsUsed : q1Keys.length,
+            employees: results,
+            dataSource: dataSource,
+            periodLabel: periodLabel
         };
     }
 
@@ -390,8 +456,8 @@
 
         var data = buildQ1ReviewData();
 
-        if (data.employees.length === 0 || data.weeksInQ1 === 0) {
-            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No Q1 data available. Upload weekly data from January-March to see Q1 review prep.</p>';
+        if (data.employees.length === 0) {
+            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No data available. Upload weekly or YTD data to see review prep.</p>';
             return;
         }
 
@@ -399,7 +465,11 @@
 
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #7c4dff;">';
-        html += '<strong>Q1 ' + data.year + ' Review Prep</strong> &mdash; ' + data.weeksInQ1 + ' weeks of data (Jan - Mar)';
+        if (data.dataSource === 'ytd') {
+            html += '<strong>' + data.year + ' Review Prep</strong> &mdash; YTD data (' + data.periodLabel + ')';
+        } else {
+            html += '<strong>Q1 ' + data.year + ' Review Prep</strong> &mdash; ' + data.weeksInQ1 + ' weeks of data (Jan - Mar)';
+        }
         html += '</div>';
 
         // Employee selector
@@ -456,8 +526,26 @@
             if (emp.metrics[mk].trend.direction === 'declining') decliningCount++;
         });
 
+        // On/Off Tracker Score Card
+        if (emp.onOffResult) {
+            var onOffMod = window.DevCoachModules?.onOffTracker;
+            if (onOffMod?.buildOnOffScoreTableHtml) {
+                html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+                html += '<h3 style="margin-top: 0; color: #1a1a2e;">On/Off Track Score</h3>';
+                if (emp.onOffResult.isComplete) {
+                    var avg = emp.onOffResult.ratingAverage;
+                    var trackColor = avg >= 2.5 ? '#2e7d32' : (avg >= 1.5 ? '#f57f17' : '#c62828');
+                    html += '<div style="margin-bottom: 12px; padding: 10px 16px; border-radius: 8px; display: inline-block; background: ' + trackColor + '; color: white; font-weight: bold; font-size: 1.1em;">';
+                    html += emp.onOffResult.trackLabel + ' (' + avg.toFixed(2) + ')';
+                    html += '</div>';
+                }
+                html += onOffMod.buildOnOffScoreTableHtml(emp.onOffResult, q1Data.year);
+                html += '</div>';
+            }
+        }
+
         html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h3 style="margin-top: 0; color: #1a1a2e;">' + _escapeHtml(emp.name) + ' &mdash; Q1 Overview</h3>';
+        html += '<h3 style="margin-top: 0; color: #1a1a2e;">' + _escapeHtml(emp.name) + ' &mdash; ' + (q1Data.dataSource === 'ytd' ? 'YTD' : 'Q1') + ' Overview</h3>';
 
         // Summary badges
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">';
