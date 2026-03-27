@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T17:39:40.753Z",
+  "generatedAt": "2026-03-27T17:40:05.132Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -45310,10 +45310,16 @@
     "2026-03-20|2026-03-26": [
       "Alyssa Dimes",
       "Angelina Fierro",
+      "Christi Martinez-Sharp",
       "Desiree Clark",
       "Destiny Cervantez",
+      "Erica Kallestewa",
+      "Jadyn Flowers",
+      "James Garcia",
       "Kamella Dash",
-      "Robert Berrelleza"
+      "Oceane Ingram",
+      "Robert Berrelleza",
+      "Sabrina Gage"
     ]
   },
   "callCenterAverages": {
@@ -49106,7 +49112,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 473
+      "byteLength": 579
     }
   }
 }
