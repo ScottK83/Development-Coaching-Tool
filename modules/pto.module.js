@@ -1520,10 +1520,18 @@ function processPayrollExcelRows(rows) {
         });
     });
 
+    // Log header detection for debugging
+    console.log('[Payroll Excel] Header found at row', headerIdx, 'colMap:', JSON.stringify(colMap));
+    if (rows[headerIdx + 1]) {
+        console.log('[Payroll Excel] First data row sample:', JSON.stringify(rows[headerIdx + 1].slice(0, 20)));
+    }
+
     // Parse all non-REG rows grouped by employee
     const byEmployee = {};
     let skippedCount = 0;
     let regCount = 0;
+    let emptyTrcCount = 0;
+    const unknownTrcs = {};
 
     for (let i = headerIdx + 1; i < rows.length; i++) {
         const row = rows[i];
@@ -1533,20 +1541,25 @@ function processPayrollExcelRows(rows) {
         if (!rawName) continue;
 
         const rawTrc = cleanUnicodeControl(String(row[colMap.trc] || '').trim());
-        if (!rawTrc) continue;
+        if (!rawTrc) { emptyTrcCount++; continue; }
 
         const trcLower = rawTrc.toLowerCase();
         if (trcLower === 'reg') { regCount++; continue; }
         if (trcLower === 'trc') continue; // header repeat
 
         const mappedType = PAYROLL_TRC_MAP[trcLower];
-        if (!mappedType) { skippedCount++; continue; }
+        if (!mappedType) {
+            unknownTrcs[rawTrc] = (unknownTrcs[rawTrc] || 0) + 1;
+            skippedCount++;
+            continue;
+        }
 
         const rawQty = cleanUnicodeControl(String(row[colMap.quantity] || '').trim());
         const hours = parseFloat(rawQty);
         if (!Number.isFinite(hours) || hours <= 0) { skippedCount++; continue; }
 
         // Parse date — could be "2026-01-02 00:00:00", "2026-01-02", "01/02/2026", etc.
+        // SheetJS with raw:false may format dates as "1/2/26", "1/2/2026", "2026-01-02", or serial numbers
         const rawDate = cleanUnicodeControl(String(row[colMap.date] || '').trim());
         const isoDate = parseExcelDate(rawDate);
         if (!isoDate) { skippedCount++; continue; }
@@ -1572,9 +1585,24 @@ function processPayrollExcelRows(rows) {
     }
 
     // Overwrite: clear all payroll entries for each employee found, then re-add
+    console.log('[Payroll Excel] Parsed:', { regCount, emptyTrcCount, skippedCount, unknownTrcs, entriesFound: Object.keys(byEmployee).length });
+
     const employeeNames = Object.keys(byEmployee);
     if (!employeeNames.length) {
-        showToast(`No time-off entries found in file. (${regCount} REG rows skipped${skippedCount ? ', ' + skippedCount + ' unparseable' : ''})`, 5000);
+        let detail = `${regCount} REG rows skipped`;
+        if (emptyTrcCount) detail += `, ${emptyTrcCount} rows with no TRC`;
+        if (skippedCount) detail += `, ${skippedCount} unparseable`;
+        if (Object.keys(unknownTrcs).length) detail += `. Unknown TRCs: ${Object.entries(unknownTrcs).map(([k,v]) => `${k}(${v})`).join(', ')}`;
+        showToast(`No time-off entries found. ${detail}`, 7000);
+
+        const resultsEl = document.getElementById('ptoPayrollExcelResults');
+        if (resultsEl) {
+            resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:8px;">
+                <strong>No entries imported</strong><br>
+                <span style="font-size:0.9em;">${detail}</span><br>
+                <span style="font-size:0.82em;color:#666;">Check browser console (F12) for debug details.</span>
+            </div>`;
+        }
         return;
     }
 
@@ -1640,9 +1668,24 @@ function parseExcelDate(raw) {
     // "2026-01-02 00:00:00" or "2026-01-02"
     const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
     if (isoMatch) return isoMatch[1];
-    // "01/02/2026" or "1/2/2026"
+    // "01/02/2026" or "1/2/2026" (4-digit year)
     const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (usMatch) return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`;
+    // "1/2/26" (2-digit year) — SheetJS raw:false format
+    const usShort = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if (usShort) {
+        const yr = parseInt(usShort[3], 10);
+        const fullYear = yr >= 50 ? 1900 + yr : 2000 + yr;
+        return `${fullYear}-${String(usShort[1]).padStart(2, '0')}-${String(usShort[2]).padStart(2, '0')}`;
+    }
+    // Excel serial number (days since 1900-01-01)
+    const serial = parseFloat(raw);
+    if (Number.isFinite(serial) && serial > 40000 && serial < 60000) {
+        const date = new Date((serial - 25569) * 86400000);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().slice(0, 10);
+        }
+    }
     return null;
 }
 
