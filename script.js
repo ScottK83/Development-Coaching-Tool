@@ -6372,7 +6372,10 @@ async function generateQuickCheckin() {
 
         focusText = `\uD83C\uDFAF Your focus this week should be ${focusMetric}${focusDetail ? ' (currently at ' + focusDetail + ')' : ''}.`;
         if (tipText) {
-            focusText += ` \uD83D\uDCA1 Try this: ${tipText}`;
+            // Strip redundant prefixes like "Practice this:" since we add our own intro
+            const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
+            const finalTip = cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1);
+            focusText += ` \uD83D\uDCA1 ${finalTip}`;
         }
     }
 

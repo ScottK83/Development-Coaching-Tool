@@ -608,11 +608,11 @@ const DEFAULT_METRIC_TIPS = {
         "Building consistent habits now supports future shift flexibility."
     ],
     "Rep Satisfaction": [
-        "Be mindful of tone, especially during challenging moments.",
-        "Show patience and empathy when addressing concerns.",
-        "Take ownership of the issue, even if another team is involved.",
-        "Calm delivery builds trust with customers.",
-        "How you say it matters as much as the solution itself."
+        "After resolving the issue, ask 'Is there anything else I can help with today?' to show you're not rushing them off the call.",
+        "Use the customer's name at least twice during the call and mirror their language to build rapport.",
+        "When explaining a process, say 'Let me walk you through this step by step' instead of jumping straight to the answer.",
+        "If there's a hold or wait, set expectations: 'This will take about 2 minutes, and here's what I'm doing for you.'",
+        "End every call with a brief recap: 'So just to confirm, we've taken care of [X] for you today.'"
     ],
     "First Call Resolution": [
         "Fully understand the customer's need before taking action.",
