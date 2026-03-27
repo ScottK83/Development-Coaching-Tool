@@ -6191,6 +6191,9 @@ function bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn) {
 }
 
 function initializeCoachingEmail() {
+    var mod = window.DevCoachModules?.coachingEmail;
+    if (mod?.initializeCoachingEmail) return mod.initializeCoachingEmail();
+
     const select = document.getElementById('coachingEmployeeSelect');
     const status = document.getElementById('coachingEmailStatus');
     const panel = document.getElementById('coachingMetricsPanel');
@@ -6204,14 +6207,15 @@ function initializeCoachingEmail() {
 
     resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn);
 
-    if (!weeklyData || Object.keys(weeklyData).length === 0) {
+    const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+    if ((!weeklyData || Object.keys(weeklyData).length === 0) && Object.keys(ytd).length === 0) {
         status.textContent = 'No data available. Upload data first to generate coaching emails.';
         status.style.display = 'block';
         return;
     }
 
     coachingLatestWeekKey = getLatestWeekKeyForCoaching();
-    if (!coachingLatestWeekKey || !weeklyData[coachingLatestWeekKey]) {
+    if (!coachingLatestWeekKey || !(weeklyData[coachingLatestWeekKey] || ytd[coachingLatestWeekKey])) {
         status.textContent = 'Unable to find the latest data period.';
         status.style.display = 'block';
         return;
@@ -6222,8 +6226,6 @@ function initializeCoachingEmail() {
     setCoachingLatestPeriodStatus(status, coachingLatestWeekKey, latestWeek);
     bindCoachingOutlookInputState(outlookBody, outlookBtn);
     bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn);
-
-    
 }
 
 function getCallListeningEmployeeOptions() {

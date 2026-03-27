@@ -167,21 +167,20 @@
     /**
      * Get team members filter for a period
      */
-    function getTeamFilter(periodKey) {
-        var myTeamMembers = getMyTeamMembers();
-        // Try exact key match first
-        if (myTeamMembers[periodKey] && myTeamMembers[periodKey].length > 0) {
-            return myTeamMembers[periodKey];
-        }
-        // Fall back to team filter module's resolved context (handles YTD keys)
+    function getTeamFilterContext() {
         var teamFilter = window.DevCoachModules?.teamFilter;
         if (teamFilter?.getTeamSelectionContext) {
-            var ctx = teamFilter.getTeamSelectionContext();
-            if (ctx.weekKey && ctx.selectedMembers && ctx.selectedMembers.length > 0) {
-                return ctx.selectedMembers;
-            }
+            return teamFilter.getTeamSelectionContext();
         }
-        return [];
+        return { isFiltering: false, selectedSet: null };
+    }
+
+    function isIncludedByTeamFilter(employeeName, filterContext) {
+        var teamFilter = window.DevCoachModules?.teamFilter;
+        if (teamFilter?.isAssociateIncludedByTeamFilter) {
+            return teamFilter.isAssociateIncludedByTeamFilter(employeeName, filterContext);
+        }
+        return true;
     }
 
     /**
@@ -303,14 +302,14 @@
 
     function assembleSnapshotData(periodKey, source) {
         var employees = getEmployeesForPeriod(periodKey, source);
-        var teamFilter = getTeamFilter(periodKey);
+        var filterContext = getTeamFilterContext();
         var centerAvgs = readCenterAvgInputs();
         var metrics = getMetrics();
 
         // Filter to team members if filter is set
-        if (teamFilter.length > 0) {
+        if (filterContext.isFiltering) {
             employees = employees.filter(function(emp) {
-                return teamFilter.indexOf(emp.name) !== -1;
+                return isIncludedByTeamFilter(emp.name, filterContext);
             });
         }
 
@@ -1026,11 +1025,11 @@
         if (!gridContainer) return;
 
         var employees = getEmployeesForPeriod(periodKey, source);
-        var teamFilter = getTeamFilter(periodKey);
+        var filterContext = getTeamFilterContext();
 
-        if (teamFilter.length > 0) {
+        if (filterContext.isFiltering) {
             employees = employees.filter(function(emp) {
-                return teamFilter.indexOf(emp.name) !== -1;
+                return isIncludedByTeamFilter(emp.name, filterContext);
             });
         }
 

@@ -24,12 +24,20 @@
         } catch(e) { return {}; }
     }
 
-    function getTeamFilter(weekKey) {
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
-            var all = raw ? JSON.parse(raw) : {};
-            return Array.isArray(all[weekKey]) ? all[weekKey] : [];
-        } catch(e) { return []; }
+    function getTeamFilterContext() {
+        var teamFilter = window.DevCoachModules?.teamFilter;
+        if (teamFilter?.getTeamSelectionContext) {
+            return teamFilter.getTeamSelectionContext();
+        }
+        return { isFiltering: false, selectedSet: null };
+    }
+
+    function isIncludedByTeamFilter(employeeName, filterContext) {
+        var teamFilter = window.DevCoachModules?.teamFilter;
+        if (teamFilter?.isAssociateIncludedByTeamFilter) {
+            return teamFilter.isAssociateIncludedByTeamFilter(employeeName, filterContext);
+        }
+        return true;
     }
 
     function getLatestWeekKey(wData) {
@@ -283,11 +291,11 @@
         }
 
         var employees = getEmployeesForWeek(wData, weekKey);
-        var teamFilter = getTeamFilter(weekKey);
+        var filterContext = getTeamFilterContext();
 
-        if (teamFilter.length > 0) {
+        if (filterContext.isFiltering) {
             employees = employees.filter(function(emp) {
-                return teamFilter.indexOf(emp.name) !== -1;
+                return isIncludedByTeamFilter(emp.name, filterContext);
             });
         }
 

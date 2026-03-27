@@ -189,7 +189,7 @@ function savePtoStore(store) {
 
 function getWeeklyAssociates() {
     const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
-    const teamFilter = getPtoTeamSelectionFilter(weeklyData);
+    const filterContext = getPtoTeamFilterContext();
     const names = new Set();
 
     Object.entries(weeklyData).forEach(([weekKey, week]) => {
@@ -198,15 +198,11 @@ function getWeeklyAssociates() {
         const endDate = String(week?.metadata?.endDate || '').trim();
         if (!isPeriodInTrackingYear(startDate, endDate, weekKey)) return;
 
-        if (teamFilter?.weekKey && weekKey !== teamFilter.weekKey) {
-            return;
-        }
-
         const employees = Array.isArray(week.employees) ? week.employees : [];
         employees.forEach(employee => {
             const name = normalizeAssociateName(employee?.name);
             if (!name) return;
-            if (teamFilter?.allowedSet && !teamFilter.allowedSet.has(name)) return;
+            if (!isPtoIncludedByTeamFilter(name, filterContext)) return;
             names.add(name);
         });
     });
@@ -223,7 +219,7 @@ function getWeeklyAssociates() {
         employees.forEach(employee => {
             const name = normalizeAssociateName(employee?.name);
             if (!name) return;
-            if (teamFilter?.allowedSet && !teamFilter.allowedSet.has(name)) return;
+            if (!isPtoIncludedByTeamFilter(name, filterContext)) return;
             names.add(name);
         });
     });
@@ -232,15 +228,13 @@ function getWeeklyAssociates() {
 }
 
 function getAssociateOptions(store) {
-    const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
-    const teamFilter = getPtoTeamSelectionFilter(weeklyData);
+    const filterContext = getPtoTeamFilterContext();
     const fromWeekly = getWeeklyAssociates();
     const fromPto = Object.keys(store.associates || {});
     const combined = new Set([...fromWeekly, ...fromPto]);
     const options = Array.from(combined).filter(name => {
         if (name === PTO_LEGACY_ASSOCIATE_KEY) return true;
-        if (!teamFilter?.allowedSet) return true;
-        return teamFilter.allowedSet.has(name);
+        return isPtoIncludedByTeamFilter(name, filterContext);
     });
     return options.sort((a, b) => a.localeCompare(b));
 }
@@ -301,49 +295,20 @@ function getLatestTrackingWeekKey(weeklyData) {
     return String(candidates[0]?.weekKey || '').trim();
 }
 
-function getPtoTeamSelectionFilter(weeklyData) {
-    const sharedContextResolver = window.getTeamSelectionContext;
-    if (typeof sharedContextResolver === 'function') {
-        const context = sharedContextResolver();
-        const weekKey = String(context?.weekKey || '').trim();
-        if (!weekKey) return null;
-
-        const selectedMembers = Array.isArray(context?.selectedMembers)
-            ? context.selectedMembers.map(normalizeAssociateName).filter(Boolean)
-            : [];
-
-        if (!selectedMembers.length) {
-            return {
-                weekKey,
-                allowedSet: null
-            };
-        }
-
-        return {
-            weekKey,
-            allowedSet: new Set(selectedMembers)
-        };
+function getPtoTeamFilterContext() {
+    var teamFilter = window.DevCoachModules?.teamFilter;
+    if (teamFilter?.getTeamSelectionContext) {
+        return teamFilter.getTeamSelectionContext();
     }
+    return { isFiltering: false, selectedSet: null };
+}
 
-    const latestWeekKey = getLatestTrackingWeekKey(weeklyData);
-    if (!latestWeekKey) return null;
-
-    const teamMembersByWeek = loadTeamMembersByWeek();
-    const selectedMembers = Array.isArray(teamMembersByWeek[latestWeekKey])
-        ? teamMembersByWeek[latestWeekKey].map(normalizeAssociateName).filter(Boolean)
-        : [];
-
-    if (!selectedMembers.length) {
-        return {
-            weekKey: latestWeekKey,
-            allowedSet: null
-        };
+function isPtoIncludedByTeamFilter(employeeName, filterContext) {
+    var teamFilter = window.DevCoachModules?.teamFilter;
+    if (teamFilter?.isAssociateIncludedByTeamFilter) {
+        return teamFilter.isAssociateIncludedByTeamFilter(employeeName, filterContext);
     }
-
-    return {
-        weekKey: latestWeekKey,
-        allowedSet: new Set(selectedMembers)
-    };
+    return true;
 }
 
 function ensureAssociateTracker(store, associateName) {
