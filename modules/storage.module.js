@@ -415,11 +415,11 @@
     }
 
     function savePtoTracker(data) {
-        try {
-            localStorage.setItem(STORAGE_PREFIX + 'ptoTracker', JSON.stringify(data));
-        } catch (error) {
-            console.error('Error saving PTO tracker:', error);
+        const ok = saveWithSizeCheck('ptoTracker', data);
+        if (!ok) {
+            console.error('Error saving PTO tracker: save failed (quota or size limit)');
         }
+        return ok;
     }
 
     // ============================================

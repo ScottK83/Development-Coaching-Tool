@@ -50,14 +50,25 @@ function loadPtoStore() {
 
 function savePtoStore(store) {
     const storage = window.DevCoachModules?.storage;
+    let ok = false;
     if (storage?.savePtoTracker) {
-        storage.savePtoTracker(store);
+        ok = storage.savePtoTracker(store);
     } else {
-        try { localStorage.setItem(STORAGE_PREFIX + 'ptoTracker', JSON.stringify(store)); } catch (e) { /* */ }
+        try {
+            localStorage.setItem(STORAGE_PREFIX + 'ptoTracker', JSON.stringify(store));
+            ok = true;
+        } catch (e) {
+            console.error('[PTO] savePtoStore failed:', e);
+        }
     }
-    if (typeof window.queueRepoSync === 'function') {
+    if (!ok) {
+        console.error('[PTO] Failed to save PTO data - localStorage may be full');
+        showToast('ERROR: Could not save payroll data. Storage may be full.', 8000);
+    }
+    if (ok && typeof window.queueRepoSync === 'function') {
         window.queueRepoSync('pto tracker updated');
     }
+    return ok;
 }
 
 // ============================================
@@ -323,9 +334,35 @@ function processPayrollExcelRows(rows) {
         });
     });
 
-    savePtoStore(store);
+    const saved = savePtoStore(store);
 
     const summaryLines = Object.entries(summary).map(([trc, hrs]) => `${trc}: ${hrs.toFixed(1)}h`).join(', ');
+
+    if (!saved) {
+        if (resultsEl) {
+            resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#f8d7da;color:#842029;margin-top:8px;">
+                <strong>ERROR: Could not save payroll data.</strong> Browser storage may be full.<br>
+                Parsed ${totalAdded} entries for ${employeeNames.length} employees but save failed.<br>
+                Try clearing old data or using a different browser.
+            </div>`;
+        }
+        return;
+    }
+
+    // Verify the save actually persisted
+    const verifyStore = loadPtoStore();
+    const verifyName = employeeNames[0];
+    const verifyEntries = verifyStore.associates?.[verifyName]?.payrollEntries || [];
+    if (!verifyEntries.length) {
+        console.error('[PTO] Save verification failed - data not persisted for', verifyName);
+        if (resultsEl) {
+            resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:8px;">
+                <strong>Warning:</strong> Data may not have saved correctly. Please re-upload or check browser storage.
+            </div>`;
+        }
+        return;
+    }
+
     showToast(`Imported ${totalAdded} entries for ${employeeNames.length} employees`, 5000);
 
     if (resultsEl) {
@@ -355,10 +392,19 @@ function populateAssociateSelect() {
     const names = getEmployeeNames();
     const store = loadPtoStore();
 
+    // Build case-insensitive lookup for store names
+    const storeLookup = {};
+    Object.keys(store.associates || {}).forEach(n => { storeLookup[n.toLowerCase()] = n; });
+
     names.forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        const entries = store.associates?.[name]?.payrollEntries || [];
+        // Try exact match first, then case-insensitive
+        let entries = store.associates?.[name]?.payrollEntries || [];
+        if (!entries.length) {
+            const storeName = storeLookup[name.toLowerCase()];
+            if (storeName) entries = store.associates[storeName]?.payrollEntries || [];
+        }
         const count = entries.length;
         opt.textContent = count > 0 ? `${name} (${count})` : name;
         select.appendChild(opt);
@@ -383,15 +429,36 @@ function renderEmployeeEntries(employeeName) {
     }
 
     const store = loadPtoStore();
+    const storeNames = Object.keys(store.associates || {});
     const entries = (store.associates?.[employeeName]?.payrollEntries || [])
         .filter(e => e.date)
         .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!entries.length) {
+        // Check if it's a name mismatch
+        const lowerName = employeeName.toLowerCase();
+        const match = storeNames.find(n => n.toLowerCase() === lowerName);
+        if (match && match !== employeeName) {
+            console.warn('[PTO] Name mismatch: dropdown has "' + employeeName + '" but store has "' + match + '"');
+            // Use the store name instead
+            const fixedEntries = (store.associates[match]?.payrollEntries || [])
+                .filter(e => e.date)
+                .sort((a, b) => a.date.localeCompare(b.date));
+            if (fixedEntries.length) {
+                // Render with corrected name - recurse won't loop since store has the name
+                renderEmployeeEntriesFromData(container, fixedEntries);
+                return;
+            }
+        }
+        console.log('[PTO] No entries for "' + employeeName + '". Store has ' + storeNames.length + ' associates:', storeNames.slice(0, 5).join(', '));
         container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
         return;
     }
 
+    renderEmployeeEntriesFromData(container, entries);
+}
+
+function renderEmployeeEntriesFromData(container, entries) {
     // Summary by TRC
     const totals = {};
     let totalHours = 0;
