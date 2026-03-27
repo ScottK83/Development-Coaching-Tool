@@ -6297,15 +6297,20 @@ async function generateQuickCheckin() {
 
     const firstName = employeeName.split(/[\s,]+/)[0] || employeeName;
 
-    // Get employee data from the selected period
-    const employeeData = getEmployeeDataForPeriod(employeeName);
+    // Get employee data from the coaching tab's latest period
+    const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+    const weekKey = coachingLatestWeekKey;
+    const periodData = weeklyData[weekKey] || ytd[weekKey];
+    const employeeData = periodData?.employees?.find(emp => emp.name === employeeName);
     if (!employeeData) {
-        alert('No data found for this employee in the current period.');
+        alert('No data found for this employee. Try selecting a different associate.');
         return;
     }
 
-    const periodContext = getActivePeriodContext();
-    const periodLabel = periodContext.periodLabel || 'this period';
+    const endDate = periodData?.metadata?.endDate
+        ? formatDateMMDDYYYY(periodData.metadata.endDate)
+        : (weekKey?.split('|')[1] ? formatDateMMDDYYYY(weekKey.split('|')[1]) : 'this period');
+    const periodLabel = 'week of ' + endDate;
     const coachingEval = evaluateMetricsForCoaching(employeeData);
     const celebrate = coachingEval.celebrate || [];
     const needsCoaching = coachingEval.needsCoaching || [];
