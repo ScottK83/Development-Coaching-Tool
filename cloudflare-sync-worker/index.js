@@ -176,10 +176,10 @@ function json(data, status = 200, headers = corsHeaders()) {
 }
 
 function corsHeaders(requestOrigin = '', allowedOrigin = '') {
-  const safeAllowed = String(allowedOrigin || '').trim();
   const safeRequest = String(requestOrigin || '').trim();
-  // Never fall back to wildcard — require explicit ALLOWED_ORIGIN configuration
-  const origin = safeAllowed || (safeRequest ? safeRequest : '');
+  // Use the request origin in the CORS header if it passes the allowlist check
+  // This is necessary for Cloudflare Pages subdomain deployments
+  const origin = isAllowedOrigin(safeRequest, allowedOrigin) ? safeRequest : String(allowedOrigin || '').trim();
   if (!origin) {
     return {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -199,7 +199,16 @@ function isAllowedOrigin(requestOrigin, allowedOrigin) {
   const safeAllowed = String(allowedOrigin || '').trim();
   // Default-deny: if ALLOWED_ORIGIN is not configured, reject all origins
   if (!safeAllowed) return false;
-  return String(requestOrigin || '').trim() === safeAllowed;
+  const safeRequest = String(requestOrigin || '').trim();
+  // Exact match
+  if (safeRequest === safeAllowed) return true;
+  // Allow Cloudflare Pages deployment subdomains (e.g. abc123.development-coaching-tool.pages.dev)
+  try {
+    const allowedHost = new URL(safeAllowed).hostname;
+    const requestHost = new URL(safeRequest).hostname;
+    if (requestHost.endsWith('.' + allowedHost)) return true;
+  } catch (e) { /* invalid URL, fall through */ }
+  return false;
 }
 
 /**
