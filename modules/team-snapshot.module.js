@@ -169,7 +169,19 @@
      */
     function getTeamFilter(periodKey) {
         var myTeamMembers = getMyTeamMembers();
-        return myTeamMembers[periodKey] || [];
+        // Try exact key match first
+        if (myTeamMembers[periodKey] && myTeamMembers[periodKey].length > 0) {
+            return myTeamMembers[periodKey];
+        }
+        // Fall back to team filter module's resolved context (handles YTD keys)
+        var teamFilter = window.DevCoachModules?.teamFilter;
+        if (teamFilter?.getTeamSelectionContext) {
+            var ctx = teamFilter.getTeamSelectionContext();
+            if (ctx.weekKey && ctx.selectedMembers && ctx.selectedMembers.length > 0) {
+                return ctx.selectedMembers;
+            }
+        }
+        return [];
     }
 
     /**

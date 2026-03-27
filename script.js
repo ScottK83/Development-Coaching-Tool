@@ -786,7 +786,23 @@ function setTeamMembersForWeek(weekKey, memberNames) {
     notifyTeamFilterChanged();
 }
 function getTeamMembersForWeek(weekKey) {
-    return myTeamMembers[weekKey] || [];
+    // Try exact key match first
+    if (myTeamMembers[weekKey] && myTeamMembers[weekKey].length > 0) {
+        return myTeamMembers[weekKey];
+    }
+    // Fall back to the most recent key that has selections
+    var bestKey = null;
+    var bestDate = 0;
+    Object.keys(myTeamMembers).forEach(function(k) {
+        if (!myTeamMembers[k] || myTeamMembers[k].length === 0) return;
+        var endStr = k.includes('|') ? k.split('|')[1] : k;
+        var d = new Date(endStr);
+        if (!isNaN(d) && d.getTime() > bestDate) {
+            bestDate = d.getTime();
+            bestKey = k;
+        }
+    });
+    return bestKey ? myTeamMembers[bestKey] : [];
 }
 function isTeamMember(weekKey, employeeName) {
     const members = getTeamMembersForWeek(weekKey);
