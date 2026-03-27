@@ -5421,6 +5421,32 @@ function renderTrendVisualizations() {
         chartContainer.appendChild(canvas);
         chartsGrid.appendChild(chartContainer);
 
+        // Inline plugin to draw data labels on bars
+        const dataLabelPlugin = {
+            id: 'barDataLabels',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const value = dataset.data[index];
+                        if (value === null || value === undefined) return;
+                        const unit = metric.unit || '';
+                        const label = unit === '%' ? value.toFixed(1) + '%'
+                            : unit === 'sec' ? Math.round(value) + 's'
+                            : unit === 'hrs' ? value.toFixed(1) + 'h'
+                            : String(Math.round(value * 10) / 10);
+                        ctx.save();
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.fillStyle = '#333';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(label, bar.x, bar.y - 4);
+                        ctx.restore();
+                    });
+                });
+            }
+        };
+
         // Create bar chart
         new Chart(canvas, {
             type: 'bar',
@@ -5434,9 +5460,13 @@ function renderTrendVisualizations() {
                     borderWidth: 2
                 }]
             },
+            plugins: [dataLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                layout: {
+                    padding: { top: 16 }
+                },
                 plugins: {
                     legend: {
                         display: true,
