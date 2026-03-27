@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-27T01:43:54.209Z",
+  "generatedAt": "2026-03-27T01:43:59.720Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -42722,8 +42722,3402 @@
     }
   },
   "ptoTracker": {
-    "selectedAssociate": "",
-    "associates": {}
+    "selectedAssociate": "⬭Robert Berrelleza⬬",
+    "associates": {
+      "⬭Robert Berrelleza⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-bbca46",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-81f363",
+            "date": "2026-01-05",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-a87eda",
+            "date": "2026-01-06",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-261ede",
+            "date": "2026-01-16",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-d380ee",
+            "date": "2026-01-27",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-f7f264",
+            "date": "2026-02-04",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-ab4eca",
+            "date": "2026-02-05",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-07b86a",
+            "date": "2026-02-11",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c2341e",
+            "date": "2026-02-12",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-884867",
+            "date": "2026-02-19",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-978c0a",
+            "date": "2026-02-20",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-8894ce",
+            "date": "2026-03-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-6ff27a",
+            "date": "2026-03-13",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Destiny Cervantez⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-03d838",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-206d2b",
+            "date": "2026-01-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-dcf216",
+            "date": "2026-01-13",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-8b1ec7",
+            "date": "2026-01-14",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-41df58",
+            "date": "2026-01-15",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-893edd",
+            "date": "2026-01-16",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-31924b",
+            "date": "2026-03-17",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Caylie Chirumbolo⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-29ad15",
+            "date": "2026-01-02",
+            "hours": 7.39,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-1dfd8c",
+            "date": "2026-01-16",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-4ec9b2",
+            "date": "2026-01-26",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-59fb4f",
+            "date": "2026-02-07",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-d5c89b",
+            "date": "2026-02-17",
+            "hours": 7.17,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-579bc3",
+            "date": "2026-02-26",
+            "hours": 1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-e25fc6",
+            "date": "2026-03-03",
+            "hours": 4.1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-bf9c8d",
+            "date": "2026-03-06",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-197188",
+            "date": "2026-03-09",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-6190b4",
+            "date": "2026-03-17",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-069b99",
+            "date": "2026-03-18",
+            "hours": 2.1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c368a5",
+            "date": "2026-03-23",
+            "hours": 5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Desiree Clark⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-c13a0a",
+            "date": "2026-01-04",
+            "hours": 1.13,
+            "type": "nop",
+            "payrollTrc": "NOP",
+            "status": "Approved",
+            "notes": "Payroll: NOP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-1572b4",
+            "date": "2026-01-05",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-69c95e",
+            "date": "2026-01-16",
+            "hours": 7.33,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-63cdfc",
+            "date": "2026-01-22",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-94ee6f",
+            "date": "2026-01-24",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-bdf6be",
+            "date": "2026-01-25",
+            "hours": 1.62,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-84e376",
+            "date": "2026-02-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-82da90",
+            "date": "2026-02-07",
+            "hours": 4.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c6f474",
+            "date": "2026-02-08",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-eb1f03",
+            "date": "2026-02-15",
+            "hours": 1.21,
+            "type": "nop",
+            "payrollTrc": "NOP",
+            "status": "Approved",
+            "notes": "Payroll: NOP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c40256",
+            "date": "2026-02-22",
+            "hours": 1.28,
+            "type": "nop",
+            "payrollTrc": "NOP",
+            "status": "Approved",
+            "notes": "Payroll: NOP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-4fa0c0",
+            "date": "2026-03-05",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-3bddd5",
+            "date": "2026-03-06",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-bd93ff",
+            "date": "2026-03-12",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-e45bbf",
+            "date": "2026-03-17",
+            "hours": 4.08,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834810-e16ff4",
+            "date": "2026-03-20",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Kamella Dash⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-8b3c76",
+            "date": "2026-01-01",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-711f2a",
+            "date": "2026-01-21",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-9e9acf",
+            "date": "2026-02-05",
+            "hours": 10,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-4a3cd0",
+            "date": "2026-02-06",
+            "hours": 10,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-86d287",
+            "date": "2026-02-07",
+            "hours": 10,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-b49b5c",
+            "date": "2026-03-05",
+            "hours": 0.82,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Alyssa Dimes⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-5a642e",
+            "date": "2026-01-07",
+            "hours": 1.33,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-236502",
+            "date": "2026-01-08",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-1ded86",
+            "date": "2026-01-09",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-7d1bbf",
+            "date": "2026-01-10",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-4dfdec",
+            "date": "2026-01-17",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-9a8b68",
+            "date": "2026-01-22",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c315b4",
+            "date": "2026-01-27",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-b84c26",
+            "date": "2026-01-28",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-ced33f",
+            "date": "2026-02-21",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-725234",
+            "date": "2026-03-09",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-81b5ef",
+            "date": "2026-03-10",
+            "hours": 3.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-b78862",
+            "date": "2026-03-20",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Trisha Erb⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834810-45e8f8",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-183fe1",
+            "date": "2026-01-12",
+            "hours": 7.32,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-23d568",
+            "date": "2026-01-13",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-824773",
+            "date": "2026-01-15",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-2e7248",
+            "date": "2026-01-20",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-52bd18",
+            "date": "2026-01-21",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-2b254e",
+            "date": "2026-01-22",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-c9c42b",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-f6e3c7",
+            "date": "2026-01-26",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-e7b9d2",
+            "date": "2026-01-27",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-fba16c",
+            "date": "2026-01-28",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-49004d",
+            "date": "2026-01-29",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-76ca28",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-f99100",
+            "date": "2026-02-02",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-0bca5a",
+            "date": "2026-02-03",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-5ef207",
+            "date": "2026-02-04",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834810-ca7c5b",
+            "date": "2026-02-05",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-17dd9b",
+            "date": "2026-02-06",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5fa0a5",
+            "date": "2026-02-09",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ba0681",
+            "date": "2026-02-10",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0536b3",
+            "date": "2026-02-11",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-afd10b",
+            "date": "2026-02-12",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-66b9fb",
+            "date": "2026-02-13",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-1d160a",
+            "date": "2026-02-16",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-54f329",
+            "date": "2026-02-17",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-72d0d1",
+            "date": "2026-02-18",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-bc9e52",
+            "date": "2026-02-19",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-24ff1e",
+            "date": "2026-02-20",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8e5bc2",
+            "date": "2026-02-23",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b2a4b5",
+            "date": "2026-02-24",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-639c8d",
+            "date": "2026-02-25",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a629e2",
+            "date": "2026-02-26",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-345d69",
+            "date": "2026-02-27",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d72af0",
+            "date": "2026-03-02",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ddabf2",
+            "date": "2026-03-03",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-369584",
+            "date": "2026-03-04",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-7be9e6",
+            "date": "2026-03-05",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b0c71a",
+            "date": "2026-03-06",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-7624ed",
+            "date": "2026-03-09",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2f771d",
+            "date": "2026-03-10",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2f0063",
+            "date": "2026-03-11",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-259712",
+            "date": "2026-03-12",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a399a1",
+            "date": "2026-03-13",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-438324",
+            "date": "2026-03-16",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-695f9e",
+            "date": "2026-03-17",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5b353b",
+            "date": "2026-03-18",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-1008f4",
+            "date": "2026-03-19",
+            "hours": 8,
+            "type": "std",
+            "payrollTrc": "STD",
+            "status": "Approved",
+            "notes": "Payroll: STD (Approved)"
+          }
+        ]
+      },
+      "⬭Angelina Fierro⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-b61dab",
+            "date": "2026-01-12",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-bc103e",
+            "date": "2026-01-15",
+            "hours": 5.75,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-dd3355",
+            "date": "2026-01-16",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-daddd7",
+            "date": "2026-02-05",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0c46fa",
+            "date": "2026-02-06",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-eb5a6f",
+            "date": "2026-02-19",
+            "hours": 4.75,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-25a200",
+            "date": "2026-02-25",
+            "hours": 1.95,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          }
+        ]
+      },
+      "⬭Jadyn Flowers⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-4600a6",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-683226",
+            "date": "2026-01-05",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0dc97b",
+            "date": "2026-01-06",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-30d309",
+            "date": "2026-01-07",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ba072d",
+            "date": "2026-01-09",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ac6724",
+            "date": "2026-01-12",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-142378",
+            "date": "2026-01-13",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ccf211",
+            "date": "2026-01-14",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-645319",
+            "date": "2026-01-20",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-106c79",
+            "date": "2026-01-21",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-98f68e",
+            "date": "2026-01-22",
+            "hours": 3.32,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d70fcd",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-65bfa5",
+            "date": "2026-01-28",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6a2501",
+            "date": "2026-02-02",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-7f1292",
+            "date": "2026-02-03",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-08255f",
+            "date": "2026-02-04",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2f7dd4",
+            "date": "2026-02-11",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0c0f39",
+            "date": "2026-02-17",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9d406e",
+            "date": "2026-02-17",
+            "hours": 7.5,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-704802",
+            "date": "2026-02-18",
+            "hours": 3.51,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ef0512",
+            "date": "2026-03-02",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8a34fc",
+            "date": "2026-03-03",
+            "hours": 6.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2bff3f",
+            "date": "2026-03-05",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-61bb0b",
+            "date": "2026-03-09",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-1b7dc5",
+            "date": "2026-03-10",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0a0098",
+            "date": "2026-03-11",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8f7584",
+            "date": "2026-03-12",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8e6fd8",
+            "date": "2026-03-13",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8fed17",
+            "date": "2026-03-17",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-88d288",
+            "date": "2026-03-18",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-971562",
+            "date": "2026-03-19",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Needs Approval",
+            "notes": "Payroll: FMLNP (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-f5b8cf",
+            "date": "2026-03-20",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Needs Approval",
+            "notes": "Payroll: FMLNP (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-f56a76",
+            "date": "2026-03-25",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-d148e4",
+            "date": "2026-03-26",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Sabrina Gage⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-9399df",
+            "date": "2026-01-22",
+            "hours": 6,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9be502",
+            "date": "2026-01-26",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3acf69",
+            "date": "2026-01-26",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2919da",
+            "date": "2026-01-27",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3a0c08",
+            "date": "2026-02-13",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5fa843",
+            "date": "2026-02-18",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8f02e1",
+            "date": "2026-02-19",
+            "hours": 1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2b1b54",
+            "date": "2026-02-27",
+            "hours": 5.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5c9965",
+            "date": "2026-03-19",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭James Garcia⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-c00f23",
+            "date": "2026-01-08",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-c91f95",
+            "date": "2026-01-09",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9d21b1",
+            "date": "2026-01-14",
+            "hours": 7,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4a6983",
+            "date": "2026-01-15",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4cedff",
+            "date": "2026-01-23",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-dfdf24",
+            "date": "2026-01-28",
+            "hours": 7,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4a6214",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6def09",
+            "date": "2026-02-05",
+            "hours": 6,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-fb513e",
+            "date": "2026-02-11",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-dca0c1",
+            "date": "2026-02-13",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-85391d",
+            "date": "2026-02-18",
+            "hours": 6,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6841b0",
+            "date": "2026-02-20",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5521ab",
+            "date": "2026-02-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a55fa9",
+            "date": "2026-02-26",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a2d561",
+            "date": "2026-03-06",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Approved",
+            "notes": "Payroll: FMLNP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-be77fc",
+            "date": "2026-03-13",
+            "hours": 1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-af1744",
+            "date": "2026-03-17",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-a9c327",
+            "date": "2026-03-18",
+            "hours": 8,
+            "type": "fmlnp",
+            "payrollTrc": "FMLNP",
+            "status": "Needs Approval",
+            "notes": "Payroll: FMLNP (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Jenifer Henson⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-298fe4",
+            "date": "2026-01-06",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-089661",
+            "date": "2026-01-15",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-26bff5",
+            "date": "2026-01-15",
+            "hours": 7,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-91ee70",
+            "date": "2026-01-16",
+            "hours": 7,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ea45d2",
+            "date": "2026-01-20",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-21c55e",
+            "date": "2026-01-26",
+            "hours": 4.59,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b53fb3",
+            "date": "2026-02-05",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b58550",
+            "date": "2026-02-18",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f1c054",
+            "date": "2026-03-03",
+            "hours": 4.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4302a6",
+            "date": "2026-03-21",
+            "hours": 1.62,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Oceane Ingram⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-24f8b1",
+            "date": "2026-01-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b88159",
+            "date": "2026-01-13",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3cbbbd",
+            "date": "2026-01-14",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6297f9",
+            "date": "2026-01-15",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5dd60a",
+            "date": "2026-01-16",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-27600c",
+            "date": "2026-01-20",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f645e2",
+            "date": "2026-01-21",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-1223ef",
+            "date": "2026-01-22",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-120789",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e2f13e",
+            "date": "2026-01-26",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0256c0",
+            "date": "2026-01-27",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-da3dc8",
+            "date": "2026-01-28",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8e3b70",
+            "date": "2026-01-29",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8573e3",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8cf10f",
+            "date": "2026-02-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-42c80c",
+            "date": "2026-02-03",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ef9364",
+            "date": "2026-02-04",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-02ffbe",
+            "date": "2026-02-05",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-aeb4b2",
+            "date": "2026-02-06",
+            "hours": 5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-986bef",
+            "date": "2026-02-06",
+            "hours": 3,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-c0ea93",
+            "date": "2026-02-09",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a42793",
+            "date": "2026-02-10",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-c10c91",
+            "date": "2026-02-11",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6df175",
+            "date": "2026-02-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-78fef2",
+            "date": "2026-02-13",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-7ebaa1",
+            "date": "2026-02-13",
+            "hours": 5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-64bf95",
+            "date": "2026-02-17",
+            "hours": 3.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4ef75f",
+            "date": "2026-02-17",
+            "hours": 4.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0d0530",
+            "date": "2026-02-18",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-7e3174",
+            "date": "2026-02-19",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Precious Johnson⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-1a7152",
+            "date": "2026-01-07",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ecd57d",
+            "date": "2026-01-12",
+            "hours": 7.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6b1d63",
+            "date": "2026-01-27",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-72f29f",
+            "date": "2026-01-28",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-118dbd",
+            "date": "2026-01-29",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-57b1ad",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-35af53",
+            "date": "2026-02-05",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-dfd8dc",
+            "date": "2026-02-13",
+            "hours": 5.34,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d3e186",
+            "date": "2026-02-24",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-1352f8",
+            "date": "2026-03-04",
+            "hours": 7.18,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-8af52b",
+            "date": "2026-03-05",
+            "hours": 4.02,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-ea433f",
+            "date": "2026-03-16",
+            "hours": 0.96,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-75ca14",
+            "date": "2026-03-20",
+            "hours": 0.37,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-b2e88f",
+            "date": "2026-03-23",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-4405f0",
+            "date": "2026-03-23",
+            "hours": 4.3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Erica Kallestewa⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-d85174",
+            "date": "2026-01-03",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0109fe",
+            "date": "2026-01-04",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-28bc8a",
+            "date": "2026-01-12",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-836024",
+            "date": "2026-01-18",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5d125e",
+            "date": "2026-02-09",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a53a65",
+            "date": "2026-03-05",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-541066",
+            "date": "2026-03-13",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5bf9f6",
+            "date": "2026-03-16",
+            "hours": 4.52,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTOST (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-ef49c8",
+            "date": "2026-03-16",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-8b77fc",
+            "date": "2026-03-19",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Scott Knight⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-79b365",
+            "date": "2026-03-18",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Brandywine Lockhart⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-a18232",
+            "date": "2026-01-09",
+            "hours": 6,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-19eb26",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-823790",
+            "date": "2026-01-26",
+            "hours": 1.8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d18bab",
+            "date": "2026-01-29",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e6b95b",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f514b0",
+            "date": "2026-02-05",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d247ca",
+            "date": "2026-02-06",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-227a4c",
+            "date": "2026-02-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-be7394",
+            "date": "2026-02-19",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-06a270",
+            "date": "2026-02-20",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f78a73",
+            "date": "2026-02-23",
+            "hours": 8,
+            "type": "brv",
+            "payrollTrc": "BRV",
+            "status": "Approved",
+            "notes": "Payroll: BRV (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-def904",
+            "date": "2026-03-06",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b34e29",
+            "date": "2026-03-10",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-635269",
+            "date": "2026-03-12",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d015d4",
+            "date": "2026-03-13",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Christi Martinez-Sharp⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-0e35fd",
+            "date": "2026-01-04",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3dc0e0",
+            "date": "2026-01-15",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9496c0",
+            "date": "2026-01-16",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9ce3dd",
+            "date": "2026-01-17",
+            "hours": 5.35,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-847602",
+            "date": "2026-01-23",
+            "hours": 5.02,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d2fe6c",
+            "date": "2026-01-24",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-53b2b0",
+            "date": "2026-01-25",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-47b291",
+            "date": "2026-02-06",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a03f04",
+            "date": "2026-02-15",
+            "hours": 4,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-218530",
+            "date": "2026-02-23",
+            "hours": 0.55,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-53b604",
+            "date": "2026-03-04",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e4ecd7",
+            "date": "2026-03-11",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ab9deb",
+            "date": "2026-03-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Matrece Muldrow⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-d2c9dd",
+            "date": "2026-01-05",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-49c6f4",
+            "date": "2026-01-06",
+            "hours": 7.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-55df87",
+            "date": "2026-01-07",
+            "hours": 5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-803596",
+            "date": "2026-01-09",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-94d463",
+            "date": "2026-01-12",
+            "hours": 6,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-24dbc4",
+            "date": "2026-01-16",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-04902d",
+            "date": "2026-01-20",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-c6d914",
+            "date": "2026-01-23",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e8c3ae",
+            "date": "2026-01-26",
+            "hours": 1.82,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-04808e",
+            "date": "2026-01-31",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-fec2dc",
+            "date": "2026-02-11",
+            "hours": 5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3f21bb",
+            "date": "2026-02-21",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0ce9e7",
+            "date": "2026-02-24",
+            "hours": 1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-2ce853",
+            "date": "2026-03-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e9b077",
+            "date": "2026-03-16",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-248814",
+            "date": "2026-03-17",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTOST (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-c7572b",
+            "date": "2026-03-18",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-8df32c",
+            "date": "2026-03-23",
+            "hours": 5.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          },
+          {
+            "id": "payroll-1774575834811-3da83b",
+            "date": "2026-03-24",
+            "hours": 4.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Scoticia Osborne⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-0375fa",
+            "date": "2026-01-07",
+            "hours": 2.39,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-63b2dc",
+            "date": "2026-01-08",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-55affc",
+            "date": "2026-01-09",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-46e06d",
+            "date": "2026-01-10",
+            "hours": 2.14,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-66ddca",
+            "date": "2026-01-19",
+            "hours": 8,
+            "type": "nop",
+            "payrollTrc": "NOP",
+            "status": "Approved",
+            "notes": "Payroll: NOP (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a0a8f2",
+            "date": "2026-01-20",
+            "hours": 8,
+            "type": "ppl",
+            "payrollTrc": "PPL",
+            "status": "Approved",
+            "notes": "Payroll: PPL (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-cb91b8",
+            "date": "2026-01-21",
+            "hours": 8,
+            "type": "ppl",
+            "payrollTrc": "PPL",
+            "status": "Approved",
+            "notes": "Payroll: PPL (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-793f94",
+            "date": "2026-01-22",
+            "hours": 8,
+            "type": "ppl",
+            "payrollTrc": "PPL",
+            "status": "Approved",
+            "notes": "Payroll: PPL (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4d9b0b",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "ppl",
+            "payrollTrc": "PPL",
+            "status": "Approved",
+            "notes": "Payroll: PPL (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-3de8a1",
+            "date": "2026-01-24",
+            "hours": 8,
+            "type": "ppl",
+            "payrollTrc": "PPL",
+            "status": "Approved",
+            "notes": "Payroll: PPL (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f9797b",
+            "date": "2026-01-29",
+            "hours": 1,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-688296",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-890e1e",
+            "date": "2026-01-31",
+            "hours": 4.27,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-27f792",
+            "date": "2026-02-06",
+            "hours": 5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6540c7",
+            "date": "2026-02-12",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-113a97",
+            "date": "2026-02-14",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-8fa939",
+            "date": "2026-02-19",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9e97c2",
+            "date": "2026-02-28",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-e7d461",
+            "date": "2026-03-12",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-0cdf4e",
+            "date": "2026-03-23",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTOST (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Johnathan Padilla⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-7d1063",
+            "date": "2026-01-30",
+            "hours": 2.89,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-70626e",
+            "date": "2026-03-12",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Esperanza Palomera⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-69ac0f",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-787437",
+            "date": "2026-01-22",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-82cb6c",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Teena Pokorski⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-9e4c22",
+            "date": "2026-01-15",
+            "hours": 0.78,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4adb16",
+            "date": "2026-01-21",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b5eec6",
+            "date": "2026-01-22",
+            "hours": 4,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-05005f",
+            "date": "2026-01-23",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-eeb242",
+            "date": "2026-01-26",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-892183",
+            "date": "2026-01-28",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-6deed2",
+            "date": "2026-02-02",
+            "hours": 1.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-64139e",
+            "date": "2026-02-09",
+            "hours": 1.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-f85b30",
+            "date": "2026-02-11",
+            "hours": 3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-c676f3",
+            "date": "2026-02-20",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-5e4cef",
+            "date": "2026-02-24",
+            "hours": 0.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-acd61e",
+            "date": "2026-02-25",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-98bdac",
+            "date": "2026-03-04",
+            "hours": 1,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-9c12b2",
+            "date": "2026-03-06",
+            "hours": 0.57,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-a6aafd",
+            "date": "2026-03-16",
+            "hours": 2,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-077444",
+            "date": "2026-03-23",
+            "hours": 4.5,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          }
+        ]
+      },
+      "⬭Esther Ramos⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-83b253",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-b2214d",
+            "date": "2026-02-06",
+            "hours": 2,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-d44eca",
+            "date": "2026-02-26",
+            "hours": 1.3,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-dbb92b",
+            "date": "2026-02-27",
+            "hours": 0.34,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-16ff03",
+            "date": "2026-02-27",
+            "hours": 2.3,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          }
+        ]
+      },
+      "⬭Kristin Villela⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-700394",
+            "date": "2026-01-02",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4a2d27",
+            "date": "2026-02-18",
+            "hours": 1.75,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-72f58d",
+            "date": "2026-02-19",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-195164",
+            "date": "2026-03-18",
+            "hours": 2.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Needs Approval",
+            "notes": "Payroll: PTO (Needs Approval)"
+          }
+        ]
+      },
+      "⬭Betty Yanez⬬": {
+        "carriedOverHours": 0,
+        "earnedThisYearHours": 0,
+        "reliabilityHoursAgainst": 0,
+        "ptostMaxHours": 40,
+        "entries": [],
+        "payrollEntries": [
+          {
+            "id": "payroll-1774575834811-b4a10e",
+            "date": "2026-01-07",
+            "hours": 4,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-4086df",
+            "date": "2026-01-13",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-551e1d",
+            "date": "2026-01-14",
+            "hours": 8,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-92a296",
+            "date": "2026-01-15",
+            "hours": 7.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-36477b",
+            "date": "2026-01-16",
+            "hours": 4,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-ec2b7c",
+            "date": "2026-01-20",
+            "hours": 7.5,
+            "type": "pto-planned",
+            "payrollTrc": "PTO",
+            "status": "Approved",
+            "notes": "Payroll: PTO (Approved)"
+          },
+          {
+            "id": "payroll-1774575834811-79e722",
+            "date": "2026-01-30",
+            "hours": 8,
+            "type": "ptost",
+            "payrollTrc": "PTOST",
+            "status": "Approved",
+            "notes": "Payroll: PTOST (Approved)"
+          }
+        ]
+      }
+    }
   },
   "followUpHistory": {
     "entries": []
@@ -43402,7 +46796,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 40
+      "byteLength": 60601
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
