@@ -1466,31 +1466,29 @@ function embedPtoTracker() {
     }
     if (typeof initializePtoTracker === 'function') initializePtoTracker();
 
-    // DEBUG: trace PTO store state
+    // DEBUG: visible diagnostic banner for PTO
     try {
         const raw = localStorage.getItem('devCoachingTool_ptoTracker');
         const parsed = raw ? JSON.parse(raw) : null;
         const names = parsed?.associates ? Object.keys(parsed.associates) : [];
         const sampleName = names[0];
         const sampleEntries = sampleName ? (parsed.associates[sampleName]?.payrollEntries || []).length : 0;
-        console.log('[PTO DEBUG] Store has', names.length, 'associates. Sample:', sampleName, '=', sampleEntries, 'entries');
-        console.log('[PTO DEBUG] Raw size:', raw ? raw.length : 0, 'bytes');
 
-        // Check if dropdown matches store
         const select = document.getElementById('ptoAssociateSelect');
-        if (select) {
-            const opts = Array.from(select.options).map(o => o.value).filter(Boolean);
-            console.log('[PTO DEBUG] Dropdown has', opts.length, 'options:', opts.slice(0, 3).join(', '));
-            if (opts.length && names.length) {
-                const firstOpt = opts[0];
-                const inStore = !!parsed.associates[firstOpt];
-                console.log('[PTO DEBUG] First dropdown "' + firstOpt + '" in store?', inStore);
-                if (!inStore) {
-                    const lower = firstOpt.toLowerCase();
-                    const match = names.find(n => n.toLowerCase() === lower);
-                    console.log('[PTO DEBUG] Case-insensitive match:', match || 'NONE');
-                }
-            }
+        const optCount = select ? Array.from(select.options).filter(o => o.value).length : -1;
+        const firstOpt = select ? (Array.from(select.options).find(o => o.value)?.value || 'none') : 'no-select';
+        const inStore = firstOpt !== 'none' && firstOpt !== 'no-select' ? !!parsed?.associates?.[firstOpt] : false;
+
+        const msg = `PTO DEBUG: store=${names.length} associates, sample="${sampleName}"=${sampleEntries} entries, dropdown=${optCount} opts, first="${firstOpt}" inStore=${inStore}, rawBytes=${raw ? raw.length : 0}`;
+        console.log('[PTO DEBUG]', msg);
+
+        // Show visible banner
+        const container = document.getElementById('ptoEntriesContainer') || document.getElementById('embeddedPto');
+        if (container) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'padding:8px 12px;background:#e3f2fd;color:#0d47a1;border-radius:6px;font-size:0.8em;margin-bottom:8px;font-family:monospace;';
+            banner.textContent = msg;
+            container.insertBefore(banner, container.firstChild);
         }
     } catch(e) { console.error('[PTO DEBUG] Error:', e); }
 }
