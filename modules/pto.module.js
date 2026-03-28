@@ -923,6 +923,22 @@ function initializePtoTracker() {
         excelBtn.dataset.bound = 'true';
     }
 
+    var clearBtn = document.getElementById('ptoClearAllBtn');
+    if (clearBtn && !clearBtn.dataset.bound) {
+        clearBtn.addEventListener('click', function() {
+            var store = loadPtoStore();
+            var count = Object.keys(store.associates || {}).length;
+            if (!count) { showToast('No entries to clear', 3000); return; }
+            if (!confirm('Delete ALL payroll entries for all ' + count + ' employees? This cannot be undone.')) return;
+            store.associates = {};
+            savePtoStore(store);
+            populateAssociateSelect();
+            renderEmployeeView('');
+            showToast('All payroll entries cleared', 3000);
+        });
+        clearBtn.dataset.bound = 'true';
+    }
+
     bindEntryEventDelegation();
 
     if (select?.value) renderEmployeeView(select.value);
