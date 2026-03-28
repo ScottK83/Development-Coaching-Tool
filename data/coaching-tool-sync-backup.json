@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-28T01:03:06.456Z",
+  "generatedAt": "2026-03-28T01:10:16.430Z",
   "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -45589,7 +45589,7 @@
   "ptoTracker": {
     "selectedAssociate": "James Garcia",
     "associates": {
-      "⬭Robert Berrelleza⬬": {
+      "Robert Berrelleza": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -45702,7 +45702,7 @@
           }
         ]
       },
-      "⬭Destiny Cervantez⬬": {
+      "Destiny Cervantez": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -45767,7 +45767,7 @@
           }
         ]
       },
-      "⬭Caylie Chirumbolo⬬": {
+      "Caylie Chirumbolo": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -45872,7 +45872,7 @@
           }
         ]
       },
-      "⬭Desiree Clark⬬": {
+      "Desiree Clark": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46009,7 +46009,7 @@
           }
         ]
       },
-      "⬭Kamella Dash⬬": {
+      "Kamella Dash": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46066,112 +46066,15 @@
           }
         ]
       },
-      "⬭Alyssa Dimes⬬": {
+      "Alyssa Dimes": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
         "ptostMaxHours": 40,
         "entries": [],
-        "payrollEntries": [
-          {
-            "id": "payroll-1774659781565-e23820",
-            "date": "2026-01-07",
-            "hours": 1.33,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-8ed704",
-            "date": "2026-01-08",
-            "hours": 8,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-af9391",
-            "date": "2026-01-09",
-            "hours": 8,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-59546a",
-            "date": "2026-01-10",
-            "hours": 2.5,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-99bb51",
-            "date": "2026-01-17",
-            "hours": 8,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-eb26eb",
-            "date": "2026-01-22",
-            "hours": 1.5,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-f8d410",
-            "date": "2026-01-27",
-            "hours": 8,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-ce03d2",
-            "date": "2026-01-28",
-            "hours": 8,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-79ffdb",
-            "date": "2026-02-21",
-            "hours": 1,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-159888",
-            "date": "2026-03-09",
-            "hours": 8,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-bb2e4a",
-            "date": "2026-03-10",
-            "hours": 3.5,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-2c68a7",
-            "date": "2026-03-20",
-            "hours": 4,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Needs Approval"
-          }
-        ]
+        "payrollEntries": []
       },
-      "⬭Trisha Erb⬬": {
+      "Trisha Erb": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46556,7 +46459,7 @@
           }
         ]
       },
-      "⬭Angelina Fierro⬬": {
+      "Angelina Fierro": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46621,7 +46524,7 @@
           }
         ]
       },
-      "⬭Jadyn Flowers⬬": {
+      "Jadyn Flowers": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46902,7 +46805,7 @@
           }
         ]
       },
-      "⬭Sabrina Gage⬬": {
+      "Sabrina Gage": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -46983,160 +46886,15 @@
           }
         ]
       },
-      "⬭James Garcia⬬": {
+      "James Garcia": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
+        "reliabilityHoursAgainst": 45.25,
         "ptostMaxHours": 40,
         "entries": [],
-        "payrollEntries": [
-          {
-            "id": "payroll-1774659781565-04f555",
-            "date": "2026-01-08",
-            "hours": 8,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-2346cf",
-            "date": "2026-01-09",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-f7b169",
-            "date": "2026-01-14",
-            "hours": 7,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-246eb5",
-            "date": "2026-01-15",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-643a69",
-            "date": "2026-01-23",
-            "hours": 2,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-5e61b4",
-            "date": "2026-01-28",
-            "hours": 7,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-00ba1f",
-            "date": "2026-01-30",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-020357",
-            "date": "2026-02-05",
-            "hours": 6,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-b1bf12",
-            "date": "2026-02-11",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-449ca2",
-            "date": "2026-02-13",
-            "hours": 8,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-066758",
-            "date": "2026-02-18",
-            "hours": 6,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-2764d7",
-            "date": "2026-02-20",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-80d020",
-            "date": "2026-02-23",
-            "hours": 8,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-27b630",
-            "date": "2026-02-26",
-            "hours": 8,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-d21850",
-            "date": "2026-03-06",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-151420",
-            "date": "2026-03-13",
-            "hours": 1,
-            "trc": "PTOST",
-            "payrollTrc": "PTOST",
-            "status": "Approved"
-          },
-          {
-            "id": "payroll-1774659781565-77e532",
-            "date": "2026-03-17",
-            "hours": 3,
-            "trc": "PTO",
-            "payrollTrc": "PTO",
-            "status": "Needs Approval"
-          },
-          {
-            "id": "payroll-1774659781565-bb6f01",
-            "date": "2026-03-18",
-            "hours": 8,
-            "trc": "FMLA",
-            "payrollTrc": "FMLNP",
-            "status": "Needs Approval"
-          }
-        ]
+        "payrollEntries": []
       },
-      "⬭Jenifer Henson⬬": {
+      "Jenifer Henson": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47225,7 +46983,7 @@
           }
         ]
       },
-      "⬭Oceane Ingram⬬": {
+      "Oceane Ingram": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47474,7 +47232,7 @@
           }
         ]
       },
-      "⬭Precious Johnson⬬": {
+      "Precious Johnson": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47603,7 +47361,7 @@
           }
         ]
       },
-      "⬭Erica Kallestewa⬬": {
+      "Erica Kallestewa": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47692,7 +47450,7 @@
           }
         ]
       },
-      "⬭Scott Knight⬬": {
+      "Scott Knight": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47709,7 +47467,7 @@
           }
         ]
       },
-      "⬭Brandywine Lockhart⬬": {
+      "Brandywine Lockhart": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47838,7 +47596,7 @@
           }
         ]
       },
-      "⬭Christi Martinez-Sharp⬬": {
+      "Christi Martinez-Sharp": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -47951,7 +47709,7 @@
           }
         ]
       },
-      "⬭Matrece Muldrow⬬": {
+      "Matrece Muldrow": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48112,7 +47870,7 @@
           }
         ]
       },
-      "⬭Scoticia Osborne⬬": {
+      "Scoticia Osborne": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48281,7 +48039,7 @@
           }
         ]
       },
-      "⬭Johnathan Padilla⬬": {
+      "Johnathan Padilla": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48306,7 +48064,7 @@
           }
         ]
       },
-      "⬭Esperanza Palomera⬬": {
+      "Esperanza Palomera": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48339,7 +48097,7 @@
           }
         ]
       },
-      "⬭Teena Pokorski⬬": {
+      "Teena Pokorski": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48476,7 +48234,7 @@
           }
         ]
       },
-      "⬭Esther Ramos⬬": {
+      "Esther Ramos": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48525,7 +48283,7 @@
           }
         ]
       },
-      "⬭Kristin Villela⬬": {
+      "Kristin Villela": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48566,7 +48324,7 @@
           }
         ]
       },
-      "⬭Betty Yanez⬬": {
+      "Betty Yanez": {
         "carriedOverHours": 0,
         "earnedThisYearHours": 0,
         "reliabilityHoursAgainst": 0,
@@ -48630,22 +48388,6 @@
             "status": "Approved"
           }
         ]
-      },
-      "Alyssa Dimes": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 0,
-        "ptostMaxHours": 40,
-        "entries": [],
-        "payrollEntries": []
-      },
-      "James Garcia": {
-        "carriedOverHours": 0,
-        "earnedThisYearHours": 0,
-        "reliabilityHoursAgainst": 45.25,
-        "ptostMaxHours": 40,
-        "entries": [],
-        "payrollEntries": []
       }
     }
   },
@@ -48717,7 +48459,7 @@
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 46843
+      "byteLength": 42848
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
