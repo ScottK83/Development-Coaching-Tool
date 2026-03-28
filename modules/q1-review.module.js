@@ -273,13 +273,16 @@
 
         // Build employee lookup: YTD data if available, else Q1 aggregation
         var aggEmployees;
+        var q1Agg = { employees: {}, periodCount: 0 };
         if (hasYtdData) {
             aggEmployees = {};
             ytdPeriod.data.employees.forEach(function (emp) {
                 if (emp && emp.name) aggEmployees[emp.name] = emp;
             });
+            // Still aggregate Q1 weekly data for trend/period info if available
+            if (q1Keys.length > 0) q1Agg = aggregateQ1Data(q1Keys);
         } else {
-            var q1Agg = aggregateQ1Data(q1Keys);
+            q1Agg = aggregateQ1Data(q1Keys);
             aggEmployees = q1Agg.employees;
         }
 
