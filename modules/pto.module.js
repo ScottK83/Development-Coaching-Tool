@@ -269,7 +269,12 @@ function processPayrollExcelRows(rows) {
         const trcIdx = lower.indexOf('trc');
         if (nameIdx >= 0 && trcIdx >= 0) {
             headerIdx = i;
-            colMap = { name: nameIdx, date: lower.indexOf('date'), trc: trcIdx, quantity: lower.indexOf('quantity'), status: lower.indexOf('status') };
+            // Find "Unschd" column (may also appear as "unscheduled", "unsched", etc.)
+            var unschdIdx = -1;
+            for (var u = 0; u < lower.length; u++) {
+                if (lower[u].indexOf('unsch') >= 0) { unschdIdx = u; break; }
+            }
+            colMap = { name: nameIdx, date: lower.indexOf('date'), trc: trcIdx, quantity: lower.indexOf('quantity'), status: lower.indexOf('status'), unschd: unschdIdx };
             break;
         }
     }
@@ -328,6 +333,17 @@ function processPayrollExcelRows(rows) {
         if (year !== PTO_TRACKING_YEAR) continue;
 
         const rawStatus = cleanUnicodeControl(String(row[colMap.status] || '').trim());
+
+        // Parse "Unschd" column - any truthy value (Y, Yes, X, 1, a number > 0) means unscheduled
+        var isUnscheduled = false;
+        if (colMap.unschd >= 0) {
+            var rawUnschd = String(row[colMap.unschd] || '').trim().toLowerCase();
+            isUnscheduled = rawUnschd === 'y' || rawUnschd === 'yes' || rawUnschd === 'x' || rawUnschd === '1' || rawUnschd === 'true'
+                || (Number.isFinite(parseFloat(rawUnschd)) && parseFloat(rawUnschd) > 0);
+        }
+        // Also flag if TRC itself is "PTO Unsched"
+        if (mappedLabel === 'PTO Unsched') isUnscheduled = true;
+
         const resolvedName = resolveEmployeeName(rawName, nameLookup);
 
         if (!byEmployee[resolvedName]) byEmployee[resolvedName] = [];
@@ -337,7 +353,7 @@ function processPayrollExcelRows(rows) {
             trc: mappedLabel,
             payrollTrc: rawTrc,
             status: rawStatus,
-            unscheduled: mappedLabel === 'PTO Unsched'
+            unscheduled: isUnscheduled
         });
     }
 
@@ -584,7 +600,6 @@ function renderEntriesTable(container, entries, storeKey) {
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Code</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Hours</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Status</th>
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;text-align:center;" title="Mark as unscheduled PTO">Unsched</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;width:40px;"></th>
             </tr>
         </thead>
@@ -594,21 +609,19 @@ function renderEntriesTable(container, entries, storeKey) {
         const color = TRC_COLORS[e.trc] || { bg: '#f5f5f5', text: '#333' };
         const dateStr = formatDateDisplay(e.date);
         const statusColor = (e.status || '').toLowerCase().includes('approved') ? '#1b5e20' : '#e65100';
-        const unschedChecked = e.unscheduled ? 'checked' : '';
         const rowBorder = e.unscheduled ? 'border-left:3px solid #e65100;' : '';
+        const unschedLabel = e.unscheduled ? '<span style="display:inline-block;padding:2px 6px;border-radius:8px;font-size:0.78em;font-weight:600;background:#fff3e0;color:#e65100;">UNSCHED</span>' : '';
 
         html += `<tr style="border-bottom:1px solid #f0f0f0;${rowBorder}" data-entry-id="${escapeHtml(e.id)}">
             <td style="padding:7px 10px;">${escapeHtml(dateStr)}</td>
             <td style="padding:7px 10px;" class="pto-edit-trc" data-id="${escapeHtml(e.id)}" title="Click to change">
                 <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.88em;font-weight:600;background:${color.bg};color:${color.text};cursor:pointer;">${escapeHtml(e.trc)}</span>
+                ${unschedLabel}
             </td>
             <td style="padding:7px 10px;" class="pto-edit-hours" data-id="${escapeHtml(e.id)}" title="Click to edit">
                 <span style="cursor:pointer;border-bottom:1px dashed #ccc;">${e.hours}</span>
             </td>
             <td style="padding:7px 10px;color:${statusColor};font-size:0.88em;">${escapeHtml(e.status || '')}</td>
-            <td style="padding:7px 10px;text-align:center;">
-                <input type="checkbox" class="pto-unsched-check" data-id="${escapeHtml(e.id)}" ${unschedChecked} title="Unscheduled PTO">
-            </td>
             <td style="padding:7px 10px;text-align:center;">
                 <button type="button" class="pto-delete-entry" data-id="${escapeHtml(e.id)}" title="Delete entry"
                     style="background:none;border:none;color:#b71c1c;cursor:pointer;font-size:1.1em;padding:2px 6px;">&#x2715;</button>
@@ -639,14 +652,6 @@ function bindEntryEventDelegation() {
     if (!container || container.dataset.ptoBound) return;
     container.dataset.ptoBound = 'true';
 
-    // Unscheduled checkbox
-    container.addEventListener('change', function(e) {
-        if (e.target.classList.contains('pto-unsched-check')) {
-            var id = e.target.dataset.id;
-            toggleUnscheduled(currentPtoEmployee, id, e.target.checked);
-        }
-    });
-
     // Click events: edit TRC, edit hours, delete, add entry
     container.addEventListener('click', function(e) {
         var target = e.target.closest('.pto-edit-trc');
@@ -671,22 +676,6 @@ function bindEntryEventDelegation() {
                 saveBalanceFields(currentPtoEmployee);
             }
         });
-    }
-}
-
-function toggleUnscheduled(employeeName, entryId, isUnscheduled) {
-    var store = loadPtoStore();
-    var storeKey = resolveStoreKey(store, employeeName);
-    var entries = store.associates?.[storeKey]?.payrollEntries;
-    if (!entries) return;
-    var entry = entries.find(function(e) { return e.id === entryId; });
-    if (entry) {
-        entry.unscheduled = isUnscheduled;
-        savePtoStore(store);
-        renderBalancePanel(employeeName);
-        // Update row border without full re-render
-        var row = document.querySelector('tr[data-entry-id="' + CSS.escape(entryId) + '"]');
-        if (row) row.style.borderLeft = isUnscheduled ? '3px solid #e65100' : '';
     }
 }
 
