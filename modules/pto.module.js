@@ -1,12 +1,16 @@
 (function() {
 'use strict';
 // ============================================
-// PTO / PAYROLL TIME-OFF TRACKER (SIMPLIFIED)
-// Upload payroll Excel, view missed days per employee
+// PTO / PAYROLL TIME-OFF TRACKER
+// Upload payroll Excel, view/edit entries, track PTO balance
 // ============================================
 
 var PTO_TRACKING_YEAR = 2026;
 var STORAGE_PREFIX = 'devCoachingTool_';
+var DEFAULT_ANNUAL_ALLOTMENT = 120;
+
+// TRC codes that count against PTO balance
+var PTO_BALANCE_TRCS = ['PTO', 'PTOST', 'PTO Unsched'];
 
 var PAYROLL_TRC_MAP = {
     'pto': 'PTO',
@@ -19,6 +23,8 @@ var PAYROLL_TRC_MAP = {
     'nop': 'No Pay'
 };
 
+var ALL_TRC_LABELS = ['PTO', 'PTOST', 'PTO Unsched', 'STD', 'FMLA', 'Bereavement', 'Parental Leave', 'No Pay'];
+
 var TRC_COLORS = {
     'PTO':             { bg: '#e8f5e9', text: '#1b5e20' },
     'PTOST':           { bg: '#e3f2fd', text: '#0d47a1' },
@@ -30,9 +36,18 @@ var TRC_COLORS = {
     'No Pay':          { bg: '#efebe9', text: '#3e2723' }
 };
 
+// Track currently selected employee for event delegation
+var currentPtoEmployee = '';
+
 function showToast(msg, ms) {
     if (typeof window.showToast === 'function') { window.showToast(msg, ms); return; }
     console.log('[PTO]', msg);
+}
+
+function escapeHtml(str) {
+    var utils = window.DevCoachModules?.sharedUtils;
+    if (utils?.escapeHtml) return utils.escapeHtml(str);
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ============================================
@@ -72,6 +87,34 @@ function savePtoStore(store) {
 }
 
 // ============================================
+// BALANCE CALCULATION
+// ============================================
+
+function getAssociateData(store, name) {
+    if (!store.associates) store.associates = {};
+    if (!store.associates[name]) store.associates[name] = { payrollEntries: [] };
+    var data = store.associates[name];
+    if (data.carryoverHours == null) data.carryoverHours = 0;
+    if (data.annualAllotment == null) data.annualAllotment = store.defaultAnnualAllotment || DEFAULT_ANNUAL_ALLOTMENT;
+    return data;
+}
+
+function calculatePtoBalance(store, name) {
+    var data = getAssociateData(store, name);
+    var carryover = data.carryoverHours || 0;
+    var allotment = data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || DEFAULT_ANNUAL_ALLOTMENT);
+    var used = 0;
+    (data.payrollEntries || []).forEach(function(e) {
+        if (PTO_BALANCE_TRCS.indexOf(e.trc) >= 0) {
+            used += (e.hours || 0);
+        }
+    });
+    used = Math.round(used * 100) / 100;
+    var remaining = Math.round((carryover + allotment - used) * 100) / 100;
+    return { carryover: carryover, allotment: allotment, used: used, remaining: remaining };
+}
+
+// ============================================
 // TEAM FILTER
 // ============================================
 
@@ -95,13 +138,11 @@ function getEmployeeNames() {
     const filterCtx = getTeamFilterContext();
     const names = new Set();
 
-    // From payroll store
     const store = loadPtoStore();
     Object.keys(store.associates || {}).forEach(n => {
         if (isIncludedByTeamFilter(n, filterCtx)) names.add(n);
     });
 
-    // From weekly/ytd data
     const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
     [weeklyData, ytdData].forEach(source => {
@@ -122,42 +163,30 @@ function getEmployeeNames() {
 // ============================================
 
 function cleanUnicodeControl(str) {
-    // Strip directional/formatting Unicode
     str = str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
-    // Strip common garbage characters from Excel exports (©, ®, ™, ●, ■, □, etc.)
     str = str.replace(/[©®™●■□▪▫◆◇○◎★☆•‣⁃△▲▼►◄→←↑↓]/g, '');
-    // Strip any remaining non-printable or symbol characters at start/end of string
     str = str.replace(/^[^\w\s]+|[^\w\s]+$/g, '');
     return str.trim();
 }
 
 function parseExcelDate(raw) {
     if (raw == null || raw === '') return null;
-
-    if (raw instanceof Date && !isNaN(raw.getTime())) {
-        return raw.toISOString().slice(0, 10);
-    }
-
+    if (raw instanceof Date && !isNaN(raw.getTime())) return raw.toISOString().slice(0, 10);
     if (typeof raw === 'number' && raw > 40000 && raw < 60000) {
         const date = new Date((raw - 25569) * 86400000);
         if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
     }
-
     const str = String(raw).trim();
-
     const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
     if (isoMatch) return isoMatch[1];
-
     const usMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (usMatch) return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`;
-
     const usShort = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
     if (usShort) {
         const yr = parseInt(usShort[3], 10);
         const fullYear = yr >= 50 ? 1900 + yr : 2000 + yr;
         return `${fullYear}-${String(usShort[1]).padStart(2, '0')}-${String(usShort[2]).padStart(2, '0')}`;
     }
-
     const MONTHS = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
                      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
     const namedMatch = str.match(/^(\d{1,2})-([A-Za-z]+)-(\d{2,4})$/);
@@ -170,13 +199,11 @@ function parseExcelDate(raw) {
             return `${year}-${month}-${String(namedMatch[1]).padStart(2, '0')}`;
         }
     }
-
     const serial = parseFloat(str);
     if (Number.isFinite(serial) && serial > 40000 && serial < 60000) {
         const date = new Date((serial - 25569) * 86400000);
         if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
     }
-
     return null;
 }
 
@@ -186,6 +213,20 @@ function resolveEmployeeName(rawName, nameLookup) {
     const titleCased = rawName.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
     nameLookup[lower] = titleCased;
     return titleCased;
+}
+
+// ============================================
+// STORE NAME RESOLUTION (case-insensitive)
+// ============================================
+
+function resolveStoreKey(store, employeeName) {
+    if (store.associates?.[employeeName]) return employeeName;
+    var lower = employeeName.toLowerCase();
+    var keys = Object.keys(store.associates || {});
+    for (var i = 0; i < keys.length; i++) {
+        if (keys[i].toLowerCase() === lower) return keys[i];
+    }
+    return employeeName;
 }
 
 // ============================================
@@ -218,7 +259,6 @@ function importPayrollExcel(file) {
 }
 
 function processPayrollExcelRows(rows) {
-    // Find header row
     let headerIdx = -1;
     let colMap = {};
     for (let i = 0; i < Math.min(rows.length, 10); i++) {
@@ -229,13 +269,7 @@ function processPayrollExcelRows(rows) {
         const trcIdx = lower.indexOf('trc');
         if (nameIdx >= 0 && trcIdx >= 0) {
             headerIdx = i;
-            colMap = {
-                name: nameIdx,
-                date: lower.indexOf('date'),
-                trc: trcIdx,
-                quantity: lower.indexOf('quantity'),
-                status: lower.indexOf('status')
-            };
+            colMap = { name: nameIdx, date: lower.indexOf('date'), trc: trcIdx, quantity: lower.indexOf('quantity'), status: lower.indexOf('status') };
             break;
         }
     }
@@ -245,9 +279,6 @@ function processPayrollExcelRows(rows) {
         return;
     }
 
-    console.log('[Payroll Excel] Header at row', headerIdx, 'colMap:', JSON.stringify(colMap));
-
-    // Build name lookup from existing data
     const store = loadPtoStore();
     const nameLookup = {};
     Object.keys(store.associates || {}).forEach(n => { nameLookup[n.toLowerCase()] = n; });
@@ -264,7 +295,6 @@ function processPayrollExcelRows(rows) {
         });
     });
 
-    // Parse rows
     const byEmployee = {};
     let regCount = 0;
     let skippedCount = 0;
@@ -306,7 +336,8 @@ function processPayrollExcelRows(rows) {
             hours: Math.round(hours * 100) / 100,
             trc: mappedLabel,
             payrollTrc: rawTrc,
-            status: rawStatus
+            status: rawStatus,
+            unscheduled: mappedLabel === 'PTO Unsched'
         });
     }
 
@@ -323,13 +354,14 @@ function processPayrollExcelRows(rows) {
         return;
     }
 
-    // Save: overwrite payrollEntries for each employee
     if (!store.associates) store.associates = {};
     let totalAdded = 0;
     const summary = {};
 
     employeeNames.forEach(name => {
         if (!store.associates[name]) store.associates[name] = { payrollEntries: [] };
+        // Preserve carryover/allotment if already set
+        var existing = store.associates[name];
         store.associates[name].payrollEntries = byEmployee[name].map(entry => ({
             id: `payroll-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
             ...entry
@@ -341,36 +373,30 @@ function processPayrollExcelRows(rows) {
     });
 
     const saved = savePtoStore(store);
-
     const summaryLines = Object.entries(summary).map(([trc, hrs]) => `${trc}: ${hrs.toFixed(1)}h`).join(', ');
 
     if (!saved) {
         if (resultsEl) {
             resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#f8d7da;color:#842029;margin-top:8px;">
-                <strong>ERROR: Could not save payroll data.</strong> Browser storage may be full.<br>
-                Parsed ${totalAdded} entries for ${employeeNames.length} employees but save failed.<br>
-                Try clearing old data or using a different browser.
+                <strong>ERROR: Could not save payroll data.</strong> Browser storage may be full.
             </div>`;
         }
         return;
     }
 
-    // Verify the save actually persisted
     const verifyStore = loadPtoStore();
     const verifyName = employeeNames[0];
     const verifyEntries = verifyStore.associates?.[verifyName]?.payrollEntries || [];
     if (!verifyEntries.length) {
-        console.error('[PTO] Save verification failed - data not persisted for', verifyName);
         if (resultsEl) {
             resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:8px;">
-                <strong>Warning:</strong> Data may not have saved correctly. Please re-upload or check browser storage.
+                <strong>Warning:</strong> Data may not have saved correctly. Please re-upload.
             </div>`;
         }
         return;
     }
 
     showToast(`Imported ${totalAdded} entries for ${employeeNames.length} employees`, 5000);
-
     if (resultsEl) {
         resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;">
             <strong>Imported ${totalAdded} entries</strong> for ${employeeNames.length} employees<br>
@@ -378,10 +404,9 @@ function processPayrollExcelRows(rows) {
         </div>`;
     }
 
-    // Refresh view
     populateAssociateSelect();
     const select = document.getElementById('ptoAssociateSelect');
-    if (select?.value) renderEmployeeEntries(select.value);
+    if (select?.value) renderEmployeeView(select.value);
 }
 
 // ============================================
@@ -397,15 +422,12 @@ function populateAssociateSelect() {
 
     const names = getEmployeeNames();
     const store = loadPtoStore();
-
-    // Build case-insensitive lookup for store names
     const storeLookup = {};
     Object.keys(store.associates || {}).forEach(n => { storeLookup[n.toLowerCase()] = n; });
 
     names.forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        // Try exact match first, then case-insensitive
         let entries = store.associates?.[name]?.payrollEntries || [];
         if (!entries.length) {
             const storeName = storeLookup[name.toLowerCase()];
@@ -422,8 +444,87 @@ function populateAssociateSelect() {
 }
 
 // ============================================
-// UI: RENDER ENTRIES TABLE
+// UI: BALANCE PANEL
 // ============================================
+
+function renderBalancePanel(employeeName) {
+    var panel = document.getElementById('ptoBalancePanel');
+    if (!panel) return;
+
+    if (!employeeName) {
+        panel.innerHTML = '';
+        return;
+    }
+
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, employeeName);
+    var data = getAssociateData(store, storeKey);
+    var bal = calculatePtoBalance(store, storeKey);
+
+    var remainColor = bal.remaining > 16 ? '#1b5e20' : bal.remaining >= 8 ? '#e65100' : '#b71c1c';
+    var remainBg = bal.remaining > 16 ? '#e8f5e9' : bal.remaining >= 8 ? '#fff3e0' : '#fce4ec';
+
+    // Count unscheduled
+    var unschedHours = 0;
+    var unschedDays = 0;
+    var unschedDates = {};
+    (data.payrollEntries || []).forEach(function(e) {
+        if (e.unscheduled) {
+            unschedHours += (e.hours || 0);
+            if (e.date && !unschedDates[e.date]) { unschedDays++; unschedDates[e.date] = true; }
+        }
+    });
+
+    panel.innerHTML = `
+        <div style="margin-bottom:20px;padding:16px;background:#fff;border-radius:10px;border:1px solid #d0dce5;">
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:12px;">
+                <div style="flex:0 0 auto;">
+                    <label style="font-size:0.8em;color:#666;display:block;margin-bottom:2px;">Carryover Hours</label>
+                    <input type="number" id="ptoCarryover" value="${data.carryoverHours || 0}" min="0" step="1"
+                        style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
+                </div>
+                <div style="flex:0 0 auto;">
+                    <label style="font-size:0.8em;color:#666;display:block;margin-bottom:2px;">Annual Allotment</label>
+                    <input type="number" id="ptoAllotment" value="${data.annualAllotment != null ? data.annualAllotment : DEFAULT_ANNUAL_ALLOTMENT}" min="0" step="1"
+                        style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
+                </div>
+                <div style="flex:0 0 auto;padding:6px 16px;border-radius:8px;background:${remainBg};text-align:center;">
+                    <div style="font-size:0.75em;color:#666;">PTO Remaining</div>
+                    <div style="font-size:1.3em;font-weight:700;color:${remainColor};">${bal.remaining}h</div>
+                </div>
+                <div style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;color:#666;">
+                    Used: <strong>${bal.used}h</strong> of ${bal.carryover + bal.allotment}h
+                </div>
+            </div>
+            ${unschedHours > 0 ? `<div style="padding:6px 12px;background:#fff3e0;border-radius:6px;font-size:0.85em;color:#e65100;">
+                Unscheduled PTO: <strong>${unschedHours.toFixed(1)}h</strong> across <strong>${unschedDays}</strong> day${unschedDays !== 1 ? 's' : ''}
+            </div>` : ''}
+        </div>`;
+}
+
+function saveBalanceFields(employeeName) {
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, employeeName);
+    var data = getAssociateData(store, storeKey);
+
+    var carryEl = document.getElementById('ptoCarryover');
+    var allotEl = document.getElementById('ptoAllotment');
+    if (carryEl) data.carryoverHours = parseFloat(carryEl.value) || 0;
+    if (allotEl) data.annualAllotment = parseFloat(allotEl.value) || 0;
+
+    savePtoStore(store);
+    renderBalancePanel(employeeName);
+}
+
+// ============================================
+// UI: RENDER EMPLOYEE VIEW (balance + table)
+// ============================================
+
+function renderEmployeeView(employeeName) {
+    currentPtoEmployee = employeeName;
+    renderBalancePanel(employeeName);
+    renderEmployeeEntries(employeeName);
+}
 
 function renderEmployeeEntries(employeeName) {
     const container = document.getElementById('ptoEntriesContainer');
@@ -435,51 +536,45 @@ function renderEmployeeEntries(employeeName) {
     }
 
     const store = loadPtoStore();
-    const storeNames = Object.keys(store.associates || {});
-    const entries = (store.associates?.[employeeName]?.payrollEntries || [])
+    var storeKey = resolveStoreKey(store, employeeName);
+    const entries = (store.associates?.[storeKey]?.payrollEntries || [])
         .filter(e => e.date)
         .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!entries.length) {
-        // Check if it's a name mismatch
-        const lowerName = employeeName.toLowerCase();
-        const match = storeNames.find(n => n.toLowerCase() === lowerName);
-        if (match && match !== employeeName) {
-            console.warn('[PTO] Name mismatch: dropdown has "' + employeeName + '" but store has "' + match + '"');
-            // Use the store name instead
-            const fixedEntries = (store.associates[match]?.payrollEntries || [])
-                .filter(e => e.date)
-                .sort((a, b) => a.date.localeCompare(b.date));
-            if (fixedEntries.length) {
-                // Render with corrected name - recurse won't loop since store has the name
-                renderEmployeeEntriesFromData(container, fixedEntries);
-                return;
-            }
-        }
-        console.log('[PTO] No entries for "' + employeeName + '". Store has ' + storeNames.length + ' associates:', storeNames.slice(0, 5).join(', '));
         container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
         return;
     }
 
-    renderEmployeeEntriesFromData(container, entries);
+    renderEntriesTable(container, entries, storeKey);
 }
 
-function renderEmployeeEntriesFromData(container, entries) {
-    // Summary by TRC
+function renderEntriesTable(container, entries, storeKey) {
+    // Summary badges
     const totals = {};
     let totalHours = 0;
+    let unschedHours = 0;
     entries.forEach(e => {
         totals[e.trc] = (totals[e.trc] || 0) + (e.hours || 0);
         totalHours += (e.hours || 0);
+        if (e.unscheduled) unschedHours += (e.hours || 0);
     });
 
     let html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">';
     Object.entries(totals).forEach(([trc, hrs]) => {
         const color = TRC_COLORS[trc] || { bg: '#f5f5f5', text: '#333' };
-        html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:${color.bg};color:${color.text};">${trc}: ${hrs.toFixed(1)}h</span>`;
+        html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:${color.bg};color:${color.text};">${escapeHtml(trc)}: ${hrs.toFixed(1)}h</span>`;
     });
     html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:#f5f5f5;color:#333;">Total: ${totalHours.toFixed(1)}h</span>`;
+    if (unschedHours > 0) {
+        html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:#fff3e0;color:#e65100;">Unsched: ${unschedHours.toFixed(1)}h</span>`;
+    }
     html += '</div>';
+
+    // Add entry button
+    html += `<div style="margin-bottom:10px;">
+        <button type="button" id="ptoAddEntryBtn" style="padding:6px 14px;border:1px dashed #5a2c8a;background:#f8f0ff;color:#5a2c8a;border-radius:6px;font-size:0.85em;cursor:pointer;">+ Add Entry</button>
+    </div>`;
 
     // Table
     html += `<table style="width:100%;border-collapse:collapse;font-size:0.9em;">
@@ -489,6 +584,8 @@ function renderEmployeeEntriesFromData(container, entries) {
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Code</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Hours</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Status</th>
+                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;text-align:center;" title="Mark as unscheduled PTO">Unsched</th>
+                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;width:40px;"></th>
             </tr>
         </thead>
         <tbody>`;
@@ -497,11 +594,25 @@ function renderEmployeeEntriesFromData(container, entries) {
         const color = TRC_COLORS[e.trc] || { bg: '#f5f5f5', text: '#333' };
         const dateStr = formatDateDisplay(e.date);
         const statusColor = (e.status || '').toLowerCase().includes('approved') ? '#1b5e20' : '#e65100';
-        html += `<tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:7px 10px;">${dateStr}</td>
-            <td style="padding:7px 10px;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.88em;font-weight:600;background:${color.bg};color:${color.text};">${e.trc}</span></td>
-            <td style="padding:7px 10px;">${e.hours}</td>
-            <td style="padding:7px 10px;color:${statusColor};font-size:0.88em;">${e.status || ''}</td>
+        const unschedChecked = e.unscheduled ? 'checked' : '';
+        const rowBorder = e.unscheduled ? 'border-left:3px solid #e65100;' : '';
+
+        html += `<tr style="border-bottom:1px solid #f0f0f0;${rowBorder}" data-entry-id="${escapeHtml(e.id)}">
+            <td style="padding:7px 10px;">${escapeHtml(dateStr)}</td>
+            <td style="padding:7px 10px;" class="pto-edit-trc" data-id="${escapeHtml(e.id)}" title="Click to change">
+                <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.88em;font-weight:600;background:${color.bg};color:${color.text};cursor:pointer;">${escapeHtml(e.trc)}</span>
+            </td>
+            <td style="padding:7px 10px;" class="pto-edit-hours" data-id="${escapeHtml(e.id)}" title="Click to edit">
+                <span style="cursor:pointer;border-bottom:1px dashed #ccc;">${e.hours}</span>
+            </td>
+            <td style="padding:7px 10px;color:${statusColor};font-size:0.88em;">${escapeHtml(e.status || '')}</td>
+            <td style="padding:7px 10px;text-align:center;">
+                <input type="checkbox" class="pto-unsched-check" data-id="${escapeHtml(e.id)}" ${unschedChecked} title="Unscheduled PTO">
+            </td>
+            <td style="padding:7px 10px;text-align:center;">
+                <button type="button" class="pto-delete-entry" data-id="${escapeHtml(e.id)}" title="Delete entry"
+                    style="background:none;border:none;color:#b71c1c;cursor:pointer;font-size:1.1em;padding:2px 6px;">&#x2715;</button>
+            </td>
         </tr>`;
     });
 
@@ -520,7 +631,232 @@ function formatDateDisplay(isoDate) {
 }
 
 // ============================================
-// INITIALIZATION
+// ENTRY EDITING (event delegation)
+// ============================================
+
+function bindEntryEventDelegation() {
+    var container = document.getElementById('ptoEntriesContainer');
+    if (!container || container.dataset.ptoBound) return;
+    container.dataset.ptoBound = 'true';
+
+    // Unscheduled checkbox
+    container.addEventListener('change', function(e) {
+        if (e.target.classList.contains('pto-unsched-check')) {
+            var id = e.target.dataset.id;
+            toggleUnscheduled(currentPtoEmployee, id, e.target.checked);
+        }
+    });
+
+    // Click events: edit TRC, edit hours, delete, add entry
+    container.addEventListener('click', function(e) {
+        var target = e.target.closest('.pto-edit-trc');
+        if (target) { startEditTrc(target, target.dataset.id); return; }
+
+        target = e.target.closest('.pto-edit-hours');
+        if (target) { startEditHours(target, target.dataset.id); return; }
+
+        target = e.target.closest('.pto-delete-entry');
+        if (target) { deleteEntry(currentPtoEmployee, target.dataset.id); return; }
+
+        target = e.target.closest('#ptoAddEntryBtn');
+        if (target) { showAddEntryForm(); return; }
+    });
+
+    // Balance field changes
+    var balPanel = document.getElementById('ptoBalancePanel');
+    if (balPanel && !balPanel.dataset.ptoBound) {
+        balPanel.dataset.ptoBound = 'true';
+        balPanel.addEventListener('change', function(e) {
+            if (e.target.id === 'ptoCarryover' || e.target.id === 'ptoAllotment') {
+                saveBalanceFields(currentPtoEmployee);
+            }
+        });
+    }
+}
+
+function toggleUnscheduled(employeeName, entryId, isUnscheduled) {
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, employeeName);
+    var entries = store.associates?.[storeKey]?.payrollEntries;
+    if (!entries) return;
+    var entry = entries.find(function(e) { return e.id === entryId; });
+    if (entry) {
+        entry.unscheduled = isUnscheduled;
+        savePtoStore(store);
+        renderBalancePanel(employeeName);
+        // Update row border without full re-render
+        var row = document.querySelector('tr[data-entry-id="' + CSS.escape(entryId) + '"]');
+        if (row) row.style.borderLeft = isUnscheduled ? '3px solid #e65100' : '';
+    }
+}
+
+function startEditTrc(cell, entryId) {
+    if (cell.querySelector('select')) return; // Already editing
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, currentPtoEmployee);
+    var entries = store.associates?.[storeKey]?.payrollEntries || [];
+    var entry = entries.find(function(e) { return e.id === entryId; });
+    if (!entry) return;
+
+    var select = document.createElement('select');
+    select.style.cssText = 'padding:3px 6px;border-radius:5px;font-size:0.9em;';
+    ALL_TRC_LABELS.forEach(function(label) {
+        var opt = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        if (label === entry.trc) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    cell.innerHTML = '';
+    cell.appendChild(select);
+    select.focus();
+
+    function finish() {
+        var newTrc = select.value;
+        if (newTrc !== entry.trc) {
+            entry.trc = newTrc;
+            entry.unscheduled = newTrc === 'PTO Unsched' || entry.unscheduled;
+            savePtoStore(store);
+        }
+        renderEmployeeView(currentPtoEmployee);
+    }
+    select.addEventListener('change', finish);
+    select.addEventListener('blur', finish);
+}
+
+function startEditHours(cell, entryId) {
+    if (cell.querySelector('input')) return;
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, currentPtoEmployee);
+    var entries = store.associates?.[storeKey]?.payrollEntries || [];
+    var entry = entries.find(function(e) { return e.id === entryId; });
+    if (!entry) return;
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '0.25';
+    input.value = entry.hours;
+    input.style.cssText = 'width:60px;padding:3px 6px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;text-align:center;';
+
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    function finish() {
+        var val = parseFloat(input.value);
+        if (Number.isFinite(val) && val >= 0 && val !== entry.hours) {
+            entry.hours = Math.round(val * 100) / 100;
+            savePtoStore(store);
+        }
+        renderEmployeeView(currentPtoEmployee);
+    }
+    input.addEventListener('blur', finish);
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') finish(); });
+}
+
+function deleteEntry(employeeName, entryId) {
+    if (!confirm('Delete this entry?')) return;
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, employeeName);
+    var data = store.associates?.[storeKey];
+    if (!data) return;
+    data.payrollEntries = (data.payrollEntries || []).filter(function(e) { return e.id !== entryId; });
+    savePtoStore(store);
+    populateAssociateSelect();
+    renderEmployeeView(employeeName);
+}
+
+// ============================================
+// ADD ENTRY FORM
+// ============================================
+
+function showAddEntryForm() {
+    var container = document.getElementById('ptoEntriesContainer');
+    if (!container) return;
+    if (document.getElementById('ptoAddEntryForm')) return;
+
+    var today = new Date().toISOString().slice(0, 10);
+    var form = document.createElement('div');
+    form.id = 'ptoAddEntryForm';
+    form.style.cssText = 'padding:12px 16px;background:#f8f0ff;border:1px solid #d0b8e8;border-radius:8px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;';
+
+    var trcOptions = ALL_TRC_LABELS.map(function(label) {
+        return '<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</option>';
+    }).join('');
+
+    form.innerHTML = `
+        <div>
+            <label style="font-size:0.78em;color:#666;display:block;">Date</label>
+            <input type="date" id="ptoNewDate" value="${today}" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">
+        </div>
+        <div>
+            <label style="font-size:0.78em;color:#666;display:block;">Code</label>
+            <select id="ptoNewTrc" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">${trcOptions}</select>
+        </div>
+        <div>
+            <label style="font-size:0.78em;color:#666;display:block;">Hours</label>
+            <input type="number" id="ptoNewHours" value="8" min="0" step="0.25" style="width:70px;padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;text-align:center;">
+        </div>
+        <div>
+            <label style="font-size:0.78em;color:#666;display:block;">Unsched?</label>
+            <input type="checkbox" id="ptoNewUnsched" style="margin-top:6px;">
+        </div>
+        <div style="display:flex;gap:6px;">
+            <button type="button" id="ptoSaveNewEntry" style="padding:6px 14px;background:#5a2c8a;color:#fff;border:none;border-radius:5px;font-size:0.85em;cursor:pointer;">Save</button>
+            <button type="button" id="ptoCancelNewEntry" style="padding:6px 14px;background:#eee;color:#333;border:1px solid #ccc;border-radius:5px;font-size:0.85em;cursor:pointer;">Cancel</button>
+        </div>`;
+
+    var addBtn = document.getElementById('ptoAddEntryBtn');
+    if (addBtn) addBtn.insertAdjacentElement('afterend', form);
+    else container.insertBefore(form, container.firstChild);
+
+    document.getElementById('ptoSaveNewEntry').addEventListener('click', function() {
+        saveNewEntry();
+    });
+    document.getElementById('ptoCancelNewEntry').addEventListener('click', function() {
+        form.remove();
+    });
+}
+
+function saveNewEntry() {
+    var dateEl = document.getElementById('ptoNewDate');
+    var trcEl = document.getElementById('ptoNewTrc');
+    var hoursEl = document.getElementById('ptoNewHours');
+    var unschedEl = document.getElementById('ptoNewUnsched');
+
+    var date = dateEl?.value;
+    var trc = trcEl?.value;
+    var hours = parseFloat(hoursEl?.value);
+    var unsched = unschedEl?.checked || false;
+
+    if (!date) { showToast('Please enter a date', 3000); return; }
+    if (!Number.isFinite(hours) || hours <= 0) { showToast('Please enter valid hours', 3000); return; }
+
+    var store = loadPtoStore();
+    var storeKey = resolveStoreKey(store, currentPtoEmployee);
+    var data = getAssociateData(store, storeKey);
+
+    data.payrollEntries.push({
+        id: `manual-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        date: date,
+        hours: Math.round(hours * 100) / 100,
+        trc: trc,
+        payrollTrc: 'manual',
+        status: 'Manual',
+        unscheduled: unsched || trc === 'PTO Unsched'
+    });
+
+    savePtoStore(store);
+    populateAssociateSelect();
+    renderEmployeeView(currentPtoEmployee);
+    showToast('Entry added', 2000);
+}
+
+// ============================================
+// MIGRATION
 // ============================================
 
 function migrateDirtyStoreNames() {
@@ -532,9 +868,7 @@ function migrateDirtyStoreNames() {
         const clean = cleanUnicodeControl(name);
         if (clean !== name) {
             console.log('[PTO] Migrating dirty name "' + name + '" -> "' + clean + '"');
-            // Merge into clean name if it already exists
             if (newAssociates[clean]?.payrollEntries?.length) {
-                // Keep the one with more entries
                 if ((data.payrollEntries || []).length > newAssociates[clean].payrollEntries.length) {
                     newAssociates[clean] = data;
                 }
@@ -549,12 +883,30 @@ function migrateDirtyStoreNames() {
     if (changed) {
         store.associates = newAssociates;
         savePtoStore(store);
-        console.log('[PTO] Migrated dirty names in store');
     }
 }
 
+function migrateUnscheduledField() {
+    var store = loadPtoStore();
+    var changed = false;
+    Object.values(store.associates || {}).forEach(function(data) {
+        (data.payrollEntries || []).forEach(function(e) {
+            if (e.unscheduled == null) {
+                e.unscheduled = e.trc === 'PTO Unsched';
+                changed = true;
+            }
+        });
+    });
+    if (changed) savePtoStore(store);
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
 function initializePtoTracker() {
     migrateDirtyStoreNames();
+    migrateUnscheduledField();
 
     const select = document.getElementById('ptoAssociateSelect');
     const excelBtn = document.getElementById('ptoPayrollExcelBtn');
@@ -563,7 +915,7 @@ function initializePtoTracker() {
     populateAssociateSelect();
 
     if (select && !select.dataset.bound) {
-        select.addEventListener('change', () => renderEmployeeEntries(select.value));
+        select.addEventListener('change', () => renderEmployeeView(select.value));
         select.dataset.bound = 'true';
     }
 
@@ -582,11 +934,11 @@ function initializePtoTracker() {
         excelBtn.dataset.bound = 'true';
     }
 
-    // Render if associate already selected
-    if (select?.value) renderEmployeeEntries(select.value);
+    bindEntryEventDelegation();
+
+    if (select?.value) renderEmployeeView(select.value);
 }
 
-// Make initializePtoTracker globally accessible
 window.initializePtoTracker = initializePtoTracker;
 
 })();
