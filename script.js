@@ -1465,6 +1465,34 @@ function embedPtoTracker() {
         while (source.firstChild) target.appendChild(source.firstChild);
     }
     if (typeof initializePtoTracker === 'function') initializePtoTracker();
+
+    // DEBUG: trace PTO store state
+    try {
+        const raw = localStorage.getItem('devCoachingTool_ptoTracker');
+        const parsed = raw ? JSON.parse(raw) : null;
+        const names = parsed?.associates ? Object.keys(parsed.associates) : [];
+        const sampleName = names[0];
+        const sampleEntries = sampleName ? (parsed.associates[sampleName]?.payrollEntries || []).length : 0;
+        console.log('[PTO DEBUG] Store has', names.length, 'associates. Sample:', sampleName, '=', sampleEntries, 'entries');
+        console.log('[PTO DEBUG] Raw size:', raw ? raw.length : 0, 'bytes');
+
+        // Check if dropdown matches store
+        const select = document.getElementById('ptoAssociateSelect');
+        if (select) {
+            const opts = Array.from(select.options).map(o => o.value).filter(Boolean);
+            console.log('[PTO DEBUG] Dropdown has', opts.length, 'options:', opts.slice(0, 3).join(', '));
+            if (opts.length && names.length) {
+                const firstOpt = opts[0];
+                const inStore = !!parsed.associates[firstOpt];
+                console.log('[PTO DEBUG] First dropdown "' + firstOpt + '" in store?', inStore);
+                if (!inStore) {
+                    const lower = firstOpt.toLowerCase();
+                    const match = names.find(n => n.toLowerCase() === lower);
+                    console.log('[PTO DEBUG] Case-insensitive match:', match || 'NONE');
+                }
+            }
+        }
+    } catch(e) { console.error('[PTO DEBUG] Error:', e); }
 }
 
 function bindNavigationHandlers() {
