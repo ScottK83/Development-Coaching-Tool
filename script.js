@@ -1465,32 +1465,6 @@ function embedPtoTracker() {
         while (source.firstChild) target.appendChild(source.firstChild);
     }
     if (typeof initializePtoTracker === 'function') initializePtoTracker();
-
-    // DEBUG: visible diagnostic banner for PTO
-    try {
-        const raw = localStorage.getItem('devCoachingTool_ptoTracker');
-        const parsed = raw ? JSON.parse(raw) : null;
-        const names = parsed?.associates ? Object.keys(parsed.associates) : [];
-        const sampleName = names[0];
-        const sampleEntries = sampleName ? (parsed.associates[sampleName]?.payrollEntries || []).length : 0;
-
-        const select = document.getElementById('ptoAssociateSelect');
-        const optCount = select ? Array.from(select.options).filter(o => o.value).length : -1;
-        const firstOpt = select ? (Array.from(select.options).find(o => o.value)?.value || 'none') : 'no-select';
-        const inStore = firstOpt !== 'none' && firstOpt !== 'no-select' ? !!parsed?.associates?.[firstOpt] : false;
-
-        const msg = `PTO DEBUG: store=${names.length} associates, sample="${sampleName}"=${sampleEntries} entries, dropdown=${optCount} opts, first="${firstOpt}" inStore=${inStore}, rawBytes=${raw ? raw.length : 0}`;
-        console.log('[PTO DEBUG]', msg);
-
-        // Show visible banner
-        const container = document.getElementById('ptoEntriesContainer') || document.getElementById('embeddedPto');
-        if (container) {
-            const banner = document.createElement('div');
-            banner.style.cssText = 'padding:8px 12px;background:#e3f2fd;color:#0d47a1;border-radius:6px;font-size:0.8em;margin-bottom:8px;font-family:monospace;';
-            banner.textContent = msg;
-            container.insertBefore(banner, container.firstChild);
-        }
-    } catch(e) { console.error('[PTO DEBUG] Error:', e); }
 }
 
 function bindNavigationHandlers() {

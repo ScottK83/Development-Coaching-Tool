@@ -122,7 +122,13 @@ function getEmployeeNames() {
 // ============================================
 
 function cleanUnicodeControl(str) {
-    return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+    // Strip directional/formatting Unicode
+    str = str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+    // Strip common garbage characters from Excel exports (©, ®, ™, ●, ■, □, etc.)
+    str = str.replace(/[©®™●■□▪▫◆◇○◎★☆•‣⁃△▲▼►◄→←↑↓]/g, '');
+    // Strip any remaining non-printable or symbol characters at start/end of string
+    str = str.replace(/^[^\w\s]+|[^\w\s]+$/g, '');
+    return str.trim();
 }
 
 function parseExcelDate(raw) {
@@ -517,7 +523,39 @@ function formatDateDisplay(isoDate) {
 // INITIALIZATION
 // ============================================
 
+function migrateDirtyStoreNames() {
+    const store = loadPtoStore();
+    if (!store.associates) return;
+    let changed = false;
+    const newAssociates = {};
+    Object.entries(store.associates).forEach(([name, data]) => {
+        const clean = cleanUnicodeControl(name);
+        if (clean !== name) {
+            console.log('[PTO] Migrating dirty name "' + name + '" -> "' + clean + '"');
+            // Merge into clean name if it already exists
+            if (newAssociates[clean]?.payrollEntries?.length) {
+                // Keep the one with more entries
+                if ((data.payrollEntries || []).length > newAssociates[clean].payrollEntries.length) {
+                    newAssociates[clean] = data;
+                }
+            } else {
+                newAssociates[clean] = data;
+            }
+            changed = true;
+        } else {
+            newAssociates[clean] = data;
+        }
+    });
+    if (changed) {
+        store.associates = newAssociates;
+        savePtoStore(store);
+        console.log('[PTO] Migrated dirty names in store');
+    }
+}
+
 function initializePtoTracker() {
+    migrateDirtyStoreNames();
+
     const select = document.getElementById('ptoAssociateSelect');
     const excelBtn = document.getElementById('ptoPayrollExcelBtn');
     const excelInput = document.getElementById('ptoPayrollExcelInput');
