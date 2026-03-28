@@ -227,6 +227,17 @@
 
     /* ── Score table building ── */
 
+    function buildStretchGoalText(bandConfig, formatKey) {
+        if (!bandConfig) return '';
+        if (bandConfig.type === 'min' && bandConfig.score3?.min != null) {
+            return `\u2265 ${_formatMetricDisplay(formatKey, bandConfig.score3.min)}`;
+        }
+        if (bandConfig.type === 'max' && bandConfig.score3?.max != null) {
+            return `\u2264 ${_formatMetricDisplay(formatKey, bandConfig.score3.max)}`;
+        }
+        return '';
+    }
+
     function buildGapToNextText(score, val, bandConfig) {
         if (score === null || score === 3 || val === null || !bandConfig) return '';
         var hints = [];
@@ -251,6 +262,7 @@
                 label: 'AHT',
                 valueText: result.values.aht === null ? 'N/A' : _formatMetricDisplay('aht', result.values.aht),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'aht', 'aht', 'aht', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.aht, 'aht'),
                 score: result.scores.aht,
                 gapText: buildGapToNextText(result.scores.aht, result.values.aht, ratingBands.aht)
             },
@@ -258,6 +270,7 @@
                 label: 'Adherence',
                 valueText: result.values.adherence === null ? 'N/A' : _formatMetricDisplay('scheduleAdherence', result.values.adherence),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.scheduleAdherence, 'scheduleAdherence'),
                 score: result.scores.adherence,
                 gapText: buildGapToNextText(result.scores.adherence, result.values.adherence, ratingBands.scheduleAdherence)
             },
@@ -265,6 +278,7 @@
                 label: 'Overall Sentiment',
                 valueText: result.values.sentiment === null ? 'N/A' : _formatMetricDisplay('overallSentiment', result.values.sentiment),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.overallSentiment, 'overallSentiment'),
                 score: result.scores.sentiment,
                 gapText: buildGapToNextText(result.scores.sentiment, result.values.sentiment, ratingBands.overallSentiment)
             },
@@ -272,6 +286,7 @@
                 label: surveyLabel,
                 valueText: result.values.associateOverall === null ? 'N/A' : _formatMetricDisplay('overallExperience', result.values.associateOverall),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'overallExperience', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.cxRepOverall, 'overallExperience'),
                 score: result.scores.associateOverall,
                 gapText: buildGapToNextText(result.scores.associateOverall, result.values.associateOverall, ratingBands.cxRepOverall)
             },
@@ -279,6 +294,7 @@
                 label: 'Reliability',
                 valueText: result.values.reliability === null ? 'N/A' : _formatMetricDisplay('reliability', result.values.reliability),
                 goalText: resolveOnOffGoalText(goalSource, bands, 'reliability', 'reliability', 'reliability', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.reliability, 'reliability'),
                 score: result.scores.reliability,
                 gapText: buildGapToNextText(result.scores.reliability, result.values.reliability, ratingBands.reliability)
             }
@@ -323,6 +339,7 @@
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.label}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.valueText}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7;">${row.goalText}</td>
+                            <td style="padding: 8px; border: 1px solid #e3d7f7; font-size: 0.88em; color: #6a1b9a;">${row.stretchText || ''}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7; text-align: center; ${getOnOffScoreCellStyle(row.score)}">${row.score === null ? 'N/A' : row.score}</td>
                             <td style="padding: 8px; border: 1px solid #e3d7f7; font-size: 0.85em; color: #555;">${row.gapText || (row.score === 3 ? '✓' : '')}</td>
                         </tr>
@@ -350,6 +367,7 @@
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Metric</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Actual</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Annual Goal</th>
+                        <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Stretch Goal</th>
                         <th style="text-align: center; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Score</th>
                         <th style="text-align: left; padding: 8px; border: 1px solid #d6c4f5; background: #ede7f6; color: #4a148c;">Gap to Next</th>
                     </tr>
@@ -358,11 +376,11 @@
                     ${rowsHtml}
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Rating Average</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="4">${ratingText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="5">${ratingText}</td>
                     </tr>
                     <tr>
                         <td style="padding: 8px; border: 1px solid #e3d7f7; font-weight: bold;">Overall Status</td>
-                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="4">${statusText}</td>
+                        <td style="padding: 8px; border: 1px solid #e3d7f7;" colspan="5">${statusText}</td>
                     </tr>
                 </tbody>
             </table>
