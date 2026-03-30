@@ -31,14 +31,35 @@
         if (!onOff?.calculateYearEndOnOffMirror) return null;
 
         var result = onOff.calculateYearEndOnOffMirror(emp, year);
-        if (!result || !result.isComplete) return null;
+        if (!result) return null;
+
+        // For center ranking, include employees even if they're missing some
+        // metrics. Calculate a partial rating average from available scores.
+        var scores = result.scores || {};
+        var ratingAverage = result.ratingAverage;
+        var trackLabel = result.trackLabel || 'N/A';
+        var trackStatusValue = result.trackStatusValue || 'unknown';
+
+        if (!result.isComplete) {
+            var validScores = Object.values(scores).filter(function (s) { return s !== null; });
+            if (validScores.length === 0) return null;
+            var sum = validScores.reduce(function (a, b) { return a + b; }, 0);
+            ratingAverage = sum / validScores.length;
+            if (ratingAverage <= 1.79) {
+                trackLabel = 'Off Track'; trackStatusValue = 'off-track';
+            } else if (ratingAverage <= 2.79) {
+                trackLabel = 'On Track/Successful'; trackStatusValue = 'on-track-successful';
+            } else {
+                trackLabel = 'On Track/Exceptional'; trackStatusValue = 'on-track-exceptional';
+            }
+        }
 
         return {
-            ratingAverage: result.ratingAverage,
-            trackLabel: result.trackLabel,
-            trackStatusValue: result.trackStatusValue,
-            scores: result.scores,
-            values: result.values,
+            ratingAverage: ratingAverage,
+            trackLabel: trackLabel,
+            trackStatusValue: trackStatusValue,
+            scores: scores,
+            values: result.values || {},
             reliability: parseFloat(emp.reliability) || 0,
             surveyTotal: parseInt(emp.surveyTotal, 10) || 0
         };
