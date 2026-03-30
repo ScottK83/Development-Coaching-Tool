@@ -55,8 +55,9 @@
         var yData = _getYtdData();
 
         // Find the best data source for rankings.
-        // Prefer the newest real (non-auto-generated) YTD upload first,
-        // then fall back to the period with the most employees.
+        // For center ranking we need the LARGEST real YTD upload (most employees)
+        // so we get the full center, not just a team-only upload.
+        // Tiebreaker: newest end date.
         var bestPeriod = null;
         var bestCount = 0;
         var bestSource = '';
@@ -64,7 +65,7 @@
         var foundRealYtd = false;
         var bestRealYtdDate = 0;
 
-        // Check YTD data first — prefer the newest real YTD upload
+        // Check YTD data — prefer real YTD with the most employees
         Object.entries(yData).forEach(function (entry) {
             var key = entry[0];
             var period = entry[1];
@@ -78,8 +79,11 @@
             var endTime = endDate && !isNaN(endDate) ? endDate.getTime() : 0;
 
             if (isRealYtd) {
-                // Among real YTDs, always prefer the newest by end date
-                if (!foundRealYtd || endTime > bestRealYtdDate) {
+                // Among real YTDs, prefer the one with the most employees
+                // so we get full center data, not a team-only upload.
+                // Tiebreaker: newest end date.
+                var dominated = foundRealYtd && (count < bestCount || (count === bestCount && endTime <= bestRealYtdDate));
+                if (!dominated) {
                     foundRealYtd = true;
                     bestRealYtdDate = endTime;
                     bestPeriod = period;
