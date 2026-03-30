@@ -96,9 +96,48 @@
 
         if (!bestPeriod || bestCount === 0) return null;
 
+        // Build merged employee list: start with the largest period (full roster),
+        // then overlay with newer data for any employee that appears in a more
+        // recent upload, so rankings always reflect the latest numbers.
+        var baseEmployees = {};
+        (bestPeriod.employees || []).forEach(function (emp) {
+            if (emp && emp.name) baseEmployees[emp.name] = emp;
+        });
+
+        // Find all other current-year periods and overlay newer employee data
+        var allPeriods = [];
+        Object.entries(yData).forEach(function (entry) {
+            var meta = entry[1]?.metadata || {};
+            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
+            var endYear = parseInt(String(endStr).split('-')[0], 10);
+            if (endYear !== currentYear && entry[0] !== bestKey) return;
+            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
+            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
+        });
+        Object.entries(wData).forEach(function (entry) {
+            var meta = entry[1]?.metadata || {};
+            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
+            var endYear = parseInt(String(endStr).split('-')[0], 10);
+            if (endYear !== currentYear && entry[0] !== bestKey) return;
+            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
+            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
+        });
+
+        // Sort oldest first so newer uploads overwrite older data
+        allPeriods.sort(function (a, b) { return a.uploadedAt - b.uploadedAt; });
+        allPeriods.forEach(function (item) {
+            (item.period.employees || []).forEach(function (emp) {
+                if (emp && emp.name && baseEmployees[emp.name]) {
+                    baseEmployees[emp.name] = emp;
+                }
+            });
+        });
+
+        var mergedEmployees = Object.values(baseEmployees);
+
         // Score every employee
         var rankings = [];
-        (bestPeriod.employees || []).forEach(function (emp) {
+        mergedEmployees.forEach(function (emp) {
             if (!emp || !emp.name) return;
             var score = scoreEmployee(emp, currentYear);
             if (!score) return;
