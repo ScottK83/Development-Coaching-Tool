@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-30T17:37:16.569Z",
+  "generatedAt": "2026-03-30T17:37:33.951Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -45739,14 +45739,18 @@
     "2026-03-23|2026-03-29": [
       "Alyssa Dimes",
       "Angelina Fierro",
+      "Betty Yanez",
       "Christi Martinez-Sharp",
       "Desiree Clark",
       "Destiny Cervantez",
       "Erica Kallestewa",
+      "Esperanza Palomera",
+      "Esther Ramos",
       "Jadyn Flowers",
       "James Garcia",
       "Johnathan Padilla",
       "Kamella Dash",
+      "Kristin Villela",
       "Matrece Muldrow",
       "Oceane Ingram",
       "Robert Berrelleza",
@@ -49437,7 +49441,7 @@
     "devCoachingTool_teamMemberSelectorExpanded": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 4
+      "byteLength": 5
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
@@ -49482,7 +49486,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 319
+      "byteLength": 288
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -49532,7 +49536,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 3,
-      "byteLength": 959
+      "byteLength": 1027
     }
   }
 }
