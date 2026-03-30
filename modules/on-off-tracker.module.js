@@ -242,11 +242,11 @@
         if (score === null || score === 3 || val === null || !bandConfig) return '';
         var hints = [];
         if (bandConfig.type === 'min') {
-            if (score === 1) hints.push('+' + (bandConfig.score2.min - val).toFixed(1) + ' to score 2');
-            if (score <= 2) hints.push('+' + (bandConfig.score3.min - val).toFixed(1) + ' to score 3');
+            if (score === 1) hints.push('+' + (bandConfig.score2.min - val).toFixed(1) + ' to next level');
+            if (score <= 2) hints.push('+' + (bandConfig.score3.min - val).toFixed(1) + ' to top level');
         } else {
-            if (score === 1) hints.push('-' + (val - bandConfig.score2.max).toFixed(1) + ' to score 2');
-            if (score <= 2) hints.push('-' + (val - bandConfig.score3.max).toFixed(1) + ' to score 3');
+            if (score === 1) hints.push('-' + (val - bandConfig.score2.max).toFixed(1) + ' to next level');
+            if (score <= 2) hints.push('-' + (val - bandConfig.score3.max).toFixed(1) + ' to top level');
         }
         return hints.join(' | ');
     }

@@ -489,7 +489,10 @@
 
         employees.forEach(function (emp) {
             html += '<div style="margin-bottom: 24px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-            html += '<h3 style="margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #4caf50; padding-bottom: 8px;">' + _escapeHtml(emp.name) + '</h3>';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4caf50; padding-bottom: 8px; margin-bottom: 0;">';
+            html += '<h3 style="margin: 0; color: #1a1a2e;">' + _escapeHtml(emp.name) + '</h3>';
+            html += '<button type="button" class="futures-checkin-btn" data-employee="' + _escapeHtml(emp.name) + '" style="padding: 6px 16px; background: #1565c0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85em; white-space: nowrap;">Check-In Summary</button>';
+            html += '</div>';
 
             if (emp.dataSource) {
                 html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
@@ -637,13 +640,250 @@
         });
 
         tableContainer.innerHTML = html;
+
+        // Bind check-in buttons
+        tableContainer.querySelectorAll('.futures-checkin-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var empName = btn.dataset.employee;
+                showCheckInModal(empName, data);
+            });
+        });
+    }
+
+    /* ── Check-In Summary ── */
+
+    /**
+     * Count working days (Mon-Fri) between two dates (exclusive of start, inclusive of end).
+     */
+    function countWorkingDays(startDate, endDate) {
+        var count = 0;
+        var current = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        current.setDate(current.getDate() + 1); // start from next day
+        var end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        while (current <= end) {
+            var dow = current.getDay();
+            if (dow !== 0 && dow !== 6) count++;
+            current.setDate(current.getDate() + 1);
+        }
+        return count;
+    }
+
+    /**
+     * Get number of working days remaining in the performance period.
+     * Performance period ends October 31 of the current year.
+     */
+    function getWorkingDaysRemaining() {
+        var now = new Date();
+        var endDate = new Date(now.getFullYear(), 9, 31); // Oct 31
+        if (now > endDate) return 0;
+        return countWorkingDays(now, endDate);
+    }
+
+    /**
+     * Calculate required daily average for a rate metric to reach a target.
+     * Uses weeks completed/remaining to compute overall required average,
+     * then converts to a daily figure based on working days left.
+     */
+    function calculateDailyTarget(currentAvg, weeksCompleted, weeksRemaining, target) {
+        if (weeksRemaining <= 0) return null;
+        var totalNeeded = target * (weeksCompleted + weeksRemaining);
+        var currentTotal = currentAvg * weeksCompleted;
+        var required = (totalNeeded - currentTotal) / weeksRemaining;
+        return required;
+    }
+
+    /**
+     * Build an employee-friendly check-in summary.
+     * Uses "next level" language — no score numbers, no goal values, no end dates.
+     */
+    function buildCheckInSummary(empName, data) {
+        var emp = null;
+        for (var i = 0; i < data.employees.length; i++) {
+            if (data.employees[i].name === empName) { emp = data.employees[i]; break; }
+        }
+        if (!emp) return 'No data available for ' + empName + '.';
+
+        var weekInfo = data.weekInfo;
+        var workingDaysLeft = getWorkingDaysRemaining();
+        var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[weekInfo.currentYear] || {};
+
+        var lines = [];
+        lines.push('Performance Check-In: ' + empName);
+        lines.push('');
+
+        var greatMetrics = [];
+        var improvementMetrics = [];
+
+        var metricKeys = Object.keys(emp.metrics);
+        metricKeys.forEach(function (metricKey) {
+            // Skip reliability — not shared with employees in check-ins
+            if (metricKey === 'reliability') return;
+
+            var m = emp.metrics[metricKey];
+            var metric = window.METRICS_REGISTRY[metricKey];
+            if (!metric) return;
+
+            var label = metric.label || metricKey;
+            var bandConfig = ratingBands[metricKey];
+
+            // Determine current score level
+            var score = null;
+            if (bandConfig) {
+                if (bandConfig.type === 'min') {
+                    if (m.currentAvg >= bandConfig.score3.min) score = 3;
+                    else if (m.currentAvg >= bandConfig.score2.min) score = 2;
+                    else score = 1;
+                } else {
+                    if (m.currentAvg <= bandConfig.score3.max) score = 3;
+                    else if (m.currentAvg <= bandConfig.score2.max) score = 2;
+                    else score = 1;
+                }
+            } else {
+                // No rating band — use meet/exceed status
+                if (m.currentlyExceeding) score = 3;
+                else if (m.currentlyMeeting) score = 2;
+                else score = 1;
+            }
+
+            if (score === 3) {
+                greatMetrics.push({ label: label, currentAvg: m.currentAvg, metricKey: metricKey });
+                return;
+            }
+
+            // Figure out the next level target
+            var nextTarget = null;
+            var levelLabel = 'next level';
+            if (bandConfig) {
+                if (score === 1) {
+                    nextTarget = bandConfig.type === 'min' ? bandConfig.score2.min : bandConfig.score2.max;
+                } else if (score === 2) {
+                    nextTarget = bandConfig.type === 'min' ? bandConfig.score3.min : bandConfig.score3.max;
+                    levelLabel = 'top level';
+                }
+            } else {
+                nextTarget = score === 1 ? m.meetTarget : m.exceedTarget;
+                if (score === 2) levelLabel = 'top level';
+            }
+
+            if (nextTarget === null) return;
+
+            // Calculate required daily average
+            var dailyTarget = null;
+            if (!m.isCumulative) {
+                var requiredAvg = calculateDailyTarget(m.currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, nextTarget);
+                if (requiredAvg !== null && isAchievable(metricKey, requiredAvg)) {
+                    dailyTarget = requiredAvg;
+                }
+            }
+
+            improvementMetrics.push({
+                label: label,
+                metricKey: metricKey,
+                currentAvg: m.currentAvg,
+                nextTarget: nextTarget,
+                dailyTarget: dailyTarget,
+                levelLabel: levelLabel,
+                isCumulative: m.isCumulative,
+                isReverse: m.isReverse,
+                budgetRemaining: m.budgetRemaining,
+                achievable: dailyTarget !== null || m.isCumulative
+            });
+        });
+
+        // Great metrics section
+        if (greatMetrics.length > 0) {
+            lines.push('DOING GREAT:');
+            greatMetrics.forEach(function (gm) {
+                lines.push('  ' + gm.label + ': ' + _formatMetricDisplay(gm.metricKey, gm.currentAvg) + ' — Top level! Keep it up.');
+            });
+            lines.push('');
+        }
+
+        // Improvement metrics section
+        if (improvementMetrics.length > 0) {
+            lines.push('AREAS TO FOCUS ON:');
+            improvementMetrics.forEach(function (im) {
+                var current = _formatMetricDisplay(im.metricKey, im.currentAvg);
+                if (im.isCumulative) {
+                    if (im.budgetRemaining > 0) {
+                        var perDay = workingDaysLeft > 0 ? im.budgetRemaining / workingDaysLeft : 0;
+                        lines.push('  ' + im.label + ': Currently at ' + current + '. You have ' + _formatMetricDisplay(im.metricKey, im.budgetRemaining) + ' remaining to stay within budget.');
+                    } else {
+                        lines.push('  ' + im.label + ': Currently at ' + current + '. Over budget — minimize further usage.');
+                    }
+                } else if (im.dailyTarget !== null) {
+                    var targetDisplay = _formatMetricDisplay(im.metricKey, im.dailyTarget);
+                    var direction = im.isReverse ? 'at or below' : 'at or above';
+                    lines.push('  ' + im.label + ': Currently at ' + current + '. To reach the ' + im.levelLabel + ', aim for ' + direction + ' ' + targetDisplay + ' each day.');
+                } else {
+                    lines.push('  ' + im.label + ': Currently at ' + current + '. This one will be tough to move — stay consistent and do your best.');
+                }
+            });
+            lines.push('');
+        }
+
+        if (improvementMetrics.length === 0 && greatMetrics.length > 0) {
+            lines.push('All metrics are at the top level — outstanding work!');
+            lines.push('');
+        }
+
+        lines.push('Keep pushing — every day counts!');
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Show the check-in summary in a modal.
+     */
+    function showCheckInModal(empName, data) {
+        var summary = buildCheckInSummary(empName, data);
+
+        // Remove existing modal if any
+        var existing = document.getElementById('futuresCheckInModal');
+        if (existing) existing.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'futuresCheckInModal';
+        overlay.className = 'modal-overlay';
+        overlay.style.display = 'flex';
+
+        var content = document.createElement('div');
+        content.className = 'modal-content';
+        content.innerHTML =
+            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">' +
+                '<h3 style="margin: 0; color: #1a1a2e;">Check-In Summary</h3>' +
+                '<button id="futuresCheckInClose" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 0 4px;">&times;</button>' +
+            '</div>' +
+            '<pre id="futuresCheckInText" style="white-space: pre-wrap; font-family: Segoe UI, sans-serif; font-size: 0.92em; line-height: 1.6; background: #f8f9fa; padding: 16px; border-radius: 6px; border: 1px solid #e0e0e0; max-height: 60vh; overflow-y: auto;">' + _escapeHtml(summary) + '</pre>' +
+            '<div style="margin-top: 16px; display: flex; gap: 10px;">' +
+                '<button id="futuresCheckInCopy" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Copy to Clipboard</button>' +
+            '</div>';
+
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        // Close handlers
+        document.getElementById('futuresCheckInClose').addEventListener('click', function () { overlay.remove(); });
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+
+        // Copy handler
+        document.getElementById('futuresCheckInCopy').addEventListener('click', function () {
+            navigator.clipboard.writeText(summary).then(function () {
+                var btn = document.getElementById('futuresCheckInCopy');
+                btn.textContent = 'Copied!';
+                btn.style.background = '#2e7d32';
+                setTimeout(function () { btn.textContent = 'Copy to Clipboard'; btn.style.background = '#4caf50'; }, 2000);
+            });
+        });
     }
 
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.futures = {
         renderFutures: renderFutures,
-        buildFuturesData: buildFuturesData
+        buildFuturesData: buildFuturesData,
+        buildCheckInSummary: buildCheckInSummary,
+        showCheckInModal: showCheckInModal
     };
 
     window.renderFutures = renderFutures;
