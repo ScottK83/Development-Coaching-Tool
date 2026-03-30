@@ -239,7 +239,7 @@
                 var percentile = Math.round((1 - (r.rank - 1) / data.totalEmployees) * 100);
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
-                html += '<div style="font-weight: bold; font-size: 1.05em;">' + _escapeHtml(r.name) + '</div>';
+                html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(0,0,0,0.2);">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
@@ -264,6 +264,20 @@
 
         container.innerHTML = html;
         renderRankingTable('composite', 'asc');
+
+        // Bind team card name clicks to scroll to that employee's row
+        container.querySelectorAll('.ranking-card-name').forEach(function (el) {
+            el.addEventListener('click', function () {
+                var name = el.dataset.employee;
+                var row = document.querySelector('#centerRankingTableWrapper tr[data-employee="' + CSS.escape(name) + '"]');
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.style.transition = 'background 0.3s';
+                    row.style.background = '#bbdefb';
+                    setTimeout(function () { row.style.background = ''; }, 2000);
+                }
+            });
+        });
     }
 
     var _lastRankingData = null;
@@ -329,7 +343,7 @@
                 return '#c62828';
             };
 
-            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
+            html += '<tr data-employee="' + _escapeHtml(r.name) + '" style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
             // Row number
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
