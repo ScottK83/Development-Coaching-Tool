@@ -110,7 +110,7 @@
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
             var endYear = parseInt(String(endStr).split('-')[0], 10);
-            if (endYear !== currentYear && entry[0] !== bestKey) return;
+            if (endYear !== currentYear) return;
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
             allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
         });
@@ -118,7 +118,7 @@
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
             var endYear = parseInt(String(endStr).split('-')[0], 10);
-            if (endYear !== currentYear && entry[0] !== bestKey) return;
+            if (endYear !== currentYear) return;
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
             allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
         });

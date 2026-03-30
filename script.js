@@ -785,6 +785,15 @@ function setTeamMembersForWeek(weekKey, memberNames) {
     saveTeamMembers();
     notifyTeamFilterChanged();
 }
+// Default team roster — used when no per-week selection exists
+var DEFAULT_TEAM_MEMBERS = [
+    'Robert Berrelleza', 'Kamella Dash', 'Alyssa Dimes', 'Desiree Clark',
+    'Sabrina Gage', 'Angelina Fierro', 'Esperanza Palomera', 'Matrece Muldrow',
+    'Destiny Cervantez', 'Esther Ramos', 'Jadyn Flowers', 'Kristin Villela',
+    'Erica Kallestewa', 'Betty Yanez', 'Oceane Ingram', 'James Garcia',
+    'Johnathan Padilla', 'Christi Martinez-Sharp'
+];
+
 function getTeamMembersForWeek(weekKey) {
     // Try exact key match first
     if (myTeamMembers[weekKey] && myTeamMembers[weekKey].length > 0) {
@@ -802,7 +811,9 @@ function getTeamMembersForWeek(weekKey) {
             bestKey = k;
         }
     });
-    return bestKey ? myTeamMembers[bestKey] : [];
+    if (bestKey) return myTeamMembers[bestKey];
+    // Fall back to default team roster
+    return DEFAULT_TEAM_MEMBERS;
 }
 function isTeamMember(weekKey, employeeName) {
     const members = getTeamMembersForWeek(weekKey);
