@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:36:19.884Z",
+  "generatedAt": "2026-04-02T20:36:46.709Z",
   "reason": "upload to git",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2949,6 +2949,11 @@
       "valueType": "object",
       "itemCount": 3,
       "byteLength": 126
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 259
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
