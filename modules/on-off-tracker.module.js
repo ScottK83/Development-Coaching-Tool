@@ -285,9 +285,9 @@
             },
             {
                 label: surveyLabel,
-                valueText: result.values.associateOverall === null ? 'N/A' : _formatMetricDisplay('overallExperience', result.values.associateOverall),
-                goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'overallExperience', reviewYear, periodMetadata),
-                stretchText: buildStretchGoalText(ratingBands.cxRepOverall, 'overallExperience'),
+                valueText: result.values.associateOverall === null ? 'N/A' : _formatMetricDisplay('cxRepOverall', result.values.associateOverall),
+                goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'cxRepOverall', reviewYear, periodMetadata),
+                stretchText: buildStretchGoalText(ratingBands.cxRepOverall, 'cxRepOverall'),
                 score: result.scores.associateOverall,
                 gapText: buildGapToNextText(result.scores.associateOverall, result.values.associateOverall, ratingBands.cxRepOverall)
             },
