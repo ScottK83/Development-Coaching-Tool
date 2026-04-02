@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:37:50.932Z",
+  "generatedAt": "2026-04-02T20:38:09.999Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2859,7 +2859,11 @@
       "Robert Berrelleza",
       "Sabrina Gage"
     ],
-    "2026-01-01|2026-04-01": []
+    "2026-01-01|2026-04-01": [
+      "Alyssa Dimes",
+      "Angelina Fierro",
+      "Betty Yanez"
+    ]
   },
   "callCenterAverages": {
     "2026-01-01|2026-04-01": {
@@ -2994,7 +2998,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 370
+      "byteLength": 416
     }
   }
 }
