@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:38:26.800Z",
+  "generatedAt": "2026-04-02T20:38:44.653Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2864,7 +2864,12 @@
       "Angelina Fierro",
       "Betty Yanez",
       "Christi Martinez-Sharp",
-      "Destiny Cervantez"
+      "Destiny Cervantez",
+      "Erica Kallestewa",
+      "Esperanza Palomera",
+      "Esther Ramos",
+      "Jadyn Flowers",
+      "James Garcia"
     ]
   },
   "callCenterAverages": {
@@ -3000,7 +3005,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 461
+      "byteLength": 547
     }
   }
 }
