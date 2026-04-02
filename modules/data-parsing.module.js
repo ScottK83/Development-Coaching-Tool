@@ -391,8 +391,7 @@
                 'rep sat',
                 'repsat',
                 'rep satisfaction %',
-                'customer rep satisfaction',
-                'associate overall'
+                'customer rep satisfaction'
             ]),
             overallExperience: findColumnIndex([
                 'overall experience',
@@ -403,7 +402,8 @@
                 'overall experience top 2',
                 'top2',
                 'top 2 box',
-                'top2 box'
+                'top2 box',
+                'associate overall'
             ]),
             overallExperienceTop3: findColumnIndex([
                 'oe top3',
@@ -529,7 +529,7 @@
                 name: displayName,
                 firstName: firstName,
                 scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
-                cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)) || parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
+                cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)) || parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
                 fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
                 overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
                 overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
