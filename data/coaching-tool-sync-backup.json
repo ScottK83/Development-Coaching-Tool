@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:39:19.055Z",
+  "generatedAt": "2026-04-02T20:39:56.395Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2864,6 +2864,7 @@
       "Angelina Fierro",
       "Betty Yanez",
       "Christi Martinez-Sharp",
+      "Desiree Clark",
       "Destiny Cervantez",
       "Erica Kallestewa",
       "Esperanza Palomera",
@@ -2927,7 +2928,7 @@
     "devCoachingTool_teamMemberSelectorExpanded": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 4
+      "byteLength": 5
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
@@ -3012,7 +3013,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 669
+      "byteLength": 685
     }
   }
 }
