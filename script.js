@@ -1992,6 +1992,10 @@ function handleLoadPastedDataClick() {
     const isDailySelected = !!selectedDailyBtn;
     const isCustomSelected = !!selectedCustomBtn;
 
+    const selectedYtdBtn = document.querySelector('.upload-period-btn[data-period="ytd"][style*="background: rgb(40, 167, 69)"]') ||
+        document.querySelector('.upload-period-btn[data-period="ytd"][style*="background:#28a745"]');
+    const isYtdSelected = !!selectedYtdBtn;
+
     let startDate;
     if (isCustomSelected) {
         startDate = document.getElementById('pasteStartDate')?.value;
@@ -2005,6 +2009,10 @@ function handleLoadPastedDataClick() {
         }
     } else if (isDailySelected) {
         startDate = endDate; // Daily: start = end (same day)
+    } else if (isYtdSelected) {
+        // YTD always starts Jan 1 of the end date's year
+        const ytdYear = new Date(weekEndingDate).getFullYear();
+        startDate = `${ytdYear}-01-01`;
     } else {
         const endDateObj = new Date(weekEndingDate);
         endDateObj.setDate(endDateObj.getDate() - 6);
@@ -2013,6 +2021,12 @@ function handleLoadPastedDataClick() {
 
     const detectedPeriodType = detectUploadPeriodTypeByRange(startDate, endDate);
     const periodType = resolveSelectedUploadPeriodType(detectedPeriodType);
+
+    // Ensure YTD always starts Jan 1
+    if (periodType === 'ytd') {
+        const ytdYear = new Date(weekEndingDate).getFullYear();
+        startDate = `${ytdYear}-01-01`;
+    }
 
     saveSmartDefault('lastPeriodType', periodType);
 
