@@ -6237,10 +6237,17 @@ function getCoachingLatestPeriodEmployees(coachingWeekKey) {
 }
 
 function setCoachingLatestPeriodStatus(status, coachingWeekKey, latestWeek) {
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (coachingWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingWeekKey.split('|')[1]) : coachingWeekKey);
-    status.textContent = `Using latest period: Week of ${endDate}`;
+    const periodType = latestWeek?.metadata?.periodType || 'week';
+    const label = latestWeek?.metadata?.label;
+    if (label) {
+        status.textContent = `Using latest period: ${label}`;
+    } else {
+        const endDate = latestWeek?.metadata?.endDate
+            ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
+            : (coachingWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingWeekKey.split('|')[1]) : coachingWeekKey);
+        const prefix = periodType === 'ytd' ? 'YTD through' : periodType === 'month' ? 'Month of' : 'Week of';
+        status.textContent = `Using latest period: ${prefix} ${endDate}`;
+    }
     status.style.display = 'block';
 }
 

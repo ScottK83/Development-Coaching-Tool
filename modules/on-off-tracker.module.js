@@ -43,20 +43,21 @@
     }
 
     function pickYearEndAssociateOverallValue(employeeRecord) {
-        const overallExperienceVal = parseOnOffMirrorNumber(employeeRecord?.overallExperience);
         const cxRepOverallVal = parseOnOffMirrorNumber(employeeRecord?.cxRepOverall);
+        const overallExperienceVal = parseOnOffMirrorNumber(employeeRecord?.overallExperience);
 
-        if (isValidOnOffPercent(overallExperienceVal) && overallExperienceVal > 0) {
-            return { value: overallExperienceVal, source: 'overallExperience' };
-        }
+        // Prefer cxRepOverall (Top 3 / RepSat) over overallExperience (OE Top 2)
         if (isValidOnOffPercent(cxRepOverallVal) && cxRepOverallVal > 0) {
             return { value: cxRepOverallVal, source: 'cxRepOverall' };
         }
-        if (isValidOnOffPercent(overallExperienceVal)) {
+        if (isValidOnOffPercent(overallExperienceVal) && overallExperienceVal > 0) {
             return { value: overallExperienceVal, source: 'overallExperience' };
         }
         if (isValidOnOffPercent(cxRepOverallVal)) {
             return { value: cxRepOverallVal, source: 'cxRepOverall' };
+        }
+        if (isValidOnOffPercent(overallExperienceVal)) {
+            return { value: overallExperienceVal, source: 'overallExperience' };
         }
 
         return { value: null, source: 'none' };
