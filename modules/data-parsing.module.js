@@ -439,7 +439,15 @@
         Object.keys(colMapDetected).forEach(key => {
             colMap[key] = resolveColumnIndex(colMapDetected[key], key);
         });
-        
+
+        // Debug: log column mapping with header names
+        console.log('📊 COLUMN MAPPING DEBUG:');
+        console.log('  Headers:', headers.map((h, i) => i + ':' + h).join(' | '));
+        Object.keys(colMap).forEach(key => {
+            var idx = colMap[key];
+            console.log('  ' + key + ' → col ' + idx + (idx >= 0 ? ' ("' + headers[idx] + '")' : ' (not found)'));
+        });
+
         const getCell = (cells, colIndex) => {
             if (colIndex < 0) return '';
             const value = cells[colIndex];
@@ -548,6 +556,14 @@
                 totalCalls: totalCalls
             };
             
+            // Debug: log Christi's raw cell values
+            if (displayName && displayName.toLowerCase().includes('martinez')) {
+                console.log('🔍 CHRISTI DEBUG:');
+                console.log('  cxRepOverall col(' + colMap.cxRepOverall + ') raw:', getCell(cells, colMap.cxRepOverall));
+                console.log('  overallExperienceTop3 col(' + colMap.overallExperienceTop3 + ') raw:', getCell(cells, colMap.overallExperienceTop3));
+                console.log('  overallExperience col(' + colMap.overallExperience + ') raw:', getCell(cells, colMap.overallExperience));
+                console.log('  Parsed → cxRepOverall:', employeeData.cxRepOverall, 'overallExperience:', employeeData.overallExperience, 'top3:', employeeData.overallExperienceTop3);
+            }
             if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
                 console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}).`);
             }
