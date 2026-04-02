@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:39:10.779Z",
+  "generatedAt": "2026-04-02T20:39:19.055Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2874,7 +2874,9 @@
       "Kamella Dash",
       "Kristin Villela",
       "Matrece Muldrow",
-      "Oceane Ingram"
+      "Oceane Ingram",
+      "Robert Berrelleza",
+      "Sabrina Gage"
     ]
   },
   "callCenterAverages": {
@@ -3010,7 +3012,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 634
+      "byteLength": 669
     }
   }
 }
