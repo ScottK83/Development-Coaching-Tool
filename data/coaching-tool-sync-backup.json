@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T20:38:44.653Z",
+  "generatedAt": "2026-04-02T20:38:52.584Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2869,7 +2869,9 @@
       "Esperanza Palomera",
       "Esther Ramos",
       "Jadyn Flowers",
-      "James Garcia"
+      "James Garcia",
+      "Johnathan Padilla",
+      "Kamella Dash"
     ]
   },
   "callCenterAverages": {
@@ -3005,7 +3007,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 2,
-      "byteLength": 547
+      "byteLength": 582
     }
   }
 }
