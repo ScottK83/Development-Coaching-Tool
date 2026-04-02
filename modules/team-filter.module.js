@@ -68,7 +68,25 @@
     }
 
     function getTeamMembersForWeek(weekKey) {
-        return getMyTeamMembers()[weekKey] || [];
+        var members = getMyTeamMembers();
+        // Exact match first
+        if (members[weekKey] && members[weekKey].length > 0) {
+            return members[weekKey];
+        }
+        // Fall back to the most recent period that has selections
+        var bestKey = null;
+        var bestDate = 0;
+        Object.keys(members).forEach(function(k) {
+            if (!members[k] || members[k].length === 0) return;
+            var endStr = k.indexOf('|') !== -1 ? k.split('|')[1] : k;
+            var d = new Date(endStr);
+            if (!isNaN(d.getTime()) && d.getTime() > bestDate) {
+                bestDate = d.getTime();
+                bestKey = k;
+            }
+        });
+        if (bestKey) return members[bestKey];
+        return [];
     }
 
     function isTeamMember(weekKey, employeeName) {
