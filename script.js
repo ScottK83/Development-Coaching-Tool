@@ -1546,10 +1546,12 @@ function bindNavigationHandlers() {
     });
     document.getElementById('subNavTaRankings')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaCenterRanking', 'subNavTaRankings');
+        ensureTrendsMounted('subSectionCenterRanking', 'subSectionTaCenterRanking');
         if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
     });
     document.getElementById('subNavTaFutures')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaFutures', 'subNavTaFutures');
+        ensureTrendsMounted('subSectionFutures', 'subSectionTaFutures');
         if (typeof window.renderFutures === 'function') window.renderFutures();
     });
     document.getElementById('subNavTaSentiment')?.addEventListener('click', () => {
@@ -1590,6 +1592,18 @@ function ensureReviewPrepMounted(subSectionId) {
     if (!container || !subSection) return;
     if (subSection.parentElement === container) return;
     container.appendChild(subSection);
+}
+
+// --- Generic DOM mount helper for Trends & Analysis ---
+// Moves an old sub-section div (with its real content) into a new container div
+
+function ensureTrendsMounted(sourceId, targetId) {
+    var target = document.getElementById(targetId);
+    var source = document.getElementById(sourceId);
+    if (!target || !source) return;
+    if (source.parentElement === target) return;
+    target.appendChild(source);
+    source.style.display = 'block';
 }
 
 // --- DOM mount helpers for Trends & Analysis ---
