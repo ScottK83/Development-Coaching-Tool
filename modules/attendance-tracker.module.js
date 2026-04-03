@@ -220,11 +220,12 @@
 
             if (!colB) continue;
 
-            var totalHrs = parseFloat(row[3]) || 0;
-            var carryoverHrs = parseFloat(row[4]) || 0;
-            var usedHrs = parseFloat(row[7]) || 0;
-            var scheduledHrs = parseFloat(row[9]) || 0;
-            var remainingHrs = parseFloat(row[10]) || 0;
+            var numVal = function(v) { return parseFloat(String(v || '').replace(/[$,]/g, '')) || 0; };
+            var totalHrs = numVal(row[3]);
+            var carryoverHrs = numVal(row[4]);
+            var usedHrs = numVal(row[7]);
+            var scheduledHrs = numVal(row[9]);
+            var remainingHrs = numVal(row[10]);
 
             // Check if this is a PTO sub-category (indented with spaces)
             var rawColB = String(row[1] || '');
