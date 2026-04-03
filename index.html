@@ -182,6 +182,7 @@
                         <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white; font-size: 0.9em; padding: 8px 16px;">💌 Coaching</button>
                         <button type="button" id="subNavTeamSnapshot" class="btn-secondary" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📊 Snapshot</button>
                         <button type="button" id="subNavCallListening" class="btn-secondary" style="background: #546e7a; color: white; font-size: 0.9em; padding: 8px 16px;">🎧 Call Listening</button>
+                        <button type="button" id="subNavAttendance" class="btn-secondary" style="background: #00695c; color: white; font-size: 0.9em; padding: 8px 16px;">🕒 Attendance</button>
                     </div>
 
                     <!-- Coaching Email Sub-section -->
@@ -548,6 +549,11 @@ Box 2 - Future Improvement Areas:
                         <div id="embeddedTeamSnapshot"></div>
                     </div>
 
+                    <!-- Attendance Sub-section (PTO tracker, will become Verint reconciliation) -->
+                    <div id="subSectionAttendance" style="display: none;">
+                        <div id="embeddedPtoInMyTeam"></div>
+                    </div>
+
                     <!-- Center Ranking Sub-section -->
                     <div id="subSectionCenterRanking" style="display: none;">
                         <p style="color: #0d47a1; margin-bottom: 20px;">See where every employee ranks using the On/Off Track scoring system. Your team members are highlighted.</p>
@@ -895,7 +901,6 @@ Box 2 - Future Improvement Areas:
                         <button type="button" id="subNavTeamMembers" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Members</button>
                         <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
                         <button type="button" id="subNavSyncBackup" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🔄 Sync & Backup</button>
-                        <button type="button" id="subNavPtoTracker" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🕒 PTO</button>
                         <button type="button" id="subNavDeleteData" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗑️ Delete Data</button>
                     </div>
                     
@@ -993,10 +998,6 @@ Box 2 - Future Improvement Areas:
                     </div>
                     <!-- End Team Members Sub-section -->
 
-                    <!-- PTO Tracker Sub-section -->
-                    <div id="subSectionPtoTracker" style="display: none;">
-                        <div id="embeddedPto"></div>
-                    </div>
                     
                     <!-- Coaching Tips Sub-section -->
                     <div id="subSectionCoachingTips" style="display: none;">

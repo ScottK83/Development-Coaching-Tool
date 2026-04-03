@@ -1479,7 +1479,16 @@ function embedTeamSnapshot() {
 }
 
 function embedPtoTracker() {
-    const target = document.getElementById('embeddedPto');
+    const target = document.getElementById('embeddedPto') || document.getElementById('embeddedPtoInMyTeam');
+    const source = document.getElementById('ptoSection');
+    if (target && source && !target.hasChildNodes()) {
+        while (source.firstChild) target.appendChild(source.firstChild);
+    }
+    if (typeof initializePtoTracker === 'function') initializePtoTracker();
+}
+
+function embedPtoInMyTeam() {
+    const target = document.getElementById('embeddedPtoInMyTeam');
     const source = document.getElementById('ptoSection');
     if (target && source && !target.hasChildNodes()) {
         while (source.firstChild) target.appendChild(source.firstChild);
@@ -1512,6 +1521,10 @@ function bindNavigationHandlers() {
     document.getElementById('subNavCallListening')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionCallListening', 'subNavCallListening');
         initializeCallListeningSection();
+    });
+    document.getElementById('subNavAttendance')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionAttendance', 'subNavAttendance');
+        embedPtoInMyTeam();
     });
 
     // --- Trends & Analysis ---
@@ -1611,10 +1624,6 @@ function bindManageDataNavigationHandlers() {
     document.getElementById('subNavSyncBackup')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionSyncBackup');
         initializeRepoSyncControls();
-    });
-    document.getElementById('subNavPtoTracker')?.addEventListener('click', () => {
-        showManageDataSubSection('subSectionPtoTracker');
-        embedPtoTracker();
     });
     document.getElementById('subNavDeleteData')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionDeleteData');

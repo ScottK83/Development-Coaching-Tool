@@ -54,13 +54,14 @@
 
     // --- My Team sub-sections ---
 
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening'];
-    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavAttendance'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionMorningPulse: 'subNavMorningPulse',
         subSectionCoachingEmail: 'subNavCoachingEmail',
         subSectionTeamSnapshot: 'subNavTeamSnapshot',
-        subSectionCallListening: 'subNavCallListening'
+        subSectionCallListening: 'subNavCallListening',
+        subSectionAttendance: 'subNavAttendance'
     };
 
     function showMyTeamSubSection(subSectionId, activeButtonId) {
@@ -108,8 +109,8 @@
 
     // --- Settings (Manage Data) sub-sections ---
 
-    var SETTINGS_SUB_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSyncBackup', 'subSectionPtoTracker', 'subSectionDeleteData'];
-    var SETTINGS_NAV_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavPtoTracker', 'subNavDeleteData'];
+    var SETTINGS_SUB_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSyncBackup', 'subSectionDeleteData'];
+    var SETTINGS_NAV_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavDeleteData'];
 
     function showManageDataSubSection(subSectionId) {
         SETTINGS_SUB_SECTIONS.forEach(function(id) {
@@ -180,7 +181,7 @@
         subSectionOnOffTracker:     { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
         subSectionQ1Review:         { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
         subSectionYearEnd:          { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionYearEnd' },
-        subSectionPto:              { section: 'manageDataSection', key: 'settingsSubSectionId', value: 'subSectionPtoTracker' },
+        subSectionPto:              { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionAttendance' },
         // Dissolved wrapper IDs → defaults
         subSectionPerformance:      { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
         subSectionTrends:           { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
@@ -216,7 +217,7 @@
 
             // Migrate old section IDs
             if (parsed.sectionId === 'coachingForm') parsed.sectionId = 'uploadSection';
-            if (parsed.sectionId === 'ptoSection') { parsed.sectionId = 'manageDataSection'; parsed.settingsSubSectionId = 'subSectionPtoTracker'; }
+            if (parsed.sectionId === 'ptoSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionAttendance'; }
             if (parsed.sectionId === 'hotTipSection') parsed.sectionId = 'dashboardSection';
             if (parsed.sectionId === 'teamSnapshotSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionTeamSnapshot'; }
 
