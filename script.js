@@ -1462,6 +1462,82 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
     document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
+
+    // Auto-detect period type when date changes
+    document.getElementById('pasteWeekEndingDate')?.addEventListener('change', function() {
+        autoDetectAndSelectPeriodType(this.value);
+    });
+}
+
+function autoDetectAndSelectPeriodType(dateValue) {
+    if (!dateValue) return;
+
+    const endDate = dateValue;
+    const endDateObj = new Date(endDate + 'T00:00:00');
+    const dayOfWeek = endDateObj.getDay(); // 0=Sun, 6=Sat
+    const month = endDateObj.getMonth();
+    const day = endDateObj.getDate();
+    const year = endDateObj.getFullYear();
+
+    // Check custom start date
+    const customStart = document.getElementById('pasteCustomStartDate')?.value;
+    if (customStart) {
+        const detected = detectUploadPeriodTypeByRange(customStart, endDate);
+        selectPeriodButton(detected);
+        return;
+    }
+
+    // Check if today or yesterday (likely daily)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const inputDate = new Date(endDate + 'T00:00:00');
+
+    // Is it a Sunday? Likely a week ending date
+    if (dayOfWeek === 0) {
+        selectPeriodButton('week');
+        return;
+    }
+
+    // Is it end of month? (last day of month)
+    const nextDay = new Date(year, month, day + 1);
+    if (nextDay.getMonth() !== month) {
+        // Last day of month — could be month or quarter
+        if (month === 2 || month === 5 || month === 8 || month === 11) {
+            selectPeriodButton('quarter');
+        } else {
+            selectPeriodButton('month');
+        }
+        return;
+    }
+
+    // Is it close to today? Could be YTD (partial month/year in progress)
+    const diffFromToday = Math.round((today - inputDate) / (1000 * 60 * 60 * 24));
+    if (diffFromToday <= 3 && day > 7) {
+        // Recent date, not early in month — likely YTD or running total
+        // Check: how many days from Jan 1?
+        const jan1 = new Date(year, 0, 1);
+        const daysFromJan1 = Math.round((inputDate - jan1) / (1000 * 60 * 60 * 24));
+        if (daysFromJan1 > 45) {
+            selectPeriodButton('ytd');
+            return;
+        }
+    }
+
+    // Default: if it's same day as today, daily
+    if (diffFromToday === 0 || diffFromToday === 1) {
+        selectPeriodButton('daily');
+        return;
+    }
+
+    // Fallback: week (most common)
+    selectPeriodButton('week');
+}
+
+function selectPeriodButton(periodType) {
+    const btn = document.querySelector(`.upload-period-btn[data-period="${periodType}"]`);
+    if (btn) btn.click(); // triggers the existing click handler to update styles + labels
 }
 
 function initializeDashboard() {
