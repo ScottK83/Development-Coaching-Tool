@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-03T21:25:43.611Z",
+  "generatedAt": "2026-04-03T21:28:34.003Z",
   "reason": "upload to git",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2990,7 +2990,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 272
+      "byteLength": 259
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
