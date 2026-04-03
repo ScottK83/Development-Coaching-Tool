@@ -540,7 +540,21 @@
         var plannedItems = getPlannedLineItems(data.activities || []);
 
         // Load missed lunch flags
-        var lunchFlags = store.associates?.[employeeName]?.missedLunchFlags || {};
+        // Auto-bake: entries over 4 hours default to missed lunch unless user explicitly unchecked (false)
+        var savedLunchFlags = store.associates?.[employeeName]?.missedLunchFlags || {};
+        var lunchFlags = {};
+        unplannedItems.forEach(function(item) {
+            var key = item.fromDate + '|' + item.activity;
+            if (savedLunchFlags[key] === true) {
+                lunchFlags[key] = true;
+            } else if (savedLunchFlags[key] === false) {
+                // User explicitly unchecked — respect it
+                lunchFlags[key] = false;
+            } else if (item.hours > 4) {
+                // Auto-bake: >4 hours = missed lunch by default
+                lunchFlags[key] = true;
+            }
+        });
 
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
@@ -740,11 +754,7 @@
                 var store = loadStore();
                 if (!store.associates[emp]) store.associates[emp] = {};
                 if (!store.associates[emp].missedLunchFlags) store.associates[emp].missedLunchFlags = {};
-                if (this.checked) {
-                    store.associates[emp].missedLunchFlags[key] = true;
-                } else {
-                    delete store.associates[emp].missedLunchFlags[key];
-                }
+                store.associates[emp].missedLunchFlags[key] = this.checked ? true : false;
                 saveStore(store);
                 // Re-render to update totals
                 renderAttendanceDashboard(container, emp);
