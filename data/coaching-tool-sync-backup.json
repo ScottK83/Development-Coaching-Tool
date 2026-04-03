@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-03T22:13:16.709Z",
-  "reason": "clear attendance data",
+  "generatedAt": "2026-04-03T22:14:04.018Z",
+  "reason": "ytd data updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -2968,7 +2968,7 @@
     "devCoachingTool_attendanceTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 107563
+      "byteLength": 17
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
@@ -2993,12 +2993,12 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 255
+      "byteLength": 259
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 226
+      "byteLength": 229
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
