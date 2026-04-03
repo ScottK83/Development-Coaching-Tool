@@ -863,6 +863,8 @@
         const ptoTracker = storage?.loadPtoTracker?.() || {};
         const localDataSummary = summarizeLocalBackupFreshness();
         const followUpHistory = storage?.loadFollowUpHistory?.() || { entries: [] };
+        const attendanceData = storage?.loadAttendanceTracker?.() || {};
+        console.log('[Repo Sync] Building payload. attendanceTracker associates:', Object.keys(attendanceData?.associates || {}));
 
         return {
             appVersion: window.APP_VERSION || '',
@@ -878,7 +880,7 @@
             myTeamMembers: storage?.loadTeamMembers?.() || {},
             callCenterAverages: storage?.loadCallCenterAverages?.() || {},
             ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
-            attendanceTracker: storage?.loadAttendanceTracker?.() || {},
+            attendanceTracker: attendanceData,
             followUpHistory: followUpHistory,
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
             yearEndAnnualGoalsStore: window.loadYearEndAnnualGoalsStore?.() || {},
@@ -1154,6 +1156,7 @@
 
         console.log('[Repo Restore] Applying payload with keys:', Object.keys(payload || {}));
         console.log('[Repo Restore] weeklyData periods:', Object.keys(keys.weeklyData).length);
+        console.log('[Repo Restore] attendanceTracker in payload?', !!payload?.attendanceTracker, 'associates:', Object.keys(payload?.attendanceTracker?.associates || {}));
 
         let savedCount = 0;
         for (const [key, data] of Object.entries(keys)) {
