@@ -635,11 +635,11 @@
 
         // Bind message buttons
         document.getElementById('attendanceAssocMsgBtn')?.addEventListener('click', function() {
-            var msg = generateAssociateMessage(firstName, ptost, tier);
+            var msg = generateAssociateMessage(firstName, ptost, tier, reclassItems);
             showMessage(msg);
         });
         document.getElementById('attendanceWfmMsgBtn')?.addEventListener('click', function() {
-            var msg = generateWfmMessage(employeeName, reclassItems);
+            var msg = generateWfmMessage(employeeName, reclassItems, ptost);
             showMessage(msg);
         });
         document.getElementById('attendanceMsgCopyBtn')?.addEventListener('click', function() {
@@ -660,49 +660,93 @@
 
     // --- Message Generators ---
 
-    function generateAssociateMessage(firstName, ptost, tier) {
+    function generateAssociateMessage(firstName, ptost, tier, reclassItems) {
         var msg = 'Hey ' + firstName + '! Quick attendance update for you:\n\n';
+
         msg += 'PTOST Used: ' + ptost.ptostUsed + ' / ' + ptost.ptostLimit + ' hours\n';
         msg += 'PTOST Remaining: ' + ptost.ptostRemaining + ' hours\n';
 
-        if (ptost.reclassificationGap > 0) {
-            msg += '\n' + ptost.reclassificationGap + ' hours of unplanned time still need to be reclassified as PTOST. I\'m working with WFM to get that updated.\n';
-        }
+        // Key scenario: they have PTOST left AND unexcused hours
+        if (ptost.reclassificationGap > 0 && ptost.ptostRemaining > 0) {
+            var canCover = Math.min(ptost.reclassificationGap, ptost.ptostRemaining);
+            var wouldRemain = round2(ptost.ptostRemaining - canCover);
+            var uncovered = round2(ptost.reclassificationGap - canCover);
 
-        msg += '\nTotal Unplanned Hours: ' + ptost.totalUnplanned + ' hours\n';
-        msg += 'Current Status: ' + tier.tier.label + '\n';
+            msg += '\nYou currently have ' + ptost.reclassificationGap + ' hours of unplanned/unexcused time that counts against your reliability. ';
+            msg += 'The good news is you still have ' + ptost.ptostRemaining + ' hours of PTOST available.\n\n';
 
-        if (tier.nextTier) {
-            msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
-        }
+            msg += 'I can reach out to WFM and get ';
+            if (canCover >= ptost.reclassificationGap) {
+                msg += 'all ' + ptost.reclassificationGap + ' hours excused as PTOST';
+                msg += ' (you\'d still have ' + wouldRemain + ' hours of PTOST left after that).\n';
+            } else {
+                msg += canCover + ' hours excused as PTOST, but ' + uncovered + ' hours would remain unexcused since that\'s all the PTOST you have left.\n';
+            }
 
-        if (ptost.totalUnplanned >= 24) {
-            msg += '\nPlease be mindful of attendance going forward. Let me know if there\'s anything I can help with or if you have any questions about the attendance policy.';
-        } else if (ptost.totalUnplanned >= 16) {
-            msg += '\nJust want to make sure you\'re aware of where things stand. Let me know if you need anything.';
+            msg += '\nHere are the specific dates:\n';
+            reclassItems.forEach(function(item) {
+                msg += '  - ' + formatDateDisplay(item.fromDate) + ': ' + item.hours + 'h (' + item.activity + ')\n';
+            });
+
+            msg += '\nWould you like me to go ahead and get these excused? Just let me know.';
+        } else if (ptost.reclassificationGap > 0 && ptost.ptostRemaining <= 0) {
+            // No PTOST left — these hours are unexcused and count against policy
+            msg += '\nYou have ' + ptost.reclassificationGap + ' hours of unplanned time that is currently unexcused. ';
+            msg += 'Unfortunately your PTOST balance is at 0, so these hours go against the attendance policy.\n';
+
+            msg += '\nTotal Unplanned Hours: ' + ptost.totalUnplanned + ' hours\n';
+            msg += 'Current Status: ' + tier.tier.label + '\n';
+            if (tier.nextTier) {
+                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
+            }
+
+            msg += '\nPlease be mindful of attendance going forward. Let me know if you have any questions about the attendance policy or if there\'s anything I can help with.';
         } else {
-            msg += '\nYou\'re in good shape. Keep it up!';
+            // No reclassification needed
+            msg += '\nTotal Unplanned Hours: ' + ptost.totalUnplanned + ' hours\n';
+            msg += 'Current Status: ' + tier.tier.label + '\n';
+            if (tier.nextTier) {
+                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
+            }
+
+            if (ptost.totalUnplanned >= 24) {
+                msg += '\nPlease be mindful of attendance going forward. Let me know if there\'s anything I can help with.';
+            } else if (ptost.totalUnplanned >= 16) {
+                msg += '\nJust want to make sure you\'re aware of where things stand. Let me know if you need anything.';
+            } else {
+                msg += '\nYou\'re in good shape. Keep it up!';
+            }
         }
 
         return msg;
     }
 
-    function generateWfmMessage(employeeName, reclassItems) {
+    function generateWfmMessage(employeeName, reclassItems, ptost) {
         if (reclassItems.length === 0) {
             return 'No entries need reclassification for ' + employeeName + '.';
         }
 
         var totalHours = round2(reclassItems.reduce(function(sum, item) { return sum + item.hours; }, 0));
+        var canCover = ptost ? Math.min(totalHours, ptost.ptostRemaining) : totalHours;
 
         var msg = 'Hi WFM team,\n\n';
-        msg += 'Please reclassify the following entries as PTOST for ' + employeeName + ':\n\n';
+
+        if (ptost && ptost.ptostRemaining > 0) {
+            msg += employeeName + ' has ' + ptost.ptostRemaining + 'h of PTOST remaining (used ' + ptost.ptostUsed + '/' + ptost.ptostLimit + 'h). ';
+            msg += 'Please reclassify the following unplanned entries as PTOST:\n\n';
+        } else {
+            msg += 'Please reclassify the following entries as PTOST for ' + employeeName + ':\n\n';
+        }
 
         reclassItems.forEach(function(item) {
             msg += '- ' + formatDateDisplay(item.fromDate) + ': ' + item.activity + ' - ' + item.hours + 'h\n';
         });
 
-        msg += '\nTotal: ' + totalHours + 'h to reclassify\n';
-        msg += '\nThank you!';
+        msg += '\nTotal: ' + totalHours + 'h to reclassify';
+        if (ptost && ptost.ptostRemaining > 0 && totalHours > ptost.ptostRemaining) {
+            msg += ' (note: only ' + ptost.ptostRemaining + 'h of PTOST remaining — ' + round2(totalHours - ptost.ptostRemaining) + 'h will exceed their PTOST balance)';
+        }
+        msg += '\n\nThank you!';
 
         return msg;
     }
