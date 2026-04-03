@@ -19,52 +19,25 @@
         }
     }
 
-    /**
-     * Show a specific sub-section within the Coaching & Analysis section
-     */
-    function showSubSection(subSectionId, activeButtonId) {
-        if (activeButtonId === undefined) activeButtonId = null;
+    // --- Generic sub-section show/hide helper ---
 
-        // Hide all sub-sections
-        var subSections = ['subSectionCoachingEmail', 'subSectionYearEnd', 'subSectionOnOffTracker', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCallListening', 'subSectionTeamSnapshot', 'subSectionPto', 'subSectionFutures', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionPerformance', 'subSectionTrends', 'subSectionReviewPrep', 'subSectionMoreTools'];
-        subSections.forEach(function(id) {
+    function showSubSectionGeneric(subSectionId, activeButtonId, subSectionIds, subNavButtonIds, activeGradient, stateKey) {
+        // Hide all sub-sections in this group
+        subSectionIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
 
-        // Show the specified sub-section
-        var targetSubSection = document.getElementById(subSectionId);
-        if (targetSubSection) {
-            targetSubSection.style.display = 'block';
-        }
+        // Show the target
+        var target = document.getElementById(subSectionId);
+        if (target) target.style.display = 'block';
 
-        // Update sub-nav button active states
-        var subNavButtons = ['subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavPerformance', 'subNavTrends', 'subNavReviewPrep', 'subNavMoreTools'];
-        var subSectionToButton = {
-            subSectionCoachingEmail: 'subNavCoachingEmail',
-            subSectionYearEnd: 'subNavYearEnd',
-            subSectionOnOffTracker: 'subNavOnOffTracker',
-            subSectionSentiment: 'subNavSentiment',
-            subSectionMetricTrends: 'subNavMetricTrends',
-            subSectionTrendIntelligence: 'subNavTrendIntelligence',
-            subSectionCallListening: 'subNavCallListening',
-            subSectionTeamSnapshot: 'subNavTeamSnapshot',
-            subSectionPto: 'subNavPto',
-            subSectionFutures: 'subNavPerformance',
-            subSectionQ1Review: 'subNavReviewPrep',
-            subSectionCenterRanking: 'subNavPerformance',
-            subSectionPerformance: 'subNavPerformance',
-            subSectionTrends: 'subNavTrends',
-            subSectionReviewPrep: 'subNavReviewPrep',
-            subSectionMoreTools: 'subNavMoreTools'
-        };
-        var selectedSubNavButton = activeButtonId || subSectionToButton[subSectionId] || '';
-
-        subNavButtons.forEach(function(btnId) {
+        // Update button active states
+        subNavButtonIds.forEach(function(btnId) {
             var btn = document.getElementById(btnId);
             if (btn) {
-                if (btnId === selectedSubNavButton) {
-                    btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                if (btnId === activeButtonId) {
+                    btn.style.background = activeGradient;
                     btn.style.opacity = '1';
                 } else {
                     btn.style.background = '#ccc';
@@ -73,35 +46,86 @@
             }
         });
 
-        saveUiNavState({
-            sectionId: 'coachingEmailSection',
-            coachingSubSectionId: subSectionId
-        });
+        // Save state
+        var partial = {};
+        partial[stateKey] = subSectionId;
+        saveUiNavState(partial);
     }
 
-    /**
-     * Show a specific sub-section within the Manage Data section
-     */
+    // --- My Team sub-sections ---
+
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening'];
+    var MY_TEAM_SUB_TO_BTN = {
+        subSectionMorningPulse: 'subNavMorningPulse',
+        subSectionCoachingEmail: 'subNavCoachingEmail',
+        subSectionTeamSnapshot: 'subNavTeamSnapshot',
+        subSectionCallListening: 'subNavCallListening'
+    };
+
+    function showMyTeamSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || MY_TEAM_SUB_TO_BTN[subSectionId] || 'subNavMorningPulse';
+        showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS,
+            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'myTeamSubSectionId');
+        saveUiNavState({ sectionId: 'coachingEmailSection' });
+    }
+
+    // --- Trends & Analysis sub-sections ---
+
+    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment'];
+    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment'];
+    var TRENDS_SUB_TO_BTN = {
+        subSectionTaTrendIntelligence: 'subNavTaIntelligence',
+        subSectionTaMetricTrends: 'subNavTaMetricCharts',
+        subSectionTaCenterRanking: 'subNavTaRankings',
+        subSectionTaFutures: 'subNavTaFutures',
+        subSectionTaSentiment: 'subNavTaSentiment'
+    };
+
+    function showTrendsSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || TRENDS_SUB_TO_BTN[subSectionId] || 'subNavTaIntelligence';
+        showSubSectionGeneric(subSectionId, btnId, TRENDS_SUB_SECTIONS, TRENDS_NAV_BUTTONS,
+            'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', 'trendsSubSectionId');
+        saveUiNavState({ sectionId: 'trendsAnalysisSection' });
+    }
+
+    // --- Review Prep sub-sections ---
+
+    var REVIEW_SUB_SECTIONS = ['subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionYearEnd'];
+    var REVIEW_NAV_BUTTONS = ['subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpYearEnd'];
+    var REVIEW_SUB_TO_BTN = {
+        subSectionOnOffTracker: 'subNavRpScoreCard',
+        subSectionQ1Review: 'subNavRpQuarterly',
+        subSectionYearEnd: 'subNavRpYearEnd'
+    };
+
+    function showReviewPrepSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || REVIEW_SUB_TO_BTN[subSectionId] || 'subNavRpScoreCard';
+        showSubSectionGeneric(subSectionId, btnId, REVIEW_SUB_SECTIONS, REVIEW_NAV_BUTTONS,
+            'linear-gradient(135deg, #d84315 0%, #bf360c 100%)', 'reviewPrepSubSectionId');
+        saveUiNavState({ sectionId: 'reviewPrepSection' });
+    }
+
+    // --- Settings (Manage Data) sub-sections ---
+
+    var SETTINGS_SUB_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSyncBackup', 'subSectionPtoTracker', 'subSectionDeleteData'];
+    var SETTINGS_NAV_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavPtoTracker', 'subNavDeleteData'];
+
     function showManageDataSubSection(subSectionId) {
-        // Hide all sub-sections
-        var subSections = ['subSectionTeamData', 'subSectionCoachingTips', 'subSectionDeleteData'];
-        subSections.forEach(function(id) {
+        SETTINGS_SUB_SECTIONS.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
 
-        // Show the specified sub-section
-        var targetSubSection = document.getElementById(subSectionId);
-        if (targetSubSection) {
-            targetSubSection.style.display = 'block';
-        }
+        var target = document.getElementById(subSectionId);
+        if (target) target.style.display = 'block';
 
-        // Update sub-nav button active states
-        var subNavButtons = ['subNavTeamData', 'subNavCoachingTips', 'subNavDeleteData'];
-        subNavButtons.forEach(function(btnId) {
+        SETTINGS_NAV_BUTTONS.forEach(function(btnId) {
             var btn = document.getElementById(btnId);
             if (btn) {
-                if (btnId.replace('subNav', 'subSection') === subSectionId) {
+                // Match button to sub-section by convention
+                var expectedSubId = btnId.replace('subNav', 'subSection');
+                if (expectedSubId === subSectionId) {
                     btn.style.background = 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)';
                     btn.style.opacity = '1';
                 } else {
@@ -111,29 +135,97 @@
             }
         });
 
-        saveUiNavState({
-            sectionId: 'manageDataSection',
-            manageDataSubSectionId: subSectionId
-        });
+        saveUiNavState({ sectionId: 'manageDataSection', settingsSubSectionId: subSectionId });
     }
+
+    // --- Legacy backward compat: old showSubSection still works ---
+    // Some code may still call showSubSection. Route to the correct handler.
+    function showSubSection(subSectionId, activeButtonId) {
+        if (MY_TEAM_SUB_TO_BTN[subSectionId]) {
+            showMyTeamSubSection(subSectionId, activeButtonId);
+        } else if (TRENDS_SUB_TO_BTN[subSectionId]) {
+            showTrendsSubSection(subSectionId, activeButtonId);
+        } else if (REVIEW_SUB_TO_BTN[subSectionId]) {
+            showReviewPrepSubSection(subSectionId, activeButtonId);
+        } else {
+            // Fallback: try to show it directly
+            var target = document.getElementById(subSectionId);
+            if (target) target.style.display = 'block';
+        }
+    }
+
+    // --- State management ---
 
     function getDefaultUiNavState() {
         return {
             sectionId: 'dashboardSection',
-            coachingSubSectionId: 'subSectionCoachingEmail',
-            manageDataSubSectionId: 'subSectionTeamData'
+            myTeamSubSectionId: 'subSectionMorningPulse',
+            trendsSubSectionId: 'subSectionTaTrendIntelligence',
+            reviewPrepSubSectionId: 'subSectionOnOffTracker',
+            settingsSubSectionId: 'subSectionTeamMembers'
         };
     }
+
+    // Migration map: old coachingSubSectionId → { sectionId, subKey, subValue }
+    var OLD_SUB_MIGRATION = {
+        subSectionCoachingEmail:    { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionCoachingEmail' },
+        subSectionTeamSnapshot:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionTeamSnapshot' },
+        subSectionCallListening:    { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionCallListening' },
+        subSectionMorningPulse:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
+        subSectionTrendIntelligence:{ section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaTrendIntelligence' },
+        subSectionMetricTrends:     { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaMetricTrends' },
+        subSectionCenterRanking:    { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaCenterRanking' },
+        subSectionFutures:          { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaFutures' },
+        subSectionSentiment:        { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaSentiment' },
+        subSectionOnOffTracker:     { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
+        subSectionQ1Review:         { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
+        subSectionYearEnd:          { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionYearEnd' },
+        subSectionPto:              { section: 'manageDataSection', key: 'settingsSubSectionId', value: 'subSectionPtoTracker' },
+        // Dissolved wrapper IDs → defaults
+        subSectionPerformance:      { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
+        subSectionTrends:           { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
+        subSectionReviewPrep:       { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
+        subSectionMoreTools:        { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' }
+    };
 
     function loadUiNavState() {
         try {
             var raw = localStorage.getItem(UI_NAV_STATE_STORAGE_KEY);
             var parsed = raw ? JSON.parse(raw) : {};
             var defaults = getDefaultUiNavState();
+
+            // Migrate old state format
+            if (parsed.coachingSubSectionId && !parsed.myTeamSubSectionId) {
+                var migration = OLD_SUB_MIGRATION[parsed.coachingSubSectionId];
+                if (migration) {
+                    parsed.sectionId = migration.section;
+                    parsed[migration.key] = migration.value;
+                }
+                delete parsed.coachingSubSectionId;
+            }
+
+            // Migrate old manage data sub-section
+            if (parsed.manageDataSubSectionId && !parsed.settingsSubSectionId) {
+                if (parsed.manageDataSubSectionId === 'subSectionTeamData') {
+                    parsed.settingsSubSectionId = 'subSectionTeamMembers';
+                } else {
+                    parsed.settingsSubSectionId = parsed.manageDataSubSectionId;
+                }
+                delete parsed.manageDataSubSectionId;
+            }
+
+            // Migrate old section IDs
+            if (parsed.sectionId === 'coachingForm') parsed.sectionId = 'uploadSection';
+            if (parsed.sectionId === 'ptoSection') { parsed.sectionId = 'manageDataSection'; parsed.settingsSubSectionId = 'subSectionPtoTracker'; }
+            if (parsed.sectionId === 'hotTipSection') parsed.sectionId = 'dashboardSection';
+            if (parsed.sectionId === 'teamSnapshotSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionTeamSnapshot'; }
+
             return {
-                sectionId: typeof parsed?.sectionId === 'string' ? parsed.sectionId : defaults.sectionId,
-                coachingSubSectionId: typeof parsed?.coachingSubSectionId === 'string' ? parsed.coachingSubSectionId : defaults.coachingSubSectionId,
-                manageDataSubSectionId: typeof parsed?.manageDataSubSectionId === 'string' ? parsed.manageDataSubSectionId : defaults.manageDataSubSectionId
+                sectionId: typeof parsed.sectionId === 'string' ? parsed.sectionId : defaults.sectionId,
+                myTeamSubSectionId: typeof parsed.myTeamSubSectionId === 'string' ? parsed.myTeamSubSectionId : defaults.myTeamSubSectionId,
+                trendsSubSectionId: typeof parsed.trendsSubSectionId === 'string' ? parsed.trendsSubSectionId : defaults.trendsSubSectionId,
+                reviewPrepSubSectionId: typeof parsed.reviewPrepSubSectionId === 'string' ? parsed.reviewPrepSubSectionId : defaults.reviewPrepSubSectionId,
+                settingsSubSectionId: typeof parsed.settingsSubSectionId === 'string' ? parsed.settingsSubSectionId : defaults.settingsSubSectionId
             };
         } catch (error) {
             console.error('Error loading UI nav state:', error);
@@ -156,60 +248,49 @@
         var state = loadUiNavState();
         var sectionId = state.sectionId || 'dashboardSection';
 
-        // Redirect old standalone section IDs to coaching sub-sections
-        if (sectionId === 'ptoSection') { sectionId = 'coachingEmailSection'; state.coachingSubSectionId = 'subSectionPto'; }
-        if (sectionId === 'hotTipSection') { sectionId = 'dashboardSection'; }
-        if (sectionId === 'teamSnapshotSection') { sectionId = 'coachingEmailSection'; state.coachingSubSectionId = 'subSectionTeamSnapshot'; }
-
-        var coachingSubSectionToButton = {
-            subSectionCoachingEmail: 'subNavCoachingEmail',
-            subSectionYearEnd: 'subNavYearEnd',
-            subSectionOnOffTracker: 'subNavOnOffTracker',
-            subSectionSentiment: 'subNavSentiment',
-            subSectionMetricTrends: 'subNavMetricTrends',
-            subSectionTrendIntelligence: 'subNavTrendIntelligence',
-            subSectionCallListening: 'subNavCallListening',
-            subSectionTeamSnapshot: 'subNavTeamSnapshot',
-            subSectionPto: 'subNavPto',
-            subSectionFutures: 'subNavPerformance',
-            subSectionQ1Review: 'subNavReviewPrep',
-            subSectionCenterRanking: 'subNavPerformance',
-            subSectionPerformance: 'subNavPerformance',
-            subSectionTrends: 'subNavTrends',
-            subSectionReviewPrep: 'subNavReviewPrep',
-            subSectionMoreTools: 'subNavMoreTools'
-        };
-
-        var manageDataSubSectionToButton = {
-            subSectionTeamData: 'subNavTeamData',
-            subSectionCoachingTips: 'subNavCoachingTips'
-        };
-
         if (sectionId === 'coachingEmailSection') {
             showOnlySection('coachingEmailSection');
-            var coachingSubId = state.coachingSubSectionId || 'subSectionCoachingEmail';
-            var coachingBtnId = coachingSubSectionToButton[coachingSubId] || 'subNavCoachingEmail';
-            var coachingBtn = document.getElementById(coachingBtnId);
-            if (coachingBtn) coachingBtn.click();
+            var subId = state.myTeamSubSectionId || 'subSectionMorningPulse';
+            var btnId = MY_TEAM_SUB_TO_BTN[subId] || 'subNavMorningPulse';
+            var btn = document.getElementById(btnId);
+            if (btn) btn.click();
+            return;
+        }
+
+        if (sectionId === 'trendsAnalysisSection') {
+            showOnlySection('trendsAnalysisSection');
+            var subId = state.trendsSubSectionId || 'subSectionTaTrendIntelligence';
+            var btnId = TRENDS_SUB_TO_BTN[subId] || 'subNavTaIntelligence';
+            var btn = document.getElementById(btnId);
+            if (btn) btn.click();
+            return;
+        }
+
+        if (sectionId === 'reviewPrepSection') {
+            showOnlySection('reviewPrepSection');
+            var subId = state.reviewPrepSubSectionId || 'subSectionOnOffTracker';
+            var btnId = REVIEW_SUB_TO_BTN[subId] || 'subNavRpScoreCard';
+            var btn = document.getElementById(btnId);
+            if (btn) btn.click();
             return;
         }
 
         if (sectionId === 'manageDataSection') {
             showOnlySection('manageDataSection');
-            var manageSubId = state.manageDataSubSectionId || 'subSectionTeamData';
-            var manageBtnId = manageDataSubSectionToButton[manageSubId] || 'subNavTeamData';
-            var manageBtn = document.getElementById(manageBtnId);
-            if (manageBtn) manageBtn.click();
+            var subId = state.settingsSubSectionId || 'subSectionTeamMembers';
+            var btn = document.getElementById('subNavTeamMembers');
+            // Find the right button
+            SETTINGS_NAV_BUTTONS.forEach(function(id) {
+                var expectedSub = id.replace('subNav', 'subSection');
+                if (expectedSub === subId) btn = document.getElementById(id);
+            });
+            if (btn) btn.click();
             return;
         }
 
         if (sectionId === 'debugSection') {
             showOnlySection('debugSection');
-            if (typeof window.renderDebugPanel === 'function') {
-                window.renderDebugPanel();
-            } else if (typeof renderDebugPanel === 'function') {
-                renderDebugPanel();
-            }
+            if (typeof window.renderDebugPanel === 'function') window.renderDebugPanel();
             return;
         }
 
@@ -218,70 +299,42 @@
             return;
         }
 
-        if (sectionId === 'dashboardSection') {
-            showOnlySection('dashboardSection');
-            if (typeof window.initializeDashboard === 'function') {
-                window.initializeDashboard();
-            }
+        if (sectionId === 'uploadSection') {
+            showOnlySection('uploadSection');
             return;
         }
 
-        showOnlySection('dashboardSection');
-        if (typeof window.initializeDashboard === 'function') {
-            window.initializeDashboard();
+        if (sectionId === 'dashboardSection') {
+            showOnlySection('dashboardSection');
+            if (typeof window.initializeDashboard === 'function') window.initializeDashboard();
+            return;
         }
+
+        // Fallback
+        showOnlySection('dashboardSection');
+        if (typeof window.initializeDashboard === 'function') window.initializeDashboard();
     }
 
-    /**
-     * Initialize the content of a section when it's shown
-     */
     function initializeSection(sectionId) {
         switch(sectionId) {
             case 'tipsManagementSection':
-                if (typeof window.renderTipsManagement === 'function') {
-                    window.renderTipsManagement();
-                } else if (typeof renderTipsManagement === 'function') {
-                    renderTipsManagement();
-                }
+                if (typeof window.renderTipsManagement === 'function') window.renderTipsManagement();
+                else if (typeof renderTipsManagement === 'function') renderTipsManagement();
                 break;
             case 'metricTrendsSection':
-                if (typeof window.initializeMetricTrends === 'function') {
-                    window.initializeMetricTrends();
-                } else if (typeof initializeMetricTrends === 'function') {
-                    initializeMetricTrends();
-                }
+                if (typeof window.initializeMetricTrends === 'function') window.initializeMetricTrends();
+                else if (typeof initializeMetricTrends === 'function') initializeMetricTrends();
                 break;
             case 'manageDataSection':
-                console.log('🔧 Initializing Manage Data section');
-                if (typeof window.populateDeleteWeekDropdown === 'function') {
-                    window.populateDeleteWeekDropdown();
-                } else if (typeof populateDeleteWeekDropdown === 'function') {
-                    populateDeleteWeekDropdown();
-                }
-                if (typeof window.populateDeleteSentimentDropdown === 'function') {
-                    window.populateDeleteSentimentDropdown();
-                } else if (typeof populateDeleteSentimentDropdown === 'function') {
-                    populateDeleteSentimentDropdown();
-                }
-                if (typeof window.renderEmployeesList === 'function') {
-                    window.renderEmployeesList();
-                } else if (typeof renderEmployeesList === 'function') {
-                    renderEmployeesList();
-                }
+                if (typeof window.populateDeleteWeekDropdown === 'function') window.populateDeleteWeekDropdown();
+                if (typeof window.populateDeleteSentimentDropdown === 'function') window.populateDeleteSentimentDropdown();
+                if (typeof window.renderEmployeesList === 'function') window.renderEmployeesList();
                 break;
             case 'executiveSummarySection':
-                if (typeof window.renderExecutiveSummary === 'function') {
-                    window.renderExecutiveSummary();
-                } else if (typeof renderExecutiveSummary === 'function') {
-                    renderExecutiveSummary();
-                }
+                if (typeof window.renderExecutiveSummary === 'function') window.renderExecutiveSummary();
                 break;
             case 'debugSection':
-                if (typeof window.renderDebugPanel === 'function') {
-                    window.renderDebugPanel();
-                } else if (typeof renderDebugPanel === 'function') {
-                    renderDebugPanel();
-                }
+                if (typeof window.renderDebugPanel === 'function') window.renderDebugPanel();
                 break;
         }
     }
@@ -290,6 +343,9 @@
     window.DevCoachModules.navigation = {
         showOnlySection: showOnlySection,
         showSubSection: showSubSection,
+        showMyTeamSubSection: showMyTeamSubSection,
+        showTrendsSubSection: showTrendsSubSection,
+        showReviewPrepSubSection: showReviewPrepSubSection,
         showManageDataSubSection: showManageDataSubSection,
         getDefaultUiNavState: getDefaultUiNavState,
         loadUiNavState: loadUiNavState,

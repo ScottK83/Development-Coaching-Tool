@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.03.2'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.03.3'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -372,8 +372,17 @@ function showSubSection(subSectionId, activeButtonId = null) {
 function showManageDataSubSection(subSectionId) {
     window.DevCoachModules?.navigation?.showManageDataSubSection?.(subSectionId);
 }
+function showMyTeamSubSection(subSectionId, activeButtonId = null) {
+    window.DevCoachModules?.navigation?.showMyTeamSubSection?.(subSectionId, activeButtonId);
+}
+function showTrendsSubSection(subSectionId, activeButtonId = null) {
+    window.DevCoachModules?.navigation?.showTrendsSubSection?.(subSectionId, activeButtonId);
+}
+function showReviewPrepSubSection(subSectionId, activeButtonId = null) {
+    window.DevCoachModules?.navigation?.showReviewPrepSubSection?.(subSectionId, activeButtonId);
+}
 function getDefaultUiNavState() {
-    return window.DevCoachModules?.navigation?.getDefaultUiNavState?.() || { sectionId: 'coachingForm', coachingSubSectionId: 'subSectionCoachingEmail', manageDataSubSectionId: 'subSectionTeamData' };
+    return window.DevCoachModules?.navigation?.getDefaultUiNavState?.() || { sectionId: 'dashboardSection', myTeamSubSectionId: 'subSectionMorningPulse', trendsSubSectionId: 'subSectionTaTrendIntelligence', reviewPrepSubSectionId: 'subSectionOnOffTracker', settingsSubSectionId: 'subSectionTeamMembers' };
 }
 
 // Navigation state functions delegated to modules/navigation.module.js
@@ -1479,84 +1488,139 @@ function embedPtoTracker() {
 }
 
 function bindNavigationHandlers() {
+    // --- Top-level nav ---
     document.getElementById('dashboardBtn')?.addEventListener('click', () => {
         showOnlySection('dashboardSection');
         initializeDashboard();
     });
-    document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('coachingForm'));
+    document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('uploadSection'));
+
+    // --- My Team ---
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
-        initializeCoachingEmail();
+        showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
+        if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
     });
-
+    document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
+        if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
+    });
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
-        showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
+        showMyTeamSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
     });
-
-    // Consolidated: Performance (On/Off + Rankings + Futures)
-    document.getElementById('subNavPerformance')?.addEventListener('click', () => {
-        showSubSection('subSectionPerformance', 'subNavPerformance');
-        activateInnerTab('perf-inner-tab', 'subSectionOnOffTracker', 'perfInnerContent', initializeOnOffTracker);
+    document.getElementById('subNavCallListening')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionCallListening', 'subNavCallListening');
+        initializeCallListeningSection();
     });
 
-    // Consolidated: Trends (Intelligence + Metric Charts)
-    document.getElementById('subNavTrends')?.addEventListener('click', () => {
-        showSubSection('subSectionTrends', 'subNavTrends');
-        activateInnerTab('trends-inner-tab', 'subSectionMorningPulse', 'trendsInnerContent', function() {
-            if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
-        });
+    // --- Trends & Analysis ---
+    document.getElementById('trendsAnalysisBtn')?.addEventListener('click', () => {
+        showOnlySection('trendsAnalysisSection');
+        showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
+        ensureTrendIntelligenceMountedInTrends();
+        renderExecutiveSummary();
+    });
+    document.getElementById('subNavTaIntelligence')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
+        ensureTrendIntelligenceMountedInTrends();
+        renderExecutiveSummary();
+    });
+    document.getElementById('subNavTaMetricCharts')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaMetricTrends', 'subNavTaMetricCharts');
+        ensureMetricTrendsMountedInTrends();
+        initializeMetricTrends();
+    });
+    document.getElementById('subNavTaRankings')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaCenterRanking', 'subNavTaRankings');
+        if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
+    });
+    document.getElementById('subNavTaFutures')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaFutures', 'subNavTaFutures');
+        if (typeof window.renderFutures === 'function') window.renderFutures();
+    });
+    document.getElementById('subNavTaSentiment')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaSentiment', 'subNavTaSentiment');
+        ensureSentimentMountedInTrends();
     });
 
-    // Consolidated: Review Prep (Quarterly + Year-End)
-    document.getElementById('subNavReviewPrep')?.addEventListener('click', () => {
-        showSubSection('subSectionReviewPrep', 'subNavReviewPrep');
-        activateInnerTab('review-inner-tab', 'subSectionQ1Review', 'reviewInnerContent', function() {
-            if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
-        });
+    // --- Review Prep ---
+    document.getElementById('reviewPrepBtn')?.addEventListener('click', () => {
+        showOnlySection('reviewPrepSection');
+        showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
+        initializeOnOffTracker();
     });
-
-    // Consolidated: More Tools (Call Listening, Sentiment, PTO)
-    document.getElementById('subNavMoreTools')?.addEventListener('click', () => {
-        showSubSection('subSectionMoreTools', 'subNavMoreTools');
-        activateInnerTab('more-inner-tab', 'subSectionCallListening', 'moreInnerContent', initializeCallListeningSection);
+    document.getElementById('subNavRpScoreCard')?.addEventListener('click', () => {
+        showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
+        initializeOnOffTracker();
     });
+    document.getElementById('subNavRpQuarterly')?.addEventListener('click', () => {
+        showReviewPrepSubSection('subSectionQ1Review', 'subNavRpQuarterly');
+        if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
+    });
+    document.getElementById('subNavRpYearEnd')?.addEventListener('click', () => {
+        showReviewPrepSubSection('subSectionYearEnd', 'subNavRpYearEnd');
+        initializeYearEndComments();
+    });
+}
 
-    // Inner tab click handlers for all consolidated sections
-    bindInnerTabHandlers();
+// --- DOM mount helpers for Trends & Analysis ---
+// These move content from standalone hidden sections into the new Trends sub-sections
+
+function ensureTrendIntelligenceMountedInTrends() {
+    var target = document.getElementById('subSectionTaTrendIntelligence');
+    if (!target || target.querySelector('#executiveSummaryContainer')) return;
+    var source = document.getElementById('executiveSummarySection');
+    if (!source) return;
+    while (source.firstChild) target.appendChild(source.firstChild);
+}
+
+function ensureMetricTrendsMountedInTrends() {
+    var target = document.getElementById('subSectionTaMetricTrends');
+    if (!target || target.hasChildNodes()) return;
+    var source = document.getElementById('metricTrendsSection');
+    if (!source) return;
+    while (source.firstChild) target.appendChild(source.firstChild);
+}
+
+function ensureSentimentMountedInTrends() {
+    handleSubNavSentimentClick(true);
 }
 
 function bindManageDataNavigationHandlers() {
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
-        showManageDataSubSection('subSectionTeamData');
-        initializeRepoSyncControls();
-        populateDeleteWeekDropdown();
+        showManageDataSubSection('subSectionTeamMembers');
         renderEmployeesList();
     });
-
-    document.getElementById('subNavTeamData')?.addEventListener('click', () => {
-        showManageDataSubSection('subSectionTeamData');
-        initializeRepoSyncControls();
-        populateDeleteWeekDropdown();
+    document.getElementById('subNavTeamMembers')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionTeamMembers');
         renderEmployeesList();
     });
     document.getElementById('subNavCoachingTips')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionCoachingTips');
         const tipsManagementSection = document.getElementById('tipsManagementSection');
         const subSectionCoachingTips = document.getElementById('subSectionCoachingTips');
-        if (tipsManagementSection && subSectionCoachingTips) {
+        if (tipsManagementSection && subSectionCoachingTips && !subSectionCoachingTips.hasChildNodes()) {
             while (tipsManagementSection.firstChild) {
                 subSectionCoachingTips.appendChild(tipsManagementSection.firstChild);
             }
         }
         renderTipsManagement();
     });
+    document.getElementById('subNavSyncBackup')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionSyncBackup');
+        initializeRepoSyncControls();
+    });
+    document.getElementById('subNavPtoTracker')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionPtoTracker');
+        embedPtoTracker();
+    });
     document.getElementById('subNavDeleteData')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionDeleteData');
         populateDeleteWeekDropdown();
         populateDeleteSentimentDropdown();
+        if (typeof populateDeleteEmployeeYearOptions === 'function') populateDeleteEmployeeYearOptions();
     });
     document.getElementById('openDebugFromManageBtn')?.addEventListener('click', () => {
         showOnlySection('debugSection');
@@ -1572,7 +1636,7 @@ function bindQuickActionHandlers() {
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
     document.getElementById('subNavTeamSnapshot')?.addEventListener('click', () => {
-        showSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
+        showMyTeamSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
         embedTeamSnapshot();
     });
 
@@ -1657,130 +1721,15 @@ function handlePasteDataTextareaInput(event) {
     }
 }
 
-// ============================================
-// CONSOLIDATED TAB INNER NAVIGATION
-// ============================================
-
-var INNER_TAB_INIT_MAP = {
-    subSectionOnOffTracker: function() { initializeOnOffTracker(); },
-    subSectionCenterRanking: function() { if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking(); },
-    subSectionFutures: function() { if (typeof window.renderFutures === 'function') window.renderFutures(); },
-    subSectionMorningPulse: function() { if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse(); },
-    subSectionTrendIntelligence: function() { handleSubNavTrendIntelligenceClick(true); },
-    subSectionMetricTrends: function() { handleSubNavMetricTrendsClick(true); },
-    subSectionQ1Review: function() { if (typeof window.renderQ1Review === 'function') window.renderQ1Review(); },
-    subSectionYearEnd: function() { initializeYearEndComments(); },
-    subSectionCallListening: function() { initializeCallListeningSection(); },
-    subSectionSentiment: function() { handleSubNavSentimentClick(true); },
-    subSectionPto: function() { embedPtoTracker(); }
-};
-
-function activateInnerTab(tabClass, targetId, contentContainerId, initFn) {
-    // Move target sub-section into the content container
-    var container = document.getElementById(contentContainerId);
-    var target = document.getElementById(targetId);
-    if (!container || !target) return;
-
-    // Hide any currently shown sub-section in this container
-    Array.from(container.children).forEach(function(child) {
-        child.style.display = 'none';
-    });
-
-    // Move target into container if not already there
-    if (target.parentElement !== container) {
-        container.appendChild(target);
-    }
-    target.style.display = 'block';
-
-    // Update inner tab button styles
-    document.querySelectorAll('.' + tabClass).forEach(function(btn) {
-        if (btn.dataset.target === targetId) {
-            btn.style.background = btn.closest('#subSectionPerformance') ? '#1565c0' :
-                btn.closest('#subSectionTrends') ? '#9c27b0' :
-                btn.closest('#subSectionReviewPrep') ? '#d84315' : '#546e7a';
-            btn.style.color = 'white';
-        } else {
-            btn.style.background = '#e0e0e0';
-            btn.style.color = '#555';
-        }
-    });
-
-    // Initialize
-    if (typeof initFn === 'function') initFn();
-}
-
-function bindInnerTabHandlers() {
-    ['perf-inner-tab', 'trends-inner-tab', 'review-inner-tab', 'more-inner-tab'].forEach(function(tabClass) {
-        document.querySelectorAll('.' + tabClass).forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var targetId = btn.dataset.target;
-                var contentId = btn.closest('[id^="subSection"]')?.querySelector('[id$="InnerContent"]')?.id;
-                if (!contentId) {
-                    // Determine content container from tab class
-                    var map = {
-                        'perf-inner-tab': 'perfInnerContent',
-                        'trends-inner-tab': 'trendsInnerContent',
-                        'review-inner-tab': 'reviewInnerContent',
-                        'more-inner-tab': 'moreInnerContent'
-                    };
-                    contentId = map[tabClass];
-                }
-                var initFn = INNER_TAB_INIT_MAP[targetId];
-                activateInnerTab(tabClass, targetId, contentId, initFn);
-            });
-        });
-    });
-}
-
+// Legacy stubs for any code that still references old inner tab functions
 function handleSubNavMetricTrendsClick(skipShowSubSection) {
-    if (!skipShowSubSection) showSubSection('subSectionMetricTrends', 'subNavMetricTrends');
-    const metricTrendsSection = document.getElementById('metricTrendsSection');
-    const subSectionMetricTrends = document.getElementById('subSectionMetricTrends');
-    if (metricTrendsSection && subSectionMetricTrends) {
-        while (metricTrendsSection.firstChild) {
-            subSectionMetricTrends.appendChild(metricTrendsSection.firstChild);
-        }
-    }
+    ensureMetricTrendsMountedInTrends();
     initializeMetricTrends();
 }
 
-function ensureTrendIntelligenceMounted() {
-    const subSection = document.getElementById('subSectionTrendIntelligence');
-    if (!subSection) return;
-
-    const alreadyMounted = Boolean(subSection.querySelector('#executiveSummaryContainer'));
-    if (alreadyMounted) return;
-
-    const sourceSection = document.getElementById('executiveSummarySection');
-    if (!sourceSection) return;
-
-    while (sourceSection.firstChild) {
-        subSection.appendChild(sourceSection.firstChild);
-    }
-
-    const placeholderText = Array.from(subSection.querySelectorAll('p')).find(p =>
-        (p.textContent || '').toLowerCase().includes('trend intelligence content will appear here')
-    );
-    if (placeholderText) {
-        placeholderText.remove();
-    }
-}
-
 function handleSubNavTrendIntelligenceClick(skipShowSubSection) {
-    if (!skipShowSubSection) showSubSection('subSectionTrendIntelligence', 'subNavTrendIntelligence');
-    ensureTrendIntelligenceMounted();
+    ensureTrendIntelligenceMountedInTrends();
     renderExecutiveSummary();
-
-    const summarySelect = document.getElementById('summaryAssociateSelect');
-    if (summarySelect) {
-        summarySelect.value = '';
-    }
-
-    const dataContainer = document.getElementById('summaryDataContainer');
-    const chartsContainer = document.getElementById('summaryChartsContainer');
-
-    if (dataContainer) dataContainer.style.display = 'none';
-    if (chartsContainer) chartsContainer.innerHTML = '';
 }
 
 function handleCopilotOutputInput(event) {
@@ -1798,7 +1747,7 @@ function handleUploadMoreDataClick() {
     document.getElementById('uploadSuccessMessage').style.display = 'none';
     document.getElementById('pasteDataTextarea').value = '';
     document.getElementById('pasteWeekEndingDate').value = '';
-    showOnlySection('coachingForm');
+    showOnlySection('uploadSection');
 }
 
 function handleDeleteEmployeeYearClick() {
@@ -1824,10 +1773,8 @@ function handleDeleteEmployeeYearClick() {
 }
 
 function handleSubNavSentimentClick(skipShowSubSection) {
-    if (!skipShowSubSection) showSubSection('subSectionSentiment', 'subNavSentiment');
-
     const sentimentSection = document.getElementById('sentimentSection');
-    const subSectionSentiment = document.getElementById('subSectionSentiment');
+    const subSectionSentiment = document.getElementById('subSectionTaSentiment');
     if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
         while (sentimentSection.firstChild) {
             subSectionSentiment.appendChild(sentimentSection.firstChild);
@@ -2110,7 +2057,7 @@ function handleLoadPastedDataClick() {
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';
 
-        showOnlySection('coachingForm');
+        showOnlySection('uploadSection');
 
         if (periodType !== 'ytd') {
             syncWeeklyViewAfterPastedUpload(weekKey);

@@ -19,10 +19,12 @@
             <p class="subtitle">Personalized coaching with knowledge base guidance</p>
             <div class="top-nav-buttons flex-row-center" style="margin-top: 15px;">
                 <button type="button" id="dashboardBtn" class="btn-secondary top-nav-btn" aria-label="Dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">📋 Dashboard</button>
-                <button type="button" id="homeBtn" class="btn-secondary top-nav-btn" aria-label="Home - Upload Data">🏠 Upload Data</button>
-                <button type="button" id="coachingEmailBtn" class="btn-secondary top-nav-btn" aria-label="Coaching and Analysis">💌 Coaching & Analysis</button>
+                <button type="button" id="homeBtn" class="btn-secondary top-nav-btn" aria-label="Upload Data">📤 Upload</button>
+                <button type="button" id="coachingEmailBtn" class="btn-secondary top-nav-btn" aria-label="My Team">☀️ My Team</button>
+                <button type="button" id="trendsAnalysisBtn" class="btn-secondary top-nav-btn" aria-label="Trends and Analysis">📈 Trends</button>
+                <button type="button" id="reviewPrepBtn" class="btn-secondary top-nav-btn" aria-label="Review Prep">📋 Review Prep</button>
                 <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Follow Up">📌 Follow Up</button>
-                <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Manage Data">🗄️ Manage Data</button>
+                <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Settings">⚙️ Settings</button>
             </div>
         </header>
 
@@ -35,6 +37,7 @@
             </section>
 
             <!-- Upload Section -->
+            <section id="uploadSection" style="display: none;">
             <form id="coachingForm">
                 <section class="form-section" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
                     <h2>📊 Get Started</h2>
@@ -114,6 +117,7 @@
                     </div>
                 </section>
             </form>
+            </section>
 
             <!-- Upload Sentiment Modal (hidden by default) -->
             <div id="uploadSentimentModal" class="modal-overlay">
@@ -170,16 +174,14 @@
 
             <section id="coachingEmailSection" style="display: none;">
                 <div class="form-section" style="background: #f3e5f5; border-left: 4px solid #E91E63;">
-                    <h2>💌 Coaching & Analysis</h2>
-                    
+                    <h2>☀️ My Team</h2>
+
                     <!-- Sub-navigation -->
                     <div class="sub-nav" style="border-bottom: 2px solid #7c4dff; gap: 8px;">
+                        <button type="button" id="subNavMorningPulse" class="btn-secondary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-size: 0.9em; padding: 8px 16px;">☀️ Morning Pulse</button>
                         <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white; font-size: 0.9em; padding: 8px 16px;">💌 Coaching</button>
                         <button type="button" id="subNavTeamSnapshot" class="btn-secondary" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📊 Snapshot</button>
-                        <button type="button" id="subNavPerformance" class="btn-secondary" style="background: #1565c0; color: white; font-size: 0.9em; padding: 8px 16px;">🏆 Performance</button>
-                        <button type="button" id="subNavTrends" class="btn-secondary" style="background: #9c27b0; color: white; font-size: 0.9em; padding: 8px 16px;">📈 Trends</button>
-                        <button type="button" id="subNavReviewPrep" class="btn-secondary" style="background: #d84315; color: white; font-size: 0.9em; padding: 8px 16px;">📋 Review Prep</button>
-                        <button type="button" id="subNavMoreTools" class="btn-secondary" style="background: #546e7a; color: white; font-size: 0.9em; padding: 8px 16px;">🔧 More</button>
+                        <button type="button" id="subNavCallListening" class="btn-secondary" style="background: #546e7a; color: white; font-size: 0.9em; padding: 8px 16px;">🎧 Call Listening</button>
                     </div>
 
                     <!-- Coaching Email Sub-section -->
@@ -546,11 +548,6 @@ Box 2 - Future Improvement Areas:
                         <div id="embeddedTeamSnapshot"></div>
                     </div>
 
-                    <!-- PTO Tracker Sub-section (embedded from standalone) -->
-                    <div id="subSectionPto" style="display: none;">
-                        <div id="embeddedPto"></div>
-                    </div>
-
                     <!-- Center Ranking Sub-section -->
                     <div id="subSectionCenterRanking" style="display: none;">
                         <p style="color: #0d47a1; margin-bottom: 20px;">See where every employee ranks using the On/Off Track scoring system. Your team members are highlighted.</p>
@@ -575,45 +572,37 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
-                    <!-- Consolidated: Performance (On/Off + Rankings + Futures) -->
-                    <div id="subSectionPerformance" style="display: none;">
-                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
-                            <button type="button" class="perf-inner-tab" data-target="subSectionOnOffTracker" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #1565c0; color: white;">📍 Score Card</button>
-                            <button type="button" class="perf-inner-tab" data-target="subSectionCenterRanking" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🏆 Rankings</button>
-                            <button type="button" class="perf-inner-tab" data-target="subSectionFutures" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🔮 Futures</button>
-                        </div>
-                        <div id="perfInnerContent"></div>
-                    </div>
+                </div>
+            </section>
 
-                    <!-- Consolidated: Trends (Metric Trends + Trend Intelligence) -->
-                    <div id="subSectionTrends" style="display: none;">
-                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
-                            <button type="button" class="trends-inner-tab" data-target="subSectionMorningPulse" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #9c27b0; color: white;">☀️ Morning Pulse</button>
-                            <button type="button" class="trends-inner-tab" data-target="subSectionTrendIntelligence" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🧠 Intelligence</button>
-                            <button type="button" class="trends-inner-tab" data-target="subSectionMetricTrends" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">📈 Metric Charts</button>
-                        </div>
-                        <div id="trendsInnerContent"></div>
+            <!-- Trends & Analysis Section (NEW) -->
+            <section id="trendsAnalysisSection" style="display: none;">
+                <div class="form-section" style="background: #ede7f6; border-left: 4px solid #9c27b0;">
+                    <h2>📈 Trends & Analysis</h2>
+                    <div class="sub-nav" style="border-bottom: 2px solid #9c27b0; gap: 8px;">
+                        <button type="button" id="subNavTaIntelligence" class="btn-secondary" style="background: #9c27b0; color: white; font-size: 0.9em; padding: 8px 16px;">🧠 Intelligence</button>
+                        <button type="button" id="subNavTaMetricCharts" class="btn-secondary" style="background: #7b1fa2; color: white; font-size: 0.9em; padding: 8px 16px;">📈 Metric Charts</button>
+                        <button type="button" id="subNavTaRankings" class="btn-secondary" style="background: #1565c0; color: white; font-size: 0.9em; padding: 8px 16px;">🏆 Rankings</button>
+                        <button type="button" id="subNavTaFutures" class="btn-secondary" style="background: #00695c; color: white; font-size: 0.9em; padding: 8px 16px;">🔮 Futures</button>
+                        <button type="button" id="subNavTaSentiment" class="btn-secondary" style="background: #26a69a; color: white; font-size: 0.9em; padding: 8px 16px;">💬 Sentiment</button>
                     </div>
+                    <div id="subSectionTaTrendIntelligence" style="display: block;"></div>
+                    <div id="subSectionTaMetricTrends" style="display: none;"></div>
+                    <div id="subSectionTaCenterRanking" style="display: none;"><div id="centerRankingContent"></div></div>
+                    <div id="subSectionTaFutures" style="display: none;"><div id="futuresContent"></div></div>
+                    <div id="subSectionTaSentiment" style="display: none;"></div>
+                </div>
+            </section>
 
-                    <!-- Consolidated: Review Prep (Q1/Q2/Q3/Q4 + Year-End) -->
-                    <div id="subSectionReviewPrep" style="display: none;">
-                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
-                            <button type="button" class="review-inner-tab" data-target="subSectionQ1Review" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #d84315; color: white;">📋 Quarterly</button>
-                            <button type="button" class="review-inner-tab" data-target="subSectionYearEnd" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🗓️ Year-End</button>
-                        </div>
-                        <div id="reviewInnerContent"></div>
+            <!-- Review Prep Section (NEW) -->
+            <section id="reviewPrepSection" style="display: none;">
+                <div class="form-section" style="background: #fbe9e7; border-left: 4px solid #d84315;">
+                    <h2>📋 Review Prep</h2>
+                    <div class="sub-nav" style="border-bottom: 2px solid #d84315; gap: 8px;">
+                        <button type="button" id="subNavRpScoreCard" class="btn-secondary" style="background: #1565c0; color: white; font-size: 0.9em; padding: 8px 16px;">📍 Score Card</button>
+                        <button type="button" id="subNavRpQuarterly" class="btn-secondary" style="background: #d84315; color: white; font-size: 0.9em; padding: 8px 16px;">📋 Quarterly</button>
+                        <button type="button" id="subNavRpYearEnd" class="btn-secondary" style="background: #5e35b1; color: white; font-size: 0.9em; padding: 8px 16px;">🗓️ Year-End</button>
                     </div>
-
-                    <!-- Consolidated: More Tools (Call Listening, Sentiment, PTO) -->
-                    <div id="subSectionMoreTools" style="display: none;">
-                        <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
-                            <button type="button" class="more-inner-tab" data-target="subSectionCallListening" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #546e7a; color: white;">🎧 Call Listening</button>
-                            <button type="button" class="more-inner-tab" data-target="subSectionSentiment" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">💬 Sentiment</button>
-                            <button type="button" class="more-inner-tab" data-target="subSectionPto" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🕒 PTO</button>
-                        </div>
-                        <div id="moreInnerContent"></div>
-                    </div>
-
                 </div>
             </section>
 
@@ -895,21 +884,23 @@ Box 2 - Future Improvement Areas:
             <!-- Manage Data Section -->
             <section id="manageDataSection" style="display: none;">
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
-                    <h2>🗄️ Manage Data</h2>
-                    <p style="color: #856404; margin-bottom: 20px;">View employees, manage coaching tips, backup, restore, or delete your data.</p>
+                    <h2>⚙️ Settings</h2>
+                    <p style="color: #856404; margin-bottom: 20px;">Team members, coaching tips, sync, backup, and data management.</p>
                     <div style="margin-bottom: 16px;">
                         <button type="button" id="openDebugFromManageBtn" class="btn-secondary" style="background: #455a64; color: white;">🐞 Open Debug Panel</button>
                     </div>
-                    
-                    <!-- Sub-navigation for Manage Data -->
+
+                    <!-- Sub-navigation for Settings -->
                     <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                        <button type="button" id="subNavTeamData" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Data</button>
+                        <button type="button" id="subNavTeamMembers" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Members</button>
                         <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                        <button type="button" id="subNavSyncBackup" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🔄 Sync & Backup</button>
+                        <button type="button" id="subNavPtoTracker" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🕒 PTO</button>
                         <button type="button" id="subNavDeleteData" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗑️ Delete Data</button>
                     </div>
                     
-                    <!-- Team Data Sub-section -->
-                    <div id="subSectionTeamData" style="display: block;">
+                    <!-- Sync & Backup Sub-section -->
+                    <div id="subSectionSyncBackup" style="display: none;">
                     <div style="margin-bottom: 20px; padding: 20px; background: #eef3f5; border-radius: 8px; border: 2px solid #455a64;">
                         <h3 style="color: #37474f; margin-top: 0;">🔄 Cloud Sync</h3>
                         <div id="callListeningSyncStatus" style="margin-bottom: 8px; font-size: 0.85em; color: #546e7a;"></div>
@@ -967,40 +958,6 @@ Box 2 - Future Improvement Areas:
                         <div style="margin-top: 8px; font-size: 0.8em; color: #6d4c41;">Restore source is repo backup JSON. Excel file is for reporting/view only.</div>
                     </div>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #1976d2;">
-                        <h3 style="color: #1976d2; margin-top: 0;">👥 Team Members & Employees</h3>
-                        <p style="color: #666; margin-bottom: 15px;">View employees and check/uncheck team members to show or hide them in coaching, trends, and emails. Leave all unchecked to show everyone.</p>
-                        <div id="teamFilterStatusChip" style="display: inline-block; margin: 0 0 12px 0; padding: 6px 10px; border-radius: 999px; background: #e8f5e9; color: #2e7d32; font-size: 0.82em; font-weight: 600;">Active Team Filter: Loading…</div>
-                        <button type="button" id="toggleTeamMemberSelectorBtn" class="btn-secondary" aria-expanded="false" style="background: #1976d2; color: white; margin-bottom: 12px;">Show Team Members & Employees</button>
-                        <div id="teamMemberSelectorBody" style="display: none;">
-                            <div style="margin-bottom: 14px; padding: 16px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
-                                <h4 style="color: #6a1b9a; margin-top: 0; margin-bottom: 10px;">👥 View Employees</h4>
-                                <p style="color: #666; margin: 0 0 10px 0; font-size: 0.9em;">Use the checkbox beside each associate name to include/exclude them from coaching, trends, and PTO views.</p>
-                                <div id="employeesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white;">
-                                    <div style="padding: 20px; text-align: center; color: #999;">No employees yet. Add one above!</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #8e24aa;">
-                        <h3 style="color: #8e24aa; margin-top: 0;">🗓️ Delete Associate Year Data</h3>
-                        <p style="color: #666; margin-bottom: 15px;">Delete one associate's data for a specific review year (example: Marietta, 2026).</p>
-                        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end;">
-                            <div>
-                                <label for="deleteEmployeeYearSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #6a1b9a;">Associate:</label>
-                                <select id="deleteEmployeeYearSelect" style="width: 100%; padding: 12px; border: 2px solid #8e24aa; border-radius: 4px; font-size: 1em; cursor: pointer;">
-                                    <option value="">-- Choose an associate --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="deleteEmployeeYearInput" style="font-weight: bold; display: block; margin-bottom: 5px; color: #6a1b9a;">Review Year:</label>
-                                <input type="number" id="deleteEmployeeYearInput" min="2020" max="2100" placeholder="2026" style="width: 100%; padding: 12px; border: 2px solid #8e24aa; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                            </div>
-                            <button type="button" id="deleteEmployeeYearBtn" class="btn-secondary" style="background: #8e24aa; color: white; font-size: 1em; padding: 12px 18px;">🗑️ Delete Year Data</button>
-                        </div>
-                    </div>
-
                     <!-- Backup / Restore -->
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #28a745;">
                         <h3 style="color: #28a745; margin-top: 0;">💾 Backup & Restore</h3>
@@ -1014,7 +971,32 @@ Box 2 - Future Improvement Areas:
                     </div>
 
                     </div>
-                    <!-- End Team Data Sub-section -->
+                    <!-- End Sync & Backup Sub-section -->
+
+                    <!-- Team Members Sub-section -->
+                    <div id="subSectionTeamMembers" style="display: block;">
+                    <div style="margin-bottom: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #1976d2;">
+                        <h3 style="color: #1976d2; margin-top: 0;">👥 Team Members & Employees</h3>
+                        <p style="color: #666; margin-bottom: 15px;">View employees and check/uncheck team members to show or hide them in coaching, trends, and emails. Leave all unchecked to show everyone.</p>
+                        <div id="teamFilterStatusChip" style="display: inline-block; margin: 0 0 12px 0; padding: 6px 10px; border-radius: 999px; background: #e8f5e9; color: #2e7d32; font-size: 0.82em; font-weight: 600;">Active Team Filter: Loading...</div>
+                        <button type="button" id="toggleTeamMemberSelectorBtn" class="btn-secondary" aria-expanded="false" style="background: #1976d2; color: white; margin-bottom: 12px;">Show Team Members & Employees</button>
+                        <div id="teamMemberSelectorBody" style="display: none;">
+                            <div style="margin-bottom: 14px; padding: 16px; background: #f3e5f5; border-radius: 8px; border: 2px solid #9C27B0;">
+                                <h4 style="color: #6a1b9a; margin-top: 0; margin-bottom: 10px;">👥 View Employees</h4>
+                                <p style="color: #666; margin: 0 0 10px 0; font-size: 0.9em;">Use the checkbox beside each associate name to include/exclude them from coaching, trends, and PTO views.</p>
+                                <div id="employeesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white;">
+                                    <div style="padding: 20px; text-align: center; color: #999;">No employees yet. Add one above!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    <!-- End Team Members Sub-section -->
+
+                    <!-- PTO Tracker Sub-section -->
+                    <div id="subSectionPtoTracker" style="display: none;">
+                        <div id="embeddedPto"></div>
+                    </div>
                     
                     <!-- Coaching Tips Sub-section -->
                     <div id="subSectionCoachingTips" style="display: none;">
@@ -1043,6 +1025,24 @@ Box 2 - Future Improvement Areas:
                             </select>
                         </div>
                         <button type="button" id="deleteSelectedSentimentBtn" class="btn-secondary" style="background: #26a69a; color: white; font-size: 1.1em; padding: 12px 24px;">🗑️ Delete Selected Sentiment</button>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #8e24aa;">
+                        <h3 style="color: #8e24aa; margin-top: 0;">🗓️ Delete Associate Year Data</h3>
+                        <p style="color: #666; margin-bottom: 15px;">Delete one associate's data for a specific review year (example: Marietta, 2026).</p>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end;">
+                            <div>
+                                <label for="deleteEmployeeYearSelect" style="font-weight: bold; display: block; margin-bottom: 5px; color: #6a1b9a;">Associate:</label>
+                                <select id="deleteEmployeeYearSelect" style="width: 100%; padding: 12px; border: 2px solid #8e24aa; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                    <option value="">-- Choose an associate --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="deleteEmployeeYearInput" style="font-weight: bold; display: block; margin-bottom: 5px; color: #6a1b9a;">Review Year:</label>
+                                <input type="number" id="deleteEmployeeYearInput" min="2020" max="2100" placeholder="2026" style="width: 100%; padding: 12px; border: 2px solid #8e24aa; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                            </div>
+                            <button type="button" id="deleteEmployeeYearBtn" class="btn-secondary" style="background: #8e24aa; color: white; font-size: 1em; padding: 12px 18px;">🗑️ Delete Year Data</button>
+                        </div>
                     </div>
 
                     <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
