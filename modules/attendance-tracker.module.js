@@ -365,18 +365,24 @@
         ptostUsed = round2(ptostUsed);
         unplannedNotPtost = round2(unplannedNotPtost);
 
-        // Attendance policy only counts hours BEYOND what the 40h PTOST bucket covers
-        // PTOST-marked hours are excused. Unplanned-not-PTOST could be excused if reclassified.
-        // Policy hours = total unplanned minus the 40h PTOST allowance (floor at 0)
-        var policyHours = round2(Math.max(0, totalUnplanned - PTOST_ANNUAL_LIMIT));
+        var ptostRemaining = round2(Math.max(0, PTOST_ANNUAL_LIMIT - ptostUsed));
+
+        // Attendance policy: unplanned NOT-PTOST hours count against reliability RIGHT NOW.
+        // PTOST-marked hours are already excused.
+        // ptostRemaining = hours they CAN still use to excuse some of the unplanned hours.
+        // If they use all remaining PTOST: leftover = unplannedNotPtost - ptostRemaining
+        var canExcuse = round2(Math.min(unplannedNotPtost, ptostRemaining));
+        var afterExcusing = round2(Math.max(0, unplannedNotPtost - ptostRemaining));
 
         return {
             ptostUsed: ptostUsed,
             unplannedNotPtost: unplannedNotPtost,
             totalUnplanned: totalUnplanned,
-            policyHours: policyHours,
+            policyHours: unplannedNotPtost,       // currently against reliability
+            policyHoursAfterExcusing: afterExcusing, // what would remain if they use all PTOST
+            canExcuse: canExcuse,                  // how many hours can be excused
             reclassificationGap: unplannedNotPtost,
-            ptostRemaining: round2(Math.max(0, PTOST_ANNUAL_LIMIT - ptostUsed)),
+            ptostRemaining: ptostRemaining,
             ptostLimit: PTOST_ANNUAL_LIMIT
         };
     }
@@ -570,11 +576,14 @@
         // Attendance Policy Status
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
         html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Attendance Policy Status</h4>';
-        html += '<div style="font-size:0.82em; color:#666; margin-bottom:6px;">Only counts unplanned hours exceeding the 40h PTOST allowance. PTOST-covered hours are excused.</div>';
+        html += '<div style="font-size:0.82em; color:#666; margin-bottom:6px;">Unplanned hours not yet marked as PTOST count against reliability. PTOST-excused hours do not.</div>';
         html += renderTierBar(ptost.policyHours);
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
         html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
-        html += '<div style="font-size:0.85em; color:#666;">' + ptost.policyHours + 'h against policy (' + ptost.totalUnplanned + 'h total unplanned, ' + PTOST_ANNUAL_LIMIT + 'h PTOST allowance)</div>';
+        html += '<div style="font-size:0.85em; color:#666;">' + ptost.policyHours + 'h currently against reliability</div>';
+        if (ptost.canExcuse > 0) {
+            html += '<div style="font-size:0.82em; color:#1565c0; font-weight:600;">Can excuse ' + ptost.canExcuse + 'h with PTOST \u2192 ' + ptost.policyHoursAfterExcusing + 'h would remain</div>';
+        }
         if (tier.nextTier) {
             html += '<div style="font-size:0.82em; color:' + tier.nextTier.color + '; font-weight:600;">' + tier.hoursUntilNext + 'h until ' + tier.nextTier.label + '</div>';
         }
@@ -704,59 +713,56 @@
     function generateAssociateMessage(firstName, ptost, tier, reclassItems) {
         var msg = 'Hey ' + firstName + '! Quick attendance update for you:\n\n';
 
-        msg += 'PTOST Used: ' + ptost.ptostUsed + ' / ' + ptost.ptostLimit + ' hours\n';
+        msg += 'You\'ve used ' + ptost.ptostUsed + ' hours of your ' + ptost.ptostLimit + ' PTOST hours.\n';
         msg += 'PTOST Remaining: ' + ptost.ptostRemaining + ' hours\n';
 
-        // Key scenario: they have PTOST left AND unexcused hours
-        if (ptost.reclassificationGap > 0 && ptost.ptostRemaining > 0) {
-            var canCover = Math.min(ptost.reclassificationGap, ptost.ptostRemaining);
-            var wouldRemain = round2(ptost.ptostRemaining - canCover);
-            var uncovered = round2(ptost.reclassificationGap - canCover);
+        // Scenario 1: has unexcused hours AND PTOST remaining to cover some/all
+        if (ptost.unplannedNotPtost > 0 && ptost.ptostRemaining > 0) {
+            msg += '\nYou have ' + ptost.unplannedNotPtost + ' hours of unplanned/unscheduled time that currently goes against your reliability.\n\n';
 
-            msg += '\nYou currently have ' + ptost.reclassificationGap + ' hours of unplanned/unexcused time that counts against your reliability. ';
-            msg += 'The good news is you still have ' + ptost.ptostRemaining + ' hours of PTOST available.\n\n';
-
-            msg += 'I can reach out to WFM and get ';
-            if (canCover >= ptost.reclassificationGap) {
-                msg += 'all ' + ptost.reclassificationGap + ' hours excused as PTOST';
-                msg += ' (you\'d still have ' + wouldRemain + ' hours of PTOST left after that).\n';
-            } else {
-                msg += canCover + ' hours excused as PTOST, but ' + uncovered + ' hours would remain unexcused since that\'s all the PTOST you have left.\n';
-            }
-
-            msg += '\nHere are the specific dates:\n';
+            msg += 'Here are those dates:\n';
             reclassItems.forEach(function(item) {
-                msg += '  - ' + formatDateDisplay(item.fromDate) + ': ' + item.hours + 'h (' + item.activity + ')\n';
+                msg += '  - ' + formatDateDisplay(item.fromDate) + ': ' + item.hours + 'h\n';
             });
 
-            msg += '\nWould you like me to go ahead and get these excused? Just let me know.';
-        } else if (ptost.reclassificationGap > 0 && ptost.ptostRemaining <= 0) {
-            // No PTOST left — these hours are unexcused and count against policy
-            msg += '\nYou have ' + ptost.reclassificationGap + ' hours of unplanned time that is currently unexcused. ';
-            msg += 'Unfortunately your PTOST balance is at 0, so these hours go against the attendance policy.\n';
-
-            msg += '\nTotal Unplanned Hours: ' + ptost.totalUnplanned + ' hours\n';
-            msg += 'Current Status: ' + tier.tier.label + '\n';
-            if (tier.nextTier) {
-                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
-            }
-
-            msg += '\nPlease be mindful of attendance going forward. Let me know if you have any questions about the attendance policy or if there\'s anything I can help with.';
-        } else {
-            // No reclassification needed
-            msg += '\nTotal Unplanned Hours: ' + ptost.totalUnplanned + ' hours\n';
-            msg += 'Current Status: ' + tier.tier.label + '\n';
-            if (tier.nextTier) {
-                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
-            }
-
-            if (ptost.totalUnplanned >= 24) {
-                msg += '\nPlease be mindful of attendance going forward. Let me know if there\'s anything I can help with.';
-            } else if (ptost.totalUnplanned >= 16) {
-                msg += '\nJust want to make sure you\'re aware of where things stand. Let me know if you need anything.';
+            if (ptost.canExcuse >= ptost.unplannedNotPtost) {
+                msg += '\nIf you\'d like, I can reach out to WFM and mark all ' + ptost.unplannedNotPtost + ' hours as PTOST to get them excused. ';
+                msg += 'You\'d still have ' + round2(ptost.ptostRemaining - ptost.canExcuse) + ' hours of PTOST remaining after that.\n';
             } else {
-                msg += '\nYou\'re in good shape. Keep it up!';
+                msg += '\nI can mark ' + ptost.canExcuse + ' hours as PTOST to get them excused, but the remaining ' + ptost.policyHoursAfterExcusing + ' hours would stay against your reliability since that would use up your PTOST.\n';
             }
+
+            msg += '\nAs a reminder, our attendance policy is:\n';
+            msg += '  - 16 hours: Verbal Warning\n';
+            msg += '  - 24 hours: Written Warning\n';
+            msg += '  - 32 hours: Second Written Warning\n';
+            msg += '  - 40 hours: Termination Eligible\n';
+
+            msg += '\nWould you like me to go ahead and get those hours excused? Just let me know.';
+
+        // Scenario 2: has unexcused hours but NO PTOST left
+        } else if (ptost.unplannedNotPtost > 0 && ptost.ptostRemaining <= 0) {
+            msg += '\nYou have ' + ptost.unplannedNotPtost + ' hours of unplanned time against your reliability, and your PTOST balance is at 0.\n';
+            msg += 'Current Status: ' + tier.tier.label + '\n';
+            if (tier.nextTier) {
+                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
+            }
+
+            msg += '\nAs a reminder, our attendance policy is:\n';
+            msg += '  - 16 hours: Verbal Warning\n';
+            msg += '  - 24 hours: Written Warning\n';
+            msg += '  - 32 hours: Second Written Warning\n';
+            msg += '  - 40 hours: Termination Eligible\n';
+
+            msg += '\nPlease be mindful of attendance going forward. Let me know if you have any questions.';
+
+        // Scenario 3: no unexcused hours
+        } else {
+            msg += '\nNo unexcused hours against your reliability right now. You\'re in good shape!\n';
+            if (ptost.ptostUsed > 0) {
+                msg += 'All ' + ptost.ptostUsed + ' hours of unplanned time have been excused as PTOST.\n';
+            }
+            msg += '\nKeep it up!';
         }
 
         return msg;
