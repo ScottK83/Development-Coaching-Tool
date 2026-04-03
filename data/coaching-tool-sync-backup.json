@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-03T21:12:43.389Z",
+  "generatedAt": "2026-04-03T21:15:15.118Z",
   "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2955,7 +2955,7 @@
     "devCoachingTool_attendanceTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 14883
+      "byteLength": 21193
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
