@@ -1560,21 +1560,36 @@ function bindNavigationHandlers() {
     // --- Review Prep ---
     document.getElementById('reviewPrepBtn')?.addEventListener('click', () => {
         showOnlySection('reviewPrepSection');
+        ensureReviewPrepMounted('subSectionOnOffTracker');
         showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
         initializeOnOffTracker();
     });
     document.getElementById('subNavRpScoreCard')?.addEventListener('click', () => {
+        ensureReviewPrepMounted('subSectionOnOffTracker');
         showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
         initializeOnOffTracker();
     });
     document.getElementById('subNavRpQuarterly')?.addEventListener('click', () => {
+        ensureReviewPrepMounted('subSectionQ1Review');
         showReviewPrepSubSection('subSectionQ1Review', 'subNavRpQuarterly');
         if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
     });
     document.getElementById('subNavRpYearEnd')?.addEventListener('click', () => {
+        ensureReviewPrepMounted('subSectionYearEnd');
         showReviewPrepSubSection('subSectionYearEnd', 'subNavRpYearEnd');
         initializeYearEndComments();
     });
+}
+
+// --- DOM mount helper for Review Prep ---
+// Moves sub-sections from coachingEmailSection into reviewPrepContent on first use
+
+function ensureReviewPrepMounted(subSectionId) {
+    var container = document.getElementById('reviewPrepContent');
+    var subSection = document.getElementById(subSectionId);
+    if (!container || !subSection) return;
+    if (subSection.parentElement === container) return;
+    container.appendChild(subSection);
 }
 
 // --- DOM mount helpers for Trends & Analysis ---

@@ -54,7 +54,9 @@
 
     // --- My Team sub-sections ---
 
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance'];
+    // Include legacy sub-section IDs that are still children of coachingEmailSection
+    // so they get hidden when switching My Team tabs
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionSentiment', 'subSectionMetricTrends', 'subSectionTrendIntelligence', 'subSectionCenterRanking', 'subSectionFutures', 'subSectionPto'];
     var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavAttendance'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionMorningPulse: 'subNavMorningPulse',
