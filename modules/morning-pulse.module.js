@@ -293,8 +293,12 @@
                 `<div><div style="font-weight:600; font-size:0.8em; color:#666; margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
             `</div>` +
             focalHtml +
-            `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                `style="background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em; margin-top:auto;">\uD83D\uDCAC Quick Check-in</button>` +
+            `<div style="display:flex; gap:8px; margin-top:auto;">` +
+                `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                    `style="flex:1; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83D\uDCAC Check-in</button>` +
+                `<button type="button" class="pulse-highfive-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                    `style="flex:1; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83C\uDF89 High-Five</button>` +
+            `</div>` +
         `</div>`;
     }
 
@@ -381,6 +385,73 @@
         return message;
     }
 
+    // --- Weekend High-Five message generation ---
+
+    async function generateHighFiveMessage(employeeName, latestKey, baselineKey) {
+        const period = getPeriodData(latestKey);
+        const emp = period?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const endDate = getEndDateLabel(latestKey, period);
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+
+        const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+        if (!analysis) return null;
+
+        const allMetrics = analysis.allMetrics || [];
+        const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
+        const biggestJump = getBiggestJump(weekDeltas);
+
+        // Get all wins sorted by how far above target
+        const wins = allMetrics
+            .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
+            .sort((a, b) => {
+                if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
+                const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
+                const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
+                return mB - mA;
+            });
+
+        // Build the celebration — no coaching, no focus areas, pure praise
+        let message = `Hey ${firstName}! \uD83C\uDF89\uD83D\uDE4C`;
+
+        if (biggestJump && biggestJump.delta > 0) {
+            message += ` What a week! You made an incredible jump in ${biggestJump.label} \u2014 ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
+        } else if (wins.length >= 2) {
+            message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} and ${wins[1].label} at ${fmtVal(wins[1])} were outstanding! \uD83D\uDD25\uD83D\uDCAA`;
+        } else if (wins.length === 1) {
+            message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} was outstanding! \uD83D\uDD25`;
+        } else {
+            message += ` I wanted to take a second to recognize your effort this week. You showed up and put in the work, and that matters. \uD83D\uDCAA`;
+        }
+
+        // Add more wins if available
+        if (wins.length > 2 && biggestJump) {
+            const extraWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 2);
+            if (extraWins.length > 0) {
+                const extras = extraWins.map(w => `${w.label} at ${fmtVal(w)}`).join(' and ');
+                message += ` On top of that, ${extras} \u2014 you're on a roll!`;
+            }
+        }
+
+        // Count how many metrics are on track
+        const onTrackCount = allMetrics.filter(m => m.meetsTarget).length;
+        if (onTrackCount >= allMetrics.length * 0.7 && allMetrics.length > 3) {
+            message += `\n\n${onTrackCount} out of ${allMetrics.length} metrics hitting target \u2014 that's consistency right there. \u2B50`;
+        }
+
+        message += `\n\nProud of you. Enjoy your weekend! \uD83D\uDE80\uD83C\uDF1F`;
+
+        return message;
+    }
+
     // --- Summary bar ---
 
     function buildSummaryBar(cardData, numUploads) {
@@ -413,15 +484,22 @@
 
     // --- Modal ---
 
-    function showCheckinModal(employeeName, message, latestKey, baselineKey) {
+    function showCheckinModal(employeeName, message, latestKey, baselineKey, messageType) {
         const existing = document.getElementById('pulseCheckinModal');
         if (existing) existing.remove();
 
+        const isHighFive = messageType === 'highfive';
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
+        const titleIcon = isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
+        const titleText = isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}` : `Check-in for ${escapeHtml(firstName)}`;
+        const copyGradient = isHighFive
+            ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
+            : 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)';
 
         const overlay = document.createElement('div');
         overlay.id = 'pulseCheckinModal';
@@ -430,12 +508,12 @@
 
         overlay.innerHTML = `<div style="background:white; border-radius:12px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
             `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">` +
-                `<h3 style="margin:0; color:#1a237e;">\uD83D\uDCAC Check-in for ${escapeHtml(firstName)}</h3>` +
+                `<h3 style="margin:0; color:#1a237e;">${titleIcon} ${titleText}</h3>` +
                 `<button id="pulseCheckinClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:#999; padding:4px 8px;">\u2715</button>` +
             `</div>` +
             `<textarea id="pulseCheckinText" style="width:100%; height:180px; padding:14px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; color:#333; background:#f9f9f9; resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
             `<div style="display:flex; gap:10px; margin-top:14px;">` +
-                `<button id="pulseCheckinCopy" style="flex:1; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDCCB Copy to Clipboard</button>` +
+                `<button id="pulseCheckinCopy" style="flex:1; background:${copyGradient}; color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDCCB Copy to Clipboard</button>` +
                 `<button id="pulseCheckinRegenerate" style="flex:1; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDD04 Regenerate</button>` +
             `</div>` +
         `</div>`;
@@ -453,12 +531,13 @@
             } catch (e) { textarea.select(); }
         });
 
+        const generateFn = isHighFive ? generateHighFiveMessage : generateCheckinMessage;
         document.getElementById('pulseCheckinRegenerate').addEventListener('click', async () => {
             const regenBtn = document.getElementById('pulseCheckinRegenerate');
             regenBtn.textContent = '\u23F3 Regenerating...';
             regenBtn.disabled = true;
             try {
-                const newMessage = await generateCheckinMessage(employeeName, latestKey, baselineKey);
+                const newMessage = await generateFn(employeeName, latestKey, baselineKey);
                 if (newMessage) {
                     document.getElementById('pulseCheckinText').value = newMessage;
                     try {
@@ -532,7 +611,7 @@
         const rangeText = baseDate && baseDate !== endDate ? `${baseDate} \u2013 ${endDate}` : endDate;
         html += `<div style="margin-bottom:16px;">` +
             `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Morning Pulse \u2014 ${rangeText}</h3>` +
-            `<p style="color:#666; margin:0; font-size:0.9em;">Your team's weekly trajectory at a glance. Click "Quick Check-in" to generate a ready-to-send message.</p>` +
+            `<p style="color:#666; margin:0; font-size:0.9em;">Your team's weekly trajectory at a glance. Use "Check-in" for coaching or "High-Five" for a Friday shoutout.</p>` +
         `</div>`;
 
         // Summary bar
@@ -561,11 +640,38 @@
                         if (typeof showToast === 'function') showToast('Could not generate check-in for ' + empName, 3000);
                         return;
                     }
-                    showCheckinModal(empName, message, latestKey, baselineKey);
+                    showCheckinModal(empName, message, latestKey, baselineKey, 'checkin');
 
                     try {
                         await navigator.clipboard.writeText(message);
                         if (typeof showToast === 'function') showToast('Check-in copied to clipboard!', 3000);
+                    } catch (e) { /* clipboard not available */ }
+                } finally {
+                    this.textContent = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // Bind high-five buttons
+        container.querySelectorAll('.pulse-highfive-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const empName = this.dataset.employee;
+                const originalText = this.textContent;
+                this.textContent = '\u23F3 Generating...';
+                this.disabled = true;
+
+                try {
+                    const message = await generateHighFiveMessage(empName, latestKey, baselineKey);
+                    if (!message) {
+                        if (typeof showToast === 'function') showToast('Could not generate high-five for ' + empName, 3000);
+                        return;
+                    }
+                    showCheckinModal(empName, message, latestKey, baselineKey, 'highfive');
+
+                    try {
+                        await navigator.clipboard.writeText(message);
+                        if (typeof showToast === 'function') showToast('High-five copied to clipboard!', 3000);
                     } catch (e) { /* clipboard not available */ }
                 } finally {
                     this.textContent = originalText;
@@ -586,6 +692,7 @@
     window.DevCoachModules.morningPulse = {
         initializeMorningPulse,
         renderMorningPulse,
-        generateCheckinMessage
+        generateCheckinMessage,
+        generateHighFiveMessage
     };
 })();
