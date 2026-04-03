@@ -685,8 +685,8 @@
 
         // Upload row
         html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">';
-        html += '<input type="file" id="attendanceVerintInput" accept=".xlsx,.xls" style="display:none;">';
-        html += '<button type="button" id="attendanceVerintBtn" style="background:linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Verint Excel</button>';
+        html += '<input type="file" id="attendanceVerintInput" accept=".xlsx,.xls" multiple style="display:none;">';
+        html += '<button type="button" id="attendanceVerintBtn" style="background:linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Verint Excel(s)</button>';
         html += '<span id="attendanceVerintFileName" style="font-size:0.85em; color:#666;"></span>';
         html += '</div>';
 
@@ -712,50 +712,52 @@
         });
 
         document.getElementById('attendanceVerintInput')?.addEventListener('change', async function() {
-            var file = this.files?.[0];
-            if (!file) return;
+            var files = Array.from(this.files || []);
+            if (!files.length) return;
 
-            document.getElementById('attendanceVerintFileName').textContent = file.name;
+            var loaded = 0;
+            var errors = 0;
+            var lastMatchedName = '';
+            var store = loadStore();
+            if (!store.associates) store.associates = {};
 
-            try {
-                var result = await parseVerintExcel(file);
-                if (!result.employeeName) {
-                    if (typeof showToast === 'function') showToast('Could not find employee name in Verint file', 5000);
-                    return;
+            document.getElementById('attendanceVerintFileName').textContent = files.length + ' file' + (files.length !== 1 ? 's' : '') + ' selected';
+
+            for (var f = 0; f < files.length; f++) {
+                try {
+                    var result = await parseVerintExcel(files[f]);
+                    if (!result.employeeName) {
+                        console.warn('No employee name found in:', files[f].name);
+                        errors++;
+                        continue;
+                    }
+
+                    var matchedName = matchEmployeeToExisting(result.employeeName);
+                    if (!store.associates[matchedName]) store.associates[matchedName] = {};
+                    store.associates[matchedName].verintData = result;
+                    lastMatchedName = matchedName;
+                    loaded++;
+                } catch (err) {
+                    console.error('Verint parse error for', files[f].name, ':', err);
+                    errors++;
                 }
+            }
 
-                // Match to existing employee
-                var matchedName = matchEmployeeToExisting(result.employeeName);
+            saveStore(store);
 
-                // Save
-                var store = loadStore();
-                if (!store.associates) store.associates = {};
-                if (!store.associates[matchedName]) store.associates[matchedName] = {};
-                store.associates[matchedName].verintData = result;
-                saveStore(store);
+            if (typeof showToast === 'function') {
+                if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
+                else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded!', 4000);
+            }
 
-                if (typeof showToast === 'function') showToast('Verint data loaded for ' + matchedName, 4000);
-
-                // Auto-select this associate and refresh
+            // Refresh the dropdown and auto-select last loaded
+            initializeAttendanceTracker();
+            if (lastMatchedName) {
                 var select = document.getElementById('attendanceAssociateSelect');
                 if (select) {
-                    // Add option if not present
-                    var found = false;
-                    for (var i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === matchedName) { found = true; break; }
-                    }
-                    if (!found) {
-                        var opt = document.createElement('option');
-                        opt.value = matchedName;
-                        opt.textContent = matchedName + ' (Verint data loaded)';
-                        select.appendChild(opt);
-                    }
-                    select.value = matchedName;
+                    select.value = lastMatchedName;
                     select.dispatchEvent(new Event('change'));
                 }
-            } catch (err) {
-                console.error('Verint parse error:', err);
-                if (typeof showToast === 'function') showToast('Error parsing Verint file: ' + err, 5000);
             }
 
             this.value = '';

@@ -1462,13 +1462,22 @@ function bindUploadAndPasteHandlers() {
         document.getElementById('uploadVerintFileInput')?.click();
     });
     document.getElementById('uploadVerintFileInput')?.addEventListener('change', async function() {
-        var file = this.files?.[0];
-        if (!file) return;
-        try {
-            await window.DevCoachModules?.attendanceTracker?.handleVerintUploadFromUploadPage?.(file);
-        } catch (err) {
-            console.error('Verint upload error:', err);
-            if (typeof showToast === 'function') showToast('Error: ' + err, 5000);
+        var files = Array.from(this.files || []);
+        if (!files.length) return;
+        var loaded = 0;
+        var errors = 0;
+        for (var i = 0; i < files.length; i++) {
+            try {
+                await window.DevCoachModules?.attendanceTracker?.handleVerintUploadFromUploadPage?.(files[i]);
+                loaded++;
+            } catch (err) {
+                console.error('Verint upload error for file ' + files[i].name + ':', err);
+                errors++;
+            }
+        }
+        if (typeof showToast === 'function') {
+            if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
+            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
         }
         this.value = '';
     });
