@@ -46,7 +46,9 @@
         'Tardy EQ GT 6 Min':        { bg: '#fff3e0', text: '#e65100' },
         'Tardy EQ GT 6 Min PTOST':  { bg: '#e3f2fd', text: '#0d47a1' },
         'Tardy LT 6 Min':           { bg: '#f5f5f5', text: '#616161' },
-        'VTO-PTO':                  { bg: '#f3e5f5', text: '#6a1b9a' }
+        'VTO-PTO':                  { bg: '#f3e5f5', text: '#6a1b9a' },
+        'Alternate Day Off':        { bg: '#e0f2f1', text: '#004d40' },
+        'Extra Day off':            { bg: '#e0f2f1', text: '#004d40' }
     };
     var DEFAULT_ACTIVITY_COLOR = { bg: '#f5f5f5', text: '#333' };
 
@@ -406,6 +408,14 @@
             .sort(function(a, b) { return a.fromDate.localeCompare(b.fromDate); });
     }
 
+    var PLANNED_CATEGORIES = ['Pre Planned Absence', 'Holiday', 'VTO-PTO', 'Alternate Day Off', 'Extra Day off'];
+
+    function getPlannedLineItems(activities) {
+        return activities
+            .filter(function(a) { return PLANNED_CATEGORIES.indexOf(a.activity) !== -1; })
+            .sort(function(a, b) { return a.fromDate.localeCompare(b.fromDate); });
+    }
+
     // --- Name Matching ---
 
     function normalizeNameForMatch(name) {
@@ -497,6 +507,7 @@
         var fmlaActivities = (data.activities || []).filter(function(a) { return a.activity === 'FMLA'; });
         var unplannedItems = getUnplannedLineItems(data.activities || []);
         var reclassItems = getNeedsReclassificationItems(data.activities || []);
+        var plannedItems = getPlannedLineItems(data.activities || []);
 
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
@@ -586,6 +597,24 @@
                 html += '<td style="padding:8px;"><span style="padding:2px 8px; border-radius:4px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.9em;">' + escHtml(item.activity) + '</span></td>';
                 html += '<td style="padding:8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
                 html += '<td style="padding:8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.85em;">' + statusLabel + '</td>';
+                html += '</tr>';
+            });
+            html += '</table></div></div>';
+        }
+
+        // Planned Time Off
+        if (plannedItems.length > 0) {
+            var plannedTotalHrs = round2(plannedItems.reduce(function(s, i) { return s + i.hours; }, 0));
+            html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #2e7d32;">';
+            html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">Planned Time Off (' + plannedItems.length + ' entries, ' + plannedTotalHrs + 'h)</h4>';
+            html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
+            html += '<tr style="background:#e8f5e9;"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Type</th><th style="padding:8px; text-align:right;">Hours</th></tr>';
+            plannedItems.forEach(function(item) {
+                var colors = ACTIVITY_COLORS[item.activity] || { bg: '#e8f5e9', text: '#2e7d32' };
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:8px;">' + formatDateDisplay(item.fromDate) + '</td>';
+                html += '<td style="padding:8px;"><span style="padding:2px 8px; border-radius:4px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.9em;">' + escHtml(item.activity) + '</span></td>';
+                html += '<td style="padding:8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
                 html += '</tr>';
             });
             html += '</table></div></div>';
