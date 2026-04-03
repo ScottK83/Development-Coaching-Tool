@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-02T20:39:56.395Z",
-  "reason": "team members updated",
+  "generatedAt": "2026-04-03T21:11:14.986Z",
+  "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -2836,7 +2836,19 @@
   },
   "coachingHistory": {},
   "callListeningLogs": {},
-  "sentimentPhraseDatabase": {},
+  "sentimentPhraseDatabase": {
+    "positive": {
+      "A": [],
+      "C": []
+    },
+    "negative": {
+      "A": [],
+      "C": []
+    },
+    "emotions": {
+      "C": []
+    }
+  },
   "associateSentimentSnapshots": {},
   "myTeamMembers": {
     "2026-03-26|2026-04-01": [
@@ -2935,25 +2947,30 @@
       "itemCount": 1,
       "byteLength": 294
     },
-    "devCoachingTool_ytdData": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 48772
-    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
       "byteLength": 9390
+    },
+    "devCoachingTool_ytdData": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 48772
     },
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
       "itemCount": 4,
       "byteLength": 116
     },
+    "devCoachingTool_attendanceTracker": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 8007
+    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+      "itemCount": 3,
+      "byteLength": 75
     },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
@@ -2970,15 +2987,15 @@
       "itemCount": 1,
       "byteLength": 14
     },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 126
-    },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
       "byteLength": 266
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 232
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
