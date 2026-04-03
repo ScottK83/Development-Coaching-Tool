@@ -975,11 +975,17 @@
         });
 
         document.getElementById('attendanceAssociateSelect')?.addEventListener('change', function() {
-            var empDash = document.getElementById('attendanceEmployeeDashboard');
-            if (!empDash) return;
-            var name = this.value;
-            if (!name) { empDash.innerHTML = ''; return; }
-            renderAttendanceDashboard(empDash, name);
+            try {
+                var empDash = document.getElementById('attendanceEmployeeDashboard');
+                if (!empDash) { console.error('attendanceEmployeeDashboard not found'); return; }
+                var name = this.value;
+                if (!name) { empDash.innerHTML = ''; return; }
+                console.log('[Attendance] Rendering dashboard for:', name);
+                renderAttendanceDashboard(empDash, name);
+                console.log('[Attendance] Dashboard rendered successfully');
+            } catch (e) {
+                console.error('[Attendance] RENDER CRASH:', e.message, e.stack);
+            }
         });
     }
 
@@ -1006,6 +1012,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.attendanceTracker = {
         initializeAttendanceTracker: initializeAttendanceTracker,
+        renderAttendanceDashboard: renderAttendanceDashboard,
         parseVerintExcel: parseVerintExcel,
         handleVerintUploadFromUploadPage: handleVerintUploadFromUploadPage
     };
