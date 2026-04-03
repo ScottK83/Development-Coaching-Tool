@@ -434,6 +434,51 @@
         return cleanStr(name).toLowerCase().replace(/\s+/g, ' ');
     }
 
+    // --- Payroll PTO Report Parser ---
+
+    function parsePayrollPtoText(text) {
+        // Parse PWMS1001 PTO & Vacation Balances report text
+        // Format: lines with numbers followed by name lines
+        // ID DEPT PLAN  PREVYR  EARNED  TAKEN  ADJUST  REMAINING
+        // Name  Description
+        var results = [];
+        var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+
+            // Match data line: ID DEPT PTO  numbers...
+            // e.g.: "17347 6790 PTO     11.73    160.00     78.50      0.00     93.23"
+            var dataMatch = line.match(/^\d+\s+\d+\s+PTO\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\s+([\d.]+)/);
+            if (dataMatch) {
+                var prevYr = parseFloat(dataMatch[1]);
+                var earned = parseFloat(dataMatch[2]);
+                var taken = parseFloat(dataMatch[3]);
+                var remaining = parseFloat(dataMatch[5]);
+
+                // Next line should be the name
+                var nameLine = (i + 1 < lines.length) ? lines[i + 1] : '';
+                // Clean: name is everything before "Transition" or the department description
+                var nameClean = nameLine.split(/\s{2,}|Transition/)[0].trim();
+                // Remove trailing spaces and description
+                nameClean = nameClean.replace(/\s+$/, '');
+
+                if (nameClean && !nameClean.match(/^[\d=_*]+$/) && !nameClean.match(/^(Total|End|Report|Run|PTO)/i)) {
+                    results.push({
+                        name: nameClean,
+                        prevYr: round2(prevYr),
+                        earned: round2(earned),
+                        taken: round2(taken),
+                        remaining: round2(remaining)
+                    });
+                    i++; // Skip the name line
+                }
+            }
+        }
+
+        return results;
+    }
+
     function matchEmployeeToExisting(verintName) {
         // Verint format: "LastName, FirstName  " (with possible trailing spaces)
         var cleaned = cleanStr(verintName);
@@ -937,7 +982,17 @@
         html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">';
         html += '<input type="file" id="attendanceVerintInput" accept=".xlsx,.xls" multiple style="display:none;">';
         html += '<button type="button" id="attendanceVerintBtn" style="background:linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Verint Excel(s)</button>';
-        html += '<span id="attendanceVerintFileName" style="font-size:0.85em; color:#666;"></span>';
+        html += '<button type="button" id="attendancePayrollPdfBtn" style="background:linear-gradient(135deg, #00695c 0%, #004d40 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Import Payroll PTO Report</button>';
+        html += '<span id="attendanceUploadStatus" style="font-size:0.85em; color:#666;"></span>';
+        html += '</div>';
+
+        // Payroll PTO paste area (hidden until button clicked)
+        html += '<div id="payrollPtoPasteArea" style="display:none; margin-bottom:16px; padding:14px; background:#fff; border-radius:8px; border:2px solid #00695c;">';
+        html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Paste Payroll PTO Report</h4>';
+        html += '<p style="margin:0 0 8px 0; font-size:0.85em; color:#666;">Open the PWMS1001 PDF, Ctrl+A to select all, Ctrl+C to copy, then paste below.</p>';
+        html += '<textarea id="payrollPtoTextarea" placeholder="Paste report text here..." style="width:100%; height:120px; padding:10px; border:1px solid #ddd; border-radius:4px; font-family:monospace; font-size:0.82em; resize:vertical;"></textarea>';
+        html += '<button type="button" id="parsePayrollPtoBtn" style="margin-top:8px; background:#00695c; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:bold;">Parse & Apply</button>';
+        html += '<span id="payrollPtoParseStatus" style="margin-left:10px; font-size:0.85em;"></span>';
         html += '</div>';
 
         // Associate dropdown
@@ -974,6 +1029,46 @@
         // Bind events
         document.getElementById('attendanceVerintBtn')?.addEventListener('click', function() {
             document.getElementById('attendanceVerintInput')?.click();
+        });
+
+        // Payroll PTO paste toggle
+        document.getElementById('attendancePayrollPdfBtn')?.addEventListener('click', function() {
+            var area = document.getElementById('payrollPtoPasteArea');
+            if (area) area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Parse payroll PTO text
+        document.getElementById('parsePayrollPtoBtn')?.addEventListener('click', function() {
+            var text = document.getElementById('payrollPtoTextarea')?.value || '';
+            var status = document.getElementById('payrollPtoParseStatus');
+            if (!text.trim()) { if (status) status.textContent = 'Paste the report first.'; return; }
+
+            var parsed = parsePayrollPtoText(text);
+            if (parsed.length === 0) { if (status) status.textContent = 'Could not parse any employees.'; return; }
+
+            var store = loadStore();
+            if (!store.associates) store.associates = {};
+            var matched = 0;
+            parsed.forEach(function(entry) {
+                var matchedName = matchEmployeeToExisting(entry.name);
+                if (!store.associates[matchedName]) store.associates[matchedName] = {};
+                if (!store.associates[matchedName].manualPto) store.associates[matchedName].manualPto = {};
+                store.associates[matchedName].manualPto.carryover = entry.prevYr;
+                store.associates[matchedName].manualPto.allotment = entry.earned;
+                store.associates[matchedName].manualPto.payrollRemaining = entry.remaining;
+                store.associates[matchedName].manualPto.payrollTaken = entry.taken;
+                matched++;
+            });
+            saveStore(store);
+
+            if (status) status.textContent = matched + ' associates updated!';
+            if (typeof showToast === 'function') showToast(matched + ' PTO balances imported from payroll report.', 4000);
+
+            // Re-render if an associate is selected
+            var select = document.getElementById('attendanceAssociateSelect');
+            if (select?.value) {
+                renderAttendanceDashboard(container, select.value);
+            }
         });
 
         document.getElementById('attendanceVerintInput')?.addEventListener('change', async function() {
