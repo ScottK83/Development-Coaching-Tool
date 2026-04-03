@@ -513,26 +513,6 @@
             return;
         }
 
-        var ptost = calculatePtostUsage(data.ptoSubCategories || {});
-
-        // Add missed lunch adjustments
-        var missedLunchTotal = 0;
-        unplannedItems.forEach(function(item) {
-            var key = item.fromDate + '|' + item.activity;
-            if (lunchFlags[key]) missedLunchTotal += 0.5;
-        });
-        if (missedLunchTotal > 0) {
-            // Missed lunch adds to unplanned-not-ptost (against reliability)
-            ptost.unplannedNotPtost = round2(ptost.unplannedNotPtost + missedLunchTotal);
-            ptost.totalUnplanned = round2(ptost.totalUnplanned + missedLunchTotal);
-            ptost.policyHours = ptost.unplannedNotPtost;
-            ptost.reclassificationGap = ptost.unplannedNotPtost;
-            ptost.canExcuse = round2(Math.min(ptost.unplannedNotPtost, ptost.ptostRemaining));
-            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.unplannedNotPtost - ptost.ptostRemaining));
-            ptost.missedLunchTotal = missedLunchTotal;
-        }
-
-        var tier = calculateDisciplineTier(ptost.policyHours);
         var fmlaData = data.summary?.['FMLA'] || { used: 0 };
         var fmlaActivities = (data.activities || []).filter(function(a) { return a.activity === 'FMLA'; });
         var unplannedItems = getUnplannedLineItems(data.activities || []);
@@ -555,6 +535,24 @@
                 lunchFlags[key] = true;
             }
         });
+
+        // Calculate PTOST usage + missed lunch adjustments
+        var ptost = calculatePtostUsage(data.ptoSubCategories || {});
+        var missedLunchTotal = 0;
+        unplannedItems.forEach(function(item) {
+            var key = item.fromDate + '|' + item.activity;
+            if (lunchFlags[key]) missedLunchTotal += 0.5;
+        });
+        if (missedLunchTotal > 0) {
+            ptost.unplannedNotPtost = round2(ptost.unplannedNotPtost + missedLunchTotal);
+            ptost.totalUnplanned = round2(ptost.totalUnplanned + missedLunchTotal);
+            ptost.policyHours = ptost.unplannedNotPtost;
+            ptost.reclassificationGap = ptost.unplannedNotPtost;
+            ptost.canExcuse = round2(Math.min(ptost.unplannedNotPtost, ptost.ptostRemaining));
+            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.unplannedNotPtost - ptost.ptostRemaining));
+            ptost.missedLunchTotal = missedLunchTotal;
+        }
+        var tier = calculateDisciplineTier(ptost.policyHours);
 
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
