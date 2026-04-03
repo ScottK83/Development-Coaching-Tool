@@ -130,7 +130,7 @@
                     if (!XLSX) { reject('XLSX library not loaded'); return; }
                     var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
                     var ws = wb.Sheets[wb.SheetNames[0]];
-                    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+                    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
                     var result = parseVerintRows(rows);
                     resolve(result);
                 } catch (err) {
@@ -523,6 +523,27 @@
             html += '</div>';
         }
         html += '</div>';
+
+        // PTO Balance
+        var ptoSummary = data.summary?.['PTO'] || {};
+        var ptoTotal = round2(ptoSummary.total || 0);
+        var ptoCarryover = round2(ptoSummary.carryover || 0);
+        var ptoUsed = round2(ptoSummary.used || 0);
+        var ptoScheduled = round2(ptoSummary.scheduled || 0);
+        var ptoRemaining = round2(ptoSummary.remaining || 0);
+        var ptoAllotment = round2(ptoTotal - ptoCarryover);
+        var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
+
+        html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #2e7d32;">';
+        html += '<h4 style="margin:0 0 12px 0; color:#2e7d32;">PTO Balance</h4>';
+        html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 18);
+        html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-top:12px; text-align:center;">';
+        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.75em; color:#666;">Carryover</div></div>';
+        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#2e7d32;">' + ptoAllotment + 'h</div><div style="font-size:0.75em; color:#666;">Allotment</div></div>';
+        html += '<div style="padding:8px; background:#fff3e0; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#e65100;">' + ptoUsed + 'h</div><div style="font-size:0.75em; color:#666;">Used</div></div>';
+        html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#1565c0;">' + ptoScheduled + 'h</div><div style="font-size:0.75em; color:#666;">Scheduled</div></div>';
+        html += '<div style="padding:8px; background:#f5f5f5; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:' + ptoRemainingColor + ';">' + ptoRemaining + 'h</div><div style="font-size:0.75em; color:#666;">Remaining</div></div>';
+        html += '</div></div>';
 
         // Attendance Policy Status
         html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid ' + tier.tier.color + ';">';
