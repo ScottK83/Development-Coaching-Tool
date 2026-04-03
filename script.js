@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.02.9'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.03.1'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1504,8 +1504,8 @@ function bindNavigationHandlers() {
     // Consolidated: Trends (Intelligence + Metric Charts)
     document.getElementById('subNavTrends')?.addEventListener('click', () => {
         showSubSection('subSectionTrends', 'subNavTrends');
-        activateInnerTab('trends-inner-tab', 'subSectionTrendIntelligence', 'trendsInnerContent', function() {
-            handleSubNavTrendIntelligenceClick(true);
+        activateInnerTab('trends-inner-tab', 'subSectionMorningPulse', 'trendsInnerContent', function() {
+            if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
         });
     });
 
@@ -1665,6 +1665,7 @@ var INNER_TAB_INIT_MAP = {
     subSectionOnOffTracker: function() { initializeOnOffTracker(); },
     subSectionCenterRanking: function() { if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking(); },
     subSectionFutures: function() { if (typeof window.renderFutures === 'function') window.renderFutures(); },
+    subSectionMorningPulse: function() { if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse(); },
     subSectionTrendIntelligence: function() { handleSubNavTrendIntelligenceClick(true); },
     subSectionMetricTrends: function() { handleSubNavMetricTrendsClick(true); },
     subSectionQ1Review: function() { if (typeof window.renderQ1Review === 'function') window.renderQ1Review(); },

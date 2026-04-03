@@ -445,6 +445,11 @@ Box 2 - Future Improvement Areas:
                         <p style="color: #666; font-style: italic; margin-bottom: 20px;">Sentiment analysis content will appear here when you click the Sentiment button above.</p>
                     </div>
 
+                    <!-- Morning Pulse Sub-section -->
+                    <div id="subSectionMorningPulse" style="display: none;">
+                        <div id="morningPulseContainer"></div>
+                    </div>
+
                     <!-- Metric Trends Sub-section -->
                     <div id="subSectionMetricTrends" style="display: none;">
                         <p style="color: #666; font-style: italic; margin-bottom: 20px;">Metric trends content will appear here when you click the Metric Trends button above.</p>
@@ -583,7 +588,8 @@ Box 2 - Future Improvement Areas:
                     <!-- Consolidated: Trends (Metric Trends + Trend Intelligence) -->
                     <div id="subSectionTrends" style="display: none;">
                         <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
-                            <button type="button" class="trends-inner-tab" data-target="subSectionTrendIntelligence" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #9c27b0; color: white;">🧠 Intelligence</button>
+                            <button type="button" class="trends-inner-tab" data-target="subSectionMorningPulse" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #9c27b0; color: white;">☀️ Morning Pulse</button>
+                            <button type="button" class="trends-inner-tab" data-target="subSectionTrendIntelligence" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">🧠 Intelligence</button>
                             <button type="button" class="trends-inner-tab" data-target="subSectionMetricTrends" style="padding: 7px 16px; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.88em; background: #e0e0e0; color: #555;">📈 Metric Charts</button>
                         </div>
                         <div id="trendsInnerContent"></div>
@@ -1586,6 +1592,7 @@ Box 2 - Future Improvement Areas:
                 'modules/employee-list.module.js',
                 'modules/trend-intelligence.module.js',
                 'modules/trend-coaching-email.module.js',
+                'modules/morning-pulse.module.js',
                 'modules/copilot-prompt.module.js',
                 'modules/team-snapshot.module.js',
                 'modules/center-ranking.module.js',
