@@ -567,25 +567,27 @@
         // Upload info
         html += '<div style="margin-bottom:12px; font-size:0.85em; color:#666;">Verint data uploaded: ' + new Date(data.uploadedAt).toLocaleDateString() + (data.organization ? ' | Org: ' + escHtml(data.organization) : '') + '</div>';
 
-        // --- Always-visible summary cards ---
-
-        // PTOST Tracker
+        // ===== ALWAYS VISIBLE: Reliability Status =====
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
-        html += '<h4 style="margin:0 0 12px 0; color:#0d47a1;">PTOST Tracker (40 hrs/year)</h4>';
-        html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 20);
+        html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Reliability</h4>';
+        html += renderTierBar(ptost.policyHours);
         html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; text-align:center;">';
-        html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Used</div></div>';
-        html += '<div style="padding:8px; background:#fff3e0; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.75em; color:#666;">Needs Reclassification</div></div>';
-        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Remaining</div></div>';
+        html += '<div style="padding:8px; background:' + tier.tier.bg + '; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:' + tier.tier.color + ';">' + ptost.policyHours + 'h</div><div style="font-size:0.75em; color:#666;">Against Reliability</div></div>';
+        html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Available</div></div>';
+        html += '<div style="padding:8px; border-radius:6px; background:' + (tier.nextTier ? tier.nextTier.bg : '#e8f5e9') + ';"><div style="font-size:1.3em; font-weight:700; color:' + (tier.nextTier ? tier.nextTier.color : '#2e7d32') + ';">' + (tier.nextTier ? tier.hoursUntilNext + 'h' : 'N/A') + '</div><div style="font-size:0.75em; color:#666;">' + (tier.nextTier ? 'Until ' + tier.nextTier.label : 'No next tier') + '</div></div>';
         html += '</div>';
-        if (ptost.reclassificationGap > 0) {
-            html += '<div style="margin-top:10px; padding:8px 12px; background:#fff3e0; border-radius:6px; border-left:3px solid #e65100; font-size:0.85em; color:#e65100;">';
-            html += '<strong>' + ptost.reclassificationGap + 'h</strong> need reclassification. Use Quick Messages below.';
-            html += '</div>';
+        html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
+        html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
+        if (ptost.canExcuse > 0) {
+            html += '<div style="font-size:0.85em; color:#1565c0; font-weight:600;">Can excuse ' + ptost.canExcuse + 'h with PTOST \u2192 ' + ptost.policyHoursAfterExcusing + 'h would remain</div>';
+        }
+        html += '</div>';
+        if (missedLunchTotal > 0) {
+            html += '<div style="margin-top:8px; font-size:0.8em; color:#666;">Includes ' + missedLunchTotal + 'h missed lunch (auto-added for absences over 4hrs)</div>';
         }
         html += '</div>';
 
-        // PTO Balance (from Verint)
+        // ===== ALWAYS VISIBLE: PTO Balance =====
         var ptoSummary = data.summary?.['PTO'] || {};
         var ptoTotal = round2(ptoSummary.total || 0);
         var ptoCarryover = round2(ptoSummary.carryover || 0);
@@ -594,16 +596,10 @@
         var ptoRemaining = round2(ptoSummary.remaining || 0);
         var ptoAllotment = round2(ptoTotal - ptoCarryover);
         var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
-
-        // Load manual PTO overrides
         var manualPto = store.associates?.[employeeName]?.manualPto || {};
-        var hasManual = manualPto.carryover !== undefined || manualPto.allotment !== undefined || manualPto.payrollRemaining !== undefined;
 
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
         html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">PTO Balance</h4>';
-
-        // Verint data row
-        html += '<div style="font-size:0.8em; color:#999; margin-bottom:6px;">From Verint:</div>';
         html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 16);
         html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:8px; text-align:center;">';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.7em; color:#666;">Carryover</div></div>';
@@ -612,78 +608,80 @@
         html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#1565c0;">' + ptoScheduled + 'h</div><div style="font-size:0.7em; color:#666;">Scheduled</div></div>';
         html += '<div style="padding:6px; background:#f5f5f5; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:' + ptoRemainingColor + ';">' + ptoRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
         html += '</div>';
-
         // Manual override inputs
-        html += '<div style="margin-top:14px; padding:12px; background:#f9f9f9; border-radius:6px; border:1px dashed #ccc;">';
-        html += '<div style="font-size:0.82em; color:#666; margin-bottom:8px; font-weight:600;">My Records (manual entry):</div>';
-        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">';
-        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">Carryover Hours:</label>';
-        html += '<input type="number" class="manual-pto-input" data-field="carryover" step="0.5" value="' + (manualPto.carryover !== undefined ? manualPto.carryover : '') + '" placeholder="' + ptoCarryover + '" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
-        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">Annual Allotment:</label>';
-        html += '<input type="number" class="manual-pto-input" data-field="allotment" step="0.5" value="' + (manualPto.allotment !== undefined ? manualPto.allotment : '') + '" placeholder="' + ptoAllotment + '" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
-        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">PTO Left (Payroll):</label>';
-        html += '<input type="number" class="manual-pto-input" data-field="payrollRemaining" step="0.5" value="' + (manualPto.payrollRemaining !== undefined ? manualPto.payrollRemaining : '') + '" placeholder="Enter hrs" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
+        html += '<div style="margin-top:12px; padding:10px; background:#f9f9f9; border-radius:6px; border:1px dashed #ccc;">';
+        html += '<div style="font-size:0.8em; color:#666; margin-bottom:6px; font-weight:600;">My Records:</div>';
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">';
+        html += '<div><label style="font-size:0.75em; color:#555; display:block; margin-bottom:2px;">Carryover:</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="carryover" step="0.5" value="' + (manualPto.carryover !== undefined ? manualPto.carryover : '') + '" placeholder="' + ptoCarryover + '" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:0.85em;"></div>';
+        html += '<div><label style="font-size:0.75em; color:#555; display:block; margin-bottom:2px;">Allotment:</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="allotment" step="0.5" value="' + (manualPto.allotment !== undefined ? manualPto.allotment : '') + '" placeholder="' + ptoAllotment + '" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:0.85em;"></div>';
+        html += '<div><label style="font-size:0.75em; color:#555; display:block; margin-bottom:2px;">PTO Left (Payroll):</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="payrollRemaining" step="0.5" value="' + (manualPto.payrollRemaining !== undefined ? manualPto.payrollRemaining : '') + '" placeholder="Enter hrs" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:0.85em;"></div>';
         html += '</div>';
-
-        // Show discrepancy if payroll remaining differs from Verint
         if (manualPto.payrollRemaining !== undefined && manualPto.payrollRemaining !== ptoRemaining) {
             var diff = round2(manualPto.payrollRemaining - ptoRemaining);
             var diffColor = Math.abs(diff) > 2 ? '#b71c1c' : '#e65100';
-            html += '<div style="margin-top:8px; padding:6px 10px; background:#fff3e0; border-radius:4px; border-left:3px solid ' + diffColor + '; font-size:0.82em; color:' + diffColor + ';">';
-            html += 'Discrepancy: Payroll says ' + manualPto.payrollRemaining + 'h remaining vs Verint ' + ptoRemaining + 'h (' + (diff > 0 ? '+' : '') + diff + 'h)';
+            html += '<div style="margin-top:6px; padding:5px 8px; background:#fff3e0; border-radius:4px; border-left:3px solid ' + diffColor + '; font-size:0.8em; color:' + diffColor + ';">';
+            html += 'Discrepancy: Payroll ' + manualPto.payrollRemaining + 'h vs Verint ' + ptoRemaining + 'h (' + (diff > 0 ? '+' : '') + diff + 'h)';
             html += '</div>';
         }
-
         html += '</div></div>';
 
-        // Attendance Policy Status
-        html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
-        html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Attendance Policy Status</h4>';
-        html += '<div style="font-size:0.82em; color:#666; margin-bottom:6px;">Unplanned hours not yet marked as PTOST count against reliability. PTOST-excused hours do not.</div>';
-        html += renderTierBar(ptost.policyHours);
-        html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
-        html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
-        html += '<div style="font-size:0.85em; color:#666;">' + ptost.policyHours + 'h currently against reliability</div>';
-        if (ptost.canExcuse > 0) {
-            html += '<div style="font-size:0.82em; color:#1565c0; font-weight:600;">Can excuse ' + ptost.canExcuse + 'h with PTOST \u2192 ' + ptost.policyHoursAfterExcusing + 'h would remain</div>';
-        }
-        if (tier.nextTier) {
-            html += '<div style="font-size:0.82em; color:' + tier.nextTier.color + '; font-weight:600;">' + tier.hoursUntilNext + 'h until ' + tier.nextTier.label + '</div>';
-        }
-        html += '</div></div>';
-
-        // --- Collapsible detail sections ---
-
+        // ===== COLLAPSIBLE SECTIONS =====
         var detailStyle = 'margin-bottom:12px; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;';
         var summaryStyle = 'padding:12px 16px; cursor:pointer; font-weight:600; font-size:0.95em; background:#fafafa; user-select:none;';
         var contentStyle = 'padding:12px 16px;';
 
+        // Helper for line item tables
+        function buildTable(items, headerBg, columns) {
+            var t = '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            t += '<tr style="background:' + headerBg + ';">';
+            columns.forEach(function(col) { t += '<th style="padding:6px 8px; text-align:' + (col.align || 'left') + ';">' + col.label + '</th>'; });
+            t += '</tr>';
+            items.forEach(function(item) {
+                var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
+                var lunchKey = item.fromDate + '|' + item.activity;
+                var hasLunch = !!lunchFlags[lunchKey];
+                var hrs = hasLunch ? round2(item.hours + 0.5) : item.hours;
+                var isPtost = PTOST_CATEGORIES.indexOf(item.activity) !== -1;
+                t += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                t += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
+                t += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
+                t += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + hrs + 'h' + (hasLunch ? ' <span style="font-size:0.78em; color:#999;">(+.5 lunch)</span>' : '') + '</td>';
+                if (columns.length > 3) {
+                    var statusLabel = isPtost ? 'Excused' : 'Unexcused';
+                    var statusColor = isPtost ? '#0d47a1' : '#e65100';
+                    t += '<td style="padding:6px 8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.82em;">' + statusLabel + '</td>';
+                }
+                t += '</tr>';
+            });
+            t += '</table>';
+            return t;
+        }
+
         // Unplanned Absences
         if (unplannedItems.length > 0) {
             var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0) + missedLunchTotal);
-            html += '<details style="' + detailStyle + '" open>';
-            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h' + (missedLunchTotal > 0 ? ' incl. ' + missedLunchTotal + 'h missed lunch' : '') + ')</summary>';
+            html += '<details style="' + detailStyle + '">';
+            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
             html += '<div style="' + contentStyle + '">';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Missed Lunch</th><th style="padding:6px 8px; text-align:center;">Status</th></tr>';
-            unplannedItems.forEach(function(item, idx) {
-                var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
-                var isPtost = PTOST_CATEGORIES.indexOf(item.activity) !== -1;
-                var statusLabel = isPtost ? 'PTOST' : 'Needs Reclassification';
-                var statusColor = isPtost ? '#0d47a1' : '#e65100';
-                var lunchKey = item.fromDate + '|' + item.activity;
-                var isLunchFlagged = !!lunchFlags[lunchKey];
-                var effectiveHours = isLunchFlagged ? round2(item.hours + 0.5) : item.hours;
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
-                html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
-                html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
-                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + effectiveHours + 'h' + (isLunchFlagged ? ' <span style="font-size:0.8em; color:#999;">(+0.5)</span>' : '') + '</td>';
-                html += '<td style="padding:6px 8px; text-align:center;"><input type="checkbox" class="missed-lunch-toggle" data-key="' + escHtml(lunchKey) + '" data-employee="' + escHtml(employeeName) + '" ' + (isLunchFlagged ? 'checked' : '') + ' style="cursor:pointer; width:16px; height:16px;"></td>';
-                html += '<td style="padding:6px 8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.82em;">' + statusLabel + '</td>';
-                html += '</tr>';
-            });
-            html += '</table></div></details>';
+            html += buildTable(unplannedItems, '#eceff1', [
+                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }, { label: 'Status', align: 'center' }
+            ]);
+            html += '</div></details>';
         }
+
+        // PTOST Details
+        html += '<details style="' + detailStyle + '">';
+        html += '<summary style="' + summaryStyle + 'color:#0d47a1;">PTOST Details (' + ptost.ptostUsed + 'h used of ' + PTOST_ANNUAL_LIMIT + 'h, ' + ptost.ptostRemaining + 'h remaining)</summary>';
+        html += '<div style="' + contentStyle + '">';
+        html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 16);
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; text-align:center;">';
+        html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.7em; color:#666;">Used</div></div>';
+        html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Needs Reclassification</div></div>';
+        html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
+        html += '</div></div></details>';
 
         // Planned Time Off
         if (plannedItems.length > 0) {
@@ -691,17 +689,10 @@
             html += '<details style="' + detailStyle + '">';
             html += '<summary style="' + summaryStyle + 'color:#2e7d32;">Planned Time Off (' + plannedItems.length + ' entries, ' + plannedTotalHrs + 'h)</summary>';
             html += '<div style="' + contentStyle + '">';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<tr style="background:#e8f5e9;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Type</th><th style="padding:6px 8px; text-align:right;">Hours</th></tr>';
-            plannedItems.forEach(function(item) {
-                var colors = ACTIVITY_COLORS[item.activity] || { bg: '#e8f5e9', text: '#2e7d32' };
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
-                html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
-                html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
-                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
-                html += '</tr>';
-            });
-            html += '</table></div></details>';
+            html += buildTable(plannedItems, '#e8f5e9', [
+                { label: 'Date' }, { label: 'Type' }, { label: 'Hours', align: 'right' }
+            ]);
+            html += '</div></details>';
         }
 
         // FMLA
@@ -793,20 +784,6 @@
             });
         });
 
-        // Bind missed lunch toggles
-        container.querySelectorAll('.missed-lunch-toggle').forEach(function(cb) {
-            cb.addEventListener('change', function() {
-                var key = this.dataset.key;
-                var emp = this.dataset.employee;
-                var store = loadStore();
-                if (!store.associates[emp]) store.associates[emp] = {};
-                if (!store.associates[emp].missedLunchFlags) store.associates[emp].missedLunchFlags = {};
-                store.associates[emp].missedLunchFlags[key] = this.checked ? true : false;
-                saveStore(store);
-                // Re-render to update totals
-                renderAttendanceDashboard(container, emp);
-            });
-        });
     }
 
     // --- Message Generators ---
