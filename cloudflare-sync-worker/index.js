@@ -93,6 +93,7 @@ export default {
         myTeamMembers: sanitizeForRepo(coerce(body?.myTeamMembers)),
         callCenterAverages: sanitizeForRepo(coerce(body?.callCenterAverages)),
         ptoTracker: sanitizeForRepo(coerce(body?.ptoTracker, { entries: [] })),
+        attendanceTracker: sanitizeForRepo(coerce(body?.attendanceTracker)),
         followUpHistory: sanitizeForRepo(coerce(body?.followUpHistory, { entries: [] })),
         hotTipHistory: sanitizeForRepo(coerce(body?.hotTipHistory, { entries: [] })),
         yearEndAnnualGoalsStore: sanitizeForRepo(coerce(body?.yearEndAnnualGoalsStore)),
