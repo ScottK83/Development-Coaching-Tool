@@ -695,11 +695,26 @@
         html += '<label for="attendanceAssociateSelect" style="font-weight:bold; display:block; margin-bottom:6px;">Select Associate:</label>';
         html += '<select id="attendanceAssociateSelect" style="width:100%; max-width:400px; padding:10px; border:2px solid #7b1fa2; border-radius:4px; font-size:1em; cursor:pointer;">';
         html += '<option value="">-- Choose an associate --</option>';
+        var loadedCount = 0;
+        var missingCount = 0;
         sortedNames.forEach(function(name) {
-            var hasData = store.associates?.[name]?.verintData ? ' (Verint data loaded)' : '';
-            html += '<option value="' + escHtml(name) + '">' + escHtml(name) + hasData + '</option>';
+            var verint = store.associates?.[name]?.verintData;
+            var indicator = '';
+            if (verint?.uploadedAt) {
+                var uploadDate = new Date(verint.uploadedAt).toLocaleDateString();
+                indicator = '\u2705 ' + uploadDate + ' \u2014 ';
+                loadedCount++;
+            } else {
+                indicator = '\u274C No data \u2014 ';
+                missingCount++;
+            }
+            html += '<option value="' + escHtml(name) + '">' + indicator + escHtml(name) + '</option>';
         });
-        html += '</select></div>';
+        html += '</select>';
+        if (sortedNames.length > 0) {
+            html += '<div style="margin-top:6px; font-size:0.85em; color:#666;">' + loadedCount + ' loaded, ' + missingCount + ' missing</div>';
+        }
+        html += '</div>';
 
         // Dashboard area
         html += '<div id="attendanceEmployeeDashboard"></div>';
