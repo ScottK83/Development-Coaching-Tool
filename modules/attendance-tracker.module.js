@@ -552,8 +552,6 @@
             ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.unplannedNotPtost - ptost.ptostRemaining));
             ptost.missedLunchTotal = missedLunchTotal;
         }
-        var tier = calculateDisciplineTier(ptost.policyHours);
-
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
             firstName = getEmployeeNickname(employeeName) || firstName;
@@ -562,6 +560,16 @@
         var bereavementData = data.summary?.['WFO-Bereavement'] || { used: 0 };
         var bereavementActivities = (data.activities || []).filter(function(a) { return a.activity === 'WFO-Bereavement' || a.activity === 'Bereavement'; });
 
+        // Load manual reliability override
+        var manualReliability = store.associates?.[employeeName]?.manualReliabilityHours;
+        var verintCalcHours = ptost.policyHours;
+        var reliabilityHours = (manualReliability !== undefined && manualReliability !== null) ? manualReliability : verintCalcHours;
+        // Recalculate tier based on actual reliability hours used
+        var tier = calculateDisciplineTier(reliabilityHours);
+        // Recalculate canExcuse based on actual reliability
+        var canExcuse = round2(Math.min(reliabilityHours, ptost.ptostRemaining));
+        var afterExcusing = round2(Math.max(0, reliabilityHours - ptost.ptostRemaining));
+
         var html = '';
 
         // Upload info
@@ -569,22 +577,29 @@
 
         // ===== ALWAYS VISIBLE: Reliability Status =====
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
-        html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Reliability</h4>';
-        html += renderTierBar(ptost.policyHours);
+        html += '<h4 style="margin:0 0 8px 0; color:' + tier.tier.color + ';">Reliability</h4>';
+
+        // Manual entry field
+        html += '<div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">';
+        html += '<label style="font-size:0.85em; font-weight:600; color:#333; white-space:nowrap;">Hours against reliability (from PowerBI):</label>';
+        html += '<input type="number" id="manualReliabilityInput" step="0.01" value="' + (manualReliability !== undefined && manualReliability !== null ? manualReliability : '') + '" placeholder="' + verintCalcHours + '" style="width:100px; padding:6px; border:2px solid ' + tier.tier.color + '; border-radius:4px; font-size:1em; font-weight:700; color:' + tier.tier.color + '; text-align:center;">';
+        if (manualReliability !== undefined && manualReliability !== null && Math.abs(manualReliability - verintCalcHours) > 0.1) {
+            html += '<span style="font-size:0.8em; color:#999;">Verint calc: ' + verintCalcHours + 'h</span>';
+        }
+        html += '</div>';
+
+        html += renderTierBar(reliabilityHours);
         html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; text-align:center;">';
-        html += '<div style="padding:8px; background:' + tier.tier.bg + '; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:' + tier.tier.color + ';">' + ptost.policyHours + 'h</div><div style="font-size:0.75em; color:#666;">Against Reliability</div></div>';
+        html += '<div style="padding:8px; background:' + tier.tier.bg + '; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:' + tier.tier.color + ';">' + reliabilityHours + 'h</div><div style="font-size:0.75em; color:#666;">Against Reliability</div></div>';
         html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Available</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:' + (tier.nextTier ? tier.nextTier.bg : '#e8f5e9') + ';"><div style="font-size:1.3em; font-weight:700; color:' + (tier.nextTier ? tier.nextTier.color : '#2e7d32') + ';">' + (tier.nextTier ? tier.hoursUntilNext + 'h' : 'N/A') + '</div><div style="font-size:0.75em; color:#666;">' + (tier.nextTier ? 'Until ' + tier.nextTier.label : 'No next tier') + '</div></div>';
         html += '</div>';
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
         html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
-        if (ptost.canExcuse > 0) {
-            html += '<div style="font-size:0.85em; color:#1565c0; font-weight:600;">Can excuse ' + ptost.canExcuse + 'h with PTOST \u2192 ' + ptost.policyHoursAfterExcusing + 'h would remain</div>';
+        if (canExcuse > 0) {
+            html += '<div style="font-size:0.85em; color:#1565c0; font-weight:600;">Can excuse ' + canExcuse + 'h with PTOST \u2192 ' + afterExcusing + 'h would remain</div>';
         }
         html += '</div>';
-        if (missedLunchTotal > 0) {
-            html += '<div style="margin-top:8px; font-size:0.8em; color:#666;">Includes ' + missedLunchTotal + 'h missed lunch (auto-added for absences over 4hrs)</div>';
-        }
         html += '</div>';
 
         // ===== ALWAYS VISIBLE: PTO Balance =====
@@ -743,7 +758,8 @@
 
         // Bind message buttons
         document.getElementById('attendanceAssocMsgBtn')?.addEventListener('click', function() {
-            var msg = generateAssociateMessage(firstName, ptost, tier, reclassItems);
+            var msgPtost = Object.assign({}, ptost, { policyHours: reliabilityHours, canExcuse: canExcuse, policyHoursAfterExcusing: afterExcusing });
+            var msg = generateAssociateMessage(firstName, msgPtost, tier, reclassItems);
             showMessage(msg);
         });
         document.getElementById('attendanceWfmMsgBtn')?.addEventListener('click', function() {
@@ -766,6 +782,20 @@
         }
 
         // Bind manual PTO inputs — save on change
+        // Bind reliability hours input
+        document.getElementById('manualReliabilityInput')?.addEventListener('change', function() {
+            var val = this.value.trim();
+            var store = loadStore();
+            if (!store.associates[employeeName]) store.associates[employeeName] = {};
+            if (val === '') {
+                delete store.associates[employeeName].manualReliabilityHours;
+            } else {
+                store.associates[employeeName].manualReliabilityHours = parseFloat(val);
+            }
+            saveStore(store);
+            renderAttendanceDashboard(container, employeeName);
+        });
+
         container.querySelectorAll('.manual-pto-input').forEach(function(input) {
             input.addEventListener('change', function() {
                 var field = this.dataset.field;
@@ -795,16 +825,16 @@
         msg += 'PTOST Remaining: ' + ptost.ptostRemaining + ' hours\n';
 
         // Scenario 1: has unexcused hours AND PTOST remaining to cover some/all
-        if (ptost.unplannedNotPtost > 0 && ptost.ptostRemaining > 0) {
-            msg += '\nYou have ' + ptost.unplannedNotPtost + ' hours of unplanned/unscheduled time that currently goes against your reliability.\n\n';
+        if (ptost.policyHours > 0 && ptost.ptostRemaining > 0) {
+            msg += '\nYou have ' + ptost.policyHours + ' hours of unplanned/unscheduled time that currently goes against your reliability.\n\n';
 
             msg += 'Here are those dates:\n';
             reclassItems.forEach(function(item) {
                 msg += '  - ' + formatDateDisplay(item.fromDate) + ': ' + item.hours + 'h\n';
             });
 
-            if (ptost.canExcuse >= ptost.unplannedNotPtost) {
-                msg += '\nIf you\'d like, I can reach out to WFM and mark all ' + ptost.unplannedNotPtost + ' hours as PTOST to get them excused. ';
+            if (ptost.canExcuse >= ptost.policyHours) {
+                msg += '\nIf you\'d like, I can reach out to WFM and mark all ' + ptost.policyHours + ' hours as PTOST to get them excused. ';
                 msg += 'You\'d still have ' + round2(ptost.ptostRemaining - ptost.canExcuse) + ' hours of PTOST remaining after that.\n';
             } else {
                 msg += '\nI can mark ' + ptost.canExcuse + ' hours as PTOST to get them excused, but the remaining ' + ptost.policyHoursAfterExcusing + ' hours would stay against your reliability since that would use up your PTOST.\n';
@@ -819,8 +849,8 @@
             msg += '\nWould you like me to go ahead and get those hours excused? Just let me know.';
 
         // Scenario 2: has unexcused hours but NO PTOST left
-        } else if (ptost.unplannedNotPtost > 0 && ptost.ptostRemaining <= 0) {
-            msg += '\nYou have ' + ptost.unplannedNotPtost + ' hours of unplanned time against your reliability, and your PTOST balance is at 0.\n';
+        } else if (ptost.policyHours > 0 && ptost.ptostRemaining <= 0) {
+            msg += '\nYou have ' + ptost.policyHours + ' hours of unplanned time against your reliability, and your PTOST balance is at 0.\n';
             msg += 'Current Status: ' + tier.tier.label + '\n';
             if (tier.nextTier) {
                 msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
