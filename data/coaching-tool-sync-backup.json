@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-03T21:11:14.986Z",
+  "generatedAt": "2026-04-03T21:12:43.389Z",
   "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2947,25 +2947,25 @@
       "itemCount": 1,
       "byteLength": 294
     },
-    "devCoachingTool_metricCoachingTips": {
-      "valueType": "object",
-      "itemCount": 12,
-      "byteLength": 9390
-    },
     "devCoachingTool_ytdData": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 48772
     },
+    "devCoachingTool_attendanceTracker": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 14883
+    },
+    "devCoachingTool_metricCoachingTips": {
+      "valueType": "object",
+      "itemCount": 12,
+      "byteLength": 9390
+    },
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
       "itemCount": 4,
       "byteLength": 116
-    },
-    "devCoachingTool_attendanceTracker": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 8007
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
@@ -2987,15 +2987,15 @@
       "itemCount": 1,
       "byteLength": 14
     },
-    "devCoachingTool_repoSyncLastSuccess": {
-      "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 266
-    },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 232
+      "byteLength": 223
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 272
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
