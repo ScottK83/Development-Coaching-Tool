@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-03T23:10:45.352Z",
+  "generatedAt": "2026-04-03T23:59:46.690Z",
   "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -6761,6 +6761,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.312Z"
+        },
+        "manualPto": {
+          "carryover": 89.8,
+          "allotment": 160,
+          "payrollRemaining": 33.8,
+          "payrollTaken": 216
         }
       },
       "James Garcia": {
@@ -7093,6 +7099,12 @@
         },
         "missedLunchFlags": {
           "2026-01-14|Same Day": false
+        },
+        "manualPto": {
+          "carryover": 26.39,
+          "allotment": 160,
+          "payrollRemaining": 116.89,
+          "payrollTaken": 69.5
         }
       },
       "Sabrina Gage": {
@@ -7422,6 +7434,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.330Z"
+        },
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 99.5,
+          "payrollTaken": 60.5
         }
       },
       "Jadyn Flowers": {
@@ -8009,6 +8027,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.341Z"
+        },
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 21.67,
+          "payrollTaken": 138.33
         }
       },
       "Angelina Fierro": {
@@ -8500,6 +8524,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.348Z"
+        },
+        "manualPto": {
+          "carryover": 0.37,
+          "allotment": 160,
+          "payrollRemaining": 129.42,
+          "payrollTaken": 30.95
         }
       },
       "Alyssa Dimes": {
@@ -8955,6 +8985,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.355Z"
+        },
+        "manualPto": {
+          "carryover": 54.34,
+          "allotment": 160,
+          "payrollRemaining": 143.94,
+          "payrollTaken": 70.4
         }
       },
       "Kamella Dash": {
@@ -9158,6 +9194,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.360Z"
+        },
+        "manualPto": {
+          "carryover": 1.82,
+          "allotment": 200,
+          "payrollRemaining": 165,
+          "payrollTaken": 36.82
         }
       },
       "Desiree Clark": {
@@ -9613,6 +9655,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.368Z"
+        },
+        "manualPto": {
+          "carryover": 4.75,
+          "allotment": 160,
+          "payrollRemaining": 95.72,
+          "payrollTaken": 69.03
         }
       },
       "Robert Berrelleza": {
@@ -10170,6 +10218,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.377Z"
+        },
+        "manualPto": {
+          "carryover": 11.73,
+          "allotment": 160,
+          "payrollRemaining": 93.23,
+          "payrollTaken": 78.5
         }
       },
       "Destiny Cervantez": {
@@ -10655,6 +10709,44 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:17:13.283Z"
+        },
+        "manualPto": {
+          "carryover": 71.13,
+          "allotment": 160,
+          "payrollRemaining": 147.13,
+          "payrollTaken": 84
+        }
+      },
+      "Caylie Chirumbolo": {
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 94.24,
+          "payrollTaken": 65.76
+        }
+      },
+      "Trisha Erb": {
+        "manualPto": {
+          "carryover": 2.89,
+          "allotment": 160,
+          "payrollRemaining": 90.07,
+          "payrollTaken": 72.82
+        }
+      },
+      "Jenifer Henson": {
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 108.29,
+          "payrollTaken": 51.71
+        }
+      },
+      "Precious Johnson": {
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 72.41,
+          "payrollTaken": 87.59
         }
       }
     }
@@ -10694,25 +10786,25 @@
       "itemCount": 1,
       "byteLength": 294
     },
-    "devCoachingTool_metricCoachingTips": {
+    "devCoachingTool_attendanceTracker": {
       "valueType": "object",
-      "itemCount": 12,
-      "byteLength": 9390
+      "itemCount": 1,
+      "byteLength": 110099
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 48772
     },
+    "devCoachingTool_metricCoachingTips": {
+      "valueType": "object",
+      "itemCount": 12,
+      "byteLength": 9390
+    },
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
       "itemCount": 4,
       "byteLength": 116
-    },
-    "devCoachingTool_attendanceTracker": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 108738
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
@@ -10737,7 +10829,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 259
+      "byteLength": 272
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
