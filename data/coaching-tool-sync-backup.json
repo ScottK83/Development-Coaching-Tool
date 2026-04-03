@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-03T22:46:49.670Z",
-  "reason": "upload to git",
+  "generatedAt": "2026-04-03T23:10:45.352Z",
+  "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -7090,6 +7090,9 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.322Z"
+        },
+        "missedLunchFlags": {
+          "2026-01-14|Same Day": false
         }
       },
       "Sabrina Gage": {
@@ -10709,7 +10712,7 @@
     "devCoachingTool_attendanceTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 108689
+      "byteLength": 108738
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
@@ -10734,12 +10737,12 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 272
+      "byteLength": 259
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 226
+      "byteLength": 229
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -10770,6 +10773,11 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_lastError": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 259
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
