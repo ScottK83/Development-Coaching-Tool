@@ -1544,19 +1544,12 @@ function selectPeriodButton(periodType) {
 }
 
 function updateDetectedBadge(periodType) {
-    const badge = document.getElementById('detectedPeriodBadge');
-    if (!badge) return;
-    if (!periodType) { badge.style.display = 'none'; return; }
+    const hint = document.getElementById('periodAutoDetectHint');
+    if (!hint) return;
+    if (!periodType) { hint.textContent = ''; return; }
 
     const labels = { daily: 'Daily', week: 'Week', month: 'Month', quarter: 'Quarter', ytd: 'YTD', custom: 'Custom' };
-    const colors = { daily: '#1565c0', week: '#28a745', month: '#7b1fa2', quarter: '#d84315', ytd: '#e65100', custom: '#546e7a' };
-    const c = colors[periodType] || '#666';
-
-    badge.textContent = labels[periodType] || periodType;
-    badge.style.background = c + '18';
-    badge.style.color = c;
-    badge.style.border = '2px solid ' + c;
-    badge.style.display = 'block';
+    hint.textContent = `(auto-detected: ${labels[periodType] || periodType})`;
 }
 
 function initializeDashboard() {
