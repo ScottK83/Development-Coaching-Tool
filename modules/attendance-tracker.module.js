@@ -585,7 +585,7 @@
         }
         html += '</div>';
 
-        // PTO Balance
+        // PTO Balance (from Verint)
         var ptoSummary = data.summary?.['PTO'] || {};
         var ptoTotal = round2(ptoSummary.total || 0);
         var ptoCarryover = round2(ptoSummary.carryover || 0);
@@ -595,15 +595,45 @@
         var ptoAllotment = round2(ptoTotal - ptoCarryover);
         var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
 
+        // Load manual PTO overrides
+        var manualPto = store.associates?.[employeeName]?.manualPto || {};
+        var hasManual = manualPto.carryover !== undefined || manualPto.allotment !== undefined || manualPto.payrollRemaining !== undefined;
+
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
         html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">PTO Balance</h4>';
+
+        // Verint data row
+        html += '<div style="font-size:0.8em; color:#999; margin-bottom:6px;">From Verint:</div>';
         html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 16);
-        html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:10px; text-align:center;">';
+        html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:8px; text-align:center;">';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.7em; color:#666;">Carryover</div></div>';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoAllotment + 'h</div><div style="font-size:0.7em; color:#666;">Allotment</div></div>';
         html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#e65100;">' + ptoUsed + 'h</div><div style="font-size:0.7em; color:#666;">Used</div></div>';
         html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#1565c0;">' + ptoScheduled + 'h</div><div style="font-size:0.7em; color:#666;">Scheduled</div></div>';
         html += '<div style="padding:6px; background:#f5f5f5; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:' + ptoRemainingColor + ';">' + ptoRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
+        html += '</div>';
+
+        // Manual override inputs
+        html += '<div style="margin-top:14px; padding:12px; background:#f9f9f9; border-radius:6px; border:1px dashed #ccc;">';
+        html += '<div style="font-size:0.82em; color:#666; margin-bottom:8px; font-weight:600;">My Records (manual entry):</div>';
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">';
+        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">Carryover Hours:</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="carryover" step="0.5" value="' + (manualPto.carryover !== undefined ? manualPto.carryover : '') + '" placeholder="' + ptoCarryover + '" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
+        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">Annual Allotment:</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="allotment" step="0.5" value="' + (manualPto.allotment !== undefined ? manualPto.allotment : '') + '" placeholder="' + ptoAllotment + '" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
+        html += '<div><label style="font-size:0.78em; color:#555; display:block; margin-bottom:3px;">PTO Left (Payroll):</label>';
+        html += '<input type="number" class="manual-pto-input" data-field="payrollRemaining" step="0.5" value="' + (manualPto.payrollRemaining !== undefined ? manualPto.payrollRemaining : '') + '" placeholder="Enter hrs" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:0.9em;"></div>';
+        html += '</div>';
+
+        // Show discrepancy if payroll remaining differs from Verint
+        if (manualPto.payrollRemaining !== undefined && manualPto.payrollRemaining !== ptoRemaining) {
+            var diff = round2(manualPto.payrollRemaining - ptoRemaining);
+            var diffColor = Math.abs(diff) > 2 ? '#b71c1c' : '#e65100';
+            html += '<div style="margin-top:8px; padding:6px 10px; background:#fff3e0; border-radius:4px; border-left:3px solid ' + diffColor + '; font-size:0.82em; color:' + diffColor + ';">';
+            html += 'Discrepancy: Payroll says ' + manualPto.payrollRemaining + 'h remaining vs Verint ' + ptoRemaining + 'h (' + (diff > 0 ? '+' : '') + diff + 'h)';
+            html += '</div>';
+        }
+
         html += '</div></div>';
 
         // Attendance Policy Status
@@ -743,6 +773,25 @@
             if (copyBtn) copyBtn.style.display = 'inline-block';
             navigator.clipboard.writeText(msg).catch(function() {});
         }
+
+        // Bind manual PTO inputs — save on change
+        container.querySelectorAll('.manual-pto-input').forEach(function(input) {
+            input.addEventListener('change', function() {
+                var field = this.dataset.field;
+                var val = this.value.trim();
+                var store = loadStore();
+                if (!store.associates[employeeName]) store.associates[employeeName] = {};
+                if (!store.associates[employeeName].manualPto) store.associates[employeeName].manualPto = {};
+                if (val === '') {
+                    delete store.associates[employeeName].manualPto[field];
+                } else {
+                    store.associates[employeeName].manualPto[field] = parseFloat(val);
+                }
+                saveStore(store);
+                // Re-render to show discrepancy
+                renderAttendanceDashboard(container, employeeName);
+            });
+        });
 
         // Bind missed lunch toggles
         container.querySelectorAll('.missed-lunch-toggle').forEach(function(cb) {
