@@ -365,10 +365,16 @@
         ptostUsed = round2(ptostUsed);
         unplannedNotPtost = round2(unplannedNotPtost);
 
+        // Attendance policy only counts hours BEYOND what the 40h PTOST bucket covers
+        // PTOST-marked hours are excused. Unplanned-not-PTOST could be excused if reclassified.
+        // Policy hours = total unplanned minus the 40h PTOST allowance (floor at 0)
+        var policyHours = round2(Math.max(0, totalUnplanned - PTOST_ANNUAL_LIMIT));
+
         return {
             ptostUsed: ptostUsed,
             unplannedNotPtost: unplannedNotPtost,
             totalUnplanned: totalUnplanned,
+            policyHours: policyHours,
             reclassificationGap: unplannedNotPtost,
             ptostRemaining: round2(Math.max(0, PTOST_ANNUAL_LIMIT - ptostUsed)),
             ptostLimit: PTOST_ANNUAL_LIMIT
@@ -502,7 +508,7 @@
         }
 
         var ptost = calculatePtostUsage(data.ptoSubCategories || {});
-        var tier = calculateDisciplineTier(ptost.totalUnplanned);
+        var tier = calculateDisciplineTier(ptost.policyHours);
         var fmlaData = data.summary?.['FMLA'] || { used: 0 };
         var fmlaActivities = (data.activities || []).filter(function(a) { return a.activity === 'FMLA'; });
         var unplannedItems = getUnplannedLineItems(data.activities || []);
@@ -564,10 +570,11 @@
         // Attendance Policy Status
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
         html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Attendance Policy Status</h4>';
-        html += renderTierBar(ptost.totalUnplanned);
+        html += '<div style="font-size:0.82em; color:#666; margin-bottom:6px;">Only counts unplanned hours exceeding the 40h PTOST allowance. PTOST-covered hours are excused.</div>';
+        html += renderTierBar(ptost.policyHours);
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
         html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
-        html += '<div style="font-size:0.85em; color:#666;">' + ptost.totalUnplanned + 'h total unplanned</div>';
+        html += '<div style="font-size:0.85em; color:#666;">' + ptost.policyHours + 'h against policy (' + ptost.totalUnplanned + 'h total unplanned, ' + PTOST_ANNUAL_LIMIT + 'h PTOST allowance)</div>';
         if (tier.nextTier) {
             html += '<div style="font-size:0.82em; color:' + tier.nextTier.color + '; font-weight:600;">' + tier.hoursUntilNext + 'h until ' + tier.nextTier.label + '</div>';
         }
