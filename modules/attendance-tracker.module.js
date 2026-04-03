@@ -514,23 +514,28 @@
             firstName = getEmployeeNickname(employeeName) || firstName;
         }
 
+        var bereavementData = data.summary?.['WFO-Bereavement'] || { used: 0 };
+        var bereavementActivities = (data.activities || []).filter(function(a) { return a.activity === 'WFO-Bereavement' || a.activity === 'Bereavement'; });
+
         var html = '';
 
         // Upload info
         html += '<div style="margin-bottom:12px; font-size:0.85em; color:#666;">Verint data uploaded: ' + new Date(data.uploadedAt).toLocaleDateString() + (data.organization ? ' | Org: ' + escHtml(data.organization) : '') + '</div>';
 
+        // --- Always-visible summary cards ---
+
         // PTOST Tracker
-        html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #1565c0;">';
+        html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
         html += '<h4 style="margin:0 0 12px 0; color:#0d47a1;">PTOST Tracker (40 hrs/year)</h4>';
-        html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 22);
-        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px; text-align:center;">';
-        html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.8em; color:#666;">PTOST Used</div></div>';
-        html += '<div style="padding:10px; background:#fff3e0; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.8em; color:#666;">Needs Reclassification</div></div>';
-        html += '<div style="padding:10px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.3em; font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.8em; color:#666;">PTOST Remaining</div></div>';
+        html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 20);
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; text-align:center;">';
+        html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Used</div></div>';
+        html += '<div style="padding:8px; background:#fff3e0; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.75em; color:#666;">Needs Reclassification</div></div>';
+        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.2em; font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Remaining</div></div>';
         html += '</div>';
         if (ptost.reclassificationGap > 0) {
-            html += '<div style="margin-top:12px; padding:10px; background:#fff3e0; border-radius:6px; border-left:3px solid #e65100; font-size:0.9em; color:#e65100;">';
-            html += '<strong>' + ptost.reclassificationGap + ' hours</strong> of unplanned absence need to be reclassified as PTOST. Use "Generate WFM Message" below to request reclassification.';
+            html += '<div style="margin-top:10px; padding:8px 12px; background:#fff3e0; border-radius:6px; border-left:3px solid #e65100; font-size:0.85em; color:#e65100;">';
+            html += '<strong>' + ptost.reclassificationGap + 'h</strong> need reclassification. Use Quick Messages below.';
             html += '</div>';
         }
         html += '</div>';
@@ -545,91 +550,120 @@
         var ptoAllotment = round2(ptoTotal - ptoCarryover);
         var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
 
-        html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #2e7d32;">';
-        html += '<h4 style="margin:0 0 12px 0; color:#2e7d32;">PTO Balance</h4>';
-        html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 18);
-        html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-top:12px; text-align:center;">';
-        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.75em; color:#666;">Carryover</div></div>';
-        html += '<div style="padding:8px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#2e7d32;">' + ptoAllotment + 'h</div><div style="font-size:0.75em; color:#666;">Allotment</div></div>';
-        html += '<div style="padding:8px; background:#fff3e0; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#e65100;">' + ptoUsed + 'h</div><div style="font-size:0.75em; color:#666;">Used</div></div>';
-        html += '<div style="padding:8px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:#1565c0;">' + ptoScheduled + 'h</div><div style="font-size:0.75em; color:#666;">Scheduled</div></div>';
-        html += '<div style="padding:8px; background:#f5f5f5; border-radius:6px;"><div style="font-size:1.1em; font-weight:700; color:' + ptoRemainingColor + ';">' + ptoRemaining + 'h</div><div style="font-size:0.75em; color:#666;">Remaining</div></div>';
+        html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
+        html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">PTO Balance</h4>';
+        html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 16);
+        html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:10px; text-align:center;">';
+        html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.7em; color:#666;">Carryover</div></div>';
+        html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoAllotment + 'h</div><div style="font-size:0.7em; color:#666;">Allotment</div></div>';
+        html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#e65100;">' + ptoUsed + 'h</div><div style="font-size:0.7em; color:#666;">Used</div></div>';
+        html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#1565c0;">' + ptoScheduled + 'h</div><div style="font-size:0.7em; color:#666;">Scheduled</div></div>';
+        html += '<div style="padding:6px; background:#f5f5f5; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:' + ptoRemainingColor + ';">' + ptoRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
         html += '</div></div>';
 
         // Attendance Policy Status
-        html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid ' + tier.tier.color + ';">';
-        html += '<h4 style="margin:0 0 8px 0; color:' + tier.tier.color + ';">Attendance Policy Status</h4>';
+        html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
+        html += '<h4 style="margin:0 0 6px 0; color:' + tier.tier.color + ';">Attendance Policy Status</h4>';
         html += renderTierBar(ptost.totalUnplanned);
-        html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">';
-        html += '<div style="padding:8px 16px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.95em;">' + tier.tier.label + '</div>';
-        html += '<div style="font-size:0.9em; color:#666;">' + ptost.totalUnplanned + 'h total unplanned</div>';
+        html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">';
+        html += '<div style="padding:6px 14px; border-radius:20px; background:' + tier.tier.bg + '; color:' + tier.tier.color + '; font-weight:700; font-size:0.9em;">' + tier.tier.label + '</div>';
+        html += '<div style="font-size:0.85em; color:#666;">' + ptost.totalUnplanned + 'h total unplanned</div>';
         if (tier.nextTier) {
-            html += '<div style="font-size:0.85em; color:' + tier.nextTier.color + '; font-weight:600;">' + tier.hoursUntilNext + 'h until ' + tier.nextTier.label + '</div>';
+            html += '<div style="font-size:0.82em; color:' + tier.nextTier.color + '; font-weight:600;">' + tier.hoursUntilNext + 'h until ' + tier.nextTier.label + '</div>';
         }
         html += '</div></div>';
 
-        // FMLA Summary
-        html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #880e4f;">';
-        html += '<h4 style="margin:0 0 10px 0; color:#880e4f;">FMLA Summary</h4>';
-        html += '<div style="font-size:0.95em;">FMLA hours from Verint: <strong>' + round2(fmlaData.used) + 'h</strong></div>';
-        if (fmlaActivities.length > 0) {
-            html += '<div style="margin-top:8px; font-size:0.85em; color:#666;">';
-            fmlaActivities.forEach(function(a) {
-                html += '<div>' + formatDateDisplay(a.fromDate) + ' | ' + a.hours + 'h</div>';
-            });
-            html += '</div>';
-        }
-        html += '</div>';
+        // --- Collapsible detail sections ---
 
-        // Line Items
+        var detailStyle = 'margin-bottom:12px; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;';
+        var summaryStyle = 'padding:12px 16px; cursor:pointer; font-weight:600; font-size:0.95em; background:#fafafa; user-select:none;';
+        var contentStyle = 'padding:12px 16px;';
+
+        // Unplanned Absences
         if (unplannedItems.length > 0) {
-            html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #546e7a;">';
-            html += '<h4 style="margin:0 0 10px 0; color:#37474f;">Unplanned Absence Details (' + unplannedItems.length + ' entries)</h4>';
-            html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
-            html += '<tr style="background:#eceff1;"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Activity</th><th style="padding:8px; text-align:right;">Hours</th><th style="padding:8px; text-align:center;">Status</th></tr>';
+            var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0));
+            html += '<details style="' + detailStyle + '" open>';
+            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
+            html += '<div style="' + contentStyle + '">';
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Status</th></tr>';
             unplannedItems.forEach(function(item) {
                 var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
                 var isPtost = PTOST_CATEGORIES.indexOf(item.activity) !== -1;
                 var statusLabel = isPtost ? 'PTOST' : 'Needs Reclassification';
                 var statusColor = isPtost ? '#0d47a1' : '#e65100';
-                html += '<tr style="border-bottom:1px solid #eee;">';
-                html += '<td style="padding:8px;">' + formatDateDisplay(item.fromDate) + '</td>';
-                html += '<td style="padding:8px;"><span style="padding:2px 8px; border-radius:4px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.9em;">' + escHtml(item.activity) + '</span></td>';
-                html += '<td style="padding:8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
-                html += '<td style="padding:8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.85em;">' + statusLabel + '</td>';
+                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
+                html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
+                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
+                html += '<td style="padding:6px 8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.82em;">' + statusLabel + '</td>';
                 html += '</tr>';
             });
-            html += '</table></div></div>';
+            html += '</table></div></details>';
         }
 
         // Planned Time Off
         if (plannedItems.length > 0) {
             var plannedTotalHrs = round2(plannedItems.reduce(function(s, i) { return s + i.hours; }, 0));
-            html += '<div style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; border:2px solid #2e7d32;">';
-            html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">Planned Time Off (' + plannedItems.length + ' entries, ' + plannedTotalHrs + 'h)</h4>';
-            html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
-            html += '<tr style="background:#e8f5e9;"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Type</th><th style="padding:8px; text-align:right;">Hours</th></tr>';
+            html += '<details style="' + detailStyle + '">';
+            html += '<summary style="' + summaryStyle + 'color:#2e7d32;">Planned Time Off (' + plannedItems.length + ' entries, ' + plannedTotalHrs + 'h)</summary>';
+            html += '<div style="' + contentStyle + '">';
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#e8f5e9;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Type</th><th style="padding:6px 8px; text-align:right;">Hours</th></tr>';
             plannedItems.forEach(function(item) {
                 var colors = ACTIVITY_COLORS[item.activity] || { bg: '#e8f5e9', text: '#2e7d32' };
-                html += '<tr style="border-bottom:1px solid #eee;">';
-                html += '<td style="padding:8px;">' + formatDateDisplay(item.fromDate) + '</td>';
-                html += '<td style="padding:8px;"><span style="padding:2px 8px; border-radius:4px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.9em;">' + escHtml(item.activity) + '</span></td>';
-                html += '<td style="padding:8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
+                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
+                html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
+                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
                 html += '</tr>';
             });
-            html += '</table></div></div>';
+            html += '</table></div></details>';
         }
 
-        // Message Generators
-        html += '<div style="padding:16px; background:#fff; border-radius:8px; border:2px solid #7b1fa2;">';
-        html += '<h4 style="margin:0 0 10px 0; color:#7b1fa2;">Quick Messages</h4>';
+        // FMLA
+        html += '<details style="' + detailStyle + '">';
+        html += '<summary style="' + summaryStyle + 'color:#880e4f;">FMLA (' + round2(fmlaData.used) + 'h' + (fmlaActivities.length > 0 ? ', ' + fmlaActivities.length + ' entries' : '') + ')</summary>';
+        html += '<div style="' + contentStyle + '">';
+        if (fmlaActivities.length > 0) {
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#fce4ec;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:right;">Hours</th></tr>';
+            fmlaActivities.forEach(function(a) {
+                html += '<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:6px 8px;">' + formatDateDisplay(a.fromDate) + '</td><td style="padding:6px 8px; text-align:right; font-weight:600;">' + a.hours + 'h</td></tr>';
+            });
+            html += '</table>';
+        } else {
+            html += '<div style="color:#999; font-size:0.9em;">No FMLA entries in Verint.</div>';
+        }
+        html += '</div></details>';
+
+        // Bereavement
+        html += '<details style="' + detailStyle + '">';
+        html += '<summary style="' + summaryStyle + 'color:#4a148c;">Bereavement (' + round2(bereavementData.used) + 'h' + (bereavementActivities.length > 0 ? ', ' + bereavementActivities.length + ' entries' : '') + ')</summary>';
+        html += '<div style="' + contentStyle + '">';
+        if (bereavementActivities.length > 0) {
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#ede7f6;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:right;">Hours</th></tr>';
+            bereavementActivities.forEach(function(a) {
+                html += '<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:6px 8px;">' + formatDateDisplay(a.fromDate) + '</td><td style="padding:6px 8px; text-align:right; font-weight:600;">' + a.hours + 'h</td></tr>';
+            });
+            html += '</table>';
+        } else {
+            html += '<div style="color:#999; font-size:0.9em;">No bereavement entries in Verint.</div>';
+        }
+        html += '</div></details>';
+
+        // Quick Messages
+        html += '<details style="' + detailStyle + '" open>';
+        html += '<summary style="' + summaryStyle + 'color:#7b1fa2;">Quick Messages</summary>';
+        html += '<div style="' + contentStyle + '">';
         html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">';
         html += '<button type="button" id="attendanceAssocMsgBtn" style="flex:1; min-width:180px; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">Send Associate Update</button>';
         html += '<button type="button" id="attendanceWfmMsgBtn" style="flex:1; min-width:180px; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">Generate WFM Reclassification</button>';
         html += '</div>';
         html += '<textarea id="attendanceMsgOutput" readonly style="width:100%; height:150px; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:0.92em; color:#333; background:#f9f9f9; resize:vertical; display:none; font-family:inherit;"></textarea>';
         html += '<button type="button" id="attendanceMsgCopyBtn" style="display:none; margin-top:8px; background:#16a34a; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:bold;">Copy to Clipboard</button>';
-        html += '</div>';
+        html += '</div></details>';
 
         container.innerHTML = html;
 
