@@ -434,20 +434,62 @@
         return cleanStr(name).toLowerCase().replace(/\s+/g, ' ');
     }
 
+    // --- PDF Text Extraction ---
+
+    var pdfjsLoaded = false;
+    function loadPdfJs() {
+        if (pdfjsLoaded) return Promise.resolve();
+        return new Promise(function(resolve, reject) {
+            var script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = function() {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                pdfjsLoaded = true;
+                resolve();
+            };
+            script.onerror = function() { reject('Failed to load PDF.js'); };
+            document.head.appendChild(script);
+        });
+    }
+
+    async function extractTextFromPdf(file) {
+        await loadPdfJs();
+        var arrayBuffer = await file.arrayBuffer();
+        var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var allText = '';
+        for (var i = 1; i <= pdf.numPages; i++) {
+            var page = await pdf.getPage(i);
+            var content = await page.getTextContent();
+            // Group items by Y position to reconstruct lines
+            var lines = {};
+            content.items.forEach(function(item) {
+                var y = Math.round(item.transform[5]); // Y position
+                if (!lines[y]) lines[y] = [];
+                lines[y].push({ x: item.transform[4], str: item.str });
+            });
+            // Sort by Y descending (PDF coords go bottom-up), then X ascending within each line
+            var sortedYs = Object.keys(lines).map(Number).sort(function(a, b) { return b - a; });
+            sortedYs.forEach(function(y) {
+                var lineItems = lines[y].sort(function(a, b) { return a.x - b.x; });
+                var lineText = lineItems.map(function(item) { return item.str; }).join('  ');
+                allText += lineText + '\n';
+            });
+        }
+        return allText;
+    }
+
     // --- Payroll PTO Report Parser ---
 
     function parsePayrollPtoText(text) {
         // Parse PWMS1001 PTO & Vacation Balances report text
-        // Format: lines with numbers followed by name lines
-        // ID DEPT PLAN  PREVYR  EARNED  TAKEN  ADJUST  REMAINING
-        // Name  Description
+        // Handles both line-by-line format and PDF.js concatenated format
         var results = [];
         var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
 
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
 
-            // Match data line: ID DEPT PTO  numbers...
+            // Format 1: Data line with numbers, name on next line
             // e.g.: "17347 6790 PTO     11.73    160.00     78.50      0.00     93.23"
             var dataMatch = line.match(/^\d+\s+\d+\s+PTO\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\s+([\d.]+)/);
             if (dataMatch) {
@@ -458,20 +500,33 @@
 
                 // Next line should be the name
                 var nameLine = (i + 1 < lines.length) ? lines[i + 1] : '';
-                // Clean: name is everything before "Transition" or the department description
                 var nameClean = nameLine.split(/\s{2,}|Transition/)[0].trim();
-                // Remove trailing spaces and description
                 nameClean = nameClean.replace(/\s+$/, '');
 
                 if (nameClean && !nameClean.match(/^[\d=_*]+$/) && !nameClean.match(/^(Total|End|Report|Run|PTO)/i)) {
-                    results.push({
-                        name: nameClean,
-                        prevYr: round2(prevYr),
-                        earned: round2(earned),
-                        taken: round2(taken),
-                        remaining: round2(remaining)
-                    });
-                    i++; // Skip the name line
+                    results.push({ name: nameClean, prevYr: round2(prevYr), earned: round2(earned), taken: round2(taken), remaining: round2(remaining) });
+                    i++;
+                }
+                continue;
+            }
+
+            // Format 2: PDF.js might put numbers and name on same line or nearby
+            // Look for pattern: ID DEPT PTO numbers... then name somewhere
+            // Also try: "11.73  160.00  78.50  0.00  93.23" followed by name
+            var numsMatch = line.match(/([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\s+([\d.]+)\s*$/);
+            if (numsMatch && line.match(/PTO/)) {
+                var prevYr = parseFloat(numsMatch[1]);
+                var earned = parseFloat(numsMatch[2]);
+                var taken = parseFloat(numsMatch[3]);
+                var remaining = parseFloat(numsMatch[5]);
+                // Sanity check: earned should be >= 100 (annual allotment)
+                if (earned < 100) continue;
+
+                var nameLine = (i + 1 < lines.length) ? lines[i + 1] : '';
+                var nameClean = nameLine.split(/\s{2,}|Transition/)[0].trim();
+                if (nameClean && nameClean.match(/[a-zA-Z]/) && !nameClean.match(/^(Total|End|Report|Run|PTO|ID|Page)/i)) {
+                    results.push({ name: nameClean, prevYr: round2(prevYr), earned: round2(earned), taken: round2(taken), remaining: round2(remaining) });
+                    i++;
                 }
             }
         }
@@ -982,17 +1037,9 @@
         html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">';
         html += '<input type="file" id="attendanceVerintInput" accept=".xlsx,.xls" multiple style="display:none;">';
         html += '<button type="button" id="attendanceVerintBtn" style="background:linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Verint Excel(s)</button>';
-        html += '<button type="button" id="attendancePayrollPdfBtn" style="background:linear-gradient(135deg, #00695c 0%, #004d40 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Import Payroll PTO Report</button>';
+        html += '<input type="file" id="attendancePayrollPdfInput" accept=".pdf" style="display:none;">';
+        html += '<button type="button" id="attendancePayrollPdfBtn" style="background:linear-gradient(135deg, #00695c 0%, #004d40 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Payroll PTO (PDF)</button>';
         html += '<span id="attendanceUploadStatus" style="font-size:0.85em; color:#666;"></span>';
-        html += '</div>';
-
-        // Payroll PTO paste area (hidden until button clicked)
-        html += '<div id="payrollPtoPasteArea" style="display:none; margin-bottom:16px; padding:14px; background:#fff; border-radius:8px; border:2px solid #00695c;">';
-        html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Paste Payroll PTO Report</h4>';
-        html += '<p style="margin:0 0 8px 0; font-size:0.85em; color:#666;">Open the PWMS1001 PDF, Ctrl+A to select all, Ctrl+C to copy, then paste below.</p>';
-        html += '<textarea id="payrollPtoTextarea" placeholder="Paste report text here..." style="width:100%; height:120px; padding:10px; border:1px solid #ddd; border-radius:4px; font-family:monospace; font-size:0.82em; resize:vertical;"></textarea>';
-        html += '<button type="button" id="parsePayrollPtoBtn" style="margin-top:8px; background:#00695c; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:bold;">Parse & Apply</button>';
-        html += '<span id="payrollPtoParseStatus" style="margin-left:10px; font-size:0.85em;"></span>';
         html += '</div>';
 
         // Associate dropdown
@@ -1031,44 +1078,56 @@
             document.getElementById('attendanceVerintInput')?.click();
         });
 
-        // Payroll PTO paste toggle
+        // Payroll PTO PDF upload
         document.getElementById('attendancePayrollPdfBtn')?.addEventListener('click', function() {
-            var area = document.getElementById('payrollPtoPasteArea');
-            if (area) area.style.display = area.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('attendancePayrollPdfInput')?.click();
         });
 
-        // Parse payroll PTO text
-        document.getElementById('parsePayrollPtoBtn')?.addEventListener('click', function() {
-            var text = document.getElementById('payrollPtoTextarea')?.value || '';
-            var status = document.getElementById('payrollPtoParseStatus');
-            if (!text.trim()) { if (status) status.textContent = 'Paste the report first.'; return; }
+        document.getElementById('attendancePayrollPdfInput')?.addEventListener('change', async function() {
+            var file = this.files?.[0];
+            if (!file) return;
+            var statusEl = document.getElementById('attendanceUploadStatus');
+            if (statusEl) statusEl.textContent = 'Reading PDF...';
 
-            var parsed = parsePayrollPtoText(text);
-            if (parsed.length === 0) { if (status) status.textContent = 'Could not parse any employees.'; return; }
+            try {
+                var text = await extractTextFromPdf(file);
+                var parsed = parsePayrollPtoText(text);
+                if (parsed.length === 0) {
+                    if (statusEl) statusEl.textContent = 'Could not parse any employees from PDF.';
+                    if (typeof showToast === 'function') showToast('Could not parse payroll PDF. Check the file format.', 5000);
+                    this.value = '';
+                    return;
+                }
 
-            var store = loadStore();
-            if (!store.associates) store.associates = {};
-            var matched = 0;
-            parsed.forEach(function(entry) {
-                var matchedName = matchEmployeeToExisting(entry.name);
-                if (!store.associates[matchedName]) store.associates[matchedName] = {};
-                if (!store.associates[matchedName].manualPto) store.associates[matchedName].manualPto = {};
-                store.associates[matchedName].manualPto.carryover = entry.prevYr;
-                store.associates[matchedName].manualPto.allotment = entry.earned;
-                store.associates[matchedName].manualPto.payrollRemaining = entry.remaining;
-                store.associates[matchedName].manualPto.payrollTaken = entry.taken;
-                matched++;
-            });
-            saveStore(store);
+                var store = loadStore();
+                if (!store.associates) store.associates = {};
+                var matched = 0;
+                parsed.forEach(function(entry) {
+                    var matchedName = matchEmployeeToExisting(entry.name);
+                    if (!store.associates[matchedName]) store.associates[matchedName] = {};
+                    if (!store.associates[matchedName].manualPto) store.associates[matchedName].manualPto = {};
+                    store.associates[matchedName].manualPto.carryover = entry.prevYr;
+                    store.associates[matchedName].manualPto.allotment = entry.earned;
+                    store.associates[matchedName].manualPto.payrollRemaining = entry.remaining;
+                    store.associates[matchedName].manualPto.payrollTaken = entry.taken;
+                    matched++;
+                });
+                saveStore(store);
 
-            if (status) status.textContent = matched + ' associates updated!';
-            if (typeof showToast === 'function') showToast(matched + ' PTO balances imported from payroll report.', 4000);
+                if (statusEl) statusEl.textContent = matched + ' associates updated!';
+                if (typeof showToast === 'function') showToast(matched + ' PTO balances imported from payroll report.', 4000);
 
-            // Re-render if an associate is selected
-            var select = document.getElementById('attendanceAssociateSelect');
-            if (select?.value) {
-                renderAttendanceDashboard(container, select.value);
+                // Re-render if an associate is selected
+                var select = document.getElementById('attendanceAssociateSelect');
+                if (select?.value) {
+                    renderAttendanceDashboard(container, select.value);
+                }
+            } catch (err) {
+                console.error('Payroll PDF parse error:', err);
+                if (statusEl) statusEl.textContent = 'Error reading PDF.';
+                if (typeof showToast === 'function') showToast('Error reading PDF: ' + err, 5000);
             }
+            this.value = '';
         });
 
         document.getElementById('attendanceVerintInput')?.addEventListener('change', async function() {
