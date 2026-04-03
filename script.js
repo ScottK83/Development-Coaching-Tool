@@ -1463,81 +1463,100 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
 
-    // Auto-detect period type when date changes
-    document.getElementById('pasteWeekEndingDate')?.addEventListener('change', function() {
-        autoDetectAndSelectPeriodType(this.value);
-    });
+    // Auto-detect period type when either date changes
+    document.getElementById('pasteWeekEndingDate')?.addEventListener('change', autoDetectPeriodFromDates);
+    document.getElementById('pasteStartDate')?.addEventListener('change', autoDetectPeriodFromDates);
 }
 
-function autoDetectAndSelectPeriodType(dateValue) {
-    if (!dateValue) return;
+function autoDetectPeriodFromDates() {
+    const endDate = document.getElementById('pasteWeekEndingDate')?.value;
+    if (!endDate) {
+        updateDetectedBadge(null);
+        return;
+    }
 
-    const endDate = dateValue;
+    const startDate = document.getElementById('pasteStartDate')?.value;
+
+    // If both dates provided, use range detection
+    if (startDate) {
+        const detected = detectUploadPeriodTypeByRange(startDate, endDate);
+        selectPeriodButton(detected);
+        updateDetectedBadge(detected);
+        return;
+    }
+
+    // Single date — use heuristics
     const endDateObj = new Date(endDate + 'T00:00:00');
-    const dayOfWeek = endDateObj.getDay(); // 0=Sun, 6=Sat
+    const dayOfWeek = endDateObj.getDay();
     const month = endDateObj.getMonth();
     const day = endDateObj.getDate();
     const year = endDateObj.getFullYear();
-
-    // Check custom start date
-    const customStart = document.getElementById('pasteCustomStartDate')?.value;
-    if (customStart) {
-        const detected = detectUploadPeriodTypeByRange(customStart, endDate);
-        selectPeriodButton(detected);
-        return;
-    }
-
-    // Check if today or yesterday (likely daily)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const inputDate = new Date(endDate + 'T00:00:00');
+    const diffFromToday = Math.round((today - endDateObj) / (1000 * 60 * 60 * 24));
 
-    // Is it a Sunday? Likely a week ending date
+    // Sunday → week ending
     if (dayOfWeek === 0) {
         selectPeriodButton('week');
+        updateDetectedBadge('week');
         return;
     }
 
-    // Is it end of month? (last day of month)
+    // End of month
     const nextDay = new Date(year, month, day + 1);
     if (nextDay.getMonth() !== month) {
-        // Last day of month — could be month or quarter
         if (month === 2 || month === 5 || month === 8 || month === 11) {
             selectPeriodButton('quarter');
+            updateDetectedBadge('quarter');
         } else {
             selectPeriodButton('month');
+            updateDetectedBadge('month');
         }
         return;
     }
 
-    // Is it close to today? Could be YTD (partial month/year in progress)
-    const diffFromToday = Math.round((today - inputDate) / (1000 * 60 * 60 * 24));
-    if (diffFromToday <= 3 && day > 7) {
-        // Recent date, not early in month — likely YTD or running total
-        // Check: how many days from Jan 1?
+    // Recent date, past first week of month → likely YTD
+    if (diffFromToday <= 5 && diffFromToday >= -1 && day > 7) {
         const jan1 = new Date(year, 0, 1);
-        const daysFromJan1 = Math.round((inputDate - jan1) / (1000 * 60 * 60 * 24));
-        if (daysFromJan1 > 45) {
+        const daysFromJan1 = Math.round((endDateObj - jan1) / (1000 * 60 * 60 * 24));
+        if (daysFromJan1 > 30) {
             selectPeriodButton('ytd');
+            updateDetectedBadge('ytd');
             return;
         }
     }
 
-    // Default: if it's same day as today, daily
-    if (diffFromToday === 0 || diffFromToday === 1) {
+    // Today/yesterday early in month → daily
+    if (diffFromToday >= 0 && diffFromToday <= 1 && day <= 7) {
         selectPeriodButton('daily');
+        updateDetectedBadge('daily');
         return;
     }
 
-    // Fallback: week (most common)
+    // Fallback → week
     selectPeriodButton('week');
+    updateDetectedBadge('week');
 }
 
 function selectPeriodButton(periodType) {
     const btn = document.querySelector(`.upload-period-btn[data-period="${periodType}"]`);
-    if (btn) btn.click(); // triggers the existing click handler to update styles + labels
+    if (btn) btn.click();
+}
+
+function updateDetectedBadge(periodType) {
+    const badge = document.getElementById('detectedPeriodBadge');
+    if (!badge) return;
+    if (!periodType) { badge.style.display = 'none'; return; }
+
+    const labels = { daily: 'Daily', week: 'Week', month: 'Month', quarter: 'Quarter', ytd: 'YTD', custom: 'Custom' };
+    const colors = { daily: '#1565c0', week: '#28a745', month: '#7b1fa2', quarter: '#d84315', ytd: '#e65100', custom: '#546e7a' };
+    const c = colors[periodType] || '#666';
+
+    badge.textContent = labels[periodType] || periodType;
+    badge.style.background = c + '18';
+    badge.style.color = c;
+    badge.style.border = '2px solid ' + c;
+    badge.style.display = 'block';
 }
 
 function initializeDashboard() {
