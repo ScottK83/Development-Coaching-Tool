@@ -514,12 +514,33 @@
         }
 
         var ptost = calculatePtostUsage(data.ptoSubCategories || {});
+
+        // Add missed lunch adjustments
+        var missedLunchTotal = 0;
+        unplannedItems.forEach(function(item) {
+            var key = item.fromDate + '|' + item.activity;
+            if (lunchFlags[key]) missedLunchTotal += 0.5;
+        });
+        if (missedLunchTotal > 0) {
+            // Missed lunch adds to unplanned-not-ptost (against reliability)
+            ptost.unplannedNotPtost = round2(ptost.unplannedNotPtost + missedLunchTotal);
+            ptost.totalUnplanned = round2(ptost.totalUnplanned + missedLunchTotal);
+            ptost.policyHours = ptost.unplannedNotPtost;
+            ptost.reclassificationGap = ptost.unplannedNotPtost;
+            ptost.canExcuse = round2(Math.min(ptost.unplannedNotPtost, ptost.ptostRemaining));
+            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.unplannedNotPtost - ptost.ptostRemaining));
+            ptost.missedLunchTotal = missedLunchTotal;
+        }
+
         var tier = calculateDisciplineTier(ptost.policyHours);
         var fmlaData = data.summary?.['FMLA'] || { used: 0 };
         var fmlaActivities = (data.activities || []).filter(function(a) { return a.activity === 'FMLA'; });
         var unplannedItems = getUnplannedLineItems(data.activities || []);
         var reclassItems = getNeedsReclassificationItems(data.activities || []);
         var plannedItems = getPlannedLineItems(data.activities || []);
+
+        // Load missed lunch flags
+        var lunchFlags = store.associates?.[employeeName]?.missedLunchFlags || {};
 
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
@@ -597,21 +618,25 @@
 
         // Unplanned Absences
         if (unplannedItems.length > 0) {
-            var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0));
+            var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0) + missedLunchTotal);
             html += '<details style="' + detailStyle + '" open>';
-            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
+            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h' + (missedLunchTotal > 0 ? ' incl. ' + missedLunchTotal + 'h missed lunch' : '') + ')</summary>';
             html += '<div style="' + contentStyle + '">';
             html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Status</th></tr>';
-            unplannedItems.forEach(function(item) {
+            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Missed Lunch</th><th style="padding:6px 8px; text-align:center;">Status</th></tr>';
+            unplannedItems.forEach(function(item, idx) {
                 var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
                 var isPtost = PTOST_CATEGORIES.indexOf(item.activity) !== -1;
                 var statusLabel = isPtost ? 'PTOST' : 'Needs Reclassification';
                 var statusColor = isPtost ? '#0d47a1' : '#e65100';
+                var lunchKey = item.fromDate + '|' + item.activity;
+                var isLunchFlagged = !!lunchFlags[lunchKey];
+                var effectiveHours = isLunchFlagged ? round2(item.hours + 0.5) : item.hours;
                 html += '<tr style="border-bottom:1px solid #f0f0f0;">';
                 html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
                 html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
-                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + item.hours + 'h</td>';
+                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + effectiveHours + 'h' + (isLunchFlagged ? ' <span style="font-size:0.8em; color:#999;">(+0.5)</span>' : '') + '</td>';
+                html += '<td style="padding:6px 8px; text-align:center;"><input type="checkbox" class="missed-lunch-toggle" data-key="' + escHtml(lunchKey) + '" data-employee="' + escHtml(employeeName) + '" ' + (isLunchFlagged ? 'checked' : '') + ' style="cursor:pointer; width:16px; height:16px;"></td>';
                 html += '<td style="padding:6px 8px; text-align:center; color:' + statusColor + '; font-weight:600; font-size:0.82em;">' + statusLabel + '</td>';
                 html += '</tr>';
             });
@@ -706,6 +731,25 @@
             if (copyBtn) copyBtn.style.display = 'inline-block';
             navigator.clipboard.writeText(msg).catch(function() {});
         }
+
+        // Bind missed lunch toggles
+        container.querySelectorAll('.missed-lunch-toggle').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var key = this.dataset.key;
+                var emp = this.dataset.employee;
+                var store = loadStore();
+                if (!store.associates[emp]) store.associates[emp] = {};
+                if (!store.associates[emp].missedLunchFlags) store.associates[emp].missedLunchFlags = {};
+                if (this.checked) {
+                    store.associates[emp].missedLunchFlags[key] = true;
+                } else {
+                    delete store.associates[emp].missedLunchFlags[key];
+                }
+                saveStore(store);
+                // Re-render to update totals
+                renderAttendanceDashboard(container, emp);
+            });
+        });
     }
 
     // --- Message Generators ---
