@@ -400,6 +400,26 @@
     }
 
     // ============================================
+    // ATTENDANCE TRACKER
+    // ============================================
+
+    function loadAttendanceTracker() {
+        try {
+            const saved = localStorage.getItem(STORAGE_PREFIX + 'attendanceTracker');
+            return saved ? JSON.parse(saved) : { associates: {} };
+        } catch (error) {
+            console.error('Error loading attendance tracker:', error);
+            return { associates: {} };
+        }
+    }
+
+    function saveAttendanceTracker(data) {
+        const ok = saveWithSizeCheck('attendanceTracker', data);
+        if (!ok) console.error('Error saving attendance tracker: save failed');
+        return ok;
+    }
+
+    // ============================================
     // PTO TRACKER
     // ============================================
 
@@ -467,6 +487,9 @@
         // PTO
         loadPtoTracker,
         savePtoTracker,
+        // Attendance tracker
+        loadAttendanceTracker,
+        saveAttendanceTracker,
         // Constants
         STORAGE_PREFIX,
         SENTIMENT_PHRASE_DB_STORAGE_KEY,

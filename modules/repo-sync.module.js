@@ -181,7 +181,8 @@
         STORAGE_PREFIX + 'sentimentPhraseDatabase',
         STORAGE_PREFIX + 'associateSentimentSnapshots',
         STORAGE_PREFIX + 'executiveSummaryNotes',
-        STORAGE_PREFIX + 'ptoTracker'
+        STORAGE_PREFIX + 'ptoTracker',
+        STORAGE_PREFIX + 'attendanceTracker'
     ]);
 
     function shouldSyncForStorageKey(key) {
@@ -877,6 +878,7 @@
             myTeamMembers: storage?.loadTeamMembers?.() || {},
             callCenterAverages: storage?.loadCallCenterAverages?.() || {},
             ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
+            attendanceTracker: storage?.loadAttendanceTracker?.() || {},
             followUpHistory: followUpHistory,
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
             yearEndAnnualGoalsStore: window.loadYearEndAnnualGoalsStore?.() || {},
@@ -1144,6 +1146,7 @@
             myTeamMembers: coerceObject(payload?.myTeamMembers),
             callCenterAverages: coerceObject(payload?.callCenterAverages),
             ptoTracker: coerceObject(payload?.ptoTracker),
+            attendanceTracker: coerceObject(payload?.attendanceTracker),
             yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames)

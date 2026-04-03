@@ -46,6 +46,10 @@
                     <div class="flex-row-center" style="margin-bottom: 20px; gap: 15px;">
                         <button type="button" id="showUploadMetricsBtn" class="btn-upload-metrics">📊 Upload Metrics</button>
                         <button type="button" id="showUploadSentimentBtn" class="btn-upload-sentiment">💬 Upload Sentiment</button>
+                        <button type="button" id="showUploadVerintBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📋 Upload Verint</button>
+                        <button type="button" id="showUploadPayrollBtn" style="background: #00695c; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">💰 Upload Payroll</button>
+                        <input type="file" id="uploadVerintFileInput" accept=".xlsx,.xls" style="display:none;">
+                        <input type="file" id="uploadPayrollFileInput" accept=".xlsx,.xls" style="display:none;">
                     </div>
                     
                     <!-- Upload Metrics Container -->
@@ -535,9 +539,14 @@ Box 2 - Future Improvement Areas:
                         <div id="embeddedTeamSnapshot"></div>
                     </div>
 
-                    <!-- Attendance Sub-section (PTO tracker, will become Verint reconciliation) -->
+                    <!-- Attendance Sub-section -->
                     <div id="subSectionAttendance" style="display: none;">
-                        <div id="embeddedPtoInMyTeam"></div>
+                        <div id="attendanceDashboard"></div>
+                        <hr style="margin: 20px 0; border: none; border-top: 2px solid #e0e0e0;">
+                        <details style="margin-bottom: 16px;">
+                            <summary style="cursor:pointer; font-weight:600; color:#00695c; font-size:0.95em;">Payroll PTO Tracker (legacy)</summary>
+                            <div id="embeddedPtoInMyTeam" style="margin-top:12px;"></div>
+                        </details>
                     </div>
 
                     <!-- Center Ranking Sub-section -->
@@ -1581,6 +1590,7 @@ Box 2 - Future Improvement Areas:
                 'modules/trend-intelligence.module.js',
                 'modules/trend-coaching-email.module.js',
                 'modules/morning-pulse.module.js',
+                'modules/attendance-tracker.module.js',
                 'modules/copilot-prompt.module.js',
                 'modules/team-snapshot.module.js',
                 'modules/center-ranking.module.js',

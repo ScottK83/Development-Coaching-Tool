@@ -1456,6 +1456,39 @@ function bindUploadAndPasteHandlers() {
 
 
     document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModal);
+
+    // Verint upload from Upload page
+    document.getElementById('showUploadVerintBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadVerintFileInput')?.click();
+    });
+    document.getElementById('uploadVerintFileInput')?.addEventListener('change', async function() {
+        var file = this.files?.[0];
+        if (!file) return;
+        try {
+            await window.DevCoachModules?.attendanceTracker?.handleVerintUploadFromUploadPage?.(file);
+        } catch (err) {
+            console.error('Verint upload error:', err);
+            if (typeof showToast === 'function') showToast('Error: ' + err, 5000);
+        }
+        this.value = '';
+    });
+
+    // Payroll upload from Upload page
+    document.getElementById('showUploadPayrollBtn')?.addEventListener('click', () => {
+        document.getElementById('uploadPayrollFileInput')?.click();
+    });
+    document.getElementById('uploadPayrollFileInput')?.addEventListener('change', async function() {
+        var file = this.files?.[0];
+        if (!file) return;
+        if (typeof importPayrollExcel === 'function') {
+            importPayrollExcel(file);
+        } else if (typeof window.importPayrollExcel === 'function') {
+            window.importPayrollExcel(file);
+        } else {
+            if (typeof showToast === 'function') showToast('PTO module not loaded. Upload from My Team > Attendance.', 5000);
+        }
+        this.value = '';
+    });
     document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
     document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
     document.getElementById('pasteDataTextarea')?.addEventListener('input', handlePasteDataTextareaInput);
@@ -1612,6 +1645,9 @@ function bindNavigationHandlers() {
     });
     document.getElementById('subNavAttendance')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionAttendance', 'subNavAttendance');
+        if (window.DevCoachModules?.attendanceTracker?.initializeAttendanceTracker) {
+            window.DevCoachModules.attendanceTracker.initializeAttendanceTracker();
+        }
         embedPtoInMyTeam();
     });
 
