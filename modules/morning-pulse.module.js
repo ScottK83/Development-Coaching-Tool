@@ -16,7 +16,8 @@
 
     function getAllSortedKeys() {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        const allKeys = Object.keys(weekly).sort();
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const allKeys = Object.keys(weekly).concat(Object.keys(ytd)).sort();
         return allKeys;
     }
 
