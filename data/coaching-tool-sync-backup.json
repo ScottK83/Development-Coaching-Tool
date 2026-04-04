@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-03T23:59:46.690Z",
+  "generatedAt": "2026-04-04T00:00:06.644Z",
   "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -3247,6 +3247,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.195Z"
+        },
+        "manualPto": {
+          "carryover": 60.82,
+          "allotment": 160,
+          "payrollRemaining": 173.82,
+          "payrollTaken": 47
         }
       },
       "Kristin Villela": {
@@ -3750,6 +3756,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.209Z"
+        },
+        "manualPto": {
+          "carryover": 24.84,
+          "allotment": 160,
+          "payrollRemaining": 112.59,
+          "payrollTaken": 72.25
         }
       },
       "Esther Ramos": {
@@ -4205,6 +4217,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.220Z"
+        },
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 144.37,
+          "payrollTaken": 15.63
         }
       },
       "Esperanza Palomera": {
@@ -4594,6 +4612,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.229Z"
+        },
+        "manualPto": {
+          "carryover": 2.21,
+          "allotment": 160,
+          "payrollRemaining": 124.46,
+          "payrollTaken": 37.75
         }
       },
       "Johnathan Padilla": {
@@ -5432,6 +5456,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.246Z"
+        },
+        "manualPto": {
+          "carryover": 0.17,
+          "allotment": 160,
+          "payrollRemaining": 56.85,
+          "payrollTaken": 103.32
         }
       },
       "Christi Martinez-Sharp": {
@@ -5809,6 +5839,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.254Z"
+        },
+        "manualPto": {
+          "carryover": 0.01,
+          "allotment": 160,
+          "payrollRemaining": 71.75,
+          "payrollTaken": 88.26
         }
       },
       "Erica Kallestewa": {
@@ -6156,6 +6192,12 @@
             }
           ],
           "uploadedAt": "2026-04-03T22:14:11.261Z"
+        },
+        "manualPto": {
+          "carryover": 10.96,
+          "allotment": 160,
+          "payrollRemaining": 97.44,
+          "payrollTaken": 73.52
         }
       },
       "Oceane Ingram": {
@@ -10748,6 +10790,46 @@
           "payrollRemaining": 72.41,
           "payrollTaken": 87.59
         }
+      },
+      "Knight,Scott T": {
+        "manualPto": {
+          "carryover": 120,
+          "allotment": 200,
+          "payrollRemaining": 312,
+          "payrollTaken": 8
+        }
+      },
+      "Lockhart,Brandywine": {
+        "manualPto": {
+          "carryover": 8.2,
+          "allotment": 200,
+          "payrollRemaining": 143.4,
+          "payrollTaken": 64.8
+        }
+      },
+      "Scoticia Osborne": {
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 89.2,
+          "payrollTaken": 70.8
+        }
+      },
+      "Dyna Padilla": {
+        "manualPto": {
+          "carryover": 31.64,
+          "allotment": 160,
+          "payrollRemaining": 181.81,
+          "payrollTaken": 9.83
+        }
+      },
+      "Teena Pokorski": {
+        "manualPto": {
+          "carryover": 0,
+          "allotment": 160,
+          "payrollRemaining": 111.15,
+          "payrollTaken": 48.85
+        }
       }
     }
   },
@@ -10789,7 +10871,7 @@
     "devCoachingTool_attendanceTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 110099
+      "byteLength": 111302
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
