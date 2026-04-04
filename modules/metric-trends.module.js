@@ -968,10 +968,12 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
     const periodType = context.periodType || 'week';
 
     Object.entries(TREND_METRIC_MAPPINGS).forEach(([registryKey, csvKey]) => {
-        const employeeValue = parseFloat(employeeData[registryKey]) || 0;
+        const employeeValueRaw = parseFloat(employeeData[registryKey]);
+        if (!Number.isFinite(employeeValueRaw)) return;
+        const employeeValue = employeeValueRaw;
         const centerValue = parseFloat(centerAverages[csvKey]) || 0;
         const metric = METRICS_REGISTRY[registryKey];
-        if (!metric || employeeValue === 0) return;
+        if (!metric) return;
 
         const target = getMetricTrendTarget(registryKey);
         const targetType = getMetricTrendTargetType(registryKey);
