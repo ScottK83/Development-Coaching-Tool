@@ -12,19 +12,19 @@
     // jump in FCR this week."
     // ============================================
 
+    // Volume-only metrics excluded from pulse messages (no target to coach against)
+    const PULSE_EXCLUDED_METRICS = ['totalCalls'];
+
     // --- Data helpers ---
 
     function getAllSortedKeys() {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        const allKeys = Object.keys(weekly).concat(Object.keys(ytd)).sort();
-        return allKeys;
+        return Object.keys(weekly).sort();
     }
 
     function getPeriodData(weekKey) {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        return weekly[weekKey] || ytd[weekKey] || null;
+        return weekly[weekKey] || null;
     }
 
     function getPeriodEndDate(weekKey) {
@@ -90,7 +90,7 @@
         const registry = typeof METRICS_REGISTRY !== 'undefined' ? METRICS_REGISTRY : {};
         const deltas = [];
 
-        Object.keys(registry).forEach(metricKey => {
+        Object.keys(registry).filter(k => !PULSE_EXCLUDED_METRICS.includes(k)).forEach(metricKey => {
             const baseVal = parseFloat(baseEmp[metricKey]);
             const latestVal = parseFloat(latestEmp[metricKey]);
             if (!Number.isFinite(baseVal) || !Number.isFinite(latestVal)) return;
@@ -200,7 +200,7 @@
     // --- Card rendering ---
 
     function buildEmployeeCard(emp, analysis, weekDeltas, biggestJump) {
-        const allMetrics = analysis.allMetrics || [];
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
         const badge = getStatusBadge(allMetrics);
         const focalPoint = pickFocalPoint(allMetrics);
         const hasTrajectory = weekDeltas.length > 0;
@@ -226,9 +226,10 @@
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s));
 
-        const trendArrow = (dir) => {
-            if (dir === 'improving') return '<span style="color:#2e7d32;" title="Improving">\u25B2</span>';
-            if (dir === 'declining') return '<span style="color:#e53935;" title="Declining">\u25BC</span>';
+        const trendArrow = (dir, metricKey) => {
+            const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+            if (dir === 'improving') return `<span style="color:#2e7d32;" title="Improving">${reverse ? '\u25BC' : '\u25B2'}</span>`;
+            if (dir === 'declining') return `<span style="color:#e53935;" title="Declining">${reverse ? '\u25B2' : '\u25BC'}</span>`;
             return '<span style="color:#9e9e9e;" title="Stable">\u2015</span>';
         };
 
@@ -242,7 +243,7 @@
                     ? ` <span style="color:#1b5e20; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} this week)</span>`
                     : '';
                 return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
-                    `${trendArrow(m.trendDirection)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
+                    `${trendArrow(m.trendDirection, m.metricKey)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
             }).join('');
         } else {
             winsHtml = '<div style="font-size:0.85em; color:#999;">No metrics at target yet</div>';
@@ -257,7 +258,7 @@
                     ? ` <span style="color:${wd.delta > 0 ? '#1b5e20' : '#b71c1c'}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
                     : '';
                 return `<div style="font-size:0.85em; color:#c62828; padding:2px 0;">` +
-                    `${trendArrow(m.trendDirection)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong> ` +
+                    `${trendArrow(m.trendDirection, m.metricKey)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong> ` +
                     `<span style="color:#999;">(target: ${fmtTarget(m)})</span>${deltaTag}</div>`;
             }).join('');
         } else {
@@ -323,7 +324,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = analysis.allMetrics || [];
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
 
         // Week trajectory
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
@@ -406,7 +407,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = analysis.allMetrics || [];
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
         const biggestJump = getBiggestJump(weekDeltas);
 
