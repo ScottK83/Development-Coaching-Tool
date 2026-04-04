@@ -600,20 +600,32 @@
         });
 
         // Calculate PTOST usage + missed lunch adjustments
+        var entryNotes = store.associates?.[employeeName]?.entryNotes || {};
+        var EXCUSING_REASONS = ['pc_issues', 'system_outage', 'mgr_approved'];
         var ptost = calculatePtostUsage(data.ptoSubCategories || {});
         var missedLunchTotal = 0;
+        var excusedByReasonTotal = 0;
         unplannedItems.forEach(function(item) {
             var key = item.fromDate + '|' + item.activity;
-            if (lunchFlags[key]) missedLunchTotal += 0.5;
+            var note = entryNotes[key] || {};
+            var isExcusedByReason = EXCUSING_REASONS.indexOf(note.reason) !== -1;
+            if (isExcusedByReason) {
+                var hrs = lunchFlags[key] ? round2(item.hours + 0.5) : item.hours;
+                excusedByReasonTotal += hrs;
+            } else if (lunchFlags[key]) {
+                missedLunchTotal += 0.5;
+            }
         });
-        if (missedLunchTotal > 0) {
-            ptost.unplannedNotPtost = round2(ptost.unplannedNotPtost + missedLunchTotal);
-            ptost.totalUnplanned = round2(ptost.totalUnplanned + missedLunchTotal);
-            ptost.policyHours = ptost.unplannedNotPtost;
-            ptost.reclassificationGap = ptost.unplannedNotPtost;
-            ptost.canExcuse = round2(Math.min(ptost.unplannedNotPtost, ptost.ptostRemaining));
-            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.unplannedNotPtost - ptost.ptostRemaining));
+        // Adjust for missed lunch and excused-by-reason
+        if (missedLunchTotal > 0 || excusedByReasonTotal > 0) {
+            ptost.unplannedNotPtost = round2(ptost.unplannedNotPtost + missedLunchTotal - excusedByReasonTotal);
+            ptost.totalUnplanned = round2(ptost.totalUnplanned + missedLunchTotal - excusedByReasonTotal);
+            ptost.policyHours = round2(Math.max(0, ptost.unplannedNotPtost));
+            ptost.reclassificationGap = round2(Math.max(0, ptost.unplannedNotPtost));
+            ptost.canExcuse = round2(Math.min(ptost.policyHours, ptost.ptostRemaining));
+            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.policyHours - ptost.ptostRemaining));
             ptost.missedLunchTotal = missedLunchTotal;
+            ptost.excusedByReasonTotal = excusedByReasonTotal;
         }
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
@@ -766,22 +778,44 @@
             if (ptost.ptostRemaining > 0) {
                 html += '<div style="margin-bottom:8px; font-size:0.82em; color:#1565c0;"><strong>\uD83D\uDEA9 Highlighted rows</strong> can be excused with remaining PTOST (' + ptost.ptostRemaining + 'h available)</div>';
             }
-            // Custom table with highlighting
+            // Load entry notes/reasons
+            var entryNotes = store.associates?.[employeeName]?.entryNotes || {};
+
+            // Custom table with highlighting + reason column
             html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Action</th></tr>';
+            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:left;">Reason</th><th style="padding:6px 8px; text-align:center;">Action</th></tr>';
             unplannedItems.forEach(function(item) {
                 var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
                 var lunchKey = item.fromDate + '|' + item.activity;
                 var hasLunch = !!lunchFlags[lunchKey];
                 var hrs = hasLunch ? round2(item.hours + 0.5) : item.hours;
                 var excusable = canExcuseKeys[lunchKey];
-                var rowBg = excusable === true ? '#e3f2fd' : excusable === 'partial' ? '#fff8e1' : 'transparent';
-                var actionLabel = excusable === true ? '\u2705 Excuse with PTOST' : excusable === 'partial' ? '\u26A0\uFE0F Partial' : '';
-                var actionColor = excusable === true ? '#0d47a1' : '#e65100';
+                var note = entryNotes[lunchKey] || {};
+                var reason = note.reason || '';
+                var isExcusedByReason = reason === 'pc_issues' || reason === 'system_outage' || reason === 'mgr_approved';
+                var rowBg = isExcusedByReason ? '#e0f2f1' : excusable === true ? '#e3f2fd' : excusable === 'partial' ? '#fff8e1' : 'transparent';
+                var actionLabel = isExcusedByReason ? '\u2705 Excused' : excusable === true ? '\u2705 PTOST' : excusable === 'partial' ? '\u26A0\uFE0F Partial' : '';
+                var actionColor = isExcusedByReason ? '#00695c' : excusable === true ? '#0d47a1' : '#e65100';
                 html += '<tr style="border-bottom:1px solid #f0f0f0; background:' + rowBg + ';">';
                 html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
                 html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
                 html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + hrs + 'h' + (hasLunch ? ' <span style="font-size:0.78em; color:#999;">(+.5)</span>' : '') + '</td>';
+                // Reason dropdown + note
+                html += '<td style="padding:4px 6px;">';
+                html += '<select class="entry-reason-select" data-key="' + escHtml(lunchKey) + '" data-employee="' + escHtml(employeeName) + '" style="padding:3px; border:1px solid #ddd; border-radius:3px; font-size:0.88em; width:100%; max-width:140px;">';
+                html += '<option value=""' + (reason === '' ? ' selected' : '') + '>--</option>';
+                html += '<option value="no_reason"' + (reason === 'no_reason' ? ' selected' : '') + '>No reason given</option>';
+                html += '<option value="personal"' + (reason === 'personal' ? ' selected' : '') + '>Personal</option>';
+                html += '<option value="sick"' + (reason === 'sick' ? ' selected' : '') + '>Sick</option>';
+                html += '<option value="pc_issues"' + (reason === 'pc_issues' ? ' selected' : '') + '>PC/Tech Issues</option>';
+                html += '<option value="system_outage"' + (reason === 'system_outage' ? ' selected' : '') + '>System Outage</option>';
+                html += '<option value="mgr_approved"' + (reason === 'mgr_approved' ? ' selected' : '') + '>Manager Approved</option>';
+                html += '<option value="other"' + (reason === 'other' ? ' selected' : '') + '>Other</option>';
+                html += '</select>';
+                if (reason === 'other' || note.detail) {
+                    html += '<input type="text" class="entry-reason-detail" data-key="' + escHtml(lunchKey) + '" data-employee="' + escHtml(employeeName) + '" value="' + escHtml(note.detail || '') + '" placeholder="Details..." style="margin-top:3px; padding:3px; border:1px solid #ddd; border-radius:3px; font-size:0.82em; width:100%; max-width:140px;">';
+                }
+                html += '</td>';
                 html += '<td style="padding:6px 8px; text-align:center; font-size:0.82em; color:' + actionColor + '; font-weight:600;">' + actionLabel + '</td>';
                 html += '</tr>';
             });
@@ -889,6 +923,33 @@
         }
 
         // Bind manual PTO inputs — save on change
+        // Bind reason dropdowns
+        container.querySelectorAll('.entry-reason-select').forEach(function(sel) {
+            sel.addEventListener('change', function() {
+                var key = this.dataset.key;
+                var emp = this.dataset.employee;
+                var store = loadStore();
+                if (!store.associates[emp]) store.associates[emp] = {};
+                if (!store.associates[emp].entryNotes) store.associates[emp].entryNotes = {};
+                if (!store.associates[emp].entryNotes[key]) store.associates[emp].entryNotes[key] = {};
+                store.associates[emp].entryNotes[key].reason = this.value;
+                saveStore(store);
+                renderAttendanceDashboard(container, emp);
+            });
+        });
+        container.querySelectorAll('.entry-reason-detail').forEach(function(input) {
+            input.addEventListener('change', function() {
+                var key = this.dataset.key;
+                var emp = this.dataset.employee;
+                var store = loadStore();
+                if (!store.associates[emp]) store.associates[emp] = {};
+                if (!store.associates[emp].entryNotes) store.associates[emp].entryNotes = {};
+                if (!store.associates[emp].entryNotes[key]) store.associates[emp].entryNotes[key] = {};
+                store.associates[emp].entryNotes[key].detail = this.value;
+                saveStore(store);
+            });
+        });
+
         // Bind reliability hours input
         document.getElementById('manualReliabilityInput')?.addEventListener('change', function() {
             var val = this.value.trim();
