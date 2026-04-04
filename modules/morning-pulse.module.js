@@ -13,7 +13,7 @@
     // ============================================
 
     // Volume-only metrics excluded from pulse messages (no target to coach against)
-    const PULSE_EXCLUDED_METRICS = ['totalCalls'];
+    const PULSE_EXCLUDED_METRICS = ['totalCalls', 'reliability'];
 
     // --- Data helpers ---
 
