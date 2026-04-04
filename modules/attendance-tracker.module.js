@@ -1014,6 +1014,16 @@
         html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Needs Reclassification</div></div>';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
         html += '</div>';
+        if (hasPayroll && payroll.ptostTotal > PTOST_ANNUAL_LIMIT) {
+            html += '<div style="margin:8px 0; padding:8px 12px; background:#ffebee; border-radius:6px; border-left:3px solid #d32f2f; font-size:0.88em; color:#d32f2f; font-weight:600;">';
+            html += '\uD83D\uDED1 PTOST is ' + round2(payroll.ptostTotal - PTOST_ANNUAL_LIMIT) + 'h OVER the 40h limit! Payroll will flag this.';
+            html += '</div>';
+        }
+        if (hasPayroll && payroll.pendingEntries && payroll.pendingEntries.length > 0) {
+            html += '<div style="margin:8px 0; padding:8px 12px; background:#fff3e0; border-radius:6px; border-left:3px solid #e65100; font-size:0.85em; color:#e65100;">';
+            html += '\u23F3 ' + payroll.pendingEntries.length + ' entries pending approval';
+            html += '</div>';
+        }
         // Show payroll PTOST entries if available, otherwise Verint
         var ptostDisplayItems = hasPayroll ? (payroll.ptostEntries || []) : ptostItems;
         if (ptostDisplayItems.length > 0) {
@@ -1413,12 +1423,13 @@
                 indicator = '\u2705 Payroll';
                 loadedCount++;
                 // Use payroll data for flags
-                if (payrollD.unschdTotal > 0) {
-                    fixFlag = ' \u26A0\uFE0F ' + payrollD.unschdTotal + 'h against policy';
-                }
-                if (payrollD.ptostRemaining > 0 && payrollD.unschdTotal > 0) {
+                if (payrollD.ptostTotal > PTOST_ANNUAL_LIMIT) {
+                    fixFlag = ' \uD83D\uDED1 PTOST OVER 40 (' + payrollD.ptostTotal + 'h)';
+                } else if (payrollD.unschdTotal > 0 && payrollD.ptostRemaining > 0) {
                     fixFlag = ' \uD83D\uDEA9 ' + payrollD.unschdTotal + 'h policy, ' + payrollD.ptostRemaining + 'h PTOST left';
                     fixableCount++;
+                } else if (payrollD.unschdTotal > 0) {
+                    fixFlag = ' \u26A0\uFE0F ' + payrollD.unschdTotal + 'h against policy';
                 }
             } else if (verint?.uploadedAt) {
                 var uploadDate = new Date(verint.uploadedAt).toLocaleDateString();
