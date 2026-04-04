@@ -947,28 +947,11 @@
                 msg += '\nI can mark ' + ptost.canExcuse + ' hours as PTOST to get them excused, but the remaining ' + ptost.policyHoursAfterExcusing + ' hours would stay against your reliability since that would use up your PTOST.\n';
             }
 
-            msg += '\nAs a reminder, our attendance policy is:\n';
-            msg += '  - 16 hours: Verbal Warning\n';
-            msg += '  - 24 hours: Written Warning\n';
-            msg += '  - 32 hours: Second Written Warning\n';
-            msg += '  - 40 hours: Termination Eligible\n';
-
             msg += '\nWould you like me to go ahead and get those hours excused? Just let me know.';
 
         // Scenario 2: has unexcused hours but NO PTOST left
         } else if (ptost.policyHours > 0 && ptost.ptostRemaining <= 0) {
             msg += '\nYou have ' + ptost.policyHours + ' hours of unplanned time against your reliability, and your PTOST balance is at 0.\n';
-            msg += 'Current Status: ' + tier.tier.label + '\n';
-            if (tier.nextTier) {
-                msg += tier.hoursUntilNext + ' hours until ' + tier.nextTier.label + '\n';
-            }
-
-            msg += '\nAs a reminder, our attendance policy is:\n';
-            msg += '  - 16 hours: Verbal Warning\n';
-            msg += '  - 24 hours: Written Warning\n';
-            msg += '  - 32 hours: Second Written Warning\n';
-            msg += '  - 40 hours: Termination Eligible\n';
-
             msg += '\nPlease be mindful of attendance going forward. Let me know if you have any questions.';
 
         // Scenario 3: no unexcused hours
