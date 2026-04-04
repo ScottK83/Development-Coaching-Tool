@@ -744,13 +744,48 @@
         // Unexcused Absences (against reliability)
         if (unplannedItems.length > 0) {
             var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0) + missedLunchTotal);
+
+            // Figure out which days can be excused with remaining PTOST
+            var ptostBudget = ptost.ptostRemaining;
+            var canExcuseKeys = {};
+            unplannedItems.forEach(function(item) {
+                var lunchKey = item.fromDate + '|' + item.activity;
+                var hrs = lunchFlags[lunchKey] ? round2(item.hours + 0.5) : item.hours;
+                if (ptostBudget >= hrs) {
+                    canExcuseKeys[lunchKey] = true;
+                    ptostBudget = round2(ptostBudget - hrs);
+                } else if (ptostBudget > 0) {
+                    canExcuseKeys[lunchKey] = 'partial';
+                    ptostBudget = 0;
+                }
+            });
+
             html += '<details style="' + detailStyle + '">';
             html += '<summary style="' + summaryStyle + 'color:#d84315;">Unexcused Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
             html += '<div style="' + contentStyle + '">';
-            html += buildTable(unplannedItems, '#eceff1', [
-                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }
-            ]);
-            html += '</div></details>';
+            if (ptost.ptostRemaining > 0) {
+                html += '<div style="margin-bottom:8px; font-size:0.82em; color:#1565c0;"><strong>\uD83D\uDEA9 Highlighted rows</strong> can be excused with remaining PTOST (' + ptost.ptostRemaining + 'h available)</div>';
+            }
+            // Custom table with highlighting
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#eceff1;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Activity</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:center;">Action</th></tr>';
+            unplannedItems.forEach(function(item) {
+                var colors = ACTIVITY_COLORS[item.activity] || DEFAULT_ACTIVITY_COLOR;
+                var lunchKey = item.fromDate + '|' + item.activity;
+                var hasLunch = !!lunchFlags[lunchKey];
+                var hrs = hasLunch ? round2(item.hours + 0.5) : item.hours;
+                var excusable = canExcuseKeys[lunchKey];
+                var rowBg = excusable === true ? '#e3f2fd' : excusable === 'partial' ? '#fff8e1' : 'transparent';
+                var actionLabel = excusable === true ? '\u2705 Excuse with PTOST' : excusable === 'partial' ? '\u26A0\uFE0F Partial' : '';
+                var actionColor = excusable === true ? '#0d47a1' : '#e65100';
+                html += '<tr style="border-bottom:1px solid #f0f0f0; background:' + rowBg + ';">';
+                html += '<td style="padding:6px 8px;">' + formatDateDisplay(item.fromDate) + '</td>';
+                html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:' + colors.bg + '; color:' + colors.text + '; font-size:0.88em;">' + escHtml(item.activity) + '</span></td>';
+                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + hrs + 'h' + (hasLunch ? ' <span style="font-size:0.78em; color:#999;">(+.5)</span>' : '') + '</td>';
+                html += '<td style="padding:6px 8px; text-align:center; font-size:0.82em; color:' + actionColor + '; font-weight:600;">' + actionLabel + '</td>';
+                html += '</tr>';
+            });
+            html += '</table></div></details>';
         }
 
         // PTOST Details (excused absences)
@@ -953,25 +988,38 @@
             return 'No entries need reclassification for ' + employeeName + '.';
         }
 
-        var totalHours = round2(reclassItems.reduce(function(sum, item) { return sum + item.hours; }, 0));
-        var canCover = ptost ? Math.min(totalHours, ptost.ptostRemaining) : totalHours;
+        // Only include items that PTOST can cover
+        var budget = ptost ? ptost.ptostRemaining : 999;
+        var itemsToExcuse = [];
+        var excessItems = [];
+        reclassItems.forEach(function(item) {
+            if (budget >= item.hours) {
+                itemsToExcuse.push(item);
+                budget = round2(budget - item.hours);
+            } else {
+                excessItems.push(item);
+            }
+        });
+
+        var excuseHours = round2(itemsToExcuse.reduce(function(s, i) { return s + i.hours; }, 0));
 
         var msg = 'Hi WFM team,\n\n';
 
         if (ptost && ptost.ptostRemaining > 0) {
             msg += employeeName + ' has ' + ptost.ptostRemaining + 'h of PTOST remaining (used ' + ptost.ptostUsed + '/' + ptost.ptostLimit + 'h). ';
-            msg += 'Please reclassify the following unplanned entries as PTOST:\n\n';
+            msg += 'Please reclassify the following entries as PTOST:\n\n';
         } else {
             msg += 'Please reclassify the following entries as PTOST for ' + employeeName + ':\n\n';
         }
 
-        reclassItems.forEach(function(item) {
+        itemsToExcuse.forEach(function(item) {
             msg += '- ' + formatDateDisplay(item.fromDate) + ': ' + item.activity + ' - ' + item.hours + 'h\n';
         });
 
-        msg += '\nTotal: ' + totalHours + 'h to reclassify';
-        if (ptost && ptost.ptostRemaining > 0 && totalHours > ptost.ptostRemaining) {
-            msg += ' (note: only ' + ptost.ptostRemaining + 'h of PTOST remaining — ' + round2(totalHours - ptost.ptostRemaining) + 'h will exceed their PTOST balance)';
+        msg += '\nTotal: ' + excuseHours + 'h to reclassify';
+        if (excessItems.length > 0) {
+            var excessHours = round2(excessItems.reduce(function(s, i) { return s + i.hours; }, 0));
+            msg += '\n\nNote: ' + excessHours + 'h of additional unplanned time cannot be covered (PTOST exhausted).';
         }
         msg += '\n\nThank you!';
 
