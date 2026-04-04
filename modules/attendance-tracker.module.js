@@ -1036,6 +1036,63 @@
         }
         html += '</div></details>';
 
+        // Payroll vs Verint Reconciliation
+        if (hasPayroll && data.activities) {
+            // Build sets of dates by category from Verint
+            var verintPtostDates = {};
+            (data.activities || []).forEach(function(a) {
+                if (PTOST_CATEGORIES.indexOf(a.activity) !== -1) {
+                    verintPtostDates[a.fromDate] = a;
+                }
+            });
+            var verintUnplannedDates = {};
+            (data.activities || []).forEach(function(a) {
+                if (UNPLANNED_NOT_PTOST.indexOf(a.activity) !== -1) {
+                    verintUnplannedDates[a.fromDate] = a;
+                }
+            });
+
+            // Find discrepancies: payroll has PTOST but Verint doesn't
+            var needsWfmFix = [];
+            (payroll.ptostEntries || []).forEach(function(pe) {
+                if (!verintPtostDates[pe.date]) {
+                    // Payroll says PTOST but Verint doesn't have it as PTOST
+                    var verintEntry = verintUnplannedDates[pe.date];
+                    needsWfmFix.push({
+                        date: pe.date,
+                        payrollTrc: 'PTOST',
+                        payrollHours: pe.hours,
+                        verintActivity: verintEntry ? verintEntry.activity : 'Not in Verint',
+                        verintHours: verintEntry ? verintEntry.hours : 0
+                    });
+                }
+            });
+
+            if (needsWfmFix.length > 0) {
+                html += '<details style="' + detailStyle + '" open>';
+                html += '<summary style="' + summaryStyle + 'color:#d32f2f;">\uD83D\uDEA8 WFM Fixes Needed (' + needsWfmFix.length + ' entries \u2014 Payroll has PTOST, Verint doesn\'t)</summary>';
+                html += '<div style="' + contentStyle + '">';
+                html += '<div style="margin-bottom:8px; font-size:0.85em; color:#d32f2f;">These dates are coded as PTOST in Payroll but not in Verint. Contact WFM to update Verint.</div>';
+                html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+                html += '<tr style="background:#ffebee;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Payroll</th><th style="padding:6px 8px; text-align:left;">Verint Shows</th><th style="padding:6px 8px; text-align:right;">Payroll Hrs</th></tr>';
+                needsWfmFix.forEach(function(fix) {
+                    html += '<tr style="border-bottom:1px solid #f0f0f0; background:#fff5f5;">';
+                    html += '<td style="padding:6px 8px; font-weight:600;">' + formatDateDisplay(fix.date) + '</td>';
+                    html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:#e3f2fd; color:#0d47a1; font-size:0.88em;">PTOST</span></td>';
+                    html += '<td style="padding:6px 8px;"><span style="padding:2px 6px; border-radius:3px; background:#fff3e0; color:#e65100; font-size:0.88em;">' + escHtml(fix.verintActivity) + '</span></td>';
+                    html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + fix.payrollHours + 'h</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+
+                // Auto-generate WFM message for these
+                html += '<div style="margin-top:10px;">';
+                html += '<button type="button" id="wfmReconcileBtn" style="background:#d32f2f; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:bold;">Copy WFM Fix Message</button>';
+                html += '</div>';
+                html += '</div></details>';
+            }
+        }
+
         // Planned Time Off
         if (plannedItems.length > 0) {
             var plannedTotalHrs = round2(plannedItems.reduce(function(s, i) { return s + i.hours; }, 0));
@@ -1144,6 +1201,27 @@
                 if (!store.associates[emp].entryNotes[key]) store.associates[emp].entryNotes[key] = {};
                 store.associates[emp].entryNotes[key].detail = this.value;
                 saveStore(store);
+            });
+        });
+
+        // Bind WFM reconciliation message
+        document.getElementById('wfmReconcileBtn')?.addEventListener('click', function() {
+            var msg = 'Hi WFM team,\n\nThe following dates are coded as PTOST in Payroll for ' + employeeName + ' but are not reflected in Verint. Please update Verint to match:\n\n';
+            var fixes = hasPayroll ? [] : [];
+            if (hasPayroll && data.activities) {
+                var verintPtostSet = {};
+                (data.activities || []).forEach(function(a) {
+                    if (PTOST_CATEGORIES.indexOf(a.activity) !== -1) verintPtostSet[a.fromDate] = true;
+                });
+                (payroll.ptostEntries || []).forEach(function(pe) {
+                    if (!verintPtostSet[pe.date]) {
+                        msg += '- ' + formatDateDisplay(pe.date) + ': ' + pe.hours + 'h (Payroll: PTOST)\n';
+                    }
+                });
+            }
+            msg += '\nThank you!';
+            navigator.clipboard.writeText(msg).then(function() {
+                if (typeof showToast === 'function') showToast('WFM fix message copied!', 3000);
             });
         });
 
