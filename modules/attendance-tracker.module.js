@@ -739,6 +739,10 @@
         '</div>';
     }
 
+    function sourceBadge(label, colors) {
+        return '<span style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:0.75em; font-weight:700; background:' + colors.bg + '; color:' + colors.text + ';">' + label + '</span>';
+    }
+
     function renderAttendanceDashboard(container, employeeName) {
         var store = loadStore();
         var data = store.associates?.[employeeName]?.verintData;
@@ -800,6 +804,7 @@
             ptost.missedLunchTotal = missedLunchTotal;
             ptost.excusedByReasonTotal = excusedByReasonTotal;
         }
+        var verintReliabilityBasis = round2(ptost.policyHours || 0);
         var firstName = employeeName.split(/[\s,]+/)[0];
         if (typeof getEmployeeNickname === 'function') {
             firstName = getEmployeeNickname(employeeName) || firstName;
@@ -824,6 +829,7 @@
             bereavementData = { used: payroll.brvTotal };
             bereavementActivities = payroll.brvEntries || [];
         }
+        var payrollReliabilityBasis = hasPayroll ? round2(ptost.policyHours || 0) : null;
 
         // Load manual reliability override
         var manualReliability = store.associates?.[employeeName]?.manualReliabilityHours;
@@ -837,12 +843,23 @@
 
         var html = '';
 
-        // Data source info
+        // Data source info + plain-language guide
         var sourceInfo = [];
         if (hasPayroll) sourceInfo.push('Payroll: ' + new Date(payroll.uploadedAt).toLocaleDateString() + ' (PTOST: ' + payroll.ptostTotal + 'h)');
         if (data.uploadedAt) sourceInfo.push('Verint: ' + new Date(data.uploadedAt).toLocaleDateString());
-        html += '<div style="margin-bottom:12px; font-size:0.85em; color:#666;">' + (hasPayroll ? '\uD83D\uDCCA Data from Payroll (source of truth)' : '\u26A0\uFE0F Data from Verint only — upload Payroll Excel for accurate PTOST tracking') + '</div>';
+        html += '<div style="margin-bottom:10px; font-size:0.85em; color:#666;">' + (hasPayroll ? '\uD83D\uDCCA Payroll is source of truth for PTO/PTOST hours' : '\u26A0\uFE0F Verint-only view right now. Upload Payroll Excel to confirm official PTO/PTOST numbers.') + '</div>';
         if (sourceInfo.length) html += '<div style="margin-bottom:8px; font-size:0.8em; color:#999;">' + sourceInfo.join(' | ') + '</div>';
+        html += '<div style="margin-bottom:14px; padding:10px 12px; border:1px solid #dbeafe; background:#f8fbff; border-radius:8px;">';
+        html += '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px;">';
+        html += '<span style="font-size:0.82em; font-weight:700; color:#1e3a8a;">How to read this:</span>';
+        html += sourceBadge('Payroll = official hours', { bg: '#e0f2f1', text: '#00695c' });
+        html += sourceBadge('Verint = activity labels', { bg: '#f3e5f5', text: '#6a1b9a' });
+        html += sourceBadge('Action needed = orange/red rows', { bg: '#fff3e0', text: '#e65100' });
+        html += '</div>';
+        html += '<div style="font-size:0.8em; color:#334155; line-height:1.45;">';
+        html += 'What you can change here: set a reason on unexcused rows, update your Payroll numbers in My Records, and use Copy WFM Fix Message when Payroll and Verint disagree.';
+        html += '</div>';
+        html += '</div>';
 
         // ===== ALWAYS VISIBLE: Reliability Status =====
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -856,6 +873,15 @@
             html += '<span style="font-size:0.8em; color:#999;">Verint calc: ' + calcHours + 'h</span>';
         }
         html += '</div>';
+        html += '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-4px 0 10px 0;">';
+        html += sourceBadge('Verint basis: ' + verintReliabilityBasis + 'h', { bg: '#f3e5f5', text: '#6a1b9a' });
+        if (payrollReliabilityBasis !== null) {
+            html += sourceBadge('Payroll basis: ' + payrollReliabilityBasis + 'h', { bg: '#e0f2f1', text: '#00695c' });
+        }
+        html += '<button type="button" id="useVerintBasisBtn" style="padding:4px 10px; border:1px solid #6a1b9a; color:#6a1b9a; background:#fff; border-radius:999px; font-size:0.78em; font-weight:700; cursor:pointer;">Use Verint basis</button>';
+        html += '<span style="font-size:0.78em; color:#64748b;">Quick baseline from your Verint upload before manual overrides.</span>';
+        html += '</div>';
+        html += '<div style="margin:-4px 0 10px; font-size:0.78em; color:#64748b;">Verint basis formula: unplanned not-PTOST hours + missed lunch adjustments - manager/system excused reason hours.</div>';
 
         html += renderTierBar(reliabilityHours);
         html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; text-align:center;">';
@@ -1023,8 +1049,11 @@
         html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 16);
         html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:8px 0; text-align:center;">';
         html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.7em; color:#666;">Used</div></div>';
-        html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Needs Reclassification</div></div>';
+        html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Verint shows unexcused</div></div>';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
+        html += '</div>';
+        html += '<div style="margin:6px 0 10px; font-size:0.8em; color:#334155;">';
+        html += sourceBadge('Payroll', { bg: '#e0f2f1', text: '#00695c' }) + ' decides PTOST totals. ' + sourceBadge('Verint', { bg: '#f3e5f5', text: '#6a1b9a' }) + ' may still need WFM coding updates.';
         html += '</div>';
         if (hasPayroll && payroll.ptostTotal > PTOST_ANNUAL_LIMIT) {
             html += '<div style="margin:8px 0; padding:8px 12px; background:#ffebee; border-radius:6px; border-left:3px solid #d32f2f; font-size:0.88em; color:#d32f2f; font-weight:600;">';
@@ -1074,6 +1103,92 @@
                 }
             });
 
+            // Side-by-side view: one row per actionable date so coaches can explain differences quickly.
+            var payrollByDate = {};
+            (payroll.entries || []).forEach(function(pe) {
+                if (pe.trc === 'PTOST' || (pe.trc === 'PTO' && pe.taskCode === 'UNSCHD')) {
+                    if (!payrollByDate[pe.date]) payrollByDate[pe.date] = [];
+                    payrollByDate[pe.date].push(pe);
+                }
+            });
+
+            var verintByDate = {};
+            (data.activities || []).forEach(function(a) {
+                if (PTOST_CATEGORIES.indexOf(a.activity) !== -1 || UNPLANNED_NOT_PTOST.indexOf(a.activity) !== -1) {
+                    if (!verintByDate[a.fromDate]) verintByDate[a.fromDate] = [];
+                    verintByDate[a.fromDate].push(a);
+                }
+            });
+
+            var compareDatesSet = {};
+            Object.keys(payrollByDate).forEach(function(d) { compareDatesSet[d] = true; });
+            Object.keys(verintByDate).forEach(function(d) { compareDatesSet[d] = true; });
+            var compareDates = Object.keys(compareDatesSet).sort();
+
+            if (compareDates.length > 0) {
+                html += '<details style="' + detailStyle + '" open>';
+                html += '<summary style="' + summaryStyle + 'color:#334155;">Side-by-Side: Payroll vs Verint (' + compareDates.length + ' dates)</summary>';
+                html += '<div style="' + contentStyle + '">';
+                html += '<div style="margin-bottom:8px; font-size:0.83em; color:#475569;">Left side is Payroll (official coding). Right side is Verint (what the schedule tool currently shows).</div>';
+                html += '<table style="width:100%; border-collapse:collapse; font-size:0.84em;">';
+                html += '<tr style="background:#f1f5f9;">';
+                html += '<th style="padding:7px 8px; text-align:left;">Date</th>';
+                html += '<th style="padding:7px 8px; text-align:left;">Payroll (official)</th>';
+                html += '<th style="padding:7px 8px; text-align:left;">Verint (shown)</th>';
+                html += '<th style="padding:7px 8px; text-align:left;">What this means</th>';
+                html += '</tr>';
+
+                compareDates.forEach(function(date) {
+                    var pItems = payrollByDate[date] || [];
+                    var vItems = verintByDate[date] || [];
+
+                    var payrollText = pItems.length ? pItems.map(function(p) {
+                        var tag = p.trc;
+                        if (p.trc === 'PTO' && p.taskCode === 'UNSCHD') tag = 'PTO (UNSCHD)';
+                        return tag + ' ' + p.hours + 'h' + (p.status ? ' [' + p.status + ']' : '');
+                    }).join(' | ') : 'No Payroll entry';
+
+                    var verintText = vItems.length ? vItems.map(function(v) {
+                        return v.activity + ' ' + v.hours + 'h';
+                    }).join(' | ') : 'No Verint entry';
+
+                    var payrollHasPtost = pItems.some(function(p) { return p.trc === 'PTOST'; });
+                    var verintHasPtost = vItems.some(function(v) { return PTOST_CATEGORIES.indexOf(v.activity) !== -1; });
+                    var meaning = '';
+                    var meaningColor = '#1f2937';
+
+                    if (payrollHasPtost && !verintHasPtost) {
+                        meaning = 'Mismatch: ask WFM to update Verint to PTOST';
+                        meaningColor = '#b91c1c';
+                    } else if (!payrollHasPtost && verintHasPtost) {
+                        meaning = 'Check Payroll coding (Verint shows PTOST, Payroll does not)';
+                        meaningColor = '#b45309';
+                    } else if (!pItems.length && vItems.length) {
+                        meaning = 'Only in Verint: verify with Payroll report';
+                        meaningColor = '#b45309';
+                    } else if (pItems.length && !vItems.length) {
+                        meaning = 'Only in Payroll: Verint may need update';
+                        meaningColor = '#b45309';
+                    } else {
+                        meaning = 'Aligned';
+                        meaningColor = '#166534';
+                    }
+
+                    var rowBg = meaningColor === '#166534' ? '#f8fff9' : '#fff7ed';
+                    if (meaningColor === '#b91c1c') rowBg = '#fff5f5';
+
+                    html += '<tr style="border-bottom:1px solid #e5e7eb; background:' + rowBg + ';">';
+                    html += '<td style="padding:7px 8px; white-space:nowrap; font-weight:600;">' + formatDateDisplay(date) + '</td>';
+                    html += '<td style="padding:7px 8px; color:#0f172a;">' + escHtml(payrollText) + '</td>';
+                    html += '<td style="padding:7px 8px; color:#0f172a;">' + escHtml(verintText) + '</td>';
+                    html += '<td style="padding:7px 8px; color:' + meaningColor + '; font-weight:600;">' + escHtml(meaning) + '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</table>';
+                html += '</div></details>';
+            }
+
             // Find discrepancies: payroll has PTOST but Verint doesn't
             var needsWfmFix = [];
             (payroll.ptostEntries || []).forEach(function(pe) {
@@ -1092,9 +1207,9 @@
 
             if (needsWfmFix.length > 0) {
                 html += '<details style="' + detailStyle + '" open>';
-                html += '<summary style="' + summaryStyle + 'color:#d32f2f;">\uD83D\uDEA8 WFM Fixes Needed (' + needsWfmFix.length + ' entries \u2014 Payroll has PTOST, Verint doesn\'t)</summary>';
+                html += '<summary style="' + summaryStyle + 'color:#d32f2f;">\uD83D\uDEA8 Mismatch: Payroll says PTOST, Verint does not (' + needsWfmFix.length + ' entries)</summary>';
                 html += '<div style="' + contentStyle + '">';
-                html += '<div style="margin-bottom:8px; font-size:0.85em; color:#d32f2f;">These dates are coded as PTOST in Payroll but not in Verint. Contact WFM to update Verint.</div>';
+                html += '<div style="margin-bottom:8px; font-size:0.85em; color:#d32f2f;">Payroll is already correct for these dates. Verint coding is the part that needs to change. Use the button below to send WFM the exact fixes.</div>';
                 html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
                 html += '<tr style="background:#ffebee;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Payroll</th><th style="padding:6px 8px; text-align:left;">Verint Shows</th><th style="padding:6px 8px; text-align:right;">Payroll Hrs</th></tr>';
                 needsWfmFix.forEach(function(fix) {
@@ -1257,6 +1372,14 @@
             } else {
                 store.associates[employeeName].manualReliabilityHours = parseFloat(val);
             }
+            saveStore(store);
+            renderAttendanceDashboard(container, employeeName);
+        });
+
+        document.getElementById('useVerintBasisBtn')?.addEventListener('click', function() {
+            var store = loadStore();
+            if (!store.associates[employeeName]) store.associates[employeeName] = {};
+            store.associates[employeeName].manualReliabilityHours = verintReliabilityBasis;
             saveStore(store);
             renderAttendanceDashboard(container, employeeName);
         });
