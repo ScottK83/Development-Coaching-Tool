@@ -204,10 +204,12 @@
 
     function fmtDelta(metricKey, delta) {
         const unit = window.METRICS_REGISTRY?.[metricKey]?.unit || '';
-        const sign = delta > 0 ? '+' : '';
-        if (unit === 'sec') return sign + Math.round(delta) + 's';
-        if (unit === 'hrs') return sign + delta.toFixed(1) + ' hrs';
-        return sign + delta.toFixed(1) + '%';
+        const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+        const displayDelta = reverse ? -delta : delta;
+        const sign = displayDelta > 0 ? '+' : '';
+        if (unit === 'sec') return sign + Math.round(displayDelta) + 's';
+        if (unit === 'hrs') return sign + displayDelta.toFixed(1) + ' hrs';
+        return sign + displayDelta.toFixed(1) + '%';
     }
 
     // --- Card rendering ---
