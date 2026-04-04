@@ -975,14 +975,27 @@
         var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
         var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
         var ctx = typeof getTeamSelectionContext === 'function' ? getTeamSelectionContext() : null;
-        var allNames = new Set(associateNames);
+        var hasTeamFilter = typeof isAssociateIncludedByTeamFilter === 'function';
+
+        // Build set of team-filtered names from weekly/ytd data
+        var teamNames = new Set();
         Object.values(weekly).concat(Object.values(ytd)).forEach(function(period) {
             (period?.employees || []).forEach(function(emp) {
-                if (emp?.name && (typeof isAssociateIncludedByTeamFilter !== 'function' || isAssociateIncludedByTeamFilter(emp.name, ctx))) {
-                    allNames.add(emp.name);
+                if (emp?.name && (!hasTeamFilter || isAssociateIncludedByTeamFilter(emp.name, ctx))) {
+                    teamNames.add(emp.name);
                 }
             });
         });
+
+        // Only show attendance associates who are also in team filter
+        var allNames = new Set();
+        associateNames.forEach(function(name) {
+            if (!hasTeamFilter || teamNames.has(name) || isAssociateIncludedByTeamFilter(name, ctx)) {
+                allNames.add(name);
+            }
+        });
+        // Also add team members who might not have attendance data yet
+        teamNames.forEach(function(name) { allNames.add(name); });
 
         var sortedNames = Array.from(allNames).sort();
 
