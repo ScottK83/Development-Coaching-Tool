@@ -15,6 +15,113 @@
     // Volume-only metrics excluded from pulse messages (no target to coach against)
     const PULSE_EXCLUDED_METRICS = ['totalCalls', 'reliability'];
 
+    // --- Phrase pools (randomized to avoid sounding templated) ---
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    const GREETINGS = [
+        name => `Hey ${name}!`,
+        name => `Hi ${name}!`,
+        name => `What's up ${name}!`,
+        name => `Hey there ${name}!`,
+        name => `${name}!`,
+    ];
+    const DATA_IN = [
+        date => `Your numbers for the week of ${date} just came in.`,
+        date => `Got your data for the week of ${date}.`,
+        date => `Just pulled up your week of ${date} numbers.`,
+        date => `Your stats from the week of ${date} are in.`,
+        date => `Took a look at your week of ${date} performance.`,
+    ];
+    const JUMP_INTROS = [
+        (label, delta, range) => `Huge improvement in ${label}, ${delta}! (${range})`,
+        (label, delta, range) => `Big move in ${label} this week, ${delta}! (${range})`,
+        (label, delta, range) => `Love seeing ${label} move like that, ${delta}! (${range})`,
+        (label, delta, range) => `${label} really stood out this week, ${delta}! (${range})`,
+        (label, delta, range) => `You crushed it on ${label}, ${delta}! (${range})`,
+    ];
+    const PLUS_SOLID = [
+        (label, val) => `Plus you're solid on ${label} at ${val}.`,
+        (label, val) => `And ${label} sitting at ${val} is great too.`,
+        (label, val) => `${label} at ${val} is right where it needs to be.`,
+        (label, val) => `Also, ${label} at ${val}? Nice.`,
+    ];
+    const TWO_WINS = [
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? That's solid.`,
+        (l1, v1, l2, v2) => `Loving ${l1} at ${v1} and ${l2} at ${v2}!`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} are looking great!`,
+        (l1, v1, l2, v2) => `Really strong showing on ${l1} (${v1}) and ${l2} (${v2}).`,
+    ];
+    const ONE_WIN = [
+        (label, val) => `${label} at ${val} is looking great!`,
+        (label, val) => `Solid work on ${label} at ${val}!`,
+        (label, val) => `${label} at ${val}? Love to see it.`,
+        (label, val) => `Nice job keeping ${label} at ${val}.`,
+    ];
+    const NO_WINS = [
+        'I see you putting in the effort and I appreciate it!',
+        'Appreciate you showing up and grinding this week.',
+        'I know the numbers don\'t always show it, but the effort matters.',
+        'Keep pushing, I see the work you\'re putting in.',
+    ];
+    const FOCUS_INTROS = [
+        (label, val, target) => `One thing to zero in on: ${label} (at ${val}, target is ${target}).`,
+        (label, val, target) => `Let's work on getting ${label} closer to target (${val} vs ${target}).`,
+        (label, val, target) => `Area to focus on: ${label} sitting at ${val}, we want ${target}.`,
+        (label, val, target) => `Your focus this week: ${label} (currently ${val}, target ${target}).`,
+    ];
+    const CLOSERS = [
+        'Keep it up! Let me know if you need anything.',
+        'Solid week. I\'m here if you want to chat about anything.',
+        'Keep doing your thing. Reach out if you need me.',
+        'Good stuff. Let\'s keep the momentum going.',
+        'Nice work this week. My door\'s always open.',
+    ];
+    const HF_OPENERS = [
+        name => `Hey ${name}! \uD83C\uDF89`,
+        name => `${name}! \uD83C\uDF89\uD83D\uDE4C`,
+        name => `Yo ${name}! \uD83C\uDF89`,
+        name => `What a week, ${name}! \uD83C\uDF89`,
+    ];
+    const HF_JUMP = [
+        (label, delta, range) => `Incredible jump in ${label}, ${delta}! (${range}) That kind of growth stands out.`,
+        (label, delta, range) => `You moved ${label} in a big way this week, ${delta}! (${range}) That's impressive.`,
+        (label, delta, range) => `${label} took a huge leap, ${delta}! (${range}) Love to see it.`,
+        (label, delta, range) => `The progress on ${label} is awesome, ${delta}! (${range}) Keep that energy.`,
+    ];
+    const HF_TWO_WINS = [
+        (l1, v1, l2, v2) => `Your ${l1} at ${v1} and ${l2} at ${v2} were outstanding!`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
+        (l1, v1, l2, v2) => `Crushed it on ${l1} (${v1}) and ${l2} (${v2}) this week!`,
+    ];
+    const HF_ONE_WIN = [
+        (label, val) => `Your ${label} at ${val} was outstanding!`,
+        (label, val) => `${label} at ${val}? That's what I'm talking about!`,
+        (label, val) => `Killed it on ${label} at ${val} this week!`,
+    ];
+    const HF_NO_WINS = [
+        'I wanted to recognize your effort this week. You showed up and put in the work, and that matters.',
+        'Just want you to know I see the grind. Keep at it.',
+        'Appreciate the effort you put in this week. It doesn\'t go unnoticed.',
+    ];
+    const HF_EXTRAS = [
+        extras => `On top of that, ${extras}... you're on a roll!`,
+        extras => `And ${extras} too? You're firing on all cylinders.`,
+        extras => `Plus ${extras}. Just an all-around great week.`,
+        extras => `Not to mention ${extras}. Seriously impressive.`,
+    ];
+    const HF_CONSISTENCY = [
+        (on, total) => `${on} out of ${total} metrics hitting target, that's consistency right there.`,
+        (on, total) => `${on} of ${total} metrics on target. That's not luck, that's discipline.`,
+        (on, total) => `Hitting target on ${on} out of ${total} metrics. Consistency is your thing.`,
+    ];
+    const HF_CLOSERS = [
+        'Proud of you. Enjoy your weekend!',
+        'Have a great weekend. You earned it!',
+        'Enjoy the weekend, you deserve it!',
+        'Great week. Go relax, you\'ve earned it!',
+        'Awesome job. Have a good one!',
+    ];
+
     // --- Data helpers ---
 
     function getAllSortedKeys() {
@@ -360,16 +467,16 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = `You made the biggest jump in ${biggestJump.label} this week, ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)}) \uD83D\uDD25`;
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
-                praiseText += ` Plus you're solid on ${wins[0].label} at ${fmtVal(wins[0])}. \uD83D\uDCAA`;
+                praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
         } else if (wins.length >= 2) {
-            praiseText = `You're rocking ${wins[0].label} at ${fmtVal(wins[0])} and ${wins[1].label} at ${fmtVal(wins[1])}! \uD83D\uDD25\uD83D\uDCAA`;
+            praiseText = pick(TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
         } else if (wins.length === 1) {
-            praiseText = `You're rocking ${wins[0].label} at ${fmtVal(wins[0])}! \uD83D\uDD25`;
+            praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
         } else {
-            praiseText = 'I see you putting in the effort and I appreciate it! \uD83D\uDE4C';
+            praiseText = pick(NO_WINS);
         }
 
         // Build focus with tip
@@ -388,16 +495,16 @@
                 }
             } catch (e) { /* no tips */ }
 
-            focusText = `\uD83C\uDFAF Your focus this week: ${focalPoint.label} (currently at ${fmtVal(focalPoint)}, target is ${fmtTarget(focalPoint)}).`;
+            focusText = `\uD83C\uDFAF ${pick(FOCUS_INTROS)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
             if (tipText) {
                 const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
                 focusText += ` \uD83D\uDCA1 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
             }
         }
 
-        let message = `Hey ${firstName}! \uD83D\uDC4B Your data for the week of ${endDate} is in. ${praiseText}`;
+        let message = `${pick(GREETINGS)(firstName)} \uD83D\uDC4B ${pick(DATA_IN)(endDate)} ${praiseText}`;
         if (focusText) message += `\n\n${focusText}`;
-        message += `\n\nKeep up the great work! \uD83D\uDE80 Let me know if you need anything.`;
+        message += `\n\n${pick(CLOSERS)}`;
 
         return message;
     }
@@ -437,16 +544,16 @@
             });
 
         // Build the celebration — no coaching, no focus areas, pure praise
-        let message = `Hey ${firstName}! \uD83C\uDF89\uD83D\uDE4C`;
+        let message = pick(HF_OPENERS)(firstName);
 
         if (biggestJump && biggestJump.delta > 0) {
-            message += ` What a week! You made an incredible jump in ${biggestJump.label}, ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
+            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue))} \uD83D\uDD25`;
         } else if (wins.length >= 2) {
-            message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} and ${wins[1].label} at ${fmtVal(wins[1])} were outstanding! \uD83D\uDD25\uD83D\uDCAA`;
+            message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]))} \uD83D\uDD25\uD83D\uDCAA`;
         } else if (wins.length === 1) {
-            message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} was outstanding! \uD83D\uDD25`;
+            message += ` ${pick(HF_ONE_WIN)(wins[0].label, fmtVal(wins[0]))} \uD83D\uDD25`;
         } else {
-            message += ` I wanted to take a second to recognize your effort this week. You showed up and put in the work, and that matters. \uD83D\uDCAA`;
+            message += ` ${pick(HF_NO_WINS)} \uD83D\uDCAA`;
         }
 
         // Add more wins if available
@@ -454,17 +561,17 @@
             const extraWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 2);
             if (extraWins.length > 0) {
                 const extras = extraWins.map(w => `${w.label} at ${fmtVal(w)}`).join(' and ');
-                message += ` On top of that, ${extras}... you're on a roll!`;
+                message += ` ${pick(HF_EXTRAS)(extras)}`;
             }
         }
 
         // Count how many metrics are on track
         const onTrackCount = allMetrics.filter(m => m.meetsTarget).length;
         if (onTrackCount >= allMetrics.length * 0.7 && allMetrics.length > 3) {
-            message += `\n\n${onTrackCount} out of ${allMetrics.length} metrics hitting target, that's consistency right there. \u2B50`;
+            message += `\n\n${pick(HF_CONSISTENCY)(onTrackCount, allMetrics.length)} \u2B50`;
         }
 
-        message += `\n\nProud of you. Enjoy your weekend! \uD83D\uDE80\uD83C\uDF1F`;
+        message += `\n\n${pick(HF_CLOSERS)} \uD83D\uDE80`;
 
         return message;
     }
