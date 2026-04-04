@@ -1034,22 +1034,36 @@
         html += '<option value="">-- Choose an associate --</option>';
         var loadedCount = 0;
         var missingCount = 0;
+        var fixableCount = 0;
         sortedNames.forEach(function(name) {
             var verint = store.associates?.[name]?.verintData;
             var indicator = '';
+            var fixFlag = '';
             if (verint?.uploadedAt) {
                 var uploadDate = new Date(verint.uploadedAt).toLocaleDateString();
-                indicator = '\u2705 ' + uploadDate + ' \u2014 ';
+                indicator = '\u2705 ' + uploadDate;
                 loadedCount++;
+
+                // Check if they have unexcused hours that PTOST can cover
+                var empPtost = calculatePtostUsage(verint.ptoSubCategories || {});
+                if (empPtost.unplannedNotPtost > 0 && empPtost.ptostRemaining > 0) {
+                    fixFlag = ' \uD83D\uDEA9 Can fix ' + empPtost.unplannedNotPtost + 'h';
+                    fixableCount++;
+                } else if (empPtost.unplannedNotPtost > 0) {
+                    fixFlag = ' \u26A0\uFE0F ' + empPtost.unplannedNotPtost + 'h unexcused';
+                }
             } else {
-                indicator = '\u274C No data \u2014 ';
+                indicator = '\u274C No data';
                 missingCount++;
             }
-            html += '<option value="' + escHtml(name) + '">' + indicator + escHtml(name) + '</option>';
+            html += '<option value="' + escHtml(name) + '">' + indicator + fixFlag + ' \u2014 ' + escHtml(name) + '</option>';
         });
         html += '</select>';
         if (sortedNames.length > 0) {
-            html += '<div style="margin-top:6px; font-size:0.85em; color:#666;">' + loadedCount + ' loaded, ' + missingCount + ' missing</div>';
+            var statusParts = [loadedCount + ' loaded'];
+            if (missingCount > 0) statusParts.push(missingCount + ' missing');
+            if (fixableCount > 0) statusParts.push('\uD83D\uDEA9 ' + fixableCount + ' can be fixed with PTOST');
+            html += '<div style="margin-top:6px; font-size:0.85em; color:#666;">' + statusParts.join(', ') + '</div>';
         }
         html += '</div>';
 
