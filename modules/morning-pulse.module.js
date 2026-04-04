@@ -189,6 +189,12 @@
         return metric.target + '';
     }
 
+    function fmtRange(metricKey, baseVal, latestVal) {
+        const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+        if (reverse) return `down from ${fmtVal(metricKey, baseVal)} to ${fmtVal(metricKey, latestVal)}`;
+        return `${fmtVal(metricKey, baseVal)} \u2192 ${fmtVal(metricKey, latestVal)}`;
+    }
+
     function fmtDelta(metricKey, delta) {
         const unit = window.METRICS_REGISTRY?.[metricKey]?.unit || '';
         const sign = delta > 0 ? '+' : '';
@@ -270,7 +276,7 @@
         if (biggestJump && biggestJump.delta > 0) {
             jumpHtml = `<div style="padding:6px 10px; background:#e8f5e9; border-radius:4px; font-size:0.83em; color:#1b5e20; border-left:3px solid #4caf50;">` +
                 `\uD83D\uDE80 <strong>Biggest jump:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} this week ` +
-                `(${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)})</div>`;
+                `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)})</div>`;
         }
 
         // Focal point
@@ -345,7 +351,7 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = `You made the biggest jump in ${biggestJump.label} this week \u2014 ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)}) \uD83D\uDD25`;
+            praiseText = `You made the biggest jump in ${biggestJump.label} this week, ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)}) \uD83D\uDD25`;
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` Plus you're solid on ${wins[0].label} at ${fmtVal(wins[0])}. \uD83D\uDCAA`;
             }
@@ -425,7 +431,7 @@
         let message = `Hey ${firstName}! \uD83C\uDF89\uD83D\uDE4C`;
 
         if (biggestJump && biggestJump.delta > 0) {
-            message += ` What a week! You made an incredible jump in ${biggestJump.label}, up ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
+            message += ` What a week! You made an incredible jump in ${biggestJump.label}, ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
         } else if (wins.length >= 2) {
             message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} and ${wins[1].label} at ${fmtVal(wins[1])} were outstanding! \uD83D\uDD25\uD83D\uDCAA`;
         } else if (wins.length === 1) {
