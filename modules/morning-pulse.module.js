@@ -121,17 +121,81 @@
         'Great week. Go relax, you\'ve earned it!',
         'Awesome job. Have a good one!',
     ];
+    // Monthly review phrases
+    const MO_GREETINGS = [
+        (name, month) => `Hey ${name}! Here's your ${month} recap.`,
+        (name, month) => `${name}! Let's look at how ${month} went.`,
+        (name, month) => `Hey ${name}, wrapping up ${month} for you.`,
+        (name, month) => `${name}, your ${month} numbers are in. Let's talk about it.`,
+    ];
+    const MO_JUMP = [
+        (label, delta, range) => `Big month for ${label}, ${delta}! (${range})`,
+        (label, delta, range) => `${label} moved nicely this month, ${delta}. (${range})`,
+        (label, delta, range) => `Standout improvement: ${label} at ${delta}. (${range})`,
+    ];
+    const MO_TWO_WINS = [
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} were strong all month.`,
+        (l1, v1, l2, v2) => `Consistently solid on ${l1} (${v1}) and ${l2} (${v2}).`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Month-long wins right there.`,
+    ];
+    const MO_ONE_WIN = [
+        (label, val) => `${label} at ${val} was a highlight for the month.`,
+        (label, val) => `Really solid month on ${label} at ${val}.`,
+    ];
+    const MO_NO_WINS = [
+        'This month was a grind but I see the effort.',
+        'Not the month we wanted, but we\'re going to build on it.',
+        'Tough month, but we\'ve got a clean slate ahead.',
+    ];
+    const MO_FOCUS = [
+        (label, val, target) => `Heading into next month, let's target ${label} (${val} vs goal of ${target}).`,
+        (label, val, target) => `For next month, the priority is ${label} (sitting at ${val}, target ${target}).`,
+        (label, val, target) => `Main focus going forward: ${label} at ${val}, we need ${target}.`,
+    ];
+    const MO_CONSISTENCY = [
+        (on, total) => `You hit target on ${on} of ${total} metrics for the month.`,
+        (on, total) => `${on} out of ${total} metrics at or above target this month.`,
+    ];
+    const MO_CLOSERS = [
+        'Let\'s carry this into next month. I\'m here if you want to go over anything.',
+        'Solid month overall. Let me know if you want to sit down and talk through it.',
+        'Good work this month. Let\'s keep building.',
+        'On to the next one. Reach out if you need anything.',
+    ];
 
     // --- Data helpers ---
 
     function getAllSortedKeys() {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        return Object.keys(weekly).sort();
+        return Object.keys(weekly).filter(k => {
+            const p = weekly[k];
+            const pt = p?.metadata?.periodType;
+            return !pt || pt === 'week' || pt === 'daily';
+        }).sort();
     }
 
     function getPeriodData(weekKey) {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
         return weekly[weekKey] || null;
+    }
+
+    // Find latest monthly upload and optionally the previous month for comparison
+    function getMonthWindow() {
+        const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        const monthKeys = Object.keys(weekly)
+            .filter(k => weekly[k]?.metadata?.periodType === 'month')
+            .sort();
+        if (!monthKeys.length) return null;
+        const latestKey = monthKeys[monthKeys.length - 1];
+        const prevKey = monthKeys.length > 1 ? monthKeys[monthKeys.length - 2] : null;
+        return { latestKey, prevKey };
+    }
+
+    function getMonthName(weekKey) {
+        const period = getPeriodData(weekKey);
+        const meta = period?.metadata?.endDate;
+        const d = meta ? new Date(meta + 'T00:00:00') : getPeriodEndDate(weekKey);
+        return d.toLocaleString('default', { month: 'long', year: 'numeric' });
     }
 
     function getPeriodEndDate(weekKey) {
@@ -417,11 +481,13 @@
                 `<div><div style="font-weight:600; font-size:0.8em; color:#666; margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
             `</div>` +
             focalHtml +
-            `<div style="display:flex; gap:8px; margin-top:auto;">` +
+            `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;">` +
                 `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                    `style="flex:1; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83D\uDCAC Check-in</button>` +
+                    `style="flex:1; min-width:0; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83D\uDCAC Check-in</button>` +
                 `<button type="button" class="pulse-highfive-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                    `style="flex:1; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83C\uDF89 High-Five</button>` +
+                    `style="flex:1; min-width:0; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83C\uDF89 High-Five</button>` +
+                (getMonthWindow() ? `<button type="button" class="pulse-monthly-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                    `style="flex-basis:100%; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83D\uDCC5 Monthly Review</button>` : '') +
             `</div>` +
         `</div>`;
     }
@@ -576,6 +642,95 @@
         return message;
     }
 
+    // --- Monthly check-in message generation ---
+
+    async function generateMonthlyCheckinMessage(employeeName, monthKey, prevMonthKey) {
+        const period = getPeriodData(monthKey);
+        const emp = period?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const monthName = getMonthName(monthKey);
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(monthKey) || {}
+            : {};
+
+        const analysis = analyzeCurrentSnapshot(emp, centerAvgs, monthKey);
+        if (!analysis) return null;
+
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const monthDeltas = prevMonthKey ? calcWeekDeltas(employeeName, prevMonthKey, monthKey) : [];
+        const biggestJump = getBiggestJump(monthDeltas);
+
+        const wins = allMetrics
+            .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
+            .sort((a, b) => {
+                if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
+                const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
+                const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
+                return mB - mA;
+            })
+            .slice(0, 3);
+
+        const focalPoint = pickFocalPoint(allMetrics);
+
+        // Build praise
+        let praiseText = '';
+        if (biggestJump && biggestJump.delta > 0) {
+            praiseText = pick(MO_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
+            if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
+                praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
+            }
+        } else if (wins.length >= 2) {
+            praiseText = pick(MO_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
+        } else if (wins.length === 1) {
+            praiseText = pick(MO_ONE_WIN)(wins[0].label, fmtVal(wins[0]));
+        } else {
+            praiseText = pick(MO_NO_WINS);
+        }
+
+        // Consistency
+        const onTrackCount = allMetrics.filter(m => m.meetsTarget).length;
+        let consistencyText = '';
+        if (allMetrics.length > 3) {
+            consistencyText = pick(MO_CONSISTENCY)(onTrackCount, allMetrics.length);
+        }
+
+        // Focus with tip
+        let focusText = '';
+        if (focalPoint) {
+            const metricKey = focalPoint.metricKey;
+            let tipText = '';
+            try {
+                const allTips = typeof loadServerTips === 'function' ? await loadServerTips() : {};
+                const metricTips = allTips[metricKey] || [];
+                if (metricTips.length > 0) {
+                    const tip = typeof selectSmartTip === 'function'
+                        ? selectSmartTip({ employeeId: employeeName, metricKey, severity: 'medium', tips: metricTips })
+                        : metricTips[Math.floor(Math.random() * metricTips.length)];
+                    if (tip) tipText = tip;
+                }
+            } catch (e) { /* no tips */ }
+
+            focusText = `\uD83C\uDFAF ${pick(MO_FOCUS)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
+            if (tipText) {
+                const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
+                focusText += ` \uD83D\uDCA1 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
+            }
+        }
+
+        let message = `${pick(MO_GREETINGS)(firstName, monthName)} ${praiseText}`;
+        if (consistencyText) message += `\n\n${consistencyText}`;
+        if (focusText) message += `\n\n${focusText}`;
+        message += `\n\n${pick(MO_CLOSERS)}`;
+
+        return message;
+    }
+
     // --- Summary bar ---
 
     function buildSummaryBar(cardData, numUploads) {
@@ -613,15 +768,18 @@
         if (existing) existing.remove();
 
         const isHighFive = messageType === 'highfive';
+        const isMonthly = messageType === 'monthly';
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
-        const titleIcon = isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
-        const titleText = isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}` : `Check-in for ${escapeHtml(firstName)}`;
-        const copyGradient = isHighFive
+        const titleIcon = isMonthly ? '\uD83D\uDCC5' : isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
+        const titleText = isMonthly ? `Monthly Review for ${escapeHtml(firstName)}` : isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}` : `Check-in for ${escapeHtml(firstName)}`;
+        const copyGradient = isMonthly
+            ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
+            : isHighFive
             ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
             : 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)';
 
@@ -655,7 +813,7 @@
             } catch (e) { textarea.select(); }
         });
 
-        const generateFn = isHighFive ? generateHighFiveMessage : generateCheckinMessage;
+        const generateFn = isMonthly ? generateMonthlyCheckinMessage : isHighFive ? generateHighFiveMessage : generateCheckinMessage;
         document.getElementById('pulseCheckinRegenerate').addEventListener('click', async () => {
             const regenBtn = document.getElementById('pulseCheckinRegenerate');
             regenBtn.textContent = '\u23F3 Regenerating...';
@@ -803,6 +961,36 @@
                 }
             });
         });
+
+        // Bind monthly review buttons
+        const monthWindow = getMonthWindow();
+        if (monthWindow) {
+            container.querySelectorAll('.pulse-monthly-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const empName = this.dataset.employee;
+                    const originalText = this.textContent;
+                    this.textContent = '\u23F3 Generating...';
+                    this.disabled = true;
+
+                    try {
+                        const message = await generateMonthlyCheckinMessage(empName, monthWindow.latestKey, monthWindow.prevKey);
+                        if (!message) {
+                            if (typeof showToast === 'function') showToast('Could not generate monthly review for ' + empName, 3000);
+                            return;
+                        }
+                        showCheckinModal(empName, message, monthWindow.latestKey, monthWindow.prevKey, 'monthly');
+
+                        try {
+                            await navigator.clipboard.writeText(message);
+                            if (typeof showToast === 'function') showToast('Monthly review copied to clipboard!', 3000);
+                        } catch (e) { /* clipboard not available */ }
+                    } finally {
+                        this.textContent = originalText;
+                        this.disabled = false;
+                    }
+                });
+            });
+        }
     }
 
     // Initialize - called when the Morning Pulse tab is activated
