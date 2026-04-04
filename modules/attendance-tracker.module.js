@@ -77,7 +77,16 @@
 
     function cleanStr(s) {
         if (!s) return '';
-        return String(s).replace(/[\u0000-\u001F\u007F-\u009F\uFE00-\uFE0F\u200B-\u200F\u2028-\u202F]/g, '').trim();
+        // Keep only printable characters: ASCII 0x20-0x7E, Latin Extended, common Unicode letters
+        // Strip all control chars, directional markers, invisible formatters, geometric shapes
+        var cleaned = String(s);
+        // Remove known problematic unicode ranges
+        cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // control chars
+        cleaned = cleaned.replace(/[\u200B-\u200F\u202A-\u202E\u2028-\u202F]/g, ''); // directional/format
+        cleaned = cleaned.replace(/[\u2060-\u206F\uFE00-\uFE0F\uFEFF]/g, ''); // invisible formatters
+        cleaned = cleaned.replace(/[\u2B00-\u2BFF]/g, ''); // geometric shapes (⬭⬬ etc)
+        cleaned = cleaned.replace(/[\u2066-\u2069]/g, ''); // isolate markers
+        return cleaned.trim();
     }
 
     function parseDate(raw) {
@@ -1360,11 +1369,37 @@
 
     // --- Initialization ---
 
+    function migrateStoreKeys(store) {
+        // Fix keys with unicode garbage (⬭NAME⬬ etc)
+        if (!store.associates) return false;
+        var dirty = false;
+        var keys = Object.keys(store.associates);
+        keys.forEach(function(key) {
+            var cleaned = cleanStr(key);
+            if (cleaned !== key) {
+                // Merge into cleaned key
+                var existing = store.associates[cleaned] || {};
+                var bad = store.associates[key];
+                // Copy payrollData/verintData/etc from bad key to clean key if clean doesn't have it
+                Object.keys(bad).forEach(function(prop) {
+                    if (!existing[prop]) existing[prop] = bad[prop];
+                });
+                store.associates[cleaned] = existing;
+                delete store.associates[key];
+                dirty = true;
+            }
+        });
+        return dirty;
+    }
+
     function initializeAttendanceTracker() {
         var container = document.getElementById('attendanceDashboard');
         if (!container) return;
 
         var store = loadStore();
+        if (migrateStoreKeys(store)) {
+            saveStore(store);
+        }
         var associateNames = Object.keys(store.associates || {}).sort();
 
         // Also include names from weekly/ytd data
