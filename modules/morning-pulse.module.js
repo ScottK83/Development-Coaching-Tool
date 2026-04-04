@@ -424,7 +424,7 @@
         let message = `Hey ${firstName}! \uD83C\uDF89\uD83D\uDE4C`;
 
         if (biggestJump && biggestJump.delta > 0) {
-            message += ` What a week! You made an incredible jump in ${biggestJump.label} \u2014 ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
+            message += ` What a week! You made an incredible jump in ${biggestJump.label}, up ${fmtDelta(biggestJump.metricKey, biggestJump.delta)}! (${fmtVal(biggestJump.metricKey, biggestJump.baseValue)} \u2192 ${fmtVal(biggestJump.metricKey, biggestJump.latestValue)}) That's the kind of growth that stands out. \uD83D\uDD25`;
         } else if (wins.length >= 2) {
             message += ` What a week! Your ${wins[0].label} at ${fmtVal(wins[0])} and ${wins[1].label} at ${fmtVal(wins[1])} were outstanding! \uD83D\uDD25\uD83D\uDCAA`;
         } else if (wins.length === 1) {
@@ -438,14 +438,14 @@
             const extraWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 2);
             if (extraWins.length > 0) {
                 const extras = extraWins.map(w => `${w.label} at ${fmtVal(w)}`).join(' and ');
-                message += ` On top of that, ${extras} \u2014 you're on a roll!`;
+                message += ` On top of that, ${extras}... you're on a roll!`;
             }
         }
 
         // Count how many metrics are on track
         const onTrackCount = allMetrics.filter(m => m.meetsTarget).length;
         if (onTrackCount >= allMetrics.length * 0.7 && allMetrics.length > 3) {
-            message += `\n\n${onTrackCount} out of ${allMetrics.length} metrics hitting target \u2014 that's consistency right there. \u2B50`;
+            message += `\n\n${onTrackCount} out of ${allMetrics.length} metrics hitting target, that's consistency right there. \u2B50`;
         }
 
         message += `\n\nProud of you. Enjoy your weekend! \uD83D\uDE80\uD83C\uDF1F`;
