@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-04T00:12:54.151Z",
+  "generatedAt": "2026-04-04T01:35:16.248Z",
   "reason": "attendance tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -10830,6 +10830,5611 @@
           "payrollRemaining": 111.15,
           "payrollTaken": 48.85
         }
+      },
+      "⬭ROBERT BERRELLEZA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-05",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-06",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 32,
+          "ptostRemaining": 8,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 16,
+          "ptoTotal": 46.5,
+          "ptostEntries": [
+            {
+              "date": "2026-01-06",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-05",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptoEntries": [
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ROBERT BERRELLEZA⬬"
+        }
+      },
+      "⬭DESTINY CERVANTEZ⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 0,
+          "ptostRemaining": 40,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 56,
+          "ptostEntries": [],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭DESTINY CERVANTEZ⬬"
+        }
+      },
+      "⬭CAYLIE CHIRUMBOLO⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 7.39,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTOST",
+              "hours": 7.17,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTOST",
+              "hours": 4.1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTOST",
+              "hours": 2.1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 37.76,
+          "ptostRemaining": 2.24,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 30.5,
+          "ptostEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 7.39,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTOST",
+              "hours": 7.17,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTOST",
+              "hours": 4.1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTOST",
+              "hours": 2.1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭CAYLIE CHIRUMBOLO⬬"
+        }
+      },
+      "⬭DESIREE CLARK⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-04",
+              "trc": "NOP",
+              "hours": 1.13,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-01-05",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 7.33,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-24",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-01-25",
+              "trc": "PTO",
+              "hours": 1.62,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-08",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-15",
+              "trc": "NOP",
+              "hours": 1.21,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-02-22",
+              "trc": "NOP",
+              "hours": 1.28,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 4.08,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-31",
+              "trc": "PTOST",
+              "hours": 5.65,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 25.48,
+          "ptostRemaining": 14.52,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 8,
+          "brvTotal": 0,
+          "ptoTotal": 49.2,
+          "ptostEntries": [
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 7.33,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-31",
+              "trc": "PTOST",
+              "hours": 5.65,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [
+            {
+              "date": "2026-01-05",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            }
+          ],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-24",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-01-25",
+              "trc": "PTO",
+              "hours": 1.62,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-02-08",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 4.08,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-03-31",
+              "trc": "PTOST",
+              "hours": 5.65,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭DESIREE CLARK⬬"
+        }
+      },
+      "⬭KAMELLA DASH⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-01",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 0.82,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 0,
+          "ptostRemaining": 40,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 34.82,
+          "ptostEntries": [],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-01",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-07",
+              "trc": "PTO",
+              "hours": 10,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 0.82,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭KAMELLA DASH⬬"
+        }
+      },
+      "⬭ALYSSA DIMES⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 1.33,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-08",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-10",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "PTO",
+              "hours": 3.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 2.4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 26.4,
+          "ptostRemaining": 13.6,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 37.83,
+          "ptostEntries": [
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 2.4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 1.33,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-08",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-10",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-17",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "PTO",
+              "hours": 3.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ALYSSA DIMES⬬"
+        }
+      },
+      "⬭TRISHA ERB⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 7.32,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-03",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-10",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-16",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-25",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-02",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-11",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "STD",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 31.32,
+          "ptostRemaining": 8.68,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 41.5,
+          "ptostEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 7.32,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭TRISHA ERB⬬"
+        }
+      },
+      "⬭ANGELINA FIERRO⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 5.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 4.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-25",
+              "trc": "PTOST",
+              "hours": 1.95,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 7.7,
+          "ptostRemaining": 32.3,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 15.25,
+          "ptostEntries": [
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 5.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-25",
+              "trc": "PTOST",
+              "hours": 1.95,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 4.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ANGELINA FIERRO⬬"
+        }
+      },
+      "⬭JADYN FLOWERS⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-07",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 3.32,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-03",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "FMLNP",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 3.51,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-02",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTO",
+              "hours": 6.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-09",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-11",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 40,
+          "ptostRemaining": 0,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 63.5,
+          "brvTotal": 40,
+          "ptoTotal": 98.33,
+          "ptostEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [
+            {
+              "date": "2026-02-02",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-03",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "FMLNP",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-02",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "brvEntries": [
+            {
+              "date": "2026-03-09",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-11",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptoEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSFML⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 3.32,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 3.51,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTO",
+              "hours": 6.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭JADYN FLOWERS⬬"
+        }
+      },
+      "⬭SABRINA GAGE⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 5.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-29",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 19,
+          "ptostRemaining": 21,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 33.5,
+          "ptostEntries": [
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 5.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-29",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭SABRINA GAGE⬬"
+        }
+      },
+      "⬭JAMES GARCIA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-08",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "FMLNP",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 43,
+          "ptostRemaining": 0,
+          "ptostOver": 3,
+          "unschdTotal": 0,
+          "fmlaTotal": 70,
+          "brvTotal": 0,
+          "ptoTotal": 19,
+          "ptostEntries": [
+            {
+              "date": "2026-01-14",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [
+            {
+              "date": "2026-01-09",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "FMLNP",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "FMLNP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-08",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-04-01",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭JAMES GARCIA⬬"
+        }
+      },
+      "⬭JENIFER HENSON⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 4.59,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-21",
+              "trc": "PTO",
+              "hours": 1.62,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            }
+          ],
+          "ptostTotal": 39.09,
+          "ptostRemaining": 0.91,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 12.62,
+          "ptostEntries": [
+            {
+              "date": "2026-01-15",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 7,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 4.59,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-03",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-21",
+              "trc": "PTO",
+              "hours": 1.62,
+              "status": "Approved",
+              "taskCode": "⬭ERLOUT⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭JENIFER HENSON⬬"
+        }
+      },
+      "⬭OCEANE INGRAM⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-03",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-10",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTO",
+              "hours": 3.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 12.5,
+          "ptostRemaining": 27.5,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 203.5,
+          "ptostEntries": [
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-03",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-10",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-17",
+              "trc": "PTO",
+              "hours": 3.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭OCEANE INGRAM⬬"
+        }
+      },
+      "⬭PRECIOUS JOHNSON⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 5.34,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 7.18,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 4.02,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 0.96,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 0.37,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 4.3,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Needs Approval",
+              "taskCode": "⬭UNSCHD⬬"
+            }
+          ],
+          "ptostTotal": 39.34,
+          "ptostRemaining": 0.66,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 51.33,
+          "ptostEntries": [
+            {
+              "date": "2026-01-27",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-13",
+              "trc": "PTOST",
+              "hours": 5.34,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 7.18,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 4.02,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 0.96,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-20",
+              "trc": "PTO",
+              "hours": 0.37,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 4.3,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Needs Approval",
+              "taskCode": "⬭UNSCHD⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-03-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Needs Approval",
+              "taskCode": "⬭UNSCHD⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭PRECIOUS JOHNSON⬬"
+        }
+      },
+      "⬭ERICA KALLESTEWA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-03",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTOST",
+              "hours": 4.52,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 36.52,
+          "ptostRemaining": 3.48,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 37,
+          "ptostEntries": [
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTOST",
+              "hours": 4.52,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-03",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-05",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-19",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ERICA KALLESTEWA⬬"
+        }
+      },
+      "⬭SCOTT KNIGHT⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 0,
+          "ptostRemaining": 40,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 8,
+          "ptostEntries": [],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭SCOTT KNIGHT⬬"
+        }
+      },
+      "⬭BRANDYWINE LOCKHART⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 1.8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-30",
+              "trc": "PTOST",
+              "hours": 4.4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-31",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 18.4,
+          "ptostRemaining": 21.6,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 40,
+          "ptoTotal": 50.8,
+          "ptostEntries": [
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-10",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-30",
+              "trc": "PTOST",
+              "hours": 4.4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [
+            {
+              "date": "2026-01-23",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "BRV",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptoEntries": [
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 1.8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-05",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-31",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-03-30",
+              "trc": "PTOST",
+              "hours": 4.4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-31",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭BRANDYWINE LOCKHART⬬"
+        }
+      },
+      "⬭CHRISTI MARTINEZ-SHARP⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-04",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-17",
+              "trc": "PTO",
+              "hours": 5.35,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTOST",
+              "hours": 5.02,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-15",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "PTOST",
+              "hours": 0.55,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-11",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 0.34,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 33.91,
+          "ptostRemaining": 6.09,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 53.35,
+          "ptostEntries": [
+            {
+              "date": "2026-01-04",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTOST",
+              "hours": 5.02,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-15",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-23",
+              "trc": "PTOST",
+              "hours": 0.55,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-11",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTOST",
+              "hours": 0.34,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-17",
+              "trc": "PTO",
+              "hours": 5.35,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-01-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭CHRISTI MARTINEZ-SHARP⬬"
+        }
+      },
+      "⬭MATRECE MULDROW⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-06",
+              "trc": "PTOST",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 1.82,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-31",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTOST",
+              "hours": 5.68,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 2.32,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 5.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 40,
+          "ptostRemaining": 0,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 59.32,
+          "ptostEntries": [
+            {
+              "date": "2026-01-05",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-06",
+              "trc": "PTOST",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-12",
+              "trc": "PTOST",
+              "hours": 6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTOST",
+              "hours": 1.82,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-31",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTOST",
+              "hours": 5.68,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-17",
+              "trc": "PTO",
+              "hours": 2.32,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 5.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTO",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭MATRECE MULDROW⬬"
+        }
+      },
+      "⬭SCOTICIA OSBORNE⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 2.39,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-08",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-10",
+              "trc": "PTO",
+              "hours": 2.14,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-19",
+              "trc": "NOP",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PPL",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PPL",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PPL",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PPL",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-24",
+              "trc": "PPL",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-31",
+              "trc": "PTO",
+              "hours": 4.27,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-28",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 33,
+          "ptostRemaining": 7,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 35.8,
+          "ptostEntries": [
+            {
+              "date": "2026-01-08",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-09",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-29",
+              "trc": "PTOST",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTO",
+              "hours": 2.39,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-10",
+              "trc": "PTO",
+              "hours": 2.14,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-31",
+              "trc": "PTO",
+              "hours": 4.27,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTO",
+              "hours": 5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-12",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-28",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭SCOTICIA OSBORNE⬬"
+        }
+      },
+      "⬭JOHNATHAN PADILLA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 2.89,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 0,
+          "ptostRemaining": 40,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 4.39,
+          "ptostEntries": [],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 2.89,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-12",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭JOHNATHAN PADILLA⬬"
+        }
+      },
+      "⬭ESPERANZA PALOMERA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 2,
+          "ptostRemaining": 38,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 16,
+          "ptostEntries": [
+            {
+              "date": "2026-01-22",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ESPERANZA PALOMERA⬬"
+        }
+      },
+      "⬭TEENA POKORSKI⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 0.78,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-09",
+              "trc": "PTOST",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTO",
+              "hours": 0.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-25",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTOST",
+              "hours": 0.57,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 6.57,
+          "ptostRemaining": 33.43,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 42.28,
+          "ptostEntries": [
+            {
+              "date": "2026-02-09",
+              "trc": "PTOST",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-06",
+              "trc": "PTOST",
+              "hours": 0.57,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTOST",
+              "hours": 4.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 0.78,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-21",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-22",
+              "trc": "PTO",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-28",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-02",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-11",
+              "trc": "PTO",
+              "hours": 3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-20",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-24",
+              "trc": "PTO",
+              "hours": 0.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-25",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-04",
+              "trc": "PTO",
+              "hours": 1,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-16",
+              "trc": "PTO",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭TEENA POKORSKI⬬"
+        }
+      },
+      "⬭ESTHER RAMOS⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 1.3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 0.34,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 2.3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTOST",
+              "hours": 0.6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTOST",
+              "hours": 1.09,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 4.99,
+          "ptostRemaining": 35.01,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 10.64,
+          "ptostEntries": [
+            {
+              "date": "2026-02-06",
+              "trc": "PTOST",
+              "hours": 2,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-26",
+              "trc": "PTOST",
+              "hours": 1.3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTOST",
+              "hours": 0.6,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTOST",
+              "hours": 1.09,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-30",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 0.34,
+              "status": "Approved",
+              "taskCode": "⬭UNSCHD⬬"
+            },
+            {
+              "date": "2026-02-27",
+              "trc": "PTO",
+              "hours": 2.3,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭ESTHER RAMOS⬬"
+        }
+      },
+      "⬭KRISTIN VILLELA⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 1.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 8,
+          "ptostRemaining": 32,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 54.75,
+          "ptostEntries": [
+            {
+              "date": "2026-01-02",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-02-18",
+              "trc": "PTO",
+              "hours": 1.75,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-02-19",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-18",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-23",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-24",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-25",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-26",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-03-27",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 2.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭KRISTIN VILLELA⬬"
+        }
+      },
+      "⬭BETTY YANEZ⬬": {
+        "payrollData": {
+          "entries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "ptostTotal": 16,
+          "ptostRemaining": 24,
+          "ptostOver": 0,
+          "unschdTotal": 0,
+          "fmlaTotal": 0,
+          "brvTotal": 0,
+          "ptoTotal": 32.5,
+          "ptostEntries": [
+            {
+              "date": "2026-01-07",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-16",
+              "trc": "PTOST",
+              "hours": 4,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-30",
+              "trc": "PTOST",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "unschdEntries": [],
+          "fmlaEntries": [],
+          "brvEntries": [],
+          "ptoEntries": [
+            {
+              "date": "2026-01-13",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-14",
+              "trc": "PTO",
+              "hours": 8,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-15",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-01-20",
+              "trc": "PTO",
+              "hours": 7.5,
+              "status": "Approved",
+              "taskCode": "⬭⬬"
+            },
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "pendingEntries": [
+            {
+              "date": "2026-04-01",
+              "trc": "PTO",
+              "hours": 1.5,
+              "status": "Needs Approval",
+              "taskCode": "⬭⬬"
+            }
+          ],
+          "uploadedAt": "2026-04-04T01:35:10.822Z",
+          "rawName": "⬭BETTY YANEZ⬬"
+        }
       }
     }
   },
@@ -10871,7 +16476,7 @@
     "devCoachingTool_attendanceTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 111302
+      "byteLength": 178577
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
