@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-04T02:07:20.677Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-04-04T02:13:16.614Z",
+  "reason": "ytd data updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-03-30|2026-04-05": {
@@ -22212,7 +22212,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 231
+      "byteLength": 226
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -22243,6 +22243,11 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_trendQueueLegendExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
