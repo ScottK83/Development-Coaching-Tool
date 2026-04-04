@@ -660,17 +660,20 @@
 
         // ===== ALWAYS VISIBLE: PTO Balance =====
         var ptoSummary = data.summary?.['PTO'] || {};
-        var ptoTotal = round2(ptoSummary.total || 0);
-        var ptoCarryover = round2(ptoSummary.carryover || 0);
-        var ptoUsed = round2(ptoSummary.used || 0);
-        var ptoScheduled = round2(ptoSummary.scheduled || 0);
-        var ptoRemaining = round2(ptoSummary.remaining || 0);
-        var ptoAllotment = round2(ptoTotal - ptoCarryover);
-        var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
         var manualPto = store.associates?.[employeeName]?.manualPto || {};
 
+        // Use payroll (manual) values when available, fall back to Verint
+        var ptoCarryover = round2(manualPto.carryover !== undefined ? manualPto.carryover : (ptoSummary.carryover || 0));
+        var ptoAllotment = round2(manualPto.allotment !== undefined ? manualPto.allotment : ((ptoSummary.total || 0) - (ptoSummary.carryover || 0)));
+        var ptoTotal = round2(ptoCarryover + ptoAllotment);
+        var ptoUsed = round2(manualPto.payrollTaken !== undefined ? manualPto.payrollTaken : (ptoSummary.used || 0));
+        var ptoScheduled = round2(ptoSummary.scheduled || 0);
+        var ptoRemaining = round2(manualPto.payrollRemaining !== undefined ? manualPto.payrollRemaining : (ptoSummary.remaining || 0));
+        var ptoRemainingColor = ptoRemaining > 16 ? '#2e7d32' : ptoRemaining > 8 ? '#e65100' : '#b71c1c';
+        var hasPayrollData = manualPto.carryover !== undefined || manualPto.allotment !== undefined || manualPto.payrollRemaining !== undefined;
+
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
-        html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">PTO Balance</h4>';
+        html += '<h4 style="margin:0 0 10px 0; color:#2e7d32;">PTO Balance' + (hasPayrollData ? ' <span style="font-size:0.7em; font-weight:normal; color:#666;">(from Payroll)</span>' : ' <span style="font-size:0.7em; font-weight:normal; color:#999;">(from Verint)</span>') + '</h4>';
         html += renderProgressBar(ptoUsed, ptoTotal, '#2e7d32', 16);
         html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:8px; text-align:center;">';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-size:1em; font-weight:700; color:#2e7d32;">' + ptoCarryover + 'h</div><div style="font-size:0.7em; color:#666;">Carryover</div></div>';
