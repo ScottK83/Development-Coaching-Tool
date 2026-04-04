@@ -80,12 +80,19 @@
     }
 
     // Calculate per-metric deltas between baseline and latest for one employee
+    // Skip comparison if baseline had too few calls (employee was likely absent)
+    const MIN_BASELINE_CALLS = 20;
+
     function calcWeekDeltas(empName, baselineKey, latestKey) {
         const basePeriod = getPeriodData(baselineKey);
         const latestPeriod = getPeriodData(latestKey);
         const baseEmp = basePeriod?.employees?.find(e => e.name === empName);
         const latestEmp = latestPeriod?.employees?.find(e => e.name === empName);
         if (!baseEmp || !latestEmp) return [];
+
+        // If baseline had barely any calls, the data is noise
+        const baseCalls = parseInt(baseEmp.totalCalls, 10);
+        if (!Number.isFinite(baseCalls) || baseCalls < MIN_BASELINE_CALLS) return [];
 
         const registry = typeof METRICS_REGISTRY !== 'undefined' ? METRICS_REGISTRY : {};
         const deltas = [];
