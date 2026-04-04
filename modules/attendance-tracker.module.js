@@ -884,6 +884,9 @@
         var brvPayrollHrs = round2(payrollEntries.filter(function(e) { return e.trc === 'BRV'; }).reduce(function(s, e) { return s + e.hours; }, 0));
         var brvVerintHrs = round2((data.activities || []).filter(function(a) { return a.activity === 'WFO-Bereavement' || a.activity === 'Bereavement'; }).reduce(function(s, a) { return s + a.hours; }, 0));
 
+        var prePlannedPayrollHrs = round2(payrollEntries.filter(function(e) { return e.trc === 'PTO' && e.taskCode !== 'UNSCHD'; }).reduce(function(s, e) { return s + e.hours; }, 0));
+        var prePlannedVerintHrs = round2((data.activities || []).filter(function(a) { return a.activity === 'Pre Planned Absence'; }).reduce(function(s, a) { return s + a.hours; }, 0));
+
         var payrollByDate = {};
         comparePayroll.forEach(function(e) {
             if (!payrollByDate[e.date]) payrollByDate[e.date] = [];
@@ -922,7 +925,8 @@
         html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">PTOST Status</div><div style="font-size:1.05em; font-weight:800; color:#0d47a1;">' + (hasPayroll ? (ptostApprovedHrs + 'h approved') : (ptost.ptostUsed + 'h used')) + '</div><div style="font-size:0.72em; color:#b45309;">' + (hasPayroll ? (ptostPendingHrs + 'h pending') : 'Upload Payroll for approvals') + '</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">Reliability Basis</div><div style="font-size:1.05em; font-weight:800; color:#7c3aed;">Verint ' + verintReliabilityBasis + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (payrollReliabilityBasis !== null ? ('Payroll ' + payrollReliabilityBasis + 'h') : 'No Payroll basis yet') + '</div></div>';
         html += '</div>';
-        html += '<div style="display:grid; grid-template-columns:repeat(3, minmax(130px, 1fr)); gap:8px; margin-top:8px;">';
+        html += '<div style="display:grid; grid-template-columns:repeat(4, minmax(130px, 1fr)); gap:8px; margin-top:8px;">';
+        html += '<div style="padding:8px; border-radius:6px; background:#eff6ff; border:1px solid #bfdbfe;"><div style="font-size:0.75em; color:#1d4ed8; font-weight:700;">Pre Planned Absence</div><div style="font-size:1.05em; font-weight:800; color:#1d4ed8;">' + (hasPayroll ? prePlannedPayrollHrs : prePlannedVerintHrs) + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (hasPayroll ? ('Payroll · Verint: ' + prePlannedVerintHrs + 'h') : 'from Verint') + '</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0;"><div style="font-size:0.75em; color:#166534; font-weight:700;">Holiday</div><div style="font-size:1.05em; font-weight:800; color:#166534;">' + (hasPayroll ? holPayrollHrs : holVerintHrs) + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (hasPayroll ? ('Payroll · Verint: ' + holVerintHrs + 'h') : 'from Verint') + '</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:#fdf4ff; border:1px solid #e9d5ff;"><div style="font-size:0.75em; color:#7e22ce; font-weight:700;">FMLA</div><div style="font-size:1.05em; font-weight:800; color:#7e22ce;">' + (hasPayroll ? fmlaPayrollHrs : fmlaVerintHrs) + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (hasPayroll ? ('Payroll · Verint: ' + fmlaVerintHrs + 'h') : 'from Verint') + '</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:#fff1f2; border:1px solid #fecdd3;"><div style="font-size:0.75em; color:#9f1239; font-weight:700;">Bereavement</div><div style="font-size:1.05em; font-weight:800; color:#9f1239;">' + (hasPayroll ? brvPayrollHrs : brvVerintHrs) + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (hasPayroll ? ('Payroll · Verint: ' + brvVerintHrs + 'h') : 'from Verint') + '</div></div>';
