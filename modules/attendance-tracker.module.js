@@ -408,9 +408,15 @@
     }
 
     function getUnplannedLineItems(activities) {
-        var allUnplanned = UNPLANNED_NOT_PTOST.concat(PTOST_CATEGORIES);
+        // Only unexcused — NOT including PTOST (those are already excused)
         return activities
-            .filter(function(a) { return allUnplanned.indexOf(a.activity) !== -1; })
+            .filter(function(a) { return UNPLANNED_NOT_PTOST.indexOf(a.activity) !== -1; })
+            .sort(function(a, b) { return a.fromDate.localeCompare(b.fromDate); });
+    }
+
+    function getPtostLineItems(activities) {
+        return activities
+            .filter(function(a) { return PTOST_CATEGORIES.indexOf(a.activity) !== -1; })
             .sort(function(a, b) { return a.fromDate.localeCompare(b.fromDate); });
     }
 
@@ -572,6 +578,7 @@
         var fmlaData = data.summary?.['FMLA'] || { used: 0 };
         var fmlaActivities = (data.activities || []).filter(function(a) { return a.activity === 'FMLA'; });
         var unplannedItems = getUnplannedLineItems(data.activities || []);
+        var ptostItems = getPtostLineItems(data.activities || []);
         var reclassItems = getNeedsReclassificationItems(data.activities || []);
         var plannedItems = getPlannedLineItems(data.activities || []);
 
@@ -734,28 +741,34 @@
             return t;
         }
 
-        // Unplanned Absences
+        // Unexcused Absences (against reliability)
         if (unplannedItems.length > 0) {
             var unplannedTotalHrs = round2(unplannedItems.reduce(function(s, i) { return s + i.hours; }, 0) + missedLunchTotal);
             html += '<details style="' + detailStyle + '">';
-            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unplanned Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
+            html += '<summary style="' + summaryStyle + 'color:#d84315;">Unexcused Absences (' + unplannedItems.length + ' entries, ' + unplannedTotalHrs + 'h)</summary>';
             html += '<div style="' + contentStyle + '">';
             html += buildTable(unplannedItems, '#eceff1', [
-                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }, { label: 'Status', align: 'center' }
+                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }
             ]);
             html += '</div></details>';
         }
 
-        // PTOST Details
+        // PTOST Details (excused absences)
         html += '<details style="' + detailStyle + '">';
-        html += '<summary style="' + summaryStyle + 'color:#0d47a1;">PTOST Details (' + ptost.ptostUsed + 'h used of ' + PTOST_ANNUAL_LIMIT + 'h, ' + ptost.ptostRemaining + 'h remaining)</summary>';
+        html += '<summary style="' + summaryStyle + 'color:#0d47a1;">Excused / PTOST (' + ptost.ptostUsed + 'h used of ' + PTOST_ANNUAL_LIMIT + 'h, ' + ptost.ptostRemaining + 'h remaining)</summary>';
         html += '<div style="' + contentStyle + '">';
         html += renderProgressBar(ptost.ptostUsed, PTOST_ANNUAL_LIMIT, '#1565c0', 16);
-        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; text-align:center;">';
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:8px 0; text-align:center;">';
         html += '<div style="padding:6px; background:#e3f2fd; border-radius:6px;"><div style="font-weight:700; color:#0d47a1;">' + ptost.ptostUsed + 'h</div><div style="font-size:0.7em; color:#666;">Used</div></div>';
         html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Needs Reclassification</div></div>';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
-        html += '</div></div></details>';
+        html += '</div>';
+        if (ptostItems.length > 0) {
+            html += buildTable(ptostItems, '#e3f2fd', [
+                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }
+            ]);
+        }
+        html += '</div></details>';
 
         // Planned Time Off
         if (plannedItems.length > 0) {
