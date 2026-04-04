@@ -496,6 +496,167 @@
         return results;
     }
 
+    // --- Payroll Excel Parser (PW_TL_RPT_EX / PW_TL_PAYB_E) ---
+
+    function parsePayrollExcel(file) {
+        return new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var XLSX = window.XLSX;
+                    if (!XLSX) { reject('XLSX library not loaded'); return; }
+                    var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+                    var ws = wb.Sheets[wb.SheetNames[0]];
+                    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+                    var result = parsePayrollRows(rows);
+                    resolve(result);
+                } catch (err) {
+                    reject('Failed to parse payroll Excel: ' + err.message);
+                }
+            };
+            reader.onerror = function() { reject('Failed to read file'); };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function parsePayrollRows(rows) {
+        // Find header row
+        var headerRow = -1;
+        for (var i = 0; i < Math.min(rows.length, 10); i++) {
+            var firstCell = cleanStr(String(rows[i]?.[0] || ''));
+            if (firstCell.match(/Emplid/i) || firstCell.match(/Empl.*ID/i)) {
+                headerRow = i;
+                break;
+            }
+        }
+        if (headerRow < 0) return {};
+
+        // Detect column layout
+        var header = rows[headerRow];
+        var colMap = {};
+        for (var c = 0; c < header.length; c++) {
+            var h = cleanStr(String(header[c] || '')).toLowerCase();
+            if (h === 'name') colMap.name = c;
+            else if (h === 'date' || h === 'reported date') colMap.date = c;
+            else if (h === 'trc') colMap.trc = c;
+            else if (h === 'quantity') colMap.qty = c;
+            else if (h === 'status') colMap.status = c;
+            else if (h === 'task code') colMap.task = c;
+            else if (h === 'in' && !colMap.clockIn) colMap.clockIn = c;
+            else if (h === 'out') colMap.clockOut = c;
+            else if (h === 'transfer' || h === 'lunch') colMap.lunchOut = c;
+            else if (h === 'in' && colMap.clockIn !== undefined) colMap.lunchIn = c;
+        }
+
+        // Fallback to known positions if header detection misses
+        if (colMap.name === undefined) colMap.name = 1;
+        if (colMap.date === undefined) colMap.date = 6;
+        if (colMap.trc === undefined) colMap.trc = 14;
+        if (colMap.qty === undefined) colMap.qty = 15;
+        if (colMap.status === undefined) colMap.status = 16;
+        if (colMap.task === undefined) colMap.task = 22;
+
+        var byEmployee = {};
+
+        for (var i = headerRow + 1; i < rows.length; i++) {
+            var row = rows[i];
+            var rawName = cleanStr(String(row[colMap.name] || ''));
+            if (!rawName) continue;
+
+            var trc = cleanStr(String(row[colMap.trc] || '')).toUpperCase();
+            if (!trc) continue;
+
+            // Skip regular/overtime/short-day for attendance purposes
+            if (trc === 'REG' || trc === 'OT4' || trc === 'OT5' || trc === 'SD') continue;
+
+            var dateRaw = row[colMap.date];
+            var dateStr = null;
+            if (dateRaw instanceof Date) {
+                dateStr = dateRaw.toISOString().split('T')[0];
+            } else {
+                dateStr = parseDate(dateRaw);
+            }
+            if (!dateStr) continue;
+
+            var qty = parseFloat(row[colMap.qty]) || 0;
+            if (qty <= 0) continue;
+
+            var status = cleanStr(String(row[colMap.status] || ''));
+            var taskCode = cleanStr(String(row[colMap.task] || '')).toUpperCase();
+
+            if (!byEmployee[rawName]) byEmployee[rawName] = [];
+            byEmployee[rawName].push({
+                date: dateStr,
+                trc: trc,
+                hours: round2(qty),
+                status: status,
+                taskCode: taskCode
+            });
+        }
+
+        // Build summary per employee
+        var result = {};
+        Object.keys(byEmployee).forEach(function(name) {
+            var entries = byEmployee[name].sort(function(a, b) { return a.date.localeCompare(b.date); });
+            var ptostTotal = 0;
+            var unschdTotal = 0;
+            var fmlaTotal = 0;
+            var brvTotal = 0;
+            var ptoTotal = 0;
+            var ptostEntries = [];
+            var unschdEntries = [];
+            var fmlaEntries = [];
+            var brvEntries = [];
+            var ptoEntries = [];
+            var pendingEntries = [];
+
+            entries.forEach(function(e) {
+                if (e.trc === 'PTOST') {
+                    ptostTotal += e.hours;
+                    ptostEntries.push(e);
+                } else if (e.trc === 'FMLNP') {
+                    fmlaTotal += e.hours;
+                    fmlaEntries.push(e);
+                } else if (e.trc === 'BRV') {
+                    brvTotal += e.hours;
+                    brvEntries.push(e);
+                } else if (e.trc === 'PTO') {
+                    ptoTotal += e.hours;
+                    ptoEntries.push(e);
+                    if (e.taskCode === 'UNSCHD') {
+                        unschdTotal += e.hours;
+                        unschdEntries.push(e);
+                    }
+                } else if (e.trc === 'HOL' || e.trc === 'STD' || e.trc === 'PPL' || e.trc === 'NOP') {
+                    // Track but don't count against anything
+                }
+
+                if (e.status === 'Needs Approval') {
+                    pendingEntries.push(e);
+                }
+            });
+
+            result[name] = {
+                entries: entries,
+                ptostTotal: round2(ptostTotal),
+                ptostRemaining: round2(Math.max(0, PTOST_ANNUAL_LIMIT - ptostTotal)),
+                ptostOver: round2(Math.max(0, ptostTotal - PTOST_ANNUAL_LIMIT)),
+                unschdTotal: round2(unschdTotal),
+                fmlaTotal: round2(fmlaTotal),
+                brvTotal: round2(brvTotal),
+                ptoTotal: round2(ptoTotal),
+                ptostEntries: ptostEntries,
+                unschdEntries: unschdEntries,
+                fmlaEntries: fmlaEntries,
+                brvEntries: brvEntries,
+                ptoEntries: ptoEntries,
+                pendingEntries: pendingEntries
+            };
+        });
+
+        return result;
+    }
+
     function matchEmployeeToExisting(verintName) {
         // Verint format: "LastName, FirstName  " (with possible trailing spaces)
         var cleaned = cleanStr(verintName);
@@ -635,10 +796,27 @@
         var bereavementData = data.summary?.['WFO-Bereavement'] || { used: 0 };
         var bereavementActivities = (data.activities || []).filter(function(a) { return a.activity === 'WFO-Bereavement' || a.activity === 'Bereavement'; });
 
+        // If payroll data exists, override PTOST and policy calculations
+        var payroll = store.associates?.[employeeName]?.payrollData;
+        var hasPayroll = !!payroll;
+        if (hasPayroll) {
+            ptost.ptostUsed = payroll.ptostTotal;
+            ptost.ptostRemaining = payroll.ptostRemaining;
+            ptost.unplannedNotPtost = payroll.unschdTotal;
+            ptost.policyHours = payroll.unschdTotal;
+            ptost.reclassificationGap = ptost.unplannedNotPtost;
+            ptost.canExcuse = round2(Math.min(ptost.policyHours, ptost.ptostRemaining));
+            ptost.policyHoursAfterExcusing = round2(Math.max(0, ptost.policyHours - ptost.ptostRemaining));
+            fmlaData = { used: payroll.fmlaTotal };
+            fmlaActivities = payroll.fmlaEntries || [];
+            bereavementData = { used: payroll.brvTotal };
+            bereavementActivities = payroll.brvEntries || [];
+        }
+
         // Load manual reliability override
         var manualReliability = store.associates?.[employeeName]?.manualReliabilityHours;
-        var verintCalcHours = ptost.policyHours;
-        var reliabilityHours = (manualReliability !== undefined && manualReliability !== null) ? manualReliability : verintCalcHours;
+        var calcHours = ptost.policyHours;
+        var reliabilityHours = (manualReliability !== undefined && manualReliability !== null) ? manualReliability : calcHours;
         // Recalculate tier based on actual reliability hours used
         var tier = calculateDisciplineTier(reliabilityHours);
         // Recalculate canExcuse based on actual reliability
@@ -647,8 +825,12 @@
 
         var html = '';
 
-        // Upload info
-        html += '<div style="margin-bottom:12px; font-size:0.85em; color:#666;">Verint data uploaded: ' + new Date(data.uploadedAt).toLocaleDateString() + (data.organization ? ' | Org: ' + escHtml(data.organization) : '') + '</div>';
+        // Data source info
+        var sourceInfo = [];
+        if (hasPayroll) sourceInfo.push('Payroll: ' + new Date(payroll.uploadedAt).toLocaleDateString() + ' (PTOST: ' + payroll.ptostTotal + 'h)');
+        if (data.uploadedAt) sourceInfo.push('Verint: ' + new Date(data.uploadedAt).toLocaleDateString());
+        html += '<div style="margin-bottom:12px; font-size:0.85em; color:#666;">' + (hasPayroll ? '\uD83D\uDCCA Data from Payroll (source of truth)' : '\u26A0\uFE0F Data from Verint only — upload Payroll Excel for accurate PTOST tracking') + '</div>';
+        if (sourceInfo.length) html += '<div style="margin-bottom:8px; font-size:0.8em; color:#999;">' + sourceInfo.join(' | ') + '</div>';
 
         // ===== ALWAYS VISIBLE: Reliability Status =====
         html += '<div style="margin-bottom:16px; padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -657,9 +839,9 @@
         // Manual entry field
         html += '<div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">';
         html += '<label style="font-size:0.85em; font-weight:600; color:#333; white-space:nowrap;">Hours against reliability (from PowerBI):</label>';
-        html += '<input type="number" id="manualReliabilityInput" step="0.01" value="' + (manualReliability !== undefined && manualReliability !== null ? manualReliability : '') + '" placeholder="' + verintCalcHours + '" style="width:100px; padding:6px; border:2px solid ' + tier.tier.color + '; border-radius:4px; font-size:1em; font-weight:700; color:' + tier.tier.color + '; text-align:center;">';
-        if (manualReliability !== undefined && manualReliability !== null && Math.abs(manualReliability - verintCalcHours) > 0.1) {
-            html += '<span style="font-size:0.8em; color:#999;">Verint calc: ' + verintCalcHours + 'h</span>';
+        html += '<input type="number" id="manualReliabilityInput" step="0.01" value="' + (manualReliability !== undefined && manualReliability !== null ? manualReliability : '') + '" placeholder="' + calcHours + '" style="width:100px; padding:6px; border:2px solid ' + tier.tier.color + '; border-radius:4px; font-size:1em; font-weight:700; color:' + tier.tier.color + '; text-align:center;">';
+        if (manualReliability !== undefined && manualReliability !== null && Math.abs(manualReliability - calcHours) > 0.1) {
+            html += '<span style="font-size:0.8em; color:#999;">Verint calc: ' + calcHours + 'h</span>';
         }
         html += '</div>';
 
@@ -832,10 +1014,25 @@
         html += '<div style="padding:6px; background:#fff3e0; border-radius:6px;"><div style="font-weight:700; color:#e65100;">' + ptost.unplannedNotPtost + 'h</div><div style="font-size:0.7em; color:#666;">Needs Reclassification</div></div>';
         html += '<div style="padding:6px; background:#e8f5e9; border-radius:6px;"><div style="font-weight:700; color:#2e7d32;">' + ptost.ptostRemaining + 'h</div><div style="font-size:0.7em; color:#666;">Remaining</div></div>';
         html += '</div>';
-        if (ptostItems.length > 0) {
-            html += buildTable(ptostItems, '#e3f2fd', [
-                { label: 'Date' }, { label: 'Activity' }, { label: 'Hours', align: 'right' }
-            ]);
+        // Show payroll PTOST entries if available, otherwise Verint
+        var ptostDisplayItems = hasPayroll ? (payroll.ptostEntries || []) : ptostItems;
+        if (ptostDisplayItems.length > 0) {
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<tr style="background:#e3f2fd;"><th style="padding:6px 8px; text-align:left;">Date</th><th style="padding:6px 8px; text-align:left;">Source</th><th style="padding:6px 8px; text-align:right;">Hours</th><th style="padding:6px 8px; text-align:left;">Status</th></tr>';
+            ptostDisplayItems.forEach(function(item) {
+                var date = item.date || item.fromDate;
+                var src = item.trc ? 'Payroll' : 'Verint';
+                var hrs = item.hours;
+                var status = item.status || '';
+                var taskNote = item.taskCode === 'UNSCHD' ? ' (UNSCHD)' : '';
+                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                html += '<td style="padding:6px 8px;">' + formatDateDisplay(date) + '</td>';
+                html += '<td style="padding:6px 8px; font-size:0.85em; color:#666;">' + src + taskNote + '</td>';
+                html += '<td style="padding:6px 8px; text-align:right; font-weight:600;">' + hrs + 'h</td>';
+                html += '<td style="padding:6px 8px; font-size:0.85em; color:#666;">' + status + '</td>';
+                html += '</tr>';
+            });
+            html += '</table>';
         }
         html += '</div></details>';
 
@@ -1115,7 +1312,9 @@
         html += '<input type="file" id="attendanceVerintInput" accept=".xlsx,.xls" multiple style="display:none;">';
         html += '<button type="button" id="attendanceVerintBtn" style="background:linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Verint Excel(s)</button>';
         html += '<input type="file" id="attendancePayrollPdfInput" accept=".pdf" style="display:none;">';
-        html += '<button type="button" id="attendancePayrollPdfBtn" style="background:linear-gradient(135deg, #00695c 0%, #004d40 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Payroll PDF</button>';
+        html += '<input type="file" id="attendancePayrollExcelInput" accept=".xlsx,.xls" style="display:none;">';
+        html += '<button type="button" id="attendancePayrollExcelBtn" style="background:linear-gradient(135deg, #1565c0 0%, #0d47a1 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload Payroll Excel</button>';
+        html += '<button type="button" id="attendancePayrollPdfBtn" style="background:linear-gradient(135deg, #00695c 0%, #004d40 100%); color:white; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Upload PTO Balances (PDF)</button>';
         html += '<span id="attendanceUploadStatus" style="font-size:0.85em; color:#666;"></span>';
         html += '</div>';
 
@@ -1131,12 +1330,22 @@
             var verint = store.associates?.[name]?.verintData;
             var indicator = '';
             var fixFlag = '';
-            if (verint?.uploadedAt) {
+            var payrollD = store.associates?.[name]?.payrollData;
+            if (payrollD) {
+                indicator = '\u2705 Payroll';
+                loadedCount++;
+                // Use payroll data for flags
+                if (payrollD.unschdTotal > 0) {
+                    fixFlag = ' \u26A0\uFE0F ' + payrollD.unschdTotal + 'h against policy';
+                }
+                if (payrollD.ptostRemaining > 0 && payrollD.unschdTotal > 0) {
+                    fixFlag = ' \uD83D\uDEA9 ' + payrollD.unschdTotal + 'h policy, ' + payrollD.ptostRemaining + 'h PTOST left';
+                    fixableCount++;
+                }
+            } else if (verint?.uploadedAt) {
                 var uploadDate = new Date(verint.uploadedAt).toLocaleDateString();
                 indicator = '\u2705 ' + uploadDate;
                 loadedCount++;
-
-                // Check if they have unexcused hours that PTOST can cover
                 var empPtost = calculatePtostUsage(verint.ptoSubCategories || {});
                 if (empPtost.unplannedNotPtost > 0 && empPtost.ptostRemaining > 0) {
                     fixFlag = ' \uD83D\uDEA9 Can fix ' + empPtost.unplannedNotPtost + 'h';
@@ -1170,6 +1379,57 @@
         });
 
         // Payroll PDF upload
+        // Payroll Excel upload
+        document.getElementById('attendancePayrollExcelBtn')?.addEventListener('click', function() {
+            document.getElementById('attendancePayrollExcelInput')?.click();
+        });
+
+        document.getElementById('attendancePayrollExcelInput')?.addEventListener('change', async function() {
+            var file = this.files?.[0];
+            if (!file) return;
+            var statusEl = document.getElementById('attendanceUploadStatus');
+            if (statusEl) statusEl.textContent = 'Parsing payroll Excel...';
+
+            try {
+                var payrollData = await parsePayrollExcel(file);
+                var employeeCount = Object.keys(payrollData).length;
+                if (employeeCount === 0) {
+                    if (statusEl) statusEl.textContent = 'No employees found in payroll Excel.';
+                    this.value = '';
+                    return;
+                }
+
+                var store = loadStore();
+                if (!store.associates) store.associates = {};
+                var matched = 0;
+                Object.keys(payrollData).forEach(function(rawName) {
+                    var matchedName = matchEmployeeToExisting(rawName);
+                    if (!store.associates[matchedName]) store.associates[matchedName] = {};
+                    store.associates[matchedName].payrollData = payrollData[rawName];
+                    store.associates[matchedName].payrollData.uploadedAt = new Date().toISOString();
+                    store.associates[matchedName].payrollData.rawName = rawName;
+                    matched++;
+                });
+                saveStore(store);
+
+                if (statusEl) statusEl.textContent = matched + ' associates loaded from payroll!';
+                if (typeof showToast === 'function') showToast(matched + ' payroll records imported.', 4000);
+
+                // Refresh
+                initializeAttendanceTracker();
+                var select = document.getElementById('attendanceAssociateSelect');
+                if (select?.value) {
+                    select.dispatchEvent(new Event('change'));
+                }
+            } catch (err) {
+                console.error('Payroll Excel error:', err);
+                if (statusEl) statusEl.textContent = 'Error: ' + err;
+                if (typeof showToast === 'function') showToast('Payroll Excel error: ' + err, 5000);
+            }
+            this.value = '';
+        });
+
+        // PTO Balance PDF upload
         document.getElementById('attendancePayrollPdfBtn')?.addEventListener('click', function() {
             document.getElementById('attendancePayrollPdfInput')?.click();
         });
@@ -1328,6 +1588,7 @@
         initializeAttendanceTracker: initializeAttendanceTracker,
         renderAttendanceDashboard: renderAttendanceDashboard,
         parseVerintExcel: parseVerintExcel,
+        parsePayrollExcel: parsePayrollExcel,
         handleVerintUploadFromUploadPage: handleVerintUploadFromUploadPage
     };
     window.initializeAttendanceTracker = initializeAttendanceTracker;
