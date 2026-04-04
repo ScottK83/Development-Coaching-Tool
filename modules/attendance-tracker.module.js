@@ -658,15 +658,18 @@
     }
 
     function matchEmployeeToExisting(verintName) {
-        // Verint format: "LastName, FirstName  " (with possible trailing spaces)
         var cleaned = cleanStr(verintName);
-        // Try to find in weeklyData/ytdData employee lists
+        // Build list of all known names from all sources
         var allNames = new Set();
+        // From weekly/ytd data
         var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
         var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
         Object.values(weekly).concat(Object.values(ytd)).forEach(function(period) {
             (period?.employees || []).forEach(function(emp) { if (emp?.name) allNames.add(emp.name); });
         });
+        // From attendance store
+        var store = loadStore();
+        Object.keys(store.associates || {}).forEach(function(name) { allNames.add(name); });
 
         var verintNorm = normalizeNameForMatch(cleaned);
 
