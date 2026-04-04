@@ -866,12 +866,11 @@
         var ptostPendingHrs = round2(payrollPtostEntries.filter(function(e) { return e.status === 'Needs Approval'; }).reduce(function(s, e) { return s + e.hours; }, 0));
 
         var comparePayroll = payrollEntries.filter(function(e) {
-            return ['PTO', 'PTOST'].indexOf(e.trc) !== -1;
+            return e.trc === 'PTOST' || (e.trc === 'PTO' && e.taskCode === 'UNSCHD');
         });
         var compareVerint = (data.activities || []).filter(function(a) {
             return PTOST_CATEGORIES.indexOf(a.activity) !== -1 ||
-                UNPLANNED_NOT_PTOST.indexOf(a.activity) !== -1 ||
-                PLANNED_CATEGORIES.indexOf(a.activity) !== -1;
+                UNPLANNED_NOT_PTOST.indexOf(a.activity) !== -1;
         });
 
         // Separate category data for their own sections
@@ -949,7 +948,7 @@
         html += '<option value="approval">Show pending approvals</option>';
         html += '</select>';
         html += '</div>';
-        html += '<div style="font-size:0.8em; color:#475569; margin-bottom:8px;">Payroll row includes approval status so you can explain current PTO/PTOST balances quickly.</div>';
+        html += '<div style="font-size:0.8em; color:#475569; margin-bottom:8px;">This table is only unscheduled/PTOST items. Pre Planned Absence is tracked in the separate snapshot card above.</div>';
         html += '<div style="overflow:auto;">';
         html += '<table style="width:100%; border-collapse:collapse; font-size:0.84em; min-width:860px;">';
         html += '<tr style="background:#f1f5f9;">';
