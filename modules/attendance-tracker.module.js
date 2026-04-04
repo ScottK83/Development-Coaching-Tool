@@ -904,6 +904,32 @@
         Object.keys(verintByDate).forEach(function(d) { allDatesMap[d] = true; });
         var compareDates = Object.keys(allDatesMap).sort().reverse();
 
+        function buildPtostApprovedCumulativeByDate(payrollRecords) {
+            var approvedPtost = (payrollRecords || []).filter(function(r) {
+                return r.trc === 'PTOST' && r.status === 'Approved' && r.date;
+            });
+
+            var byDate = {};
+            approvedPtost.forEach(function(r) {
+                byDate[r.date] = round2((byDate[r.date] || 0) + (r.hours || 0));
+            });
+
+            var cumulativeByDate = {};
+            var running = 0;
+            Object.keys(byDate).sort().forEach(function(date) {
+                running = round2(running + byDate[date]);
+                cumulativeByDate[date] = running;
+            });
+
+            return {
+                totalApproved: running,
+                cumulativeByDate: cumulativeByDate
+            };
+        }
+
+        var ptostApprovedRollup = buildPtostApprovedCumulativeByDate(payrollEntries);
+        var ptostApprovedCumulativeByDate = ptostApprovedRollup.cumulativeByDate;
+
         var mismatchDates = [];
 
         html += '<div style="margin-bottom:12px; padding:10px 12px; border:1px solid #dbeafe; background:#f8fbff; border-radius:8px;">';
@@ -920,8 +946,8 @@
         html += '<h4 style="margin:0 0 10px 0; color:#0f172a;">Snapshot</h4>';
         html += '<div style="display:grid; grid-template-columns:repeat(4, minmax(130px, 1fr)); gap:8px;">';
         html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">PTO Left</div><div style="font-size:1.2em; font-weight:800; color:#0f766e;">' + ptoRemaining + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (hasPayroll ? 'from Payroll' : 'from Verint') + '</div></div>';
-        html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">PTO Status</div><div style="font-size:1.05em; font-weight:800; color:#1d4ed8;">' + (hasPayroll ? (ptoApprovedHrs + 'h approved') : (ptoUsed + 'h used')) + '</div><div style="font-size:0.72em; color:#b45309;">' + (hasPayroll ? (ptoPendingHrs + 'h pending') : 'Upload Payroll for approvals') + '</div></div>';
-        html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">PTOST Status</div><div style="font-size:1.05em; font-weight:800; color:#0d47a1;">' + (hasPayroll ? (ptostApprovedHrs + 'h approved') : (ptost.ptostUsed + 'h used')) + '</div><div style="font-size:0.72em; color:#b45309;">' + (hasPayroll ? (ptostPendingHrs + 'h pending') : 'Upload Payroll for approvals') + '</div></div>';
+        html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">' + (hasPayroll ? 'PTO Status (Payroll)' : 'PTO Status (Verint)') + '</div><div style="font-size:1.05em; font-weight:800; color:#1d4ed8;">' + (hasPayroll ? (ptoApprovedHrs + 'h approved in Payroll') : (ptoUsed + 'h used in Verint')) + '</div><div style="font-size:0.72em; color:#b45309;">' + (hasPayroll ? (ptoPendingHrs + 'h pending in Payroll') : 'Upload Payroll for approvals') + '</div></div>';
+        html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">' + (hasPayroll ? 'PTOST Status (Payroll)' : 'PTOST Status (Verint)') + '</div><div style="font-size:1.05em; font-weight:800; color:#0d47a1;">' + (hasPayroll ? (ptostApprovedHrs + 'h approved in Payroll') : (ptost.ptostUsed + 'h used in Verint')) + '</div><div style="font-size:0.72em; color:#b45309;">' + (hasPayroll ? (ptostPendingHrs + 'h pending in Payroll') : 'Upload Payroll for approvals') + '</div></div>';
         html += '<div style="padding:8px; border-radius:6px; background:#f8fafc;"><div style="font-size:0.75em; color:#64748b;">Reliability Basis</div><div style="font-size:1.05em; font-weight:800; color:#7c3aed;">Verint ' + verintReliabilityBasis + 'h</div><div style="font-size:0.72em; color:#64748b;">' + (payrollReliabilityBasis !== null ? ('Payroll ' + payrollReliabilityBasis + 'h') : 'No Payroll basis yet') + '</div></div>';
         html += '</div>';
         html += '<div style="display:grid; grid-template-columns:repeat(4, minmax(130px, 1fr)); gap:8px; margin-top:8px;">';
@@ -948,7 +974,7 @@
         html += '<option value="approval">Show pending approvals</option>';
         html += '</select>';
         html += '</div>';
-        html += '<div style="font-size:0.8em; color:#475569; margin-bottom:8px;">This table is only unscheduled/PTOST items. Pre Planned Absence is tracked in the separate snapshot card above.</div>';
+        html += '<div style="font-size:0.8em; color:#475569; margin-bottom:8px;">This table is only unscheduled/PTOST items. Matches are checked by date and PTOST hours. Pre Planned Absence is tracked in the separate snapshot card above.</div>';
         html += '<div style="overflow:auto;">';
         html += '<table style="width:100%; border-collapse:collapse; font-size:0.84em; min-width:860px;">';
         html += '<tr style="background:#f1f5f9;">';
@@ -974,27 +1000,48 @@
                 return escHtml(v.activity) + ' ' + v.hours + 'h';
             }).join(' | ') : '<span style="color:#94a3b8;">No Verint entry</span>';
 
-            var payrollHasPtost = pItems.some(function(p) { return p.trc === 'PTOST'; });
-            var verintHasPtost = vItems.some(function(v) { return PTOST_CATEGORIES.indexOf(v.activity) !== -1; });
+            var payrollPtostHrs = round2(pItems.filter(function(p) { return p.trc === 'PTOST'; }).reduce(function(s, p) { return s + p.hours; }, 0));
+            var verintPtostHrs = round2(vItems.filter(function(v) { return PTOST_CATEGORIES.indexOf(v.activity) !== -1; }).reduce(function(s, v) { return s + v.hours; }, 0));
+            var verintUnplannedHrs = round2(vItems.filter(function(v) { return UNPLANNED_NOT_PTOST.indexOf(v.activity) !== -1; }).reduce(function(s, v) { return s + v.hours; }, 0));
+            var payrollHasPtost = payrollPtostHrs > 0;
+            var verintHasPtost = verintPtostHrs > 0;
             var hasPending = pItems.some(function(p) { return p.status === 'Needs Approval'; });
+            var hasVerintTardy = vItems.some(function(v) { return /tardy/i.test(String(v.activity || '')); });
+            var ptostHoursMatch = payrollHasPtost && verintHasPtost && Math.abs(payrollPtostHrs - verintPtostHrs) < 0.01;
+            var cumulativeApprovedPtost = ptostApprovedCumulativeByDate[date] || 0;
 
             var diff = 'Aligned';
             var diffColor = '#166534';
             var action = 'None';
 
             if (payrollHasPtost && !verintHasPtost) {
-                diff = 'Payroll PTOST missing in Verint';
-                diffColor = '#b91c1c';
-                action = 'Send WFM fix';
-                mismatchDates.push(date);
+                if (Math.abs(payrollPtostHrs - verintUnplannedHrs) < 0.01 && verintUnplannedHrs > 0) {
+                    diff = 'Coding mismatch only (hours match)';
+                    diffColor = '#b91c1c';
+                    action = 'Send WFM fix';
+                    mismatchDates.push(date);
+                } else {
+                    diff = 'Payroll PTOST missing in Verint';
+                    diffColor = '#b91c1c';
+                    action = 'Send WFM fix';
+                    mismatchDates.push(date);
+                }
             } else if (!payrollHasPtost && verintHasPtost) {
                 diff = 'Verint PTOST missing in Payroll';
                 diffColor = '#b45309';
                 action = 'Check payroll coding';
+            } else if (payrollHasPtost && verintHasPtost && !ptostHoursMatch) {
+                diff = 'PTOST hours mismatch (' + payrollPtostHrs + 'h vs ' + verintPtostHrs + 'h)';
+                diffColor = '#b45309';
+                action = 'Verify edits in Payroll/Verint';
             } else if (hasPending) {
                 diff = 'Pending payroll approval';
                 diffColor = '#b45309';
                 action = 'Wait/approve in Payroll';
+            } else if (!pItems.length && hasVerintTardy) {
+                diff = 'Tardy only - no payroll entry';
+                diffColor = '#b45309';
+                action = 'Verify next Payroll report';
             } else if (!pItems.length && vItems.length) {
                 diff = 'Only in Verint';
                 diffColor = '#b45309';
@@ -1003,6 +1050,11 @@
                 diff = 'Only in Payroll';
                 diffColor = '#b45309';
                 action = 'May need Verint update';
+            }
+
+            if (payrollHasPtost && cumulativeApprovedPtost > PTOST_ANNUAL_LIMIT) {
+                diff = 'PTOST balance exhausted - should be PTO Unscheduled';
+                diffColor = '#b91c1c';
             }
 
             var rowBg = diffColor === '#166534' ? '#f8fff9' : '#fff7ed';
@@ -1018,6 +1070,10 @@
         });
 
         html += '</table></div>';
+        html += '<div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">';
+        html += '<button type="button" id="copyAssociatePtostMsgBtn" style="background:#2563eb; color:white; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:700;">Copy Associate PTOST Message</button>';
+        html += '<span style="font-size:0.8em; color:#64748b;">Includes "do you want me to claim PTOST" language when claimable hours exist.</span>';
+        html += '</div>';
         if (mismatchDates.length > 0) {
             html += '<div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">';
             html += '<button type="button" id="copyMismatchMsgBtn" style="background:#b91c1c; color:white; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:700;">Copy WFM Fix Message</button>';
@@ -1054,6 +1110,18 @@
             s.associates[employeeName].manualReliabilityHours = verintReliabilityBasis;
             saveStore(s);
             renderAttendanceDashboard(container, employeeName);
+        });
+
+        document.getElementById('copyAssociatePtostMsgBtn')?.addEventListener('click', function() {
+            var msgPtost = Object.assign({}, ptost, {
+                policyHours: reliabilityHours,
+                canExcuse: canExcuse,
+                policyHoursAfterExcusing: afterExcusing
+            });
+            var msg = generateAssociateMessage(firstName, msgPtost, tier, reclassItems);
+            navigator.clipboard.writeText(msg).then(function() {
+                if (typeof showToast === 'function') showToast('Associate PTOST message copied!', 2500);
+            });
         });
 
         document.getElementById('copyMismatchMsgBtn')?.addEventListener('click', function() {
