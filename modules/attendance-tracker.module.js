@@ -1481,21 +1481,28 @@
             if (!file) return;
             var statusEl = document.getElementById('attendanceUploadStatus');
             if (statusEl) statusEl.textContent = 'Parsing payroll Excel...';
+            console.log('[Payroll Upload] File selected:', file.name, file.size, 'bytes');
 
             try {
                 var payrollData = await parsePayrollExcel(file);
-                var employeeCount = Object.keys(payrollData).length;
-                if (employeeCount === 0) {
+                var employeeNames = Object.keys(payrollData);
+                console.log('[Payroll Upload] Parsed', employeeNames.length, 'employees:', employeeNames.slice(0, 5));
+
+                if (employeeNames.length === 0) {
                     if (statusEl) statusEl.textContent = 'No employees found in payroll Excel.';
+                    console.error('[Payroll Upload] ZERO employees parsed');
                     this.value = '';
                     return;
                 }
 
                 var store = loadStore();
                 if (!store.associates) store.associates = {};
+                console.log('[Payroll Upload] Existing store keys:', Object.keys(store.associates).slice(0, 5));
+
                 var matched = 0;
-                Object.keys(payrollData).forEach(function(rawName) {
+                employeeNames.forEach(function(rawName) {
                     var matchedName = matchEmployeeToExisting(rawName);
+                    console.log('[Payroll Upload] ' + rawName + ' -> ' + matchedName);
                     if (!store.associates[matchedName]) store.associates[matchedName] = {};
                     store.associates[matchedName].payrollData = payrollData[rawName];
                     store.associates[matchedName].payrollData.uploadedAt = new Date().toISOString();
@@ -1503,6 +1510,12 @@
                     matched++;
                 });
                 saveStore(store);
+                console.log('[Payroll Upload] Saved', matched, 'to store');
+
+                // Verify save
+                var verify = loadStore();
+                var firstKey = Object.keys(verify.associates || {})[0];
+                console.log('[Payroll Upload] Verify - first key:', firstKey, 'has payrollData:', !!verify.associates?.[firstKey]?.payrollData);
 
                 if (statusEl) statusEl.textContent = matched + ' associates loaded from payroll!';
                 if (typeof showToast === 'function') showToast(matched + ' payroll records imported.', 4000);
@@ -1514,7 +1527,7 @@
                     select.dispatchEvent(new Event('change'));
                 }
             } catch (err) {
-                console.error('Payroll Excel error:', err);
+                console.error('[Payroll Upload] ERROR:', err, err.stack);
                 if (statusEl) statusEl.textContent = 'Error: ' + err;
                 if (typeof showToast === 'function') showToast('Payroll Excel error: ' + err, 5000);
             }
