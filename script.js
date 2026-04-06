@@ -1472,6 +1472,10 @@ function bindUploadAndPasteHandlers() {
             } catch (err) {
                 console.error('Verint upload error for file ' + files[i].name + ':', err);
                 errors++;
+                if (typeof showToast === 'function') {
+                    var msg = err?.message ? (': ' + err.message) : '';
+                    showToast('Failed ' + files[i].name + msg, 6000);
+                }
             }
         }
         if (typeof showToast === 'function') {

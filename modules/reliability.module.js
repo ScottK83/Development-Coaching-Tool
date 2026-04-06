@@ -231,7 +231,7 @@
                     var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                     var ws = wb.Sheets[wb.SheetNames[0]];
                     var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                    resolve(extractVerintData(rows));
+                    resolve(extractVerintData(rows, file?.name || ''));
                 } catch (err) { reject(err); }
             };
             reader.onerror = function() { reject(new Error('File read error')); };
@@ -239,15 +239,56 @@
         });
     }
 
-    function extractVerintData(rows) {
-        // Find employee name from "Employee: Last, First" row
+    function extractNameFromFileName(fileName) {
+        var base = String(fileName || '')
+            .replace(/\.[^.]+$/, '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\b(time\s*off|summary|report|verint|pto|attendance|employee)\b/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return base;
+    }
+
+    function findVerintEmployeeName(rows, fileName) {
         var employeeName = '';
-        var employeeRow = rows.find(function(r) {
-            return String(r[1] || '').trim().startsWith('Employee:');
-        });
-        if (employeeRow) {
-            employeeName = String(employeeRow[1]).replace(/^Employee:\s*/, '').trim();
+
+        // Search top rows and first few columns for any "Employee:" label.
+        for (var i = 0; i < Math.min(rows.length, 40); i++) {
+            var row = Array.isArray(rows[i]) ? rows[i] : [];
+            for (var c = 0; c < Math.min(row.length, 12); c++) {
+                var cell = stripUnicode(String(row[c] || '')).trim();
+                if (!cell) continue;
+                var m = cell.match(/^employee\s*:\s*(.+)$/i);
+                if (m && m[1]) return m[1].trim();
+
+                if (/^employee\s*:$/i.test(cell)) {
+                    var rightCell = stripUnicode(String(row[c + 1] || '')).trim();
+                    if (rightCell) return rightCell;
+                }
+            }
         }
+
+        // Fallback: derive employee text from filename if sheet label is missing.
+        employeeName = extractNameFromFileName(fileName);
+        return employeeName;
+    }
+
+    function findColumnIndexFromHeaderRow(row, candidates) {
+        if (!Array.isArray(row)) return -1;
+        for (var i = 0; i < row.length; i++) {
+            var h = stripUnicode(String(row[i] || ''))
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '');
+            if (!h) continue;
+            for (var j = 0; j < candidates.length; j++) {
+                if (h === candidates[j] || h.indexOf(candidates[j]) >= 0) return i;
+            }
+        }
+        return -1;
+    }
+
+    function extractVerintData(rows, fileName) {
+        var employeeName = findVerintEmployeeName(rows, fileName);
 
         // Extract summary totals for same-day / PTOST categories
         // Col B = activity name (index 1), Col H = Used Hours (index 7)
@@ -266,25 +307,51 @@
         });
 
         // Extract chronological detail events (Time Off Activities section)
-        // Header row: "Time Off Activities", ..., "From", ..., "To", ..., "Length (Hours)"
+        // Header row usually follows "Time Off Activities" and may shift by column.
         var events = [];
         var detailStartIdx = -1;
         for (var i = 0; i < rows.length; i++) {
-            if (String(rows[i][1] || '').trim() === 'Time Off Activities') {
+            var rowLabel = stripUnicode(String(rows[i][1] || rows[i][0] || '')).trim();
+            if (rowLabel === 'Time Off Activities') {
                 detailStartIdx = i + 1;
                 break;
             }
         }
+
+        var activityCol = 1;
+        var fromCol = 5;
+        var toCol = 8;
+        var hoursCol = 11;
+
+        if (detailStartIdx > 0) {
+            for (var h = detailStartIdx; h < Math.min(rows.length, detailStartIdx + 8); h++) {
+                var headerRow = Array.isArray(rows[h]) ? rows[h] : [];
+                var fromIdx = findColumnIndexFromHeaderRow(headerRow, ['from', 'start', 'startdate']);
+                var toIdx = findColumnIndexFromHeaderRow(headerRow, ['to', 'end', 'enddate']);
+                var hrsIdx = findColumnIndexFromHeaderRow(headerRow, ['lengthhours', 'hours', 'duration']);
+                var actIdx = findColumnIndexFromHeaderRow(headerRow, ['timeoffactivity', 'activity', 'type']);
+
+                if (fromIdx >= 0 || toIdx >= 0 || hrsIdx >= 0 || actIdx >= 0) {
+                    if (actIdx >= 0) activityCol = actIdx;
+                    if (fromIdx >= 0) fromCol = fromIdx;
+                    if (toIdx >= 0) toCol = toIdx;
+                    if (hrsIdx >= 0) hoursCol = hrsIdx;
+                    detailStartIdx = h + 1;
+                    break;
+                }
+            }
+        }
+
         if (detailStartIdx > 0) {
             for (var j = detailStartIdx; j < rows.length; j++) {
                 var row = rows[j];
-                var activity = String(row[1] || '').trim();
+                var activity = String(row[activityCol] || '').trim();
                 // Stop at "Total Time Off" or "Time Off Requests" or empty section
                 if (activity.startsWith('Total Time Off') || activity === 'Time Off Requests' || activity === '') break;
 
-                var fromStr = String(row[5] || '');
-                var toStr = String(row[8] || '');
-                var lengthStr = String(row[11] || '').trim();
+                var fromStr = String(row[fromCol] || '');
+                var toStr = String(row[toCol] || '');
+                var lengthStr = String(row[hoursCol] || '').trim();
                 var hours = parseFloat(lengthStr) || 0;
                 var fromDate = fromStr ? new Date(fromStr) : null;
 
