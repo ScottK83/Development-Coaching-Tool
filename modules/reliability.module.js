@@ -252,9 +252,36 @@
         return [titleCaseWords(last), titleCaseWords(first)].join(', ');
     }
 
+    function parseSpreadsheetDate(value) {
+        if (value === null || value === undefined || value === '') return null;
+
+        if (value instanceof Date && !isNaN(value.getTime())) {
+            return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+        }
+
+        var raw = String(value).trim();
+        if (!raw) return null;
+
+        // Excel serial date support (e.g., 46024).
+        var serial = Number(raw);
+        if (isFinite(serial) && serial > 0) {
+            var whole = Math.floor(serial);
+            if (whole >= 20000 && whole <= 80000) {
+                var utcMs = (whole - 25569) * 86400 * 1000;
+                var utc = new Date(utcMs);
+                return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+            }
+        }
+
+        var parsed = new Date(raw);
+        if (isNaN(parsed.getTime())) return null;
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
     function formatDate(d) {
         if (!d) return '';
-        if (typeof d === 'string') d = new Date(d);
+        d = parseSpreadsheetDate(d);
+        if (!d) return '';
         var m = d.getMonth() + 1;
         var day = d.getDate();
         var y = d.getFullYear();
@@ -415,16 +442,17 @@
                 // Stop at "Total Time Off" or "Time Off Requests" or empty section
                 if (activity.startsWith('Total Time Off') || activity === 'Time Off Requests' || activity === '') break;
 
-                var fromStr = String(row[fromCol] || '');
-                var toStr = String(row[toCol] || '');
+                var fromRaw = row[fromCol];
+                var toRaw = row[toCol];
                 var lengthStr = String(row[hoursCol] || '').trim();
                 var hours = parseFloat(lengthStr) || 0;
-                var fromDate = fromStr ? new Date(fromStr) : null;
+                var fromDate = parseSpreadsheetDate(fromRaw);
+                var toDate = parseSpreadsheetDate(toRaw);
 
                 events.push({
                     activity: activity,
                     from: fromDate,
-                    to: toStr ? new Date(toStr) : null,
+                    to: toDate,
                     hours: hours,
                     dateStr: fromDate ? formatDate(fromDate) : ''
                 });
@@ -476,14 +504,14 @@
             var name = normalizeEmployeeName(rawName);
             if (!isLikelyEmployeeName(name)) continue;
             var emplid = stripUnicode(String(row[0] || ''));
-            var dateStr = String(row[6] || '');
+            var dateValue = row[6];
             var clockIn = String(row[8] || '').trim();
             var clockOut = String(row[13] || '').trim();
             var trc = stripUnicode(String(row[14] || '')).toUpperCase();
             var quantity = parseFloat(row[15]) || 0;
             var taskCode = stripUnicode(String(row[22] || '')).toUpperCase();
 
-            var dateObj = dateStr ? new Date(dateStr) : null;
+            var dateObj = parseSpreadsheetDate(dateValue);
 
             if (!employees[name]) {
                 employees[name] = { emplid: emplid, entries: [] };
@@ -547,7 +575,8 @@
 
         function dateKey(d) {
             if (!d) return null;
-            if (typeof d === 'string') d = new Date(d);
+            d = parseSpreadsheetDate(d);
+            if (!d) return null;
             return d.toISOString().slice(0, 10);
         }
 
