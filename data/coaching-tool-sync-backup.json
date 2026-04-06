@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-04T02:42:58.064Z",
-  "reason": "attendance tracker updated",
+  "generatedAt": "2026-04-06T18:01:05.798Z",
+  "reason": "call center averages updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-03-30|2026-04-05": {
@@ -2829,7 +2829,7 @@
         "periodType": "week",
         "yearEndTargetProfile": "auto",
         "yearEndReviewYear": "2026",
-        "uploadedAt": "2026-04-04T02:06:31.663Z"
+        "uploadedAt": "2026-04-06T18:01:00.249Z"
       }
     },
     "2026-03-23|2026-03-29": {
@@ -8581,7 +8581,7 @@
       "fcr": 78.33,
       "overallExperience": 83.33,
       "reliability": 1.83,
-      "lastUpdated": "2026-04-04T02:06:31.666Z"
+      "lastUpdated": "2026-04-06T18:01:00.253Z"
     },
     "2026-03-23|2026-03-29": {
       "adherence": 94.17,
@@ -27554,6 +27554,11 @@
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_lastTrendPeriod": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 21
+    },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 1,
@@ -27567,7 +27572,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 229
+      "byteLength": 226
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
