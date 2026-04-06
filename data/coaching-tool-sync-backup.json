@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T22:17:10.065Z",
+  "generatedAt": "2026-04-06T22:18:46.429Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -7793,6 +7793,9 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -8024,7 +8027,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 01:30 PM"
               ],
               "category": "same-day"
             },
@@ -8275,12 +8278,13 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [
             {
               "date": "2/12/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.13,
-              "payrollHours": 5.15,
               "payrollClockIn": "01:30 PM"
             }
           ],
@@ -8324,9 +8328,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8365,9 +8374,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8406,9 +8420,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8447,9 +8466,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8488,9 +8512,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8529,9 +8558,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8570,9 +8604,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -8611,9 +8650,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -9600,7 +9644,10 @@
         "reconciled": {
           "ptostHoursUsed": 16,
           "ptostBufferRemaining": 24,
-          "reliabilityHours": 0,
+          "sameDayNoPtostHours": 0.27,
+          "correctableSameDayHours": 0.27,
+          "remainingSameDayExposureHours": 0,
+          "reliabilityHours": 0.27,
           "timeline": [
             {
               "date": "2025-12-31",
@@ -9613,7 +9660,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (0.27h against reliability)"
+              ],
+              "sameDayExposureHours": 0.27,
               "category": "same-day"
             },
             {
@@ -9833,7 +9883,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 07:05 AM"
               ],
               "category": "same-day"
             },
@@ -9975,12 +10025,21 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [
+            {
+              "date": "12/31/2025",
+              "hours": 0.27,
+              "originalHours": 0.27,
+              "activity": "Tardy EQ GT 6 Min",
+              "reason": "Can be changed to PTOST"
+            }
+          ],
+          "pcIssueCandidates": [
             {
               "date": "1/29/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.12,
-              "payrollHours": 8.11667,
               "payrollClockIn": "07:05 AM"
             }
           ],
@@ -11275,6 +11334,9 @@
         "reconciled": {
           "ptostHoursUsed": 8,
           "ptostBufferRemaining": 32,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -11435,7 +11497,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:30 AM"
               ],
               "category": "same-day"
             },
@@ -11766,12 +11828,13 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [
             {
               "date": "2/20/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.47,
-              "payrollHours": 6.98333,
               "payrollClockIn": "11:30 AM"
             }
           ],
@@ -13119,7 +13182,10 @@
         "reconciled": {
           "ptostHoursUsed": 4.99,
           "ptostBufferRemaining": 35.01,
-          "reliabilityHours": 0,
+          "sameDayNoPtostHours": 13.5,
+          "correctableSameDayHours": 13.5,
+          "remainingSameDayExposureHours": 0,
+          "reliabilityHours": 13.5,
           "timeline": [
             {
               "date": "2026-01-01",
@@ -13162,7 +13228,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:00 AM"
               ],
               "category": "same-day"
             },
@@ -13207,7 +13273,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:00 AM"
               ],
               "category": "same-day"
             },
@@ -13442,7 +13508,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (5.5h against reliability)"
+              ],
+              "sameDayExposureHours": 5.5,
               "category": "same-day"
             },
             {
@@ -13456,7 +13525,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (8h against reliability)"
+              ],
+              "sameDayExposureHours": 8,
               "category": "same-day"
             },
             {
@@ -13572,19 +13644,34 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [
+            {
+              "date": "4/2/2026",
+              "hours": 5.5,
+              "originalHours": 5.5,
+              "activity": "Pre Planned Absence, Same Day",
+              "reason": "Can be changed to PTOST"
+            },
+            {
+              "date": "4/3/2026",
+              "hours": 8,
+              "originalHours": 8,
+              "activity": "Same Day",
+              "reason": "Can be changed to PTOST"
+            }
+          ],
+          "pcIssueCandidates": [
             {
               "date": "1/2/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.2,
-              "payrollHours": 7.38333,
               "payrollClockIn": "11:00 AM"
             },
             {
               "date": "1/27/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.12,
-              "payrollHours": 7.48333,
               "payrollClockIn": "11:00 AM"
             }
           ],
@@ -14902,6 +14989,9 @@
         "reconciled": {
           "ptostHoursUsed": 2,
           "ptostBufferRemaining": 38,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -15000,7 +15090,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:40 AM"
               ],
               "category": "same-day"
             },
@@ -15098,7 +15188,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:30 AM"
               ],
               "category": "same-day"
             },
@@ -15172,7 +15262,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 12:20 PM"
               ],
               "category": "same-day"
             },
@@ -15325,26 +15415,25 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [
             {
               "date": "1/6/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.17,
-              "payrollHours": 6.81667,
               "payrollClockIn": "11:40 AM"
             },
             {
               "date": "2/9/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.2,
-              "payrollHours": 6.96667,
               "payrollClockIn": "11:30 AM"
             },
             {
               "date": "3/31/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.33,
-              "payrollHours": 6.15,
               "payrollClockIn": "12:20 PM"
             }
           ],
@@ -16502,6 +16591,9 @@
         "reconciled": {
           "ptostHoursUsed": 0.87,
           "ptostBufferRemaining": 39.13,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -16686,7 +16778,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:00 AM"
               ],
               "category": "same-day"
             },
@@ -16726,12 +16818,14 @@
               "verintHours": 0.87,
               "payrollHours": 7.43333,
               "payrollClockIn": "11:00 AM"
-            },
+            }
+          ],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [
             {
               "date": "3/26/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.23,
-              "payrollHours": 7.48334,
               "payrollClockIn": "11:00 AM"
             }
           ],
@@ -17898,6 +17992,9 @@
         "reconciled": {
           "ptostHoursUsed": 44,
           "ptostBufferRemaining": 0,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 4,
           "timeline": [
             {
@@ -18734,6 +18831,8 @@
               "payrollClockIn": "07:00 AM"
             }
           ],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [
               "1/12/2026",
@@ -20014,7 +20113,10 @@
         "reconciled": {
           "ptostHoursUsed": 33.91,
           "ptostBufferRemaining": 6.09,
-          "reliabilityHours": 0,
+          "sameDayNoPtostHours": 12,
+          "correctableSameDayHours": 6.09,
+          "remainingSameDayExposureHours": 5.91,
+          "reliabilityHours": 12,
           "timeline": [
             {
               "date": "2026-01-01",
@@ -20268,7 +20370,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 12:25 PM"
               ],
               "category": "same-day"
             },
@@ -20535,7 +20637,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (4h against reliability)"
+              ],
+              "sameDayExposureHours": 4,
               "category": "same-day"
             },
             {
@@ -20549,7 +20654,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (8h against reliability)"
+              ],
+              "sameDayExposureHours": 8,
               "category": "same-day"
             },
             {
@@ -20625,13 +20733,6 @@
           ],
           "discrepancies": [
             {
-              "date": "2/9/2026",
-              "verintActivity": "Tardy EQ GT 6 Min",
-              "verintHours": 0.42,
-              "payrollHours": 5.81667,
-              "payrollClockIn": "12:25 PM"
-            },
-            {
               "date": "2/20/2026",
               "verintActivity": "Same Day",
               "verintHours": 0.67,
@@ -20644,6 +20745,30 @@
               "verintHours": 0.67,
               "payrollHours": 5.85,
               "payrollClockIn": "12:39 PM"
+            }
+          ],
+          "correctionCandidates": [
+            {
+              "date": "3/31/2026",
+              "hours": 4,
+              "originalHours": 4,
+              "activity": "Same Day",
+              "reason": "Can be changed to PTOST"
+            },
+            {
+              "date": "4/1/2026",
+              "hours": 2.09,
+              "originalHours": 8,
+              "activity": "Same Day",
+              "reason": "Partial conversion due to PTOST 40h limit"
+            }
+          ],
+          "pcIssueCandidates": [
+            {
+              "date": "2/9/2026",
+              "verintActivity": "Tardy EQ GT 6 Min",
+              "verintHours": 0.42,
+              "payrollClockIn": "12:25 PM"
             }
           ],
           "dayBuckets": {
@@ -21672,7 +21797,10 @@
         "reconciled": {
           "ptostHoursUsed": 36.52,
           "ptostBufferRemaining": 3.48,
-          "reliabilityHours": 0,
+          "sameDayNoPtostHours": 0.15,
+          "correctableSameDayHours": 0.15,
+          "remainingSameDayExposureHours": 0,
+          "reliabilityHours": 0.15,
           "timeline": [
             {
               "date": "2025-12-27",
@@ -21685,7 +21813,10 @@
                 }
               ],
               "payroll": [],
-              "flags": [],
+              "flags": [
+                "Same Day without PTOST (0.15h against reliability)"
+              ],
+              "sameDayExposureHours": 0.15,
               "category": "same-day"
             },
             {
@@ -21790,7 +21921,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 08:45 AM"
               ],
               "category": "same-day"
             },
@@ -22031,7 +22162,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 05:00 AM"
               ],
               "category": "same-day"
             },
@@ -22062,7 +22193,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 05:00 AM"
               ],
               "category": "same-day"
             },
@@ -22095,26 +22226,33 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [
+            {
+              "date": "12/27/2025",
+              "hours": 0.15,
+              "originalHours": 0.15,
+              "activity": "Tardy EQ GT 6 Min",
+              "reason": "Can be changed to PTOST"
+            }
+          ],
+          "pcIssueCandidates": [
             {
               "date": "1/17/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.25,
-              "payrollHours": 7.75,
               "payrollClockIn": "08:45 AM"
             },
             {
               "date": "3/30/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.28,
-              "payrollHours": 6,
               "payrollClockIn": "05:00 AM"
             },
             {
               "date": "3/31/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.18,
-              "payrollHours": 6.05,
               "payrollClockIn": "05:00 AM"
             }
           ],
@@ -23295,6 +23433,9 @@
         "reconciled": {
           "ptostHoursUsed": 12.5,
           "ptostBufferRemaining": 27.5,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -23977,6 +24118,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [
               "2/13/2026"
@@ -25011,6 +25154,9 @@
         "reconciled": {
           "ptostHoursUsed": 43,
           "ptostBufferRemaining": 0,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 3,
           "timeline": [
             {
@@ -25548,7 +25694,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at 11:00 AM"
               ],
               "category": "same-day"
             },
@@ -25623,12 +25769,13 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
+          "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [
             {
               "date": "3/23/2026",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.15,
-              "payrollHours": 7,
               "payrollClockIn": "11:00 AM"
             }
           ],
@@ -26545,6 +26692,9 @@
         "reconciled": {
           "ptostHoursUsed": 19,
           "ptostBufferRemaining": 21,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -26863,6 +27013,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [
               "2/19/2026"
@@ -27848,6 +28000,9 @@
         "reconciled": {
           "ptostHoursUsed": 40,
           "ptostBufferRemaining": 0,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -28771,6 +28926,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [
               "1/20/2026",
@@ -29891,6 +30048,9 @@
         "reconciled": {
           "ptostHoursUsed": 7.7,
           "ptostBufferRemaining": 32.3,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -30414,6 +30574,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -31396,6 +31558,9 @@
         "reconciled": {
           "ptostHoursUsed": 26.4,
           "ptostBufferRemaining": 13.6,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -31939,6 +32104,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -33300,6 +33467,9 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -33428,6 +33598,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -34506,6 +34678,9 @@
         "reconciled": {
           "ptostHoursUsed": 25.48,
           "ptostBufferRemaining": 14.52,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -35132,6 +35307,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -36237,6 +36414,9 @@
         "reconciled": {
           "ptostHoursUsed": 39.5,
           "ptostBufferRemaining": 0.5,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -36886,6 +37066,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -36918,9 +37100,14 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -37607,6 +37794,9 @@
         "reconciled": {
           "ptostHoursUsed": 37.76,
           "ptostBufferRemaining": 2.24,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -37889,6 +38079,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -38421,6 +38613,9 @@
         "reconciled": {
           "ptostHoursUsed": 31.32,
           "ptostBufferRemaining": 8.68,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -39199,6 +39394,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -39863,6 +40060,9 @@
         "reconciled": {
           "ptostHoursUsed": 39.09,
           "ptostBufferRemaining": 0.91,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -40065,6 +40265,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -40821,6 +41023,9 @@
         "reconciled": {
           "ptostHoursUsed": 39.34,
           "ptostBufferRemaining": 0.66,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -41140,6 +41345,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -41176,6 +41383,9 @@
         "reconciled": {
           "ptostHoursUsed": 0,
           "ptostBufferRemaining": 40,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -41196,6 +41406,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [],
@@ -42044,6 +42256,9 @@
         "reconciled": {
           "ptostHoursUsed": 18.4,
           "ptostBufferRemaining": 21.6,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -42382,6 +42597,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -43312,6 +43529,9 @@
         "reconciled": {
           "ptostHoursUsed": 33,
           "ptostBufferRemaining": 7,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -43716,6 +43936,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -44444,6 +44666,9 @@
         "reconciled": {
           "ptostHoursUsed": 6.57,
           "ptostBufferRemaining": 33.43,
+          "sameDayNoPtostHours": 0,
+          "correctableSameDayHours": 0,
+          "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
             {
@@ -44808,6 +45033,8 @@
             }
           ],
           "discrepancies": [],
+          "correctionCandidates": [],
+          "pcIssueCandidates": [],
           "dayBuckets": {
             "sameDay": [],
             "sameDayPtost": [
@@ -44866,7 +45093,7 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 552243
+      "byteLength": 557968
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
