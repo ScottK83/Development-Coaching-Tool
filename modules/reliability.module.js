@@ -1543,49 +1543,109 @@
         });
         mismatchDates = Array.from(new Set(mismatchDates));
 
-        html += '<div style="margin-bottom:14px; padding:10px; background:#f7fdfc; border:1px solid #d7efea; border-radius:6px; font-size:0.84em;">';
-        html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">What You Need to Action</div>';
-        html += '<div><strong>PTOST Used So Far:</strong> ' + ptostUsed + 'h of 40h</div>';
-        html += '<div><strong>Unscheduled or Unplanned Total:</strong> ' + unscheduledHours + 'h</div>';
-        html += '<div><strong>Payroll Follow-up Needed:</strong> ' + (payrollFollowUpNeeded ? 'Yes' : 'No') + '</div>';
-        if (payrollFollowUpNeeded) {
-            html += '<div style="color:#8a5300;"><strong>Follow-up Rows:</strong> ' + payrollFollowUpCount + ' item(s) in Action List</div>';
-        }
-        html += '<div><strong>Mismatched Days:</strong> ' + (mismatchDates.length ? escapeHtml(mismatchDates.join(', ')) : '—') + '</div>';
-        html += '<div><strong>Good to Correct Now (stays <= 40h):</strong> ' + (safeCorrectionRows.length ? escapeHtml(safeCorrectionRows.join(', ')) : '—') + '</div>';
-        html += '<div><strong>Hold for Later (would push over 40h):</strong> ' + (holdCorrectionRows.length ? escapeHtml(holdCorrectionRows.join(', ')) : '—') + '</div>';
-        html += '<div><strong>Can Still Convert to PTOST:</strong> ' + (r.correctableSameDayHours || 0) + 'h across ' + correctionCandidates.length + ' day(s)</div>';
-        html += '<div><strong>Still Exposed After Corrections:</strong> ' + (r.remainingSameDayExposureHours || 0) + 'h</div>';
-        html += '<div><strong>PTOST Discipline Threshold:</strong> ' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? 'Reached (40h+)' : 'Not reached') + '</div>';
-        html += '<div><strong>Reliability Tier:</strong> ' + tier.label + ' (' + (r.reliabilityHours || 0) + 'h)</div>';
-        html += '<div style="color:#455a64;"><strong>FMLA Note:</strong> FMLA does not count against PTO balance.</div>';
+        // ── High-level Summary ──────────────────────────────────────────
+        var ptostBarPct = Math.min(100, (ptostUsed / PTOST_BUFFER_LIMIT) * 100);
+        var ptostBarColor = ptostBarPct >= 100 ? '#b71c1c' : ptostBarPct >= 75 ? '#e65100' : '#2e7d32';
+        var tierBadgeBg = tier.bg; var tierBadgeColor = tier.color;
+
+        html += '<div style="margin-bottom:14px; padding:12px 14px; background:#f7fdfc; border:1px solid #b2dfdb; border-radius:8px;">';
+        html += '<div style="font-weight:700; color:#00695c; font-size:0.95em; margin-bottom:10px; letter-spacing:0.02em;">At a Glance</div>';
+
+        // Row 1: 4 key stat chips
+        html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">';
+
+        // PTOST chip with inline mini-bar
+        html += '<div style="background:#fff; border:1px solid #b2dfdb; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">PTOST</div>';
+        html += '<div style="font-size:1.25em; font-weight:700; color:' + ptostBarColor + ';">' + ptostUsed + '<span style="font-size:0.65em; color:#90a4ae;"> / 40h</span></div>';
+        html += '<div style="margin-top:5px; height:5px; background:#e0e0e0; border-radius:3px; overflow:hidden;">';
+        html += '<div style="height:100%; width:' + ptostBarPct + '%; background:' + ptostBarColor + '; border-radius:3px;"></div></div>';
         html += '</div>';
 
-        var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
-        var reconStatus = 'Partial coverage';
-        var reconStatusColor = '#e65100';
-        if (unexplainedDelta == null) {
-            reconStatus = 'Partial coverage';
-            reconStatusColor = '#e65100';
-        } else if (Math.abs(unexplainedDelta) <= 0.25) {
-            reconStatus = 'Matched';
-            reconStatusColor = '#2e7d32';
-        } else if (Math.abs(unexplainedDelta) <= 2) {
-            reconStatus = 'Partial coverage';
-            reconStatusColor = '#e65100';
-        } else {
-            reconStatus = 'Needs correction';
-            reconStatusColor = '#b71c1c';
-        }
-        html += '<div style="margin-bottom:14px; padding:10px; background:#f8f9ff; border:1px solid #d9ddff; border-radius:6px; font-size:0.84em;">';
-        html += '<div style="font-weight:700; color:#1a237e; margin-bottom:6px;">Reliability Reasons Reconciliation</div>';
-        html += '<div><strong>YTD Reliability Metric:</strong> ' + (ytdReliability == null ? 'Not found in YTD data' : (ytdReliability + 'h')) + '</div>';
-        html += '<div><strong>Modeled from Attendance Detail:</strong> ' + modeledReliability + 'h</div>';
-        html += '<div><strong>  • Same Day (No PTOST):</strong> ' + (reasonBuckets.sameDayNoPtostHours || 0) + 'h</div>';
-        html += '<div><strong>  • PTOST Over 40h:</strong> ' + (reasonBuckets.ptostOverageHours || 0) + 'h</div>';
-        html += '<div><strong>Unexplained Delta:</strong> <span style="color:' + deltaColor + '; font-weight:700;">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</span></div>';
-        html += '<div><strong>Status:</strong> <span style="color:' + reconStatusColor + '; font-weight:700;">' + reconStatus + '</span></div>';
+        // Reliability tier chip
+        html += '<div style="background:' + tierBadgeBg + '; border:1px solid ' + tierBadgeColor + '33; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Reliability</div>';
+        html += '<div style="font-size:1.25em; font-weight:700; color:' + tierBadgeColor + ';">' + tier.label + '</div>';
+        html += '<div style="font-size:0.75em; color:' + tierBadgeColor + '; opacity:0.85;">' + (r.reliabilityHours || 0) + 'h against</div>';
         html += '</div>';
+
+        // Unscheduled chip
+        var unschedChipColor = unscheduledHours > 0 ? '#e65100' : '#2e7d32';
+        html += '<div style="background:#fff; border:1px solid #ffe0b2; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Unscheduled</div>';
+        html += '<div style="font-size:1.25em; font-weight:700; color:' + unschedChipColor + ';">' + unscheduledHours + 'h</div>';
+        html += '<div style="font-size:0.75em; color:#90a4ae;">mismatch rows</div>';
+        html += '</div>';
+
+        // Payroll follow-up chip
+        var followChipBg = payrollFollowUpNeeded ? '#fff8e1' : '#e8f5e9';
+        var followChipColor = payrollFollowUpNeeded ? '#8a5300' : '#2e7d32';
+        html += '<div style="background:' + followChipBg + '; border:1px solid ' + (payrollFollowUpNeeded ? '#ffe08a' : '#a5d6a7') + '; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Payroll Actions</div>';
+        html += '<div style="font-size:1.25em; font-weight:700; color:' + followChipColor + ';">' + (payrollFollowUpNeeded ? payrollFollowUpCount + ' item' + (payrollFollowUpCount !== 1 ? 's' : '') : 'None') + '</div>';
+        html += '<div style="font-size:0.75em; color:#90a4ae;">' + (payrollFollowUpNeeded ? 'need follow-up' : 'all clear') + '</div>';
+        html += '</div>';
+
+        html += '</div>'; // end grid row 1
+
+        // Row 2: Correct Now / Hold two-column table (only if there are any)
+        if (safeCorrectionRows.length > 0 || holdCorrectionRows.length > 0 || mismatchDates.length > 0) {
+            html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">';
+
+            // Correct Now
+            html += '<div style="background:#e8f5e9; border:1px solid #a5d6a7; border-radius:6px; padding:8px 10px;">';
+            html += '<div style="font-size:0.72em; font-weight:700; color:#2e7d32; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">✓ Correct Now (stays ≤ 40h)</div>';
+            if (safeCorrectionRows.length > 0) {
+                safeCorrectionRows.forEach(function(row) {
+                    html += '<div style="font-size:0.82em; color:#1b5e20; padding:1px 0;">' + escapeHtml(row) + '</div>';
+                });
+            } else {
+                html += '<div style="font-size:0.82em; color:#90a4ae;">—</div>';
+            }
+            html += '</div>';
+
+            // Hold
+            html += '<div style="background:#fff8e1; border:1px solid #ffe082; border-radius:6px; padding:8px 10px;">';
+            html += '<div style="font-size:0.72em; font-weight:700; color:#8a5300; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">⏸ Hold (would exceed 40h)</div>';
+            if (holdCorrectionRows.length > 0) {
+                holdCorrectionRows.forEach(function(row) {
+                    html += '<div style="font-size:0.82em; color:#6d4200; padding:1px 0;">' + escapeHtml(row) + '</div>';
+                });
+            } else {
+                html += '<div style="font-size:0.82em; color:#90a4ae;">—</div>';
+            }
+            html += '</div>';
+
+            html += '</div>'; // end two-col grid
+
+            if (mismatchDates.length > 0) {
+                html += '<div style="margin-top:6px; font-size:0.8em; color:#616161;">';
+                html += '<span style="font-weight:600; color:#b71c1c;">⚠ Mismatched days (Verint/Payroll coding differs):</span> ';
+                html += escapeHtml(mismatchDates.join(', '));
+                html += '</div>';
+            }
+        }
+
+        // Subtext: YTD delta status
+        var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
+        var reconStatus, reconStatusColor;
+        if (unexplainedDelta == null) {
+            reconStatus = 'Partial coverage'; reconStatusColor = '#e65100';
+        } else if (Math.abs(unexplainedDelta) <= 0.25) {
+            reconStatus = 'Matched'; reconStatusColor = '#2e7d32';
+        } else if (Math.abs(unexplainedDelta) <= 2) {
+            reconStatus = 'Partial coverage'; reconStatusColor = '#e65100';
+        } else {
+            reconStatus = 'Needs correction'; reconStatusColor = '#b71c1c';
+        }
+        html += '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:12px; font-size:0.8em; color:#607d8b; border-top:1px solid #e0f2f1; padding-top:7px;">';
+        html += '<span>Can still convert: <strong style="color:#00695c;">' + (r.correctableSameDayHours || 0) + 'h</strong> across ' + correctionCandidates.length + ' day(s)</span>';
+        html += '<span>Still exposed: <strong style="color:' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? '#b71c1c' : '#2e7d32') + ';">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
+        html += '<span>YTD delta: <strong style="color:' + deltaColor + ';">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
+        html += '<span>PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span style="color:#b71c1c;">Reached</span>' : 'Not reached') + '</strong></span>';
+        html += '</div>';
+
+        html += '</div>'; // end At a Glance
 
         html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
         html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">Attendance Day Breakdown</div>';
