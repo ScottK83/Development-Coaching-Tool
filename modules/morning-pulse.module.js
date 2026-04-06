@@ -357,6 +357,7 @@
         const val = value !== undefined ? value : (typeof metricKeyOrObj === 'object' ? metricKeyOrObj.employeeValue : 0);
         if (typeof formatMetricDisplay === 'function') return formatMetricDisplay(key, val);
         const unit = window.METRICS_REGISTRY?.[key]?.unit || '';
+        if (unit === '#') return Math.round(val).toString();
         if (unit === 'sec') return Math.round(val) + 's';
         if (unit === 'hrs') return val.toFixed(1) + ' hrs';
         return val.toFixed(1) + '%';
@@ -378,6 +379,7 @@
         const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
         const displayDelta = reverse ? -delta : delta;
         const sign = displayDelta > 0 ? '+' : '';
+        if (unit === '#') return sign + Math.round(displayDelta).toString();
         if (unit === 'sec') return sign + Math.round(displayDelta) + 's';
         if (unit === 'hrs') return sign + displayDelta.toFixed(1) + ' hrs';
         return sign + displayDelta.toFixed(1) + '%';
@@ -451,11 +453,11 @@
             oppsHtml = '<div style="font-size:0.85em; color:#999;">All metrics on track!</div>';
         }
 
-        // Biggest jump callout (only if we have multi-day data)
+        // Biggest improvement callout (only if we have multi-day data)
         let jumpHtml = '';
         if (biggestJump && biggestJump.delta > 0) {
             jumpHtml = `<div style="padding:6px 10px; background:#e8f5e9; border-radius:4px; font-size:0.83em; color:#1b5e20; border-left:3px solid #4caf50;">` +
-                `\uD83D\uDE80 <strong>Biggest jump:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} this week ` +
+                `\uD83D\uDE80 <strong>Biggest improvement:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} this week ` +
                 `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)})</div>`;
         }
 
@@ -1008,3 +1010,5 @@
         generateHighFiveMessage
     };
 })();
+
+

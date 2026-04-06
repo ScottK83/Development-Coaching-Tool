@@ -1644,6 +1644,10 @@ function bindNavigationHandlers() {
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
         if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
     });
+    document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');
+        if (window.DevCoachModules?.mondayPost?.initializeMondayPost) window.DevCoachModules.mondayPost.initializeMondayPost();
+    });
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         initializeCoachingEmail();
@@ -2930,27 +2934,7 @@ function getLatestPeriodEndMsFromMap(periodMap) {
 }
 
 function getBackupFootprintScore(payload) {
-    const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
-        ? Object.keys(value).length
-        : 0;
-
-    const countNestedEntries = (value) => {
-        if (!value || typeof value !== 'object') return 0;
-        return Object.values(value).reduce((sum, item) => {
-            if (Array.isArray(item)) return sum + item.length;
-            if (item && typeof item === 'object') return sum + Object.keys(item).length;
-            return sum;
-        }, 0);
-    };
-
-    return (
-        countObjectKeys(payload?.weeklyData) * 100
-        + countObjectKeys(payload?.ytdData) * 100
-        + countNestedEntries(payload?.coachingHistory)
-        + countNestedEntries(payload?.callListeningLogs)
-        + countNestedEntries(payload?.associateSentimentSnapshots)
-        + countObjectKeys(payload?.myTeamMembers)
-    );
+    return window.DevCoachModules?.repoSync?.getBackupFootprintScore?.(payload) ?? 0;
 }
 
 function queueRepoSync(reason = 'updated') {

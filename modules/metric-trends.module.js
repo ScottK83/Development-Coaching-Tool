@@ -2091,7 +2091,7 @@ function getMetricOrder() {
 
 function isReverseMetric(metricKey) {
     // Lower is better for these metrics
-    const reverseMetrics = ['transfers', 'aht', 'holdTime', 'acw', 'reliability'];
+    const reverseMetrics = ['transfers', 'transfersCount', 'aht', 'holdTime', 'acw', 'reliability'];
     return reverseMetrics.includes(metricKey);
 }
 
@@ -4134,3 +4134,4 @@ function generateAllTrendEmails() {
     window.generateAllTrendEmails = generateAllTrendEmails;
 
 })();
+

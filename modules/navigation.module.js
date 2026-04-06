@@ -56,10 +56,11 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionFutures'];
-    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavAttendance'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavAttendance'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionMorningPulse: 'subNavMorningPulse',
+        subSectionMondayPost: 'subNavMondayPost',
         subSectionCoachingEmail: 'subNavCoachingEmail',
         subSectionTeamSnapshot: 'subNavTeamSnapshot',
         subSectionCallListening: 'subNavCallListening',
