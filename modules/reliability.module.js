@@ -399,7 +399,13 @@
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
             reliabilityHours: 0,
             timeline: [],           // Unified day-by-day timeline
-            discrepancies: []       // Verint says absent but payroll says worked
+            discrepancies: [],      // Verint says absent but payroll says worked
+            dayBuckets: {
+                sameDay: [],
+                sameDayPtost: [],
+                bereavement: [],
+                fmla: []
+            }
         };
 
         // Build a date-keyed map of all events from both sources
@@ -486,6 +492,20 @@
 
             // Verint same-day (unscheduled) events
             var verintSameDay = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'ptost' || v.type === 'tardy' || v.type === 'tardy-ptost'; });
+            var verintPtost = verintItems.filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; });
+            var verintSameDayNoPtost = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'tardy'; });
+
+            var isSameDay = payrollUnschdHours > 0 || verintSameDayNoPtost.length > 0;
+            var isSameDayPtost = payrollPtostHours > 0 || verintPtost.length > 0;
+            var isBereavement = payrollItems.some(function(p) { return p.trc === 'BRV'; }) ||
+                verintItems.some(function(v) { return String(v.activity || '').toLowerCase().includes('bereavement'); });
+            var isFmla = payrollItems.some(function(p) { return p.trc === 'FMLA' || p.trc === 'FMLNP'; }) ||
+                verintItems.some(function(v) { return String(v.activity || '').toLowerCase().includes('fmla'); });
+
+            if (isSameDay) result.dayBuckets.sameDay.push(formatDate(new Date(dk + 'T12:00:00')));
+            if (isSameDayPtost) result.dayBuckets.sameDayPtost.push(formatDate(new Date(dk + 'T12:00:00')));
+            if (isBereavement) result.dayBuckets.bereavement.push(formatDate(new Date(dk + 'T12:00:00')));
+            if (isFmla) result.dayBuckets.fmla.push(formatDate(new Date(dk + 'T12:00:00')));
 
             // --- Track PTOST running total ---
             if (payrollPtostHours > 0) {
@@ -547,6 +567,10 @@
         result.ptostHoursUsed = round2(runningPtost);
         result.ptostBufferRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - runningPtost));
 
+        Object.keys(result.dayBuckets).forEach(function(key) {
+            result.dayBuckets[key] = Array.from(new Set(result.dayBuckets[key] || []));
+        });
+
         return result;
     }
 
@@ -598,6 +622,13 @@
         return { label: 'Termination', color: '#4a148c', bg: '#f3e5f5' };
     }
 
+    function summarizeDateList(list) {
+        var dates = Array.isArray(list) ? list : [];
+        if (!dates.length) return '—';
+        if (dates.length <= 3) return dates.join(', ');
+        return dates.slice(0, 3).join(', ') + ' (+' + (dates.length - 3) + ')';
+    }
+
     function renderTeamTable(container) {
         var store = loadStore();
         consolidateDuplicateEmployees(store);
@@ -631,6 +662,10 @@
         html += '<table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
         html += '<thead><tr style="background:#e0f2f1; color:#00695c;">';
         html += '<th style="padding:8px; text-align:left; border-bottom:2px solid #00695c;">Employee</th>';
+        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Same Day</th>';
+        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Same Day PTOST</th>';
+        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Bereavement</th>';
+        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">FMLA</th>';
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">PTOST Used</th>';
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Buffer Left</th>';
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Reliability Hours</th>';
@@ -644,9 +679,18 @@
             var r = emp.reconciled || {};
             var tier = getTierInfo(r.reliabilityHours || 0);
             var discCount = (r.discrepancies || []).length;
+            var buckets = r.dayBuckets || {};
+            var sameDayDates = buckets.sameDay || [];
+            var sameDayPtostDates = buckets.sameDayPtost || [];
+            var bereavementDates = buckets.bereavement || [];
+            var fmlaDates = buckets.fmla || [];
 
             html += '<tr style="border-bottom:1px solid #e0e0e0; cursor:pointer;" class="rel-employee-row" data-name="' + escapeHtml(name) + '">';
             html += '<td style="padding:8px; font-weight:600;">' + escapeHtml(name) + '</td>';
+            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(sameDayDates)) + '">' + sameDayDates.length + '</td>';
+            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(sameDayPtostDates)) + '">' + sameDayPtostDates.length + '</td>';
+            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(bereavementDates)) + '">' + bereavementDates.length + '</td>';
+            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(fmlaDates)) + '">' + fmlaDates.length + '</td>';
             html += '<td style="padding:8px; text-align:center;">' + (r.ptostHoursUsed || 0) + 'h</td>';
             html += '<td style="padding:8px; text-align:center;">' + (r.ptostBufferRemaining !== undefined ? r.ptostBufferRemaining : PTOST_BUFFER_LIMIT) + 'h</td>';
             html += '<td style="padding:8px; text-align:center; font-weight:700; color:' + tier.color + ';">' + (r.reliabilityHours || 0) + 'h</td>';
@@ -690,6 +734,11 @@
         var tier = getTierInfo(r.reliabilityHours || 0);
         var firstName = getFirstName(employeeName);
         var timeline = r.timeline || [];
+        var buckets = r.dayBuckets || {};
+        var sameDayDates = buckets.sameDay || [];
+        var sameDayPtostDates = buckets.sameDayPtost || [];
+        var bereavementDates = buckets.bereavement || [];
+        var fmlaDates = buckets.fmla || [];
 
         var html = '';
         html += '<div style="padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -706,6 +755,14 @@
         html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + (r.ptostBufferRemaining !== undefined ? r.ptostBufferRemaining : PTOST_BUFFER_LIMIT) + 'h</div><div style="font-size:0.75em; color:#666;">Buffer Left</div></div>';
         html += '<div style="padding:10px; background:' + tier.bg + '; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:' + tier.color + ';">' + (r.reliabilityHours || 0) + 'h</div><div style="font-size:0.75em; color:#666;">Against Reliability</div></div>';
         html += '<div style="padding:10px; background:' + tier.bg + '; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:' + tier.color + ';">' + tier.label + '</div><div style="font-size:0.75em; color:#666;">Tier</div></div>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
+        html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">Attendance Day Breakdown</div>';
+        html += '<div><strong>Same Day:</strong> ' + (sameDayDates.length ? escapeHtml(sameDayDates.join(', ')) : '—') + '</div>';
+        html += '<div><strong>Same Day PTOST:</strong> ' + (sameDayPtostDates.length ? escapeHtml(sameDayPtostDates.join(', ')) : '—') + '</div>';
+        html += '<div><strong>Bereavement:</strong> ' + (bereavementDates.length ? escapeHtml(bereavementDates.join(', ')) : '—') + '</div>';
+        html += '<div><strong>FMLA:</strong> ' + (fmlaDates.length ? escapeHtml(fmlaDates.join(', ')) : '—') + '</div>';
         html += '</div>';
 
         // PTOST buffer bar
