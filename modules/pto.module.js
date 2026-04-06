@@ -1144,12 +1144,6 @@ function initializePtoTracker() {
     migrateUnscheduledField();
 
     const select = document.getElementById('ptoAssociateSelect');
-    
-    // Toggle PTO upload container in Upload section
-    const excelBtn = document.getElementById('ptoPayrollExcelBtn');
-    const excelInput = document.getElementById('ptoPayrollExcelInput');
-    const balanceBtn = document.getElementById('ptoBalanceExcelBtn');
-    const balanceInput = document.getElementById('ptoBalanceExcelInput');
 
     populateAssociateSelect();
 
@@ -1158,43 +1152,7 @@ function initializePtoTracker() {
         select.dataset.bound = 'true';
     }
 
-    if (excelBtn && excelInput && !excelBtn.dataset.bound) {
-        excelBtn.addEventListener('click', () => {
-            excelInput.value = '';
-            excelInput.click();
-        });
-            excelInput.addEventListener('change', async (e) => {
-                const files = Array.from(e.target.files || []);
-                if (!files.length) return;
-            const fileNameEl = document.getElementById('ptoPayrollExcelFileName');
-                if (fileNameEl) fileNameEl.textContent = files.map(function(file) { return file.name; }).join(', ');
-                for (const file of files) {
-                    await Promise.resolve(importPayrollExcel(file));
-                }
-                showToast(files.length + ' PTO payroll file' + (files.length !== 1 ? 's' : '') + ' loaded.', 4000);
-        });
-        excelBtn.dataset.bound = 'true';
-    }
-
-    if (balanceBtn && balanceInput && !balanceBtn.dataset.bound) {
-        balanceBtn.addEventListener('click', function() {
-            balanceInput.value = '';
-            balanceInput.click();
-        });
-            balanceInput.addEventListener('change', async function(e) {
-                var files = Array.from(e.target.files || []);
-                if (!files.length) return;
-            var fileNameEl = document.getElementById('ptoBalanceExcelFileName');
-                if (fileNameEl) fileNameEl.textContent = files.map(function(file) { return file.name; }).join(', ');
-                for (var i = 0; i < files.length; i++) {
-                    await Promise.resolve(importPtoBalanceExcel(files[i]));
-                }
-                showToast(files.length + ' PTO balance file' + (files.length !== 1 ? 's' : '') + ' loaded.', 4000);
-        });
-        balanceBtn.dataset.bound = 'true';
-    }
-
-    var pdfBtn = document.getElementById('ptoPdfBtn');
+    var pdfBtn = document.getElementById('ptoPdfBtn') || document.getElementById('showUploadPtoPdfBtn');
     var pdfInput = document.getElementById('ptoPdfInput');
     if (pdfBtn && pdfInput && !pdfBtn.dataset.bound) {
         pdfBtn.addEventListener('click', function() {

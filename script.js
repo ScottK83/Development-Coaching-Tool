@@ -1476,7 +1476,7 @@ function bindUploadAndPasteHandlers() {
         }
         if (typeof showToast === 'function') {
             if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
-            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Reliability.', 4000);
+            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
         }
         this.value = '';
     });

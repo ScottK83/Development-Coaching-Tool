@@ -46,30 +46,13 @@
                     <div class="flex-row-center" style="margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
                         <button type="button" id="showUploadMetricsBtn" class="btn-upload-metrics">📊 Upload Metrics</button>
                         <button type="button" id="showUploadSentimentBtn" class="btn-upload-sentiment">💬 Upload Sentiment</button>
-                        <button type="button" id="showUploadVerintBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📋 Upload Verint</button>
-                        <button type="button" id="showUploadPayrollBtn" style="background: #00695c; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">💰 Upload Payroll</button>
+                            <button type="button" id="showUploadVerintBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📋 Upload Employee Verint</button>
+                            <button type="button" id="showUploadPayrollBtn" style="background: #00695c; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">💰 Upload Payroll Excel</button>
+                            <button type="button" id="showUploadPtoPdfBtn" style="background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📄 Upload PTO PDF</button>
                         <input type="file" id="uploadVerintFileInput" accept=".xlsx,.xls" multiple style="display:none;">
                             <input type="file" id="uploadPayrollFileInput" accept=".xlsx,.xls" multiple style="display:none;">
-                            <input type="file" id="ptoPayrollExcelInput" accept=".xlsx,.xls" multiple style="display: none;">
-                            <input type="file" id="ptoBalanceExcelInput" accept=".xlsx,.xls" multiple style="display: none;">
                         <input type="file" id="ptoPdfInput" accept=".pdf" style="display: none;">
                     </div>
-                    
-                        <!-- PTO Uploads -->
-                        <div id="ptouploadContainer" class="upload-container" style="margin-bottom: 20px; padding: 16px; background: #f9f9f9; border-radius: 10px; border: 1px solid #d0dce5;">
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
-                                <span style="font-weight: 700; color: #5a2c8a; white-space: nowrap;">⏱️ PTO Uploads</span>
-                                <button type="button" id="ptoPayrollExcelBtn" class="btn-primary" style="background: #5a2c8a; padding: 10px 20px; font-size: 0.95em;">Upload Payroll Excel</button>
-                                <button type="button" id="ptoBalanceExcelBtn" style="padding: 10px 20px; font-size: 0.95em; background: #00897b; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO Balances</button>
-                                <button type="button" id="ptoPdfBtn" style="padding: 10px 20px; font-size: 0.95em; background: #d32f2f; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO PDF</button>
-                            </div>
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap; color: #888; font-size: 0.85em;">
-                                <span id="ptoPayrollExcelFileName"></span>
-                                <span id="ptoBalanceExcelFileName"></span>
-                            </div>
-                            <div id="ptoBalanceExcelResults"></div>
-                            <div id="ptoPayrollExcelResults"></div>
-                        </div>
                     
                     <!-- Upload Metrics Container -->
                     <div id="pasteDataContainer" class="upload-container">
