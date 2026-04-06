@@ -320,6 +320,141 @@
         return fullName.split(/\s+/)[0];
     }
 
+    function getYtdReliabilityHoursForEmployee(employeeName) {
+        var mod = window.DevCoachModules?.storage;
+        if (!mod?.loadYtdData) return null;
+
+        var ytdData = mod.loadYtdData() || {};
+        var targetKey = buildEmployeeLookupKey(normalizeEmployeeName(employeeName || ''));
+        if (!targetKey) return null;
+
+        var best = null;
+        Object.keys(ytdData).forEach(function(periodKey) {
+            var period = ytdData[periodKey] || {};
+            var list = Array.isArray(period.employees) ? period.employees : [];
+            list.forEach(function(emp) {
+                var nameKey = buildEmployeeLookupKey(normalizeEmployeeName(emp?.name || ''));
+                if (!nameKey || nameKey !== targetKey) return;
+                var val = Number(emp?.reliability);
+                if (!isFinite(val)) return;
+                best = val;
+            });
+        });
+
+        return best == null ? null : round2(best);
+    }
+
+    function getPtoBalanceForEmployee(employeeName) {
+        var mod = window.DevCoachModules?.storage;
+        if (!mod?.loadPtoTracker) return null;
+
+        var store = mod.loadPtoTracker() || {};
+        var associates = store.associates || {};
+        var targetKey = buildEmployeeLookupKey(normalizeEmployeeName(employeeName || ''));
+        if (!targetKey) return null;
+
+        var foundName = Object.keys(associates).find(function(name) {
+            return buildEmployeeLookupKey(normalizeEmployeeName(name || '')) === targetKey;
+        });
+        if (!foundName) return null;
+
+        var data = associates[foundName] || {};
+        var carryover = Number(data.carryoverHours || 0);
+        var earned = Number(data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || 120));
+        var used = 0;
+        (data.payrollEntries || []).forEach(function(e) {
+            if (['PTO', 'PTOST', 'PTO Unsched'].indexOf(String(e?.trc || '')) >= 0) {
+                used += Number(e?.hours || 0);
+            }
+        });
+        used = round2(used);
+        return {
+            carryover: round2(carryover),
+            earned: round2(earned),
+            used: used,
+            remaining: round2(carryover + earned - used)
+        };
+    }
+
+    function buildActionRows(employeeName, reconciled) {
+        var rows = [];
+        var r = reconciled || {};
+
+        (r.correctionCandidates || []).forEach(function(c) {
+            rows.push({
+                employee: employeeName,
+                date: c.date,
+                actionType: 'WFM PTOST Update',
+                target: 'WFM',
+                hours: round2(Number(c.hours || 0)),
+                detail: c.activity || 'Same Day',
+                note: c.reason || 'Can be changed to PTOST'
+            });
+        });
+
+        (r.discrepancies || []).forEach(function(d) {
+            rows.push({
+                employee: employeeName,
+                date: d.date,
+                actionType: 'WFM Correction',
+                target: 'WFM',
+                hours: round2(Number(d.verintHours || 0)),
+                detail: d.verintActivity || 'Verint/Payroll mismatch',
+                note: 'Payroll shows REG ' + d.payrollHours + 'h @ ' + d.payrollClockIn
+            });
+        });
+
+        (r.pcIssueCandidates || []).forEach(function(p) {
+            rows.push({
+                employee: employeeName,
+                date: p.date,
+                actionType: 'PC Issue Follow-up',
+                target: 'Associate',
+                hours: round2(Number(p.verintHours || 0)),
+                detail: p.verintActivity || 'Tardy',
+                note: 'Payroll clock-in ' + p.payrollClockIn
+            });
+        });
+
+        return rows;
+    }
+
+    function exportActionRowsCsv(actionRows, employeeName) {
+        if (!Array.isArray(actionRows) || !actionRows.length) return false;
+        var headers = ['Employee', 'Date', 'Action Type', 'Target', 'Hours', 'Detail', 'Note'];
+        var lines = [headers.join(',')];
+
+        function csvCell(value) {
+            var s = String(value == null ? '' : value);
+            if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+            return s;
+        }
+
+        actionRows.forEach(function(r) {
+            lines.push([
+                csvCell(r.employee),
+                csvCell(r.date),
+                csvCell(r.actionType),
+                csvCell(r.target),
+                csvCell(r.hours),
+                csvCell(r.detail),
+                csvCell(r.note)
+            ].join(','));
+        });
+
+        var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        var stamp = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = 'reliability-actions-' + getFirstName(employeeName).toLowerCase() + '-' + stamp + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return true;
+    }
+
     var escapeHtml = function(s) {
         return window.DevCoachModules?.sharedUtils?.escapeHtml?.(s) ?? String(s ?? '');
     };
@@ -584,6 +719,7 @@
         var result = {
             ptostHoursUsed: 0,
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
+            ptostOverageHours: 0,
             sameDayNoPtostHours: 0,
             correctableSameDayHours: 0,
             remainingSameDayExposureHours: 0,
@@ -592,6 +728,11 @@
             discrepancies: [],      // Verint says absent but payroll says worked
             correctionCandidates: [],
             pcIssueCandidates: [],
+            reasonBuckets: {
+                sameDayNoPtostHours: 0,
+                ptostOverageHours: 0,
+                modeledReliabilityHours: 0
+            },
             dayBuckets: {
                 sameDay: [],
                 sameDayPtost: [],
@@ -729,6 +870,7 @@
                 if (runningPtost > PTOST_BUFFER_LIMIT) {
                     var overage = round2(Math.min(payrollPtostHours, runningPtost - PTOST_BUFFER_LIMIT));
                     entry.ptostOverage = overage;
+                    result.ptostOverageHours = round2(result.ptostOverageHours + overage);
                     result.reliabilityHours = round2(result.reliabilityHours + overage);
                     entry.flags.push('PTOST over 40h buffer (+' + overage + 'h reliability)');
                 }
@@ -814,6 +956,11 @@
             return sum + Number(c.hours || 0);
         }, 0));
         result.remainingSameDayExposureHours = round2(Math.max(0, result.sameDayNoPtostHours - result.correctableSameDayHours));
+        result.reasonBuckets = {
+            sameDayNoPtostHours: round2(result.sameDayNoPtostHours || 0),
+            ptostOverageHours: round2(result.ptostOverageHours || 0),
+            modeledReliabilityHours: round2(result.reliabilityHours || 0)
+        };
 
         Object.keys(result.dayBuckets).forEach(function(key) {
             result.dayBuckets[key] = Array.from(new Set(result.dayBuckets[key] || []));
@@ -827,19 +974,16 @@
     // ============================================
 
     function buildPtostDesignationEmail(employeeName, events) {
-        var firstName = getFirstName(employeeName);
         var lines = [];
-        lines.push('Hi ' + firstName + ',\n');
-        lines.push('I wanted to follow up regarding some unscheduled time off entries on your record.\n');
-        lines.push('You have the following unscheduled absence(s) that have not been designated as PTOST:\n');
+        lines.push('Hi WFM,\n');
+        lines.push('Please review the following same-day reliability entries for ' + employeeName + ' and convert to PTOST where listed.\n');
 
         events.forEach(function(ev) {
-            lines.push('  - ' + ev.dateStr + ': ' + ev.hours + ' hours (' + ev.activity + ')');
+            lines.push('  - ' + ev.dateStr + ': ' + ev.hours + 'h (' + ev.activity + ')');
         });
 
-        lines.push('\nAs a reminder, you have a 40-hour PTOST buffer available to cover unscheduled absences. Using PTOST keeps these hours from counting against your reliability.');
-        lines.push('\nWould you like me to designate any or all of these as PTOST? Please let me know and I\'ll submit the update.\n');
-        lines.push('Thanks,');
+        lines.push('\nThese rows are capped to remaining PTOST eligibility under the 40-hour policy buffer.');
+        lines.push('\nThank you.');
         return lines.join('\n');
     }
 
@@ -1131,6 +1275,16 @@
         var bereavementDates = buckets.bereavement || [];
         var fmlaDates = buckets.fmla || [];
         var correctionCandidates = r.correctionCandidates || [];
+        var ptoBalance = getPtoBalanceForEmployee(employeeName);
+        var ytdReliability = getYtdReliabilityHoursForEmployee(employeeName);
+        var reasonBuckets = r.reasonBuckets || {
+            sameDayNoPtostHours: round2(r.sameDayNoPtostHours || 0),
+            ptostOverageHours: round2(r.ptostOverageHours || 0),
+            modeledReliabilityHours: round2(r.reliabilityHours || 0)
+        };
+        var modeledReliability = round2(reasonBuckets.modeledReliabilityHours || 0);
+        var unexplainedDelta = ytdReliability == null ? null : round2(ytdReliability - modeledReliability);
+        var actionRows = buildActionRows(employeeName, r);
 
         var html = '';
         html += '<div style="padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -1153,6 +1307,13 @@
         html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
 
+        html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
+        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Carryover</div></div>';
+        html += '<div style="padding:10px; background:#e8f5e9; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#2e7d32;">' + (ptoBalance ? ptoBalance.earned : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Earned</div></div>';
+        html += '<div style="padding:10px; background:#ffebee; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#c62828;">' + (ptoBalance ? ptoBalance.used : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Used</div></div>';
+        html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#1565c0;">' + (ptoBalance ? ptoBalance.remaining : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Left</div></div>';
+        html += '</div>';
+
         // Status cards
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
         html += '<div style="padding:10px; background:#e0f2f1; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#00695c;">' + (r.ptostHoursUsed || 0) + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Used</div></div>';
@@ -1167,6 +1328,16 @@
         html += '<div><strong>Can Still Convert to PTOST:</strong> ' + (r.correctableSameDayHours || 0) + 'h across ' + correctionCandidates.length + ' day(s)</div>';
         html += '<div><strong>Still Exposed After Corrections:</strong> ' + (r.remainingSameDayExposureHours || 0) + 'h</div>';
         html += '<div><strong>PTOST Discipline Threshold:</strong> ' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? 'Reached (40h+)' : 'Not reached') + '</div>';
+        html += '</div>';
+
+        var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
+        html += '<div style="margin-bottom:14px; padding:10px; background:#f8f9ff; border:1px solid #d9ddff; border-radius:6px; font-size:0.84em;">';
+        html += '<div style="font-weight:700; color:#1a237e; margin-bottom:6px;">Reliability Reasons Reconciliation</div>';
+        html += '<div><strong>YTD Reliability Metric:</strong> ' + (ytdReliability == null ? 'Not found in YTD data' : (ytdReliability + 'h')) + '</div>';
+        html += '<div><strong>Modeled from Attendance Detail:</strong> ' + modeledReliability + 'h</div>';
+        html += '<div><strong>  • Same Day (No PTOST):</strong> ' + (reasonBuckets.sameDayNoPtostHours || 0) + 'h</div>';
+        html += '<div><strong>  • PTOST Over 40h:</strong> ' + (reasonBuckets.ptostOverageHours || 0) + 'h</div>';
+        html += '<div><strong>Unexplained Delta:</strong> <span style="color:' + deltaColor + '; font-weight:700;">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</span></div>';
         html += '</div>';
 
         html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
@@ -1191,6 +1362,7 @@
         html += '<strong style="color:#334155;">Show Payroll:</strong>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowBrv" checked> BRV</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowFmla" checked> FMLA</label>';
+        html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowHoliday" checked> Holiday</label>';
         html += '</div>';
 
         // Filter tabs
@@ -1211,7 +1383,25 @@
 
         // Day-by-day timeline table
         html += '<div id="relTimelineTable">';
-        html += buildTimelineTable(timeline, r.discrepancies || [], 'all', { showBrv: true, showFmla: true });
+        html += buildTimelineTable(timeline, r.discrepancies || [], 'all', { showBrv: true, showFmla: true, showHoliday: true });
+        html += '</div>';
+
+        html += '<div style="margin-top:12px; padding:10px; background:#fafafa; border:1px solid #e6e6e6; border-radius:6px;">';
+        html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">';
+        html += '<strong style="color:#455a64; font-size:0.88em;">Action List (' + actionRows.length + ')</strong>';
+        html += '<button type="button" id="relExportActionsCsv" style="padding:5px 10px; border:1px solid #607d8b; background:#fff; color:#455a64; border-radius:4px; cursor:pointer; font-size:0.8em;">Export CSV</button>';
+        html += '</div>';
+        if (actionRows.length === 0) {
+            html += '<div style="font-size:0.82em; color:#78909c;">No actions currently needed.</div>';
+        } else {
+            html += '<div style="max-height:180px; overflow:auto; border:1px solid #eceff1; border-radius:4px;">';
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.8em;">';
+            html += '<thead><tr style="background:#f5f7f8;"><th style="padding:5px 6px; text-align:left;">Date</th><th style="padding:5px 6px; text-align:left;">Action</th><th style="padding:5px 6px; text-align:left;">Target</th><th style="padding:5px 6px; text-align:center;">Hours</th><th style="padding:5px 6px; text-align:left;">Detail</th></tr></thead><tbody>';
+            actionRows.forEach(function(a) {
+                html += '<tr style="border-top:1px solid #eef2f4;"><td style="padding:5px 6px; white-space:nowrap;">' + escapeHtml(a.date) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.actionType) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.target) + '</td><td style="padding:5px 6px; text-align:center;">' + escapeHtml(a.hours) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.detail) + '</td></tr>';
+            });
+            html += '</tbody></table></div>';
+        }
         html += '</div>';
 
         // Action buttons
@@ -1246,7 +1436,8 @@
         function getTimelineOptions() {
             return {
                 showBrv: container.querySelector('#relShowBrv')?.checked !== false,
-                showFmla: container.querySelector('#relShowFmla')?.checked !== false
+                showFmla: container.querySelector('#relShowFmla')?.checked !== false,
+                showHoliday: container.querySelector('#relShowHoliday')?.checked !== false
             };
         }
 
@@ -1273,6 +1464,7 @@
 
         container.querySelector('#relShowBrv')?.addEventListener('change', renderTimelineForCurrentView);
         container.querySelector('#relShowFmla')?.addEventListener('change', renderTimelineForCurrentView);
+        container.querySelector('#relShowHoliday')?.addEventListener('change', renderTimelineForCurrentView);
 
         // Bind email buttons
         document.getElementById('relEmailAssociate')?.addEventListener('click', function() {
@@ -1292,10 +1484,16 @@
             var msg = buildWfmCorrectionEmail(employeeName, r.discrepancies);
             copyAndNotify(msg, 'WFM correction email copied to clipboard');
         });
+
+        document.getElementById('relExportActionsCsv')?.addEventListener('click', function() {
+            if (exportActionRowsCsv(actionRows, employeeName)) {
+                if (typeof showToast === 'function') showToast('Reliability actions CSV downloaded', 3000);
+            }
+        });
     }
 
     function buildTimelineTable(timeline, discrepancies, filter, options) {
-        var opts = options || { showBrv: true, showFmla: true };
+        var opts = options || { showBrv: true, showFmla: true, showHoliday: true };
         var discDates = {};
         (discrepancies || []).forEach(function(d) { discDates[d.date] = true; });
 
@@ -1303,6 +1501,7 @@
             var activity = String(v?.activity || '').toLowerCase();
             if (!opts.showBrv && activity.indexOf('bereavement') >= 0) return false;
             if (!opts.showFmla && activity.indexOf('fmla') >= 0) return false;
+            if (!opts.showHoliday && activity.indexOf('holiday') >= 0) return false;
             return true;
         }
 
@@ -1310,6 +1509,7 @@
             var trc = String(p?.trc || '').toUpperCase();
             if (!opts.showBrv && trc === 'BRV') return false;
             if (!opts.showFmla && (trc === 'FMLA' || trc === 'FMLNP')) return false;
+            if (!opts.showHoliday && (trc === 'HOL' || trc === 'HOLIDAY')) return false;
             return true;
         }
 
