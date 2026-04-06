@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-06T21:23:59.268Z",
-  "reason": "pto tracker updated",
+  "generatedAt": "2026-04-06T21:49:33.015Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {},
@@ -3514,7 +3514,2392 @@
       }
     }
   },
-  "reliabilityTracker": {},
+  "reliabilityTracker": {
+    "employees": {
+      "Activity, Time Off": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Cervantez, Destiny": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Haley": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Off, Alternate Day": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Off, Extra Day": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "FMLA": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Holiday": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46023.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46041.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46069.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "LOA": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Partners, Loaned To": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Office, Out Of": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "PTO": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Cc, Covid": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Pq, Covid": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Hrs, Pplo Gt": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Hrs, Pplo Lt": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Absence, Pre Planned": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46038.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46049.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46057.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46058.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46065.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46072.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46093.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46094.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46118.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46178.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46210.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46211.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46212.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46213.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46216.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46230.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46234.9791666667",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46241.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46244.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46255.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46269.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46324.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46325.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46038.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46038.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46045.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46049.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46057.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46058.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46059.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46059.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46065.9583333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46065.4583333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46066.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46071.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46072.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46093.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46094.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46118.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46153.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46178.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46210.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46211.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46212.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46213.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46216.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46230.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46234.9791666667",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46241.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46244.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46255.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46269.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46324.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46325.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Day, Same": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Ptost, Same Day - Full": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46028.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46038.625",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46064.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46073.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46108.8125",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Show, Same Day - No Call No": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Partial, Same Day -": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Ptost, Same Day - Partial": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Min, Tardy Eq Gt": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Ptost, Tardy Eq Gt Min": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Min, Tardy Lt": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "VTO-PTO": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Wop, Vto-": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "WFO-Bereavement": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46020.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46021.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46022.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46024.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "46027.6458333333",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Duty, Wfo-jury Civic Military": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Activities, Time Off": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "To",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Hours, Total Time Off": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Requests, Time Off": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "To",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            },
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Yanez, Betty": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Villela, Kristin": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Ramos, Esther": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Palomera, Esperanza": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Padilla, Johnathan": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Muldrow, Matrece": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Martinez-sharp, Christi": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Kallestewa, Erica": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Ingram, Oceane": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Garcia, James": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Gage, Sabrina": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Flowers, Jadyn": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Fierro, Angelina": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Dimes, Alyssa": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Dash, Kamella": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Clark, Desiree": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      },
+      "Employee Berrelleza, Robert": {
+        "hasVerint": false,
+        "hasPayroll": true,
+        "verint": null,
+        "payroll": {
+          "emplid": "",
+          "entries": [
+            {
+              "date": null,
+              "dateStr": "",
+              "clockIn": "",
+              "clockOut": "",
+              "trc": "",
+              "quantity": 0,
+              "taskCode": ""
+            }
+          ]
+        },
+        "reconciled": {
+          "ptostHoursUsed": 0,
+          "ptostBufferRemaining": 40,
+          "reliabilityHours": 0,
+          "timeline": [],
+          "discrepancies": [],
+          "dayBuckets": {
+            "sameDay": [],
+            "sameDayPtost": [],
+            "bereavement": [],
+            "fmla": []
+          }
+        }
+      }
+    }
+  },
   "attendanceTracker": {},
   "followUpHistory": {
     "entries": []
@@ -3554,7 +5939,7 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 16
+      "byteLength": 27879
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -3579,7 +5964,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 292
+      "byteLength": 264
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
