@@ -313,6 +313,13 @@
         return m + '/' + day + '/' + y;
     }
 
+    function normalizeTaskCode(taskCode) {
+        var cleaned = stripUnicode(String(taskCode || ''))
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '');
+        return cleaned;
+    }
+
     function getFirstName(fullName) {
         if (typeof getEmployeeNickname === 'function') return getEmployeeNickname(fullName);
         if (!fullName) return '';
@@ -774,7 +781,7 @@
                 dateMap[k].payroll.push({
                     trc: entry.trc,
                     quantity: entry.quantity,
-                    taskCode: entry.taskCode,
+                    taskCode: normalizeTaskCode(entry.taskCode),
                     clockIn: entry.clockIn,
                     clockOut: entry.clockOut
                 });
@@ -859,6 +866,13 @@
                 result.sameDayNoPtostHours = round2(result.sameDayNoPtostHours + sameDayExposureHours);
                 result.reliabilityHours = round2(result.reliabilityHours + sameDayExposureHours);
                 entry.flags.push('Same Day without PTOST (' + entry.sameDayExposureHours + 'h against reliability)');
+            }
+
+            // Review mismatch: Verint says Same Day (non-PTOST) but Payroll coded PTOST.
+            // Keep Full PTOST matches clean (e.g., Same Day - Full PTOST + Payroll PTOST).
+            if (payrollPtostHours > 0 && verintSameDayNoPtost.length > 0) {
+                var mismatchHours = round2(verintSameDayNoPtost.reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
+                entry.flags.push('REVIEW: Verint Same Day non-PTOST but Payroll has PTOST (' + mismatchHours + 'h)');
             }
 
             // --- Track PTOST running total ---
@@ -1086,7 +1100,8 @@
 
                 var payrollText = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
                     var label = p.trc;
-                    if (p.taskCode) label += ' / ' + p.taskCode;
+                    var taskCode = normalizeTaskCode(p.taskCode);
+                    if (taskCode) label += ' / ' + taskCode;
                     return label + ' (' + p.quantity + 'h)';
                 }).join('; ');
                 if (!payrollText) payrollText = '—';
@@ -1328,6 +1343,7 @@
         html += '<div><strong>Can Still Convert to PTOST:</strong> ' + (r.correctableSameDayHours || 0) + 'h across ' + correctionCandidates.length + ' day(s)</div>';
         html += '<div><strong>Still Exposed After Corrections:</strong> ' + (r.remainingSameDayExposureHours || 0) + 'h</div>';
         html += '<div><strong>PTOST Discipline Threshold:</strong> ' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? 'Reached (40h+)' : 'Not reached') + '</div>';
+        html += '<div style="color:#455a64;"><strong>FMLA Note:</strong> FMLA does not count against PTO balance.</div>';
         html += '</div>';
 
         var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
@@ -1386,9 +1402,22 @@
         html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
         var catCounts = { ptost: 0, 'same-day': 0, planned: 0 };
         timeline.forEach(function(t) { if (catCounts[t.category] !== undefined) catCounts[t.category]++; });
+        var needsReviewCount = timeline.filter(function(t) {
+            return (t.flags || []).some(function(f) {
+                var s = String(f || '');
+                return s.indexOf('REVIEW:') >= 0 ||
+                    s.indexOf('DISCREPANCY') >= 0 ||
+                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                    s.indexOf('against reliability') >= 0 ||
+                    s.indexOf('PTOST over 40h') >= 0;
+            });
+        }).length;
         html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:#fff; color:#b71c1c; border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:#fff; color:#2e7d32; border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:#fff; color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
+        if (needsReviewCount > 0) {
+            html += '<button type="button" class="rel-filter-btn" data-filter="needs-review" style="padding:4px 12px; border:1px solid #f57f17; background:#fff; color:#f57f17; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">Needs Review (' + needsReviewCount + ')</button>';
+        }
         if ((r.pcIssueCandidates || []).length > 0) {
             html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue" style="padding:4px 12px; border:1px solid #1565c0; background:#fff; color:#1565c0; border-radius:4px; cursor:pointer; font-size:0.82em;">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
         }
@@ -1538,6 +1567,17 @@
         var filtered = timeline;
         if (filter === 'discrepancy') {
             filtered = timeline.filter(function(t) { return discDates[t.dateStr]; });
+        } else if (filter === 'needs-review') {
+            filtered = timeline.filter(function(t) {
+                return (t.flags || []).some(function(f) {
+                    var s = String(f || '');
+                    return s.indexOf('REVIEW:') >= 0 ||
+                        s.indexOf('DISCREPANCY') >= 0 ||
+                        s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                        s.indexOf('against reliability') >= 0 ||
+                        s.indexOf('PTOST over 40h') >= 0;
+                });
+            });
         } else if (filter === 'pc-issue') {
             filtered = timeline.filter(function(t) {
                 return (t.flags || []).some(function(f) { return String(f || '').indexOf('PC ISSUE CANDIDATE') >= 0; });
@@ -1568,8 +1608,16 @@
             var hasFlag = t.flags && t.flags.length > 0;
             var isDiscrepancy = Boolean(discDates[t.dateStr]) || (hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }));
             var isPcIssue = hasFlag && t.flags.some(function(f) { return f.indexOf('PC ISSUE CANDIDATE') >= 0; });
-            var rowBg = isDiscrepancy ? '#ffe9e9' : (isPcIssue ? '#e8f1ff' : '');
-            var rowBorder = isDiscrepancy ? '4px solid #c62828' : (isPcIssue ? '4px solid #1565c0' : 'none');
+            var isReliabilityReview = hasFlag && t.flags.some(function(f) {
+                var s = String(f || '');
+                return s.indexOf('REVIEW:') >= 0 || s.indexOf('against reliability') >= 0 || s.indexOf('PTOST over 40h') >= 0;
+            });
+            var rowBg = isDiscrepancy
+                ? '#ffe9e9'
+                : (isPcIssue ? '#e8f1ff' : (isReliabilityReview ? '#fff8e1' : ''));
+            var rowBorder = isDiscrepancy
+                ? '4px solid #c62828'
+                : (isPcIssue ? '4px solid #1565c0' : (isReliabilityReview ? '4px solid #f57f17' : 'none'));
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
@@ -1579,7 +1627,8 @@
             var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
             var payrollText = payrollVisible.map(function(p) {
                 var label = p.trc;
-                if (p.taskCode) label += ' / ' + p.taskCode;
+                var taskCode = normalizeTaskCode(p.taskCode);
+                if (taskCode) label += ' / ' + taskCode;
                 return label + ' (' + p.quantity + 'h)';
             }).join('<br>');
             // Also show if they clocked in on a same-day
@@ -1614,6 +1663,9 @@
             html += '</td>';
             html += '<td style="padding:6px 8px; font-size:0.9em;">';
             if (t.flags && t.flags.length > 0) {
+                if (isDiscrepancy || isPcIssue || isReliabilityReview) {
+                    html += '<div style="display:inline-block; margin-bottom:4px; padding:1px 6px; border-radius:8px; font-size:0.78em; font-weight:700; background:#fff3cd; color:#8a5300; border:1px solid #ffe08a;">REVIEW</div>';
+                }
                 html += t.flags.map(function(f) {
                     var fColor = f.indexOf('DISCREPANCY') >= 0
                         ? '#b71c1c'
