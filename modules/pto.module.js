@@ -289,18 +289,20 @@ function importPtoBalancePdf(file) {
         try {
             var pdfData = new Uint8Array(e.target.result);
             pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
-                var textContent = '';
                 var pagePromises = [];
                 for (var p = 1; p <= pdf.numPages; p++) {
                     pagePromises.push(pdf.getPage(p).then(function(page) {
                         return page.getTextContent().then(function(content) {
-                            return content.items.map(function(item) { return item.str; }).join(' ');
+                            return extractPdfLines(content.items || []);
                         });
                     }));
                 }
                 Promise.all(pagePromises).then(function(pages) {
-                    textContent = pages.join('\n');
-                    processPtoBalancePdf(textContent);
+                    var allLines = [];
+                    pages.forEach(function(lines) {
+                        if (Array.isArray(lines) && lines.length) allLines = allLines.concat(lines);
+                    });
+                    processPtoBalancePdf(allLines);
                 });
             }).catch(function(err) {
                 console.error('PDF parse error:', err);
@@ -315,9 +317,55 @@ function importPtoBalancePdf(file) {
     reader.readAsArrayBuffer(file);
 }
 
-function processPtoBalancePdf(text) {
+function extractPdfLines(items) {
+    // Rebuild text lines by grouping by Y coordinate and sorting by X coordinate.
+    var buckets = {};
+    var yKeys = [];
+
+    items.forEach(function(item) {
+        var txt = String(item?.str || '').trim();
+        if (!txt) return;
+        var x = Number(item?.transform?.[4] || 0);
+        var y = Number(item?.transform?.[5] || 0);
+        var bucketY = Math.round(y);
+        if (!buckets[bucketY]) {
+            buckets[bucketY] = [];
+            yKeys.push(bucketY);
+        }
+        buckets[bucketY].push({ x: x, text: txt });
+    });
+
+    yKeys.sort(function(a, b) { return b - a; });
+    var lines = [];
+    yKeys.forEach(function(y) {
+        var row = buckets[y] || [];
+        row.sort(function(a, b) { return a.x - b.x; });
+        var line = row.map(function(part) { return part.text; }).join(' ').replace(/\s+/g, ' ').trim();
+        if (line) lines.push(line);
+    });
+    return lines;
+}
+
+function isLikelyPersonLabel(label) {
+    var s = cleanUnicodeControl(String(label || '').trim());
+    if (!s) return false;
+    if (/carryover|earned|used|balance|hours|total|summary|time\s*off|employee\s*id|id\b/i.test(s)) return false;
+    var alpha = (s.match(/[A-Za-z]/g) || []).length;
+    if (alpha < 4) return false;
+    if (s.indexOf(',') >= 0) return true;
+    return /[A-Za-z'\-]+\s+[A-Za-z'\-]+/.test(s);
+}
+
+function parseNumbersFromLine(line) {
+    var matches = String(line || '').match(/-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?/g) || [];
+    return matches.map(function(v) { return parseHoursValue(String(v).replace(/,/g, '')); }).filter(function(v) { return v != null; });
+}
+
+function processPtoBalancePdf(input) {
     // Extract balance data: Carryover, Earned, Used for each employee
-    var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+    var lines = Array.isArray(input)
+        ? input.map(function(l) { return String(l || '').trim(); }).filter(function(l) { return l.length > 0; })
+        : String(input || '').split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
     
     var store = loadPtoStore();
     var nameLookup = {};
@@ -336,34 +384,42 @@ function processPtoBalancePdf(text) {
 
     var updated = 0;
     var matched = false;
-    
-    // Look for patterns like "John Doe" followed by balance numbers
-    for (var i = 0; i < lines.length - 2; i++) {
+    var pendingName = '';
+
+    // Pattern A: Name and numbers on same line.
+    // Pattern B: Name line followed by number line.
+    for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        var nextLine = lines[i + 1] || '';
-        
-        // Pattern: Name followed by carryover, earned, used values
-        var numPattern = /-?\d+(\.\d+)?/g;
-        var nextNumbers = nextLine.match(numPattern) || [];
-        
-        // If we have a potential name and numbers in the next line
-        if (nextNumbers.length >= 2 && isNaN(line)) {
-            // Extract potential carryover, earned, used
-            var carryover = parseHoursValue(nextNumbers[0]);
-            var earned = nextNumbers.length > 1 ? parseHoursValue(nextNumbers[1]) : null;
-            var used = nextNumbers.length > 2 ? parseHoursValue(nextNumbers[2]) : null;
-            
-            if (carryover != null || earned != null || used != null) {
-                var rawName = cleanUnicodeControl(String(line).trim());
-                var resolvedName = resolveEmployeeName(rawName, nameLookup);
-                var assoc = getAssociateData(store, resolvedName);
-                
-                if (carryover != null) assoc.carryoverHours = carryover;
-                if (earned != null) assoc.annualAllotment = earned;
-                // used is tracked in entries, not directly as balance state
-                matched = true;
-                updated++;
-            }
+        var numbers = parseNumbersFromLine(line);
+        var firstNumMatch = String(line).match(/-?\d/);
+        var namePart = firstNumMatch
+            ? cleanUnicodeControl(String(line).slice(0, firstNumMatch.index).trim())
+            : cleanUnicodeControl(String(line).trim());
+
+        if (isLikelyPersonLabel(namePart) && numbers.length >= 3) {
+            var resolvedNameA = resolveEmployeeName(namePart, nameLookup);
+            var assocA = getAssociateData(store, resolvedNameA);
+            assocA.carryoverHours = numbers[0];
+            assocA.annualAllotment = numbers[1];
+            matched = true;
+            updated++;
+            pendingName = '';
+            continue;
+        }
+
+        if (isLikelyPersonLabel(line) && numbers.length < 3) {
+            pendingName = line;
+            continue;
+        }
+
+        if (pendingName && numbers.length >= 3) {
+            var resolvedNameB = resolveEmployeeName(cleanUnicodeControl(pendingName), nameLookup);
+            var assocB = getAssociateData(store, resolvedNameB);
+            assocB.carryoverHours = numbers[0];
+            assocB.annualAllotment = numbers[1];
+            matched = true;
+            updated++;
+            pendingName = '';
         }
     }
     
