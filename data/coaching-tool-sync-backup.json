@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T23:33:53.594Z",
+  "generatedAt": "2026-04-06T23:57:03.829Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -16848,7 +16848,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "Partial day worked in Payroll (REG 7.43h)"
               ],
               "ptostRunning": 0.87,
               "ptostProtected": true,
@@ -16914,15 +16914,7 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
-            {
-              "date": "3/20/2026",
-              "verintActivity": "Same Day - Full PTOST",
-              "verintHours": 0.87,
-              "payrollHours": 7.43333,
-              "payrollClockIn": "11:00 AM"
-            }
-          ],
+          "discrepancies": [],
           "correctionCandidates": [],
           "pcIssueCandidates": [
             {
@@ -18302,7 +18294,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "Partial day worked in Payroll (REG 8h)"
               ],
               "category": "same-day"
             },
@@ -18507,7 +18499,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "Partial day worked in Payroll (REG 8.08h)"
               ],
               "category": "same-day"
             },
@@ -18929,22 +18921,7 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
-            {
-              "date": "1/14/2026",
-              "verintActivity": "Same Day",
-              "verintHours": 0.65,
-              "payrollHours": 8,
-              "payrollClockIn": "07:00 AM"
-            },
-            {
-              "date": "2/2/2026",
-              "verintActivity": "Same Day",
-              "verintHours": 0.75,
-              "payrollHours": 8.08333,
-              "payrollClockIn": "07:00 AM"
-            }
-          ],
+          "discrepancies": [],
           "correctionCandidates": [
             {
               "date": "3/17/2026",
@@ -20577,7 +20554,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "Partial day worked in Payroll (REG 6.5h)"
               ],
               "category": "same-day"
             },
@@ -20699,7 +20676,7 @@
                 }
               ],
               "flags": [
-                "⚠ DISCREPANCY: Verint says absent, Payroll shows worked"
+                "Partial day worked in Payroll (REG 5.85h)"
               ],
               "category": "same-day"
             },
@@ -20862,22 +20839,7 @@
               "category": "planned"
             }
           ],
-          "discrepancies": [
-            {
-              "date": "2/20/2026",
-              "verintActivity": "Same Day",
-              "verintHours": 0.67,
-              "payrollHours": 6.5,
-              "payrollClockIn": "11:59 AM"
-            },
-            {
-              "date": "3/20/2026",
-              "verintActivity": "Same Day",
-              "verintHours": 0.67,
-              "payrollHours": 5.85,
-              "payrollClockIn": "12:39 PM"
-            }
-          ],
+          "discrepancies": [],
           "correctionCandidates": [
             {
               "date": "1/17/2026",
@@ -45425,7 +45387,7 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 564143
+      "byteLength": 563478
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
