@@ -35,7 +35,7 @@
         // Remove directional/zero-width marks and normalize common pasted symbols.
         return s
             .replace(/[\u202a-\u202e\u200e\u200f\u200b\ufeff]/g, '')
-            .replace(/[•●·]/g, ' ')
+            .replace(/[\u2022\u25CF\u00B7\u2027\u2219\u25E6\u2043]/g, ' ')
             .trim();
     }
 
@@ -126,18 +126,20 @@
             var key = buildEmployeeLookupKey(name);
             if (!key) return;
 
+            var cleanName = normalizeEmployeeName(name) || String(name || '').trim();
+
             var incoming = employees[name] || {};
             var targetKey = key;
             if (!mergedByKey[targetKey]) {
                 var existingKey = Object.keys(mergedByKey).find(function(k) {
-                    return isLikelySameEmployeeName(mergedByKey[k].name, name);
+                    return isLikelySameEmployeeName(mergedByKey[k].name, cleanName);
                 });
                 if (existingKey) targetKey = existingKey;
             }
 
             if (!mergedByKey[targetKey]) {
                 mergedByKey[targetKey] = {
-                    name: name,
+                    name: cleanName,
                     data: {
                         hasVerint: Boolean(incoming.hasVerint),
                         hasPayroll: Boolean(incoming.hasPayroll),
@@ -150,7 +152,7 @@
             }
 
             var target = mergedByKey[targetKey];
-            target.name = choosePreferredDisplayName(target.name, name);
+            target.name = choosePreferredDisplayName(target.name, cleanName);
             target.data.hasVerint = target.data.hasVerint || Boolean(incoming.hasVerint);
             target.data.hasPayroll = target.data.hasPayroll || Boolean(incoming.hasPayroll);
             if (!target.data.verint && incoming.verint) target.data.verint = incoming.verint;
