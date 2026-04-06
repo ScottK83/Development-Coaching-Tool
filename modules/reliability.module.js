@@ -724,10 +724,10 @@
     function getReliabilityNamesByTeamFilter(allNames) {
         var names = Array.isArray(allNames) ? allNames : [];
         var tf = window.DevCoachModules?.teamFilter;
-        if (!tf?.getTeamSelectionContext) return names;
+        if (!tf?.getTeamSelectionContext) return [];
 
         var ctx = tf.getTeamSelectionContext();
-        if (!ctx?.isFiltering || !Array.isArray(ctx.selectedMembers) || !ctx.selectedMembers.length) return names;
+        if (!Array.isArray(ctx?.selectedMembers) || !ctx.selectedMembers.length) return [];
 
         var selectedExact = new Set(ctx.selectedMembers.map(function(n) { return String(n || '').trim().toLowerCase(); }).filter(Boolean));
         var selectedLookup = new Set(ctx.selectedMembers.map(function(n) {
@@ -915,79 +915,25 @@
         });
         html += '</select>';
         html += '</div>';
-        html += '<button type="button" id="relOpenLedger" style="padding:6px 10px; border:1px solid #ccc; background:#fff; color:#333; border-radius:4px; cursor:pointer;">Show All-Employees Day-by-Day</button>';
-        html += '<div style="font-size:0.78em; color:#666;">Tip: click a row or use the dropdown for one-employee drill-down.</div>';
+        html += '<div style="font-size:0.78em; color:#666;">Tip: choose one checked team member to view detail.</div>';
         html += '</div>';
 
         if (names.length === 0) {
             html += '<div style="padding:20px; background:#f5f5f5; border-radius:8px; text-align:center; color:#666;">';
-            html += 'No data yet. Upload Verint and/or Payroll files to get started.';
+            html += 'No checked team members found in Settings for the current period.';
             html += '</div>';
             html += '</div>';
             container.innerHTML = html;
             return;
         }
-
-        // Summary table
-        html += '<div style="overflow-x:auto;">';
-        html += '<table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
-        html += '<thead><tr style="background:#e0f2f1; color:#00695c;">';
-        html += '<th style="padding:8px; text-align:left; border-bottom:2px solid #00695c;">Employee</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Same Day</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Same Day PTOST</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Bereavement</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">FMLA</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">PTOST Used</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Buffer Left</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Reliability Hours</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Tier</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Discrepancies</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Data Source</th>';
-        html += '</tr></thead><tbody>';
-
-        names.forEach(function(name) {
-            var emp = employees[name];
-            var r = emp.reconciled || {};
-            var tier = getTierInfo(r.reliabilityHours || 0);
-            var discCount = (r.discrepancies || []).length;
-            var buckets = r.dayBuckets || {};
-            var sameDayDates = buckets.sameDay || [];
-            var sameDayPtostDates = buckets.sameDayPtost || [];
-            var bereavementDates = buckets.bereavement || [];
-            var fmlaDates = buckets.fmla || [];
-
-            html += '<tr style="border-bottom:1px solid #e0e0e0; cursor:pointer;" class="rel-employee-row" data-name="' + escapeHtml(name) + '">';
-            html += '<td style="padding:8px; font-weight:600;">' + escapeHtml(name) + '</td>';
-            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(sameDayDates)) + '">' + sameDayDates.length + '</td>';
-            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(sameDayPtostDates)) + '">' + sameDayPtostDates.length + '</td>';
-            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(bereavementDates)) + '">' + bereavementDates.length + '</td>';
-            html += '<td style="padding:8px; text-align:center;" title="' + escapeHtml(summarizeDateList(fmlaDates)) + '">' + fmlaDates.length + '</td>';
-            html += '<td style="padding:8px; text-align:center;">' + (r.ptostHoursUsed || 0) + 'h</td>';
-            html += '<td style="padding:8px; text-align:center;">' + (r.ptostBufferRemaining !== undefined ? r.ptostBufferRemaining : PTOST_BUFFER_LIMIT) + 'h</td>';
-            html += '<td style="padding:8px; text-align:center; font-weight:700; color:' + tier.color + ';">' + (r.reliabilityHours || 0) + 'h</td>';
-            html += '<td style="padding:8px; text-align:center;"><span style="padding:2px 8px; border-radius:4px; background:' + tier.bg + '; color:' + tier.color + '; font-weight:600; font-size:0.85em;">' + tier.label + '</span></td>';
-            html += '<td style="padding:8px; text-align:center;">' + (discCount > 0 ? '<span style="color:#b71c1c; font-weight:700;">⚠ ' + discCount + '</span>' : '✓') + '</td>';
-
-            var sourceLabel = 'None';
-            if (emp.hasVerint && emp.hasPayroll) sourceLabel = 'Matched';
-            else if (emp.hasVerint) sourceLabel = 'Verint only';
-            else if (emp.hasPayroll) sourceLabel = 'Payroll only';
-            var sourceColor = sourceLabel === 'Matched' ? '#2e7d32' : '#e65100';
-            html += '<td style="padding:8px; text-align:center; font-size:0.8em; color:' + sourceColor + '; font-weight:600;">' + sourceLabel + '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
-        html += '<div id="relLedgerWrap" style="display:none;">' + buildAllEmployeesDayTable(employees) + '</div>';
+        html += '<div id="relSelectionHint" style="padding:14px; border:1px dashed #b0bec5; border-radius:8px; color:#607d8b; background:#fafcfd; margin-top:8px;">Select an employee from the dropdown to view reliability details.</div>';
 
         // Detail panel (shown when clicking a row)
         html += '<div id="relDetailPanel" style="display:none; margin-top:16px;"></div>';
         html += '</div>';
 
         container.innerHTML = html;
-        bindRowClicks(container);
         bindReliabilityControls(container);
-        bindAllEmployeesLedgerFilters(container);
     }
 
     // Category display config
@@ -1240,25 +1186,21 @@
 
     function bindReliabilityControls(container) {
         var select = container.querySelector('#relEmployeeSelect');
-        var ledgerBtn = container.querySelector('#relOpenLedger');
-        var ledgerWrap = container.querySelector('#relLedgerWrap');
+        var hint = container.querySelector('#relSelectionHint');
 
         select?.addEventListener('change', function() {
             var name = this.value;
-            if (!name) return;
             var panel = document.getElementById('relDetailPanel');
             if (!panel) return;
+            if (!name) {
+                panel.style.display = 'none';
+                if (hint) hint.style.display = '';
+                return;
+            }
             panel.style.display = 'block';
+            if (hint) hint.style.display = 'none';
             renderEmployeeDetail(panel, name);
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-
-        ledgerBtn?.addEventListener('click', function() {
-            if (!ledgerWrap) return;
-            var opening = ledgerWrap.style.display === 'none';
-            ledgerWrap.style.display = opening ? '' : 'none';
-            ledgerBtn.textContent = opening ? 'Hide All-Employees Day-by-Day' : 'Show All-Employees Day-by-Day';
-            if (opening) ledgerWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     }
 
