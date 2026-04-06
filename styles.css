@@ -656,6 +656,41 @@ textarea:focus-visible {
     transform: translateY(-2px);
 }
 
+.btn-upload-verint,
+.btn-upload-payroll,
+.btn-upload-pto {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    padding: 20px;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.btn-upload-verint {
+    background: linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%);
+}
+
+.btn-upload-payroll {
+    background: linear-gradient(135deg, #00695c 0%, #2e7d6f 100%);
+}
+
+.btn-upload-pto {
+    background: linear-gradient(135deg, #c62828 0%, #e53935 100%);
+}
+
+.btn-upload-verint:hover,
+.btn-upload-payroll:hover,
+.btn-upload-pto:hover {
+    transform: translateY(-2px);
+}
+
 /* Upload container */
 .upload-container {
     display: none;
