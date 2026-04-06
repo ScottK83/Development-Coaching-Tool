@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T22:01:28.070Z",
+  "generatedAt": "2026-04-06T22:01:42.740Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -7372,6 +7372,16 @@
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 25
+    },
+    "devCoachingTool_debugLog": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 15763
+    },
+    "devCoachingTool_lastError": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 118
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
