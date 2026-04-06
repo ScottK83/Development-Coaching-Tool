@@ -1,12 +1,24 @@
 {
-  "generatedAt": "2026-04-06T20:52:41.740Z",
+  "generatedAt": "2026-04-06T20:53:17.121Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {},
   "coachingHistory": {},
   "callListeningLogs": {},
-  "sentimentPhraseDatabase": {},
+  "sentimentPhraseDatabase": {
+    "positive": {
+      "A": [],
+      "C": []
+    },
+    "negative": {
+      "A": [],
+      "C": []
+    },
+    "emotions": {
+      "C": []
+    }
+  },
   "associateSentimentSnapshots": {},
   "myTeamMembers": {},
   "callCenterAverages": {},
@@ -65,8 +77,8 @@
     },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+      "itemCount": 3,
+      "byteLength": 75
     },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
@@ -76,7 +88,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 257
+      "byteLength": 292
     }
   }
 }
