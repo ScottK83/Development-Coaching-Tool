@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T22:05:02.423Z",
+  "generatedAt": "2026-04-06T22:05:11.125Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -36600,10 +36600,20 @@
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_repoBackupAppliedAt": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 24
+    },
     "devCoachingTool_teamMemberSelectorExpanded": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 5
+    },
+    "devCoachingTool_followUpHistory": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 14
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -36640,6 +36650,11 @@
       "itemCount": "",
       "byteLength": 5
     },
+    "devCoachingTool_yearEndAnnualGoalsStore": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
@@ -36660,7 +36675,17 @@
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_hotTipHistory": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 14
+    },
     "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
@@ -36672,8 +36697,8 @@
     },
     "devCoachingTool_employeePreferredNames": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 25
+      "itemCount": 0,
+      "byteLength": 2
     },
     "devCoachingTool_debugLog": {
       "valueType": "object",
