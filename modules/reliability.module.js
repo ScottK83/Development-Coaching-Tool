@@ -534,7 +534,7 @@
             var clockOut = String(row[13] || '').trim();
             var trc = stripUnicode(String(row[14] || '')).toUpperCase();
             var quantity = parseFloat(row[15]) || 0;
-            var taskCode = stripUnicode(String(row[22] || '')).toUpperCase();
+            var taskCode = stripUnicode(String(row[22] || '')).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 
             var dateObj = parseSpreadsheetDate(dateValue);
 
@@ -1101,6 +1101,13 @@
         html += '<div style="height:100%; width:' + pctUsed + '%; background:' + barColor + '; border-radius:6px; transition:width 0.3s;"></div>';
         html += '</div></div>';
 
+        // Payroll visibility controls
+        html += '<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.82em;">';
+        html += '<strong style="color:#334155;">Show Payroll:</strong>';
+        html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowBrv" checked> BRV</label>';
+        html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowFmla" checked> FMLA</label>';
+        html += '</div>';
+
         // Filter tabs
         html += '<div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">';
         html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
@@ -1116,7 +1123,7 @@
 
         // Day-by-day timeline table
         html += '<div id="relTimelineTable">';
-        html += buildTimelineTable(timeline, r.discrepancies || [], 'all');
+        html += buildTimelineTable(timeline, r.discrepancies || [], 'all', { showBrv: true, showFmla: true });
         html += '</div>';
 
         // Action buttons
@@ -1144,10 +1151,24 @@
             container.style.display = 'none';
         });
 
-        // Bind filter tabs
+        // Bind filter tabs and visibility controls
+        var currentFilter = 'all';
+
+        function getTimelineOptions() {
+            return {
+                showBrv: container.querySelector('#relShowBrv')?.checked !== false,
+                showFmla: container.querySelector('#relShowFmla')?.checked !== false
+            };
+        }
+
+        function renderTimelineForCurrentView() {
+            var tableDiv = document.getElementById('relTimelineTable');
+            if (tableDiv) tableDiv.innerHTML = buildTimelineTable(timeline, r.discrepancies || [], currentFilter, getTimelineOptions());
+        }
+
         container.querySelectorAll('.rel-filter-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                var filter = this.getAttribute('data-filter');
+                currentFilter = this.getAttribute('data-filter') || 'all';
                 // Update active button style
                 container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
                     b.style.background = '#fff';
@@ -1157,10 +1178,12 @@
                 this.style.color = '#fff';
                 this.style.fontWeight = '600';
                 // Re-render table
-                var tableDiv = document.getElementById('relTimelineTable');
-                if (tableDiv) tableDiv.innerHTML = buildTimelineTable(timeline, r.discrepancies || [], filter);
+                renderTimelineForCurrentView();
             });
         });
+
+        container.querySelector('#relShowBrv')?.addEventListener('change', renderTimelineForCurrentView);
+        container.querySelector('#relShowFmla')?.addEventListener('change', renderTimelineForCurrentView);
 
         // Bind email buttons
         document.getElementById('relEmailAssociate')?.addEventListener('click', function() {
@@ -1182,15 +1205,39 @@
         });
     }
 
-    function buildTimelineTable(timeline, discrepancies, filter) {
+    function buildTimelineTable(timeline, discrepancies, filter, options) {
+        var opts = options || { showBrv: true, showFmla: true };
+        var discDates = {};
+        (discrepancies || []).forEach(function(d) { discDates[d.date] = true; });
+
+        function showVerintItem(v) {
+            var activity = String(v?.activity || '').toLowerCase();
+            if (!opts.showBrv && activity.indexOf('bereavement') >= 0) return false;
+            if (!opts.showFmla && activity.indexOf('fmla') >= 0) return false;
+            return true;
+        }
+
+        function showPayrollItem(p) {
+            var trc = String(p?.trc || '').toUpperCase();
+            if (!opts.showBrv && trc === 'BRV') return false;
+            if (!opts.showFmla && (trc === 'FMLA' || trc === 'FMLNP')) return false;
+            return true;
+        }
+
+        function rowHasVisibleData(t) {
+            var verintVisible = (t.verint || []).some(showVerintItem);
+            var payrollVisible = (t.payroll || []).some(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
+            return verintVisible || payrollVisible || Boolean(discDates[t.dateStr]);
+        }
+
         var filtered = timeline;
         if (filter === 'discrepancy') {
-            var discDates = {};
-            discrepancies.forEach(function(d) { discDates[d.date] = true; });
             filtered = timeline.filter(function(t) { return discDates[t.dateStr]; });
         } else if (filter !== 'all') {
             filtered = timeline.filter(function(t) { return t.category === filter; });
         }
+
+        filtered = filtered.filter(rowHasVisibleData);
 
         if (filtered.length === 0) {
             return '<div style="padding:16px; text-align:center; color:#999; font-size:0.9em;">No events for this filter.</div>';
@@ -1210,13 +1257,17 @@
         filtered.forEach(function(t) {
             var cat = CAT_STYLES[t.category] || CAT_STYLES.other;
             var hasFlag = t.flags && t.flags.length > 0;
-            var rowBg = hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }) ? '#fff8e1' : '';
+            var isDiscrepancy = Boolean(discDates[t.dateStr]) || (hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }));
+            var rowBg = isDiscrepancy ? '#ffe9e9' : '';
+            var rowBorder = isDiscrepancy ? '4px solid #c62828' : 'none';
 
             // Verint column
-            var verintText = t.verint.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:#999;">—</span>';
+            var verintVisible = (t.verint || []).filter(showVerintItem);
+            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:#999;">—</span>';
 
             // Payroll column
-            var payrollText = t.payroll.filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
+            var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
+            var payrollText = payrollVisible.map(function(p) {
                 var label = p.trc;
                 if (p.taskCode) label += ' / ' + p.taskCode;
                 return label + ' (' + p.quantity + 'h)';
@@ -1231,13 +1282,13 @@
 
             // Total hours for the day (non-REG)
             var totalHours = 0;
-            t.verint.forEach(function(v) { totalHours += v.hours; });
-            var payrollNonReg = t.payroll.filter(function(p) { return p.trc !== 'REG'; });
+            verintVisible.forEach(function(v) { totalHours += v.hours; });
+            var payrollNonReg = payrollVisible;
             if (payrollNonReg.length > 0) {
                 totalHours = payrollNonReg.reduce(function(s, p) { return s + p.quantity; }, 0);
             }
 
-            html += '<tr style="border-bottom:1px solid #eee;' + (rowBg ? ' background:' + rowBg + ';' : '') + '">';
+            html += '<tr style="border-bottom:1px solid #eee;' + (rowBg ? ' background:' + rowBg + ';' : '') + ' border-left:' + rowBorder + ';">';
             html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(t.dateStr) + '</td>';
             html += '<td style="padding:6px 8px;"><span style="display:inline-block; padding:1px 6px; border-radius:3px; background:' + cat.bg + '; color:' + cat.color + '; font-weight:600; font-size:0.9em;">' + cat.icon + ' ' + cat.label + '</span></td>';
             html += '<td style="padding:6px 8px;">' + verintText + '</td>';
@@ -1254,9 +1305,11 @@
             html += '<td style="padding:6px 8px; font-size:0.9em;">';
             if (t.flags && t.flags.length > 0) {
                 html += t.flags.map(function(f) {
-                    var fColor = f.indexOf('DISCREPANCY') >= 0 ? '#e65100' : f.indexOf('reliability') >= 0 ? '#b71c1c' : '#666';
+                    var fColor = f.indexOf('DISCREPANCY') >= 0 ? '#b71c1c' : f.indexOf('reliability') >= 0 ? '#b71c1c' : '#666';
                     return '<div style="color:' + fColor + ';">' + escapeHtml(f) + '</div>';
                 }).join('');
+            } else if (isDiscrepancy) {
+                html += '<div style="color:#b71c1c; font-weight:700;">⚠ Discrepancy</div>';
             } else {
                 html += '<span style="color:#ccc;">—</span>';
             }
