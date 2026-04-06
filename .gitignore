@@ -25,3 +25,6 @@ build/
 .wrangler/
 *.local
 *.local.*
+
+# Prevent accidental Windows drive mirror folder from being tracked
+/C/

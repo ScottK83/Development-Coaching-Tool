@@ -32,35 +32,167 @@
 
     function stripUnicode(s) {
         if (typeof s !== 'string') return '';
-        return s.replace(/[\u202c\u202d\u200e\u200f\u200b]/g, '').trim();
+        // Remove directional/zero-width marks and normalize common pasted symbols.
+        return s
+            .replace(/[\u202a-\u202e\u200e\u200f\u200b\ufeff]/g, '')
+            .replace(/[•●·]/g, ' ')
+            .trim();
     }
 
     function round2(n) { return Math.round(n * 100) / 100; }
 
+    function titleCaseWords(text) {
+        return String(text || '')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(function(w) {
+                var lower = w.toLowerCase();
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
+            })
+            .join(' ');
+    }
+
+    function buildEmployeeLookupKey(name) {
+        var base = stripUnicode(String(name || ''))
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^A-Za-z]/g, '')
+            .toLowerCase();
+        return base;
+    }
+
+    function scoreNameQuality(name) {
+        var s = String(name || '');
+        var score = 0;
+        if (s.includes(', ')) score += 4;
+        if (/^[A-Za-z'\- ]+, [A-Za-z'\- ]+$/.test(s)) score += 6;
+        if (!/[•●·0-9]/.test(s)) score += 3;
+        return score;
+    }
+
+    function choosePreferredDisplayName(a, b) {
+        if (!a) return b || '';
+        if (!b) return a || '';
+        return scoreNameQuality(b) > scoreNameQuality(a) ? b : a;
+    }
+
+    function splitDisplayName(name) {
+        var normalized = normalizeEmployeeName(name);
+        if (!normalized.includes(',')) {
+            var words = normalized.split(/\s+/).filter(Boolean);
+            if (words.length < 2) return { last: normalized.toLowerCase(), first: '' };
+            return {
+                last: words[words.length - 1].toLowerCase(),
+                first: words.slice(0, -1).join(' ').toLowerCase()
+            };
+        }
+        var parts = normalized.split(',');
+        return {
+            last: String(parts[0] || '').trim().toLowerCase(),
+            first: String(parts[1] || '').trim().toLowerCase()
+        };
+    }
+
+    function isLikelySameEmployeeName(a, b) {
+        var n1 = splitDisplayName(a);
+        var n2 = splitDisplayName(b);
+        if (!n1.last || !n2.last || n1.last !== n2.last) return false;
+        if (!n1.first || !n2.first) return false;
+        if (n1.first === n2.first) return true;
+        // Handles malformed imports like "Orobert" vs "Robert".
+        if (n1.first.length >= 5 && n1.first.slice(1) === n2.first) return true;
+        if (n2.first.length >= 5 && n2.first.slice(1) === n1.first) return true;
+        return false;
+    }
+
+    function findExistingEmployeeName(store, incomingName) {
+        var target = buildEmployeeLookupKey(incomingName);
+        if (!target) return null;
+        var names = Object.keys(store?.employees || {});
+        for (var i = 0; i < names.length; i++) {
+            if (buildEmployeeLookupKey(names[i]) === target) return names[i];
+        }
+        for (var j = 0; j < names.length; j++) {
+            if (isLikelySameEmployeeName(names[j], incomingName)) return names[j];
+        }
+        return null;
+    }
+
+    function consolidateDuplicateEmployees(store) {
+        var employees = store?.employees || {};
+        var mergedByKey = {};
+
+        Object.keys(employees).forEach(function(name) {
+            var key = buildEmployeeLookupKey(name);
+            if (!key) return;
+
+            var incoming = employees[name] || {};
+            var targetKey = key;
+            if (!mergedByKey[targetKey]) {
+                var existingKey = Object.keys(mergedByKey).find(function(k) {
+                    return isLikelySameEmployeeName(mergedByKey[k].name, name);
+                });
+                if (existingKey) targetKey = existingKey;
+            }
+
+            if (!mergedByKey[targetKey]) {
+                mergedByKey[targetKey] = {
+                    name: name,
+                    data: {
+                        hasVerint: Boolean(incoming.hasVerint),
+                        hasPayroll: Boolean(incoming.hasPayroll),
+                        verint: incoming.verint || null,
+                        payroll: incoming.payroll || null,
+                        reconciled: incoming.reconciled || null
+                    }
+                };
+                return;
+            }
+
+            var target = mergedByKey[targetKey];
+            target.name = choosePreferredDisplayName(target.name, name);
+            target.data.hasVerint = target.data.hasVerint || Boolean(incoming.hasVerint);
+            target.data.hasPayroll = target.data.hasPayroll || Boolean(incoming.hasPayroll);
+            if (!target.data.verint && incoming.verint) target.data.verint = incoming.verint;
+            if (!target.data.payroll && incoming.payroll) target.data.payroll = incoming.payroll;
+            if (!target.data.reconciled && incoming.reconciled) target.data.reconciled = incoming.reconciled;
+        });
+
+        var rebuilt = {};
+        Object.keys(mergedByKey).forEach(function(key) {
+            var item = mergedByKey[key];
+            var data = item.data;
+            data.reconciled = reconcileEmployee(data.verint || null, data.payroll?.entries || null);
+            rebuilt[item.name] = data;
+        });
+
+        store.employees = rebuilt;
+        return store;
+    }
+
     function normalizeEmployeeName(raw) {
         // Payroll: "ROBERT BERRELLEZA" -> "Berrelleza, Robert"
         // Verint:  "Berrelleza, Robert" (already correct)
-        var s = stripUnicode(raw).trim();
+        var s = stripUnicode(raw)
+            .replace(/[^A-Za-z,\- '\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .replace(/\s+,/g, ',')
+            .replace(/,\s*/g, ', ')
+            .trim();
         if (!s) return '';
         // If already "Last, First" format
         if (s.includes(',')) {
             var parts = s.split(',').map(function(p) { return p.trim(); });
-            return parts.map(function(p) {
-                return p.split(/\s+/).map(function(w) {
-                    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-                }).join(' ');
-            }).join(', ');
+            var last = titleCaseWords(parts[0] || '');
+            var first = titleCaseWords(parts[1] || '');
+            return [last, first].filter(Boolean).join(', ');
         }
         // "FIRST LAST" or "FIRST MIDDLE LAST"
         var words = s.split(/\s+/);
         if (words.length < 2) return s;
         var last = words[words.length - 1];
         var first = words.slice(0, -1).join(' ');
-        return [last, first].map(function(p) {
-            return p.split(/\s+/).map(function(w) {
-                return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-            }).join(' ');
-        }).join(', ');
+        return [titleCaseWords(last), titleCaseWords(first)].join(', ');
     }
 
     function formatDate(d) {
@@ -466,6 +598,7 @@
 
     function renderTeamTable(container) {
         var store = loadStore();
+        consolidateDuplicateEmployees(store);
         var employees = store.employees || {};
         var names = Object.keys(employees).sort();
 
@@ -501,7 +634,7 @@
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Reliability Hours</th>';
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Tier</th>';
         html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Discrepancies</th>';
-        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Sources</th>';
+        html += '<th style="padding:8px; text-align:center; border-bottom:2px solid #00695c;">Data Source</th>';
         html += '</tr></thead><tbody>';
 
         names.forEach(function(name) {
@@ -518,10 +651,12 @@
             html += '<td style="padding:8px; text-align:center;"><span style="padding:2px 8px; border-radius:4px; background:' + tier.bg + '; color:' + tier.color + '; font-weight:600; font-size:0.85em;">' + tier.label + '</span></td>';
             html += '<td style="padding:8px; text-align:center;">' + (discCount > 0 ? '<span style="color:#b71c1c; font-weight:700;">⚠ ' + discCount + '</span>' : '✓') + '</td>';
 
-            var sources = [];
-            if (emp.hasVerint) sources.push('V');
-            if (emp.hasPayroll) sources.push('P');
-            html += '<td style="padding:8px; text-align:center; font-size:0.8em; color:#666;">' + (sources.join('+') || '—') + '</td>';
+            var sourceLabel = 'None';
+            if (emp.hasVerint && emp.hasPayroll) sourceLabel = 'Matched';
+            else if (emp.hasVerint) sourceLabel = 'Verint only';
+            else if (emp.hasPayroll) sourceLabel = 'Payroll only';
+            var sourceColor = sourceLabel === 'Matched' ? '#2e7d32' : '#e65100';
+            html += '<td style="padding:8px; text-align:center; font-size:0.8em; color:' + sourceColor + '; font-weight:600;">' + sourceLabel + '</td>';
             html += '</tr>';
         });
 
@@ -828,9 +963,11 @@
         if (!verint.employeeName) throw new Error('Could not find employee name in Verint file');
 
         var store = loadStore();
-        var name = verint.employeeName;
+        var normalizedName = normalizeEmployeeName(verint.employeeName);
+        var name = findExistingEmployeeName(store, normalizedName) || normalizedName;
         if (!store.employees[name]) store.employees[name] = {};
 
+        verint.employeeName = normalizedName;
         store.employees[name].verint = verint;
         store.employees[name].hasVerint = true;
 
@@ -838,6 +975,7 @@
         var payrollEntries = store.employees[name].payroll?.entries || null;
         store.employees[name].reconciled = reconcileEmployee(verint, payrollEntries);
 
+        consolidateDuplicateEmployees(store);
         saveStore(store);
         return verint;
     }
@@ -846,16 +984,19 @@
         var payrollByEmployee = await parsePayrollExcel(file);
         var store = loadStore();
 
-        Object.keys(payrollByEmployee).forEach(function(name) {
-            if (!store.employees[name]) store.employees[name] = {};
-            store.employees[name].payroll = payrollByEmployee[name];
-            store.employees[name].hasPayroll = true;
+        Object.keys(payrollByEmployee).forEach(function(rawName) {
+            var normalizedName = normalizeEmployeeName(rawName);
+            var existingName = findExistingEmployeeName(store, normalizedName) || normalizedName;
+            if (!store.employees[existingName]) store.employees[existingName] = {};
+            store.employees[existingName].payroll = payrollByEmployee[rawName];
+            store.employees[existingName].hasPayroll = true;
 
             // Reconcile with existing Verint data if present
-            var verint = store.employees[name].verint || null;
-            store.employees[name].reconciled = reconcileEmployee(verint, payrollByEmployee[name].entries);
+            var verint = store.employees[existingName].verint || null;
+            store.employees[existingName].reconciled = reconcileEmployee(verint, payrollByEmployee[rawName].entries);
         });
 
+        consolidateDuplicateEmployees(store);
         saveStore(store);
         return payrollByEmployee;
     }
@@ -867,6 +1008,9 @@
     function initialize() {
         var container = document.getElementById('reliabilityDashboard');
         if (!container) return;
+        var store = loadStore();
+        consolidateDuplicateEmployees(store);
+        saveStore(store);
         renderTeamTable(container);
     }
 

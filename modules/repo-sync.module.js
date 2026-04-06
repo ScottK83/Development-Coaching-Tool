@@ -27,6 +27,11 @@
         } catch (e) { return null; }
     }
 
+    function loadRawStorageObject(key) {
+        const data = safeLoadJson(key);
+        return data && typeof data === 'object' ? data : null;
+    }
+
     // ============================================
     // INTERNAL STATE
     // ============================================
@@ -715,6 +720,17 @@
         return Object.keys(value).length > 0;
     }
 
+    function resolveReliabilityTrackerData(...candidates) {
+        for (const candidate of candidates) {
+            if (!candidate || typeof candidate !== 'object') continue;
+            const hasNestedData = Object.values(candidate).some(value => hasNonEmptyEntries(value));
+            if (hasNonEmptyEntries(candidate?.employees) || hasNestedData) {
+                return candidate;
+            }
+        }
+        return {};
+    }
+
     function getMeaningfulLocalDataSources() {
         const storage = window.DevCoachModules?.storage;
         return [
@@ -725,6 +741,7 @@
             storage?.loadAssociateSentimentSnapshots?.() || null,
             storage?.loadTeamMembers?.() || null,
             storage?.loadPtoTracker?.() || null,
+                storage?.loadReliabilityTracker?.() || null,
             storage?.loadCallCenterAverages?.() || null,
             window.loadYearEndAnnualGoalsStore?.() || null,
             window.loadYearEndDraftStore?.() || null
@@ -740,6 +757,7 @@
             payload.associateSentimentSnapshots,
             payload.myTeamMembers,
             payload.ptoTracker,
+                payload.reliabilityTracker,
             payload.callCenterAverages,
             payload.yearEndAnnualGoalsStore,
             payload.yearEndDraftStore,
@@ -863,7 +881,12 @@
         const ptoTracker = storage?.loadPtoTracker?.() || {};
         const localDataSummary = summarizeLocalBackupFreshness();
         const followUpHistory = storage?.loadFollowUpHistory?.() || { entries: [] };
-        const reliabilityData = storage?.loadReliabilityTracker?.() || {};
+        const reliabilityData = resolveReliabilityTrackerData(
+            storage?.loadReliabilityTracker?.(),
+            loadRawStorageObject('reliabilityTracker'),
+            loadRawStorageObject('attendanceTracker')
+        );
+        const attendanceTrackerData = loadRawStorageObject('attendanceTracker') || {};
 
         return {
             appVersion: window.APP_VERSION || '',
@@ -880,6 +903,7 @@
             callCenterAverages: storage?.loadCallCenterAverages?.() || {},
             ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
             reliabilityTracker: reliabilityData,
+            attendanceTracker: attendanceTrackerData,
             followUpHistory: followUpHistory,
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
             yearEndAnnualGoalsStore: window.loadYearEndAnnualGoalsStore?.() || {},
@@ -1075,8 +1099,9 @@
                         const payload = data.payload;
                         const weekCount = Object.keys(payload.weeklyData || {}).length;
                         const ytdCount = Object.keys(payload.ytdData || {}).length;
-                        console.log(`[Repo Restore] Worker returned payload: ${weekCount} weekly, ${ytdCount} ytd periods, generated ${payload.generatedAt}`);
-                        if (weekCount > 0 || ytdCount > 0) return payload;
+                        const reliabilityCount = Object.keys(payload.reliabilityTracker?.employees || {}).length;
+                        console.log(`[Repo Restore] Worker returned payload: ${weekCount} weekly, ${ytdCount} ytd periods, ${reliabilityCount} reliability employees, generated ${payload.generatedAt}`);
+                        if (hasMeaningfulBackupData(payload)) return payload;
                         console.warn('[Repo Restore] Worker payload has no data');
                     } else {
                         console.warn('[Repo Restore] Worker returned:', data?.error || 'no payload');
@@ -1099,8 +1124,8 @@
                 const response = await fetch(url, { cache: 'no-store' });
                 if (!response.ok) continue;
                 const payload = await response.json();
-                if (payload && (Object.keys(payload.weeklyData || {}).length > 0 || Object.keys(payload.ytdData || {}).length > 0)) {
-                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData || {}).length, 'weekly,', Object.keys(payload.ytdData || {}).length, 'ytd periods');
+                if (payload && hasMeaningfulBackupData(payload)) {
+                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData || {}).length, 'weekly,', Object.keys(payload.ytdData || {}).length, 'ytd periods,', Object.keys(payload.reliabilityTracker?.employees || {}).length, 'reliability employees');
                     return payload;
                 }
             } catch (error) {
@@ -1136,6 +1161,11 @@
     }
 
     function applyRepoBackupPayload(payload) {
+        const resolvedReliabilityTracker = resolveReliabilityTrackerData(
+            payload?.reliabilityTracker,
+            payload?.attendanceTracker
+        );
+
         // Write directly to localStorage to guarantee data persistence
         const keys = {
             weeklyData: coerceObject(payload?.weeklyData),
@@ -1147,7 +1177,7 @@
             myTeamMembers: coerceObject(payload?.myTeamMembers),
             callCenterAverages: coerceObject(payload?.callCenterAverages),
             ptoTracker: coerceObject(payload?.ptoTracker),
-            reliabilityTracker: coerceObject(payload?.reliabilityTracker),
+            reliabilityTracker: coerceObject(resolvedReliabilityTracker),
             yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames)

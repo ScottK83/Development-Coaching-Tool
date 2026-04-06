@@ -93,7 +93,8 @@ export default {
         myTeamMembers: sanitizeForRepo(coerce(body?.myTeamMembers)),
         callCenterAverages: sanitizeForRepo(coerce(body?.callCenterAverages)),
         ptoTracker: sanitizeForRepo(coerce(body?.ptoTracker, { entries: [] })),
-        reliabilityTracker: sanitizeForRepo(coerce(body?.reliabilityTracker)),
+        reliabilityTracker: sanitizeForRepo(coerce(body?.reliabilityTracker || body?.attendanceTracker)),
+        attendanceTracker: sanitizeForRepo(coerce(body?.attendanceTracker)),
         followUpHistory: sanitizeForRepo(coerce(body?.followUpHistory, { entries: [] })),
         hotTipHistory: sanitizeForRepo(coerce(body?.hotTipHistory, { entries: [] })),
         yearEndAnnualGoalsStore: sanitizeForRepo(coerce(body?.yearEndAnnualGoalsStore)),
@@ -249,7 +250,10 @@ function hasMeaningfulData(payload) {
     return keys.length > 0 && keys.some(k => hasEntries(value[k]));
   };
   return [payload.weeklyData, payload.ytdData, payload.coachingHistory, payload.callListeningLogs,
-    payload.myTeamMembers, payload.callCenterAverages].some(hasEntries);
+    payload.associateSentimentSnapshots, payload.myTeamMembers, payload.callCenterAverages,
+    payload.ptoTracker, payload.reliabilityTracker, payload.attendanceTracker, payload.followUpHistory, payload.hotTipHistory,
+    payload.yearEndAnnualGoalsStore, payload.yearEndDraftStore, payload.employeePreferredNames,
+    payload.appStorageSnapshot].some(hasEntries);
 }
 
 function summarizeFreshness(payload) {
@@ -305,7 +309,7 @@ function getFootprintScore(p) {
     if (!v || typeof v !== 'object') return 0;
     return Object.values(v).reduce((s, i) => s + (Array.isArray(i) ? i.length : (i && typeof i === 'object') ? Object.keys(i).length : 0), 0);
   };
-  return ck(p?.weeklyData) * 100 + ck(p?.ytdData) * 100 + cn(p?.coachingHistory) + cn(p?.callListeningLogs) + cn(p?.associateSentimentSnapshots) + ck(p?.myTeamMembers);
+  return ck(p?.weeklyData) * 100 + ck(p?.ytdData) * 100 + cn(p?.coachingHistory) + cn(p?.callListeningLogs) + cn(p?.associateSentimentSnapshots) + ck(p?.myTeamMembers) + cn(p?.ptoTracker) + cn(p?.reliabilityTracker) + cn(p?.attendanceTracker) + cn(p?.followUpHistory) + cn(p?.hotTipHistory) + ck(p?.yearEndAnnualGoalsStore) + ck(p?.yearEndDraftStore) + ck(p?.employeePreferredNames) + ck(p?.appStorageSnapshot);
 }
 
 // ============================================
