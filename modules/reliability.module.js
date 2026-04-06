@@ -244,132 +244,174 @@
     // RECONCILIATION
     // ============================================
 
+    // Categories for classification
+    var VERINT_PTOST_TYPES = ['Same Day - Full PTOST', 'Same day - Partial PTOST', 'Tardy EQ GT 6 Min PTOST'];
+    var VERINT_SAME_DAY_TYPES = ['Same Day', 'Same Day - Full PTOST', 'Same day - Partial PTOST',
+        'Same Day - No Call No Show', 'Same Day - Partial', 'Tardy EQ GT 6 Min', 'Tardy EQ GT 6 Min PTOST', 'Tardy LT 6 Min'];
+    var VERINT_PLANNED_TYPES = ['Pre Planned Absence', 'Holiday', 'FMLA', 'WFO-Bereavement', 'WFO-Jury/Civic/Military Duty', 'LOA', 'VTO-PTO'];
+
+    function classifyVerintEvent(activity) {
+        if (VERINT_PTOST_TYPES.indexOf(activity) >= 0) return 'ptost';
+        if (activity === 'Same Day' || activity === 'Same Day - Partial' || activity === 'Same Day - No Call No Show') return 'same-day';
+        if (activity.indexOf('Tardy') === 0 && activity.indexOf('PTOST') < 0) return 'tardy';
+        if (activity.indexOf('Tardy') === 0 && activity.indexOf('PTOST') >= 0) return 'tardy-ptost';
+        if (VERINT_PLANNED_TYPES.indexOf(activity) >= 0) return 'planned';
+        return 'other';
+    }
+
     function reconcileEmployee(verintData, payrollEntries) {
         var result = {
             ptostHoursUsed: 0,
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
-            ptostEvents: [],          // All PTOST events (chronological)
             reliabilityHours: 0,
-            reliabilityEvents: [],     // Events that count against reliability
-            discrepancies: [],         // Verint says absent but payroll says worked
-            unschdPtoEvents: []        // PTO with UNSCHD task code
+            timeline: [],           // Unified day-by-day timeline
+            discrepancies: []       // Verint says absent but payroll says worked
         };
 
-        if (!payrollEntries || !payrollEntries.length) {
-            // Verint-only: use summary data
-            if (verintData) {
-                var ptostCategories = ['Same Day - Full PTOST', 'Same day - Partial PTOST', 'Tardy EQ GT 6 Min PTOST'];
-                var sameDayCategories = ['Same Day', 'Same Day - Partial', 'Same Day - No Call No Show', 'Tardy EQ GT 6 Min', 'Tardy LT 6 Min'];
+        // Build a date-keyed map of all events from both sources
+        var dateMap = {}; // key: YYYY-MM-DD -> { verint: [], payroll: [] }
 
-                ptostCategories.forEach(function(cat) {
-                    result.ptostHoursUsed += (verintData.summary[cat] || 0);
-                });
-
-                var unexcusedSameDay = 0;
-                sameDayCategories.forEach(function(cat) {
-                    unexcusedSameDay += (verintData.summary[cat] || 0);
-                });
-
-                result.ptostBufferRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - result.ptostHoursUsed));
-                // If PTOST used > 40, the overage plus unexcused = reliability
-                var ptostOverage = round2(Math.max(0, result.ptostHoursUsed - PTOST_BUFFER_LIMIT));
-                result.reliabilityHours = round2(ptostOverage + unexcusedSameDay);
-
-                // Build events from Verint detail
-                if (verintData.events) {
-                    verintData.events.forEach(function(ev) {
-                        if (ptostCategories.some(function(cat) { return ev.activity === cat; })) {
-                            result.ptostEvents.push(ev);
-                        }
-                        if (sameDayCategories.some(function(cat) { return ev.activity === cat; })) {
-                            result.reliabilityEvents.push(ev);
-                        }
-                    });
-                }
-            }
-            return result;
+        function dateKey(d) {
+            if (!d) return null;
+            if (typeof d === 'string') d = new Date(d);
+            return d.toISOString().slice(0, 10);
         }
 
-        // --- Payroll-based reconciliation (source of truth) ---
+        // Add Verint events
+        if (verintData && verintData.events) {
+            verintData.events.forEach(function(ev) {
+                var k = dateKey(ev.from);
+                if (!k) return;
+                if (!dateMap[k]) dateMap[k] = { verint: [], payroll: [] };
+                dateMap[k].verint.push({
+                    activity: ev.activity,
+                    hours: ev.hours,
+                    type: classifyVerintEvent(ev.activity)
+                });
+            });
+        }
 
-        // Gather all PTOST entries chronologically
-        var ptostEntries = payrollEntries.filter(function(e) { return e.trc === 'PTOST'; });
+        // Add Payroll entries
+        if (payrollEntries && payrollEntries.length) {
+            payrollEntries.forEach(function(entry) {
+                var k = dateKey(entry.date);
+                if (!k) return;
+                if (!dateMap[k]) dateMap[k] = { verint: [], payroll: [] };
+                dateMap[k].payroll.push({
+                    trc: entry.trc,
+                    quantity: entry.quantity,
+                    taskCode: entry.taskCode,
+                    clockIn: entry.clockIn,
+                    clockOut: entry.clockOut
+                });
+            });
+        }
+
+        // Walk dates chronologically and build timeline
+        var sortedDates = Object.keys(dateMap).sort();
         var runningPtost = 0;
 
-        ptostEntries.forEach(function(entry) {
-            runningPtost = round2(runningPtost + entry.quantity);
-            var ev = {
-                activity: 'PTOST',
-                dateStr: entry.dateStr,
-                hours: entry.quantity,
-                from: entry.date,
-                runningTotal: runningPtost,
-                protected: runningPtost <= PTOST_BUFFER_LIMIT
-            };
-            result.ptostEvents.push(ev);
+        sortedDates.forEach(function(dk) {
+            var day = dateMap[dk];
+            var verintItems = day.verint;
+            var payrollItems = day.payroll;
 
-            // If this entry pushes past the 40h buffer, the overage is a reliability event
-            if (runningPtost > PTOST_BUFFER_LIMIT) {
-                var overage = round2(Math.min(entry.quantity, runningPtost - PTOST_BUFFER_LIMIT));
-                result.reliabilityEvents.push({
-                    activity: 'PTOST (over 40h buffer)',
-                    dateStr: entry.dateStr,
-                    hours: overage,
-                    from: entry.date
-                });
-                result.reliabilityHours = round2(result.reliabilityHours + overage);
+            // Skip days that are only REG worked (no time off)
+            var hasTimeOff = verintItems.length > 0 ||
+                payrollItems.some(function(p) { return p.trc !== 'REG'; });
+            if (!hasTimeOff) return;
+
+            var entry = {
+                date: dk,
+                dateStr: formatDate(new Date(dk + 'T12:00:00')),
+                verint: verintItems,
+                payroll: payrollItems,
+                flags: []
+            };
+
+            // --- Determine what happened on this day ---
+
+            // Payroll PTOST on this day
+            var payrollPtost = payrollItems.filter(function(p) { return p.trc === 'PTOST'; });
+            var payrollPtostHours = payrollPtost.reduce(function(s, p) { return s + p.quantity; }, 0);
+
+            // Payroll PTO with UNSCHD task code
+            var payrollUnschd = payrollItems.filter(function(p) { return p.trc === 'PTO' && p.taskCode === 'UNSCHD'; });
+            var payrollUnschdHours = payrollUnschd.reduce(function(s, p) { return s + p.quantity; }, 0);
+
+            // Payroll PTO without UNSCHD (planned PTO)
+            var payrollPlannedPto = payrollItems.filter(function(p) { return p.trc === 'PTO' && p.taskCode !== 'UNSCHD'; });
+
+            // Payroll other leave types
+            var payrollOtherLeave = payrollItems.filter(function(p) {
+                return ['BRV', 'FMLNP', 'STD', 'PPL', 'NOP'].indexOf(p.trc) >= 0;
+            });
+
+            // Payroll REG with clock times
+            var payrollReg = payrollItems.filter(function(p) { return p.trc === 'REG' && p.clockIn; });
+
+            // Verint same-day (unscheduled) events
+            var verintSameDay = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'ptost' || v.type === 'tardy' || v.type === 'tardy-ptost'; });
+
+            // --- Track PTOST running total ---
+            if (payrollPtostHours > 0) {
+                runningPtost = round2(runningPtost + payrollPtostHours);
+                entry.ptostRunning = runningPtost;
+                entry.ptostProtected = runningPtost <= PTOST_BUFFER_LIMIT;
+
+                if (runningPtost > PTOST_BUFFER_LIMIT) {
+                    var overage = round2(Math.min(payrollPtostHours, runningPtost - PTOST_BUFFER_LIMIT));
+                    entry.ptostOverage = overage;
+                    result.reliabilityHours = round2(result.reliabilityHours + overage);
+                    entry.flags.push('PTOST over 40h buffer (+' + overage + 'h reliability)');
+                }
+            } else if (verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
+                // Verint shows PTOST but payroll doesn't — track from Verint
+                var verintPtostHours = verintItems.filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })
+                    .reduce(function(s, v) { return s + v.hours; }, 0);
+                runningPtost = round2(runningPtost + verintPtostHours);
+                entry.ptostRunning = runningPtost;
+                entry.ptostProtected = runningPtost <= PTOST_BUFFER_LIMIT;
             }
+
+            // --- PTO+UNSCHD counts against reliability ---
+            if (payrollUnschdHours > 0) {
+                result.reliabilityHours = round2(result.reliabilityHours + payrollUnschdHours);
+                entry.flags.push('Unscheduled PTO (' + payrollUnschdHours + 'h against reliability)');
+            }
+
+            // --- Discrepancy: Verint says Same Day absent but payroll shows REG ---
+            if (verintSameDay.length > 0 && payrollReg.length > 0 && payrollPtostHours === 0 && payrollUnschdHours === 0 && payrollPlannedPto.length === 0) {
+                var verintHrs = verintSameDay.reduce(function(s, v) { return s + v.hours; }, 0);
+                var regHrs = payrollReg.reduce(function(s, p) { return s + p.quantity; }, 0);
+                entry.flags.push('⚠ DISCREPANCY: Verint says absent, Payroll shows worked');
+                result.discrepancies.push({
+                    date: entry.dateStr,
+                    verintActivity: verintSameDay.map(function(v) { return v.activity; }).join(', '),
+                    verintHours: verintHrs,
+                    payrollHours: regHrs,
+                    payrollClockIn: payrollReg[0].clockIn
+                });
+            }
+
+            // Classify the day for display
+            if (payrollPtostHours > 0 || verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
+                entry.category = 'ptost';
+            } else if (payrollUnschdHours > 0 || verintItems.some(function(v) { return v.type === 'same-day' || v.type === 'tardy'; })) {
+                entry.category = 'same-day';
+            } else if (payrollOtherLeave.length > 0 || verintItems.some(function(v) { return v.type === 'planned'; })) {
+                entry.category = 'planned';
+            } else if (payrollPlannedPto.length > 0) {
+                entry.category = 'planned';
+            } else {
+                entry.category = 'other';
+            }
+
+            result.timeline.push(entry);
         });
 
         result.ptostHoursUsed = round2(runningPtost);
         result.ptostBufferRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - runningPtost));
-
-        // Gather PTO + UNSCHD task code entries (unscheduled PTO not covered by PTOST)
-        var unschdPto = payrollEntries.filter(function(e) {
-            return e.trc === 'PTO' && e.taskCode === 'UNSCHD';
-        });
-        unschdPto.forEach(function(entry) {
-            result.unschdPtoEvents.push({
-                activity: 'PTO (UNSCHD)',
-                dateStr: entry.dateStr,
-                hours: entry.quantity,
-                from: entry.date
-            });
-            result.reliabilityHours = round2(result.reliabilityHours + entry.quantity);
-            result.reliabilityEvents.push({
-                activity: 'PTO (UNSCHD)',
-                dateStr: entry.dateStr,
-                hours: entry.quantity,
-                from: entry.date
-            });
-        });
-
-        // --- Fraud detection: Verint says Same Day absent, but payroll shows REG with clock times ---
-        if (verintData && verintData.events) {
-            var sameDayVerintDates = {};
-            verintData.events.forEach(function(ev) {
-                if (ev.activity.indexOf('Same Day') === 0 && ev.from) {
-                    var key = ev.from.toISOString().slice(0, 10);
-                    sameDayVerintDates[key] = ev;
-                }
-            });
-
-            payrollEntries.forEach(function(entry) {
-                if (entry.trc !== 'REG' || !entry.clockIn || !entry.date) return;
-                var key = entry.date.toISOString().slice(0, 10);
-                if (sameDayVerintDates[key]) {
-                    result.discrepancies.push({
-                        date: entry.dateStr,
-                        verintActivity: sameDayVerintDates[key].activity,
-                        verintHours: sameDayVerintDates[key].hours,
-                        payrollTrc: 'REG',
-                        payrollHours: entry.quantity,
-                        payrollClockIn: entry.clockIn,
-                        payrollClockOut: entry.clockOut
-                    });
-                }
-            });
-        }
 
         return result;
     }
@@ -494,6 +536,15 @@
         bindRowClicks(container);
     }
 
+    // Category display config
+    var CAT_STYLES = {
+        'ptost':    { label: 'PTOST',       bg: '#e8f5e9', color: '#2e7d32', icon: '🛡' },
+        'same-day': { label: 'Same Day',    bg: '#ffebee', color: '#b71c1c', icon: '⚠' },
+        'tardy':    { label: 'Tardy',       bg: '#fff3e0', color: '#e65100', icon: '⏰' },
+        'planned':  { label: 'Planned',     bg: '#e3f2fd', color: '#0d47a1', icon: '📅' },
+        'other':    { label: 'Other',       bg: '#f5f5f5', color: '#666',    icon: '—' }
+    };
+
     function renderEmployeeDetail(container, employeeName) {
         var store = loadStore();
         var emp = store.employees?.[employeeName];
@@ -501,6 +552,7 @@
         var r = emp.reconciled || {};
         var tier = getTierInfo(r.reliabilityHours || 0);
         var firstName = getFirstName(employeeName);
+        var timeline = r.timeline || [];
 
         var html = '';
         html += '<div style="padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -519,7 +571,7 @@
         html += '<div style="padding:10px; background:' + tier.bg + '; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:' + tier.color + ';">' + tier.label + '</div><div style="font-size:0.75em; color:#666;">Tier</div></div>';
         html += '</div>';
 
-        // PTOST buffer usage bar
+        // PTOST buffer bar
         var pctUsed = Math.min(100, ((r.ptostHoursUsed || 0) / PTOST_BUFFER_LIMIT) * 100);
         var barColor = pctUsed >= 100 ? '#b71c1c' : pctUsed >= 75 ? '#e65100' : '#2e7d32';
         html += '<div style="margin-bottom:16px;">';
@@ -528,69 +580,35 @@
         html += '<div style="height:100%; width:' + pctUsed + '%; background:' + barColor + '; border-radius:6px; transition:width 0.3s;"></div>';
         html += '</div></div>';
 
-        // PTOST Events table
-        if (r.ptostEvents && r.ptostEvents.length > 0) {
-            html += '<details open style="margin-bottom:12px;">';
-            html += '<summary style="cursor:pointer; font-weight:600; color:#00695c; font-size:0.9em;">PTOST Events (' + r.ptostEvents.length + ')</summary>';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em; margin-top:6px;">';
-            html += '<tr style="background:#e0f2f1;"><th style="padding:4px 8px; text-align:left;">Date</th><th style="padding:4px 8px; text-align:center;">Hours</th><th style="padding:4px 8px; text-align:center;">Running Total</th><th style="padding:4px 8px; text-align:center;">Status</th></tr>';
-            r.ptostEvents.forEach(function(ev) {
-                var isProtected = (ev.runningTotal || 0) <= PTOST_BUFFER_LIMIT;
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
-                html += '<td style="padding:4px 8px;">' + escapeHtml(ev.dateStr) + '</td>';
-                html += '<td style="padding:4px 8px; text-align:center;">' + ev.hours + '</td>';
-                html += '<td style="padding:4px 8px; text-align:center;">' + (ev.runningTotal || '—') + '</td>';
-                html += '<td style="padding:4px 8px; text-align:center;">' + (isProtected ? '<span style="color:#2e7d32;">Protected</span>' : '<span style="color:#b71c1c;">Over buffer</span>') + '</td>';
-                html += '</tr>';
-            });
-            html += '</table></details>';
+        // Filter tabs
+        html += '<div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">';
+        html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
+        var catCounts = { ptost: 0, 'same-day': 0, planned: 0 };
+        timeline.forEach(function(t) { if (catCounts[t.category] !== undefined) catCounts[t.category]++; });
+        html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:#fff; color:#b71c1c; border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:#fff; color:#2e7d32; border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:#fff; color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
+        if ((r.discrepancies || []).length > 0) {
+            html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy" style="padding:4px 12px; border:1px solid #e65100; background:#fff; color:#e65100; border-radius:4px; cursor:pointer; font-size:0.82em;">Discrepancies (' + r.discrepancies.length + ')</button>';
         }
+        html += '</div>';
 
-        // Reliability Events
-        if (r.reliabilityEvents && r.reliabilityEvents.length > 0) {
-            html += '<details open style="margin-bottom:12px;">';
-            html += '<summary style="cursor:pointer; font-weight:600; color:#b71c1c; font-size:0.9em;">Reliability Events (' + r.reliabilityEvents.length + ')</summary>';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em; margin-top:6px;">';
-            html += '<tr style="background:#ffebee;"><th style="padding:4px 8px; text-align:left;">Date</th><th style="padding:4px 8px; text-align:left;">Type</th><th style="padding:4px 8px; text-align:center;">Hours</th></tr>';
-            r.reliabilityEvents.forEach(function(ev) {
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
-                html += '<td style="padding:4px 8px;">' + escapeHtml(ev.dateStr) + '</td>';
-                html += '<td style="padding:4px 8px;">' + escapeHtml(ev.activity) + '</td>';
-                html += '<td style="padding:4px 8px; text-align:center; color:#b71c1c; font-weight:600;">' + ev.hours + '</td>';
-                html += '</tr>';
-            });
-            html += '</table></details>';
-        }
-
-        // Discrepancies (fraud flags)
-        if (r.discrepancies && r.discrepancies.length > 0) {
-            html += '<details open style="margin-bottom:12px;">';
-            html += '<summary style="cursor:pointer; font-weight:600; color:#b71c1c; font-size:0.9em;">⚠ Discrepancies (' + r.discrepancies.length + ')</summary>';
-            html += '<div style="padding:8px; background:#fff3e0; border-radius:4px; font-size:0.8em; color:#e65100; margin:6px 0;">Verint shows absence but payroll shows hours worked — may need correction.</div>';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em; margin-top:6px;">';
-            html += '<tr style="background:#ffebee;"><th style="padding:4px 8px; text-align:left;">Date</th><th style="padding:4px 8px; text-align:left;">Verint</th><th style="padding:4px 8px; text-align:left;">Payroll</th></tr>';
-            r.discrepancies.forEach(function(d) {
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
-                html += '<td style="padding:4px 8px;">' + escapeHtml(d.date) + '</td>';
-                html += '<td style="padding:4px 8px;">' + escapeHtml(d.verintActivity) + ' (' + d.verintHours + 'h)</td>';
-                html += '<td style="padding:4px 8px;">REG ' + d.payrollHours + 'h (in: ' + escapeHtml(d.payrollClockIn) + ')</td>';
-                html += '</tr>';
-            });
-            html += '</table></details>';
-        }
+        // Day-by-day timeline table
+        html += '<div id="relTimelineTable">';
+        html += buildTimelineTable(timeline, r.discrepancies || [], 'all');
+        html += '</div>';
 
         // Action buttons
-        html += '<div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">';
+        html += '<div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">';
 
-        // Email associate about PTOST designation
-        var undesignated = (r.reliabilityEvents || []).filter(function(ev) {
-            return ev.activity.indexOf('PTOST') < 0;
+        // Unscheduled events that could be designated as PTOST
+        var undesignated = timeline.filter(function(t) {
+            return t.category === 'same-day' && (r.ptostBufferRemaining || 0) > 0;
         });
-        if (undesignated.length > 0 && (r.ptostBufferRemaining || 0) > 0) {
+        if (undesignated.length > 0) {
             html += '<button type="button" id="relEmailAssociate" style="padding:8px 16px; background:#1565c0; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Ask ' + escapeHtml(firstName) + ' about PTOST</button>';
         }
 
-        // Email WFM about discrepancies
         if ((r.discrepancies || []).length > 0) {
             html += '<button type="button" id="relEmailWfm" style="padding:8px 16px; background:#e65100; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Draft WFM Correction</button>';
         }
@@ -605,9 +623,35 @@
             container.style.display = 'none';
         });
 
+        // Bind filter tabs
+        container.querySelectorAll('.rel-filter-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var filter = this.getAttribute('data-filter');
+                // Update active button style
+                container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
+                    b.style.background = '#fff';
+                    b.style.fontWeight = 'normal';
+                });
+                this.style.background = this.style.borderColor;
+                this.style.color = '#fff';
+                this.style.fontWeight = '600';
+                // Re-render table
+                var tableDiv = document.getElementById('relTimelineTable');
+                if (tableDiv) tableDiv.innerHTML = buildTimelineTable(timeline, r.discrepancies || [], filter);
+            });
+        });
+
         // Bind email buttons
         document.getElementById('relEmailAssociate')?.addEventListener('click', function() {
-            var msg = buildPtostDesignationEmail(employeeName, undesignated);
+            var events = undesignated.map(function(t) {
+                var hrs = 0;
+                // Get hours from Verint same-day or payroll UNSCHD
+                t.verint.forEach(function(v) { if (v.type === 'same-day' || v.type === 'tardy') hrs += v.hours; });
+                t.payroll.forEach(function(p) { if (p.trc === 'PTO' && p.taskCode === 'UNSCHD') hrs += p.quantity; });
+                var activities = t.verint.map(function(v) { return v.activity; }).join(', ') || 'Unscheduled PTO';
+                return { dateStr: t.dateStr, hours: hrs || 8, activity: activities };
+            });
+            var msg = buildPtostDesignationEmail(employeeName, events);
             copyAndNotify(msg, 'PTOST email copied to clipboard');
         });
 
@@ -615,6 +659,92 @@
             var msg = buildWfmCorrectionEmail(employeeName, r.discrepancies);
             copyAndNotify(msg, 'WFM correction email copied to clipboard');
         });
+    }
+
+    function buildTimelineTable(timeline, discrepancies, filter) {
+        var filtered = timeline;
+        if (filter === 'discrepancy') {
+            var discDates = {};
+            discrepancies.forEach(function(d) { discDates[d.date] = true; });
+            filtered = timeline.filter(function(t) { return discDates[t.dateStr]; });
+        } else if (filter !== 'all') {
+            filtered = timeline.filter(function(t) { return t.category === filter; });
+        }
+
+        if (filtered.length === 0) {
+            return '<div style="padding:16px; text-align:center; color:#999; font-size:0.9em;">No events for this filter.</div>';
+        }
+
+        var html = '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
+        html += '<thead><tr style="background:#f5f5f5;">';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Date</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Type</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Verint</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Payroll</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">Hours</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">PTOST Running</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Flags</th>';
+        html += '</tr></thead><tbody>';
+
+        filtered.forEach(function(t) {
+            var cat = CAT_STYLES[t.category] || CAT_STYLES.other;
+            var hasFlag = t.flags && t.flags.length > 0;
+            var rowBg = hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }) ? '#fff8e1' : '';
+
+            // Verint column
+            var verintText = t.verint.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:#999;">—</span>';
+
+            // Payroll column
+            var payrollText = t.payroll.filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
+                var label = p.trc;
+                if (p.taskCode) label += ' / ' + p.taskCode;
+                return label + ' (' + p.quantity + 'h)';
+            }).join('<br>');
+            // Also show if they clocked in on a same-day
+            var regEntries = t.payroll.filter(function(p) { return p.trc === 'REG' && p.clockIn; });
+            if (regEntries.length > 0 && t.category !== 'planned') {
+                var regLabel = regEntries.map(function(p) { return 'REG ' + p.quantity + 'h (in: ' + p.clockIn + ')'; }).join('<br>');
+                payrollText = payrollText ? payrollText + '<br>' + regLabel : regLabel;
+            }
+            if (!payrollText) payrollText = '<span style="color:#999;">—</span>';
+
+            // Total hours for the day (non-REG)
+            var totalHours = 0;
+            t.verint.forEach(function(v) { totalHours += v.hours; });
+            var payrollNonReg = t.payroll.filter(function(p) { return p.trc !== 'REG'; });
+            if (payrollNonReg.length > 0) {
+                totalHours = payrollNonReg.reduce(function(s, p) { return s + p.quantity; }, 0);
+            }
+
+            html += '<tr style="border-bottom:1px solid #eee;' + (rowBg ? ' background:' + rowBg + ';' : '') + '">';
+            html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(t.dateStr) + '</td>';
+            html += '<td style="padding:6px 8px;"><span style="display:inline-block; padding:1px 6px; border-radius:3px; background:' + cat.bg + '; color:' + cat.color + '; font-weight:600; font-size:0.9em;">' + cat.icon + ' ' + cat.label + '</span></td>';
+            html += '<td style="padding:6px 8px;">' + verintText + '</td>';
+            html += '<td style="padding:6px 8px;">' + payrollText + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center; font-weight:600;">' + round2(totalHours) + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">';
+            if (t.ptostRunning !== undefined) {
+                var ptColor = t.ptostProtected ? '#2e7d32' : '#b71c1c';
+                html += '<span style="color:' + ptColor + '; font-weight:600;">' + t.ptostRunning + 'h</span>';
+            } else {
+                html += '<span style="color:#ccc;">—</span>';
+            }
+            html += '</td>';
+            html += '<td style="padding:6px 8px; font-size:0.9em;">';
+            if (t.flags && t.flags.length > 0) {
+                html += t.flags.map(function(f) {
+                    var fColor = f.indexOf('DISCREPANCY') >= 0 ? '#e65100' : f.indexOf('reliability') >= 0 ? '#b71c1c' : '#666';
+                    return '<div style="color:' + fColor + ';">' + escapeHtml(f) + '</div>';
+                }).join('');
+            } else {
+                html += '<span style="color:#ccc;">—</span>';
+            }
+            html += '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        return html;
     }
 
     function copyAndNotify(text, toastMsg) {
