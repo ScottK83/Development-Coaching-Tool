@@ -1331,6 +1331,21 @@
         html += '</div>';
 
         var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
+        var reconStatus = 'Partial coverage';
+        var reconStatusColor = '#e65100';
+        if (unexplainedDelta == null) {
+            reconStatus = 'Partial coverage';
+            reconStatusColor = '#e65100';
+        } else if (Math.abs(unexplainedDelta) <= 0.25) {
+            reconStatus = 'Matched';
+            reconStatusColor = '#2e7d32';
+        } else if (Math.abs(unexplainedDelta) <= 2) {
+            reconStatus = 'Partial coverage';
+            reconStatusColor = '#e65100';
+        } else {
+            reconStatus = 'Needs correction';
+            reconStatusColor = '#b71c1c';
+        }
         html += '<div style="margin-bottom:14px; padding:10px; background:#f8f9ff; border:1px solid #d9ddff; border-radius:6px; font-size:0.84em;">';
         html += '<div style="font-weight:700; color:#1a237e; margin-bottom:6px;">Reliability Reasons Reconciliation</div>';
         html += '<div><strong>YTD Reliability Metric:</strong> ' + (ytdReliability == null ? 'Not found in YTD data' : (ytdReliability + 'h')) + '</div>';
@@ -1338,6 +1353,7 @@
         html += '<div><strong>  • Same Day (No PTOST):</strong> ' + (reasonBuckets.sameDayNoPtostHours || 0) + 'h</div>';
         html += '<div><strong>  • PTOST Over 40h:</strong> ' + (reasonBuckets.ptostOverageHours || 0) + 'h</div>';
         html += '<div><strong>Unexplained Delta:</strong> <span style="color:' + deltaColor + '; font-weight:700;">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</span></div>';
+        html += '<div><strong>Status:</strong> <span style="color:' + reconStatusColor + '; font-weight:700;">' + reconStatus + '</span></div>';
         html += '</div>';
 
         html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
