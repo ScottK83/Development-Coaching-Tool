@@ -140,6 +140,37 @@
         return null;
     }
 
+    function inferEmployeeNameFromFileName(fileName, candidates) {
+        var base = String(fileName || '')
+            .replace(/\.[^.]+$/, '')
+            .replace(/[_\-\.]+/g, ' ')
+            .trim();
+        if (!base) return '';
+
+        var fileKey = buildEmployeeLookupKey(base);
+        if (!fileKey) return '';
+
+        var list = Array.isArray(candidates) ? candidates : [];
+        var matches = list.filter(function(name) {
+            var k = buildEmployeeLookupKey(normalizeEmployeeName(name || ''));
+            return k && (fileKey.indexOf(k) >= 0 || k.indexOf(fileKey) >= 0);
+        });
+
+        if (matches.length === 1) return matches[0];
+
+        // Secondary pass using first/last token checks.
+        var lowerBase = base.toLowerCase();
+        var tokenMatches = list.filter(function(name) {
+            var norm = normalizeEmployeeName(name || '');
+            if (!norm) return false;
+            var parts = norm.split(',').map(function(p) { return p.trim().toLowerCase(); });
+            var last = parts[0] || '';
+            var first = (parts[1] || '').split(/\s+/)[0] || '';
+            return (last && lowerBase.indexOf(last) >= 0) && (first && lowerBase.indexOf(first) >= 0);
+        });
+        return tokenMatches.length === 1 ? tokenMatches[0] : '';
+    }
+
     function consolidateDuplicateEmployees(store) {
         var employees = store?.employees || {};
         var mergedByKey = {};
@@ -1238,11 +1269,10 @@
         var verint = await parseVerintExcel(file);
         if (!verint.employeeName) {
             var selectedMembers = window.DevCoachModules?.teamFilter?.getTeamSelectionContext?.()?.selectedMembers || [];
-            if (selectedMembers.length === 1) {
-                verint.employeeName = selectedMembers[0];
-            } else {
-                throw new Error('Could not find employee name in Verint file. Ensure the export includes Employee/Employee Name header.');
-            }
+            var inferred = inferEmployeeNameFromFileName(file?.name || '', selectedMembers);
+            if (inferred) verint.employeeName = inferred;
+            else if (selectedMembers.length === 1) verint.employeeName = selectedMembers[0];
+            else throw new Error('Could not find employee name in Verint file. Include Employee/Employee Name in export, or include employee name in filename.');
         }
 
         var store = loadStore();
