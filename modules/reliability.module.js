@@ -892,7 +892,7 @@
             // Keep Full PTOST matches clean (e.g., Same Day - Full PTOST + Payroll PTOST).
             if (mismatchSameDayVsPayrollPtost) {
                 var mismatchHours = round2(verintSameDayNoPtost.reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
-                entry.flags.push('REVIEW: Verint Same Day non-PTOST but Payroll has PTOST (' + mismatchHours + 'h)');
+                entry.flags.push('Review coding: Verint Same Day, Payroll PTOST (' + mismatchHours + 'h)');
             }
 
             // --- Track PTOST running total ---
@@ -1243,13 +1243,12 @@
         var needsReview = score > 0 && reviewCount > 0;
 
         var reasonParts = [];
-        if (discrepancyCount > 0) reasonParts.push(discrepancyCount + ' disc');
-        if (pcIssueCount > 0) reasonParts.push(pcIssueCount + ' pc');
-        if (wfmUpdateCount > 0) reasonParts.push(wfmUpdateCount + ' wfm');
-        if (delta != null && Math.abs(delta) > 0.25) reasonParts.push('delta ' + delta + 'h');
+        if (discrepancyCount > 0) reasonParts.push(discrepancyCount + ' discrepancy' + (discrepancyCount === 1 ? '' : 'ies'));
+        if (pcIssueCount > 0) reasonParts.push(pcIssueCount + ' PC issue' + (pcIssueCount === 1 ? '' : 's'));
+        if (wfmUpdateCount > 0) reasonParts.push(wfmUpdateCount + ' WFM update' + (wfmUpdateCount === 1 ? '' : 's'));
 
         var label = needsReview
-            ? '⚠ ' + name + ' [' + reasonParts.join(', ') + ']'
+            ? '⚠ ' + name + ' - ' + reviewCount + ' review item' + (reviewCount === 1 ? '' : 's') + (delta != null && Math.abs(delta) > 0.25 ? ' (delta ' + delta + 'h)' : '')
             : name;
 
         return {
@@ -1404,12 +1403,12 @@
 
         var needsReviewCount = timeline.filter(function(t) {
             return (t.flags || []).some(function(f) {
-                var s = String(f || '');
-                return s.indexOf('REVIEW:') >= 0 ||
-                    s.indexOf('DISCREPANCY') >= 0 ||
-                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                var s = String(f || '').toLowerCase();
+                return s.indexOf('review') >= 0 ||
+                    s.indexOf('discrepancy') >= 0 ||
+                    s.indexOf('pc issue candidate') >= 0 ||
                     s.indexOf('against reliability') >= 0 ||
-                    s.indexOf('PTOST over 40h') >= 0;
+                    s.indexOf('ptost over 40h') >= 0;
             });
         }).length;
 
@@ -1688,12 +1687,12 @@
         function isActionableRow(t) {
             var flags = t.flags || [];
             var hasActionFlag = flags.some(function(f) {
-                var s = String(f || '');
-                return s.indexOf('REVIEW:') >= 0 ||
-                    s.indexOf('DISCREPANCY') >= 0 ||
-                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                var s = String(f || '').toLowerCase();
+                return s.indexOf('review') >= 0 ||
+                    s.indexOf('discrepancy') >= 0 ||
+                    s.indexOf('pc issue candidate') >= 0 ||
                     s.indexOf('against reliability') >= 0 ||
-                    s.indexOf('PTOST over 40h') >= 0;
+                    s.indexOf('ptost over 40h') >= 0;
             });
             return hasActionFlag || Number(t.sameDayExposureHours || 0) > 0 || t.unscheduledRunning !== undefined;
         }
@@ -1727,12 +1726,12 @@
         } else if (filter === 'needs-review') {
             filtered = timeline.filter(function(t) {
                 return (t.flags || []).some(function(f) {
-                    var s = String(f || '');
-                    return s.indexOf('REVIEW:') >= 0 ||
-                        s.indexOf('DISCREPANCY') >= 0 ||
-                        s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                    var s = String(f || '').toLowerCase();
+                    return s.indexOf('review') >= 0 ||
+                        s.indexOf('discrepancy') >= 0 ||
+                        s.indexOf('pc issue candidate') >= 0 ||
                         s.indexOf('against reliability') >= 0 ||
-                        s.indexOf('PTOST over 40h') >= 0;
+                        s.indexOf('ptost over 40h') >= 0;
                 });
             });
         } else if (filter === 'pc-issue') {
@@ -1766,8 +1765,8 @@
             var isDiscrepancy = Boolean(discDates[t.dateStr]) || (hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }));
             var isPcIssue = hasFlag && t.flags.some(function(f) { return f.indexOf('PC ISSUE CANDIDATE') >= 0; });
             var isReliabilityReview = hasFlag && t.flags.some(function(f) {
-                var s = String(f || '');
-                return s.indexOf('REVIEW:') >= 0 || s.indexOf('against reliability') >= 0 || s.indexOf('PTOST over 40h') >= 0;
+                var s = String(f || '').toLowerCase();
+                return s.indexOf('review') >= 0 || s.indexOf('against reliability') >= 0 || s.indexOf('ptost over 40h') >= 0;
             });
             var rowBg = isDiscrepancy
                 ? '#ffe9e9'
