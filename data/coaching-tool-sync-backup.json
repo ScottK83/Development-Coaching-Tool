@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-06T22:07:30.569Z",
-  "reason": "manual footer sync",
+  "generatedAt": "2026-04-06T22:09:01.812Z",
+  "reason": "pto tracker updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -44901,7 +44901,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 293
+      "byteLength": 264
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
