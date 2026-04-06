@@ -276,6 +276,106 @@ function importPtoBalanceExcel(file) {
     reader.readAsArrayBuffer(file);
 }
 
+function importPtoBalancePdf(file) {
+    if (!file) return;
+    var fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.pdf')) {
+        showToast('Please upload a PDF file (.pdf)', 4000);
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var pdfData = new Uint8Array(e.target.result);
+            pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
+                var textContent = '';
+                var pagePromises = [];
+                for (var p = 1; p <= pdf.numPages; p++) {
+                    pagePromises.push(pdf.getPage(p).then(function(page) {
+                        return page.getTextContent().then(function(content) {
+                            return content.items.map(function(item) { return item.str; }).join(' ');
+                        });
+                    }));
+                }
+                Promise.all(pagePromises).then(function(pages) {
+                    textContent = pages.join('\n');
+                    processPtoBalancePdf(textContent);
+                });
+            }).catch(function(err) {
+                console.error('PDF parse error:', err);
+                showToast('Failed to read PDF. Check format and try again.', 5000);
+            });
+        } catch (err) {
+            console.error('PTO PDF import error:', err);
+            showToast('Failed to read PTO PDF file.', 5000);
+        }
+    };
+    reader.onerror = function() { showToast('Failed to read file', 4000); };
+    reader.readAsArrayBuffer(file);
+}
+
+function processPtoBalancePdf(text) {
+    // Extract balance data: Carryover, Earned, Used for each employee
+    var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+    
+    var store = loadPtoStore();
+    var nameLookup = {};
+    Object.keys(store.associates || {}).forEach(function(n) { nameLookup[n.toLowerCase()] = n; });
+    var weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    var ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    [weeklyData, ytdData].forEach(function(source) {
+        Object.values(source).forEach(function(period) {
+            if (!Array.isArray(period?.employees)) return;
+            period.employees.forEach(function(emp) {
+                var n = String(emp?.name || '').trim();
+                if (n && !nameLookup[n.toLowerCase()]) nameLookup[n.toLowerCase()] = n;
+            });
+        });
+    });
+
+    var updated = 0;
+    var matched = false;
+    
+    // Look for patterns like "John Doe" followed by balance numbers
+    for (var i = 0; i < lines.length - 2; i++) {
+        var line = lines[i];
+        var nextLine = lines[i + 1] || '';
+        
+        // Pattern: Name followed by carryover, earned, used values
+        var numPattern = /-?\d+(\.\d+)?/g;
+        var nextNumbers = nextLine.match(numPattern) || [];
+        
+        // If we have a potential name and numbers in the next line
+        if (nextNumbers.length >= 2 && isNaN(line)) {
+            // Extract potential carryover, earned, used
+            var carryover = parseHoursValue(nextNumbers[0]);
+            var earned = nextNumbers.length > 1 ? parseHoursValue(nextNumbers[1]) : null;
+            var used = nextNumbers.length > 2 ? parseHoursValue(nextNumbers[2]) : null;
+            
+            if (carryover != null || earned != null || used != null) {
+                var rawName = cleanUnicodeControl(String(line).trim());
+                var resolvedName = resolveEmployeeName(rawName, nameLookup);
+                var assoc = getAssociateData(store, resolvedName);
+                
+                if (carryover != null) assoc.carryoverHours = carryover;
+                if (earned != null) assoc.annualAllotment = earned;
+                // used is tracked in entries, not directly as balance state
+                matched = true;
+                updated++;
+            }
+        }
+    }
+    
+    if (matched && updated > 0) {
+        savePtoStore(store);
+        populateAssociateSelect();
+        showToast('Imported ' + updated + ' employee balance(s) from PDF', 4000);
+    } else {
+        showToast('No recognizable PTO balance data found in PDF. Expected: Name, Carryover, Earned, Used.', 5000);
+    }
+}
+
 function processPtoBalanceRows(rows) {
     var headerIdx = -1;
     var colMap = { name: -1, carryover: -1, allotment: -1, remaining: -1, used: -1 };
@@ -1084,6 +1184,21 @@ function initializePtoTracker() {
             importPtoBalanceExcel(file);
         });
         balanceBtn.dataset.bound = 'true';
+    }
+
+    var pdfBtn = document.getElementById('ptoPdfBtn');
+    var pdfInput = document.getElementById('ptoPdfInput');
+    if (pdfBtn && pdfInput && !pdfBtn.dataset.bound) {
+        pdfBtn.addEventListener('click', function() {
+            pdfInput.value = '';
+            pdfInput.click();
+        });
+        pdfInput.addEventListener('change', function(e) {
+            var file = e.target.files?.[0];
+            if (!file) return;
+            importPtoBalancePdf(file);
+        });
+        pdfBtn.dataset.bound = 'true';
     }
 
     var clearBtn = document.getElementById('ptoClearAllBtn');
