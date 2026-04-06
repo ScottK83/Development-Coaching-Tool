@@ -52,6 +52,28 @@
             .join(' ');
     }
 
+    function cleanEmployeeLabel(raw) {
+        return stripUnicode(String(raw || ''))
+            .replace(/^employee\s*[:\-]?\s*/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function isLikelyEmployeeName(name) {
+        var s = cleanEmployeeLabel(name);
+        if (!s) return false;
+        var lower = s.toLowerCase();
+        var blocked = [
+            'same day', 'time off', 'activities', 'activity', 'pre planned', 'covid',
+            'duty', 'jury', 'bereavement', 'fmla', 'holiday', 'no call', 'tardy',
+            'total time off', 'time off requests', 'ptost', 'absence'
+        ];
+        for (var i = 0; i < blocked.length; i++) {
+            if (lower.indexOf(blocked[i]) >= 0) return false;
+        }
+        return /^[A-Za-z'\- ]+,\s*[A-Za-z'\- ]+$/.test(s) || /^[A-Za-z'\- ]+\s+[A-Za-z'\- ]+$/.test(s);
+    }
+
     function buildEmployeeLookupKey(name) {
         var base = stripUnicode(String(name || ''))
             .normalize('NFKD')
@@ -123,10 +145,12 @@
         var mergedByKey = {};
 
         Object.keys(employees).forEach(function(name) {
+            if (!isLikelyEmployeeName(name)) return;
             var key = buildEmployeeLookupKey(name);
             if (!key) return;
 
             var cleanName = normalizeEmployeeName(name) || String(name || '').trim();
+            if (!isLikelyEmployeeName(cleanName)) return;
 
             var incoming = employees[name] || {};
             var targetKey = key;
@@ -175,7 +199,7 @@
     function normalizeEmployeeName(raw) {
         // Payroll: "ROBERT BERRELLEZA" -> "Berrelleza, Robert"
         // Verint:  "Berrelleza, Robert" (already correct)
-        var s = stripUnicode(raw)
+        var s = cleanEmployeeLabel(raw)
             .replace(/[^A-Za-z,\- '\s]/g, ' ')
             .replace(/\s+/g, ' ')
             .replace(/\s+,/g, ',')
@@ -270,7 +294,7 @@
 
         // Fallback: derive employee text from filename if sheet label is missing.
         employeeName = extractNameFromFileName(fileName);
-        return employeeName;
+        return isLikelyEmployeeName(employeeName) ? employeeName : '';
     }
 
     function findColumnIndexFromHeaderRow(row, candidates) {
@@ -408,6 +432,7 @@
             if (!rawName) continue;
 
             var name = normalizeEmployeeName(rawName);
+            if (!isLikelyEmployeeName(name)) continue;
             var emplid = stripUnicode(String(row[0] || ''));
             var dateStr = String(row[6] || '');
             var clockIn = String(row[8] || '').trim();
