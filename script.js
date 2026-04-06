@@ -1468,7 +1468,7 @@ function bindUploadAndPasteHandlers() {
         var errors = 0;
         for (var i = 0; i < files.length; i++) {
             try {
-                await window.DevCoachModules?.attendanceTracker?.handleVerintUploadFromUploadPage?.(files[i]);
+                await window.DevCoachModules?.reliability?.handleVerintUpload?.(files[i]);
                 loaded++;
             } catch (err) {
                 console.error('Verint upload error for file ' + files[i].name + ':', err);
@@ -1477,7 +1477,7 @@ function bindUploadAndPasteHandlers() {
         }
         if (typeof showToast === 'function') {
             if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
-            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Reliability.', 4000);
         }
         this.value = '';
     });
@@ -1489,12 +1489,10 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('uploadPayrollFileInput')?.addEventListener('change', async function() {
         var file = this.files?.[0];
         if (!file) return;
-        if (typeof importPayrollExcel === 'function') {
-            importPayrollExcel(file);
-        } else if (typeof window.importPayrollExcel === 'function') {
-            window.importPayrollExcel(file);
+        if (window.DevCoachModules?.reliability?.handlePayrollUpload) {
+            window.DevCoachModules.reliability.handlePayrollUpload(file);
         } else {
-            if (typeof showToast === 'function') showToast('PTO module not loaded. Upload from My Team > Attendance.', 5000);
+            if (typeof showToast === 'function') showToast('Reliability module not loaded.', 5000);
         }
         this.value = '';
     });
@@ -1617,15 +1615,6 @@ function embedPtoTracker() {
     if (typeof initializePtoTracker === 'function') initializePtoTracker();
 }
 
-function embedPtoInMyTeam() {
-    const target = document.getElementById('embeddedPtoInMyTeam');
-    const source = document.getElementById('ptoSection');
-    if (target && source && !target.hasChildNodes()) {
-        while (source.firstChild) target.appendChild(source.firstChild);
-    }
-    if (typeof initializePtoTracker === 'function') initializePtoTracker();
-}
-
 function bindNavigationHandlers() {
     // --- Top-level nav ---
     document.getElementById('dashboardBtn')?.addEventListener('click', () => {
@@ -1656,12 +1645,11 @@ function bindNavigationHandlers() {
         showMyTeamSubSection('subSectionCallListening', 'subNavCallListening');
         initializeCallListeningSection();
     });
-    document.getElementById('subNavAttendance')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionAttendance', 'subNavAttendance');
-        if (window.DevCoachModules?.attendanceTracker?.initializeAttendanceTracker) {
-            window.DevCoachModules.attendanceTracker.initializeAttendanceTracker();
+    document.getElementById('subNavReliability')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionReliability', 'subNavReliability');
+        if (window.DevCoachModules?.reliability?.initialize) {
+            window.DevCoachModules.reliability.initialize();
         }
-        embedPtoInMyTeam();
     });
 
     // --- Trends & Analysis ---
@@ -1818,7 +1806,7 @@ function bindQuickActionHandlers() {
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);
     document.getElementById('copyDebugBtn')?.addEventListener('click', copyDebugInfo);
     document.getElementById('clearDebugBtn')?.addEventListener('click', () => {
-        debugState.entries = [];
+        window.DevCoachModules?.debug?.clearDebugEntries?.({ removeStorage: true });
         renderDebugPanel();
         showToast('✅ Debug errors cleared', 3000);
     });

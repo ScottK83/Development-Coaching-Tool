@@ -400,22 +400,22 @@
     }
 
     // ============================================
-    // ATTENDANCE TRACKER
+    // RELIABILITY TRACKER
     // ============================================
 
-    function loadAttendanceTracker() {
+    function loadReliabilityTracker() {
         try {
-            const saved = localStorage.getItem(STORAGE_PREFIX + 'attendanceTracker');
-            return saved ? JSON.parse(saved) : { associates: {} };
+            const saved = localStorage.getItem(STORAGE_PREFIX + 'reliabilityTracker');
+            return saved ? JSON.parse(saved) : { employees: {} };
         } catch (error) {
-            console.error('Error loading attendance tracker:', error);
-            return { associates: {} };
+            console.error('Error loading reliability tracker:', error);
+            return { employees: {} };
         }
     }
 
-    function saveAttendanceTracker(data) {
-        const ok = saveWithSizeCheck('attendanceTracker', data);
-        if (!ok) console.error('Error saving attendance tracker: save failed');
+    function saveReliabilityTracker(data) {
+        const ok = saveWithSizeCheck('reliabilityTracker', data);
+        if (!ok) console.error('Error saving reliability tracker: save failed');
         return ok;
     }
 
@@ -487,9 +487,9 @@
         // PTO
         loadPtoTracker,
         savePtoTracker,
-        // Attendance tracker
-        loadAttendanceTracker,
-        saveAttendanceTracker,
+        // Reliability tracker
+        loadReliabilityTracker,
+        saveReliabilityTracker,
         // Constants
         STORAGE_PREFIX,
         SENTIMENT_PHRASE_DB_STORAGE_KEY,

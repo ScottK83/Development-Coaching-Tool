@@ -182,7 +182,7 @@
         STORAGE_PREFIX + 'associateSentimentSnapshots',
         STORAGE_PREFIX + 'executiveSummaryNotes',
         STORAGE_PREFIX + 'ptoTracker',
-        STORAGE_PREFIX + 'attendanceTracker'
+        STORAGE_PREFIX + 'reliabilityTracker'
     ]);
 
     function shouldSyncForStorageKey(key) {
@@ -863,7 +863,7 @@
         const ptoTracker = storage?.loadPtoTracker?.() || {};
         const localDataSummary = summarizeLocalBackupFreshness();
         const followUpHistory = storage?.loadFollowUpHistory?.() || { entries: [] };
-        const attendanceData = storage?.loadAttendanceTracker?.() || {};
+        const reliabilityData = storage?.loadReliabilityTracker?.() || {};
 
         return {
             appVersion: window.APP_VERSION || '',
@@ -879,7 +879,7 @@
             myTeamMembers: storage?.loadTeamMembers?.() || {},
             callCenterAverages: storage?.loadCallCenterAverages?.() || {},
             ptoTracker: ptoTracker && typeof ptoTracker === 'object' ? ptoTracker : {},
-            attendanceTracker: attendanceData,
+            reliabilityTracker: reliabilityData,
             followUpHistory: followUpHistory,
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
             yearEndAnnualGoalsStore: window.loadYearEndAnnualGoalsStore?.() || {},
@@ -1147,7 +1147,7 @@
             myTeamMembers: coerceObject(payload?.myTeamMembers),
             callCenterAverages: coerceObject(payload?.callCenterAverages),
             ptoTracker: coerceObject(payload?.ptoTracker),
-            attendanceTracker: coerceObject(payload?.attendanceTracker),
+            reliabilityTracker: coerceObject(payload?.reliabilityTracker),
             yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames)

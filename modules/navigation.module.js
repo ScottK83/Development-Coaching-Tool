@@ -56,15 +56,15 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionAttendance', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionFutures'];
-    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavAttendance'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionMorningPulse: 'subNavMorningPulse',
         subSectionMondayPost: 'subNavMondayPost',
         subSectionCoachingEmail: 'subNavCoachingEmail',
         subSectionTeamSnapshot: 'subNavTeamSnapshot',
         subSectionCallListening: 'subNavCallListening',
-        subSectionAttendance: 'subNavAttendance'
+        subSectionReliability: 'subNavReliability'
     };
 
     function showMyTeamSubSection(subSectionId, activeButtonId) {
@@ -184,7 +184,7 @@
         subSectionOnOffTracker:     { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
         subSectionQ1Review:         { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
         subSectionYearEnd:          { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionYearEnd' },
-        subSectionPto:              { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionAttendance' },
+        subSectionPto:              { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionReliability' },
         // Dissolved wrapper IDs → defaults
         subSectionPerformance:      { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
         subSectionTrends:           { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
@@ -220,7 +220,7 @@
 
             // Migrate old section IDs
             if (parsed.sectionId === 'coachingForm') parsed.sectionId = 'uploadSection';
-            if (parsed.sectionId === 'ptoSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionAttendance'; }
+            if (parsed.sectionId === 'ptoSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionReliability'; }
             if (parsed.sectionId === 'hotTipSection') parsed.sectionId = 'dashboardSection';
             if (parsed.sectionId === 'teamSnapshotSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionTeamSnapshot'; }
 
