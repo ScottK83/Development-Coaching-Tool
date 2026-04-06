@@ -1242,13 +1242,8 @@
         var reviewCount = discrepancyCount + pcIssueCount + wfmUpdateCount + ((delta != null && Math.abs(delta) > 0.25) ? 1 : 0);
         var needsReview = score > 0 && reviewCount > 0;
 
-        var reasonParts = [];
-        if (discrepancyCount > 0) reasonParts.push(discrepancyCount + ' discrepancy' + (discrepancyCount === 1 ? '' : 'ies'));
-        if (pcIssueCount > 0) reasonParts.push(pcIssueCount + ' PC issue' + (pcIssueCount === 1 ? '' : 's'));
-        if (wfmUpdateCount > 0) reasonParts.push(wfmUpdateCount + ' WFM update' + (wfmUpdateCount === 1 ? '' : 's'));
-
         var label = needsReview
-            ? '⚠ ' + name + ' - ' + reviewCount + ' review item' + (reviewCount === 1 ? '' : 's') + (delta != null && Math.abs(delta) > 0.25 ? ' (delta ' + delta + 'h)' : '')
+            ? '⚠ ' + name + (reviewCount > 1 ? ' (' + reviewCount + ')' : '')
             : name;
 
         return {
@@ -1324,7 +1319,7 @@
         html += '</div>';
         html += '<div style="font-size:0.78em; color:#666;">Tip: choose one checked team member to view detail.</div>';
         if (reviewCount > 0) {
-            html += '<div style="font-size:0.78em; color:#b26a00; font-weight:600;">⚠ ' + reviewCount + ' employee(s) are marked for review in this list.</div>';
+            html += '<div style="font-size:0.78em; color:#b26a00; font-weight:600;">Review queue: ' + reviewCount + ' associate' + (reviewCount === 1 ? '' : 's') + '.</div>';
         }
         html += '</div>';
 
