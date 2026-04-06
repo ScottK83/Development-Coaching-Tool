@@ -353,8 +353,8 @@
             .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
             .slice(0, 200);
 
-        console\.log\('💾 Saving sentiment snapshot:', { associateName, startDate, endDate, snapshot });
-        console\.log\('📦 All snapshots after save:', associateSentimentSnapshots);
+        debugLog('💾 Saving sentiment snapshot:', { associateName, startDate, endDate, snapshot });
+        debugLog('📦 All snapshots after save:', associateSentimentSnapshots);
 
         saveAssociateSentimentSnapshots();
         populateDeleteSentimentDropdown();
