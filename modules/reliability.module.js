@@ -1505,6 +1505,7 @@
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowBrv" checked> BRV</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowFmla" checked> FMLA</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowHoliday" checked> Holiday</label>';
+        html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-left:8px; font-weight:700; color:#8a5300;"><input type="checkbox" id="relManagerMode" ' + (needsReviewCount > 0 ? 'checked' : '') + '> Manager Mode</label>';
         html += '</div>';
 
         // Filter tabs
@@ -1600,7 +1601,8 @@
             return {
                 showBrv: container.querySelector('#relShowBrv')?.checked !== false,
                 showFmla: container.querySelector('#relShowFmla')?.checked !== false,
-                showHoliday: container.querySelector('#relShowHoliday')?.checked !== false
+                showHoliday: container.querySelector('#relShowHoliday')?.checked !== false,
+                managerMode: container.querySelector('#relManagerMode')?.checked === true
             };
         }
 
@@ -1628,6 +1630,24 @@
         container.querySelector('#relShowBrv')?.addEventListener('change', renderTimelineForCurrentView);
         container.querySelector('#relShowFmla')?.addEventListener('change', renderTimelineForCurrentView);
         container.querySelector('#relShowHoliday')?.addEventListener('change', renderTimelineForCurrentView);
+        container.querySelector('#relManagerMode')?.addEventListener('change', function() {
+            var managerOn = container.querySelector('#relManagerMode')?.checked === true;
+            if (managerOn) {
+                currentFilter = 'needs-review';
+                var reviewBtn = container.querySelector('.rel-filter-btn[data-filter="needs-review"]');
+                if (reviewBtn) {
+                    container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
+                        b.style.background = '#fff';
+                        b.style.fontWeight = 'normal';
+                        b.style.color = b.style.borderColor;
+                    });
+                    reviewBtn.style.background = reviewBtn.style.borderColor;
+                    reviewBtn.style.color = '#fff';
+                    reviewBtn.style.fontWeight = '600';
+                }
+            }
+            renderTimelineForCurrentView();
+        });
 
         // Bind email buttons
         document.getElementById('relEmailAssociate')?.addEventListener('click', function() {
@@ -1661,9 +1681,22 @@
     }
 
     function buildTimelineTable(timeline, discrepancies, filter, options) {
-        var opts = options || { showBrv: true, showFmla: true, showHoliday: true };
+        var opts = options || { showBrv: true, showFmla: true, showHoliday: true, managerMode: false };
         var discDates = {};
         (discrepancies || []).forEach(function(d) { discDates[d.date] = true; });
+
+        function isActionableRow(t) {
+            var flags = t.flags || [];
+            var hasActionFlag = flags.some(function(f) {
+                var s = String(f || '');
+                return s.indexOf('REVIEW:') >= 0 ||
+                    s.indexOf('DISCREPANCY') >= 0 ||
+                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                    s.indexOf('against reliability') >= 0 ||
+                    s.indexOf('PTOST over 40h') >= 0;
+            });
+            return hasActionFlag || Number(t.sameDayExposureHours || 0) > 0 || t.unscheduledRunning !== undefined;
+        }
 
         function showVerintItem(v) {
             var activity = String(v?.activity || '').toLowerCase();
@@ -1684,6 +1717,7 @@
         function rowHasVisibleData(t) {
             var verintVisible = (t.verint || []).some(showVerintItem);
             var payrollVisible = (t.payroll || []).some(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
+            if (opts.managerMode && !isActionableRow(t)) return false;
             return verintVisible || payrollVisible || Boolean(discDates[t.dateStr]);
         }
 
