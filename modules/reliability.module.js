@@ -811,14 +811,7 @@
         var html = '';
         html += '<div style="margin-bottom:16px;">';
         html += '<h3 style="margin:0 0 12px 0; color:#00695c;">📋 Reliability Tracker</h3>';
-
-        // Upload buttons
-        html += '<div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">';
-        html += '<button type="button" id="relUploadVerint" style="padding:8px 16px; background:#7b1fa2; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📋 Upload Verint (per employee)</button>';
-        html += '<input type="file" id="relVerintInput" accept=".xlsx,.xls" multiple style="display:none;">';
-        html += '<button type="button" id="relUploadPayroll" style="padding:8px 16px; background:#00695c; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">💰 Upload Payroll (all employees)</button>';
-        html += '<input type="file" id="relPayrollInput" accept=".xlsx,.xls" style="display:none;">';
-        html += '</div>';
+        html += '<p style="font-size:0.88em; color:#666; margin-bottom:16px;">Upload files in the Upload section.</p>';
 
         html += '<div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:10px;">';
         html += '<div>';
@@ -840,7 +833,6 @@
             html += '</div>';
             html += '</div>';
             container.innerHTML = html;
-            bindUploadButtons(container);
             return;
         }
 
@@ -901,7 +893,6 @@
         html += '</div>';
 
         container.innerHTML = html;
-        bindUploadButtons(container);
         bindRowClicks(container);
         bindReliabilityControls(container);
         bindAllEmployeesLedgerFilters(container);
@@ -1154,51 +1145,6 @@
     // ============================================
     // EVENT BINDING
     // ============================================
-
-    function bindUploadButtons(container) {
-        var verintBtn = document.getElementById('relUploadVerint');
-        var verintInput = document.getElementById('relVerintInput');
-        var payrollBtn = document.getElementById('relUploadPayroll');
-        var payrollInput = document.getElementById('relPayrollInput');
-
-        verintBtn?.addEventListener('click', function() { verintInput?.click(); });
-        verintInput?.addEventListener('change', async function() {
-            var files = Array.from(this.files || []);
-            if (!files.length) return;
-            var loaded = 0;
-            for (var i = 0; i < files.length; i++) {
-                try {
-                    await handleVerintUpload(files[i]);
-                    loaded++;
-                } catch (err) {
-                    console.error('Verint upload error:', err);
-                    if (typeof showToast === 'function') showToast('Error parsing ' + files[i].name + ': ' + err.message, 5000);
-                }
-            }
-            if (loaded > 0) {
-                if (typeof showToast === 'function') showToast(loaded + ' Verint file(s) loaded.', 3000);
-                var dash = document.getElementById('reliabilityDashboard');
-                if (dash) renderTeamTable(dash);
-            }
-            this.value = '';
-        });
-
-        payrollBtn?.addEventListener('click', function() { payrollInput?.click(); });
-        payrollInput?.addEventListener('change', async function() {
-            var file = this.files?.[0];
-            if (!file) return;
-            try {
-                await handlePayrollUpload(file);
-                if (typeof showToast === 'function') showToast('Payroll loaded.', 3000);
-                var dash = document.getElementById('reliabilityDashboard');
-                if (dash) renderTeamTable(dash);
-            } catch (err) {
-                console.error('Payroll upload error:', err);
-                if (typeof showToast === 'function') showToast('Error parsing payroll: ' + err.message, 5000);
-            }
-            this.value = '';
-        });
-    }
 
     function bindReliabilityControls(container) {
         var select = container.querySelector('#relEmployeeSelect');
