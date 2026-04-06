@@ -229,6 +229,152 @@ function resolveStoreKey(store, employeeName) {
     return employeeName;
 }
 
+function parseHoursValue(raw) {
+    if (raw == null || raw === '') return null;
+    if (typeof raw === 'number' && Number.isFinite(raw)) return Math.round(raw * 100) / 100;
+    var s = String(raw).trim();
+    if (!s) return null;
+    s = s.replace(/,/g, '').replace(/hrs?|hours?/ig, '').trim();
+    var n = parseFloat(s);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n * 100) / 100;
+}
+
+function normalizeHeaderKey(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function findHeaderIndex(headers, candidates) {
+    for (var i = 0; i < headers.length; i++) {
+        if (candidates.indexOf(headers[i]) >= 0) return i;
+    }
+    return -1;
+}
+
+function importPtoBalanceExcel(file) {
+    if (!file) return;
+    var fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        showToast('Please upload an Excel file (.xlsx or .xls)', 4000);
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
+            processPtoBalanceRows(rows);
+        } catch (err) {
+            console.error('PTO balance import error:', err);
+            showToast('Failed to read PTO balance file. Check format and try again.', 5000);
+        }
+    };
+    reader.onerror = function() { showToast('Failed to read file', 4000); };
+    reader.readAsArrayBuffer(file);
+}
+
+function processPtoBalanceRows(rows) {
+    var headerIdx = -1;
+    var colMap = { name: -1, carryover: -1, allotment: -1, remaining: -1, used: -1 };
+
+    for (var i = 0; i < Math.min(rows.length, 12); i++) {
+        var row = Array.isArray(rows[i]) ? rows[i] : [];
+        var normalized = row.map(normalizeHeaderKey);
+        var nameIdx = findHeaderIndex(normalized, ['name', 'employee', 'employeename', 'associate', 'associatename']);
+        if (nameIdx < 0) continue;
+
+        var carryIdx = findHeaderIndex(normalized, ['carryover', 'carryoverhours', 'ptocarryover', 'carryoverpto']);
+        var allotIdx = findHeaderIndex(normalized, ['annualallotment', 'allotment', 'annualpto', 'ptoallotment', 'yearlyallotment']);
+        var remIdx = findHeaderIndex(normalized, ['remaining', 'balance', 'available', 'ptobalance', 'ptoavailable']);
+        var usedIdx = findHeaderIndex(normalized, ['used', 'taken', 'usedhours', 'ptoused']);
+
+        if (carryIdx >= 0 || allotIdx >= 0 || remIdx >= 0 || usedIdx >= 0) {
+            headerIdx = i;
+            colMap = { name: nameIdx, carryover: carryIdx, allotment: allotIdx, remaining: remIdx, used: usedIdx };
+            break;
+        }
+    }
+
+    var resultsEl = document.getElementById('ptoBalanceExcelResults');
+    if (headerIdx < 0) {
+        showToast('Could not find balance columns. Need Name + Carryover/Allotment/Remaining.', 5000);
+        if (resultsEl) {
+            resultsEl.innerHTML = '<div style="padding:10px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:8px;">Could not detect PTO balance columns. Expected Name and at least one of Carryover, Annual Allotment, Remaining.</div>';
+        }
+        return;
+    }
+
+    var store = loadPtoStore();
+    var nameLookup = {};
+    Object.keys(store.associates || {}).forEach(function(n) { nameLookup[n.toLowerCase()] = n; });
+    var weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+    var ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
+    [weeklyData, ytdData].forEach(function(source) {
+        Object.values(source).forEach(function(period) {
+            if (!Array.isArray(period?.employees)) return;
+            period.employees.forEach(function(emp) {
+                var n = String(emp?.name || '').trim();
+                if (n && !nameLookup[n.toLowerCase()]) nameLookup[n.toLowerCase()] = n;
+            });
+        });
+    });
+
+    var updated = 0;
+    var derived = 0;
+    for (var r = headerIdx + 1; r < rows.length; r++) {
+        var dataRow = Array.isArray(rows[r]) ? rows[r] : [];
+        var rawName = cleanUnicodeControl(String(dataRow[colMap.name] || '').trim());
+        if (!rawName) continue;
+
+        var resolvedName = resolveEmployeeName(rawName, nameLookup);
+        var assoc = getAssociateData(store, resolvedName);
+
+        var carry = colMap.carryover >= 0 ? parseHoursValue(dataRow[colMap.carryover]) : null;
+        var allot = colMap.allotment >= 0 ? parseHoursValue(dataRow[colMap.allotment]) : null;
+        var remaining = colMap.remaining >= 0 ? parseHoursValue(dataRow[colMap.remaining]) : null;
+        var used = colMap.used >= 0 ? parseHoursValue(dataRow[colMap.used]) : null;
+
+        var touched = false;
+        if (carry != null) {
+            assoc.carryoverHours = carry;
+            touched = true;
+        }
+        if (allot != null) {
+            assoc.annualAllotment = allot;
+            touched = true;
+        } else if (remaining != null && used != null) {
+            var baseCarry = carry != null ? carry : (assoc.carryoverHours || 0);
+            var inferredAllot = Math.max(0, Math.round((remaining + used - baseCarry) * 100) / 100);
+            assoc.annualAllotment = inferredAllot;
+            derived++;
+            touched = true;
+        }
+
+        if (touched) updated++;
+    }
+
+    if (!updated) {
+        showToast('No PTO balances were updated from this file.', 4000);
+        if (resultsEl) {
+            resultsEl.innerHTML = '<div style="padding:10px;border-radius:6px;background:#fff3cd;color:#856404;margin-top:8px;">No balance updates applied. Check that the sheet includes numeric carryover/allotment or remaining + used values.</div>';
+        }
+        return;
+    }
+
+    savePtoStore(store);
+    var selected = document.getElementById('ptoAssociateSelect')?.value || '';
+    if (selected) renderEmployeeView(selected);
+    populateAssociateSelect();
+    showToast('PTO balances updated for ' + updated + ' employees.', 5000);
+    if (resultsEl) {
+        var extra = derived > 0 ? ' Derived annual allotment for ' + derived + ' employee(s) using Remaining + Used - Carryover.' : '';
+        resultsEl.innerHTML = '<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;"><strong>Updated PTO balances for ' + updated + ' employee(s).</strong>' + extra + '</div>';
+    }
+}
+
 // ============================================
 // EXCEL IMPORT
 // ============================================
@@ -900,6 +1046,8 @@ function initializePtoTracker() {
     const select = document.getElementById('ptoAssociateSelect');
     const excelBtn = document.getElementById('ptoPayrollExcelBtn');
     const excelInput = document.getElementById('ptoPayrollExcelInput');
+    const balanceBtn = document.getElementById('ptoBalanceExcelBtn');
+    const balanceInput = document.getElementById('ptoBalanceExcelInput');
 
     populateAssociateSelect();
 
@@ -921,6 +1069,21 @@ function initializePtoTracker() {
             importPayrollExcel(file);
         });
         excelBtn.dataset.bound = 'true';
+    }
+
+    if (balanceBtn && balanceInput && !balanceBtn.dataset.bound) {
+        balanceBtn.addEventListener('click', function() {
+            balanceInput.value = '';
+            balanceInput.click();
+        });
+        balanceInput.addEventListener('change', function(e) {
+            var file = e.target.files?.[0];
+            if (!file) return;
+            var fileNameEl = document.getElementById('ptoBalanceExcelFileName');
+            if (fileNameEl) fileNameEl.textContent = file.name;
+            importPtoBalanceExcel(file);
+        });
+        balanceBtn.dataset.bound = 'true';
     }
 
     var clearBtn = document.getElementById('ptoClearAllBtn');
