@@ -584,9 +584,14 @@
         var result = {
             ptostHoursUsed: 0,
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
+            sameDayNoPtostHours: 0,
+            correctableSameDayHours: 0,
+            remainingSameDayExposureHours: 0,
             reliabilityHours: 0,
             timeline: [],           // Unified day-by-day timeline
             discrepancies: [],      // Verint says absent but payroll says worked
+            correctionCandidates: [],
+            pcIssueCandidates: [],
             dayBuckets: {
                 sameDay: [],
                 sameDayPtost: [],
@@ -680,8 +685,10 @@
 
             // Verint same-day (unscheduled) events
             var verintSameDay = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'ptost' || v.type === 'tardy' || v.type === 'tardy-ptost'; });
+            var verintAbsenceSameDay = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'ptost'; });
             var verintPtost = verintItems.filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; });
             var verintSameDayNoPtost = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'tardy'; });
+            var verintTardy = verintItems.filter(function(v) { return v.type === 'tardy'; });
 
             var isSameDay = payrollUnschdHours > 0 || verintSameDayNoPtost.length > 0;
             var isSameDayPtost = payrollPtostHours > 0 || verintPtost.length > 0;
@@ -694,6 +701,24 @@
             if (isSameDayPtost) result.dayBuckets.sameDayPtost.push(formatDate(new Date(dk + 'T12:00:00')));
             if (isBereavement) result.dayBuckets.bereavement.push(formatDate(new Date(dk + 'T12:00:00')));
             if (isFmla) result.dayBuckets.fmla.push(formatDate(new Date(dk + 'T12:00:00')));
+
+            var verintNoPtostHours = verintSameDayNoPtost.reduce(function(s, v) { return s + v.hours; }, 0);
+            var hasPayrollLeave = payrollPtostHours > 0 || payrollUnschdHours > 0 || payrollPlannedPto.length > 0 || payrollOtherLeave.length > 0;
+            var sameDayExposureHours = 0;
+
+            // Policy: Same Day without PTOST counts against reliability.
+            if (payrollUnschdHours > 0) {
+                sameDayExposureHours = payrollUnschdHours;
+            } else if (verintNoPtostHours > 0 && !hasPayrollLeave && payrollReg.length === 0) {
+                sameDayExposureHours = verintNoPtostHours;
+            }
+
+            if (sameDayExposureHours > 0) {
+                entry.sameDayExposureHours = round2(sameDayExposureHours);
+                result.sameDayNoPtostHours = round2(result.sameDayNoPtostHours + sameDayExposureHours);
+                result.reliabilityHours = round2(result.reliabilityHours + sameDayExposureHours);
+                entry.flags.push('Same Day without PTOST (' + entry.sameDayExposureHours + 'h against reliability)');
+            }
 
             // --- Track PTOST running total ---
             if (payrollPtostHours > 0) {
@@ -716,23 +741,30 @@
                 entry.ptostProtected = runningPtost <= PTOST_BUFFER_LIMIT;
             }
 
-            // --- PTO+UNSCHD counts against reliability ---
-            if (payrollUnschdHours > 0) {
-                result.reliabilityHours = round2(result.reliabilityHours + payrollUnschdHours);
-                entry.flags.push('Unscheduled PTO (' + payrollUnschdHours + 'h against reliability)');
-            }
-
             // --- Discrepancy: Verint says Same Day absent but payroll shows REG ---
-            if (verintSameDay.length > 0 && payrollReg.length > 0 && payrollPtostHours === 0 && payrollUnschdHours === 0 && payrollPlannedPto.length === 0) {
-                var verintHrs = verintSameDay.reduce(function(s, v) { return s + v.hours; }, 0);
+            if (verintAbsenceSameDay.length > 0 && payrollReg.length > 0 && payrollPtostHours === 0 && payrollUnschdHours === 0 && payrollPlannedPto.length === 0) {
+                var verintHrs = verintAbsenceSameDay.reduce(function(s, v) { return s + v.hours; }, 0);
                 var regHrs = payrollReg.reduce(function(s, p) { return s + p.quantity; }, 0);
                 entry.flags.push('⚠ DISCREPANCY: Verint says absent, Payroll shows worked');
                 result.discrepancies.push({
                     date: entry.dateStr,
-                    verintActivity: verintSameDay.map(function(v) { return v.activity; }).join(', '),
+                    verintActivity: verintAbsenceSameDay.map(function(v) { return v.activity; }).join(', '),
                     verintHours: verintHrs,
                     payrollHours: regHrs,
                     payrollClockIn: payrollReg[0].clockIn
+                });
+            }
+
+            // Tardy in Verint but valid payroll clock-in can be documented as PC issue.
+            if (verintTardy.length > 0 && payrollReg.length > 0 && payrollPtostHours === 0 && payrollUnschdHours === 0) {
+                var tardyHours = verintTardy.reduce(function(s, v) { return s + v.hours; }, 0);
+                var firstClock = String(payrollReg[0]?.clockIn || '').trim();
+                entry.flags.push('PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at ' + (firstClock || 'recorded time'));
+                result.pcIssueCandidates.push({
+                    date: entry.dateStr,
+                    verintActivity: verintTardy.map(function(v) { return v.activity; }).join(', '),
+                    verintHours: round2(tardyHours),
+                    payrollClockIn: firstClock || 'recorded time'
                 });
             }
 
@@ -754,6 +786,34 @@
 
         result.ptostHoursUsed = round2(runningPtost);
         result.ptostBufferRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - runningPtost));
+
+        var correctionRemaining = result.ptostBufferRemaining;
+        result.timeline.forEach(function(t) {
+            if (correctionRemaining <= 0) return;
+            var dayHours = Number(t.sameDayExposureHours || 0);
+            if (dayHours <= 0) return;
+            var isDiscrepancyDay = (t.flags || []).some(function(f) { return String(f || '').indexOf('DISCREPANCY') >= 0; });
+            if (isDiscrepancyDay) return;
+
+            var canDesignate = round2(Math.min(dayHours, correctionRemaining));
+            if (canDesignate <= 0) return;
+
+            correctionRemaining = round2(correctionRemaining - canDesignate);
+            result.correctionCandidates.push({
+                date: t.dateStr,
+                hours: canDesignate,
+                originalHours: dayHours,
+                activity: (t.verint || []).map(function(v) { return v.activity; }).join(', ') || 'Same Day',
+                reason: canDesignate < dayHours
+                    ? 'Partial conversion due to PTOST 40h limit'
+                    : 'Can be changed to PTOST'
+            });
+        });
+
+        result.correctableSameDayHours = round2(result.correctionCandidates.reduce(function(sum, c) {
+            return sum + Number(c.hours || 0);
+        }, 0));
+        result.remainingSameDayExposureHours = round2(Math.max(0, result.sameDayNoPtostHours - result.correctableSameDayHours));
 
         Object.keys(result.dayBuckets).forEach(function(key) {
             result.dayBuckets[key] = Array.from(new Set(result.dayBuckets[key] || []));
@@ -795,6 +855,22 @@
 
         lines.push('\nCan you please review and correct these entries?\n');
         lines.push('Thank you.');
+        return lines.join('\n');
+    }
+
+    function buildPcIssueEmail(employeeName, pcIssues) {
+        var firstName = getFirstName(employeeName);
+        var lines = [];
+        lines.push('Hi ' + firstName + ',\n');
+        lines.push('I reviewed a few attendance records where Verint marked tardy but Payroll shows you clocked in on time.');
+        lines.push('I am documenting these as potential PC/system issues for follow-up:\n');
+
+        (pcIssues || []).forEach(function(d) {
+            lines.push('  - ' + d.date + ': Verint "' + d.verintActivity + '" (' + d.verintHours + 'h), Payroll clock-in at ' + d.payrollClockIn);
+        });
+
+        lines.push('\nIf you had technical issues on these dates, reply with any details so we can keep the record accurate.');
+        lines.push('\nThanks,');
         return lines.join('\n');
     }
 
@@ -1054,6 +1130,7 @@
         var sameDayPtostDates = buckets.sameDayPtost || [];
         var bereavementDates = buckets.bereavement || [];
         var fmlaDates = buckets.fmla || [];
+        var correctionCandidates = r.correctionCandidates || [];
 
         var html = '';
         html += '<div style="padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
@@ -1082,6 +1159,14 @@
         html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + (r.ptostBufferRemaining !== undefined ? r.ptostBufferRemaining : PTOST_BUFFER_LIMIT) + 'h</div><div style="font-size:0.75em; color:#666;">Buffer Left</div></div>';
         html += '<div style="padding:10px; background:' + tier.bg + '; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:' + tier.color + ';">' + (r.reliabilityHours || 0) + 'h</div><div style="font-size:0.75em; color:#666;">Against Reliability</div></div>';
         html += '<div style="padding:10px; background:' + tier.bg + '; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:' + tier.color + ';">' + tier.label + '</div><div style="font-size:0.75em; color:#666;">Tier</div></div>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:14px; padding:10px; background:#f7fdfc; border:1px solid #d7efea; border-radius:6px; font-size:0.84em;">';
+        html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">Same Day Policy View</div>';
+        html += '<div><strong>Same Day (No PTOST):</strong> ' + (r.sameDayNoPtostHours || 0) + 'h</div>';
+        html += '<div><strong>Can Still Convert to PTOST:</strong> ' + (r.correctableSameDayHours || 0) + 'h across ' + correctionCandidates.length + ' day(s)</div>';
+        html += '<div><strong>Still Exposed After Corrections:</strong> ' + (r.remainingSameDayExposureHours || 0) + 'h</div>';
+        html += '<div><strong>PTOST Discipline Threshold:</strong> ' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? 'Reached (40h+)' : 'Not reached') + '</div>';
         html += '</div>';
 
         html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
@@ -1116,6 +1201,9 @@
         html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:#fff; color:#b71c1c; border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:#fff; color:#2e7d32; border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:#fff; color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
+        if ((r.pcIssueCandidates || []).length > 0) {
+            html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue" style="padding:4px 12px; border:1px solid #1565c0; background:#fff; color:#1565c0; border-radius:4px; cursor:pointer; font-size:0.82em;">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
+        }
         if ((r.discrepancies || []).length > 0) {
             html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy" style="padding:4px 12px; border:1px solid #e65100; background:#fff; color:#e65100; border-radius:4px; cursor:pointer; font-size:0.82em;">Discrepancies (' + r.discrepancies.length + ')</button>';
         }
@@ -1130,11 +1218,12 @@
         html += '<div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">';
 
         // Unscheduled events that could be designated as PTOST
-        var undesignated = timeline.filter(function(t) {
-            return t.category === 'same-day' && (r.ptostBufferRemaining || 0) > 0;
-        });
-        if (undesignated.length > 0) {
-            html += '<button type="button" id="relEmailAssociate" style="padding:8px 16px; background:#1565c0; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Ask ' + escapeHtml(firstName) + ' about PTOST</button>';
+        if (correctionCandidates.length > 0) {
+            html += '<button type="button" id="relEmailAssociate" style="padding:8px 16px; background:#1565c0; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Draft WFM PTOST Updates (' + (r.correctableSameDayHours || 0) + 'h)</button>';
+        }
+
+        if ((r.pcIssueCandidates || []).length > 0) {
+            html += '<button type="button" id="relEmailPcIssue" style="padding:8px 16px; background:#0d47a1; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Draft PC Issue Email</button>';
         }
 
         if ((r.discrepancies || []).length > 0) {
@@ -1187,16 +1276,16 @@
 
         // Bind email buttons
         document.getElementById('relEmailAssociate')?.addEventListener('click', function() {
-            var events = undesignated.map(function(t) {
-                var hrs = 0;
-                // Get hours from Verint same-day or payroll UNSCHD
-                t.verint.forEach(function(v) { if (v.type === 'same-day' || v.type === 'tardy') hrs += v.hours; });
-                t.payroll.forEach(function(p) { if (p.trc === 'PTO' && p.taskCode === 'UNSCHD') hrs += p.quantity; });
-                var activities = t.verint.map(function(v) { return v.activity; }).join(', ') || 'Unscheduled PTO';
-                return { dateStr: t.dateStr, hours: hrs || 8, activity: activities };
+            var events = correctionCandidates.map(function(c) {
+                return { dateStr: c.date, hours: c.hours, activity: c.activity };
             });
             var msg = buildPtostDesignationEmail(employeeName, events);
             copyAndNotify(msg, 'PTOST email copied to clipboard');
+        });
+
+        document.getElementById('relEmailPcIssue')?.addEventListener('click', function() {
+            var msg = buildPcIssueEmail(employeeName, r.pcIssueCandidates || []);
+            copyAndNotify(msg, 'PC issue email copied to clipboard');
         });
 
         document.getElementById('relEmailWfm')?.addEventListener('click', function() {
@@ -1233,6 +1322,10 @@
         var filtered = timeline;
         if (filter === 'discrepancy') {
             filtered = timeline.filter(function(t) { return discDates[t.dateStr]; });
+        } else if (filter === 'pc-issue') {
+            filtered = timeline.filter(function(t) {
+                return (t.flags || []).some(function(f) { return String(f || '').indexOf('PC ISSUE CANDIDATE') >= 0; });
+            });
         } else if (filter !== 'all') {
             filtered = timeline.filter(function(t) { return t.category === filter; });
         }
@@ -1258,8 +1351,9 @@
             var cat = CAT_STYLES[t.category] || CAT_STYLES.other;
             var hasFlag = t.flags && t.flags.length > 0;
             var isDiscrepancy = Boolean(discDates[t.dateStr]) || (hasFlag && t.flags.some(function(f) { return f.indexOf('DISCREPANCY') >= 0; }));
-            var rowBg = isDiscrepancy ? '#ffe9e9' : '';
-            var rowBorder = isDiscrepancy ? '4px solid #c62828' : 'none';
+            var isPcIssue = hasFlag && t.flags.some(function(f) { return f.indexOf('PC ISSUE CANDIDATE') >= 0; });
+            var rowBg = isDiscrepancy ? '#ffe9e9' : (isPcIssue ? '#e8f1ff' : '');
+            var rowBorder = isDiscrepancy ? '4px solid #c62828' : (isPcIssue ? '4px solid #1565c0' : 'none');
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
@@ -1305,7 +1399,13 @@
             html += '<td style="padding:6px 8px; font-size:0.9em;">';
             if (t.flags && t.flags.length > 0) {
                 html += t.flags.map(function(f) {
-                    var fColor = f.indexOf('DISCREPANCY') >= 0 ? '#b71c1c' : f.indexOf('reliability') >= 0 ? '#b71c1c' : '#666';
+                    var fColor = f.indexOf('DISCREPANCY') >= 0
+                        ? '#b71c1c'
+                        : f.indexOf('PC ISSUE CANDIDATE') >= 0
+                            ? '#1565c0'
+                            : f.indexOf('reliability') >= 0
+                                ? '#b71c1c'
+                                : '#666';
                     return '<div style="color:' + fColor + ';">' + escapeHtml(f) + '</div>';
                 }).join('');
             } else if (isDiscrepancy) {
