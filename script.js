@@ -1490,13 +1490,28 @@ function bindUploadAndPasteHandlers() {
         document.getElementById('uploadPayrollFileInput')?.click();
     });
     document.getElementById('uploadPayrollFileInput')?.addEventListener('change', async function() {
-        var file = this.files?.[0];
-        if (!file) return;
-        if (window.DevCoachModules?.reliability?.handlePayrollUpload) {
-            window.DevCoachModules.reliability.handlePayrollUpload(file);
-        } else {
-            if (typeof showToast === 'function') showToast('Reliability module not loaded.', 5000);
-        }
+            var files = Array.from(this.files || []);
+            if (!files.length) return;
+            if (!window.DevCoachModules?.reliability?.handlePayrollUpload) {
+                if (typeof showToast === 'function') showToast('Reliability module not loaded.', 5000);
+                this.value = '';
+                return;
+            }
+            var loaded = 0;
+            var errors = 0;
+            for (var i = 0; i < files.length; i++) {
+                try {
+                    await window.DevCoachModules.reliability.handlePayrollUpload(files[i]);
+                    loaded++;
+                } catch (err) {
+                    console.error('Payroll upload error for file ' + files[i].name + ':', err);
+                    errors++;
+                }
+            }
+            if (typeof showToast === 'function') {
+                if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
+                else showToast(loaded + ' payroll file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+            }
         this.value = '';
     });
     document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);

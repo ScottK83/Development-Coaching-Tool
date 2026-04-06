@@ -1172,12 +1172,15 @@ function initializePtoTracker() {
             excelInput.value = '';
             excelInput.click();
         });
-        excelInput.addEventListener('change', (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
+            excelInput.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files || []);
+                if (!files.length) return;
             const fileNameEl = document.getElementById('ptoPayrollExcelFileName');
-            if (fileNameEl) fileNameEl.textContent = file.name;
-            importPayrollExcel(file);
+                if (fileNameEl) fileNameEl.textContent = files.map(function(file) { return file.name; }).join(', ');
+                for (const file of files) {
+                    await Promise.resolve(importPayrollExcel(file));
+                }
+                showToast(files.length + ' PTO payroll file' + (files.length !== 1 ? 's' : '') + ' loaded.', 4000);
         });
         excelBtn.dataset.bound = 'true';
     }
@@ -1187,12 +1190,15 @@ function initializePtoTracker() {
             balanceInput.value = '';
             balanceInput.click();
         });
-        balanceInput.addEventListener('change', function(e) {
-            var file = e.target.files?.[0];
-            if (!file) return;
+            balanceInput.addEventListener('change', async function(e) {
+                var files = Array.from(e.target.files || []);
+                if (!files.length) return;
             var fileNameEl = document.getElementById('ptoBalanceExcelFileName');
-            if (fileNameEl) fileNameEl.textContent = file.name;
-            importPtoBalanceExcel(file);
+                if (fileNameEl) fileNameEl.textContent = files.map(function(file) { return file.name; }).join(', ');
+                for (var i = 0; i < files.length; i++) {
+                    await Promise.resolve(importPtoBalanceExcel(files[i]));
+                }
+                showToast(files.length + ' PTO balance file' + (files.length !== 1 ? 's' : '') + ' loaded.', 4000);
         });
         balanceBtn.dataset.bound = 'true';
     }
