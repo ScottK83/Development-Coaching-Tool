@@ -1190,6 +1190,47 @@
         return html;
     }
 
+    function getEmployeeReviewPriority(name, employeeRecord) {
+        var emp = employeeRecord || {};
+        var r = emp.reconciled || {};
+        var ytdReliability = getYtdReliabilityHoursForEmployee(name);
+        var modeledReliability = round2(Number(r.reliabilityHours || 0));
+        var delta = ytdReliability == null ? null : round2(ytdReliability - modeledReliability);
+
+        var discrepancyCount = (r.discrepancies || []).length;
+        var pcIssueCount = (r.pcIssueCandidates || []).length;
+        var wfmUpdateCount = (r.correctionCandidates || []).length;
+
+        var score = 0;
+        if (ytdReliability != null && ytdReliability > 0) score += 2;
+        if (Math.abs(modeledReliability) > 0.01) score += 2;
+        if (delta != null && Math.abs(delta) > 2) score += 5;
+        else if (delta != null && Math.abs(delta) > 0.25) score += 3;
+        score += discrepancyCount * 2;
+        score += pcIssueCount * 2;
+        score += wfmUpdateCount;
+
+        var reviewCount = discrepancyCount + pcIssueCount + wfmUpdateCount + ((delta != null && Math.abs(delta) > 0.25) ? 1 : 0);
+        var needsReview = score > 0 && reviewCount > 0;
+
+        var reasonParts = [];
+        if (discrepancyCount > 0) reasonParts.push(discrepancyCount + ' disc');
+        if (pcIssueCount > 0) reasonParts.push(pcIssueCount + ' pc');
+        if (wfmUpdateCount > 0) reasonParts.push(wfmUpdateCount + ' wfm');
+        if (delta != null && Math.abs(delta) > 0.25) reasonParts.push('delta ' + delta + 'h');
+
+        var label = needsReview
+            ? '⚠ ' + name + ' [' + reasonParts.join(', ') + ']'
+            : name;
+
+        return {
+            name: name,
+            score: score,
+            needsReview: needsReview,
+            label: label
+        };
+    }
+
     function bindAllEmployeesLedgerFilters(container) {
         var fromInput = container.querySelector('#relLedgerFrom');
         var toInput = container.querySelector('#relLedgerTo');
@@ -1230,6 +1271,13 @@
         consolidateDuplicateEmployees(store);
         var employees = store.employees || {};
         var names = getReliabilityNamesByTeamFilter(Object.keys(employees)).sort();
+        var prioritized = names.map(function(name) {
+            return getEmployeeReviewPriority(name, employees[name]);
+        }).sort(function(a, b) {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.name.localeCompare(b.name);
+        });
+        var reviewCount = prioritized.filter(function(p) { return p.needsReview; }).length;
 
         var html = '';
         html += '<div style="margin-bottom:16px;">';
@@ -1241,12 +1289,15 @@
         html += '<label style="display:block; font-size:0.78em; color:#555; margin-bottom:2px;">Employee breakdown</label>';
         html += '<select id="relEmployeeSelect" style="padding:6px 10px; border:1px solid #cdd; border-radius:4px; min-width:260px;">';
         html += '<option value="">Select employee...</option>';
-        names.forEach(function(name) {
-            html += '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>';
+        prioritized.forEach(function(item) {
+            html += '<option value="' + escapeHtml(item.name) + '">' + escapeHtml(item.label) + '</option>';
         });
         html += '</select>';
         html += '</div>';
         html += '<div style="font-size:0.78em; color:#666;">Tip: choose one checked team member to view detail.</div>';
+        if (reviewCount > 0) {
+            html += '<div style="font-size:0.78em; color:#b26a00; font-weight:600;">⚠ ' + reviewCount + ' employee(s) are marked for review in this list.</div>';
+        }
         html += '</div>';
 
         if (names.length === 0) {
