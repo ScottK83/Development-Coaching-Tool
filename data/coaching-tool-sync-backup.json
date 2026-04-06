@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T21:54:24.849Z",
+  "generatedAt": "2026-04-06T21:54:50.299Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2807,7 +2807,9 @@
   },
   "associateSentimentSnapshots": {},
   "myTeamMembers": {
-    "2026-01-01|2026-04-05": []
+    "2026-01-01|2026-04-05": [
+      "Robert Berrelleza"
+    ]
   },
   "callCenterAverages": {
     "2026-01-01|2026-04-05": {
@@ -8792,7 +8794,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 274
+      "byteLength": 266
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
@@ -8817,7 +8819,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 28
+      "byteLength": 47
     }
   }
 }
