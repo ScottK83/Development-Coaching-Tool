@@ -256,11 +256,30 @@
         if (value === null || value === undefined || value === '') return null;
 
         if (value instanceof Date && !isNaN(value.getTime())) {
+            var yearVal = value.getFullYear();
+            // Legacy bad parse path: Excel serial became year (e.g., year 46024).
+            if (yearVal >= 20000 && yearVal <= 80000) {
+                var serialFromYear = yearVal;
+                var utcMsFromYear = (serialFromYear - 25569) * 86400 * 1000;
+                var utcFromYear = new Date(utcMsFromYear);
+                return new Date(utcFromYear.getUTCFullYear(), utcFromYear.getUTCMonth(), utcFromYear.getUTCDate());
+            }
             return new Date(value.getFullYear(), value.getMonth(), value.getDate());
         }
 
         var raw = String(value).trim();
         if (!raw) return null;
+
+        // Legacy bad parse path persisted as M/D/##### where ##### is Excel serial.
+        var legacySerialMatch = raw.match(/^\d{1,2}\/\d{1,2}\/(\d{5})$/);
+        if (legacySerialMatch) {
+            var legacySerial = Number(legacySerialMatch[1]);
+            if (legacySerial >= 20000 && legacySerial <= 80000) {
+                var legacyUtcMs = (legacySerial - 25569) * 86400 * 1000;
+                var legacyUtc = new Date(legacyUtcMs);
+                return new Date(legacyUtc.getUTCFullYear(), legacyUtc.getUTCMonth(), legacyUtc.getUTCDate());
+            }
+        }
 
         // Excel serial date support (e.g., 46024).
         var serial = Number(raw);
@@ -275,6 +294,12 @@
 
         var parsed = new Date(raw);
         if (isNaN(parsed.getTime())) return null;
+        if (parsed.getFullYear() >= 20000 && parsed.getFullYear() <= 80000) {
+            var serialYear = parsed.getFullYear();
+            var serialUtcMs = (serialYear - 25569) * 86400 * 1000;
+            var serialUtc = new Date(serialUtcMs);
+            return new Date(serialUtc.getUTCFullYear(), serialUtc.getUTCMonth(), serialUtc.getUTCDate());
+        }
         return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
     }
 
