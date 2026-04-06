@@ -683,7 +683,7 @@
         });
 
         var html = '';
-        html += '<div style="margin-top:16px;">';
+        html += '<div id="relAllEmployeesLedger" style="margin-top:16px;">';
         html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Day-by-Day Breakdown (All Employees)</h4>';
         html += '<div style="font-size:0.8em; color:#666; margin-bottom:8px;">Use this to match exact dates across associates.</div>';
 
@@ -692,6 +692,17 @@
             html += '</div>';
             return html;
         }
+
+        var minKey = rows[rows.length - 1].dateKey;
+        var maxKey = rows[0].dateKey;
+
+        html += '<div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap; margin-bottom:8px;">';
+        html += '<div><label style="display:block; font-size:0.76em; color:#555; margin-bottom:2px;">From</label><input type="date" id="relLedgerFrom" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
+        html += '<div><label style="display:block; font-size:0.76em; color:#555; margin-bottom:2px;">To</label><input type="date" id="relLedgerTo" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
+        html += '<button type="button" id="relLedgerApply" style="padding:6px 10px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer;">Apply</button>';
+        html += '<button type="button" id="relLedgerClear" style="padding:6px 10px; border:1px solid #ccc; background:#fff; color:#333; border-radius:4px; cursor:pointer;">Clear</button>';
+        html += '<div id="relLedgerCount" style="font-size:0.8em; color:#555; margin-left:auto;">Rows: ' + rows.length + '</div>';
+        html += '</div>';
 
         html += '<div style="max-height:360px; overflow:auto; border:1px solid #dfe6e6; border-radius:6px;">';
         html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
@@ -709,7 +720,7 @@
         html += '</tr></thead><tbody>';
 
         rows.forEach(function(row) {
-            html += '<tr style="border-bottom:1px solid #eef2f2;">';
+            html += '<tr class="rel-ledger-row" data-date-key="' + escapeHtml(row.dateKey) + '" style="border-bottom:1px solid #eef2f2;">';
             html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(row.date) + '</td>';
             html += '<td style="padding:6px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.employee) + '</td>';
             html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDay ? '✓' : '—') + '</td>';
@@ -725,6 +736,41 @@
 
         html += '</tbody></table></div></div>';
         return html;
+    }
+
+    function bindAllEmployeesLedgerFilters(container) {
+        var fromInput = container.querySelector('#relLedgerFrom');
+        var toInput = container.querySelector('#relLedgerTo');
+        var applyBtn = container.querySelector('#relLedgerApply');
+        var clearBtn = container.querySelector('#relLedgerClear');
+        var countEl = container.querySelector('#relLedgerCount');
+        var rows = Array.from(container.querySelectorAll('.rel-ledger-row'));
+        if (!fromInput || !toInput || !applyBtn || !clearBtn || !rows.length) return;
+
+        function applyFilter() {
+            var fromVal = fromInput.value || '';
+            var toVal = toInput.value || '';
+            var visible = 0;
+
+            rows.forEach(function(row) {
+                var key = row.getAttribute('data-date-key') || '';
+                var keep = true;
+                if (fromVal && key < fromVal) keep = false;
+                if (toVal && key > toVal) keep = false;
+                row.style.display = keep ? '' : 'none';
+                if (keep) visible++;
+            });
+
+            if (countEl) countEl.textContent = 'Rows: ' + visible + ' / ' + rows.length;
+        }
+
+        applyBtn.addEventListener('click', applyFilter);
+        clearBtn.addEventListener('click', function() {
+            fromInput.value = '';
+            toInput.value = '';
+            rows.forEach(function(row) { row.style.display = ''; });
+            if (countEl) countEl.textContent = 'Rows: ' + rows.length;
+        });
     }
 
     function renderTeamTable(container) {
@@ -814,6 +860,7 @@
         container.innerHTML = html;
         bindUploadButtons(container);
         bindRowClicks(container);
+        bindAllEmployeesLedgerFilters(container);
     }
 
     // Category display config
