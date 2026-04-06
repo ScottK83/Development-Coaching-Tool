@@ -462,6 +462,23 @@
         return true;
     }
 
+    function buildReviewSummaryText(employeeName, reconciled, ytdReliability, unexplainedDelta) {
+        var r = reconciled || {};
+        var lines = [];
+        lines.push('Reliability Review Summary: ' + employeeName);
+        lines.push('YTD Reliability: ' + (ytdReliability == null ? 'N/A' : (ytdReliability + 'h')));
+        lines.push('Modeled Reliability: ' + round2(Number(r.reliabilityHours || 0)) + 'h');
+        lines.push('Delta: ' + (unexplainedDelta == null ? 'N/A' : (unexplainedDelta + 'h')));
+        lines.push('Same Day (No PTOST): ' + round2(Number(r.sameDayNoPtostHours || 0)) + 'h');
+        lines.push('PTOST Over 40h: ' + round2(Number(r.ptostOverageHours || 0)) + 'h');
+        lines.push('PTOST Running: ' + round2(Number(r.ptostHoursUsed || 0)) + 'h');
+        lines.push('Unscheduled Running: ' + round2(Number(r.unscheduledRunningHours || 0)) + 'h');
+        lines.push('Discrepancies: ' + ((r.discrepancies || []).length));
+        lines.push('PC Issues: ' + ((r.pcIssueCandidates || []).length));
+        lines.push('WFM PTOST Updates: ' + ((r.correctionCandidates || []).length));
+        return lines.join('\n');
+    }
+
     var escapeHtml = function(s) {
         return window.DevCoachModules?.sharedUtils?.escapeHtml?.(s) ?? String(s ?? '');
     };
@@ -1385,6 +1402,23 @@
         html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
 
+        var needsReviewCount = timeline.filter(function(t) {
+            return (t.flags || []).some(function(f) {
+                var s = String(f || '');
+                return s.indexOf('REVIEW:') >= 0 ||
+                    s.indexOf('DISCREPANCY') >= 0 ||
+                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
+                    s.indexOf('against reliability') >= 0 ||
+                    s.indexOf('PTOST over 40h') >= 0;
+            });
+        }).length;
+
+        if (needsReviewCount > 0) {
+            html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:#fff8e1; border:1px solid #ffe08a; color:#8a5300; font-size:0.83em; font-weight:700;">';
+            html += '⚠ ' + needsReviewCount + ' day(s) need review for ' + escapeHtml(firstName) + '.';
+            html += '</div>';
+        }
+
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
         html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Carryover</div></div>';
         html += '<div style="padding:10px; background:#e8f5e9; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#2e7d32;">' + (ptoBalance ? ptoBalance.earned : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Earned</div></div>';
@@ -1444,14 +1478,26 @@
         html += '<div><strong>FMLA:</strong> ' + (fmlaDates.length ? escapeHtml(fmlaDates.join(', ')) : '—') + '</div>';
         html += '</div>';
 
-        // PTOST buffer bar
-        var pctUsed = Math.min(100, ((r.ptostHoursUsed || 0) / PTOST_BUFFER_LIMIT) * 100);
-        var barColor = pctUsed >= 100 ? '#b71c1c' : pctUsed >= 75 ? '#e65100' : '#2e7d32';
-        html += '<div style="margin-bottom:16px;">';
-        html += '<div style="font-size:0.82em; font-weight:600; margin-bottom:4px;">PTOST Buffer (' + (r.ptostHoursUsed || 0) + ' / ' + PTOST_BUFFER_LIMIT + 'h)</div>';
+        // Running bars
+        var ptostPct = Math.min(100, ((r.ptostHoursUsed || 0) / PTOST_BUFFER_LIMIT) * 100);
+        var ptostColor = ptostPct >= 100 ? '#b71c1c' : ptostPct >= 75 ? '#e65100' : '#2e7d32';
+        var unschedPct = Math.min(100, ((r.unscheduledRunningHours || 0) / PTOST_BUFFER_LIMIT) * 100);
+        var unschedColor = unschedPct >= 100 ? '#b71c1c' : unschedPct >= 75 ? '#ef6c00' : '#ff8f00';
+
+        html += '<div style="margin-bottom:16px; display:grid; grid-template-columns:1fr; gap:8px;">';
+        html += '<div>';
+        html += '<div style="font-size:0.82em; font-weight:600; margin-bottom:4px;">PTOST Running (' + (r.ptostHoursUsed || 0) + ' / ' + PTOST_BUFFER_LIMIT + 'h)</div>';
         html += '<div style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden;">';
-        html += '<div style="height:100%; width:' + pctUsed + '%; background:' + barColor + '; border-radius:6px; transition:width 0.3s;"></div>';
-        html += '</div></div>';
+        html += '<div style="height:100%; width:' + ptostPct + '%; background:' + ptostColor + '; border-radius:6px; transition:width 0.3s;"></div>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div>';
+        html += '<div style="font-size:0.82em; font-weight:600; margin-bottom:4px;">Unscheduled Running (' + (r.unscheduledRunningHours || 0) + 'h)</div>';
+        html += '<div style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden;">';
+        html += '<div style="height:100%; width:' + unschedPct + '%; background:' + unschedColor + '; border-radius:6px; transition:width 0.3s;"></div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
 
         // Payroll visibility controls
         html += '<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.82em;">';
@@ -1466,16 +1512,6 @@
         html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
         var catCounts = { ptost: 0, 'same-day': 0, planned: 0 };
         timeline.forEach(function(t) { if (catCounts[t.category] !== undefined) catCounts[t.category]++; });
-        var needsReviewCount = timeline.filter(function(t) {
-            return (t.flags || []).some(function(f) {
-                var s = String(f || '');
-                return s.indexOf('REVIEW:') >= 0 ||
-                    s.indexOf('DISCREPANCY') >= 0 ||
-                    s.indexOf('PC ISSUE CANDIDATE') >= 0 ||
-                    s.indexOf('against reliability') >= 0 ||
-                    s.indexOf('PTOST over 40h') >= 0;
-            });
-        }).length;
         html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:#fff; color:#b71c1c; border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:#fff; color:#2e7d32; border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
         html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:#fff; color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
@@ -1516,6 +1552,8 @@
         // Action buttons
         html += '<div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">';
 
+        html += '<button type="button" id="relCopySummary" style="padding:8px 16px; background:#37474f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📋 Copy Review Summary</button>';
+
         // Unscheduled events that could be designated as PTOST
         if (correctionCandidates.length > 0) {
             html += '<button type="button" id="relEmailAssociate" style="padding:8px 16px; background:#1565c0; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Draft WFM PTOST Updates (' + (r.correctableSameDayHours || 0) + 'h)</button>';
@@ -1540,7 +1578,23 @@
         });
 
         // Bind filter tabs and visibility controls
-        var currentFilter = 'all';
+        var currentFilter = needsReviewCount > 0 ? 'needs-review' : 'all';
+
+        if (currentFilter !== 'all') {
+            var activeDefault = container.querySelector('.rel-filter-btn[data-filter="' + currentFilter + '"]');
+            if (activeDefault) {
+                container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
+                    b.style.background = '#fff';
+                    b.style.fontWeight = 'normal';
+                    b.style.color = b.style.borderColor;
+                });
+                activeDefault.style.background = activeDefault.style.borderColor;
+                activeDefault.style.color = '#fff';
+                activeDefault.style.fontWeight = '600';
+                var tableDiv = document.getElementById('relTimelineTable');
+                if (tableDiv) tableDiv.innerHTML = buildTimelineTable(timeline, r.discrepancies || [], currentFilter, getTimelineOptions());
+            }
+        }
 
         function getTimelineOptions() {
             return {
@@ -1598,6 +1652,11 @@
             if (exportActionRowsCsv(actionRows, employeeName)) {
                 if (typeof showToast === 'function') showToast('Reliability actions CSV downloaded', 3000);
             }
+        });
+
+        document.getElementById('relCopySummary')?.addEventListener('click', function() {
+            var txt = buildReviewSummaryText(employeeName, r, ytdReliability, unexplainedDelta);
+            copyAndNotify(txt, 'Review summary copied');
         });
     }
 
