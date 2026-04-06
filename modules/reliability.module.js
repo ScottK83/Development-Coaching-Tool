@@ -791,6 +791,20 @@
         html += '<input type="file" id="relPayrollInput" accept=".xlsx,.xls" style="display:none;">';
         html += '</div>';
 
+        html += '<div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:10px;">';
+        html += '<div>';
+        html += '<label style="display:block; font-size:0.78em; color:#555; margin-bottom:2px;">Employee breakdown</label>';
+        html += '<select id="relEmployeeSelect" style="padding:6px 10px; border:1px solid #cdd; border-radius:4px; min-width:260px;">';
+        html += '<option value="">Select employee...</option>';
+        names.forEach(function(name) {
+            html += '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+        html += '<button type="button" id="relOpenLedger" style="padding:6px 10px; border:1px solid #ccc; background:#fff; color:#333; border-radius:4px; cursor:pointer;">Show All-Employees Day-by-Day</button>';
+        html += '<div style="font-size:0.78em; color:#666;">Tip: click a row or use the dropdown for one-employee drill-down.</div>';
+        html += '</div>';
+
         if (names.length === 0) {
             html += '<div style="padding:20px; background:#f5f5f5; border-radius:8px; text-align:center; color:#666;">';
             html += 'No data yet. Upload Verint and/or Payroll files to get started.';
@@ -851,7 +865,7 @@
         });
 
         html += '</tbody></table></div>';
-        html += buildAllEmployeesDayTable(employees);
+        html += '<div id="relLedgerWrap" style="display:none;">' + buildAllEmployeesDayTable(employees) + '</div>';
 
         // Detail panel (shown when clicking a row)
         html += '<div id="relDetailPanel" style="display:none; margin-top:16px;"></div>';
@@ -860,6 +874,7 @@
         container.innerHTML = html;
         bindUploadButtons(container);
         bindRowClicks(container);
+        bindReliabilityControls(container);
         bindAllEmployeesLedgerFilters(container);
     }
 
@@ -1141,6 +1156,30 @@
                 if (typeof showToast === 'function') showToast('Error parsing payroll: ' + err.message, 5000);
             }
             this.value = '';
+        });
+    }
+
+    function bindReliabilityControls(container) {
+        var select = container.querySelector('#relEmployeeSelect');
+        var ledgerBtn = container.querySelector('#relOpenLedger');
+        var ledgerWrap = container.querySelector('#relLedgerWrap');
+
+        select?.addEventListener('change', function() {
+            var name = this.value;
+            if (!name) return;
+            var panel = document.getElementById('relDetailPanel');
+            if (!panel) return;
+            panel.style.display = 'block';
+            renderEmployeeDetail(panel, name);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        ledgerBtn?.addEventListener('click', function() {
+            if (!ledgerWrap) return;
+            var opening = ledgerWrap.style.display === 'none';
+            ledgerWrap.style.display = opening ? '' : 'none';
+            ledgerBtn.textContent = opening ? 'Hide All-Employees Day-by-Day' : 'Show All-Employees Day-by-Day';
+            if (opening) ledgerWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     }
 
