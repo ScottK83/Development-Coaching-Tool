@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-06T21:54:16.519Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-04-06T21:54:24.849Z",
+  "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -2806,7 +2806,9 @@
     }
   },
   "associateSentimentSnapshots": {},
-  "myTeamMembers": {},
+  "myTeamMembers": {
+    "2026-01-01|2026-04-05": []
+  },
   "callCenterAverages": {
     "2026-01-01|2026-04-05": {
       "adherence": 94.15,
@@ -8790,7 +8792,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 263
+      "byteLength": 274
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
@@ -8811,6 +8813,11 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 28
     }
   }
 }
