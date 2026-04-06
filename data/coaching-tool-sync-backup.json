@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-06T21:54:50.299Z",
+  "generatedAt": "2026-04-06T21:55:03.459Z",
   "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -2808,6 +2808,9 @@
   "associateSentimentSnapshots": {},
   "myTeamMembers": {
     "2026-01-01|2026-04-05": [
+      "Desiree Clark",
+      "Destiny Cervantez",
+      "Kamella Dash",
       "Robert Berrelleza"
     ]
   },
@@ -8819,7 +8822,7 @@
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 47
+      "byteLength": 98
     }
   }
 }
