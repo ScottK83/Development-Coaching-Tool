@@ -629,6 +629,35 @@
         return dates.slice(0, 3).join(', ') + ' (+' + (dates.length - 3) + ')';
     }
 
+    function getReliabilityNamesByTeamFilter(allNames) {
+        var names = Array.isArray(allNames) ? allNames : [];
+        var tf = window.DevCoachModules?.teamFilter;
+        if (!tf?.getTeamSelectionContext) return names;
+
+        var ctx = tf.getTeamSelectionContext();
+        if (!ctx?.isFiltering || !Array.isArray(ctx.selectedMembers) || !ctx.selectedMembers.length) return names;
+
+        var selectedExact = new Set(ctx.selectedMembers.map(function(n) { return String(n || '').trim().toLowerCase(); }).filter(Boolean));
+        var selectedLookup = new Set(ctx.selectedMembers.map(function(n) {
+            return buildEmployeeLookupKey(normalizeEmployeeName(n || ''));
+        }).filter(Boolean));
+
+        function getFirstToken(name) {
+            var s = String(name || '').trim();
+            if (!s) return '';
+            if (s.includes(',')) return String(s.split(',')[1] || '').trim().split(/\s+/)[0].toLowerCase();
+            return s.split(/\s+/)[0].toLowerCase();
+        }
+
+        return names.filter(function(name) {
+            var raw = String(name || '').trim();
+            var exact = raw.toLowerCase();
+            var lookup = buildEmployeeLookupKey(normalizeEmployeeName(raw));
+            var first = getFirstToken(raw);
+            return selectedExact.has(exact) || selectedLookup.has(lookup) || selectedExact.has(first);
+        });
+    }
+
     function buildAllEmployeesDayTable(employees) {
         var rows = [];
 
@@ -777,7 +806,7 @@
         var store = loadStore();
         consolidateDuplicateEmployees(store);
         var employees = store.employees || {};
-        var names = Object.keys(employees).sort();
+        var names = getReliabilityNamesByTeamFilter(Object.keys(employees)).sort();
 
         var html = '';
         html += '<div style="margin-bottom:16px;">';
@@ -908,6 +937,18 @@
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
         html += '<h4 style="margin:0; color:#00695c;">' + escapeHtml(employeeName) + '</h4>';
         html += '<button type="button" id="relCloseDetail" style="padding:4px 12px; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer;">✕ Close</button>';
+        html += '</div>';
+
+        var sourceLabel = emp.hasVerint && emp.hasPayroll ? 'Matched' : (emp.hasVerint ? 'Verint only' : (emp.hasPayroll ? 'Payroll only' : 'None'));
+        var sourceBg = sourceLabel === 'Matched' ? '#e8f5e9' : '#fff3e0';
+        var sourceColor = sourceLabel === 'Matched' ? '#2e7d32' : '#e65100';
+        var sourceNote = sourceLabel === 'Payroll only'
+            ? 'No Verint file matched this employee in the current data.'
+            : (sourceLabel === 'Verint only'
+                ? 'No Payroll row matched this employee in the current data.'
+                : 'Verint and Payroll are both matched for this employee.');
+        html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:' + sourceBg + '; color:' + sourceColor + '; font-size:0.83em; border:1px solid #e0e0e0;">';
+        html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
 
         // Status cards
