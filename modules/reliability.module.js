@@ -629,6 +629,104 @@
         return dates.slice(0, 3).join(', ') + ' (+' + (dates.length - 3) + ')';
     }
 
+    function buildAllEmployeesDayTable(employees) {
+        var rows = [];
+
+        Object.keys(employees || {}).forEach(function(name) {
+            var emp = employees[name] || {};
+            var r = emp.reconciled || {};
+            var timeline = r.timeline || [];
+            var buckets = r.dayBuckets || {};
+            var sameDaySet = new Set(buckets.sameDay || []);
+            var sameDayPtostSet = new Set(buckets.sameDayPtost || []);
+            var bereavementSet = new Set(buckets.bereavement || []);
+            var fmlaSet = new Set(buckets.fmla || []);
+
+            timeline.forEach(function(t) {
+                var verintText = (t.verint || []).map(function(v) {
+                    return v.activity + ' (' + v.hours + 'h)';
+                }).join('; ') || '—';
+
+                var payrollText = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
+                    var label = p.trc;
+                    if (p.taskCode) label += ' / ' + p.taskCode;
+                    return label + ' (' + p.quantity + 'h)';
+                }).join('; ');
+                if (!payrollText) payrollText = '—';
+
+                var totalHours = 0;
+                (t.verint || []).forEach(function(v) { totalHours += Number(v.hours || 0); });
+                var payrollNonReg = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
+                if (payrollNonReg.length > 0) {
+                    totalHours = payrollNonReg.reduce(function(sum, p) { return sum + Number(p.quantity || 0); }, 0);
+                }
+
+                rows.push({
+                    date: t.dateStr || '',
+                    dateKey: t.date || '',
+                    employee: name,
+                    sameDay: sameDaySet.has(t.dateStr || ''),
+                    sameDayPtost: sameDayPtostSet.has(t.dateStr || ''),
+                    bereavement: bereavementSet.has(t.dateStr || ''),
+                    fmla: fmlaSet.has(t.dateStr || ''),
+                    verint: verintText,
+                    payroll: payrollText,
+                    hours: round2(totalHours),
+                    flags: (t.flags || []).join('; ')
+                });
+            });
+        });
+
+        rows.sort(function(a, b) {
+            if (a.dateKey === b.dateKey) return a.employee.localeCompare(b.employee);
+            return String(a.dateKey).localeCompare(String(b.dateKey)) * -1;
+        });
+
+        var html = '';
+        html += '<div style="margin-top:16px;">';
+        html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Day-by-Day Breakdown (All Employees)</h4>';
+        html += '<div style="font-size:0.8em; color:#666; margin-bottom:8px;">Use this to match exact dates across associates.</div>';
+
+        if (!rows.length) {
+            html += '<div style="padding:12px; border:1px solid #e0e0e0; border-radius:6px; color:#777;">No day-level events yet.</div>';
+            html += '</div>';
+            return html;
+        }
+
+        html += '<div style="max-height:360px; overflow:auto; border:1px solid #dfe6e6; border-radius:6px;">';
+        html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
+        html += '<thead><tr style="position:sticky; top:0; background:#ecf6f5; z-index:1;">';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Date</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Employee</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Same Day</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Same Day PTOST</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Bereavement</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">FMLA</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Verint</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Payroll</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Hours</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Flags</th>';
+        html += '</tr></thead><tbody>';
+
+        rows.forEach(function(row) {
+            html += '<tr style="border-bottom:1px solid #eef2f2;">';
+            html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(row.date) + '</td>';
+            html += '<td style="padding:6px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.employee) + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDay ? '✓' : '—') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDayPtost ? '✓' : '—') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.bereavement ? '✓' : '—') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.fmla ? '✓' : '—') + '</td>';
+            html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.verint) + '</td>';
+            html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.payroll) + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + row.hours + '</td>';
+            html += '<td style="padding:6px 8px; min-width:180px; color:#666;">' + escapeHtml(row.flags || '—') + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div></div>';
+        return html;
+    }
+
     function renderTeamTable(container) {
         var store = loadStore();
         consolidateDuplicateEmployees(store);
@@ -707,6 +805,7 @@
         });
 
         html += '</tbody></table></div>';
+        html += buildAllEmployeesDayTable(employees);
 
         // Detail panel (shown when clicking a row)
         html += '<div id="relDetailPanel" style="display:none; margin-top:16px;"></div>';
