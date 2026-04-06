@@ -57,6 +57,39 @@ const isSuppressed = (msg) => {
     return SUPPRESSED_PATTERNS.some(pattern => pattern.test(msg));
 };
 
+function logAppError(message, error, context = {}) {
+    const errObj = error instanceof Error
+        ? error
+        : new Error(error?.message || String(error || message));
+
+    try {
+        window.DevCoachModules?.errorMonitor?.logError?.(errObj, {
+            source: 'script',
+            message,
+            ...context
+        });
+    } catch (_e) {}
+
+    try {
+        window.DevCoachModules?.debug?.addDebugEntry?.('error', message + ': ' + errObj.message, {
+            ...context,
+            stack: errObj.stack || null
+        });
+    } catch (_e) {}
+
+    try {
+        localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify({
+            message: message + ': ' + errObj.message,
+            source: context?.source || 'script',
+            timestamp: new Date().toISOString()
+        }));
+    } catch (_e) {}
+}
+
+window.getRecentAppErrors = function(limit = 20) {
+    return (window.DevCoachModules?.errorMonitor?.getLogs?.({ type: 'error' }) || []).slice(0, limit);
+};
+
 if (!DEBUG) {
     let lastErrorCapture = null;
     console.log = () => {};
@@ -1471,6 +1504,10 @@ function bindUploadAndPasteHandlers() {
                 loaded++;
             } catch (err) {
                 console.error('Verint upload error for file ' + files[i].name + ':', err);
+                logAppError('Verint upload failed', err, {
+                    source: 'upload.verint',
+                    fileName: files[i].name
+                });
                 errors++;
                 if (typeof showToast === 'function') {
                     var msg = err?.message ? (': ' + err.message) : '';
@@ -1505,6 +1542,10 @@ function bindUploadAndPasteHandlers() {
                     loaded++;
                 } catch (err) {
                     console.error('Payroll upload error for file ' + files[i].name + ':', err);
+                    logAppError('Payroll upload failed', err, {
+                        source: 'upload.payroll',
+                        fileName: files[i].name
+                    });
                     errors++;
                 }
             }
