@@ -2970,72 +2970,7 @@ async function withRepoSyncHydrationLock(action) {
 }
 
 async function fetchRepoBackupPayload() {
-    const origin = window?.location?.origin;
-    const timestamp = Date.now();
-    const urls = [];
-
-    if (origin && origin !== 'null') {
-        urls.push(`${origin}/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
-    }
-
-    urls.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${timestamp}`);
-
-    const payloadCandidates = [];
-
-    for (const url of urls) {
-        try {
-            const response = await fetch(url, { cache: 'no-store' });
-            if (!response.ok) continue;
-
-            const payload = await response.json();
-            if (payload && typeof payload === 'object') {
-                payloadCandidates.push(payload);
-            }
-        } catch (error) {
-            // Try next candidate URL
-        }
-    }
-
-    if (!payloadCandidates.length) return null;
-
-    const getFootprintScore = (payload) => {
-        const countObjectKeys = (value) => (value && typeof value === 'object' && !Array.isArray(value))
-            ? Object.keys(value).length
-            : 0;
-        const countNestedEntries = (value) => {
-            if (!value || typeof value !== 'object') return 0;
-            return Object.values(value).reduce((sum, item) => {
-                if (Array.isArray(item)) return sum + item.length;
-                if (item && typeof item === 'object') return sum + Object.keys(item).length;
-                return sum;
-            }, 0);
-        };
-
-        return (
-            countObjectKeys(payload?.weeklyData) * 100
-            + countObjectKeys(payload?.ytdData) * 100
-            + countNestedEntries(payload?.coachingHistory)
-            + countNestedEntries(payload?.callListeningLogs)
-            + countNestedEntries(payload?.associateSentimentSnapshots)
-            + countObjectKeys(payload?.myTeamMembers)
-        );
-    };
-
-    payloadCandidates.sort((a, b) => {
-        const timeDiff = parseTimeMs(b?.generatedAt) - parseTimeMs(a?.generatedAt);
-        if (timeDiff !== 0) return timeDiff;
-        return getFootprintScore(b) - getFootprintScore(a);
-    });
-
-    return payloadCandidates[0];
-}
-
-function coerceObject(value, fallback = {}) {
-    return value && typeof value === 'object' ? value : fallback;
-}
-
-function coerceNullableObject(value) {
-    return value && typeof value === 'object' ? value : null;
+    return window.DevCoachModules?.repoSync?.fetchRepoBackupPayload?.() || null;
 }
 
 function applyRepoBackupPayload(payload) {
@@ -3043,66 +2978,23 @@ function applyRepoBackupPayload(payload) {
 }
 
 function loadRepoBackupAppliedAt() {
-    try {
-        return String(localStorage.getItem(REPO_BACKUP_APPLIED_AT_STORAGE_KEY) || '').trim();
-    } catch (error) {
-        return '';
-    }
+    return window.DevCoachModules?.repoSync?.loadRepoBackupAppliedAt?.() || '';
 }
 
 function saveRepoBackupAppliedAt(isoText) {
-    try {
-        withRepoSyncSuppressed(() => {
-            localStorage.setItem(REPO_BACKUP_APPLIED_AT_STORAGE_KEY, String(isoText || '').trim());
-        });
-    } catch (error) {
-        console.error('Error saving repo backup applied marker:', error);
-    }
+    return window.DevCoachModules?.repoSync?.saveRepoBackupAppliedAt?.(isoText);
 }
 
 function parseTimeMs(value) {
-    const dateText = String(value || '').trim();
-    if (!dateText) return 0;
-    const parsed = Date.parse(dateText);
-    return Number.isNaN(parsed) ? 0 : parsed;
+    return window.DevCoachModules?.repoSync?.parseTimeMs?.(value) || 0;
 }
 
 function getLatestLocalRepoDataTimestampMs() {
-    const lastSync = loadRepoSyncLastSuccess();
-    const syncMs = parseTimeMs(lastSync?.syncedAt);
-    const appliedMs = parseTimeMs(loadRepoBackupAppliedAt());
-    return Math.max(syncMs, appliedMs, 0);
+    return window.DevCoachModules?.repoSync?.getLatestLocalRepoDataTimestampMs?.() || 0;
 }
 
 async function tryAutoRestoreFromRepoBackupOnEmptyState() {
-    const payload = await fetchRepoBackupPayload();
-    if (!hasMeaningfulBackupData(payload)) {
-        return false;
-    }
-
-    const localHasData = hasMeaningfulLocalData();
-    const remoteGeneratedAtMs = parseTimeMs(payload?.generatedAt);
-    const latestLocalMs = getLatestLocalRepoDataTimestampMs();
-
-    if (localHasData) {
-        if (!remoteGeneratedAtMs || (latestLocalMs > 0 && remoteGeneratedAtMs <= latestLocalMs)) {
-            return false;
-        }
-
-        const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
-        const shouldRestore = confirm(`Your data was updated on another computer on ${remoteWhen}.\n\nClick OK to sync this PC with that newer data.\nClick Cancel to keep this PC's current data as-is.`);
-        if (!shouldRestore) {
-            return false;
-        }
-    }
-
-    await withRepoSyncHydrationLock(async () => {
-        applyRepoBackupPayload(payload);
-    });
-
-    saveRepoBackupAppliedAt(new Date().toISOString());
-
-    return true;
+    return window.DevCoachModules?.repoSync?.tryAutoRestoreFromRepoBackupOnEmptyState?.() || false;
 }
 
 async function postRepoSyncPayload(endpoint, config, payload) {

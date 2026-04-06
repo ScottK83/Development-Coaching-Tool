@@ -28,7 +28,6 @@
     <script src="modules/storage.module.js"></script>
     <script src="modules/data-parsing.module.js"></script>
     <script src="modules/metric-profiles.module.js"></script>
-    <script src="modules/state.module.js"></script>
     <script src="modules/error-monitor.module.js"></script>
     <script src="modules/shared-utils.module.js"></script>
     <script src="modules/tips.module.js"></script>
@@ -77,7 +76,7 @@
 
         // 2. Check each expected module registered
         const expectedModules = [
-            'metricsRegistry', 'storage', 'dataParsing', 'metricProfiles', 'state',
+            'metricsRegistry', 'storage', 'dataParsing', 'metricProfiles',
             'errorMonitor', 'sharedUtils', 'navigation', 'debug', 'teamFilter',
             'repoSync', 'onOffTracker', 'coachingEmail', 'yearEndComments',
             'executiveSummary', 'metricTrends', 'metrics', 'sentiment', 'yearEnd',
@@ -93,7 +92,7 @@
         // 3. Check METRICS_REGISTRY is available globally
         check('METRICS_REGISTRY is global', window.METRICS_REGISTRY);
         check('METRICS_REGISTRY has scheduleAdherence', window.METRICS_REGISTRY?.scheduleAdherence);
-        check('METRICS_REGISTRY has 14 metrics', Object.keys(window.METRICS_REGISTRY || {}).length === 14);
+        check('METRICS_REGISTRY has 15 metrics', Object.keys(window.METRICS_REGISTRY || {}).length === 15);
 
         // 4. Spot-check some key window globals set by modules
         const keyGlobals = [
