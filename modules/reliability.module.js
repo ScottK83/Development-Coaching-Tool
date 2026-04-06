@@ -282,19 +282,30 @@
             for (var c = 0; c < Math.min(row.length, 12); c++) {
                 var cell = stripUnicode(String(row[c] || '')).trim();
                 if (!cell) continue;
-                var m = cell.match(/^employee\s*:\s*(.+)$/i);
+                var m = cell.match(/^employee(?:\s*name)?\s*:\s*(.+)$/i);
                 if (m && m[1]) return m[1].trim();
 
-                if (/^employee\s*:$/i.test(cell)) {
+                if (/^employee(?:\s*name)?\s*:$/i.test(cell) || /^employee(?:\s*name)?$/i.test(cell)) {
                     var rightCell = stripUnicode(String(row[c + 1] || '')).trim();
                     if (rightCell) return rightCell;
                 }
             }
         }
 
+        // Fallback: search top rows for any cell that already looks like "Last, First".
+        for (var r = 0; r < Math.min(rows.length, 40); r++) {
+            var scanRow = Array.isArray(rows[r]) ? rows[r] : [];
+            for (var k = 0; k < Math.min(scanRow.length, 12); k++) {
+                var candidate = stripUnicode(String(scanRow[k] || '')).trim();
+                if (candidate && isLikelyEmployeeName(candidate)) return candidate;
+            }
+        }
+
         // Fallback: derive employee text from filename if sheet label is missing.
         employeeName = extractNameFromFileName(fileName);
-        return isLikelyEmployeeName(employeeName) ? employeeName : '';
+        if (isLikelyEmployeeName(employeeName)) return employeeName;
+
+        return '';
     }
 
     function findColumnIndexFromHeaderRow(row, candidates) {
@@ -1225,7 +1236,14 @@
 
     async function handleVerintUpload(file) {
         var verint = await parseVerintExcel(file);
-        if (!verint.employeeName) throw new Error('Could not find employee name in Verint file');
+        if (!verint.employeeName) {
+            var selectedMembers = window.DevCoachModules?.teamFilter?.getTeamSelectionContext?.()?.selectedMembers || [];
+            if (selectedMembers.length === 1) {
+                verint.employeeName = selectedMembers[0];
+            } else {
+                throw new Error('Could not find employee name in Verint file. Ensure the export includes Employee/Employee Name header.');
+            }
+        }
 
         var store = loadStore();
         var normalizedName = normalizeEmployeeName(verint.employeeName);
