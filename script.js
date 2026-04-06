@@ -1448,9 +1448,12 @@ function bindUploadAndPasteHandlers() {
 
     document.getElementById('showUploadMetricsBtn')?.addEventListener('click', () => {
         const container = document.getElementById('pasteDataContainer');
+        const ptoContainer = document.getElementById('ptouploadContainer');
         if (container) {
-            const isHidden = window.getComputedStyle(container).display === 'none';
-            container.style.display = isHidden ? 'block' : 'none';
+            container.style.display = 'block';
+        }
+        if (ptoContainer) {
+            ptoContainer.style.display = 'none';
         }
     });
 

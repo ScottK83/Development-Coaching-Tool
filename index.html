@@ -43,13 +43,34 @@
                     <h2>📊 Get Started</h2>
                     
                     <!-- Upload Type Selection -->
-                    <div class="flex-row-center" style="margin-bottom: 20px; gap: 15px;">
+                    <div class="flex-row-center" style="margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
                         <button type="button" id="showUploadMetricsBtn" class="btn-upload-metrics">📊 Upload Metrics</button>
                         <button type="button" id="showUploadSentimentBtn" class="btn-upload-sentiment">💬 Upload Sentiment</button>
                         <button type="button" id="showUploadVerintBtn" style="background: #7b1fa2; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📋 Upload Verint</button>
                         <button type="button" id="showUploadPayrollBtn" style="background: #00695c; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">💰 Upload Payroll</button>
+                        <button type="button" id="showUploadPtoBtn" style="background: #5a2c8a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">⏱️ Upload PTO</button>
                         <input type="file" id="uploadVerintFileInput" accept=".xlsx,.xls" multiple style="display:none;">
                         <input type="file" id="uploadPayrollFileInput" accept=".xlsx,.xls" style="display:none;">
+                        <input type="file" id="ptoPayrollExcelInput" accept=".xlsx,.xls" style="display: none;">
+                        <input type="file" id="ptoBalanceExcelInput" accept=".xlsx,.xls" style="display: none;">
+                        <input type="file" id="ptoPdfInput" accept=".pdf" style="display: none;">
+                    </div>
+                    
+                    <!-- PTO Upload Container -->
+                    <div id="ptouploadContainer" class="upload-container" style="display: none;">
+                        <h3 style="color: #5a2c8a; margin-top: 0;">⏱️ Upload PTO Data</h3>
+                        <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">Upload payroll timecards, PTO balances, or PDF reports to track time-off.</p>
+                        <div style="margin-bottom: 20px; padding: 16px; background: #f9f9f9; border-radius: 10px; border: 1px solid #d0dce5;">
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" id="ptoPayrollExcelBtn" class="btn-primary" style="background: #5a2c8a; padding: 10px 20px; font-size: 0.95em;">Upload Payroll Excel</button>
+                                <button type="button" id="ptoBalanceExcelBtn" style="padding: 10px 20px; font-size: 0.95em; background: #00897b; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO Balances</button>
+                                <button type="button" id="ptoPdfBtn" style="padding: 10px 20px; font-size: 0.95em; background: #d32f2f; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO PDF</button>
+                                <span id="ptoPayrollExcelFileName" style="color: #888; font-size: 0.85em;"></span>
+                                <span id="ptoBalanceExcelFileName" style="color: #888; font-size: 0.85em;"></span>
+                            </div>
+                            <div id="ptoBalanceExcelResults"></div>
+                            <div id="ptoPayrollExcelResults"></div>
+                        </div>
                     </div>
                     
                     <!-- Upload Metrics Container -->
@@ -1139,23 +1160,11 @@ Box 2 - Future Improvement Areas:
             <section id="ptoSection" style="display: none;">
                 <div class="form-section" style="background: #f0f4f8; border-left: 4px solid #5a2c8a; padding: 24px;">
                     <h2 style="margin: 0 0 6px 0;">Payroll Time-Off Tracker</h2>
-                    <p style="color: #666; font-size: 0.88em; margin: 0 0 20px 0;">Upload your PeopleSoft timecard Excel to see missed days by employee.</p>
+                    <p style="color: #666; font-size: 0.88em; margin: 0 0 20px 0;">View and manage PTO data. Upload files in the Upload section.</p>
 
-                    <!-- Upload -->
+                    <!-- Clear All Button -->
                     <div style="margin-bottom: 20px; padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #d0dce5;">
-                        <input type="file" id="ptoPayrollExcelInput" accept=".xlsx,.xls" style="display: none;">
-                        <input type="file" id="ptoBalanceExcelInput" accept=".xlsx,.xls" style="display: none;">
-                        <input type="file" id="ptoPdfInput" accept=".pdf" style="display: none;">
-                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                            <button type="button" id="ptoPayrollExcelBtn" class="btn-primary" style="background: #5a2c8a; padding: 10px 20px; font-size: 0.95em;">Upload Payroll Excel</button>
-                            <button type="button" id="ptoBalanceExcelBtn" style="padding: 10px 20px; font-size: 0.95em; background: #00897b; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO Balances</button>
-                            <button type="button" id="ptoPdfBtn" style="padding: 10px 20px; font-size: 0.95em; background: #d32f2f; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Upload PTO PDF</button>
-                            <button type="button" id="ptoClearAllBtn" style="padding: 10px 16px; font-size: 0.9em; background: #fff; color: #b71c1c; border: 1px solid #e0e0e0; border-radius: 6px; cursor: pointer;">Clear All Entries</button>
-                            <span id="ptoPayrollExcelFileName" style="color: #888; font-size: 0.85em;"></span>
-                            <span id="ptoBalanceExcelFileName" style="color: #888; font-size: 0.85em;"></span>
-                        </div>
-                        <div id="ptoBalanceExcelResults"></div>
-                        <div id="ptoPayrollExcelResults"></div>
+                        <button type="button" id="ptoClearAllBtn" style="padding: 10px 16px; font-size: 0.9em; background: #fff; color: #b71c1c; border: 1px solid #e0e0e0; border-radius: 6px; cursor: pointer;">Clear All Entries</button>
                     </div>
 
                     <!-- Associate selector -->

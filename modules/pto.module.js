@@ -1144,6 +1144,17 @@ function initializePtoTracker() {
     migrateUnscheduledField();
 
     const select = document.getElementById('ptoAssociateSelect');
+    
+    // Toggle PTO upload container in Upload section
+    var showPtoUploadBtn = document.getElementById('showUploadPtoBtn');
+    if (showPtoUploadBtn && !showPtoUploadBtn.dataset.bound) {
+        showPtoUploadBtn.addEventListener('click', function() {
+            document.getElementById('pasteDataContainer').style.display = 'none';
+            document.getElementById('ptouploadContainer').style.display = 'block';
+        });
+        showPtoUploadBtn.dataset.bound = 'true';
+    }
+    
     const excelBtn = document.getElementById('ptoPayrollExcelBtn');
     const excelInput = document.getElementById('ptoPayrollExcelInput');
     const balanceBtn = document.getElementById('ptoBalanceExcelBtn');
