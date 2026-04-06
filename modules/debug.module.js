@@ -12,17 +12,93 @@
     // ============================================
     const STORAGE_PREFIX = 'devCoachingTool_';
     const DEBUG_MAX_ENTRIES = 50;
+    const DEBUG_LOG_STORAGE_KEY = STORAGE_PREFIX + 'debugLog';
 
     // ============================================
     // INTERNAL STATE
     // ============================================
     const debugState = { entries: [] };
 
+    function getDebugDayKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function persistDebugState() {
+        try {
+            localStorage.setItem(DEBUG_LOG_STORAGE_KEY, JSON.stringify({
+                dayKey: getDebugDayKey(),
+                entries: debugState.entries.slice(-DEBUG_MAX_ENTRIES)
+            }));
+        } catch (error) {
+            console.error('Failed to persist debug log:', error);
+        }
+    }
+
+    function clearDebugEntries(options = {}) {
+        debugState.entries = [];
+        if (options.removeStorage) {
+            try {
+                localStorage.removeItem(DEBUG_LOG_STORAGE_KEY);
+            } catch (error) {
+                console.error('Failed to remove persisted debug log:', error);
+            }
+            return;
+        }
+        persistDebugState();
+    }
+
+    function loadPersistedDebugState() {
+        try {
+            const raw = localStorage.getItem(DEBUG_LOG_STORAGE_KEY);
+            if (!raw) return;
+
+            const parsed = JSON.parse(raw);
+            const currentDayKey = getDebugDayKey();
+            const storedDayKey = parsed?.dayKey || null;
+            const storedEntries = Array.isArray(parsed?.entries) ? parsed.entries : [];
+
+            if (storedDayKey !== currentDayKey) {
+                clearDebugEntries({ removeStorage: true });
+                return;
+            }
+
+            debugState.entries = storedEntries.slice(-DEBUG_MAX_ENTRIES);
+        } catch (error) {
+            console.error('Failed to load persisted debug log:', error);
+            clearDebugEntries({ removeStorage: true });
+        }
+    }
+
+    function ensureFreshDebugLog() {
+        const currentDayKey = getDebugDayKey();
+        let storedDayKey = null;
+
+        try {
+            const raw = localStorage.getItem(DEBUG_LOG_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                storedDayKey = parsed?.dayKey || null;
+            }
+        } catch (error) {
+            console.error('Failed to inspect persisted debug log:', error);
+            clearDebugEntries({ removeStorage: true });
+            return;
+        }
+
+        if (storedDayKey && storedDayKey !== currentDayKey) {
+            clearDebugEntries();
+        }
+    }
+
     // ============================================
     // DEBUG ENTRY LOGGING
     // ============================================
 
     function addDebugEntry(type, message, details = {}) {
+        ensureFreshDebugLog();
         const entry = {
             timestamp: new Date().toISOString(),
             type,
@@ -33,6 +109,7 @@
         if (debugState.entries.length > DEBUG_MAX_ENTRIES) {
             debugState.entries = debugState.entries.slice(-DEBUG_MAX_ENTRIES);
         }
+        persistDebugState();
     }
 
     function installDebugListeners() {
@@ -141,6 +218,7 @@
     }
 
     function buildDebugPayload() {
+        ensureFreshDebugLog();
         return {
             snapshot: buildDebugSnapshot(),
             errors: debugState.entries
@@ -152,6 +230,7 @@
     // ============================================
 
     function renderDebugPanel() {
+        ensureFreshDebugLog();
         const envEl = document.getElementById('debugEnvironment');
         const dataEl = document.getElementById('debugDataSnapshot');
         const errEl = document.getElementById('debugErrors');
@@ -230,9 +309,12 @@
     // ============================================
     // MODULE EXPORT
     // ============================================
+    loadPersistedDebugState();
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.debug = {
         addDebugEntry,
+        clearDebugEntries,
         installDebugListeners,
         getPeriodTypeCounts,
         getLatestPeriodKeyByType,
@@ -245,6 +327,7 @@
         debugState,
         // Constants
         STORAGE_PREFIX,
-        DEBUG_MAX_ENTRIES
+        DEBUG_MAX_ENTRIES,
+        DEBUG_LOG_STORAGE_KEY
     };
 })();
