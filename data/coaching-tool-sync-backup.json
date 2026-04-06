@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-06T20:52:27.787Z",
-  "reason": "upload to git",
+  "generatedAt": "2026-04-06T20:52:41.740Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {},
@@ -48,6 +48,11 @@
       "itemCount": 0,
       "byteLength": 2
     },
+    "devCoachingTool_reliabilityTracker": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 16
+    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
@@ -66,7 +71,12 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 228
+      "byteLength": 230
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 257
     }
   }
 }
