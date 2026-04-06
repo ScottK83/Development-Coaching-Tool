@@ -727,6 +727,7 @@
             ptostHoursUsed: 0,
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
             ptostOverageHours: 0,
+            unscheduledRunningHours: 0,
             sameDayNoPtostHours: 0,
             correctableSameDayHours: 0,
             remainingSameDayExposureHours: 0,
@@ -791,6 +792,7 @@
         // Walk dates chronologically and build timeline
         var sortedDates = Object.keys(dateMap).sort();
         var runningPtost = 0;
+        var runningUnscheduled = 0;
 
         sortedDates.forEach(function(dk) {
             var day = dateMap[dk];
@@ -837,9 +839,10 @@
             var verintPtost = verintItems.filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; });
             var verintSameDayNoPtost = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'tardy'; });
             var verintTardy = verintItems.filter(function(v) { return v.type === 'tardy'; });
+            var mismatchSameDayVsPayrollPtost = payrollPtostHours > 0 && verintSameDayNoPtost.length > 0 && verintPtost.length === 0;
 
             var isSameDay = payrollUnschdHours > 0 || verintSameDayNoPtost.length > 0;
-            var isSameDayPtost = payrollPtostHours > 0 || verintPtost.length > 0;
+            var isSameDayPtost = (payrollPtostHours > 0 && !mismatchSameDayVsPayrollPtost) || verintPtost.length > 0;
             var isBereavement = payrollItems.some(function(p) { return p.trc === 'BRV'; }) ||
                 verintItems.some(function(v) { return String(v.activity || '').toLowerCase().includes('bereavement'); });
             var isFmla = payrollItems.some(function(p) { return p.trc === 'FMLA' || p.trc === 'FMLNP'; }) ||
@@ -870,23 +873,29 @@
 
             // Review mismatch: Verint says Same Day (non-PTOST) but Payroll coded PTOST.
             // Keep Full PTOST matches clean (e.g., Same Day - Full PTOST + Payroll PTOST).
-            if (payrollPtostHours > 0 && verintSameDayNoPtost.length > 0) {
+            if (mismatchSameDayVsPayrollPtost) {
                 var mismatchHours = round2(verintSameDayNoPtost.reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
                 entry.flags.push('REVIEW: Verint Same Day non-PTOST but Payroll has PTOST (' + mismatchHours + 'h)');
             }
 
             // --- Track PTOST running total ---
             if (payrollPtostHours > 0) {
-                runningPtost = round2(runningPtost + payrollPtostHours);
-                entry.ptostRunning = runningPtost;
-                entry.ptostProtected = runningPtost <= PTOST_BUFFER_LIMIT;
+                if (mismatchSameDayVsPayrollPtost) {
+                    runningUnscheduled = round2(runningUnscheduled + payrollPtostHours);
+                    entry.unscheduledRunning = runningUnscheduled;
+                    result.unscheduledRunningHours = runningUnscheduled;
+                } else {
+                    runningPtost = round2(runningPtost + payrollPtostHours);
+                    entry.ptostRunning = runningPtost;
+                    entry.ptostProtected = runningPtost <= PTOST_BUFFER_LIMIT;
 
-                if (runningPtost > PTOST_BUFFER_LIMIT) {
-                    var overage = round2(Math.min(payrollPtostHours, runningPtost - PTOST_BUFFER_LIMIT));
-                    entry.ptostOverage = overage;
-                    result.ptostOverageHours = round2(result.ptostOverageHours + overage);
-                    result.reliabilityHours = round2(result.reliabilityHours + overage);
-                    entry.flags.push('PTOST over 40h buffer (+' + overage + 'h reliability)');
+                    if (runningPtost > PTOST_BUFFER_LIMIT) {
+                        var overage = round2(Math.min(payrollPtostHours, runningPtost - PTOST_BUFFER_LIMIT));
+                        entry.ptostOverage = overage;
+                        result.ptostOverageHours = round2(result.ptostOverageHours + overage);
+                        result.reliabilityHours = round2(result.reliabilityHours + overage);
+                        entry.flags.push('PTOST over 40h buffer (+' + overage + 'h reliability)');
+                    }
                 }
             } else if (verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
                 // Verint shows PTOST but payroll doesn't — track from Verint
@@ -925,7 +934,9 @@
             }
 
             // Classify the day for display
-            if (payrollPtostHours > 0 || verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
+            if (mismatchSameDayVsPayrollPtost) {
+                entry.category = 'same-day';
+            } else if (payrollPtostHours > 0 || verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
                 entry.category = 'ptost';
             } else if (payrollUnschdHours > 0 || verintItems.some(function(v) { return v.type === 'same-day' || v.type === 'tardy'; })) {
                 entry.category = 'same-day';
@@ -942,6 +953,7 @@
 
         result.ptostHoursUsed = round2(runningPtost);
         result.ptostBufferRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - runningPtost));
+        result.unscheduledRunningHours = round2(runningUnscheduled);
 
         var correctionRemaining = result.ptostBufferRemaining;
         result.timeline.forEach(function(t) {
@@ -1391,6 +1403,7 @@
         html += '<div style="margin-bottom:14px; padding:10px; background:#f7fdfc; border:1px solid #d7efea; border-radius:6px; font-size:0.84em;">';
         html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">Same Day Policy View</div>';
         html += '<div><strong>Same Day (No PTOST):</strong> ' + (r.sameDayNoPtostHours || 0) + 'h</div>';
+        html += '<div><strong>Unscheduled Running (review rows):</strong> ' + (r.unscheduledRunningHours || 0) + 'h</div>';
         html += '<div><strong>Can Still Convert to PTOST:</strong> ' + (r.correctableSameDayHours || 0) + 'h across ' + correctionCandidates.length + ' day(s)</div>';
         html += '<div><strong>Still Exposed After Corrections:</strong> ' + (r.remainingSameDayExposureHours || 0) + 'h</div>';
         html += '<div><strong>PTOST Discipline Threshold:</strong> ' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? 'Reached (40h+)' : 'Not reached') + '</div>';
@@ -1650,7 +1663,7 @@
         html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Verint</th>';
         html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Payroll</th>';
         html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">Hours</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">PTOST Running</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">Running</th>';
         html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Flags</th>';
         html += '</tr></thead><tbody>';
 
@@ -1708,6 +1721,8 @@
             if (t.ptostRunning !== undefined) {
                 var ptColor = t.ptostProtected ? '#2e7d32' : '#b71c1c';
                 html += '<span style="color:' + ptColor + '; font-weight:600;">' + t.ptostRunning + 'h</span>';
+            } else if (t.unscheduledRunning !== undefined) {
+                html += '<span style="color:#e65100; font-weight:700;">Unsched ' + t.unscheduledRunning + 'h</span>';
             } else {
                 html += '<span style="color:#ccc;">—</span>';
             }
