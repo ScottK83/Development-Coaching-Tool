@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-07T01:20:24.662Z",
+  "generatedAt": "2026-04-07T01:20:59.765Z",
   "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
@@ -9719,7 +9719,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 4,
           "sameDayNoPtostHours": 0.27,
-          "correctableSameDayHours": 0.27,
+          "correctableSameDayHours": 4.64,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0.27,
           "timeline": [
@@ -9838,7 +9838,10 @@
                   "clockOut": "03:40 PM"
                 }
               ],
-              "flags": [],
+              "flags": [
+                "Review coding: Verint Same Day, Payroll PTO (0.5h)"
+              ],
+              "reviewCodingHours": 0.5,
               "category": "same-day"
             },
             {
@@ -9890,8 +9893,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (3.87h)"
+                "Review coding: Verint Same Day, Payroll PTO (3.87h)"
               ],
+              "reviewCodingHours": 3.87,
               "unscheduledRunning": 4,
               "category": "same-day"
             },
@@ -10108,14 +10112,34 @@
               "originalHours": 0.27,
               "activity": "Tardy EQ GT 6 Min",
               "reason": "Can be changed to PTOST"
+            },
+            {
+              "date": "1/14/2026",
+              "hours": 0.5,
+              "originalHours": 0.5,
+              "activity": "Pre Planned Absence, Same Day - No Call No Show",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "1/16/2026",
+              "hours": 3.87,
+              "originalHours": 3.87,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
             }
           ],
           "reviewCodingCandidates": [
             {
+              "date": "1/14/2026",
+              "verintActivity": "Same Day - No Call No Show",
+              "verintHours": 0.5,
+              "payrollPtoHours": 8
+            },
+            {
               "date": "1/16/2026",
               "verintActivity": "Same Day",
               "verintHours": 3.87,
-              "payrollPtostHours": 4
+              "payrollPtoHours": 4
             }
           ],
           "pcIssueCandidates": [
@@ -13280,7 +13304,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 1.3,
           "sameDayNoPtostHours": 13.84,
-          "correctableSameDayHours": 13.84,
+          "correctableSameDayHours": 15.16,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 13.84,
           "timeline": [
@@ -13461,8 +13485,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (1.32h)"
+                "Review coding: Verint Same Day, Payroll PTO (1.32h)"
               ],
+              "reviewCodingHours": 1.32,
               "unscheduledRunning": 1.3,
               "category": "same-day"
             },
@@ -13512,9 +13537,11 @@
                 }
               ],
               "flags": [
-                "Same Day without PTOST (0.34h against reliability)"
+                "Same Day without PTOST (0.34h against reliability)",
+                "Review coding: Verint Same Day, Payroll PTO (0.57h)"
               ],
               "sameDayExposureHours": 0.34,
+              "reviewCodingHours": 0.57,
               "category": "same-day"
             },
             {
@@ -13748,11 +13775,18 @@
           "discrepancies": [],
           "correctionCandidates": [
             {
+              "date": "2/26/2026",
+              "hours": 1.32,
+              "originalHours": 1.32,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
               "date": "2/27/2026",
               "hours": 0.34,
               "originalHours": 0.34,
               "activity": "PPLO LT 48 Hrs, Same Day",
-              "reason": "Can be changed to PTOST"
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
             },
             {
               "date": "4/2/2026",
@@ -13774,7 +13808,13 @@
               "date": "2/26/2026",
               "verintActivity": "Same Day",
               "verintHours": 1.32,
-              "payrollPtostHours": 1.3
+              "payrollPtoHours": 1.3
+            },
+            {
+              "date": "2/27/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 0.57,
+              "payrollPtoHours": 2.64
             }
           ],
           "pcIssueCandidates": [
@@ -18123,7 +18163,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 22.68,
           "sameDayNoPtostHours": 2.32,
-          "correctableSameDayHours": 2.32,
+          "correctableSameDayHours": 18.68,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 2.32,
           "timeline": [
@@ -18297,8 +18337,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (5.8h)"
+                "Review coding: Verint Same Day, Payroll PTO (5.8h)"
               ],
+              "reviewCodingHours": 5.8,
               "unscheduledRunning": 6,
               "category": "same-day"
             },
@@ -18346,8 +18387,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (8h)"
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
+              "reviewCodingHours": 8,
               "unscheduledRunning": 14,
               "category": "same-day"
             },
@@ -18502,8 +18544,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (2h)"
+                "Review coding: Verint Same Day, Payroll PTO (2h)"
               ],
+              "reviewCodingHours": 2,
               "unscheduledRunning": 16,
               "category": "same-day"
             },
@@ -18672,8 +18715,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (1h)"
+                "Review coding: Verint Same Day, Payroll PTO (1h)"
               ],
+              "reviewCodingHours": 1,
               "unscheduledRunning": 17,
               "category": "same-day"
             },
@@ -18756,9 +18800,10 @@
               ],
               "flags": [
                 "Same Day without PTOST (2.32h against reliability)",
-                "Review coding: Verint Same Day, Payroll PTOST (8h)"
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
               "sameDayExposureHours": 2.32,
+              "reviewCodingHours": 8,
               "unscheduledRunning": 22.68,
               "category": "same-day"
             },
@@ -18952,11 +18997,39 @@
           "discrepancies": [],
           "correctionCandidates": [
             {
+              "date": "1/12/2026",
+              "hours": 5.8,
+              "originalHours": 5.8,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "1/16/2026",
+              "hours": 8,
+              "originalHours": 8,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "1/31/2026",
+              "hours": 2,
+              "originalHours": 2,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "2/24/2026",
+              "hours": 1,
+              "originalHours": 1,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
               "date": "3/17/2026",
-              "hours": 2.32,
+              "hours": 1.88,
               "originalHours": 2.32,
               "activity": "Same Day",
-              "reason": "Can be changed to PTOST"
+              "reason": "Partial conversion due to PTOST 40h limit"
             }
           ],
           "reviewCodingCandidates": [
@@ -18964,31 +19037,31 @@
               "date": "1/12/2026",
               "verintActivity": "Same Day",
               "verintHours": 5.8,
-              "payrollPtostHours": 6
+              "payrollPtoHours": 6
             },
             {
               "date": "1/16/2026",
               "verintActivity": "Same Day",
               "verintHours": 8,
-              "payrollPtostHours": 8
+              "payrollPtoHours": 8
             },
             {
               "date": "1/31/2026",
               "verintActivity": "Same Day",
               "verintHours": 2,
-              "payrollPtostHours": 2
+              "payrollPtoHours": 2
             },
             {
               "date": "2/24/2026",
               "verintActivity": "Same Day",
               "verintHours": 1,
-              "payrollPtostHours": 1
+              "payrollPtoHours": 1
             },
             {
               "date": "3/17/2026",
               "verintActivity": "Same Day",
               "verintHours": 8,
-              "payrollPtostHours": 5.68
+              "payrollPtoHours": 8
             }
           ],
           "pcIssueCandidates": [],
@@ -20358,7 +20431,10 @@
                   "clockOut": ""
                 }
               ],
-              "flags": [],
+              "flags": [
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
+              ],
+              "reviewCodingHours": 8,
               "category": "same-day"
             },
             {
@@ -20459,9 +20535,11 @@
                 }
               ],
               "flags": [
-                "Same Day without PTOST (8h against reliability)"
+                "Same Day without PTOST (8h against reliability)",
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
               "sameDayExposureHours": 8,
+              "reviewCodingHours": 8,
               "category": "same-day"
             },
             {
@@ -20506,8 +20584,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (8h)"
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
+              "reviewCodingHours": 8,
               "unscheduledRunning": 8,
               "category": "same-day"
             },
@@ -20902,6 +20981,13 @@
           "discrepancies": [],
           "correctionCandidates": [
             {
+              "date": "1/16/2026",
+              "hours": 8,
+              "originalHours": 8,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
               "date": "1/17/2026",
               "hours": 5.35,
               "originalHours": 5.35,
@@ -20910,25 +20996,30 @@
             },
             {
               "date": "1/24/2026",
-              "hours": 8,
-              "originalHours": 8,
-              "activity": "Same Day",
-              "reason": "Can be changed to PTOST"
-            },
-            {
-              "date": "3/31/2026",
               "hours": 0.74,
-              "originalHours": 4,
+              "originalHours": 8,
               "activity": "Same Day",
               "reason": "Partial conversion due to PTOST 40h limit"
             }
           ],
           "reviewCodingCandidates": [
             {
+              "date": "1/16/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtoHours": 8
+            },
+            {
+              "date": "1/24/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtoHours": 8
+            },
+            {
               "date": "2/6/2026",
               "verintActivity": "Same Day",
               "verintHours": 8,
-              "payrollPtostHours": 8
+              "payrollPtoHours": 8
             }
           ],
           "pcIssueCandidates": [
@@ -21973,7 +22064,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 8,
           "sameDayNoPtostHours": 0.15,
-          "correctableSameDayHours": 0.15,
+          "correctableSameDayHours": 8.15,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0.15,
           "timeline": [
@@ -22142,8 +22233,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (8h)"
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
+              "reviewCodingHours": 8,
               "unscheduledRunning": 8,
               "category": "same-day"
             },
@@ -22410,6 +22502,13 @@
               "originalHours": 0.15,
               "activity": "Tardy EQ GT 6 Min",
               "reason": "Can be changed to PTOST"
+            },
+            {
+              "date": "2/9/2026",
+              "hours": 8,
+              "originalHours": 8,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
             }
           ],
           "reviewCodingCandidates": [
@@ -22417,7 +22516,7 @@
               "date": "2/9/2026",
               "verintActivity": "Same Day",
               "verintHours": 8,
-              "payrollPtostHours": 8
+              "payrollPtoHours": 8
             }
           ],
           "pcIssueCandidates": [
@@ -23624,7 +23723,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 5,
           "sameDayNoPtostHours": 0,
-          "correctableSameDayHours": 0,
+          "correctableSameDayHours": 3.5,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
@@ -24208,8 +24307,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (3.5h)"
+                "Review coding: Verint Same Day, Payroll PTO (3.5h)"
               ],
+              "reviewCodingHours": 3.5,
               "unscheduledRunning": 5,
               "category": "same-day"
             },
@@ -24309,13 +24409,21 @@
             }
           ],
           "discrepancies": [],
-          "correctionCandidates": [],
+          "correctionCandidates": [
+            {
+              "date": "2/13/2026",
+              "hours": 3.5,
+              "originalHours": 3.5,
+              "activity": "Pre Planned Absence, Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            }
+          ],
           "reviewCodingCandidates": [
             {
               "date": "2/13/2026",
               "verintActivity": "Same Day",
               "verintHours": 3.5,
-              "payrollPtostHours": 5
+              "payrollPtoHours": 8
             }
           ],
           "pcIssueCandidates": [],
@@ -25360,7 +25468,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 21,
           "sameDayNoPtostHours": 0,
-          "correctableSameDayHours": 0,
+          "correctableSameDayHours": 18,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
@@ -25449,8 +25557,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (6.03h)"
+                "Review coding: Verint Same Day, Payroll PTO (6.03h)"
               ],
+              "reviewCodingHours": 6.03,
               "unscheduledRunning": 7,
               "category": "same-day"
             },
@@ -25517,8 +25626,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (2h)"
+                "Review coding: Verint Same Day, Payroll PTO (2h)"
               ],
+              "reviewCodingHours": 2,
               "unscheduledRunning": 9,
               "category": "same-day"
             },
@@ -25549,8 +25659,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (7h)"
+                "Review coding: Verint Same Day, Payroll PTO (7h)"
               ],
+              "reviewCodingHours": 7,
               "unscheduledRunning": 16,
               "category": "same-day"
             },
@@ -25820,8 +25931,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (1.15h)"
+                "Review coding: Verint Same Day, Payroll PTO (1.15h)"
               ],
+              "reviewCodingHours": 1.15,
               "unscheduledRunning": 17,
               "category": "same-day"
             },
@@ -25851,7 +25963,10 @@
                   "clockOut": "05:05 PM"
                 }
               ],
-              "flags": [],
+              "flags": [
+                "Review coding: Verint Same Day, Payroll PTO (2.92h)"
+              ],
+              "reviewCodingHours": 2.92,
               "category": "same-day"
             },
             {
@@ -25956,8 +26071,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (4h)"
+                "Review coding: Verint Same Day, Payroll PTO (4h)"
               ],
+              "reviewCodingHours": 4,
               "unscheduledRunning": 21,
               "category": "same-day"
             },
@@ -25977,37 +26093,79 @@
             }
           ],
           "discrepancies": [],
-          "correctionCandidates": [],
+          "correctionCandidates": [
+            {
+              "date": "1/14/2026",
+              "hours": 6.03,
+              "originalHours": 6.03,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "1/23/2026",
+              "hours": 2,
+              "originalHours": 2,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "1/28/2026",
+              "hours": 7,
+              "originalHours": 7,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "3/13/2026",
+              "hours": 1.15,
+              "originalHours": 1.15,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            },
+            {
+              "date": "3/17/2026",
+              "hours": 1.82,
+              "originalHours": 2.92,
+              "activity": "Same Day",
+              "reason": "Partial conversion due to PTOST 40h limit"
+            }
+          ],
           "reviewCodingCandidates": [
             {
               "date": "1/14/2026",
               "verintActivity": "Same Day",
               "verintHours": 6.03,
-              "payrollPtostHours": 7
+              "payrollPtoHours": 7
             },
             {
               "date": "1/23/2026",
               "verintActivity": "Same Day",
               "verintHours": 2,
-              "payrollPtostHours": 2
+              "payrollPtoHours": 2
             },
             {
               "date": "1/28/2026",
               "verintActivity": "Same Day",
               "verintHours": 7,
-              "payrollPtostHours": 7
+              "payrollPtoHours": 7
             },
             {
               "date": "3/13/2026",
               "verintActivity": "Same Day",
               "verintHours": 1.15,
-              "payrollPtostHours": 1
+              "payrollPtoHours": 1
+            },
+            {
+              "date": "3/17/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 2.92,
+              "payrollPtoHours": 3
             },
             {
               "date": "4/1/2026",
               "verintActivity": "Same Day",
               "verintHours": 4,
-              "payrollPtostHours": 4
+              "payrollPtoHours": 4
             }
           ],
           "pcIssueCandidates": [
@@ -26934,7 +27092,7 @@
           "ptostOverageHours": 0,
           "unscheduledRunningHours": 1,
           "sameDayNoPtostHours": 0,
-          "correctableSameDayHours": 0,
+          "correctableSameDayHours": 0.93,
           "remainingSameDayExposureHours": 0,
           "reliabilityHours": 0,
           "timeline": [
@@ -27154,8 +27312,9 @@
                 }
               ],
               "flags": [
-                "Review coding: Verint Same Day, Payroll PTOST (0.93h)"
+                "Review coding: Verint Same Day, Payroll PTO (0.93h)"
               ],
+              "reviewCodingHours": 0.93,
               "unscheduledRunning": 1,
               "category": "same-day"
             },
@@ -27255,13 +27414,21 @@
             }
           ],
           "discrepancies": [],
-          "correctionCandidates": [],
+          "correctionCandidates": [
+            {
+              "date": "2/19/2026",
+              "hours": 0.93,
+              "originalHours": 0.93,
+              "activity": "Same Day",
+              "reason": "Verint Same Day with Payroll PTO: update to PTOST"
+            }
+          ],
           "reviewCodingCandidates": [
             {
               "date": "2/19/2026",
               "verintActivity": "Same Day",
               "verintHours": 0.93,
-              "payrollPtostHours": 1
+              "payrollPtoHours": 1
             }
           ],
           "pcIssueCandidates": [],
@@ -28509,9 +28676,11 @@
                 }
               ],
               "flags": [
-                "Same Day without PTOST (8h against reliability)"
+                "Same Day without PTOST (8h against reliability)",
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
               "sameDayExposureHours": 8,
+              "reviewCodingHours": 8,
               "category": "same-day"
             },
             {
@@ -28573,9 +28742,11 @@
                 }
               ],
               "flags": [
-                "Same Day without PTOST (3.32h against reliability)"
+                "Same Day without PTOST (3.32h against reliability)",
+                "Review coding: Verint Same Day, Payroll PTO (3.3h)"
               ],
               "sameDayExposureHours": 3.32,
+              "reviewCodingHours": 3.3,
               "category": "same-day"
             },
             {
@@ -28598,9 +28769,11 @@
                 }
               ],
               "flags": [
-                "Same Day without PTOST (8h against reliability)"
+                "Same Day without PTOST (8h against reliability)",
+                "Review coding: Verint Same Day, Payroll PTO (8h)"
               ],
               "sameDayExposureHours": 8,
+              "reviewCodingHours": 8,
               "category": "same-day"
             },
             {
@@ -29195,7 +29368,26 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
-          "reviewCodingCandidates": [],
+          "reviewCodingCandidates": [
+            {
+              "date": "1/20/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtoHours": 8
+            },
+            {
+              "date": "1/22/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 3.3,
+              "payrollPtoHours": 3.32
+            },
+            {
+              "date": "1/23/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtoHours": 8
+            }
+          ],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 23.32,
@@ -45526,7 +45718,7 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 565863
+      "byteLength": 569634
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
@@ -45561,7 +45753,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 283
+      "byteLength": 293
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
