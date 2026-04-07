@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-07T01:27:16.181Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-04-07T18:46:02.971Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -45812,7 +45812,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 230
+      "byteLength": 223
     },
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
@@ -45853,11 +45853,6 @@
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
-    },
-    "devCoachingTool_debugLog": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 15763
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
