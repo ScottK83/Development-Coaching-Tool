@@ -54,6 +54,7 @@
     <script src="modules/employee-list.module.js"></script>
     <script src="modules/trend-intelligence.module.js"></script>
     <script src="modules/trend-coaching-email.module.js"></script>
+    <script src="modules/reliability.module.js"></script>
     <script src="modules/copilot-prompt.module.js"></script>
 
     <script>
@@ -82,7 +83,7 @@
             'executiveSummary', 'metricTrends', 'metrics', 'sentiment', 'yearEnd',
             'uiUtils', 'emailFormatter', 'coachingAnalysis', 'coaching',
             'callListening', 'employeeList', 'trendIntelligence',
-            'trendCoachingEmail', 'copilotPrompt'
+            'trendCoachingEmail', 'reliability', 'copilotPrompt'
         ];
 
         for (const mod of expectedModules) {
@@ -121,6 +122,23 @@
         if (typeof window.escapeHtml === 'function') {
             const escaped = window.escapeHtml('<b>test&"quote</b>');
             check('escapeHtml works correctly', escaped.includes('&lt;') && escaped.includes('&amp;'));
+        }
+
+        // 6. Reliability regression check: Verint Same Day + Payroll PTOST must be flagged for coding review
+        if (typeof window.DevCoachModules?.reliability?.reconcileEmployee === 'function') {
+            const mockVerint = {
+                events: [
+                    { from: '2026-02-09', activity: 'Same Day', hours: 8 }
+                ]
+            };
+            const mockPayroll = [
+                { date: '2026-02-09', trc: 'PTOST', quantity: 8, taskCode: '', clockIn: '' }
+            ];
+
+            const rec = window.DevCoachModules.reliability.reconcileEmployee(mockVerint, mockPayroll);
+            check('Reliability detects review-coding mismatch day', (rec.reviewCodingCandidates || []).length === 1);
+            check('Mismatch day is not auto-added to PTOST correctionCandidates', (rec.correctionCandidates || []).length === 0);
+            check('Mismatch keeps reliability exposure at 0h', Number(rec.sameDayNoPtostHours || 0) === 0);
         }
 
         // Summary
