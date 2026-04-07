@@ -1056,30 +1056,29 @@
 
     function buildPtostDesignationEmail(employeeName, events) {
         var lines = [];
-        lines.push('Hi WFM,\n');
-        lines.push('Please review the following same-day reliability entries for ' + employeeName + ' and convert to PTOST where listed.\n');
+        lines.push('Hi WFM Team,\n');
+        lines.push('Please review the entries below for ' + employeeName + ' and update coding to PTOST where applicable.\n');
 
         events.forEach(function(ev) {
             lines.push('  - ' + ev.dateStr + ': ' + ev.hours + 'h (' + ev.activity + ')');
         });
 
-        lines.push('\nThese rows are capped to remaining PTOST eligibility under the 40-hour policy buffer.');
-        lines.push('\nThank you.');
+        lines.push('\nThese updates are limited to remaining PTOST eligibility under the 40-hour policy cap.');
+        lines.push('\nThank you,');
         return lines.join('\n');
     }
 
     function buildWfmCorrectionEmail(employeeName, discrepancies) {
-        var firstName = getFirstName(employeeName);
         var lines = [];
-        lines.push('Hi WFM,\n');
-        lines.push('I found the following discrepancies for ' + employeeName + ' between Verint and Payroll that need correction:\n');
+        lines.push('Hi WFM Team,\n');
+        lines.push('Please review the discrepancies below for ' + employeeName + ' between Verint and Payroll:\n');
 
         discrepancies.forEach(function(d) {
-            lines.push('  - ' + d.date + ': Verint shows "' + d.verintActivity + '" (' + d.verintHours + 'h absent), but Payroll shows REG ' + d.payrollHours + 'h with clock-in at ' + d.payrollClockIn);
+            lines.push('  - ' + d.date + ': Verint shows "' + d.verintActivity + '" (' + d.verintHours + 'h), while Payroll shows REG ' + d.payrollHours + 'h with clock-in at ' + d.payrollClockIn + '.');
         });
 
-        lines.push('\nCan you please review and correct these entries?\n');
-        lines.push('Thank you.');
+        lines.push('\nPlease update as needed.\n');
+        lines.push('Thank you,');
         return lines.join('\n');
     }
 
@@ -1126,7 +1125,7 @@
         lines.push('Hi WFM Team,');
         lines.push('');
         lines.push('Please review the attendance updates below for ' + employeeName + '.');
-        lines.push('I split these into items that can be updated now and items that need review.');
+        lines.push('Items are grouped by what can be updated now vs what needs review.');
         lines.push('');
 
         var ptostRows = items.filter(function(i) { return i.label === 'Convert to PTOST'; });
@@ -1155,10 +1154,10 @@
             lines.push('');
         }
 
-        lines.push('Thank you!');
+        lines.push('Thank you,');
 
         return {
-            subject: employeeName + ' - Verint Corrections',
+            subject: employeeName + ' - Attendance Coding Updates',
             body: lines.join('\n')
         };
     }
