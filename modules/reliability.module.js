@@ -1931,12 +1931,21 @@
 
         // Bind email button
         document.getElementById('relEmailCorrections')?.addEventListener('click', function() {
+            // Reconcile from latest stored data at click-time so open/stale panels can't miss rows.
+            var latestStore = loadStore();
+            var latestEmp = latestStore.employees?.[employeeName] || emp || {};
+            var latestReconciled = reconcileEmployee(latestEmp.verint || null, latestEmp.payroll?.entries || null);
+            if (!latestStore.employees) latestStore.employees = {};
+            if (!latestStore.employees[employeeName]) latestStore.employees[employeeName] = latestEmp;
+            latestStore.employees[employeeName].reconciled = latestReconciled;
+            saveStore(latestStore);
+
             var draft = buildVerintCorrectionsDraft(
                 employeeName,
-                correctionCandidates,
-                r.pcIssueCandidates || [],
-                r.discrepancies || [],
-                r.reviewCodingCandidates || []
+                latestReconciled.correctionCandidates || [],
+                latestReconciled.pcIssueCandidates || [],
+                latestReconciled.discrepancies || [],
+                latestReconciled.reviewCodingCandidates || []
             );
             openMailDraft(draft.subject, draft.body);
             if (typeof showToast === 'function') showToast('Opening Outlook draft for Verint corrections', 2500);
