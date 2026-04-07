@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-07T00:16:26.822Z",
-  "reason": "storage set: devCoachingTool_reliabilityTracker",
+  "generatedAt": "2026-04-07T00:17:16.845Z",
+  "reason": "associate sentiment snapshots updated",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -46031,7 +46031,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 287
+      "byteLength": 293
     },
     "devCoachingTool_yearEndAnnualGoals": {
       "valueType": "object",
