@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-07T01:23:01.629Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-04-07T01:23:32.856Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -8286,6 +8286,7 @@
           "pcIssueCandidates": [
             {
               "date": "2/12/2026",
+              "dateKey": "2026-02-12",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.13,
               "payrollClockIn": "01:30 PM"
@@ -10108,6 +10109,7 @@
           "correctionCandidates": [
             {
               "date": "12/31/2025",
+              "dateKey": "2025-12-31",
               "hours": 0.27,
               "originalHours": 0.27,
               "activity": "Tardy EQ GT 6 Min",
@@ -10115,6 +10117,7 @@
             },
             {
               "date": "1/14/2026",
+              "dateKey": "2026-01-14",
               "hours": 0.5,
               "originalHours": 0.5,
               "activity": "Pre Planned Absence, Same Day - No Call No Show",
@@ -10122,6 +10125,7 @@
             },
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "hours": 3.87,
               "originalHours": 3.87,
               "activity": "Same Day",
@@ -10131,12 +10135,14 @@
           "reviewCodingCandidates": [
             {
               "date": "1/14/2026",
+              "dateKey": "2026-01-14",
               "verintActivity": "Same Day - No Call No Show",
               "verintHours": 0.5,
               "payrollPtoHours": 8
             },
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "verintActivity": "Same Day",
               "verintHours": 3.87,
               "payrollPtoHours": 4
@@ -10145,6 +10151,7 @@
           "pcIssueCandidates": [
             {
               "date": "1/29/2026",
+              "dateKey": "2026-01-29",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.12,
               "payrollClockIn": "07:05 AM"
@@ -11947,6 +11954,7 @@
           "pcIssueCandidates": [
             {
               "date": "2/20/2026",
+              "dateKey": "2026-02-20",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.47,
               "payrollClockIn": "11:30 AM"
@@ -13776,6 +13784,7 @@
           "correctionCandidates": [
             {
               "date": "2/26/2026",
+              "dateKey": "2026-02-26",
               "hours": 1.32,
               "originalHours": 1.32,
               "activity": "Same Day",
@@ -13783,6 +13792,7 @@
             },
             {
               "date": "2/27/2026",
+              "dateKey": "2026-02-27",
               "hours": 0.34,
               "originalHours": 0.34,
               "activity": "PPLO LT 48 Hrs, Same Day",
@@ -13790,6 +13800,7 @@
             },
             {
               "date": "4/2/2026",
+              "dateKey": "2026-04-02",
               "hours": 5.5,
               "originalHours": 5.5,
               "activity": "Pre Planned Absence, Same Day",
@@ -13797,6 +13808,7 @@
             },
             {
               "date": "4/3/2026",
+              "dateKey": "2026-04-03",
               "hours": 8,
               "originalHours": 8,
               "activity": "Same Day",
@@ -13806,12 +13818,14 @@
           "reviewCodingCandidates": [
             {
               "date": "2/26/2026",
+              "dateKey": "2026-02-26",
               "verintActivity": "Same Day",
               "verintHours": 1.32,
               "payrollPtoHours": 1.3
             },
             {
               "date": "2/27/2026",
+              "dateKey": "2026-02-27",
               "verintActivity": "Same Day",
               "verintHours": 0.57,
               "payrollPtoHours": 2.64
@@ -13820,12 +13834,14 @@
           "pcIssueCandidates": [
             {
               "date": "1/2/2026",
+              "dateKey": "2026-01-02",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.2,
               "payrollClockIn": "11:00 AM"
             },
             {
               "date": "1/27/2026",
+              "dateKey": "2026-01-27",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.12,
               "payrollClockIn": "11:00 AM"
@@ -15583,18 +15599,21 @@
           "pcIssueCandidates": [
             {
               "date": "1/6/2026",
+              "dateKey": "2026-01-06",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.17,
               "payrollClockIn": "11:40 AM"
             },
             {
               "date": "2/9/2026",
+              "dateKey": "2026-02-09",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.2,
               "payrollClockIn": "11:30 AM"
             },
             {
               "date": "3/31/2026",
+              "dateKey": "2026-03-31",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.33,
               "payrollClockIn": "12:20 PM"
@@ -16987,6 +17006,7 @@
           "pcIssueCandidates": [
             {
               "date": "3/26/2026",
+              "dateKey": "2026-03-26",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.23,
               "payrollClockIn": "11:00 AM"
@@ -18998,6 +19018,7 @@
           "correctionCandidates": [
             {
               "date": "1/12/2026",
+              "dateKey": "2026-01-12",
               "hours": 5.8,
               "originalHours": 5.8,
               "activity": "Same Day",
@@ -19005,6 +19026,7 @@
             },
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "hours": 8,
               "originalHours": 8,
               "activity": "Same Day",
@@ -19012,6 +19034,7 @@
             },
             {
               "date": "1/31/2026",
+              "dateKey": "2026-01-31",
               "hours": 2,
               "originalHours": 2,
               "activity": "Same Day",
@@ -19019,6 +19042,7 @@
             },
             {
               "date": "2/24/2026",
+              "dateKey": "2026-02-24",
               "hours": 1,
               "originalHours": 1,
               "activity": "Same Day",
@@ -19026,6 +19050,7 @@
             },
             {
               "date": "3/17/2026",
+              "dateKey": "2026-03-17",
               "hours": 1.88,
               "originalHours": 2.32,
               "activity": "Same Day",
@@ -19035,30 +19060,35 @@
           "reviewCodingCandidates": [
             {
               "date": "1/12/2026",
+              "dateKey": "2026-01-12",
               "verintActivity": "Same Day",
               "verintHours": 5.8,
               "payrollPtoHours": 6
             },
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
             },
             {
               "date": "1/31/2026",
+              "dateKey": "2026-01-31",
               "verintActivity": "Same Day",
               "verintHours": 2,
               "payrollPtoHours": 2
             },
             {
               "date": "2/24/2026",
+              "dateKey": "2026-02-24",
               "verintActivity": "Same Day",
               "verintHours": 1,
               "payrollPtoHours": 1
             },
             {
               "date": "3/17/2026",
+              "dateKey": "2026-03-17",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
@@ -20982,6 +21012,7 @@
           "correctionCandidates": [
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "hours": 8,
               "originalHours": 8,
               "activity": "Same Day",
@@ -20989,6 +21020,7 @@
             },
             {
               "date": "1/17/2026",
+              "dateKey": "2026-01-17",
               "hours": 5.35,
               "originalHours": 5.35,
               "activity": "Same Day",
@@ -20996,6 +21028,7 @@
             },
             {
               "date": "1/24/2026",
+              "dateKey": "2026-01-24",
               "hours": 0.74,
               "originalHours": 8,
               "activity": "Same Day",
@@ -21005,18 +21038,21 @@
           "reviewCodingCandidates": [
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
             },
             {
               "date": "1/24/2026",
+              "dateKey": "2026-01-24",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
             },
             {
               "date": "2/6/2026",
+              "dateKey": "2026-02-06",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
@@ -21025,6 +21061,7 @@
           "pcIssueCandidates": [
             {
               "date": "2/9/2026",
+              "dateKey": "2026-02-09",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.42,
               "payrollClockIn": "12:25 PM"
@@ -22498,6 +22535,7 @@
           "correctionCandidates": [
             {
               "date": "12/27/2025",
+              "dateKey": "2025-12-27",
               "hours": 0.15,
               "originalHours": 0.15,
               "activity": "Tardy EQ GT 6 Min",
@@ -22505,6 +22543,7 @@
             },
             {
               "date": "2/9/2026",
+              "dateKey": "2026-02-09",
               "hours": 8,
               "originalHours": 8,
               "activity": "Same Day",
@@ -22514,6 +22553,7 @@
           "reviewCodingCandidates": [
             {
               "date": "2/9/2026",
+              "dateKey": "2026-02-09",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
@@ -22522,18 +22562,21 @@
           "pcIssueCandidates": [
             {
               "date": "1/17/2026",
+              "dateKey": "2026-01-17",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.25,
               "payrollClockIn": "08:45 AM"
             },
             {
               "date": "3/30/2026",
+              "dateKey": "2026-03-30",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.28,
               "payrollClockIn": "05:00 AM"
             },
             {
               "date": "3/31/2026",
+              "dateKey": "2026-03-31",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.18,
               "payrollClockIn": "05:00 AM"
@@ -24412,6 +24455,7 @@
           "correctionCandidates": [
             {
               "date": "2/13/2026",
+              "dateKey": "2026-02-13",
               "hours": 3.5,
               "originalHours": 3.5,
               "activity": "Pre Planned Absence, Same Day",
@@ -24421,6 +24465,7 @@
           "reviewCodingCandidates": [
             {
               "date": "2/13/2026",
+              "dateKey": "2026-02-13",
               "verintActivity": "Same Day",
               "verintHours": 3.5,
               "payrollPtoHours": 8
@@ -26096,6 +26141,7 @@
           "correctionCandidates": [
             {
               "date": "1/14/2026",
+              "dateKey": "2026-01-14",
               "hours": 6.03,
               "originalHours": 6.03,
               "activity": "Same Day",
@@ -26103,6 +26149,7 @@
             },
             {
               "date": "1/23/2026",
+              "dateKey": "2026-01-23",
               "hours": 2,
               "originalHours": 2,
               "activity": "Same Day",
@@ -26110,6 +26157,7 @@
             },
             {
               "date": "1/28/2026",
+              "dateKey": "2026-01-28",
               "hours": 7,
               "originalHours": 7,
               "activity": "Same Day",
@@ -26117,6 +26165,7 @@
             },
             {
               "date": "3/13/2026",
+              "dateKey": "2026-03-13",
               "hours": 1.15,
               "originalHours": 1.15,
               "activity": "Same Day",
@@ -26124,6 +26173,7 @@
             },
             {
               "date": "3/17/2026",
+              "dateKey": "2026-03-17",
               "hours": 1.82,
               "originalHours": 2.92,
               "activity": "Same Day",
@@ -26133,36 +26183,42 @@
           "reviewCodingCandidates": [
             {
               "date": "1/14/2026",
+              "dateKey": "2026-01-14",
               "verintActivity": "Same Day",
               "verintHours": 6.03,
               "payrollPtoHours": 7
             },
             {
               "date": "1/23/2026",
+              "dateKey": "2026-01-23",
               "verintActivity": "Same Day",
               "verintHours": 2,
               "payrollPtoHours": 2
             },
             {
               "date": "1/28/2026",
+              "dateKey": "2026-01-28",
               "verintActivity": "Same Day",
               "verintHours": 7,
               "payrollPtoHours": 7
             },
             {
               "date": "3/13/2026",
+              "dateKey": "2026-03-13",
               "verintActivity": "Same Day",
               "verintHours": 1.15,
               "payrollPtoHours": 1
             },
             {
               "date": "3/17/2026",
+              "dateKey": "2026-03-17",
               "verintActivity": "Same Day",
               "verintHours": 2.92,
               "payrollPtoHours": 3
             },
             {
               "date": "4/1/2026",
+              "dateKey": "2026-04-01",
               "verintActivity": "Same Day",
               "verintHours": 4,
               "payrollPtoHours": 4
@@ -26171,6 +26227,7 @@
           "pcIssueCandidates": [
             {
               "date": "3/23/2026",
+              "dateKey": "2026-03-23",
               "verintActivity": "Tardy EQ GT 6 Min",
               "verintHours": 0.15,
               "payrollClockIn": "11:00 AM"
@@ -27417,6 +27474,7 @@
           "correctionCandidates": [
             {
               "date": "2/19/2026",
+              "dateKey": "2026-02-19",
               "hours": 0.93,
               "originalHours": 0.93,
               "activity": "Same Day",
@@ -27426,6 +27484,7 @@
           "reviewCodingCandidates": [
             {
               "date": "2/19/2026",
+              "dateKey": "2026-02-19",
               "verintActivity": "Same Day",
               "verintHours": 0.93,
               "payrollPtoHours": 1
@@ -29371,18 +29430,21 @@
           "reviewCodingCandidates": [
             {
               "date": "1/20/2026",
+              "dateKey": "2026-01-20",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
             },
             {
               "date": "1/22/2026",
+              "dateKey": "2026-01-22",
               "verintActivity": "Same Day",
               "verintHours": 3.3,
               "payrollPtoHours": 3.32
             },
             {
               "date": "1/23/2026",
+              "dateKey": "2026-01-23",
               "verintActivity": "Same Day",
               "verintHours": 8,
               "payrollPtoHours": 8
@@ -37573,6 +37635,7 @@
           "correctionCandidates": [
             {
               "date": "1/16/2026",
+              "dateKey": "2026-01-16",
               "hours": 0.5,
               "originalHours": 8,
               "activity": "Pre Planned Absence, Same Day - Full PTOST",
@@ -41920,6 +41983,7 @@
           "correctionCandidates": [
             {
               "date": "3/4/2026",
+              "dateKey": "2026-03-04",
               "hours": 0.66,
               "originalHours": 7.18,
               "activity": "Same Day",
@@ -45718,7 +45782,7 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 569634
+      "byteLength": 571106
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
