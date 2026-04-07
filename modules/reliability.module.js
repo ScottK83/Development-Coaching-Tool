@@ -926,6 +926,7 @@
                 entry.flags.push('Review coding: Verint Same Day, Payroll PTO (' + mismatchHours + 'h)');
                 result.reviewCodingCandidates.push({
                     date: entry.dateStr,
+                    dateKey: entry.date,
                     verintActivity: verintSameDayNoPtost.map(function(v) { return v.activity; }).join(', '),
                     verintHours: mismatchHours,
                     payrollPtoHours: round2(payrollAnyPtoHours)
@@ -974,6 +975,7 @@
                     entry.flags.push('⚠ DISCREPANCY: Verint absence conflicts with near-full REG day');
                     result.discrepancies.push({
                         date: entry.dateStr,
+                        dateKey: entry.date,
                         verintActivity: verintAbsenceSameDay.map(function(v) { return v.activity; }).join(', '),
                         verintHours: verintHrs,
                         payrollHours: regHrs,
@@ -989,6 +991,7 @@
                 entry.flags.push('PC ISSUE CANDIDATE: Verint tardy, Payroll clock-in at ' + (firstClock || 'recorded time'));
                 result.pcIssueCandidates.push({
                     date: entry.dateStr,
+                    dateKey: entry.date,
                     verintActivity: verintTardy.map(function(v) { return v.activity; }).join(', '),
                     verintHours: round2(tardyHours),
                     payrollClockIn: firstClock || 'recorded time'
@@ -1031,6 +1034,7 @@
             correctionRemaining = round2(correctionRemaining - canDesignate);
             result.correctionCandidates.push({
                 date: t.dateStr,
+                dateKey: t.date,
                 hours: canDesignate,
                 originalHours: dayHours,
                 activity: (t.verint || []).map(function(v) { return v.activity; }).join(', ') || 'Same Day',
@@ -1112,22 +1116,64 @@
         var items = [];
 
         (correctionCandidates || []).forEach(function(c) {
-            items.push({ date: c.date, label: 'Convert to PTOST', hours: Number(c.hours || 0) });
+            items.push({ date: c.date, dateKey: c.dateKey, label: 'Convert to PTOST', hours: Number(c.hours || 0) });
         });
 
         (pcIssues || []).forEach(function(p) {
-            items.push({ date: p.date, label: 'PC issue follow-up', hours: Number(p.verintHours || 0) });
+            items.push({ date: p.date, dateKey: p.dateKey, label: 'PC issue follow-up', hours: Number(p.verintHours || 0) });
         });
 
         (discrepancies || []).forEach(function(d) {
-            items.push({ date: d.date, label: 'Payroll correction needed', hours: Number(d.verintHours || 0) });
+            items.push({ date: d.date, dateKey: d.dateKey, label: 'Payroll correction needed', hours: Number(d.verintHours || 0) });
         });
 
         (reviewCodingCandidates || []).forEach(function(d) {
-            items.push({ date: d.date, label: 'Review coding mismatch (Verint Same Day / Payroll PTO)', hours: Number(d.verintHours || 0) });
+            items.push({ date: d.date, dateKey: d.dateKey, label: 'Review coding mismatch (Verint Same Day / Payroll PTO)', hours: Number(d.verintHours || 0) });
+        });
+
+        function getSortableDateValue(item) {
+            var key = String(item?.dateKey || '').trim();
+            if (key) {
+                var parsedKey = parseSpreadsheetDate(key);
+                if (parsedKey && !Number.isNaN(parsedKey.getTime())) return parsedKey.getTime();
+            }
+
+            var raw = String(item?.date || '').trim();
+            if (!raw) return Number.POSITIVE_INFINITY;
+
+            // Handles ISO/date-like values first.
+            var parsed = parseSpreadsheetDate(raw);
+            if (parsed && !Number.isNaN(parsed.getTime())) return parsed.getTime();
+
+            // Handles display dates like M/D or M/D/YYYY.
+            var mdY = raw.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+            if (mdY) {
+                var mm = Number(mdY[1]);
+                var dd = Number(mdY[2]);
+                var yy = mdY[3] ? Number(mdY[3]) : new Date().getFullYear();
+                if (yy < 100) yy += 2000;
+                return new Date(yy, mm - 1, dd).getTime();
+            }
+
+            return Number.POSITIVE_INFINITY;
+        }
+
+        function getYear(item) {
+            var ts = getSortableDateValue(item);
+            if (!Number.isFinite(ts)) return NaN;
+            return new Date(ts).getFullYear();
+        }
+
+        // Business rule: do not send correction rows for 2025 and earlier.
+        items = items.filter(function(item) {
+            var y = getYear(item);
+            return Number.isFinite(y) && y >= 2026;
         });
 
         items.sort(function(a, b) {
+            var da = getSortableDateValue(a);
+            var db = getSortableDateValue(b);
+            if (da !== db) return da - db;
             return String(a.date || '').localeCompare(String(b.date || ''));
         });
 
