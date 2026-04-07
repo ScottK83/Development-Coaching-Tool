@@ -433,6 +433,18 @@
             });
         });
 
+        (r.reviewCodingCandidates || []).forEach(function(m) {
+            rows.push({
+                employee: employeeName,
+                date: m.date,
+                actionType: 'WFM Coding Review',
+                target: 'WFM',
+                hours: round2(Number(m.verintHours || 0)),
+                detail: m.verintActivity || 'Verint Same Day',
+                note: 'Payroll coded PTOST ' + round2(Number(m.payrollPtostHours || 0)) + 'h'
+            });
+        });
+
         return rows;
     }
 
@@ -486,6 +498,7 @@
         lines.push('Discrepancies: ' + ((r.discrepancies || []).length));
         lines.push('PC Issues: ' + ((r.pcIssueCandidates || []).length));
         lines.push('WFM PTOST Updates: ' + ((r.correctionCandidates || []).length));
+        lines.push('WFM Coding Reviews: ' + ((r.reviewCodingCandidates || []).length));
         return lines.join('\n');
     }
 
@@ -1323,6 +1336,7 @@
         var discrepancyCount = (r.discrepancies || []).length;
         var pcIssueCount = (r.pcIssueCandidates || []).length;
         var wfmUpdateCount = (r.correctionCandidates || []).length;
+        var reviewCodingCount = (r.reviewCodingCandidates || []).length;
 
         var score = 0;
         if (ytdReliability != null && ytdReliability > 0) score += 2;
@@ -1332,8 +1346,9 @@
         score += discrepancyCount * 2;
         score += pcIssueCount * 2;
         score += wfmUpdateCount;
+        score += reviewCodingCount;
 
-        var reviewCount = discrepancyCount + pcIssueCount + wfmUpdateCount + ((delta != null && Math.abs(delta) > 0.25) ? 1 : 0);
+        var reviewCount = discrepancyCount + pcIssueCount + wfmUpdateCount + reviewCodingCount + ((delta != null && Math.abs(delta) > 0.25) ? 1 : 0);
         var needsReview = score > 0 && reviewCount > 0;
 
         var label = needsReview
@@ -1540,7 +1555,7 @@
             html += '<div style="margin:-8px 0 12px 0; font-size:0.8em; color:#8d1f1f;">PTO used is currently higher than carryover + earned in the imported PTO tracker data.</div>';
         }
 
-        var payrollFollowUpCount = (correctionCandidates || []).length + (r.pcIssueCandidates || []).length + (r.discrepancies || []).length;
+        var payrollFollowUpCount = (correctionCandidates || []).length + (r.pcIssueCandidates || []).length + (r.discrepancies || []).length + (r.reviewCodingCandidates || []).length;
         var payrollFollowUpNeeded = payrollFollowUpCount > 0;
         var ptostUsed = round2(Number(r.ptostHoursUsed || 0));
         var ptostRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - ptostUsed));

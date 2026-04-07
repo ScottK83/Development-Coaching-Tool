@@ -103,14 +103,21 @@ function calculatePtoBalance(store, name) {
     var data = getAssociateData(store, name);
     var carryover = data.carryoverHours || 0;
     var allotment = data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || DEFAULT_ANNUAL_ALLOTMENT);
-    var used = 0;
-    (data.payrollEntries || []).forEach(function(e) {
-        if (PTO_BALANCE_TRCS.indexOf(e.trc) >= 0) {
-            used += (e.hours || 0);
-        }
-    });
+    var used;
+    if (data.takenHours != null) {
+        used = Number(data.takenHours) || 0;
+    } else {
+        used = 0;
+        (data.payrollEntries || []).forEach(function(e) {
+            if (PTO_BALANCE_TRCS.indexOf(e.trc) >= 0) {
+                used += (e.hours || 0);
+            }
+        });
+    }
     used = Math.round(used * 100) / 100;
-    var remaining = Math.round((carryover + allotment - used) * 100) / 100;
+    var remaining = data.reportedRemaining != null
+        ? (Math.round((Number(data.reportedRemaining) || 0) * 100) / 100)
+        : (Math.round((carryover + allotment - used) * 100) / 100);
     return { carryover: carryover, allotment: allotment, used: used, remaining: remaining };
 }
 
