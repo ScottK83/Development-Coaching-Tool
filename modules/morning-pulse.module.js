@@ -211,7 +211,7 @@
         return Object.keys(weekly).filter(k => {
             const p = weekly[k];
             const pt = p?.metadata?.periodType;
-            return !pt || pt === 'week' || pt === 'daily';
+            return !pt || pt === 'week' || pt === 'daily' || pt === 'custom';
         }).sort();
     }
 
