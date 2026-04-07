@@ -762,6 +762,7 @@
             timeline: [],           // Unified day-by-day timeline
             discrepancies: [],      // Verint says absent but payroll says worked
             correctionCandidates: [],
+            reviewCodingCandidates: [], // Verint same-day conflicts with payroll PTOST coding
             pcIssueCandidates: [],
             reasonBuckets: {
                 sameDayNoPtostHours: 0,
@@ -903,6 +904,12 @@
             if (mismatchSameDayVsPayrollPtost) {
                 var mismatchHours = round2(verintSameDayNoPtost.reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
                 entry.flags.push('Review coding: Verint Same Day, Payroll PTOST (' + mismatchHours + 'h)');
+                result.reviewCodingCandidates.push({
+                    date: entry.dateStr,
+                    verintActivity: verintSameDayNoPtost.map(function(v) { return v.activity; }).join(', '),
+                    verintHours: mismatchHours,
+                    payrollPtostHours: round2(payrollPtostHours)
+                });
             }
 
             // --- Track PTOST running total ---
@@ -1079,7 +1086,7 @@
         return lines.join('\n');
     }
 
-    function buildVerintCorrectionsDraft(employeeName, correctionCandidates, pcIssues, discrepancies) {
+    function buildVerintCorrectionsDraft(employeeName, correctionCandidates, pcIssues, discrepancies, reviewCodingCandidates) {
         var lines = [];
         var items = [];
 
@@ -1093,6 +1100,10 @@
 
         (discrepancies || []).forEach(function(d) {
             items.push({ date: d.date, label: 'Payroll Correction', hours: Number(d.verintHours || 0) });
+        });
+
+        (reviewCodingCandidates || []).forEach(function(d) {
+            items.push({ date: d.date, label: 'Review Coding (Verint Same Day / Payroll PTOST)', hours: Number(d.verintHours || 0) });
         });
 
         items.sort(function(a, b) {
@@ -1905,7 +1916,13 @@
 
         // Bind email button
         document.getElementById('relEmailCorrections')?.addEventListener('click', function() {
-            var draft = buildVerintCorrectionsDraft(employeeName, correctionCandidates, r.pcIssueCandidates || [], r.discrepancies || []);
+            var draft = buildVerintCorrectionsDraft(
+                employeeName,
+                correctionCandidates,
+                r.pcIssueCandidates || [],
+                r.discrepancies || [],
+                r.reviewCodingCandidates || []
+            );
             openMailDraft(draft.subject, draft.body);
             if (typeof showToast === 'function') showToast('Opening Outlook draft for Verint corrections', 2500);
         });
