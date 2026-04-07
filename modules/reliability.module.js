@@ -1177,6 +1177,50 @@
             return String(a.date || '').localeCompare(String(b.date || ''));
         });
 
+        // Keep one row per date to avoid confusing duplicates across sections.
+        // Priority: Convert to PTOST > Payroll correction needed > Review coding mismatch > PC issue follow-up.
+        var groupedByDate = {};
+        items.forEach(function(item) {
+            var key = String(item.dateKey || item.date || '').trim();
+            if (!key) key = String(item.date || '').trim();
+            if (!groupedByDate[key]) {
+                groupedByDate[key] = {
+                    date: item.date,
+                    dateKey: item.dateKey,
+                    labels: {},
+                    hours: 0
+                };
+            }
+
+            groupedByDate[key].labels[item.label] = true;
+            groupedByDate[key].hours = round2(Number(groupedByDate[key].hours || 0) + Number(item.hours || 0));
+        });
+
+        function pickPrimaryLabel(labels) {
+            if (labels['Convert to PTOST']) return 'Convert to PTOST';
+            if (labels['Payroll correction needed']) return 'Payroll correction needed';
+            if (labels['Review coding mismatch (Verint Same Day / Payroll PTO)']) return 'Review coding mismatch (Verint Same Day / Payroll PTO)';
+            if (labels['PC issue follow-up']) return 'PC issue follow-up';
+            return 'Needs review';
+        }
+
+        items = Object.keys(groupedByDate).map(function(k) {
+            var g = groupedByDate[k];
+            return {
+                date: g.date,
+                dateKey: g.dateKey,
+                label: pickPrimaryLabel(g.labels),
+                hours: g.hours
+            };
+        });
+
+        items.sort(function(a, b) {
+            var da = getSortableDateValue(a);
+            var db = getSortableDateValue(b);
+            if (da !== db) return da - db;
+            return String(a.date || '').localeCompare(String(b.date || ''));
+        });
+
         lines.push('Hi WFM Team,');
         lines.push('');
         lines.push('Please review the attendance updates below for ' + employeeName + '.');
