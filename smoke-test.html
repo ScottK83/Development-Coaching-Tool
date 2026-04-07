@@ -137,7 +137,7 @@
 
             const rec = window.DevCoachModules.reliability.reconcileEmployee(mockVerint, mockPayroll);
             check('Reliability detects review-coding mismatch day', (rec.reviewCodingCandidates || []).length === 1);
-            check('Mismatch day is not auto-added to PTOST correctionCandidates', (rec.correctionCandidates || []).length === 0);
+            check('Mismatch day is included in PTOST correctionCandidates', (rec.correctionCandidates || []).length === 1);
             check('Mismatch keeps reliability exposure at 0h', Number(rec.sameDayNoPtostHours || 0) === 0);
         }
 

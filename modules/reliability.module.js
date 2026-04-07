@@ -441,7 +441,7 @@
                 target: 'WFM',
                 hours: round2(Number(m.verintHours || 0)),
                 detail: m.verintActivity || 'Verint Same Day',
-                note: 'Payroll coded PTOST ' + round2(Number(m.payrollPtostHours || 0)) + 'h'
+                note: 'Payroll coded PTO ' + round2(Number(m.payrollPtoHours || 0)) + 'h'
             });
         });
 
@@ -775,7 +775,7 @@
             timeline: [],           // Unified day-by-day timeline
             discrepancies: [],      // Verint says absent but payroll says worked
             correctionCandidates: [],
-            reviewCodingCandidates: [], // Verint same-day conflicts with payroll PTOST coding
+            reviewCodingCandidates: [], // Verint same-day conflicts with payroll PTO coding
             pcIssueCandidates: [],
             reasonBuckets: {
                 sameDayNoPtostHours: 0,
@@ -859,6 +859,12 @@
             var payrollPtost = payrollItems.filter(function(p) { return p.trc === 'PTOST'; });
             var payrollPtostHours = payrollPtost.reduce(function(s, p) { return s + p.quantity; }, 0);
 
+            // Payroll PTO family (any PTO code)
+            var payrollAnyPto = payrollItems.filter(function(p) {
+                return ['PTO', 'PTOST', 'PTO Unsched'].indexOf(String(p.trc || '')) >= 0;
+            });
+            var payrollAnyPtoHours = payrollAnyPto.reduce(function(s, p) { return s + Number(p.quantity || 0); }, 0);
+
             // Payroll PTO with UNSCHD task code
             var payrollUnschd = payrollItems.filter(function(p) { return p.trc === 'PTO' && p.taskCode === 'UNSCHD'; });
             var payrollUnschdHours = payrollUnschd.reduce(function(s, p) { return s + p.quantity; }, 0);
@@ -880,10 +886,10 @@
             var verintPtost = verintItems.filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; });
             var verintSameDayNoPtost = verintItems.filter(function(v) { return v.type === 'same-day' || v.type === 'tardy'; });
             var verintTardy = verintItems.filter(function(v) { return v.type === 'tardy'; });
-            var mismatchSameDayVsPayrollPtost = payrollPtostHours > 0 && verintSameDayNoPtost.length > 0 && verintPtost.length === 0;
+            var mismatchSameDayVsPayrollPto = payrollAnyPtoHours > 0 && verintSameDayNoPtost.length > 0 && verintPtost.length === 0;
 
             var isSameDay = payrollUnschdHours > 0 || verintSameDayNoPtost.length > 0;
-            var isSameDayPtost = (payrollPtostHours > 0 && !mismatchSameDayVsPayrollPtost) || verintPtost.length > 0;
+            var isSameDayPtost = (payrollPtostHours > 0 && !mismatchSameDayVsPayrollPto) || verintPtost.length > 0;
             var isBereavement = payrollItems.some(function(p) { return p.trc === 'BRV'; }) ||
                 verintItems.some(function(v) { return String(v.activity || '').toLowerCase().includes('bereavement'); });
             var isFmla = payrollItems.some(function(p) { return p.trc === 'FMLA' || p.trc === 'FMLNP'; }) ||
@@ -912,22 +918,23 @@
                 entry.flags.push('Same Day without PTOST (' + entry.sameDayExposureHours + 'h against reliability)');
             }
 
-            // Review mismatch: Verint says Same Day (non-PTOST) but Payroll coded PTOST.
+            // Review mismatch: Verint says Same Day (non-PTOST) but Payroll coded any PTO.
             // Keep Full PTOST matches clean (e.g., Same Day - Full PTOST + Payroll PTOST).
-            if (mismatchSameDayVsPayrollPtost) {
+            if (mismatchSameDayVsPayrollPto) {
                 var mismatchHours = round2(verintSameDayNoPtost.reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
-                entry.flags.push('Review coding: Verint Same Day, Payroll PTOST (' + mismatchHours + 'h)');
+                entry.reviewCodingHours = mismatchHours;
+                entry.flags.push('Review coding: Verint Same Day, Payroll PTO (' + mismatchHours + 'h)');
                 result.reviewCodingCandidates.push({
                     date: entry.dateStr,
                     verintActivity: verintSameDayNoPtost.map(function(v) { return v.activity; }).join(', '),
                     verintHours: mismatchHours,
-                    payrollPtostHours: round2(payrollPtostHours)
+                    payrollPtoHours: round2(payrollAnyPtoHours)
                 });
             }
 
             // --- Track PTOST running total ---
             if (payrollPtostHours > 0) {
-                if (mismatchSameDayVsPayrollPtost) {
+                if (mismatchSameDayVsPayrollPto) {
                     runningUnscheduled = round2(runningUnscheduled + payrollPtostHours);
                     entry.unscheduledRunning = runningUnscheduled;
                     result.unscheduledRunningHours = runningUnscheduled;
@@ -989,7 +996,7 @@
             }
 
             // Classify the day for display
-            if (mismatchSameDayVsPayrollPtost) {
+            if (mismatchSameDayVsPayrollPto) {
                 entry.category = 'same-day';
             } else if (payrollPtostHours > 0 || verintItems.some(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })) {
                 entry.category = 'ptost';
@@ -1013,7 +1020,7 @@
         var correctionRemaining = result.ptostBufferRemaining;
         result.timeline.forEach(function(t) {
             if (correctionRemaining <= 0) return;
-            var dayHours = Number(t.sameDayExposureHours || 0);
+            var dayHours = Number(t.sameDayExposureHours || t.reviewCodingHours || 0);
             if (dayHours <= 0) return;
             var isDiscrepancyDay = (t.flags || []).some(function(f) { return String(f || '').indexOf('DISCREPANCY') >= 0; });
             if (isDiscrepancyDay) return;
@@ -1029,7 +1036,9 @@
                 activity: (t.verint || []).map(function(v) { return v.activity; }).join(', ') || 'Same Day',
                 reason: canDesignate < dayHours
                     ? 'Partial conversion due to PTOST 40h limit'
-                    : 'Can be changed to PTOST'
+                    : ((Number(t.reviewCodingHours || 0) > 0)
+                        ? 'Verint Same Day with Payroll PTO: update to PTOST'
+                        : 'Can be changed to PTOST')
             });
         });
 
@@ -1115,7 +1124,7 @@
         });
 
         (reviewCodingCandidates || []).forEach(function(d) {
-            items.push({ date: d.date, label: 'Review coding mismatch (Verint Same Day / Payroll PTOST)', hours: Number(d.verintHours || 0) });
+            items.push({ date: d.date, label: 'Review coding mismatch (Verint Same Day / Payroll PTO)', hours: Number(d.verintHours || 0) });
         });
 
         items.sort(function(a, b) {
