@@ -401,6 +401,8 @@ function processPtoBalancePdf(input) {
             var assocA = getAssociateData(store, resolvedNameA);
             assocA.carryoverHours = numbers[0];
             assocA.annualAllotment = numbers[1];
+            if (numbers.length >= 3) assocA.takenHours = numbers[2];
+            if (numbers.length >= 5) assocA.reportedRemaining = numbers[4];
             matched = true;
             updated++;
             pendingName = '';
@@ -417,6 +419,8 @@ function processPtoBalancePdf(input) {
             var assocB = getAssociateData(store, resolvedNameB);
             assocB.carryoverHours = numbers[0];
             assocB.annualAllotment = numbers[1];
+            if (numbers.length >= 3) assocB.takenHours = numbers[2];
+            if (numbers.length >= 5) assocB.reportedRemaining = numbers[4];
             matched = true;
             updated++;
             pendingName = '';

@@ -366,20 +366,30 @@
         if (!foundName) return null;
 
         var data = associates[foundName] || {};
-        var carryover = Number(data.carryoverHours || 0);
-        var earned = Number(data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || 120));
-        var used = 0;
-        (data.payrollEntries || []).forEach(function(e) {
-            if (['PTO', 'PTOST', 'PTO Unsched'].indexOf(String(e?.trc || '')) >= 0) {
-                used += Number(e?.hours || 0);
-            }
-        });
-        used = round2(used);
+        var carryover = round2(Number(data.carryoverHours || 0));
+        var earned = round2(Number(data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || 120)));
+        // Prefer Taken value from the PTO/Vacation Balance PDF if it was imported
+        var used;
+        if (data.takenHours != null) {
+            used = round2(Number(data.takenHours));
+        } else {
+            used = 0;
+            (data.payrollEntries || []).forEach(function(e) {
+                if (['PTO', 'PTOST', 'PTO Unsched'].indexOf(String(e?.trc || '')) >= 0) {
+                    used += Number(e?.hours || 0);
+                }
+            });
+            used = round2(used);
+        }
+        // Prefer the system-reported remaining if available
+        var remaining = data.reportedRemaining != null
+            ? round2(Number(data.reportedRemaining))
+            : round2(carryover + earned - used);
         return {
-            carryover: round2(carryover),
-            earned: round2(earned),
+            carryover: carryover,
+            earned: earned,
             used: used,
-            remaining: round2(carryover + earned - used)
+            remaining: remaining
         };
     }
 
@@ -1647,13 +1657,89 @@
 
         html += '</div>'; // end At a Glance
 
-        html += '<div style="margin-bottom:14px; padding:10px; background:#f9fbfb; border:1px solid #d9ecea; border-radius:6px; font-size:0.84em;">';
-        html += '<div style="font-weight:700; color:#00695c; margin-bottom:6px;">Attendance Day Breakdown</div>';
-        html += '<div><strong>Same Day:</strong> ' + (sameDayDates.length ? escapeHtml(sameDayDates.join(', ')) : '—') + '</div>';
-        html += '<div><strong>Same Day PTOST:</strong> ' + (sameDayPtostDates.length ? escapeHtml(sameDayPtostDates.join(', ')) : '—') + '</div>';
-        html += '<div><strong>Bereavement:</strong> ' + (bereavementDates.length ? escapeHtml(bereavementDates.join(', ')) : '—') + '</div>';
-        html += '<div><strong>FMLA:</strong> ' + (fmlaDates.length ? escapeHtml(fmlaDates.join(', ')) : '—') + '</div>';
-        html += '</div>';
+        // ── Missed / Flagged Day Summary ──────────────────────────────────────
+        var missedRows = timeline.filter(function(t) {
+            return t.category === 'same-day' || t.category === 'ptost' ||
+                Number(t.sameDayExposureHours || 0) > 0 || Number(t.ptostOverage || 0) > 0 ||
+                (t.flags || []).some(function(f) {
+                    var s = String(f || '').toUpperCase();
+                    return s.indexOf('DISCREPANCY') >= 0 || s.indexOf('PC ISSUE') >= 0 || s.indexOf('REVIEW') >= 0;
+                });
+        });
+
+        if (missedRows.length > 0) {
+            html += '<div style="margin-bottom:14px; padding:12px 14px; background:#fafcfd; border:1px solid #d0dde5; border-radius:8px;">';
+            html += '<div style="font-weight:700; color:#37474f; font-size:0.88em; margin-bottom:8px; letter-spacing:0.02em;">Missed / Flagged Days (' + missedRows.length + ')</div>';
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.81em;">';
+            html += '<thead><tr style="background:#eceff1;">';
+            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc; white-space:nowrap;">Date</th>';
+            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc;">Verint</th>';
+            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc;">Payroll</th>';
+            html += '<th style="padding:5px 8px; text-align:center; border-bottom:1px solid #cfd8dc; white-space:nowrap;">Hrs</th>';
+            html += '<th style="padding:5px 8px; text-align:center; border-bottom:1px solid #cfd8dc; white-space:nowrap;">vs Reliability</th>';
+            html += '</tr></thead><tbody>';
+
+            missedRows.forEach(function(t) {
+                var verintDesc = (t.verint || []).map(function(v) {
+                    return escapeHtml(v.activity || v.type || '');
+                }).filter(Boolean).join(', ') || '—';
+
+                var nonRegPayroll = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
+                var payrollDesc = nonRegPayroll.map(function(p) {
+                    var s = p.trc;
+                    if (p.taskCode) s += '/' + p.taskCode;
+                    return s;
+                }).join(', ') || '—';
+
+                var totalHrs = round2(
+                    (t.verint || []).filter(function(v) { return v.type !== 'planned'; })
+                        .reduce(function(s, v) { return s + Number(v.hours || 0); }, 0) ||
+                    nonRegPayroll.reduce(function(s, p) { return s + Number(p.quantity || 0); }, 0)
+                );
+
+                var exposure = round2(Number(t.sameDayExposureHours || 0));
+                var overage = round2(Number(t.ptostOverage || 0));
+                var hasDiscrepancy = (t.flags || []).some(function(f) { return String(f).toUpperCase().indexOf('DISCREPANCY') >= 0; });
+                var hasPcIssue = (t.flags || []).some(function(f) { return String(f).toUpperCase().indexOf('PC ISSUE') >= 0; });
+                var hasMismatch = (t.flags || []).some(function(f) { return String(f).toUpperCase().indexOf('REVIEW') >= 0; });
+
+                var vsText, vsColor;
+                if (exposure > 0) {
+                    vsText = '+' + exposure + 'h';
+                    vsColor = '#b71c1c';
+                } else if (overage > 0) {
+                    vsText = '+' + overage + 'h overage';
+                    vsColor = '#e65100';
+                } else if (hasDiscrepancy) {
+                    vsText = '⚠ Discrepancy';
+                    vsColor = '#e65100';
+                } else if (hasPcIssue) {
+                    vsText = 'PC Issue';
+                    vsColor = '#1565c0';
+                } else if (hasMismatch) {
+                    vsText = 'Review';
+                    vsColor = '#e65100';
+                } else if (t.category === 'ptost' && t.ptostProtected !== false) {
+                    vsText = 'Protected';
+                    vsColor = '#2e7d32';
+                } else {
+                    vsText = '—';
+                    vsColor = '#78909c';
+                }
+
+                var rowBg = (hasDiscrepancy || hasMismatch) ? 'background:#fff8e1;' : (exposure > 0 ? 'background:#fff5f5;' : '');
+                html += '<tr style="border-bottom:1px solid #eceff1;' + rowBg + '">';
+                html += '<td style="padding:5px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(t.dateStr) + '</td>';
+                html += '<td style="padding:5px 8px; color:#455a64;">' + verintDesc + '</td>';
+                html += '<td style="padding:5px 8px; color:#455a64;">' + escapeHtml(payrollDesc) + '</td>';
+                html += '<td style="padding:5px 8px; text-align:center;">' + (totalHrs || '—') + '</td>';
+                html += '<td style="padding:5px 8px; text-align:center; font-weight:700; color:' + vsColor + ';">' + vsText + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            html += '</div>';
+        }
 
         // Running bars
         var ptostPct = Math.min(100, ((r.ptostHoursUsed || 0) / PTOST_BUFFER_LIMIT) * 100);
