@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-07T00:17:16.845Z",
-  "reason": "associate sentiment snapshots updated",
+  "generatedAt": "2026-04-07T01:09:32.170Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {
@@ -8282,6 +8282,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [
             {
               "date": "2/12/2026",
@@ -8344,6 +8345,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8397,6 +8399,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8450,6 +8453,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8503,6 +8507,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8556,6 +8561,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8609,6 +8615,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8662,6 +8669,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -8715,6 +8723,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -10099,6 +10108,14 @@
               "originalHours": 0.27,
               "activity": "Tardy EQ GT 6 Min",
               "reason": "Can be changed to PTOST"
+            }
+          ],
+          "reviewCodingCandidates": [
+            {
+              "date": "1/16/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 3.87,
+              "payrollPtostHours": 4
             }
           ],
           "pcIssueCandidates": [
@@ -11902,6 +11919,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [
             {
               "date": "2/20/2026",
@@ -13751,6 +13769,14 @@
               "reason": "Can be changed to PTOST"
             }
           ],
+          "reviewCodingCandidates": [
+            {
+              "date": "2/26/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 1.32,
+              "payrollPtostHours": 1.3
+            }
+          ],
           "pcIssueCandidates": [
             {
               "date": "1/2/2026",
@@ -15513,6 +15539,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [
             {
               "date": "1/6/2026",
@@ -16916,6 +16943,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [
             {
               "date": "3/26/2026",
@@ -18931,6 +18959,38 @@
               "reason": "Can be changed to PTOST"
             }
           ],
+          "reviewCodingCandidates": [
+            {
+              "date": "1/12/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 5.8,
+              "payrollPtostHours": 6
+            },
+            {
+              "date": "1/16/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtostHours": 8
+            },
+            {
+              "date": "1/31/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 2,
+              "payrollPtostHours": 2
+            },
+            {
+              "date": "2/24/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 1,
+              "payrollPtostHours": 1
+            },
+            {
+              "date": "3/17/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtostHours": 5.68
+            }
+          ],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 2.32,
@@ -20863,6 +20923,14 @@
               "reason": "Partial conversion due to PTOST 40h limit"
             }
           ],
+          "reviewCodingCandidates": [
+            {
+              "date": "2/6/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtostHours": 8
+            }
+          ],
           "pcIssueCandidates": [
             {
               "date": "2/9/2026",
@@ -22342,6 +22410,14 @@
               "originalHours": 0.15,
               "activity": "Tardy EQ GT 6 Min",
               "reason": "Can be changed to PTOST"
+            }
+          ],
+          "reviewCodingCandidates": [
+            {
+              "date": "2/9/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 8,
+              "payrollPtostHours": 8
             }
           ],
           "pcIssueCandidates": [
@@ -24234,6 +24310,14 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [
+            {
+              "date": "2/13/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 3.5,
+              "payrollPtostHours": 5
+            }
+          ],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -25894,6 +25978,38 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [
+            {
+              "date": "1/14/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 6.03,
+              "payrollPtostHours": 7
+            },
+            {
+              "date": "1/23/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 2,
+              "payrollPtostHours": 2
+            },
+            {
+              "date": "1/28/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 7,
+              "payrollPtostHours": 7
+            },
+            {
+              "date": "3/13/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 1.15,
+              "payrollPtostHours": 1
+            },
+            {
+              "date": "4/1/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 4,
+              "payrollPtostHours": 4
+            }
+          ],
           "pcIssueCandidates": [
             {
               "date": "3/23/2026",
@@ -27140,6 +27256,14 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [
+            {
+              "date": "2/19/2026",
+              "verintActivity": "Same Day",
+              "verintHours": 0.93,
+              "payrollPtostHours": 1
+            }
+          ],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -29071,6 +29195,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 23.32,
@@ -30727,6 +30852,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -32264,6 +32390,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -33765,6 +33892,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -35481,6 +35609,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -37258,6 +37387,7 @@
               "reason": "Partial conversion due to PTOST 40h limit"
             }
           ],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 8,
@@ -37307,6 +37437,7 @@
           "timeline": [],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -38287,6 +38418,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -39609,6 +39741,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -40487,6 +40620,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -41600,6 +41734,7 @@
               "reason": "Partial conversion due to PTOST 40h limit"
             }
           ],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 24.83,
@@ -41675,6 +41810,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -42873,6 +43009,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -44219,6 +44356,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -45323,6 +45461,7 @@
           ],
           "discrepancies": [],
           "correctionCandidates": [],
+          "reviewCodingCandidates": [],
           "pcIssueCandidates": [],
           "reasonBuckets": {
             "sameDayNoPtostHours": 0,
@@ -45350,663 +45489,34 @@
   "hotTipHistory": {
     "entries": []
   },
-  "yearEndAnnualGoalsStore": {
-    "2025::Scoticia Osborne": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "2"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Alyssa Dimes": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Scoticia Osborne": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "not-met",
-        "note": "2"
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Teena Pokorski": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "1"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Marietta Bernal": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "not-met",
-        "note": "4"
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Marietta Bernal": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Oceane Ingram": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Ronda Colis": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Angelina Fierro": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Caylie Chirumbolo": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Caylie Chirumbolo": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Taylor Colter": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Pamela Muhammad": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Jenifer Henson": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2025::Ekiecha Brabham": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Ekiecha Brabham": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    },
-    "2026::Alyssa Dimes": {
-      "safetyGoalAps": {
-        "status": "met",
-        "note": ""
-      },
-      "emergencySafetyHazardCalls": {
-        "status": "met",
-        "note": ""
-      },
-      "accSubstantiatedComplaints": {
-        "status": "met",
-        "note": ""
-      },
-      "phishingClicks": {
-        "status": "met",
-        "note": ""
-      },
-      "redFlagViolations": {
-        "status": "met",
-        "note": ""
-      },
-      "depositWaiverAccuracy": {
-        "status": "met",
-        "note": ""
-      },
-      "trainingCompletion": {
-        "status": "met",
-        "note": ""
-      },
-      "timeEntryCompliance": {
-        "status": "met",
-        "note": ""
-      }
-    }
-  },
+  "yearEndAnnualGoalsStore": {},
   "yearEndDraftStore": {},
   "employeePreferredNames": {},
   "appStorageSnapshot": {
+    "devCoachingTool_coachingHistory": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
     "devCoachingTool_repoBackupAppliedAt": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 24
+    },
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 5
     },
     "devCoachingTool_followUpHistory": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 14
     },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 310
-    },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
-      "byteLength": 9785
-    },
-    "devCoachingTool_callListeningSyncConfig": {
-      "valueType": "object",
-      "itemCount": 4,
-      "byteLength": 122
-    },
-    "devCoachingTool_sentimentPhraseDatabase": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 75
-    },
-    "devCoachingTool_employeeNicknames": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 50
-    },
-    "devCoachingTool_yearEndAnnualGoalsStore": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_uiNavState": {
-      "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 231
-    },
-    "devCoachingTool_callListeningLogs": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_associateSentimentSnapshots": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_employeePreferredNames": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 343
-    },
-    "devCoachingTool_deletedServerTips": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 28
-    },
-    "devCoachingTool_coachingHistory": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+      "byteLength": 9390
     },
     "devCoachingTool_ytdData": {
       "valueType": "object",
@@ -46016,32 +45526,62 @@
     "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 563478
+      "byteLength": 565863
+    },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 310
+    },
+    "devCoachingTool_callListeningSyncConfig": {
+      "valueType": "object",
+      "itemCount": 4,
+      "byteLength": 116
+    },
+    "devCoachingTool_sentimentPhraseDatabase": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 75
     },
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 6
+      "byteLength": 5
+    },
+    "devCoachingTool_yearEndAnnualGoalsStore": {
+      "valueType": "object",
+      "itemCount": 17,
+      "byteLength": 7151
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 228
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 283
     },
     "devCoachingTool_ptoTracker": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 56951
     },
-    "devCoachingTool_repoSyncLastSuccess": {
+    "devCoachingTool_callListeningLogs": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 293
-    },
-    "devCoachingTool_yearEndAnnualGoals": {
-      "valueType": "object",
-      "itemCount": 17,
-      "byteLength": 7151
+      "itemCount": 0,
+      "byteLength": 2
     },
     "devCoachingTool_hotTipHistory": {
       "valueType": "object",
       "itemCount": 1,
       "byteLength": 14
+    },
+    "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
     },
     "devCoachingTool_yearEndDraftEntries": {
       "valueType": "object",
@@ -46053,15 +45593,25 @@
       "itemCount": 0,
       "byteLength": 2
     },
-    "devCoachingTool_trendQueueLegendExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
+    "devCoachingTool_employeePreferredNames": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_debugLog": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 15763
     },
     "devCoachingTool_lastError": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 228
+      "itemCount": 3,
+      "byteLength": 118
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 343
     }
   }
 }
