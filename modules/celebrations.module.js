@@ -375,6 +375,11 @@
             });
             html += '</div></div>';
 
+            // Date range
+            if (dateRange) {
+                html += '<div style="font-size:0.8em; color:#64748b;">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</div>';
+            }
+
             // Achievement list
             html += '<div style="display:flex; flex-direction:column; gap:6px;">';
             person.achievements.forEach(function(a) {
