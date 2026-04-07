@@ -156,11 +156,38 @@
 
         var mergedEmployees = Object.values(baseEmployees);
 
-        // Score every employee
+        var rankings = _scoreAndRank(mergedEmployees, currentYear);
+
+        // Identify team members — check weekly keys first, fall back to YTD/any key
+        var latestKey = _getLatestWeeklyKey();
+        if (!latestKey) {
+            var teamFilter = window.DevCoachModules?.teamFilter;
+            if (teamFilter?.getTeamSelectionContext) {
+                latestKey = teamFilter.getTeamSelectionContext().weekKey || '';
+            }
+        }
+        var teamMembers = latestKey ? _getTeamMembersForWeek(latestKey) : [];
+        var teamSet = new Set(teamMembers);
+
+        return {
+            rankings: rankings,
+            totalEmployees: rankings.length,
+            source: bestSource,
+            periodKey: bestKey,
+            teamMembers: teamSet
+        };
+    }
+
+    /**
+     * Shared scoring + ranking logic. Takes an array of employee objects,
+     * scores each one, assigns per-metric ranks and composite rank.
+     * Returns the sorted rankings array.
+     */
+    function _scoreAndRank(employees, year) {
         var rankings = [];
-        mergedEmployees.forEach(function (emp) {
+        employees.forEach(function (emp) {
             if (!emp || !emp.name) return;
-            var score = scoreEmployee(emp, currentYear);
+            var score = scoreEmployee(emp, year);
             if (!score) return;
 
             rankings.push({
@@ -177,15 +204,14 @@
 
         // Rank by each individual metric (lower rank = better)
         var metricRankKeys = [
-            { key: 'aht', field: 'values.aht', reverse: true },         // lower AHT = better
-            { key: 'adherence', field: 'values.adherence', reverse: false }, // higher = better
-            { key: 'sentiment', field: 'values.sentiment', reverse: false }, // higher = better
-            { key: 'associateOverall', field: 'values.associateOverall', reverse: false }, // higher = better
-            { key: 'reliability', field: 'reliability', reverse: true }  // lower hours = better
+            { key: 'aht', field: 'values.aht', reverse: true },
+            { key: 'adherence', field: 'values.adherence', reverse: false },
+            { key: 'sentiment', field: 'values.sentiment', reverse: false },
+            { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
+            { key: 'reliability', field: 'reliability', reverse: true }
         ];
 
         metricRankKeys.forEach(function (mk) {
-            // Sort a copy to determine ranks for this metric
             var sorted = rankings.slice().sort(function (a, b) {
                 var aVal = mk.field.includes('.') ? a.values[mk.field.split('.')[1]] : a[mk.field];
                 var bVal = mk.field.includes('.') ? b.values[mk.field.split('.')[1]] : b[mk.field];
@@ -193,8 +219,6 @@
                 bVal = bVal !== null && bVal !== undefined ? bVal : (mk.reverse ? Infinity : -Infinity);
                 return mk.reverse ? (aVal - bVal) : (bVal - aVal);
             });
-
-            // Assign metric rank to each employee
             sorted.forEach(function (emp, idx) {
                 if (!emp.metricRanks) emp.metricRanks = {};
                 emp.metricRanks[mk.key] = idx + 1;
@@ -209,32 +233,44 @@
             r.compositeScore = sum / 5;
         });
 
-        // Sort by composite score (lower = better), reliability rank as tiebreaker
+        // Sort by composite score, reliability rank as tiebreaker
         rankings.sort(function (a, b) {
             if (a.compositeScore !== b.compositeScore) return a.compositeScore - b.compositeScore;
             return (a.metricRanks?.reliability || 0) - (b.metricRanks?.reliability || 0);
         });
 
-        // Assign overall rank
         rankings.forEach(function (r, i) { r.rank = i + 1; });
+        return rankings;
+    }
 
-        // Identify team members — check weekly keys first, fall back to YTD/any key
-        var latestKey = _getLatestWeeklyKey();
-        if (!latestKey) {
-            // Try team filter module's resolution which checks ytdData too
-            var teamFilter = window.DevCoachModules?.teamFilter;
-            if (teamFilter?.getTeamSelectionContext) {
-                latestKey = teamFilter.getTeamSelectionContext().weekKey || '';
-            }
-        }
-        var teamMembers = latestKey ? _getTeamMembersForWeek(latestKey) : [];
+    /**
+     * Build rankings for a specific period key (weekly or YTD).
+     * Unlike buildCenterRankings which merges all periods,
+     * this ranks only the employees present in the given period.
+     */
+    function buildRankingsForPeriod(periodKey) {
+        if (!periodKey) return null;
+        var wData = _getWeeklyData();
+        var yData = _getYtdData();
+        var period = wData[periodKey] || yData[periodKey];
+        if (!period || !period.employees?.length) return null;
+
+        var meta = period.metadata || {};
+        var endStr = meta.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
+        var endYear = parseInt(String(endStr).split('-')[0], 10) || new Date().getFullYear();
+
+        var rankings = _scoreAndRank(period.employees, endYear);
+        if (!rankings.length) return null;
+
+        // Identify team members for this period
+        var teamMembers = _getTeamMembersForWeek(periodKey);
         var teamSet = new Set(teamMembers);
 
         return {
             rankings: rankings,
             totalEmployees: rankings.length,
-            source: bestSource,
-            periodKey: bestKey,
+            source: meta.label || periodKey,
+            periodKey: periodKey,
             teamMembers: teamSet
         };
     }
@@ -466,7 +502,8 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.centerRanking = {
         renderCenterRanking: renderCenterRanking,
-        buildCenterRankings: buildCenterRankings
+        buildCenterRankings: buildCenterRankings,
+        buildRankingsForPeriod: buildRankingsForPeriod
     };
 
     window.renderCenterRanking = renderCenterRanking;
