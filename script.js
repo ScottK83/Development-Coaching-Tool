@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.06.55'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.07.56'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1686,11 +1686,11 @@ function bindNavigationHandlers() {
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
-        if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
+        if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
     document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
-        if (window.DevCoachModules?.morningPulse?.initializeMorningPulse) window.DevCoachModules.morningPulse.initializeMorningPulse();
+        if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
     document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');

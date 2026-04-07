@@ -185,7 +185,7 @@
 
                     <!-- Sub-navigation -->
                     <div class="sub-nav" style="border-bottom: 2px solid #7c4dff; gap: 8px;">
-                        <button type="button" id="subNavMorningPulse" class="btn-secondary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-size: 0.9em; padding: 8px 16px;">☀️ Morning Pulse</button>
+                        <button type="button" id="subNavMorningPulse" class="btn-secondary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-size: 0.9em; padding: 8px 16px;">🎉 Celebrations</button>
                         <button type="button" id="subNavMondayPost" class="btn-secondary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📢 Monday Post</button>
                         <button type="button" id="subNavCoachingEmail" class="btn-secondary" style="background: #E91E63; color: white; font-size: 0.9em; padding: 8px 16px;">💌 Coaching</button>
                         <button type="button" id="subNavTeamSnapshot" class="btn-secondary" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📊 Snapshot</button>
@@ -495,9 +495,15 @@ Box 2 - Future Improvement Areas:
                     </div>
                     <!-- End Monday Morning Post Sub-section -->
 
-                    <!-- Morning Pulse Sub-section -->
+                    <!-- Celebrations Sub-section (was Morning Pulse) -->
                     <div id="subSectionMorningPulse" style="display: none;">
-                        <div id="morningPulseContainer"></div>
+                        <!-- Inner tab toggle -->
+                        <div id="celebrationsInnerNav" style="display:flex; gap:8px; margin-bottom:16px;">
+                            <button type="button" id="innerNavCelebrations" style="padding:8px 20px; border:none; border-radius:8px 8px 0 0; font-weight:700; font-size:0.95em; cursor:pointer; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff; border-bottom:3px solid #ea580c;">🎉 Celebrations</button>
+                            <button type="button" id="innerNavMorningPulse" style="padding:8px 20px; border:none; border-radius:8px 8px 0 0; font-weight:700; font-size:0.95em; cursor:pointer; background:#e2e8f0; color:#64748b; border-bottom:3px solid transparent;">☀️ Morning Pulse</button>
+                        </div>
+                        <div id="celebrationsContainer" style="display:block;"></div>
+                        <div id="morningPulseContainer" style="display:none;"></div>
                     </div>
 
                     <!-- Call Listening Sub-section -->
@@ -1626,6 +1632,7 @@ Box 2 - Future Improvement Areas:
                 'modules/trend-intelligence.module.js',
                 'modules/trend-coaching-email.module.js',
                 'modules/morning-pulse.module.js',
+                'modules/celebrations.module.js',
                 'modules/monday-morning-post.module.js',
                 'lib-pdf.js',
                 'modules/reliability.module.js',
