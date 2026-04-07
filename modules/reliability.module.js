@@ -1104,57 +1104,58 @@
         var items = [];
 
         (correctionCandidates || []).forEach(function(c) {
-            items.push({ date: c.date, label: 'PTOST', hours: Number(c.hours || 0) });
+            items.push({ date: c.date, label: 'Convert to PTOST', hours: Number(c.hours || 0) });
         });
 
         (pcIssues || []).forEach(function(p) {
-            items.push({ date: p.date, label: 'PC Issue', hours: Number(p.verintHours || 0) });
+            items.push({ date: p.date, label: 'PC issue follow-up', hours: Number(p.verintHours || 0) });
         });
 
         (discrepancies || []).forEach(function(d) {
-            items.push({ date: d.date, label: 'Payroll Correction', hours: Number(d.verintHours || 0) });
+            items.push({ date: d.date, label: 'Payroll correction needed', hours: Number(d.verintHours || 0) });
         });
 
         (reviewCodingCandidates || []).forEach(function(d) {
-            items.push({ date: d.date, label: 'Review Coding (Verint Same Day / Payroll PTOST)', hours: Number(d.verintHours || 0) });
+            items.push({ date: d.date, label: 'Review coding mismatch (Verint Same Day / Payroll PTOST)', hours: Number(d.verintHours || 0) });
         });
 
         items.sort(function(a, b) {
             return String(a.date || '').localeCompare(String(b.date || ''));
         });
 
-        lines.push('Hi WFM,');
+        lines.push('Hi WFM Team,');
         lines.push('');
-        lines.push('Please review and update these Verint/payroll items for ' + employeeName + ':');
+        lines.push('Please review the attendance updates below for ' + employeeName + '.');
+        lines.push('I split these into items that can be updated now and items that need review.');
         lines.push('');
 
-        var ptostRows = items.filter(function(i) { return i.label === 'PTOST'; });
-        var otherRows = items.filter(function(i) { return i.label !== 'PTOST'; });
+        var ptostRows = items.filter(function(i) { return i.label === 'Convert to PTOST'; });
+        var otherRows = items.filter(function(i) { return i.label !== 'Convert to PTOST'; });
 
         if (ptostRows.length > 0) {
-            lines.push('Good to correct now (PTOST within 40h cap):');
+            lines.push('Can update now (within PTOST 40h cap):');
             ptostRows.forEach(function(item) {
                 var hrs = item.hours > 0 ? ' (' + round2(item.hours) + 'h)' : '';
-                lines.push('- ' + item.date + ', ' + item.label + hrs);
+                lines.push('- ' + item.date + ': ' + item.label + hrs);
             });
             lines.push('');
         }
 
         if (otherRows.length > 0) {
-            lines.push('Other review items:');
+            lines.push('Needs review:');
             otherRows.forEach(function(item) {
                 var hrs = item.hours > 0 ? ' (' + round2(item.hours) + 'h)' : '';
-                lines.push('- ' + item.date + ', ' + item.label + hrs);
+                lines.push('- ' + item.date + ': ' + item.label + hrs);
             });
             lines.push('');
         }
 
         if (items.length === 0) {
-            lines.push('- No correction rows currently flagged.');
+            lines.push('- No updates are currently flagged.');
             lines.push('');
         }
 
-        lines.push('Thank you.');
+        lines.push('Thank you!');
 
         return {
             subject: employeeName + ' - Verint Corrections',
