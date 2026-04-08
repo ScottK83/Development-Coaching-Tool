@@ -142,25 +142,37 @@
             }
         });
 
-        // Index newest YTD employees by name for fast lookup
+        // Determine whether the YTD or the bestPeriod is more authoritative.
+        // If the bestPeriod has a newer end date than the YTD and similar employee
+        // count, the bestPeriod is likely a re-upload that should win.
         var ytdByName = {};
+        var useYtdOverride = false;
         if (newestYtdPeriod) {
-            (newestYtdPeriod.employees || []).forEach(function (emp) {
-                if (emp && emp.name) ytdByName[emp.name] = emp;
-            });
+            var ytdMeta = newestYtdPeriod.metadata || {};
+            var ytdEndStr = ytdMeta.endDate || '';
+            var ytdEndTime = ytdEndStr ? new Date(ytdEndStr).getTime() : 0;
+            // Only use YTD as override if it's newer than or equal to the bestPeriod
+            useYtdOverride = newestYtdEndTime >= bestDate;
+            if (useYtdOverride) {
+                (newestYtdPeriod.employees || []).forEach(function (emp) {
+                    if (emp && emp.name) ytdByName[emp.name] = emp;
+                });
+            }
         }
 
-        // Start with bestPeriod for the full roster, then swap in YTD records
+        // Start with bestPeriod for the full roster.
+        // If a real YTD exists and is at least as recent, swap in YTD records.
         var baseEmployees = {};
         (bestPeriod.employees || []).forEach(function (emp) {
             if (!emp || !emp.name) return;
-            // If this employee exists in the newest YTD, use that record instead
-            baseEmployees[emp.name] = ytdByName[emp.name] || emp;
+            baseEmployees[emp.name] = (useYtdOverride && ytdByName[emp.name]) || emp;
         });
         // Also add any YTD employees not in bestPeriod
-        Object.keys(ytdByName).forEach(function (name) {
-            if (!baseEmployees[name]) baseEmployees[name] = ytdByName[name];
-        });
+        if (useYtdOverride) {
+            Object.keys(ytdByName).forEach(function (name) {
+                if (!baseEmployees[name]) baseEmployees[name] = ytdByName[name];
+            });
+        }
 
         var mergedEmployees = Object.values(baseEmployees);
 
