@@ -125,29 +125,32 @@
             if (emp && emp.name) baseEmployees[emp.name] = Object.assign({}, emp);
         });
 
-        // Find all other current-year periods and overlay newer employee data
+        // Find all other current-year periods and overlay newer employee data.
+        // Tag each as isYtd so YTD uploads always overlay last (YTD = source of truth).
         var allPeriods = [];
-        Object.entries(yData).forEach(function (entry) {
-            var meta = entry[1]?.metadata || {};
-            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
-            var endYear = parseInt(String(endStr).split('-')[0], 10);
-            if (endYear !== currentYear) return;
-            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
-        });
         Object.entries(wData).forEach(function (entry) {
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
             var endYear = parseInt(String(endStr).split('-')[0], 10);
             if (endYear !== currentYear) return;
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
+            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt, isYtd: false });
+        });
+        Object.entries(yData).forEach(function (entry) {
+            var meta = entry[1]?.metadata || {};
+            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
+            var endYear = parseInt(String(endStr).split('-')[0], 10);
+            if (endYear !== currentYear) return;
+            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
+            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt, isYtd: true });
         });
 
-        // Sort oldest first so newer uploads overwrite older data.
-        // Merge field-by-field: only overwrite when the newer value is
-        // actually populated (not empty string / null / undefined).
-        allPeriods.sort(function (a, b) { return a.uploadedAt - b.uploadedAt; });
+        // Sort: weekly periods first (by upload date), then YTD periods last.
+        // YTD is the authoritative source of truth and always wins over weekly.
+        allPeriods.sort(function (a, b) {
+            if (a.isYtd !== b.isYtd) return a.isYtd ? 1 : -1;
+            return a.uploadedAt - b.uploadedAt;
+        });
         allPeriods.forEach(function (item) {
             (item.period.employees || []).forEach(function (emp) {
                 if (!emp || !emp.name || !baseEmployees[emp.name]) return;
