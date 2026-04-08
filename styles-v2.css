@@ -275,11 +275,30 @@
     background: var(--bg-surface-raised) !important;
 }
 
-/* Ranking card names - these have inline dark colors */
-[data-theme="dark"] .ranking-card-name,
-[data-theme="dark"] div[style*="cursor: pointer"][style*="text-decoration"] {
-    color: var(--brand) !important;
-    text-decoration-color: var(--brand-muted) !important;
+/* Ranking names */
+.ranking-card-name {
+    color: #1a1a2e;
+}
+.ranking-name-cell {
+    color: #1a1a2e;
+}
+.ranking-row td {
+    color: #1a1a2e;
+}
+
+[data-theme="dark"] .ranking-card-name {
+    color: #e2e8f0 !important;
+    text-decoration-color: #94a3b8 !important;
+}
+[data-theme="dark"] .ranking-name-cell,
+[data-theme="dark"] .ranking-row td {
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .ranking-row {
+    background: #1a2234 !important;
+}
+[data-theme="dark"] .ranking-row:nth-child(even) {
+    background: #1f2a3e !important;
 }
 
 /* ALL divs with inline background colors in dark mode */
@@ -1225,11 +1244,9 @@ textarea:focus-visible {
     color: var(--text-secondary) !important;
 }
 
-/* Links and names styled with dark colors - must be visible in dark mode */
-[data-theme="dark"] a[style*="color"],
-[data-theme="dark"] [style*="text-decoration: underline"],
-[data-theme="dark"] .ranking-card-name {
-    color: var(--brand) !important;
+/* Links in dark mode */
+[data-theme="dark"] a[style*="color"] {
+    color: #7ba4e8 !important;
 }
 
 [data-theme="dark"] [style*="color: #1565c0"],

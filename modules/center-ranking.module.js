@@ -72,14 +72,16 @@
      */
     function buildCenterRankings() {
         var currentYear = new Date().getFullYear();
+        var wData = _getWeeklyData();
         var yData = _getYtdData();
 
-        // Center rankings uses ONLY real YTD data. No weekly, no auto-generated.
-        // One upload, one source of truth. When you re-upload, it overwrites.
-        var bestPeriod = null;
-        var bestSource = '';
-        var bestKey = '';
-        var bestDate = 0;
+        // Find the single most recent upload with 30+ employees.
+        // Priority: newest real YTD > newest non-YTD upload.
+        // No merging. One period. That's it.
+        var bestYtd = null;
+        var bestYtdTime = 0;
+        var bestYtdKey = '';
+        var bestYtdSource = '';
 
         Object.entries(yData).forEach(function (entry) {
             var meta = entry[1]?.metadata || {};
@@ -88,21 +90,53 @@
             var endYear = parseInt(String(endStr).split('-')[0], 10);
             if (endYear !== currentYear) return;
             var count = (entry[1].employees || []).length;
-            if (count === 0) return;
-            var endDate = endStr ? new Date(endStr) : null;
-            var endTime = endDate && !isNaN(endDate) ? endDate.getTime() : 0;
-
-            if (!bestPeriod || endTime > bestDate) {
-                bestPeriod = entry[1];
-                bestDate = endTime;
-                bestSource = meta.label || 'YTD upload';
-                bestKey = entry[0];
+            if (count < 30) return;
+            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
+            if (uploadedAt > bestYtdTime) {
+                bestYtd = entry[1];
+                bestYtdTime = uploadedAt;
+                bestYtdKey = entry[0];
+                bestYtdSource = meta.label || 'YTD upload';
             }
         });
 
-        if (!bestPeriod) return null;
+        // Fall back to newest weekly/custom upload with 30+ employees
+        var bestWeekly = null;
+        var bestWeeklyTime = 0;
+        var bestWeeklyKey = '';
+        var bestWeeklySource = '';
 
-        // Use the YTD employees directly. No merging. No overlaying.
+        Object.entries(wData).forEach(function (entry) {
+            var meta = entry[1]?.metadata || {};
+            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
+            var endYear = parseInt(String(endStr).split('-')[0], 10);
+            if (endYear !== currentYear) return;
+            var count = (entry[1].employees || []).length;
+            if (count < 30) return;
+            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
+            if (uploadedAt > bestWeeklyTime) {
+                bestWeekly = entry[1];
+                bestWeeklyTime = uploadedAt;
+                bestWeeklyKey = entry[0];
+                bestWeeklySource = meta.label || entry[0];
+            }
+        });
+
+        // Use the most recently uploaded source. Real YTD wins ties.
+        var bestPeriod, bestKey, bestSource;
+        if (bestYtd && (!bestWeekly || bestYtdTime >= bestWeeklyTime)) {
+            bestPeriod = bestYtd;
+            bestKey = bestYtdKey;
+            bestSource = bestYtdSource;
+        } else if (bestWeekly) {
+            bestPeriod = bestWeekly;
+            bestKey = bestWeeklyKey;
+            bestSource = bestWeeklySource;
+        } else {
+            return null;
+        }
+
+        // Use this period's employees directly. No merging. No overlaying.
         var baseEmployees = {};
         (bestPeriod.employees || []).forEach(function (emp) {
             if (emp && emp.name) baseEmployees[emp.name] = emp;
@@ -275,7 +309,7 @@
                 var percentile = Math.round((1 - (r.rank - 1) / data.totalEmployees) * 100);
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
-                html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline; color: var(--text-primary, #1a1a2e);">' + _escapeHtml(r.name) + '</div>';
+                html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
@@ -379,14 +413,14 @@
                 return '#c62828';
             };
 
-            html += '<tr data-employee="' + _escapeHtml(r.name) + '" style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + '; color: var(--text-primary, #1a1a2e);">';
+            html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
             // Row number
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: var(--text-primary, #1a1a2e);">' + (idx + 1) + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
 
             // Name (highlight team members)
-            html += '<td style="padding: 4px 3px; white-space: nowrap; color: var(--text-primary, #1a1a2e);">';
-            if (isTeam) html += '<span style="color: var(--brand, #1565c0);">&#9733; </span>';
+            html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
+            if (isTeam) html += '<span style="color: #1565c0;">&#9733; </span>';
             html += _escapeHtml(r.name) + '</td>';
 
             // Composite average rank
