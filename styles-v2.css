@@ -226,9 +226,11 @@
     color: var(--text-secondary) !important;
 }
 
-/* DARK MODE: Nuclear text readability */
+/* DARK MODE: Nuclear text and background readability.
+   Every element gets dark background + light text.
+   This overrides ALL inline styles app-wide. */
 [data-theme="dark"] {
-    color: var(--text-primary);
+    color: #e2e8f0;
 }
 
 [data-theme="dark"] body,
@@ -240,11 +242,41 @@
 [data-theme="dark"] p,
 [data-theme="dark"] li,
 [data-theme="dark"] label,
+[data-theme="dark"] small,
+[data-theme="dark"] strong,
+[data-theme="dark"] td,
+[data-theme="dark"] th,
 [data-theme="dark"] h1, [data-theme="dark"] h2,
 [data-theme="dark"] h3, [data-theme="dark"] h4,
 [data-theme="dark"] h5, [data-theme="dark"] h6 {
-    color: var(--text-primary);
+    color: #e2e8f0 !important;
 }
+
+/* Override EVERY inline light background in the entire app */
+[data-theme="dark"] [style*="background: #f"],
+[data-theme="dark"] [style*="background:#f"],
+[data-theme="dark"] [style*="background: #e"],
+[data-theme="dark"] [style*="background:#e"],
+[data-theme="dark"] [style*="background: #d"],
+[data-theme="dark"] [style*="background:#d"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:white"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#fff"] {
+    background: #1f2a3e !important;
+}
+
+/* Status-colored badges/pills should keep their colors but with dark-safe variants */
+[data-theme="dark"] [style*="background: #e8f5e9"],
+[data-theme="dark"] [style*="background:#e8f5e9"] { background: #132a1e !important; }
+[data-theme="dark"] [style*="background: #fff3e0"],
+[data-theme="dark"] [style*="background:#fff3e0"] { background: #2a2013 !important; }
+[data-theme="dark"] [style*="background: #ffebee"],
+[data-theme="dark"] [style*="background:#ffebee"] { background: #2a1418 !important; }
+[data-theme="dark"] [style*="background: #fff8c5"],
+[data-theme="dark"] [style*="background:#fff8c5"] { background: #2a2213 !important; }
+[data-theme="dark"] [style*="background: #e3f2fd"],
+[data-theme="dark"] [style*="background:#e3f2fd"] { background: #0d1a2e !important; }
 
 /* Force all table content readable - !important to beat inline styles */
 [data-theme="dark"] table,
