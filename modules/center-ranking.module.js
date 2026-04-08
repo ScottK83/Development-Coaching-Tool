@@ -144,13 +144,20 @@
             allPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
         });
 
-        // Sort oldest first so newer uploads overwrite older data
+        // Sort oldest first so newer uploads overwrite older data.
+        // Merge field-by-field: only overwrite when the newer value is
+        // actually populated (not empty string / null / undefined).
         allPeriods.sort(function (a, b) { return a.uploadedAt - b.uploadedAt; });
         allPeriods.forEach(function (item) {
             (item.period.employees || []).forEach(function (emp) {
-                if (emp && emp.name && baseEmployees[emp.name]) {
-                    baseEmployees[emp.name] = emp;
-                }
+                if (!emp || !emp.name || !baseEmployees[emp.name]) return;
+                var base = baseEmployees[emp.name];
+                Object.keys(emp).forEach(function (key) {
+                    var val = emp[key];
+                    if (val !== null && val !== undefined && val !== '') {
+                        base[key] = val;
+                    }
+                });
             });
         });
 
