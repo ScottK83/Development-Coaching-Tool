@@ -6059,7 +6059,27 @@ function deleteEmployee(employeeName) {
 async function initApp() {
     
     installDebugListeners();
-    
+
+    // Dark mode toggle
+    (function initDarkMode() {
+        var STORAGE_KEY = 'devCoachingTool_theme';
+        var saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+        var btn = document.getElementById('darkModeToggle');
+        if (btn) {
+            btn.textContent = (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) ? '\u2600\uFE0F' : '\uD83C\uDF19';
+            btn.addEventListener('click', function() {
+                var current = document.documentElement.getAttribute('data-theme');
+                var next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem(STORAGE_KEY, next);
+                btn.textContent = next === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+            });
+        }
+    })();
+
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     ytdData = loadYtdData();
