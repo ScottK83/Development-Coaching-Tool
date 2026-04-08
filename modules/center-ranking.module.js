@@ -117,30 +117,14 @@
 
         if (!bestPeriod || bestCount === 0) return null;
 
-        // Build merged employee list: start with the largest period (full roster),
-        // then overlay with newer data for any employee that appears in a more
-        // recent upload, so rankings always reflect the latest numbers.
-        var baseEmployees = {};
-        (bestPeriod.employees || []).forEach(function (emp) {
-            if (emp && emp.name) baseEmployees[emp.name] = Object.assign({}, emp);
-        });
-
-        // Find the single newest YTD period (source of truth) and weekly periods.
-        // Only the newest YTD participates - older YTDs are ignored to prevent
-        // stale data from contaminating the merge.
-        var weeklyPeriods = [];
-        Object.entries(wData).forEach(function (entry) {
-            var meta = entry[1]?.metadata || {};
-            var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
-            var endYear = parseInt(String(endStr).split('-')[0], 10);
-            if (endYear !== currentYear) return;
-            var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            weeklyPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
-        });
+        // Build employee list. For each employee, pick ONE record:
+        //   1. Newest YTD record (source of truth, always wins)
+        //   2. Otherwise, the bestPeriod record
+        // No field-by-field merging. One record per person. Period.
 
         // Find the single newest YTD for the current year
-        var newestYtd = null;
-        var newestYtdTime = 0;
+        var newestYtdPeriod = null;
+        var newestYtdEndTime = 0;
         Object.entries(yData).forEach(function (entry) {
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
@@ -148,31 +132,31 @@
             if (endYear !== currentYear) return;
             var endDate = endStr ? new Date(endStr) : null;
             var endTime = endDate && !isNaN(endDate) ? endDate.getTime() : 0;
-            // Pick YTD with the newest end date; tiebreak by uploadedAt
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            if (endTime > newestYtdTime || (endTime === newestYtdTime && uploadedAt > (newestYtd?.uploadedAt || 0))) {
-                newestYtd = { period: entry[1], uploadedAt: uploadedAt };
-                newestYtdTime = endTime;
+            if (endTime > newestYtdEndTime || (endTime === newestYtdEndTime && uploadedAt > newestYtdEndTime)) {
+                newestYtdPeriod = entry[1];
+                newestYtdEndTime = endTime;
             }
         });
 
-        // Overlay order: weekly periods first (by upload date), then the single
-        // newest YTD last. YTD is the authoritative source of truth and always wins.
-        weeklyPeriods.sort(function (a, b) { return a.uploadedAt - b.uploadedAt; });
-        var allPeriods = weeklyPeriods.slice();
-        if (newestYtd) allPeriods.push(newestYtd);
-
-        allPeriods.forEach(function (item) {
-            (item.period.employees || []).forEach(function (emp) {
-                if (!emp || !emp.name || !baseEmployees[emp.name]) return;
-                var base = baseEmployees[emp.name];
-                Object.keys(emp).forEach(function (key) {
-                    var val = emp[key];
-                    if (val !== null && val !== undefined && val !== '') {
-                        base[key] = val;
-                    }
-                });
+        // Index newest YTD employees by name for fast lookup
+        var ytdByName = {};
+        if (newestYtdPeriod) {
+            (newestYtdPeriod.employees || []).forEach(function (emp) {
+                if (emp && emp.name) ytdByName[emp.name] = emp;
             });
+        }
+
+        // Start with bestPeriod for the full roster, then swap in YTD records
+        var baseEmployees = {};
+        (bestPeriod.employees || []).forEach(function (emp) {
+            if (!emp || !emp.name) return;
+            // If this employee exists in the newest YTD, use that record instead
+            baseEmployees[emp.name] = ytdByName[emp.name] || emp;
+        });
+        // Also add any YTD employees not in bestPeriod
+        Object.keys(ytdByName).forEach(function (name) {
+            if (!baseEmployees[name]) baseEmployees[name] = ytdByName[name];
         });
 
         var mergedEmployees = Object.values(baseEmployees);
