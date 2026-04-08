@@ -108,8 +108,9 @@
                 agg.totalCalls += Number.isInteger(tc) ? tc : 0;
                 agg.surveyTotal += Number.isInteger(st) ? st : 0;
 
+                // Reliability: cumulative hours — take the highest (most complete) value
                 var rel = parseFloat(emp.reliability);
-                if (Number.isFinite(rel)) agg.reliability += rel;
+                if (Number.isFinite(rel) && rel > agg.reliability) agg.reliability = rel;
 
                 Q1_METRICS.forEach(function (mk) {
                     if (CUMULATIVE_METRICS.has(mk)) return; // handled above

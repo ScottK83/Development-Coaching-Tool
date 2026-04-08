@@ -3379,8 +3379,12 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
 
         agg.transfersCount += Number.isFinite(parseFloat(emp.transfersCount)) ? parseFloat(emp.transfersCount) : 0;
         agg.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
-        agg.reliability += Number.isFinite(parseFloat(emp.reliability)) ? parseFloat(emp.reliability) : 0;
         agg.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
+
+        // Reliability is cumulative hours, NOT additive across periods.
+        // Always take the highest value seen (the most complete YTD number).
+        var rel = Number.isFinite(parseFloat(emp.reliability)) ? parseFloat(emp.reliability) : 0;
+        if (rel > agg.reliability) agg.reliability = rel;
 
         metricKeysToAverage.forEach(metricKey => {
             const metricValue = parseFloat(emp[metricKey]);

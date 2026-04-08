@@ -1113,13 +1113,44 @@ textarea:focus-visible {
 /* Tame inline font colors from modules */
 [style*="color: #1a237e"],
 [style*="color: #4a148c"],
-[style*="color: #37474f"] {
+[style*="color: #37474f"],
+[style*="color:#1a237e"],
+[style*="color:#4a148c"],
+[style*="color:#37474f"] {
     color: var(--text-primary) !important;
 }
 
 [style*="color: #666"],
 [style*="color: #555"],
 [style*="color: #475569"],
-[style*="color: #64748b"] {
+[style*="color: #64748b"],
+[style*="color:#666"],
+[style*="color:#555"],
+[style*="color:#475569"],
+[style*="color:#64748b"] {
     color: var(--text-secondary) !important;
+}
+
+/* Links and names styled with dark colors - must be visible in dark mode */
+[data-theme="dark"] a[style*="color"],
+[data-theme="dark"] [style*="text-decoration: underline"],
+[data-theme="dark"] .ranking-card-name {
+    color: var(--brand) !important;
+}
+
+[data-theme="dark"] [style*="color: #1565c0"],
+[data-theme="dark"] [style*="color:#1565c0"],
+[data-theme="dark"] [style*="color: #1a1a2e"],
+[data-theme="dark"] [style*="color:#1a1a2e"],
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#333"],
+[data-theme="dark"] [style*="color: #1a237e"],
+[data-theme="dark"] [style*="color:#1a237e"],
+[data-theme="dark"] [style*="color: #4a148c"],
+[data-theme="dark"] [style*="color:#4a148c"],
+[data-theme="dark"] [style*="color: #37474f"],
+[data-theme="dark"] [style*="color:#37474f"],
+[data-theme="dark"] [style*="color: black"],
+[data-theme="dark"] [style*="color:black"] {
+    color: var(--text-primary) !important;
 }
