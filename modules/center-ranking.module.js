@@ -4,7 +4,7 @@
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
         if (mod?.escapeHtml) return mod.escapeHtml(str);
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
     function _formatMetricDisplay(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
@@ -122,7 +122,7 @@
         // recent upload, so rankings always reflect the latest numbers.
         var baseEmployees = {};
         (bestPeriod.employees || []).forEach(function (emp) {
-            if (emp && emp.name) baseEmployees[emp.name] = emp;
+            if (emp && emp.name) baseEmployees[emp.name] = Object.assign({}, emp);
         });
 
         // Find all other current-year periods and overlay newer employee data
@@ -222,8 +222,12 @@
             var sorted = rankings.slice().sort(function (a, b) {
                 var aVal = mk.field.includes('.') ? a.values[mk.field.split('.')[1]] : a[mk.field];
                 var bVal = mk.field.includes('.') ? b.values[mk.field.split('.')[1]] : b[mk.field];
-                aVal = aVal !== null && aVal !== undefined ? aVal : (mk.reverse ? Infinity : -Infinity);
-                bVal = bVal !== null && bVal !== undefined ? bVal : (mk.reverse ? Infinity : -Infinity);
+                // Treat null/undefined/NaN as worst possible rank
+                var aNull = aVal === null || aVal === undefined || (typeof aVal === 'number' && isNaN(aVal));
+                var bNull = bVal === null || bVal === undefined || (typeof bVal === 'number' && isNaN(bVal));
+                if (aNull && bNull) return 0;
+                if (aNull) return 1;  // a goes to bottom
+                if (bNull) return -1; // b goes to bottom
                 return mk.reverse ? (aVal - bVal) : (bVal - aVal);
             });
             sorted.forEach(function (emp, idx) {
@@ -232,12 +236,18 @@
             });
         });
 
-        // Composite rank = average of all 5 metric ranks (lower = better)
+        // Composite rank = average of only present metric ranks (lower = better).
+        // Missing metrics are excluded from the average so employees aren't
+        // artificially boosted or penalized for missing data.
         rankings.forEach(function (r) {
             var ranks = r.metricRanks || {};
-            var sum = (ranks.aht || 0) + (ranks.adherence || 0) + (ranks.sentiment || 0) +
-                (ranks.associateOverall || 0) + (ranks.reliability || 0);
-            r.compositeScore = sum / 5;
+            var presentRanks = [];
+            ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'].forEach(function (k) {
+                if (ranks[k] && ranks[k] > 0) presentRanks.push(ranks[k]);
+            });
+            r.compositeScore = presentRanks.length > 0
+                ? presentRanks.reduce(function (a, b) { return a + b; }, 0) / presentRanks.length
+                : Infinity;
         });
 
         // Sort by composite score, reliability rank as tiebreaker

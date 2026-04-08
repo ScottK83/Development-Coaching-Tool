@@ -31,7 +31,7 @@
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
         if (mod?.escapeHtml) return mod.escapeHtml(str);
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function _getFirstName(fullName) {
