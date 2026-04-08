@@ -125,32 +125,43 @@
             if (emp && emp.name) baseEmployees[emp.name] = Object.assign({}, emp);
         });
 
-        // Find all other current-year periods and overlay newer employee data.
-        // Tag each as isYtd so YTD uploads always overlay last (YTD = source of truth).
-        var allPeriods = [];
+        // Find the single newest YTD period (source of truth) and weekly periods.
+        // Only the newest YTD participates - older YTDs are ignored to prevent
+        // stale data from contaminating the merge.
+        var weeklyPeriods = [];
         Object.entries(wData).forEach(function (entry) {
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
             var endYear = parseInt(String(endStr).split('-')[0], 10);
             if (endYear !== currentYear) return;
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt, isYtd: false });
+            weeklyPeriods.push({ period: entry[1], uploadedAt: uploadedAt });
         });
+
+        // Find the single newest YTD for the current year
+        var newestYtd = null;
+        var newestYtdTime = 0;
         Object.entries(yData).forEach(function (entry) {
             var meta = entry[1]?.metadata || {};
             var endStr = meta.endDate || (entry[0].includes('|') ? entry[0].split('|')[1] : '');
             var endYear = parseInt(String(endStr).split('-')[0], 10);
             if (endYear !== currentYear) return;
+            var endDate = endStr ? new Date(endStr) : null;
+            var endTime = endDate && !isNaN(endDate) ? endDate.getTime() : 0;
+            // Pick YTD with the newest end date; tiebreak by uploadedAt
             var uploadedAt = meta.uploadedAt ? new Date(meta.uploadedAt).getTime() : 0;
-            allPeriods.push({ period: entry[1], uploadedAt: uploadedAt, isYtd: true });
+            if (endTime > newestYtdTime || (endTime === newestYtdTime && uploadedAt > (newestYtd?.uploadedAt || 0))) {
+                newestYtd = { period: entry[1], uploadedAt: uploadedAt };
+                newestYtdTime = endTime;
+            }
         });
 
-        // Sort: weekly periods first (by upload date), then YTD periods last.
-        // YTD is the authoritative source of truth and always wins over weekly.
-        allPeriods.sort(function (a, b) {
-            if (a.isYtd !== b.isYtd) return a.isYtd ? 1 : -1;
-            return a.uploadedAt - b.uploadedAt;
-        });
+        // Overlay order: weekly periods first (by upload date), then the single
+        // newest YTD last. YTD is the authoritative source of truth and always wins.
+        weeklyPeriods.sort(function (a, b) { return a.uploadedAt - b.uploadedAt; });
+        var allPeriods = weeklyPeriods.slice();
+        if (newestYtd) allPeriods.push(newestYtd);
+
         allPeriods.forEach(function (item) {
             (item.period.employees || []).forEach(function (emp) {
                 if (!emp || !emp.name || !baseEmployees[emp.name]) return;
