@@ -1112,7 +1112,7 @@ window.saveEmployeePreferredName = function(fullName) {
     
     showToast('✅ Preferred name updated!');
     renderEmployeesList();
-}
+};
 
 // One-time supervisor seeds
 (function seedSupervisorTeams() {
@@ -4833,7 +4833,7 @@ function renderSupervisorIntelligence() {
     renderComplianceAlerts();
 }
 
-let trendIntelligenceListenersAttached = false;
+var trendIntelligenceListenersAttached = false;
 let trendIntelligenceFocusMode = true;
 let trendPrioritySnapshot = null;
 
