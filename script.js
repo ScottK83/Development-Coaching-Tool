@@ -6521,6 +6521,107 @@ async function generateQuickCheckin() {
     const copyBtn = document.getElementById('copyQuickCheckinBtn');
     if (!select || !output) return;
 
+    const _pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    const QC_GREETINGS = [
+        name => `Hey ${name}! \uD83D\uDC4B`,
+        name => `What's up ${name}!`,
+        name => `Hey there ${name}! \uD83D\uDC4B`,
+        name => `Hi ${name}! \uD83D\uDE04`,
+        name => `Good to connect ${name}!`,
+        name => `Hey ${name}, hope your day is going well!`,
+        name => `Hi ${name}! Quick note for you \u2014`,
+        name => `Hey ${name}! Just wanted to touch base.`,
+        name => `What's going on ${name}! \uD83D\uDC4B`,
+        name => `Hey ${name}! Got some updates for you.`,
+        name => `Hi there ${name}!`,
+        name => `Hey ${name}, checking in! \uD83D\uDE4C`,
+    ];
+
+    const QC_DATA_INTROS = [
+        periodLabel => `Your data for ${periodLabel} just came in.`,
+        periodLabel => `Took a look at your numbers for ${periodLabel}.`,
+        periodLabel => `Just reviewed your ${periodLabel} data.`,
+        periodLabel => `Your ${periodLabel} results are in and looking good.`,
+        periodLabel => `Peeked at your stats for ${periodLabel}.`,
+        periodLabel => `Got your data from ${periodLabel} pulled up.`,
+        periodLabel => `Your ${periodLabel} numbers just dropped.`,
+        periodLabel => `Checking out your results for ${periodLabel}.`,
+        periodLabel => `Just went through your ${periodLabel} performance.`,
+        periodLabel => `Here's what I'm seeing for ${periodLabel}.`,
+        periodLabel => `Your data for ${periodLabel} is looking great.`,
+        periodLabel => `Wanted to share what I saw in your ${periodLabel} data.`,
+    ];
+
+    const QC_ONE_WIN = [
+        (metric, detail) => `You're rocking ${metric} at ${detail}! \uD83D\uDD25`,
+        (metric, detail) => `${metric} at ${detail} \u2014 nice work! \uD83D\uDCAA`,
+        (metric, detail) => `Loving that ${metric} sitting at ${detail}! \uD83D\uDD25`,
+        (metric, detail) => `Your ${metric} is at ${detail} and that's awesome! \uD83C\uDF89`,
+        (metric, detail) => `Big shoutout on ${metric} \u2014 ${detail} is solid! \uD83D\uDE4C`,
+        (metric, detail) => `${metric} at ${detail}? That's what I like to see! \uD83D\uDCAA`,
+        (metric, detail) => `Crushin' it on ${metric} with ${detail}! \uD83D\uDD25`,
+        (metric, detail) => `Really strong ${metric} at ${detail}, keep that up! \uD83C\uDF1F`,
+        (metric, detail) => `${detail} on ${metric} is looking great! \uD83D\uDE80`,
+        (metric, detail) => `Your ${metric} at ${detail} is standing out! \uD83C\uDFC6`,
+    ];
+
+    const QC_TWO_WINS = [
+        (m1, d1, m2, d2) => `You're rocking ${m1} at ${d1} and ${m2} at ${d2}! \uD83D\uDD25\uD83D\uDCAA`,
+        (m1, d1, m2, d2) => `${m1} at ${d1} plus ${m2} at ${d2} \u2014 killing it! \uD83D\uDD25`,
+        (m1, d1, m2, d2) => `Love seeing ${m1} at ${d1} and ${m2} at ${d2}! \uD83C\uDF89`,
+        (m1, d1, m2, d2) => `Double win: ${m1} at ${d1} and ${m2} at ${d2}! \uD83D\uDCAA\uD83D\uDCAA`,
+        (m1, d1, m2, d2) => `Your ${m1} (${d1}) and ${m2} (${d2}) are both on point! \uD83D\uDE4C`,
+        (m1, d1, m2, d2) => `${m1} at ${d1}, ${m2} at ${d2} \u2014 you're on a roll! \uD83C\uDF1F`,
+        (m1, d1, m2, d2) => `Huge props on ${m1} at ${d1} and ${m2} at ${d2}! \uD83D\uDD25`,
+        (m1, d1, m2, d2) => `Standout numbers: ${m1} (${d1}) and ${m2} (${d2})! \uD83D\uDCAA`,
+        (m1, d1, m2, d2) => `Two big wins this week \u2014 ${m1} at ${d1} and ${m2} at ${d2}! \uD83C\uDF89`,
+        (m1, d1, m2, d2) => `${m1} at ${d1} and ${m2} at ${d2}? That's solid work! \uD83D\uDE80`,
+    ];
+
+    const QC_NO_WINS = [
+        `I see you putting in the effort and I appreciate it! \uD83D\uDE4C`,
+        `I know the numbers aren't where we want yet but I see the work you're putting in. \uD83D\uDCAA`,
+        `Appreciate the hustle this week \u2014 let's keep building! \uD83D\uDE4C`,
+        `The effort is there and that matters. Let's keep pushing! \uD83D\uDCAA`,
+        `Every week is a fresh start and I know you've got it in you! \uD83C\uDF1F`,
+        `I can tell you're working hard out there. Let's keep the momentum going! \uD83D\uDE80`,
+        `Not every week hits the mark but the effort doesn't go unnoticed. \uD83D\uDE4C`,
+        `Keep grinding \u2014 the results will follow the effort! \uD83D\uDCAA`,
+        `I appreciate your consistency even when the numbers are tough. \uD83C\uDF1F`,
+        `Tough week on the metrics but I see you showing up every day. \uD83D\uDE4C`,
+        `Progress isn't always linear \u2014 keep at it and it'll click! \uD83D\uDCAA`,
+        `I know you're capable of great things. Let's make next week count! \uD83D\uDD25`,
+    ];
+
+    const QC_FOCUS = [
+        (metric, detail) => `\uD83C\uDFAF Your focus this week should be ${metric}${detail ? ' (currently at ' + detail + ')' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Let's zero in on ${metric}${detail ? ' \u2014 sitting at ' + detail + ' right now' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF One area to focus on: ${metric}${detail ? ' (at ' + detail + ' currently)' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF I'd love to see a push on ${metric}${detail ? ' \u2014 you're at ' + detail : ''} this week.`,
+        (metric, detail) => `\uD83C\uDFAF The one thing I want you dialing in on is ${metric}${detail ? ' (currently ' + detail + ')' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Let's make ${metric} the priority${detail ? ' \u2014 right now it's at ' + detail : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Area to level up: ${metric}${detail ? ' (at ' + detail + ')' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Where I'd focus your energy: ${metric}${detail ? ', currently at ' + detail : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF If there's one metric to lock in on it's ${metric}${detail ? ' (' + detail + ' right now)' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Key opportunity this week: ${metric}${detail ? ' \u2014 you're at ' + detail + ' currently' : ''}.`,
+    ];
+
+    const QC_CLOSERS = [
+        `Keep up the great work! \uD83D\uDE80 Let me know if you need anything.`,
+        `You've got this! \uD83D\uDCAA Reach out if you need any help.`,
+        `Keep pushing forward! \uD83D\uDE80 I'm here if you need me.`,
+        `Let's have a great week! \uD83D\uDE4C Hit me up if you want to chat.`,
+        `Excited to see what you do this week! \uD83D\uDD25 I'm always here to help.`,
+        `Keep it rolling! \uD83D\uDE80 Don't hesitate to reach out.`,
+        `Let's build on this! \uD83D\uDCAA I'm around if you need anything.`,
+        `Great things ahead \u2014 keep it up! \uD83C\uDF1F Let me know if I can help.`,
+        `Stay focused and keep grinding! \uD83D\uDD25 My door is always open.`,
+        `Looking forward to seeing your progress! \uD83D\uDE80 Holler if you need support.`,
+        `Proud of the effort \u2014 let's keep going! \uD83D\uDCAA Talk to me anytime.`,
+        `You're doing great things! \uD83C\uDF89 Reach out whenever you need.`,
+    ];
+
     const employeeName = select.value;
     if (!employeeName) {
         alert('Please select an associate first.');
@@ -6557,12 +6658,12 @@ async function generateQuickCheckin() {
             return match ? { metric: match[1], detail: match[2].trim() } : { metric: w.replace(/^-\s*/, ''), detail: '' };
         });
         if (winDetails.length === 1) {
-            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail}! \uD83D\uDD25`;
+            praiseText = _pick(QC_ONE_WIN)(winDetails[0].metric, winDetails[0].detail);
         } else {
-            praiseText = `You're rocking ${winDetails[0].metric} at ${winDetails[0].detail} and ${winDetails[1].metric} at ${winDetails[1].detail}! \uD83D\uDD25\uD83D\uDCAA`;
+            praiseText = _pick(QC_TWO_WINS)(winDetails[0].metric, winDetails[0].detail, winDetails[1].metric, winDetails[1].detail);
         }
     } else {
-        praiseText = `I see you putting in the effort and I appreciate it! \uD83D\uDE4C`;
+        praiseText = _pick(QC_NO_WINS);
     }
 
     // Build focus section from top coaching need + tip
@@ -6602,7 +6703,7 @@ async function generateQuickCheckin() {
             } catch (e) { /* no tips available */ }
         }
 
-        focusText = `\uD83C\uDFAF Your focus this week should be ${focusMetric}${focusDetail ? ' (currently at ' + focusDetail + ')' : ''}.`;
+        focusText = _pick(QC_FOCUS)(focusMetric, focusDetail);
         if (tipText) {
             // Strip redundant prefixes like "Practice this:" since we add our own intro
             const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
@@ -6612,11 +6713,11 @@ async function generateQuickCheckin() {
     }
 
     // Assemble the message
-    let message = `Hey ${firstName}! \uD83D\uDC4B Your data for ${periodLabel} is looking great. ${praiseText}`;
+    let message = _pick(QC_GREETINGS)(firstName) + ' ' + _pick(QC_DATA_INTROS)(periodLabel) + ' ' + praiseText;
     if (focusText) {
         message += `\n\n${focusText}`;
     }
-    message += `\n\nKeep up the great work! \uD83D\uDE80 Let me know if you need anything.`;
+    message += `\n\n` + _pick(QC_CLOSERS);
 
     output.value = message;
     output.style.display = 'block';

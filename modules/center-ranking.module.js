@@ -3,13 +3,14 @@
 
     // Supervisor color palette for row highlighting
     var SUPERVISOR_COLORS = {
-        'Scott':    { bg: '#e3f2fd', dark: '#0d2137' },
-        'Miranda':  { bg: '#fce4ec', dark: '#2a1015' },
-        'Kathy Cruz': { bg: '#f3e5f5', dark: '#1f0f24' },
-        'Angie':    { bg: '#fff3e0', dark: '#2a1d08' },
-        'Sarah':    { bg: '#e8f5e9', dark: '#0d2010' },
-        'Schnelle': { bg: '#e0f7fa', dark: '#0a1f22' },
-        'Nicole':   { bg: '#fff9c4', dark: '#2a2508' }
+        'Scott':           { bg: '#e3f2fd', dark: '#0d2137' },
+        'Miranda':         { bg: '#fce4ec', dark: '#2a1015' },
+        'Kayth':           { bg: '#f3e5f5', dark: '#1f0f24' },
+        'Angie':           { bg: '#fff3e0', dark: '#2a1d08' },
+        'Sarah':           { bg: '#e8f5e9', dark: '#0d2010' },
+        'Schnelle':        { bg: '#e0f7fa', dark: '#0a1f22' },
+        'Nicole':          { bg: '#fff9c4', dark: '#2a2508' },
+        'Angela Allison':  { bg: '#f1f8e9', dark: '#1a2410' }
     };
 
     function _getSupervisorColor(empName) {
