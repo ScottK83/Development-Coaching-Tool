@@ -453,9 +453,9 @@
 
             teamRanks.forEach(function (r) {
                 var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
-                    r.trackStatusValue === 'on-track-successful' ? '#f57f17' : '#c62828';
+                    r.trackStatusValue === 'on-track-successful' ? '#8bc34a' : '#c62828';
                 var statusBg = r.trackStatusValue === 'on-track-exceptional' ? '#e8f5e9' :
-                    r.trackStatusValue === 'on-track-successful' ? '#fff8e1' : '#fbe9e7';
+                    r.trackStatusValue === 'on-track-successful' ? '#f1f8e9' : '#fbe9e7';
                 var percentile = Math.round((1 - (r.rank - 1) / data.totalEmployees) * 100);
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
@@ -562,7 +562,7 @@
             var fontWeight = (isTeam || supColor) ? 'bold' : 'normal';
 
             var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
-                r.trackStatusValue === 'on-track-successful' ? '#f57f17' : '#c62828';
+                r.trackStatusValue === 'on-track-successful' ? '#8bc34a' : '#c62828';
 
             var scoreColor = function (s) {
                 if (s === 3) return '#2e7d32';
