@@ -5358,6 +5358,17 @@ function openTrendDrilldownForAssociate(associateName) {
     showToast(`Drilled into ${name}`, 2200);
 }
 
+function openTrendTeamSummaryView() {
+    const employeeSelect = document.getElementById('trendEmployeeSelector');
+    if (!employeeSelect) return;
+
+    employeeSelect.value = '';
+    renderTrendIntelligence();
+    renderTrendVisualizations();
+    renderCoachingImpactTracker();
+    showToast('Returned to Team view', 2000);
+}
+
 function buildTrendAiExplainPrompt() {
     const selectedEmployee = getTrendSelectedEmployee();
     const keys = getWeeklyKeysSorted();
@@ -5602,6 +5613,12 @@ function initializeTrendIntelligence() {
         });
         document.getElementById('copyTrendCadenceBtn')?.addEventListener('click', copyTrendCadenceTracker);
         document.getElementById('trendIntelligenceOutput')?.addEventListener('click', (event) => {
+            const backToTeamButton = event.target.closest('.trend-back-to-team-btn');
+            if (backToTeamButton) {
+                openTrendTeamSummaryView();
+                return;
+            }
+
             const button = event.target.closest('.trend-drilldown-btn[data-trend-associate]');
             if (!button) return;
             openTrendDrilldownForAssociate(button.getAttribute('data-trend-associate'));

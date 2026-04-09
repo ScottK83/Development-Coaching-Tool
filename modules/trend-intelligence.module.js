@@ -270,10 +270,49 @@ Write the complete email.`;
 
     function buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp) {
         return `
-<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${_esc(employeeName)} (${descriptor.shortLabel})</h5>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+<h5 style="margin-top: 0; margin-bottom: 0; color: #f5576c;">Individual Coaching Insights for ${_esc(employeeName)} (${descriptor.shortLabel})</h5>
+<button type="button" class="trend-back-to-team-btn" style="border: 1px solid #f2c3cc; background: #fff7fa; color: #9c2746; border-radius: 999px; padding: 7px 12px; font-size: 0.85em; font-weight: 700; cursor: pointer;">← Back to Team</button>
+</div>
 <div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">
 <strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}
 </div>`;
+    }
+
+    function buildIndividualTrendBriefSummaryHtml(currentEmp, prevEmp, descriptor, context = {}) {
+        const metricDelta = context.metricDelta || (() => 0);
+        const metricsRegistry = context.metricsRegistry || {};
+        const trackedMetrics = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
+
+        const deltas = trackedMetrics.map(metricKey => {
+            const currentValue = parseFloat(currentEmp?.[metricKey]);
+            const previousValue = parseFloat(prevEmp?.[metricKey]);
+            if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) return null;
+            return {
+                metricKey,
+                label: metricsRegistry[metricKey]?.label || metricKey,
+                delta: metricDelta(metricKey, currentValue, previousValue)
+            };
+        }).filter(Boolean);
+
+        if (!deltas.length) return '';
+
+        const strongest = deltas.slice().sort((a, b) => b.delta - a.delta)[0] || null;
+        const weakest = deltas.slice().sort((a, b) => a.delta - b.delta)[0] || null;
+        const improvementText = strongest && strongest.delta > 0
+            ? `${strongest.label} is trending up by ${strongest.delta.toFixed(1)}.`
+            : 'No clear positive movement this cycle.';
+        const downfallText = weakest && weakest.delta < 0
+            ? `${weakest.label} is trending down by ${Math.abs(weakest.delta).toFixed(1)}.`
+            : 'No meaningful declines detected this cycle.';
+
+        return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #f2d5dd; border-radius: 8px; background: #fff9fb;">
+            <div style="font-weight: 700; color: #9c2746; margin-bottom: 8px;">Quick Summary (${descriptor.shortLabel})</div>
+            <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
+                <div><strong>Improvement:</strong> ${_esc(improvementText)}</div>
+                <div><strong>Downfall:</strong> ${_esc(downfallText)}</div>
+            </div>
+        </div>`;
     }
 
     function buildIndividualTrendItemsSectionHtml(title, titleColor, itemBorderColor, itemBgColor, items) {
@@ -341,6 +380,7 @@ Write the complete email.`;
 
         let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
         html += buildIndividualTrendHeaderHtml(employeeName, buckets.descriptor, currentEmp, prevEmp, thirdEmp);
+        html += buildIndividualTrendBriefSummaryHtml(currentEmp, prevEmp, buckets.descriptor, context);
         html += buildIndividualTrendItemsSectionHtml('🚨 Attention Needed:', '#e53935', '#e53935', '#ffebee', warnings);
         html += buildIndividualTrendItemsSectionHtml('✨ Wins & Strengths:', '#43a047', '#43a047', '#e8f5e9', wins);
         html += buildIndividualTrendCoachingImpactHtml(coachingImpact);
@@ -452,6 +492,21 @@ Write the complete email.`;
         return html;
     }
 
+    function buildGroupTrendBriefSummaryHtml(teamInsights, descriptor) {
+        const downfalls = teamInsights.atRisk.concat(teamInsights.declining);
+        const improvements = teamInsights.improving;
+        const improvementExamples = improvements.slice(0, 3).map(_esc).join(', ');
+        const downfallExamples = downfalls.slice(0, 3).map(_esc).join(', ');
+
+        return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #d4e3fb; border-radius: 8px; background: #f8fbff;">
+            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">Team Summary (${descriptor.shortLabel})</div>
+            <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
+                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} trending up${improvementExamples ? ` (${improvementExamples})` : ''}.</div>
+                <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples ? ` (${downfallExamples})` : ''}.</div>
+            </div>
+        </div>`;
+    }
+
     function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
         if (!names.length) return '';
         let html = `<div style="margin-bottom: 15px;">`;
@@ -500,6 +555,7 @@ Write the complete email.`;
         let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
         html += buildGroupTrendHeaderHtml(buckets);
         html += buildGroupTrendSummaryCardsHtml(teamInsights);
+        html += buildGroupTrendBriefSummaryHtml(teamInsights, buckets.descriptor);
         html += buildGroupTrendNamedSectionHtml('🚨 At Risk - Need Immediate Coaching:', '#e53935', '#ffebee', '#e53935', teamInsights.atRisk);
         html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
         html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
