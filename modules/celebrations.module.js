@@ -345,19 +345,46 @@
         function(name) { return '\uD83D\uDE80\uD83C\uDF1F ' + name + ' is CRUSHING it! \uD83C\uDF1F\uD83D\uDE80'; },
         function(name) { return '\uD83D\uDCA5 Everyone give it up for ' + name + '! \uD83D\uDCA5'; },
         function(name) { return '\uD83C\uDFC6\u2B50 Let\'s hear it for ' + name + '! \u2B50\uD83C\uDFC6'; },
-        function(name) { return '\uD83D\uDD25\uD83D\uDD25 ' + name + ' is on FIRE! \uD83D\uDD25\uD83D\uDD25'; }
+        function(name) { return '\uD83D\uDD25\uD83D\uDD25 ' + name + ' is on FIRE! \uD83D\uDD25\uD83D\uDD25'; },
+        function(name) { return '\uD83D\uDCA5\uD83D\uDE80 Can we talk about ' + name + ' for a second?! INCREDIBLE! \uD83D\uDE80\uD83D\uDCA5'; },
+        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' just put on a CLINIC! \u2B50\u2B50\u2B50'; },
+        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' showed up and showed OUT! \uD83D\uDD25'; },
+        function(name) { return '\uD83C\uDFC6 BIG TIME performance from ' + name + '! \uD83C\uDFC6'; },
+        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' just did! \uD83C\uDF1F\uD83C\uDF1F'; },
+        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK this week! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; },
+        function(name) { return '\uD83C\uDF89 Stop what you\'re doing and give ' + name + ' some love! \uD83C\uDF89'; },
+        function(name) { return '\uD83D\uDE80\uD83D\uDE80 ' + name + ' is absolutely FLYING right now! \uD83D\uDE80\uD83D\uDE80'; },
+        function(name) { return '\uD83D\uDCA5\uD83C\uDFC6 THIS is what greatness looks like! ' + name + ' take a bow! \uD83C\uDFC6\uD83D\uDCA5'; },
+        function(name) { return '\uD83D\uDD25 I gotta brag on ' + name + ' for a minute! \uD83D\uDD25'; },
+        function(name) { return '\u2B50\uD83C\uDF89 The spotlight is on ' + name + ' today! Look at this! \uD83C\uDF89\u2B50'; }
     ];
 
     var ONLY_ONE_LINES = [
         function(label) { return '\uD83E\uDD47 The ONLY associate to hit this for ' + label + '!'; },
         function(label) { return '\uD83D\uDC51 Nobody else matched this ' + label + ' performance!'; },
-        function(label) { return '\uD83C\uDFC6 Stood alone at the top for ' + label + '!'; }
+        function(label) { return '\uD83C\uDFC6 Stood alone at the top for ' + label + '!'; },
+        function(label) { return '\uD83D\uDCA5 One person hit this ' + label + ' number. ONE. And it was them!'; },
+        function(label) { return '\uD83D\uDD25 Untouchable in ' + label + ' \u2014 no one else even came close!'; },
+        function(label) { return '\uD83C\uDF1F In a league of their own for ' + label + '!'; },
+        function(label) { return '\uD83E\uDD47 Solo mission in ' + label + ' \u2014 the only one to pull this off!'; },
+        function(label) { return '\uD83D\uDC51 Owned ' + label + ' outright \u2014 nobody else could match it!'; },
+        function(label) { return '\uD83D\uDCA5 Completely dominated ' + label + ' \u2014 the only one!'; },
+        function(label) { return '\uD83C\uDFC6 Set the standard in ' + label + ' and stood there alone!'; },
+        function(label) { return '\uD83D\uDD25 One name on the board for ' + label + '. That\'s it. That\'s the list!'; }
     ];
 
     var STANDOUT_LINES = [
         function(label) { return '\uD83C\uDFC5 Absolutely crushed it in ' + label + '!'; },
         function(label) { return '\u2B50 Outstanding ' + label + ' performance!'; },
-        function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; }
+        function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; },
+        function(label) { return '\uD83D\uDD25 Brought the heat in ' + label + '!'; },
+        function(label) { return '\uD83D\uDE80 ' + label + ' was next level this week!'; },
+        function(label) { return '\uD83C\uDFC6 Put up a monster ' + label + ' number!'; },
+        function(label) { return '\uD83C\uDF1F Seriously impressive work in ' + label + '!'; },
+        function(label) { return '\uD83D\uDCA5 Went OFF in ' + label + '! Love to see it!'; },
+        function(label) { return '\uD83D\uDCAA Threw down a huge ' + label + ' performance!'; },
+        function(label) { return '\u2B50 Made ' + label + ' look easy this week!'; },
+        function(label) { return '\uD83D\uDD25 ' + label + ' was absolutely on point!'; }
     ];
 
     var SHOUTOUT_CLOSERS = [
@@ -367,21 +394,42 @@
         '\uD83D\uDE80 Sky\'s the limit! Keep pushing!',
         '\uD83D\uDD25 Absolutely incredible work!',
         '\uD83C\uDFC6 We see you and we appreciate you!',
-        '\u2B50 The whole team is better because of you!'
+        '\u2B50 The whole team is better because of you!',
+        '\uD83D\uDCAA This kind of effort doesn\'t go unnoticed. Keep doing your thing!',
+        '\uD83C\uDF89 You make this team better every single day!',
+        '\uD83D\uDE80 Can\'t wait to see what you do next!',
+        '\uD83D\uDD25 That work ethic is contagious. Thank you!',
+        '\uD83D\uDCAF You should be really proud of that. We are!',
+        '\u2B50 Performances like this are what make this team special!',
+        '\uD83C\uDFC6 You brought your A-game and it shows!',
+        '\uD83D\uDE4C Take a moment and be proud of what you accomplished!',
+        '\uD83C\uDF1F Consistent excellence \u2014 that\'s what we\'re seeing from you!'
     ];
 
     var BATCH_INTRO = [
         '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 SHOUT-OUT TIME! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89\n\nSome AMAZING performances from the team! Let\'s celebrate these wins:\n\n',
         '\uD83D\uDD25 TEAM WINS ALERT \uD83D\uDD25\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
         '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
-        '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n'
+        '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n',
+        '\uD83D\uDE80 WEEKLY WINS \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks showed up BIG:\n\n',
+        '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING \u2014 WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
+        '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\nSome of our people went absolutely OFF this week. Check this out:\n\n',
+        '\uD83D\uDCAA TEAM FLEXES \uD83D\uDCAA\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
+        '\uD83C\uDF89 WHO\'S POPPING OFF THIS WEEK?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
+        '\uD83D\uDD25\uD83C\uDFC6 VICTORY LAP TIME \uD83C\uDFC6\uD83D\uDD25\n\nLet\'s give some well-deserved recognition to these standout performers:\n\n'
     ];
 
     var BATCH_CLOSERS = [
         '\n\uD83D\uDE4C Amazing work everyone! Let\'s keep this energy going!',
         '\n\uD83D\uDCAF This team is something special. Proud of each and every one of you!',
         '\n\uD83D\uDE80 The bar keeps rising and you all keep clearing it. Incredible!',
-        '\n\uD83D\uDD25 This is what happens when a great team shows up and shows out!'
+        '\n\uD83D\uDD25 This is what happens when a great team shows up and shows out!',
+        '\n\u2B50 Every single one of these people made a difference this week. Thank you!',
+        '\n\uD83C\uDFC6 I could brag about this team all day. Outstanding work across the board!',
+        '\n\uD83D\uDCAA When you see your name up here, know that it means something. We see you!',
+        '\n\uD83C\uDF89 THIS is the energy! Let\'s carry this momentum into next week!',
+        '\n\uD83D\uDE80 Proud doesn\'t even begin to cover it. This team is BUILT DIFFERENT!',
+        '\n\uD83D\uDD25 Keep bringing this fire every week! You all are incredible!'
     ];
 
     function formatMetricValue(key, value) {
@@ -449,7 +497,17 @@
         function(name) { return 'Hey ' + name + '! \uD83C\uDF1F'; },
         function(name) { return name + '! \uD83C\uDF89'; },
         function(name) { return 'Hey ' + name + ', wanted to reach out real quick! \u2B50'; },
-        function(name) { return name + '! Got something great to share with you! \uD83D\uDE0A'; }
+        function(name) { return name + '! Got something great to share with you! \uD83D\uDE0A'; },
+        function(name) { return 'Hey ' + name + '! Hope your day is going well \uD83D\uDE4C'; },
+        function(name) { return name + ', I\'ve been wanting to send you this! \uD83C\uDF1F'; },
+        function(name) { return 'Hey ' + name + '! Got a sec? I have some good news for you \uD83D\uDE0A'; },
+        function(name) { return name + '! Quick message because I couldn\'t let this go unrecognized \uD83C\uDFC6'; },
+        function(name) { return 'Hi ' + name + '! Just had to drop you a note \u2B50'; },
+        function(name) { return name + '! You\'re going to like this one \uD83D\uDE04'; },
+        function(name) { return 'Hey ' + name + '! Something caught my eye and I had to tell you about it \uD83D\uDC40'; },
+        function(name) { return name + ', just dropping in with some well-deserved recognition! \uD83C\uDF89'; },
+        function(name) { return 'Hey ' + name + '! Glad I caught you \u2014 I\'ve got something great to share \uD83C\uDF1F'; },
+        function(name) { return name + '! Real talk, I had to reach out about this \uD83D\uDCAA'; }
     ];
 
     var DM_CLOSERS = [
@@ -457,14 +515,37 @@
         'Just wanted you to know I see the effort and the results. Keep being awesome! \uD83D\uDCAA',
         'You should be really proud of this. I know I am! \uD83D\uDE0A',
         'This is the kind of performance that stands out. Keep it up! \uD83D\uDE80',
-        'Wanted to make sure you heard this from me directly. Outstanding work! \uD83C\uDFC6'
+        'Wanted to make sure you heard this from me directly. Outstanding work! \uD83C\uDFC6',
+        'I don\'t take performances like this for granted. Thank you for what you do every day. \uD83D\uDE4F',
+        'Just genuinely proud of you. Keep doing exactly what you\'re doing. \uD83D\uDE0A',
+        'You earned every bit of this recognition. Enjoy the moment! \uD83C\uDF89',
+        'This is the stuff that makes my job easy \u2014 watching people like you succeed. \uD83D\uDCAA',
+        'Keep bringing this energy. It makes a bigger difference than you probably realize. \uD83C\uDF1F',
+        'I love getting to send messages like this. You made it easy this week! \u2B50',
+        'Your hard work is paying off in a real way. Don\'t stop now! \uD83D\uDE80',
+        'Moments like this are why I love this team. Great job, seriously. \uD83D\uDE4C'
+    ];
+
+    var DM_INTROS = [
+        'I was looking at the numbers and I had to reach out because you are doing incredible things:',
+        'I just pulled up this week\'s results and your name jumped right off the page:',
+        'So I was going through the metrics and honestly, I had to stop and send you this because WOW:',
+        'I don\'t always send these messages, but when I see performance like this I have to say something:',
+        'Your numbers caught my attention and I wanted to make sure you knew about it:',
+        'I was reviewing the week and couldn\'t let this slide without reaching out to you:',
+        'Real quick \u2014 I saw your results and just had to give you your flowers:',
+        'I noticed something really impressive when I was looking at the data this week:',
+        'I keep an eye on the numbers every week and yours are standing out in a big way:',
+        'Had to send this because what you\'re doing right now deserves to be recognized:',
+        'Just went through the weekly results and I\'m genuinely impressed by what I\'m seeing from you:',
+        'You probably already know you had a great week, but I wanted to tell you just how great:'
     ];
 
     function generateDirectMessage(person, dateRange) {
         var lines = [];
         lines.push(pick(DM_OPENERS)(person.firstName));
         lines.push('');
-        lines.push('I was looking at the numbers and I had to reach out because you are doing incredible things:');
+        lines.push(pick(DM_INTROS));
         lines.push('');
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';

@@ -25,6 +25,9 @@
         return null;
     }
 
+    // NOTE: This function is duplicated in metric-trends, monday-morning-post,
+    // and executive-summary modules. This is the canonical version (exported).
+    // Future: other modules should import from here instead of re-defining.
     function isReverseMetric(metricKey) {
         // Lower is better for these metrics
         const reverseMetrics = ['transfers', 'transfersCount', 'aht', 'holdTime', 'acw', 'reliability'];

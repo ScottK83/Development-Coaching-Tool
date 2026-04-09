@@ -1,3 +1,7 @@
+// NOTE: At ~4100 lines, this is the largest module. Consider splitting into:
+// - metric-trends-charts.module.js (chart rendering)
+// - metric-trends-data.module.js (aggregation/calculation)
+// - metric-trends-ui.module.js (DOM/interaction)
 (function() {
     'use strict';
 
@@ -66,7 +70,7 @@ function initializeMetricTrends() {
         const [year, month, day] = dateStr.split('-').map(Number);
         const monday = new Date(year, month - 1, day);
 
-        if (!isNaN(monday)) {
+        if (!isNaN(monday.getTime())) {
             const sunday = new Date(monday);
             sunday.setDate(monday.getDate() + 6);
             avgWeekSunday.value = sunday.toISOString().split('T')[0];

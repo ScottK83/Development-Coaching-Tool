@@ -314,6 +314,10 @@
     // MAIN DATA PARSING
     // ============================================
 
+    // REFACTOR: This function is ~250 lines. Break into:
+    // - detectColumnMapping(headerRow) — column detection logic
+    // - parseEmployeeRow(cells, colMap) — single-row parsing
+    // - validateEmployeeData(employeeData) — integrity checks
     function parsePastedData(pastedText, startDate, endDate) {
         const lines = pastedText
             .split('\n')
@@ -489,6 +493,7 @@
                     cells = parsed;
                 }
             } catch (error) {
+                console.warn(`[data-parsing] Skipped row ${i}: ${error.message}`);
                 continue;
             }
 
@@ -556,14 +561,6 @@
                 totalCalls: totalCalls
             };
             
-            // Debug: log Christi's raw cell values
-            if (displayName && displayName.toLowerCase().includes('martinez')) {
-                console.log('🔍 CHRISTI DEBUG:');
-                console.log('  cxRepOverall col(' + colMap.cxRepOverall + ') raw:', getCell(cells, colMap.cxRepOverall));
-                console.log('  overallExperienceTop3 col(' + colMap.overallExperienceTop3 + ') raw:', getCell(cells, colMap.overallExperienceTop3));
-                console.log('  overallExperience col(' + colMap.overallExperience + ') raw:', getCell(cells, colMap.overallExperience));
-                console.log('  Parsed → cxRepOverall:', employeeData.cxRepOverall, 'overallExperience:', employeeData.overallExperience, 'top3:', employeeData.overallExperienceTop3);
-            }
             if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
                 console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}).`);
             }

@@ -238,12 +238,18 @@
 
             // Console errors (optional - can be noisy)
             const originalConsoleError = console.error;
+            let inConsoleErrorOverride = false; // reentrance guard
             console.error = (...args) => {
-                if (args[0] && typeof args[0] === 'string' && !args[0].includes('[DevCoach]')) {
-                    this.logError(new Error(String(args[0])), {
-                        source: 'console.error',
-                        args: args.slice(1)
-                    });
+                if (!inConsoleErrorOverride && args[0] && typeof args[0] === 'string' && !args[0].includes('[DevCoach]')) {
+                    inConsoleErrorOverride = true;
+                    try {
+                        this.logError(new Error(String(args[0])), {
+                            source: 'console.error',
+                            args: args.slice(1)
+                        });
+                    } finally {
+                        inConsoleErrorOverride = false;
+                    }
                 }
                 originalConsoleError.apply(console, args);
             };

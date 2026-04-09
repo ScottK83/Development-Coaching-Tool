@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- SECURITY: 'unsafe-inline' for script-src weakens XSS protection.
+         Future: remove 'unsafe-inline' from script-src and use nonces/hashes.
+         Keeping 'unsafe-inline' for style-src is acceptable given inline styling patterns. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.workers.dev https://api.github.com https://raw.githubusercontent.com; object-src 'none'">
     <title>Development Coaching Tool</title>
     <!-- Swap between styles.css (original) and styles-v2.css (redesign) -->
@@ -12,6 +15,8 @@
     <script src="lib-chart.js" crossorigin="anonymous"></script>
     <script src="lib-html2canvas.js" crossorigin="anonymous"></script>
     <script src="lib-xlsx.js" crossorigin="anonymous"></script>
+<!-- A11Y: Form inputs throughout lack <label> elements or aria-label attributes.
+     Future: add labels to all inputs, selects, and textareas for screen reader support. -->
 </head>
 <body>
     <div class="container">

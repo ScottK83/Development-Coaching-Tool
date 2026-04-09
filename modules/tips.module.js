@@ -736,7 +736,7 @@ function getMetricTips(metricName) {
             var delsSet = new Set(metricDels.map(Number));
             baseTips = baseTips.filter(function(_, i) { return !delsSet.has(i); });
         }
-    } catch(e) {}
+    } catch(e) { console.warn('[tips] Failed to apply tip deletions:', e.message); }
 
     // Append user custom tips
     const userTips = loadUserTips();

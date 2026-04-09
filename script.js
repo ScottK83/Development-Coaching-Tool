@@ -36,7 +36,9 @@
 // GLOBAL STATE
 // ============================================
 const APP_VERSION = '2026.04.09.24'; // Version: YYYY.MM.DD.NN
-const DEBUG = true; // Set to true to enable console logging
+const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
+// NOTE: This prefix is also defined independently in repo-sync.module.js and other modules.
+// Future: export from a single shared-constants module to prevent divergence.
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
 // ============================================
@@ -62,20 +64,22 @@ function logAppError(message, error, context = {}) {
         ? error
         : new Error(error?.message || String(error || message));
 
+    // Intentionally defensive: empty catches prevent infinite error loops
+    // when error-reporting infrastructure itself fails
     try {
         window.DevCoachModules?.errorMonitor?.logError?.(errObj, {
             source: 'script',
             message,
             ...context
         });
-    } catch (_e) {}
+    } catch (_e) { /* prevent infinite loop if error monitor fails */ }
 
     try {
         window.DevCoachModules?.debug?.addDebugEntry?.('error', message + ': ' + errObj.message, {
             ...context,
             stack: errObj.stack || null
         });
-    } catch (_e) {}
+    } catch (_e) { /* prevent infinite loop if debug module fails */ }
 
     try {
         localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify({
@@ -83,7 +87,7 @@ function logAppError(message, error, context = {}) {
             source: context?.source || 'script',
             timestamp: new Date().toISOString()
         }));
-    } catch (_e) {}
+    } catch (_e) { /* localStorage may be full or unavailable */ }
 }
 
 window.getRecentAppErrors = function(limit = 20) {
@@ -174,6 +178,7 @@ let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
 let sentimentListenersAttached = false;
+let uploadPeriodManuallySelected = false;
 
 // ============================================
 // STORAGE HELPERS (defined early for guaranteed availability)
@@ -240,6 +245,13 @@ const LOCALSTORAGE_MAX_SIZE_MB = 4;
 const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+const QUARTER_END_MONTHS = new Set([2, 5, 8, 11]); // March, June, September, December (0-indexed)
+const SENTIMENT_IMPROVEMENT_THRESHOLD = 3;
+const MONTH_RANGE_DAYS = { min: 26, max: 33 };
+const QUARTER_RANGE_DAYS = { min: 88, max: 95 };
+const YTD_MIN_DAYS = 180;
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
 const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
@@ -247,6 +259,7 @@ const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSy
 const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
 const REPO_BACKUP_APPLIED_AT_STORAGE_KEY = STORAGE_PREFIX + 'repoBackupAppliedAt';
 const UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
+const GITHUB_REPO_API_URL = 'https://api.github.com/repos/ScottK83/Development-Coaching-Tool';
 
 // Single source of truth: modules/metric-profiles.module.js
 // These aliases keep existing references working without duplication
@@ -459,6 +472,8 @@ function escapeHtml(text) {
     return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) ?? String(text ?? '');
 }
 
+// REFACTOR: Uses inline style.cssText — migrate to CSS class (e.g., .toast) in styles.css.
+// This pattern repeats across the codebase; styles.css already has utility classes.
 function showToast(message, duration = 5000) {
     const toast = document.createElement('div');
     toast.textContent = message;
@@ -952,6 +967,8 @@ function setCallCenterAverageForPeriod(periodKey, avgData) {
     saveCallCenterAverages(averages);
 }
 
+// OPTIMIZE: Iterates employees multiple times (once per metric group).
+// Could compute all averages in a single pass for better performance.
 function calculateCenterAveragesFromEmployees(employees) {
     if (!employees || employees.length === 0) return null;
 
@@ -1078,9 +1095,10 @@ function cleanupStaleAutoYtds() {
 
 function getEmployeeNickname(fullName) {
     if (!fullName) return '';
-    
+
     // Check if a custom preferred name has been set
-    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
+    let preferredNames = {};
+    try { preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}'); } catch (_e) { /* corrupt data */ }
     if (preferredNames[fullName]) {
         return preferredNames[fullName];
     }
@@ -1092,8 +1110,9 @@ function getEmployeeNickname(fullName) {
 function setEmployeePreferredName(fullName, preferredName) {
     if (!fullName) return;
     
-    const preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}');
-    
+    let preferredNames = {};
+    try { preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}'); } catch (_e) { /* corrupt data */ }
+
     if (preferredName && preferredName.trim()) {
         preferredNames[fullName] = preferredName.trim();
     } else {
@@ -1116,8 +1135,11 @@ window.saveEmployeePreferredName = function(fullName) {
 };
 
 // One-time supervisor seeds
+// REFACTOR: These hardcoded employee names should be moved to a config file
+// or loaded from KV/localStorage seed endpoint to avoid PII in source control
+// and to simplify team roster updates.
 (function seedSupervisorTeams() {
-    var seeds = [
+    const seeds = [
         { key: 'miranda_v2', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
         { key: 'kathy_v2', supervisor: 'Kathy', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
         { key: 'angie_v2', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
@@ -1127,21 +1149,21 @@ window.saveEmployeePreferredName = function(fullName) {
         { key: 'scott_v2', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
         { key: 'angela_allison_v2', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
     ];
-    var needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
+    const needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
 
     // v2 migration: clear old assignments for a clean re-seed
-    var existing = {};
+    let existing = {};
     if (!localStorage.getItem('devCoachingTool_supervisorSeeded_v2_migration')) {
         localStorage.removeItem('devCoachingTool_employeeSupervisors');
         localStorage.setItem('devCoachingTool_supervisorSeeded_v2_migration', '1');
     } else {
-        try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) {}
+        try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
     }
-    var allEmps = {};
+    const allEmps = {};
     try {
-        var wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
-        var yd = JSON.parse(localStorage.getItem('devCoachingTool_ytdData') || '{}');
+        const wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
+        const yd = JSON.parse(localStorage.getItem('devCoachingTool_ytdData') || '{}');
         [wd, yd].forEach(function(ds) {
             Object.values(ds || {}).forEach(function(period) {
                 (period?.employees || []).forEach(function(emp) {
@@ -1149,7 +1171,7 @@ window.saveEmployeePreferredName = function(fullName) {
                 });
             });
         });
-    } catch (_e) {}
+    } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse employee data:', _e.message); }
     var empNames = Object.keys(allEmps);
 
     needsRun.forEach(function(seed) {
@@ -1502,15 +1524,17 @@ function initializeEventHandlers() {
     bindDataAdminHandlers();
 }
 
+// REFACTOR: ~140 lines — split into bindVerintHandlers(), bindPayrollHandlers(),
+// bindSentimentHandlers(), bindPasteHandlers().
 function bindUploadAndPasteHandlers() {
     // Track whether the user has manually clicked a period button.
     // When true, date-change auto-detection is suppressed.
-    window._uploadPeriodManuallySelected = false;
+    uploadPeriodManuallySelected = false;
 
     document.querySelectorAll('.upload-period-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             // Mark as manual selection if this was a real user click (not programmatic)
-            if (e.isTrusted) window._uploadPeriodManuallySelected = true;
+            if (e.isTrusted) uploadPeriodManuallySelected = true;
             document.querySelectorAll('.upload-period-btn').forEach(button => {
                 if (button === btn) {
                     button.style.background = '#28a745';
@@ -1570,11 +1594,11 @@ function bindUploadAndPasteHandlers() {
         document.getElementById('uploadVerintFileInput')?.click();
     });
     document.getElementById('uploadVerintFileInput')?.addEventListener('change', async function() {
-        var files = Array.from(this.files || []);
+        const files = Array.from(this.files || []);
         if (!files.length) return;
-        var loaded = 0;
-        var errors = 0;
-        for (var i = 0; i < files.length; i++) {
+        let loaded = 0;
+        let errors = 0;
+        for (let i = 0; i < files.length; i++) {
             try {
                 await window.DevCoachModules?.reliability?.handleVerintUpload?.(files[i]);
                 loaded++;
@@ -1586,7 +1610,7 @@ function bindUploadAndPasteHandlers() {
                 });
                 errors++;
                 if (typeof showToast === 'function') {
-                    var msg = err?.message ? (': ' + err.message) : '';
+                    const msg = err?.message ? (': ' + err.message) : '';
                     showToast('Failed ' + files[i].name + msg, 6000);
                 }
             }
@@ -1603,16 +1627,16 @@ function bindUploadAndPasteHandlers() {
         document.getElementById('uploadPayrollFileInput')?.click();
     });
     document.getElementById('uploadPayrollFileInput')?.addEventListener('change', async function() {
-            var files = Array.from(this.files || []);
+            const files = Array.from(this.files || []);
             if (!files.length) return;
             if (!window.DevCoachModules?.reliability?.handlePayrollUpload) {
                 if (typeof showToast === 'function') showToast('Reliability module not loaded.', 5000);
                 this.value = '';
                 return;
             }
-            var loaded = 0;
-            var errors = 0;
-            for (var i = 0; i < files.length; i++) {
+            let loaded = 0;
+            let errors = 0;
+            for (let i = 0; i < files.length; i++) {
                 try {
                     await window.DevCoachModules.reliability.handlePayrollUpload(files[i]);
                     loaded++;
@@ -1651,7 +1675,7 @@ function autoDetectPeriodFromDates() {
     }
 
     // If the user manually clicked a period button, don't override their choice
-    if (window._uploadPeriodManuallySelected) {
+    if (uploadPeriodManuallySelected) {
         return;
     }
 
@@ -1685,7 +1709,7 @@ function autoDetectPeriodFromDates() {
     // End of month
     const nextDay = new Date(year, month, day + 1);
     if (nextDay.getMonth() !== month) {
-        if (month === 2 || month === 5 || month === 8 || month === 11) {
+        if (QUARTER_END_MONTHS.has(month)) {
             selectPeriodButton('quarter');
             updateDetectedBadge('quarter');
         } else {
@@ -1741,7 +1765,7 @@ function embedTeamSnapshot() {
     const source = document.getElementById('teamSnapshotSection');
     if (target && source && !target.hasChildNodes()) {
         // Move the inner content from standalone section into the embedded container
-        while (source.firstChild) target.appendChild(source.firstChild);
+        target.append(...source.childNodes);
     }
     if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
 }
@@ -1750,7 +1774,7 @@ function embedPtoTracker() {
     const target = document.getElementById('embeddedPto') || document.getElementById('embeddedPtoInMyTeam');
     const source = document.getElementById('ptoSection');
     if (target && source && !target.hasChildNodes()) {
-        while (source.firstChild) target.appendChild(source.firstChild);
+        target.append(...source.childNodes);
     }
     if (typeof initializePtoTracker === 'function') initializePtoTracker();
 }
@@ -1884,7 +1908,7 @@ function ensureTrendIntelligenceMountedInTrends() {
     if (!target || target.querySelector('#executiveSummaryContainer')) return;
     var source = document.getElementById('executiveSummarySection');
     if (!source) return;
-    while (source.firstChild) target.appendChild(source.firstChild);
+    target.append(...source.childNodes);
 }
 
 function ensureMetricTrendsMountedInTrends() {
@@ -1892,7 +1916,7 @@ function ensureMetricTrendsMountedInTrends() {
     if (!target || target.hasChildNodes()) return;
     var source = document.getElementById('metricTrendsSection');
     if (!source) return;
-    while (source.firstChild) target.appendChild(source.firstChild);
+    target.append(...source.childNodes);
 }
 
 function ensureSentimentMountedInTrends() {
@@ -1914,9 +1938,7 @@ function bindManageDataNavigationHandlers() {
         const tipsManagementSection = document.getElementById('tipsManagementSection');
         const subSectionCoachingTips = document.getElementById('subSectionCoachingTips');
         if (tipsManagementSection && subSectionCoachingTips && !subSectionCoachingTips.hasChildNodes()) {
-            while (tipsManagementSection.firstChild) {
-                subSectionCoachingTips.appendChild(tipsManagementSection.firstChild);
-            }
+            subSectionCoachingTips.append(...tipsManagementSection.childNodes);
         }
         renderTipsManagement();
     });
@@ -2026,12 +2048,12 @@ function handlePasteDataTextareaInput(event) {
 }
 
 // Legacy stubs for any code that still references old inner tab functions
-function handleSubNavMetricTrendsClick(skipShowSubSection) {
+function handleSubNavMetricTrendsClick() {
     ensureMetricTrendsMountedInTrends();
     initializeMetricTrends();
 }
 
-function handleSubNavTrendIntelligenceClick(skipShowSubSection) {
+function handleSubNavTrendIntelligenceClick() {
     ensureTrendIntelligenceMountedInTrends();
     renderExecutiveSummary();
 }
@@ -2080,9 +2102,7 @@ function handleSubNavSentimentClick(skipShowSubSection) {
     const sentimentSection = document.getElementById('sentimentSection');
     const subSectionSentiment = document.getElementById('subSectionTaSentiment');
     if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
-        while (sentimentSection.firstChild) {
-            subSectionSentiment.appendChild(sentimentSection.firstChild);
-        }
+        subSectionSentiment.append(...sentimentSection.childNodes);
     }
 
     if (!sentimentListenersAttached) {
@@ -2114,9 +2134,9 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
     if (startMonth === 0 && startDay === 1 && daysDiff >= 14) return 'ytd';
 
     if (daysDiff <= 1) return 'daily';
-    if (daysDiff >= 26 && daysDiff <= 33) return 'month';
-    if (daysDiff >= 88 && daysDiff <= 95) return 'quarter';
-    if (daysDiff >= 180) return 'ytd';
+    if (daysDiff >= MONTH_RANGE_DAYS.min && daysDiff <= MONTH_RANGE_DAYS.max) return 'month';
+    if (daysDiff >= QUARTER_RANGE_DAYS.min && daysDiff <= QUARTER_RANGE_DAYS.max) return 'quarter';
+    if (daysDiff >= YTD_MIN_DAYS) return 'ytd';
     return 'week';
 }
 
@@ -2219,6 +2239,8 @@ function buildMetricsUploadQualityWarnings(employees) {
     return warnings;
 }
 
+// REFACTOR: ~170 lines — split into validateUploadInput(), generateUploadWarnings(),
+// handleDataOverwrite(), finalizeUploadUI().
 function handleLoadPastedDataClick() {
     const pastedData = document.getElementById('pasteDataTextarea').value;
     const weekEndingDate = document.getElementById('pasteWeekEndingDate').value;
@@ -2378,7 +2400,7 @@ function handleLoadPastedDataClick() {
 
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';
-        window._uploadPeriodManuallySelected = false; // Reset for next upload
+        uploadPeriodManuallySelected = false; // Reset for next upload
 
         showOnlySection('uploadSection');
 
@@ -2681,6 +2703,7 @@ function handleEmployeeSearchInput(event) {
 
 function handleDeleteSelectedWeekClick() {
     const weekSelect = document.getElementById('deleteWeekSelect');
+    if (!weekSelect) return;
     const selectedWeek = weekSelect.value;
 
     if (!selectedWeek) {
@@ -2790,6 +2813,7 @@ function handleToggleTeamMembersEmployeesPanelClick() {
 
 function handleDeleteSelectedSentimentClick() {
     const sentimentSelect = document.getElementById('deleteSentimentSelect');
+    if (!sentimentSelect) return;
     const selectedKey = sentimentSelect.value;
 
     if (!selectedKey) {
@@ -2803,6 +2827,10 @@ function handleDeleteSelectedSentimentClick() {
     }
 
     const pipeIndex = selectedKey.indexOf('|');
+    if (pipeIndex === -1) {
+        console.warn('[handleDeleteSelectedSentimentClick] Invalid key format (no pipe delimiter):', selectedKey);
+        return;
+    }
     const employeeId = selectedKey.substring(0, pipeIndex);
     const timeframe = selectedKey.substring(pipeIndex + 1);
 
@@ -2883,6 +2911,10 @@ function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     }
 }
 
+// REFACTOR: ~150 wrapper functions below simply delegate to modules.
+// These exist for backward compatibility during the module extraction.
+// Future: call window.DevCoachModules.<module>.<fn>() directly at call sites,
+// or use a delegateAll() factory to eliminate this boilerplate.
 function getDefaultCallListeningSyncConfig() {
     return window.DevCoachModules?.repoSync?.getDefaultCallListeningSyncConfig?.();
 }
@@ -3621,15 +3653,13 @@ function populateDeleteSentimentDropdown() {
 
     dropdown.innerHTML = '<option value="">-- Choose sentiment data --</option>';
     
-    console.log('🔍 Populating sentiment dropdown. Current data:', associateSentimentSnapshots);
-    
     const sentimentEntries = [];
-    
+
     // Iterate through all employees and their sentiment snapshots
     Object.entries(associateSentimentSnapshots || {}).forEach(([employeeId, snapshots]) => {
-        console.log(`  Employee: ${employeeId}, Snapshots:`, snapshots);
         if (Array.isArray(snapshots)) {
             snapshots.forEach(snapshot => {
+                if (!snapshot?.timeframeStart || !snapshot?.timeframeEnd) return;
                 const timeframe = `${snapshot.timeframeStart} to ${snapshot.timeframeEnd}`;
                 sentimentEntries.push({
                     key: `${employeeId}|${timeframe}`,
@@ -3639,8 +3669,6 @@ function populateDeleteSentimentDropdown() {
             });
         }
     });
-    
-    console.log(`📊 Found ${sentimentEntries.length} sentiment entries to display`);
     
     // Sort by date descending (most recent first)
     sentimentEntries.sort((a, b) => b.date - a.date);
@@ -4650,7 +4678,7 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, why
                 ? entry.why.slice(0, 3).join(' • ')
                 : entry.reason;
             html += `<div>
-                <div><strong>${escapeHtml(entry.name)}</strong> • Score ${entry.score} • ${entry.reason}</div>
+                <div><strong>${escapeHtml(entry.name)}</strong> • Score ${entry.score} • ${escapeHtml(entry.reason)}</div>
                 <div style="margin-top: 2px; color: #455a64; font-size: 0.88em;"><strong>${whyLabel}</strong> ${escapeHtml(whyText)}</div>
             </div>`;
         });
@@ -4948,11 +4976,11 @@ function renderTrendSimpleView() {
     const scoredCount = snapshot.employeeNamesCount || 0;
 
     const coachHtml = topCoach.length
-        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${entry.reason}</li>`).join('')
+        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${escapeHtml(entry.reason)}</li>`).join('')
         : '<li>No urgent coaching interventions this cycle.</li>';
 
     const recognizeHtml = topRecognize.length
-        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${entry.reason}</li>`).join('')
+        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${escapeHtml(entry.reason)}</li>`).join('')
         : '<li>No standout recognition callouts this cycle.</li>';
 
     container.innerHTML = `
@@ -5336,8 +5364,8 @@ function renderCoachingLoadAwareness() {
     const container = document.getElementById('coachingLoadOutput');
     if (!container) return;
     const now = Date.now();
-    const thirtyDays = now - 30 * 24 * 60 * 60 * 1000;
-    const fourteenDays = now - 14 * 24 * 60 * 60 * 1000;
+    const thirtyDays = now - THIRTY_DAYS_MS;
+    const fourteenDays = now - FOURTEEN_DAYS_MS;
 
     const noRecent = [];
     const highLoad = [];
@@ -5485,7 +5513,7 @@ function renderRecognitionIntelligence() {
         if (!prevEmp) return;
 
         const sentimentDelta = metricDelta('overallSentiment', emp.overallSentiment, prevEmp.overallSentiment);
-        if (sentimentDelta > 3) {
+        if (sentimentDelta > SENTIMENT_IMPROVEMENT_THRESHOLD) {
             mostImproved.push({ name: emp.name, delta: sentimentDelta });
         }
 
@@ -5518,7 +5546,7 @@ function renderRecognitionIntelligence() {
             <strong>Recovery Wins:</strong> ${recoveryWins.length ? recoveryWins.join(', ') : 'None'}
         </div>
         <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Quiet Consistency:</strong> ${quietConsistent.length ? quietConsistent.join(', ') : 'None'}
+            <strong>Quiet Consistency:</strong> ${quietConsistent.length ? quietConsistent.map(n => escapeHtml(n)).join(', ') : 'None'}
         </div>
     `;
 }
@@ -6236,7 +6264,12 @@ async function initApp() {
     bindTeamFilterChangeHandlers();
     notifyTeamFilterChanged();
 
-    // Auto-restore runs in background so UI loads immediately
+    // Auto-restore runs in background so UI loads immediately.
+    // Show a brief toast if local state is empty so user knows restore is attempting.
+    const hasLocalData = Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0;
+    if (!hasLocalData) {
+        showToast('Checking for synced data...', 3000);
+    }
     tryAutoRestoreFromRepoBackupOnEmptyState().then(function(restoredFromRepo) {
         if (restoredFromRepo) {
             // Re-load all in-memory variables from localStorage after restore
@@ -6256,13 +6289,9 @@ async function initApp() {
     }).catch(function(err) { console.error('Auto-restore failed:', err); });
     
 
-    if (Object.keys(weeklyData).length > 0) {
-        
-    } else {
-        
-    }
-    
     // Initialize default coaching tips (first load only)
+    // NOTE: typeof guards like this exist because module load order is not guaranteed.
+    // Future: use a module-ready event or ensure load order in index.html/bootstrap.js.
     if (typeof initializeDefaultTips === 'function') {
         initializeDefaultTips();
     } else {
@@ -6337,7 +6366,7 @@ function setAppVersionLabel(statusSuffix = '') {
 
     const deployMarkerEl = document.getElementById('deployMarker');
     if (deployMarkerEl) {
-        fetch('https://api.github.com/repos/ScottK83/Development-Coaching-Tool/commits/main', { headers: { Accept: 'application/vnd.github.v3+json' } })
+        fetch(GITHUB_REPO_API_URL + '/commits/main', { headers: { Accept: 'application/vnd.github.v3+json' } })
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (data?.sha) {
@@ -6515,6 +6544,8 @@ function initializeCoachingEmail() {
 // QUICK CHECK-IN (Teams message: praise + focus)
 // ============================================
 
+// REFACTOR: 214 lines — extract selectGreeting(), buildWinSection(),
+// buildFocusSection(), buildClosingLine() helpers.
 async function generateQuickCheckin() {
     const select = document.getElementById('coachingEmployeeSelect');
     const output = document.getElementById('quickCheckinOutput');
@@ -6740,6 +6771,8 @@ function bindQuickCheckinHandlers() {
         bindElementOnce(copyBtn, 'click', () => {
             navigator.clipboard.writeText(output.value || '').then(() => {
                 showToast('Copied!', 2000);
+            }).catch(() => {
+                showToast('Unable to copy', 3000);
             });
         });
     }
@@ -6881,6 +6914,10 @@ function copyCallListeningVerintSummary(entryId = null) {
     if (!entry) return;
 
     const summaryText = buildCallListeningVerintSummary(entry);
+    if (!navigator.clipboard?.writeText) {
+        showToast('⚠️ Clipboard API not available (requires HTTPS).', 3000);
+        return;
+    }
     navigator.clipboard.writeText(summaryText)
         .then(() => showToast('✅ Verint call summary copied to clipboard!', 3000))
         .catch(() => showToast('⚠️ Unable to copy Verint summary.', 3000));

@@ -66,6 +66,8 @@
         }
     }
 
+    // NOTE: Some save functions return boolean (saveReliabilityTracker), others return void.
+    // Future: standardize all save functions to return boolean from saveWithSizeCheck.
     function saveWeeklyData(weeklyDataRef) {
         try {
             if (!saveWithSizeCheck('weeklyData', weeklyDataRef)) {
@@ -132,6 +134,10 @@
     }
 
     function appendCoachingLogEntry(coachingHistoryRef, entry) {
+        if (!entry?.employeeId) {
+            console.warn('[storage] appendCoachingLogEntry: missing employeeId in entry');
+            return;
+        }
         const key = entry.employeeId;
         if (!coachingHistoryRef[key]) {
             coachingHistoryRef[key] = [];

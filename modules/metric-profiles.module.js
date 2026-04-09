@@ -34,6 +34,38 @@
     };
 
     const RATING_BANDS_BY_YEAR = {
+        2025: {
+            scheduleAdherence: {
+                type: 'min',
+                score3: { min: 94.5 },
+                score2: { min: 92.5 }
+            },
+            cxRepOverall: {
+                type: 'min',
+                score3: { min: 82 },
+                score2: { min: 79.5 }
+            },
+            overallSentiment: {
+                type: 'min',
+                score3: { min: 90 },
+                score2: { min: 87.5 }
+            },
+            reliability: {
+                type: 'max',
+                score3: { max: 16 },
+                score2: { max: 22 }
+            },
+            aht: {
+                type: 'max',
+                score3: { max: 428 },
+                score2: { max: 448 }
+            },
+            transfers: {
+                type: 'max',
+                score3: { max: 4 },
+                score2: { max: 6 }
+            }
+        },
         2026: {
             scheduleAdherence: {
                 type: 'min',

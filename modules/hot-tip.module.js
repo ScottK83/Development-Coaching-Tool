@@ -218,17 +218,18 @@ function renderHotTipHistory() {
         const date = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'Unknown';
         const contextPreview = String(entry.context || '').slice(0, 100) + (String(entry.context || '').length > 100 ? '...' : '');
 
-        return `<div style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="expandHotTipEntry('${entry.id}')">
+        const safeId = escapeHtmlHotTip(entry.id);
+        return `<div style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="expandHotTipEntry('${safeId}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-weight: 600; color: #e65100; font-size: 0.95em;">🔥 ${escapeHtmlHotTip(entry.title)}</div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <span style="font-size: 0.8em; color: #999;">${date}</span>
-                    <button onclick="event.stopPropagation(); reuseHotTipEmail('${entry.id}')" style="background: #f57c00; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75em; cursor: pointer;">📋 Copy</button>
-                    <button onclick="event.stopPropagation(); deleteHotTipEntry('${entry.id}')" style="background: #999; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75em; cursor: pointer;">✕</button>
+                    <button onclick="event.stopPropagation(); reuseHotTipEmail('${safeId}')" style="background: #f57c00; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75em; cursor: pointer;">📋 Copy</button>
+                    <button onclick="event.stopPropagation(); deleteHotTipEntry('${safeId}')" style="background: #999; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75em; cursor: pointer;">✕</button>
                 </div>
             </div>
             <div style="font-size: 0.82em; color: #888; margin-top: 4px;">${escapeHtmlHotTip(contextPreview)}</div>
-            <div id="hotTipExpand_${entry.id}" style="display: none; margin-top: 10px; padding: 10px; background: #fafafa; border-radius: 4px; border: 1px solid #eee; white-space: pre-wrap; font-size: 0.85em; color: #333; max-height: 300px; overflow-y: auto;"></div>
+            <div id="hotTipExpand_${safeId}" style="display: none; margin-top: 10px; padding: 10px; background: #fafafa; border-radius: 4px; border: 1px solid #eee; white-space: pre-wrap; font-size: 0.85em; color: #333; max-height: 300px; overflow-y: auto;"></div>
         </div>`;
     }).join('');
 }

@@ -21,7 +21,7 @@
                 var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                 return isDark ? SUPERVISOR_COLORS[sup].dark : SUPERVISOR_COLORS[sup].bg;
             }
-        } catch (_e) {}
+        } catch (_e) { /* localStorage parse failure — fall through to default */ }
         return null;
     }
 
@@ -30,7 +30,7 @@
             var sups = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}');
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].bg;
-        } catch (_e) {}
+        } catch (_e) { /* localStorage parse failure — fall through to default */ }
         return '#ccc';
     }
 
