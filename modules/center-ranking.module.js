@@ -436,7 +436,7 @@
             var supColor = _getSupervisorColor(r.name);
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             var defaultBg = isDark ? (r.rank % 2 === 0 ? '#1a1f2e' : 'transparent') : (r.rank % 2 === 0 ? '#fafafa' : '#fff');
-            var rowBg = supColor || (isTeam ? (isDark ? '#0d2137' : '#e8eaf6') : defaultBg);
+            var rowBg = supColor || (isTeam ? (isDark ? '#0d2a1a' : '#e8f5e9') : defaultBg);
             var fontWeight = (isTeam || supColor) ? 'bold' : 'normal';
 
             var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
@@ -448,7 +448,8 @@
                 return '#c62828';
             };
 
-            html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
+            var teamBorder = isTeam ? 'outline: 2px solid #2e7d32; outline-offset: -2px; ' : '';
+            html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
             // Row number
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';

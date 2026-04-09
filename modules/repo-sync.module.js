@@ -908,6 +908,9 @@
             hotTipHistory: storage?.loadHotTipHistory?.() || { entries: [] },
             yearEndAnnualGoalsStore: window.loadYearEndAnnualGoalsStore?.() || {},
             yearEndDraftStore: window.loadYearEndDraftStore?.() || {},
+            employeePreferredNames: safeLoadJson('employeePreferredNames') || {},
+            executiveSummaryNotes: safeLoadJson('executiveSummaryNotes') || {},
+            userCustomTips: safeLoadJson('userCustomTips') || {},
             appStorageSnapshot: getAllAppStorageSnapshot(),
             callListeningCsv: window.exportCallListeningLogsToCSV?.() || ''
         };
@@ -1180,7 +1183,9 @@
             reliabilityTracker: coerceObject(resolvedReliabilityTracker),
             yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
-            employeePreferredNames: coerceObject(payload?.employeePreferredNames)
+            employeePreferredNames: coerceObject(payload?.employeePreferredNames),
+            executiveSummaryNotes: coerceObject(payload?.executiveSummaryNotes),
+            userCustomTips: coerceObject(payload?.userCustomTips)
         };
 
         console.log('[Repo Restore] Applying payload with keys:', Object.keys(payload || {}));
@@ -1238,6 +1243,12 @@
     }
 
     async function tryAutoRestoreFromRepoBackupOnEmptyState() {
+        // Skip auto-restore if user just intentionally deleted all data
+        if (sessionStorage.getItem('devCoachingTool_deleteAllJustRan') === '1') {
+            sessionStorage.removeItem('devCoachingTool_deleteAllJustRan');
+            return false;
+        }
+
         const payload = await fetchRepoBackupPayload();
         if (!hasMeaningfulBackupData(payload)) {
             return false;
@@ -1266,6 +1277,31 @@
         saveRepoBackupAppliedAt(new Date().toISOString());
 
         return true;
+    }
+
+    // ============================================
+    // DELETE ALL REMOTE DATA
+    // ============================================
+
+    async function deleteAllRemoteData() {
+        const config = loadCallListeningSyncConfig();
+        const endpoint = String(config?.endpoint || '').trim();
+        if (!endpoint) return { ok: false, reason: 'no endpoint configured' };
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: buildRepoSyncHeaders(config.sharedSecret),
+                body: JSON.stringify({ mode: 'deleteAll' })
+            });
+            if (response.ok) {
+                return { ok: true };
+            }
+            const text = await response.text().catch(() => '');
+            return { ok: false, reason: `HTTP ${response.status}: ${text}` };
+        } catch (error) {
+            return { ok: false, reason: error.message };
+        }
     }
 
     // ============================================
@@ -1557,6 +1593,7 @@
         parseTimeMs,
         getLatestLocalRepoDataTimestampMs,
         tryAutoRestoreFromRepoBackupOnEmptyState,
+        deleteAllRemoteData,
 
         // Sync execution
         buildRepoSyncMeta,

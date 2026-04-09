@@ -995,6 +995,8 @@
     }
 
     function renderYearlySummaryMetricChart(canvas, metric, metricKey, data) {
+        var _existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
+        if (_existing) _existing.destroy();
         new Chart(canvas, {
             type: 'bar',
             data: {

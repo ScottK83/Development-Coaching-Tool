@@ -284,7 +284,7 @@
                 '<div style="font-size: 3em; margin-bottom: 16px;">📊</div>' +
                 '<h2 style="color: #475569; margin: 0 0 8px 0;">Welcome to the Coaching Tool</h2>' +
                 '<p style="color: #94a3b8; margin: 0 0 20px 0;">Upload your first week of data to see coaching priorities.</p>' +
-                '<button type="button" onclick="showOnlySection(\'coachingForm\')" ' +
+                '<button type="button" onclick="showOnlySection(\'uploadSection\')" ' +
                 'style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; ' +
                 'font-size: 1em; cursor: pointer; font-weight: 600;">Upload Data</button></div>';
             return;

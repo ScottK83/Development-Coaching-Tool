@@ -1,6 +1,11 @@
 (function() {
     'use strict';
 
+    function _esc(val) {
+        const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
+        return typeof fn === 'function' ? fn(val) : String(val ?? '');
+    }
+
     function getFilteredEmployees(week, options = {}) {
         const allEmployees = Array.isArray(week?.employees) ? week.employees : [];
         const includeFn = typeof options.isAssociateIncludedByTeamFilter === 'function'
@@ -259,7 +264,7 @@ Write the complete email.`;
 
     function buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp) {
         return `
-<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${employeeName} (${descriptor.shortLabel})</h5>
+<h5 style="margin-top: 0; color: #f5576c;">Individual Coaching Insights for ${_esc(employeeName)} (${descriptor.shortLabel})</h5>
 <div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">
 <strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}
 </div>`;
@@ -296,7 +301,7 @@ Write the complete email.`;
 
     function buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins) {
         if (warnings.length > 0 || wins.length > 0) return '';
-        return `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;"><p style="margin: 0;">📊 No significant trends detected this period. ${employeeName} is performing steadily.</p></div>`;
+        return `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;"><p style="margin: 0;">📊 No significant trends detected this period. ${_esc(employeeName)} is performing steadily.</p></div>`;
     }
 
     function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow', context = {}) {

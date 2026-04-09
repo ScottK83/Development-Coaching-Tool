@@ -475,7 +475,7 @@ function showToast(message, duration = 5000) {
         border-radius: 4px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         font-size: 14px;
-        z-index: 10000;
+        z-index: 50000;
         animation: slideIn 0.3s ease-out;
     `;
     document.body.appendChild(toast);
@@ -2439,7 +2439,7 @@ function handleTestPastedDataClick() {
                 const label = k === 'scheduleAdherence' ? 'Adh' : k === 'overallSentiment' ? 'Sent' : k === 'overallExperience' ? 'OE' : k === 'cxRepOverall' ? 'RepSat' : k === 'totalCalls' ? 'Calls' : k === 'surveyTotal' ? 'Surveys' : k.toUpperCase();
                 return `${label}:${v === '' || v === null || v === undefined ? '--' : v}`;
             }).join(' | ');
-            return `<div style="font-size: 0.85em; margin: 2px 0;"><strong>${emp.firstName || emp.name}</strong>: ${vals}</div>`;
+            return `<div style="font-size: 0.85em; margin: 2px 0;"><strong>${escapeHtml(emp.firstName || emp.name)}</strong>: ${vals}</div>`;
         }).join('');
 
         if (preview) {
@@ -2501,7 +2501,7 @@ function handleDataFileInputChange(event) {
     reader.readAsText(file);
 }
 
-function handleDeleteAllDataClick() {
+async function handleDeleteAllDataClick() {
     const message = `⚠️ WARNING: This will permanently delete ALL data:\n\n` +
         `• All weekly, monthly, quarterly, and YTD uploads\n` +
         `• Team member selections\n` +
@@ -2509,7 +2509,8 @@ function handleDeleteAllDataClick() {
         `• Call center averages\n` +
         `• Call listening logs\n` +
         `• Sentiment data\n` +
-        `• All saved notes and preferences\n\n` +
+        `• All saved notes and preferences\n` +
+        `• Synced backup on the server\n\n` +
         `This action CANNOT be undone!\n\n` +
         `Type "DELETE" to confirm:`;
 
@@ -2517,6 +2518,13 @@ function handleDeleteAllDataClick() {
     if (confirmation !== 'DELETE') {
         alert('⚠️ Deletion cancelled');
         return;
+    }
+
+    // Delete remote backup first (before clearing local config that has the endpoint/secret)
+    const remoteResult = await deleteAllRemoteData();
+    if (!remoteResult.ok) {
+        const proceed = confirm(`⚠️ Could not delete remote backup: ${remoteResult.reason}\n\nClick OK to continue deleting local data anyway, or Cancel to abort.`);
+        if (!proceed) return;
     }
 
     // Clear ALL localStorage keys with the app prefix
@@ -2528,6 +2536,9 @@ function handleDeleteAllDataClick() {
         }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    // Suppress auto-restore from repo backup after intentional delete
+    sessionStorage.setItem('devCoachingTool_deleteAllJustRan', '1');
 
     // Reset all in-memory state
     weeklyData = {};
@@ -2541,7 +2552,8 @@ function handleDeleteAllDataClick() {
     yearEndDraftContext = null;
 
     // Refresh the page for a clean state
-    alert('✅ All data has been deleted. The page will now reload.');
+    const remoteMsg = remoteResult.ok ? ' and server backup' : '';
+    alert(`✅ All local data${remoteMsg} has been deleted. The page will now reload.`);
     location.reload();
 }
 
@@ -3115,6 +3127,10 @@ function getLatestLocalRepoDataTimestampMs() {
 
 async function tryAutoRestoreFromRepoBackupOnEmptyState() {
     return window.DevCoachModules?.repoSync?.tryAutoRestoreFromRepoBackupOnEmptyState?.() || false;
+}
+
+async function deleteAllRemoteData() {
+    return window.DevCoachModules?.repoSync?.deleteAllRemoteData?.() || { ok: false, reason: 'module not loaded' };
 }
 
 async function postRepoSyncPayload(endpoint, config, payload) {
@@ -4589,8 +4605,8 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, why
                 ? entry.why.slice(0, 3).join(' • ')
                 : entry.reason;
             html += `<div>
-                <div><strong>${entry.name}</strong> • Score ${entry.score} • ${entry.reason}</div>
-                <div style="margin-top: 2px; color: #455a64; font-size: 0.88em;"><strong>${whyLabel}</strong> ${whyText}</div>
+                <div><strong>${escapeHtml(entry.name)}</strong> • Score ${entry.score} • ${entry.reason}</div>
+                <div style="margin-top: 2px; color: #455a64; font-size: 0.88em;"><strong>${whyLabel}</strong> ${escapeHtml(whyText)}</div>
             </div>`;
         });
         html += '</div>';
@@ -4887,11 +4903,11 @@ function renderTrendSimpleView() {
     const scoredCount = snapshot.employeeNamesCount || 0;
 
     const coachHtml = topCoach.length
-        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${entry.name}</strong> — ${entry.reason}</li>`).join('')
+        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${entry.reason}</li>`).join('')
         : '<li>No urgent coaching interventions this cycle.</li>';
 
     const recognizeHtml = topRecognize.length
-        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${entry.name}</strong> — ${entry.reason}</li>`).join('')
+        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${entry.reason}</li>`).join('')
         : '<li>No standout recognition callouts this cycle.</li>';
 
     container.innerHTML = `
@@ -5174,7 +5190,7 @@ function renderCoachingImpactTracker() {
 
     container.innerHTML = list.map(item => `
         <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>${item.employeeName}</strong><br>
+            <strong>${escapeHtml(item.employeeName)}</strong><br>
             Momentum: <strong>${item.momentumScore}%</strong> · Consistency: <strong>${item.consistencyScore}%</strong> · Goal Progress: <strong>${item.goalProgressScore}%</strong>
             <div style="color: #546e7a; font-size: 0.88em; margin-top: 4px;">Tracked metrics: ${item.totalTracked}</div>
         </div>
@@ -5432,7 +5448,7 @@ function renderRecognitionIntelligence() {
             !metricMeetsTarget(key, prevEmp[key]) && metricMeetsTarget(key, emp[key])
         );
         if (recoveryMetric) {
-            recoveryWins.push(`${emp.name} (${METRICS_REGISTRY[recoveryMetric]?.label || recoveryMetric})`);
+            recoveryWins.push(`${escapeHtml(emp.name)} (${METRICS_REGISTRY[recoveryMetric]?.label || recoveryMetric})`);
         }
 
         const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(key => metricMeetsTarget(key, emp[key]));
@@ -5446,7 +5462,7 @@ function renderRecognitionIntelligence() {
 
     mostImproved.sort((a, b) => b.delta - a.delta);
     const mostImprovedText = mostImproved.length
-        ? `${mostImproved[0].name} (+${mostImproved[0].delta.toFixed(1)} sentiment)`
+        ? `${escapeHtml(mostImproved[0].name)} (+${mostImproved[0].delta.toFixed(1)} sentiment)`
         : 'None yet';
 
     container.innerHTML = `
@@ -5583,6 +5599,10 @@ function renderTrendVisualizations() {
                 });
             }
         };
+
+        // Destroy any existing chart on this canvas to prevent memory leak
+        var _existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
+        if (_existing) _existing.destroy();
 
         // Create bar chart
         new Chart(canvas, {

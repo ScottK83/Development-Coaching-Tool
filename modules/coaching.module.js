@@ -1,6 +1,11 @@
 (function() {
     'use strict';
 
+    function _esc(val) {
+        const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
+        return typeof fn === 'function' ? fn(val) : String(val ?? '');
+    }
+
     function formatHistoryMetricLabels(keys = [], metricsRegistry = {}) {
         if (!Array.isArray(keys) || keys.length === 0) return 'General review';
         return keys
@@ -20,7 +25,7 @@
                 const dateLabel = entry?.weekEnding ? (formatDate(entry.weekEnding) || entry.weekEnding) : 'Unknown date';
                 const metricsLabel = formatHistoryMetricLabels(entry?.metricsCoached, metricsRegistry);
                 const aiLabel = entry?.aiAssisted ? ' · AI-assisted' : '';
-                return `<li>${dateLabel} — ${metricsLabel}${aiLabel}</li>`;
+                return `<li>${_esc(dateLabel)} — ${_esc(metricsLabel)}${aiLabel}</li>`;
             })
             .join('');
     }

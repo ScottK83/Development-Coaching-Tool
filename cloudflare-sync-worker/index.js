@@ -54,6 +54,31 @@ export default {
       }
 
       // ============================================
+      // DELETE ALL: Wipe KV backup and GitHub backup file
+      // ============================================
+      if (mode === 'deleteAll') {
+        await env.COACHING_DATA.delete('backup');
+
+        // Also clear the GitHub backup file if configured (non-blocking)
+        if (env.GH_TOKEN && env.GH_OWNER && env.GH_REPO) {
+          const branch = env.GH_BRANCH || 'main';
+          const dataDir = env.GH_DATA_DIR || 'data';
+          try {
+            await upsertRepoFile({
+              env, branch,
+              path: `${dataDir}/coaching-tool-sync-backup.json`,
+              message: 'chore(data): delete all coaching data',
+              content: JSON.stringify({ deletedAt: new Date().toISOString(), data: null }, null, 2)
+            });
+          } catch (ghErr) {
+            console.error('GitHub delete failed (non-blocking):', ghErr.message);
+          }
+        }
+
+        return json({ ok: true, mode: 'deleteAll', deletedAt: new Date().toISOString() }, 200, cors);
+      }
+
+      // ============================================
       // UPLOAD FILE: Still uses GitHub for file storage
       // ============================================
       if (mode === 'uploadFile') {
