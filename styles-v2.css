@@ -1798,7 +1798,13 @@ textarea:focus-visible {
 [data-theme="dark"] [style*="background: #f8d7da"],
 [data-theme="dark"] [style*="background:#f8d7da"] { background: var(--red-soft) !important; }
 [data-theme="dark"] [style*="background: #d4edda"],
-[data-theme="dark"] [style*="background:#d4edda"] { background: var(--green-soft) !important; }
+[data-theme="dark"] [style*="background:#d4edda"] { background: var(--green-soft) !important; color: var(--green-text) !important; }
+[data-theme="dark"] [style*="background: #d4edda"] h3,
+[data-theme="dark"] [style*="background:#d4edda"] h3,
+[data-theme="dark"] [style*="background: #d4edda"] p,
+[data-theme="dark"] [style*="background:#d4edda"] p,
+[data-theme="dark"] [style*="background: #d4edda"] strong,
+[data-theme="dark"] [style*="background:#d4edda"] strong { color: var(--green-text) !important; }
 
 /* --- Borders not caught by nuclear (starts with #a, #b, #4, #6, #8) --- */
 [data-theme="dark"] [style*="border"][style*="#6a1b9a"] { border-color: var(--brand-muted) !important; }
