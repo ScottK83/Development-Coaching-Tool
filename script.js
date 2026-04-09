@@ -1121,7 +1121,8 @@ window.saveEmployeePreferredName = function(fullName) {
         { key: 'kathy', supervisor: 'Kathy Cruz', agents: ['Michelle', 'Cordova', 'Erb', 'Frank', 'April Gonzalez', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul Sebastian', 'Dillon'] },
         { key: 'angie', supervisor: 'Angie Delgado', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah', 'Dawn Martinez', 'Rachel', 'Ariell', 'Brandi', 'Cindy', 'Alexandra Rangel', 'Chrsti-Ann Thompson', 'Alejandra Valdez', 'Lonia', 'Crystal Vill'] },
         { key: 'sarah', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Ekiecha', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gug', 'Keshary Gui', 'Aldo', 'Sophie', 'Holluy', 'John M', 'Pamela Mu', 'Eiolene P', 'Trevor', 'Needra', 'Briana Z'] },
-        { key: 'schnelle', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie Carb', 'Caylie', 'Caitlyn', 'Jenifer Hen', 'Lily', 'Kimmy', 'Anissa', 'Monica M', 'Crystal', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela T', 'Michelle Wei', 'Rachael W'] }
+        { key: 'schnelle', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie Carb', 'Caylie', 'Caitlyn', 'Jenifer Hen', 'Lily', 'Kimmy', 'Anissa', 'Monica M', 'Crystal', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela T', 'Michelle Wei', 'Rachael W'] },
+        { key: 'nicole', supervisor: 'Nicole P', agents: ['Amy', 'Jessica B', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya', 'Geralene', 'Dawanda', 'Shawn', 'Ashley R', 'Cindy', 'Ebany', 'Monica String', 'Brayden', 'Jereca'] }
     ];
     var needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
@@ -1989,18 +1990,14 @@ function handlePasteDataTextareaInput(event) {
     preview.style.display = 'block';
 
     if (validation.valid) {
-        preview.style.background = '#d4edda';
-        preview.style.border = '2px solid #28a745';
-        preview.style.color = '#155724';
+        preview.className = 'validation-success';
         preview.innerHTML = `
             ✅ <strong>Data looks good!</strong><br>
             📊 ${validation.employeeCount} employees detected<br>
             👤 Preview: ${validation.preview.join(', ')}${validation.employeeCount > 3 ? '...' : ''}
         `;
     } else {
-        preview.style.background = '#f8d7da';
-        preview.style.border = '2px solid #dc3545';
-        preview.style.color = '#721c24';
+        preview.className = 'validation-error';
         preview.innerHTML = `
             ⚠️ <strong>Data validation issues:</strong><br>
             ${validation.issues.map(i => `• ${i}`).join('<br>')}
@@ -6135,10 +6132,13 @@ async function initApp() {
         var saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
         }
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         var btn = document.getElementById('darkModeToggle');
         if (btn) {
-            btn.textContent = (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) ? '\u2600\uFE0F' : '\uD83C\uDF19';
+            btn.textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
             btn.addEventListener('click', function() {
                 var current = document.documentElement.getAttribute('data-theme');
                 var next = current === 'dark' ? 'light' : 'dark';
