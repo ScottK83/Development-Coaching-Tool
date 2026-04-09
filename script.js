@@ -174,6 +174,7 @@ let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
 let sentimentListenersAttached = false;
+let eventHandlersInitialized = false;
 
 // ============================================
 // STORAGE HELPERS (defined early for guaranteed availability)
@@ -576,6 +577,73 @@ function hideLoadingSpinner() {
     if (spinner) spinner.remove();
 }
 
+function clearPotentialBlockingOverlays() {
+    // Emergency cleanup used after startup errors so the page remains interactive.
+    const directIds = ['globalLoadingSpinner', 'globalSpinner', 'uploadSentimentModal', 'futuresCheckInModal', 'pulseCheckinModal'];
+    directIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === 'globalLoadingSpinner' || id === 'futuresCheckInModal' || id === 'pulseCheckinModal') {
+            el.remove();
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    const isBlockingFullScreenOverlay = (el) => {
+        if (!el || el === document.documentElement || el === document.body) return false;
+        const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+        if (!style) return false;
+        if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none') return false;
+        if (style.position !== 'fixed') return false;
+
+        const z = Number.parseInt(style.zIndex, 10);
+        if (!Number.isFinite(z) || z < 9000) return false;
+
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+        if (!rect) return false;
+        const minW = window.innerWidth * 0.9;
+        const minH = window.innerHeight * 0.9;
+        return rect.width >= minW && rect.height >= minH;
+    };
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+        if (isBlockingFullScreenOverlay(el)) {
+            el.style.display = 'none';
+        }
+    });
+
+    Array.from(document.body?.children || []).forEach(el => {
+        if (isBlockingFullScreenOverlay(el)) {
+            if (el.id && /^global|modal|overlay|spinner|backdrop/i.test(el.id)) {
+                el.remove();
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    });
+
+    document.querySelectorAll('.devcoach-dialog-backdrop').forEach(el => el.remove());
+}
+
+function emergencyUnfreezeUi() {
+    clearPotentialBlockingOverlays();
+    if (document.body) {
+        document.body.style.pointerEvents = 'auto';
+    }
+}
+
+window.devCoachUnfreezeUi = emergencyUnfreezeUi;
+
+window.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.shiftKey && String(event.key).toLowerCase() === 'u') {
+        emergencyUnfreezeUi();
+        if (typeof showToast === 'function') {
+            showToast('UI unfreeze applied.', 2500);
+        }
+    }
+});
+
 function enableDatePickerOpen(input) {
     if (!input) return;
     const openPicker = () => {
@@ -888,21 +956,21 @@ function bindTeamFilterChangeHandlers() {
     if (teamFilterChangeHandlersBound) return;
 
     window.addEventListener('devcoach:teamFilterChanged', () => {
-        updateEmployeeDropdown();
-        initializeTrendIntelligence();
-        renderTrendIntelligence();
-        renderTrendVisualizations();
-        populateTrendPeriodDropdown();
+        if (typeof updateEmployeeDropdown === 'function') updateEmployeeDropdown();
+        if (typeof initializeTrendIntelligence === 'function') initializeTrendIntelligence();
+        if (typeof renderTrendIntelligence === 'function') renderTrendIntelligence();
+        if (typeof renderTrendVisualizations === 'function') renderTrendVisualizations();
+        if (typeof populateTrendPeriodDropdown === 'function') populateTrendPeriodDropdown();
         const selectedTrendPeriod = String(document.getElementById('trendPeriodSelect')?.value || '').trim();
-        if (selectedTrendPeriod) {
+        if (selectedTrendPeriod && typeof populateEmployeeDropdownForPeriod === 'function') {
             populateEmployeeDropdownForPeriod(selectedTrendPeriod);
         }
 
-        populateExecutiveSummaryAssociate();
-        populateOneOnOneAssociateSelect();
-        initializeCoachingEmail();
-        initializeYearEndComments();
-        initializeCallListeningSection();
+        if (typeof populateExecutiveSummaryAssociate === 'function') populateExecutiveSummaryAssociate();
+        if (typeof populateOneOnOneAssociateSelect === 'function') populateOneOnOneAssociateSelect();
+        if (typeof initializeCoachingEmail === 'function') initializeCoachingEmail();
+        if (typeof initializeYearEndComments === 'function') initializeYearEndComments();
+        if (typeof initializeCallListeningSection === 'function') initializeCallListeningSection();
         if (typeof initializePtoTracker === 'function') {
             initializePtoTracker();
         }
@@ -1485,12 +1553,23 @@ function applyMetricHighlights() {
 // ============================================
 
 function initializeEventHandlers() {
-    bindUploadAndPasteHandlers();
-    bindNavigationHandlers();
-    bindManageDataNavigationHandlers();
-    bindQuickActionHandlers();
-    bindCoachingFormHandlers();
-    bindDataAdminHandlers();
+    if (eventHandlersInitialized) return;
+
+    const bindSafely = (label, fn) => {
+        try {
+            fn();
+        } catch (error) {
+            console.error('Failed to bind ' + label + ' handlers:', error);
+        }
+    };
+
+    bindSafely('upload/paste', bindUploadAndPasteHandlers);
+    bindSafely('navigation', bindNavigationHandlers);
+    bindSafely('manage-data navigation', bindManageDataNavigationHandlers);
+    bindSafely('quick actions', bindQuickActionHandlers);
+    bindSafely('coaching form', bindCoachingFormHandlers);
+    bindSafely('data admin', bindDataAdminHandlers);
+    eventHandlersInitialized = true;
 }
 
 function bindUploadAndPasteHandlers() {
@@ -1548,7 +1627,13 @@ function bindUploadAndPasteHandlers() {
     });
 
 
-    document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModal);
+    const openUploadSentimentModalHandler = window.openUploadSentimentModal
+        || window.DevCoachModules?.sentiment?.openUploadSentimentModal;
+    if (typeof openUploadSentimentModalHandler === 'function') {
+        document.getElementById('showUploadSentimentBtn')?.addEventListener('click', openUploadSentimentModalHandler);
+    } else {
+        console.warn('Sentiment upload modal handler is unavailable; sentiment upload button will remain inactive.');
+    }
 
     // Verint upload from Upload page
     document.getElementById('showUploadVerintBtn')?.addEventListener('click', () => {
@@ -1616,8 +1701,17 @@ function bindUploadAndPasteHandlers() {
             }
         this.value = '';
     });
-    document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModal);
-    document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmit);
+    const closeUploadSentimentModalHandler = window.closeUploadSentimentModal
+        || window.DevCoachModules?.sentiment?.closeUploadSentimentModal;
+    if (typeof closeUploadSentimentModalHandler === 'function') {
+        document.getElementById('sentimentUploadCancelBtn')?.addEventListener('click', closeUploadSentimentModalHandler);
+    }
+
+    const handleSentimentUploadSubmitHandler = window.handleSentimentUploadSubmit
+        || window.DevCoachModules?.sentiment?.handleSentimentUploadSubmit;
+    if (typeof handleSentimentUploadSubmitHandler === 'function') {
+        document.getElementById('sentimentUploadSubmitBtn')?.addEventListener('click', handleSentimentUploadSubmitHandler);
+    }
     document.getElementById('pasteDataTextarea')?.addEventListener('input', handlePasteDataTextareaInput);
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
     document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
@@ -6130,8 +6224,12 @@ function deleteEmployee(employeeName) {
 // ============================================
 
 async function initApp() {
-    
+
     installDebugListeners();
+
+    // Bind event handlers early so the UI remains clickable even if data loading fails below
+    initializeEventHandlers();
+    initializeKeyboardShortcuts();
 
     // Dark mode toggle
     (function initDarkMode() {
@@ -6163,7 +6261,11 @@ async function initApp() {
     callListeningLogs = loadCallListeningLogs();
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
-    ensureSentimentPhraseDatabaseDefaults();
+    if (typeof ensureSentimentPhraseDatabaseDefaults === 'function') {
+        ensureSentimentPhraseDatabaseDefaults();
+    } else {
+        console.warn('Sentiment defaults initializer is unavailable; skipping startup sentiment normalization.');
+    }
     migrateReliabilityCenterAverages();
     cleanupStaleAutoYtds();
     loadTeamMembers();
@@ -6200,7 +6302,7 @@ async function initApp() {
         console.warn('initializeDefaultTips is not available; skipping default tip initialization.');
     }
     
-    // Initialize event handlers
+    // Event handlers already bound at top of initApp; no-op if already done
     initializeEventHandlers();
     initializeKeyboardShortcuts();
     enforceRepoAutoSyncEnabled();
@@ -6305,6 +6407,7 @@ async function bootAppSafely() {
             console.error('Failed to log startup error:', loggingError);
         }
         setAppVersionLabel(' (startup error)');
+        emergencyUnfreezeUi();
         if (document.body) {
             showToast('⚠️ Startup error detected. Open Debug for details.', 6000);
         }

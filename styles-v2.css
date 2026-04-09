@@ -470,6 +470,34 @@
 [data-theme="dark"] [style*="background:#e3f2fd"],
 [data-theme="dark"] [style*="background: #e3f2fd"] { background: #0d1a2e !important; }
 
+/* Data validation preview */
+.validation-success {
+    background: #d4edda;
+    border: 2px solid #28a745;
+    color: #155724;
+}
+.validation-error {
+    background: #f8d7da;
+    border: 2px solid #dc3545;
+    color: #721c24;
+}
+[data-theme="dark"] .validation-success {
+    background: var(--green-soft) !important;
+    border-color: var(--green) !important;
+    color: var(--green-text) !important;
+}
+[data-theme="dark"] .validation-success strong {
+    color: var(--green-text) !important;
+}
+[data-theme="dark"] .validation-error {
+    background: var(--red-soft) !important;
+    border-color: var(--red) !important;
+    color: var(--red-text) !important;
+}
+[data-theme="dark"] .validation-error strong {
+    color: var(--red-text) !important;
+}
+
 /* --- Base --- */
 body {
     font-family: var(--font-sans);
