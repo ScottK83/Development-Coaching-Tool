@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.09.27'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.09.28'; // Version: YYYY.MM.DD.NN
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
 // NOTE: This prefix is also defined independently in repo-sync.module.js and other modules.
 // Future: export from a single shared-constants module to prevent divergence.
