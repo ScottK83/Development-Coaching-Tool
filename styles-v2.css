@@ -1750,6 +1750,69 @@ textarea:focus-visible {
     color: var(--text-primary) !important;
 }
 
+/* --- Additional text colors found by full audit --- */
+[data-theme="dark"] [style*="color: #546e7a"],
+[data-theme="dark"] [style*="color:#546e7a"] { color: var(--text-secondary) !important; }
+[data-theme="dark"] [style*="color: #2f4f87"],
+[data-theme="dark"] [style*="color:#2f4f87"] { color: var(--brand-text) !important; }
+[data-theme="dark"] [style*="color: #3f5168"],
+[data-theme="dark"] [style*="color:#3f5168"] { color: var(--text-secondary) !important; }
+[data-theme="dark"] [style*="color: #8a5300"],
+[data-theme="dark"] [style*="color:#8a5300"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #856404"],
+[data-theme="dark"] [style*="color:#856404"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #842029"],
+[data-theme="dark"] [style*="color:#842029"] { color: var(--red-text) !important; }
+[data-theme="dark"] [style*="color: #8d6e00"],
+[data-theme="dark"] [style*="color:#8d6e00"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #8d1f1f"],
+[data-theme="dark"] [style*="color:#8d1f1f"] { color: var(--red-text) !important; }
+[data-theme="dark"] [style*="color: #5e35b1"],
+[data-theme="dark"] [style*="color:#5e35b1"] { color: var(--brand-text) !important; }
+[data-theme="dark"] [style*="color: #0d47a1"],
+[data-theme="dark"] [style*="color:#0d47a1"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color: #8a6d1f"],
+[data-theme="dark"] [style*="color:#8a6d1f"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #8b4513"],
+[data-theme="dark"] [style*="color:#8b4513"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #1e40af"],
+[data-theme="dark"] [style*="color:#1e40af"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color: #b8860b"],
+[data-theme="dark"] [style*="color:#b8860b"] { color: var(--yellow-text) !important; }
+[data-theme="dark"] [style*="color: #f57f17"],
+[data-theme="dark"] [style*="color:#f57f17"] { color: var(--yellow) !important; }
+[data-theme="dark"] [style*="color: #e53935"],
+[data-theme="dark"] [style*="color:#e53935"] { color: var(--red) !important; }
+[data-theme="dark"] [style*="color: #ff9800"],
+[data-theme="dark"] [style*="color:#ff9800"] { color: var(--orange) !important; }
+[data-theme="dark"] [style*="color: #2196F3"],
+[data-theme="dark"] [style*="color:#2196F3"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color: #9c27b0"],
+[data-theme="dark"] [style*="color:#9c27b0"] { color: #c084fc !important; }
+
+/* --- Semantic backgrounds the nuclear override incorrectly flattens --- */
+[data-theme="dark"] [style*="background: #fff3cd"],
+[data-theme="dark"] [style*="background:#fff3cd"] { background: var(--yellow-soft) !important; }
+[data-theme="dark"] [style*="background: #f8d7da"],
+[data-theme="dark"] [style*="background:#f8d7da"] { background: var(--red-soft) !important; }
+[data-theme="dark"] [style*="background: #d4edda"],
+[data-theme="dark"] [style*="background:#d4edda"] { background: var(--green-soft) !important; }
+
+/* --- Borders not caught by nuclear (starts with #a, #b, #4, #6, #8) --- */
+[data-theme="dark"] [style*="border"][style*="#6a1b9a"] { border-color: var(--brand-muted) !important; }
+[data-theme="dark"] [style*="border"][style*="#b2dfdb"] { border-color: var(--border) !important; }
+[data-theme="dark"] [style*="border"][style*="#bbf7d0"] { border-color: var(--green) !important; }
+[data-theme="dark"] [style*="border"][style*="#fecaca"] { border-color: var(--red) !important; }
+[data-theme="dark"] [style*="border"][style*="#a5d6a7"] { border-color: var(--green) !important; }
+[data-theme="dark"] [style*="border"][style*="#81c784"] { border-color: var(--green) !important; }
+[data-theme="dark"] [style*="border"][style*="#ffe0b2"] { border-color: var(--orange) !important; }
+[data-theme="dark"] [style*="border"][style*="#ffe08a"] { border-color: var(--yellow) !important; }
+[data-theme="dark"] [style*="border"][style*="#4caf50"] { border-color: var(--green) !important; }
+[data-theme="dark"] [style*="border"][style*="#c62828"] { border-color: var(--red) !important; }
+[data-theme="dark"] [style*="border"][style*="#2196F3"] { border-color: var(--brand) !important; }
+[data-theme="dark"] [style*="border"][style*="#28a745"] { border-color: var(--green) !important; }
+[data-theme="dark"] [style*="border"][style*="#1976D2"] { border-color: var(--brand) !important; }
+
 /* --- Scrollbars for dark mode --- */
 [data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
 [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-surface-sunken); }
