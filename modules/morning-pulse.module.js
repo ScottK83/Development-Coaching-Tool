@@ -13,7 +13,7 @@
     // ============================================
 
     // Volume-only metrics excluded from pulse messages (no target to coach against)
-    const PULSE_EXCLUDED_METRICS = ['totalCalls', 'reliability'];
+    const PULSE_EXCLUDED_METRICS = ['totalCalls', 'reliability', 'transfersCount'];
     const PULSE_SELECTION_STORAGE_KEY = 'devCoachingTool_morningPulseSelection';
 
     // --- Phrase pools (randomized to avoid sounding templated) ---
@@ -25,6 +25,15 @@
         name => `What's up ${name}!`,
         name => `Hey there ${name}!`,
         name => `${name}!`,
+        name => `Morning ${name}!`,
+        name => `Good to catch up with you, ${name}.`,
+        name => `${name}, got a sec?`,
+        name => `Wanted to touch base, ${name}.`,
+        name => `${name}, quick update for you.`,
+        name => `Hey hey ${name}!`,
+        name => `Alright ${name}, let's get into it.`,
+        name => `${name}! Perfect timing.`,
+        name => `Happy to share this with you, ${name}.`,
     ];
     const DATA_IN = [
         date => `Your numbers for the week of ${date} just came in.`,
@@ -32,6 +41,15 @@
         date => `Just pulled up your week of ${date} numbers.`,
         date => `Your stats from the week of ${date} are in.`,
         date => `Took a look at your week of ${date} performance.`,
+        date => `Week of ${date} data is fresh off the press.`,
+        date => `Wanted to share your numbers from the week of ${date}.`,
+        date => `The week of ${date} is all wrapped up, here's how it went.`,
+        date => `Pulled your report for the week of ${date}.`,
+        date => `Your week of ${date} recap is ready.`,
+        date => `Just sat down with your week of ${date} data.`,
+        date => `Here's the rundown for the week of ${date}.`,
+        date => `Week of ${date} numbers landed on my desk.`,
+        date => `Got the latest from the week of ${date} for you.`,
     ];
     const JUMP_INTROS = [
         (label, delta, range) => `Huge improvement in ${label}, ${delta}! (${range})`,
@@ -39,36 +57,83 @@
         (label, delta, range) => `Love seeing ${label} move like that, ${delta}! (${range})`,
         (label, delta, range) => `${label} really stood out this week, ${delta}! (${range})`,
         (label, delta, range) => `You crushed it on ${label}, ${delta}! (${range})`,
+        (label, delta, range) => `That jump in ${label} caught my eye, ${delta}. (${range})`,
+        (label, delta, range) => `${label} went up in a serious way, ${delta}. (${range})`,
+        (label, delta, range) => `Not gonna lie, ${label} at ${delta} made me do a double take. (${range})`,
+        (label, delta, range) => `Okay, ${label}! That's a ${delta} swing. (${range})`,
+        (label, delta, range) => `Your ${label} is trending the right direction, ${delta}. (${range})`,
+        (label, delta, range) => `Seriously though, ${label} moving ${delta} is no joke. (${range})`,
+        (label, delta, range) => `Look at ${label} go, ${delta}! (${range})`,
+        (label, delta, range) => `${label} took a nice leap this week, ${delta}. (${range})`,
+        (label, delta, range) => `Gotta call out your ${label}, up ${delta}. (${range})`,
     ];
     const PLUS_SOLID = [
         (label, val) => `Plus you're solid on ${label} at ${val}.`,
         (label, val) => `And ${label} sitting at ${val} is great too.`,
         (label, val) => `${label} at ${val} is right where it needs to be.`,
         (label, val) => `Also, ${label} at ${val}? Nice.`,
+        (label, val) => `Oh and ${label} is cruising along at ${val}. No complaints there.`,
+        (label, val) => `Can't forget ${label} at ${val}, that's looking clean.`,
+        (label, val) => `${label} holding steady at ${val} too. Solid.`,
+        (label, val) => `Meanwhile ${label} is sitting pretty at ${val}.`,
+        (label, val) => `Your ${label} at ${val} doesn't need much commentary, it speaks for itself.`,
+        (label, val) => `And hey, ${label} at ${val} is right on the money.`,
+        (label, val) => `Worth mentioning that ${label} at ${val} is looking good too.`,
+        (label, val) => `${label} at ${val}? Yeah, that works.`,
     ];
     const TWO_WINS = [
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? That's solid.`,
         (l1, v1, l2, v2) => `Loving ${l1} at ${v1} and ${l2} at ${v2}!`,
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} are looking great!`,
         (l1, v1, l2, v2) => `Really strong showing on ${l1} (${v1}) and ${l2} (${v2}).`,
+        (l1, v1, l2, v2) => `Two things that jumped out: ${l1} at ${v1} and ${l2} at ${v2}.`,
+        (l1, v1, l2, v2) => `Your ${l1} (${v1}) and ${l2} (${v2}) are both in great shape.`,
+        (l1, v1, l2, v2) => `${l1} at ${v1}, ${l2} at ${v2}. Can't argue with those.`,
+        (l1, v1, l2, v2) => `Honestly, ${l1} at ${v1} and ${l2} at ${v2} speak for themselves.`,
+        (l1, v1, l2, v2) => `Love seeing ${l1} (${v1}) and ${l2} (${v2}) both clicking.`,
+        (l1, v1, l2, v2) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you've got a lot working for you.`,
+        (l1, v1, l2, v2) => `You nailed it on ${l1} (${v1}) and ${l2} (${v2}) this week.`,
     ];
     const ONE_WIN = [
         (label, val) => `${label} at ${val} is looking great!`,
         (label, val) => `Solid work on ${label} at ${val}!`,
         (label, val) => `${label} at ${val}? Love to see it.`,
         (label, val) => `Nice job keeping ${label} at ${val}.`,
+        (label, val) => `Your ${label} at ${val} caught my attention in a good way.`,
+        (label, val) => `${label} coming in at ${val} is a win.`,
+        (label, val) => `Gotta give you credit for ${label} at ${val}.`,
+        (label, val) => `${label} at ${val}, that's exactly what we want.`,
+        (label, val) => `Really like what I'm seeing on ${label} (${val}).`,
+        (label, val) => `The work on ${label} is showing, ${val} is proof.`,
+        (label, val) => `${label} at ${val}? That tells me you're locked in.`,
     ];
     const NO_WINS = [
         'I see you putting in the effort and I appreciate it!',
         'Appreciate you showing up and grinding this week.',
         'I know the numbers don\'t always show it, but the effort matters.',
         'Keep pushing, I see the work you\'re putting in.',
+        'Some weeks the numbers don\'t cooperate. Doesn\'t change how I see your effort.',
+        'The grind doesn\'t always pay off immediately, but it will. Hang in there.',
+        'Not every week is going to be a highlight reel, and that\'s okay.',
+        'I\'d rather have someone who keeps fighting through a tough week, and that\'s you.',
+        'Rough stretch, but I\'ve seen what you can do. We\'ll get there.',
+        'The effort is there. The results are going to follow.',
+        'Listen, not every week lands perfectly. What matters is you keep showing up.',
+        'I appreciate the consistency in your effort even when the numbers are stubborn.',
     ];
     const FOCUS_INTROS = [
         (label, val, target) => `One thing to zero in on: ${label} (at ${val}, target is ${target}).`,
         (label, val, target) => `Let's work on getting ${label} closer to target (${val} vs ${target}).`,
         (label, val, target) => `Area to focus on: ${label} sitting at ${val}, we want ${target}.`,
         (label, val, target) => `Your focus this week: ${label} (currently ${val}, target ${target}).`,
+        (label, val, target) => `If I had to pick one thing to zero in on, it'd be ${label}. You're at ${val}, target is ${target}.`,
+        (label, val, target) => `The one I want us to tackle together: ${label} at ${val}, needs to get to ${target}.`,
+        (label, val, target) => `Let's put some energy into ${label} this week. Sitting at ${val}, shooting for ${target}.`,
+        (label, val, target) => `I think ${label} is your biggest opportunity right now. At ${val}, target is ${target}.`,
+        (label, val, target) => `Quick thing to keep in mind: ${label} is at ${val} and we're aiming for ${target}.`,
+        (label, val, target) => `Where I think you can move the needle most: ${label} (${val} right now, ${target} is the goal).`,
+        (label, val, target) => `Something to be intentional about: ${label} at ${val}. The target is ${target} and I think you can get there.`,
+        (label, val, target) => `My suggestion? Put a little extra focus on ${label}. You're at ${val}, we need ${target}.`,
     ];
     const CLOSERS = [
         'Keep it up! Let me know if you need anything.',
@@ -76,44 +141,97 @@
         'Keep doing your thing. Reach out if you need me.',
         'Good stuff. Let\'s keep the momentum going.',
         'Nice work this week. My door\'s always open.',
+        'Talk soon. You know where to find me.',
+        'That\'s the update. Holler if anything comes up.',
+        'Appreciate you. Let\'s have a good one this week.',
+        'Questions? Concerns? Random thoughts? I\'m around.',
+        'Let me know if you want to dig into any of this together.',
+        'Keep at it. Rooting for you.',
+        'That\'s all I got. Go have a great week.',
+        'Catch me anytime if you want to talk through anything.',
+        'Onward. I\'m always just a message away.',
     ];
     const HF_OPENERS = [
         name => `Hey ${name}! \uD83C\uDF89`,
         name => `${name}! \uD83C\uDF89\uD83D\uDE4C`,
         name => `Yo ${name}! \uD83C\uDF89`,
         name => `What a week, ${name}! \uD83C\uDF89`,
+        name => `${name}, had to send you this before the weekend! \uD83C\uDF89`,
+        name => `${name}! Gotta give credit where it's due. \uD83C\uDF89`,
+        name => `Real quick, ${name}, before you head out for the weekend. \uD83C\uDF89`,
+        name => `Couldn't let the week end without saying something, ${name}! \uD83C\uDF89`,
+        name => `${name}! Wrapping up the week and had to share this. \uD83C\uDF89`,
+        name => `${name}, you need to see these numbers. \uD83C\uDF89`,
+        name => `Hey ${name}, just wanted to highlight your week real quick. \uD83C\uDF89`,
+        name => `Quick shoutout before the weekend, ${name}! \uD83C\uDF89`,
     ];
     const HF_JUMP = [
         (label, delta, range) => `Incredible jump in ${label}, ${delta}! (${range}) That kind of growth stands out.`,
         (label, delta, range) => `You moved ${label} in a big way this week, ${delta}! (${range}) That's impressive.`,
         (label, delta, range) => `${label} took a huge leap, ${delta}! (${range}) Love to see it.`,
         (label, delta, range) => `The progress on ${label} is awesome, ${delta}! (${range}) Keep that energy.`,
+        (label, delta, range) => `Your ${label} jumped ${delta} and honestly it's one of the best improvements I've seen. (${range})`,
+        (label, delta, range) => `That ${delta} move in ${label} is worth celebrating. (${range}) That took real effort.`,
+        (label, delta, range) => `${label} went from good to great this week, ${delta}. (${range}) You should feel good about that.`,
+        (label, delta, range) => `I have to point out that ${label} swing, ${delta}. (${range}) That's not easy to do.`,
+        (label, delta, range) => `When I saw ${label} at ${delta}, I knew I had to say something. (${range}) Wow.`,
+        (label, delta, range) => `The kind of improvement you showed on ${label}, ${delta}, doesn't happen by accident. (${range})`,
     ];
     const HF_TWO_WINS = [
         (l1, v1, l2, v2) => `Your ${l1} at ${v1} and ${l2} at ${v2} were outstanding!`,
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
         (l1, v1, l2, v2) => `Crushed it on ${l1} (${v1}) and ${l2} (${v2}) this week!`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} are both legit impressive.`,
+        (l1, v1, l2, v2) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you had one heck of a week.`,
+        (l1, v1, l2, v2) => `I mean, ${l1} at ${v1} AND ${l2} at ${v2}? Come on now.`,
+        (l1, v1, l2, v2) => `Your ${l1} (${v1}) and ${l2} (${v2}) were both standout numbers this week.`,
+        (l1, v1, l2, v2) => `Two words: ${l1} at ${v1}. Two more: ${l2} at ${v2}. Just great.`,
+        (l1, v1, l2, v2) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of week you want to have.`,
+        (l1, v1, l2, v2) => `Can we talk about ${l1} at ${v1} and ${l2} at ${v2}? Because those are excellent.`,
     ];
     const HF_ONE_WIN = [
         (label, val) => `Your ${label} at ${val} was outstanding!`,
         (label, val) => `${label} at ${val}? That's what I'm talking about!`,
         (label, val) => `Killed it on ${label} at ${val} this week!`,
+        (label, val) => `Your ${label} coming in at ${val} is seriously impressive.`,
+        (label, val) => `${label} at ${val} was the highlight of your week and it deserves a callout.`,
+        (label, val) => `I saw your ${label} at ${val} and honestly just wanted to say great job.`,
+        (label, val) => `That ${label} number at ${val}? Chef's kiss.`,
+        (label, val) => `${label} at ${val} tells me everything about how you showed up this week.`,
+        (label, val) => `Huge props on ${label} at ${val}. That's no small thing.`,
+        (label, val) => `Let's be real, ${label} at ${val} is just flat out good.`,
     ];
     const HF_NO_WINS = [
         'I wanted to recognize your effort this week. You showed up and put in the work, and that matters.',
         'Just want you to know I see the grind. Keep at it.',
         'Appreciate the effort you put in this week. It doesn\'t go unnoticed.',
+        'The numbers are one thing, but showing up every day is the foundation. You did that.',
+        'I wanted to take a sec to acknowledge your work this week. It matters more than you think.',
+        'Not every week is going to be flashy, but the work ethic you bring is what builds a great track record.',
+        'I see you out there putting in the work. That consistency is going to pay off.',
+        'Wanted to make sure you know that the effort hasn\'t gone unnoticed. Keep going.',
     ];
     const HF_EXTRAS = [
         extras => `On top of that, ${extras}... you're on a roll!`,
         extras => `And ${extras} too? You're firing on all cylinders.`,
         extras => `Plus ${extras}. Just an all-around great week.`,
         extras => `Not to mention ${extras}. Seriously impressive.`,
+        extras => `Oh and did I mention ${extras}? Because yeah, that happened too.`,
+        extras => `Throw in ${extras} and you've basically had the perfect week.`,
+        extras => `As if that wasn't enough, ${extras} also hit.`,
+        extras => `And to top it all off, ${extras}. What a week.`,
+        extras => `Then there's ${extras} on top of everything else. You went off.`,
+        extras => `Can't forget about ${extras} either. Just stacking wins.`,
     ];
     const HF_CONSISTENCY = [
         (on, total) => `${on} out of ${total} metrics hitting target, that's consistency right there.`,
         (on, total) => `${on} of ${total} metrics on target. That's not luck, that's discipline.`,
         (on, total) => `Hitting target on ${on} out of ${total} metrics. Consistency is your thing.`,
+        (on, total) => `${on} of ${total} at or above target. You're dialed in across the board.`,
+        (on, total) => `When ${on} out of ${total} metrics are hitting, that tells me you're doing things right.`,
+        (on, total) => `${on} of ${total} on target? That's what we call well-rounded performance.`,
+        (on, total) => `Landing ${on} out of ${total} metrics shows real balance. That's hard to do.`,
+        (on, total) => `${on} of ${total} on target. That doesn't happen by accident. You're putting in the work everywhere.`,
     ];
     const HF_CLOSERS = [
         'Proud of you. Enjoy your weekend!',
@@ -121,6 +239,15 @@
         'Enjoy the weekend, you deserve it!',
         'Great week. Go relax, you\'ve earned it!',
         'Awesome job. Have a good one!',
+        'Seriously, great work. Now go enjoy your days off.',
+        'Take this good energy into the weekend. You crushed it.',
+        'That\'s a wrap on a great week. Rest up and recharge.',
+        'Way to finish the week strong. See you Monday.',
+        'Go do something fun this weekend, you earned it.',
+        'Nothing left to say except well done. Have a great one.',
+        'I love ending the week on a high note like this. Enjoy!',
+        'Couldn\'t be happier with how this week went. Relax and come back refreshed.',
+        'Heck of a week. Go enjoy it.',
     ];
     // Monthly review phrases
     const MO_GREETINGS = [
@@ -128,80 +255,166 @@
         (name, month) => `${name}! Let's look at how ${month} went.`,
         (name, month) => `Hey ${name}, wrapping up ${month} for you.`,
         (name, month) => `${name}, your ${month} numbers are in. Let's talk about it.`,
+        (name, month) => `${name}, ${month} is in the books. Here's the summary.`,
+        (name, month) => `Alright ${name}, let's break down your ${month}.`,
+        (name, month) => `Hey ${name}, wanted to walk you through your ${month} numbers.`,
+        (name, month) => `${name}! Just finished reviewing your ${month} data.`,
+        (name, month) => `${name}, here's how ${month} played out for you.`,
+        (name, month) => `Quick ${month} recap for you, ${name}.`,
+        (name, month) => `Hey ${name}, got your ${month} wrap-up ready.`,
     ];
     const MO_JUMP = [
         (label, delta, range) => `Big month for ${label}, ${delta}! (${range})`,
         (label, delta, range) => `${label} moved nicely this month, ${delta}. (${range})`,
         (label, delta, range) => `Standout improvement: ${label} at ${delta}. (${range})`,
+        (label, delta, range) => `${label} really picked up steam, ${delta}. (${range})`,
+        (label, delta, range) => `Loved watching ${label} trend up this month, ${delta}. (${range})`,
+        (label, delta, range) => `Your ${label} growth was impressive, ${delta}. (${range})`,
+        (label, delta, range) => `${label} at ${delta} was the big story of the month. (${range})`,
+        (label, delta, range) => `The progress on ${label} speaks for itself, ${delta}. (${range})`,
     ];
     const MO_TWO_WINS = [
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} were strong all month.`,
         (l1, v1, l2, v2) => `Consistently solid on ${l1} (${v1}) and ${l2} (${v2}).`,
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Month-long wins right there.`,
+        (l1, v1, l2, v2) => `You held it down on ${l1} (${v1}) and ${l2} (${v2}) all month.`,
+        (l1, v1, l2, v2) => `Two highlights for the month: ${l1} at ${v1} and ${l2} at ${v2}.`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} paired with ${l2} at ${v2} is a really strong combo.`,
+        (l1, v1, l2, v2) => `Great to see ${l1} (${v1}) and ${l2} (${v2}) both sustain all month.`,
+        (l1, v1, l2, v2) => `The fact that you kept ${l1} at ${v1} and ${l2} at ${v2} for a full month is impressive.`,
     ];
     const MO_ONE_WIN = [
         (label, val) => `${label} at ${val} was a highlight for the month.`,
         (label, val) => `Really solid month on ${label} at ${val}.`,
+        (label, val) => `Your ${label} at ${val} stood out this month.`,
+        (label, val) => `${label} coming in at ${val} for the month is a win.`,
+        (label, val) => `Got to hand it to you on ${label} at ${val} this month.`,
+        (label, val) => `${label} at ${val}? That's a month well spent.`,
+        (label, val) => `The work on ${label} paid off this month, ${val} is great.`,
+        (label, val) => `${label} at ${val} was one of the best numbers I saw this month.`,
     ];
     const MO_NO_WINS = [
         'This month was a grind but I see the effort.',
         'Not the month we wanted, but we\'re going to build on it.',
         'Tough month, but we\'ve got a clean slate ahead.',
+        'Some months are like this. What matters is how we respond next month.',
+        'I know this wasn\'t the month you were hoping for. Let\'s use it as fuel.',
+        'The numbers were tough this month, but I\'ve seen what you\'re capable of.',
+        'Not every month is going to be a win, and that\'s reality. Let\'s regroup.',
+        'We\'ll look back on this month as the one that set up the next breakthrough.',
     ];
     const MO_FOCUS = [
         (label, val, target) => `Heading into next month, let's target ${label} (${val} vs goal of ${target}).`,
         (label, val, target) => `For next month, the priority is ${label} (sitting at ${val}, target ${target}).`,
         (label, val, target) => `Main focus going forward: ${label} at ${val}, we need ${target}.`,
+        (label, val, target) => `The game plan for next month starts with ${label}. Currently ${val}, goal is ${target}.`,
+        (label, val, target) => `If we nail one thing next month, let it be ${label} (${val} vs ${target}).`,
+        (label, val, target) => `I want us to put real energy into ${label} next month. At ${val}, shooting for ${target}.`,
+        (label, val, target) => `Next month's mission: get ${label} from ${val} closer to ${target}.`,
+        (label, val, target) => `The biggest opportunity I see? ${label} at ${val}. Target is ${target} and I know you can close that gap.`,
     ];
     const MO_CONSISTENCY = [
         (on, total) => `You hit target on ${on} of ${total} metrics for the month.`,
         (on, total) => `${on} out of ${total} metrics at or above target this month.`,
+        (on, total) => `Landing ${on} of ${total} on target for the month shows solid consistency.`,
+        (on, total) => `${on} of ${total} metrics where they need to be. That's a good month.`,
+        (on, total) => `Across ${total} metrics, ${on} hit target. That's the kind of balance I like to see.`,
+        (on, total) => `You were on target for ${on} out of ${total} metrics this month. Steady work.`,
     ];
     const MO_CLOSERS = [
         'Let\'s carry this into next month. I\'m here if you want to go over anything.',
         'Solid month overall. Let me know if you want to sit down and talk through it.',
         'Good work this month. Let\'s keep building.',
         'On to the next one. Reach out if you need anything.',
+        'Fresh month ahead. Let\'s make it count.',
+        'Appreciate the work this month. Let me know how I can help going forward.',
+        'That wraps up the month. My door is always open.',
+        'Here\'s to an even better month ahead. I\'m in your corner.',
+        'Thanks for the effort this month. Let\'s keep the conversation going.',
+        'New month, new opportunities. Let\'s go.',
     ];
     const QTR_GREETINGS = [
-        (name, quarter) => `Hey ${name}! Here\'s your ${quarter} recap.`,
-        (name, quarter) => `${name}, let\'s look at how ${quarter} shaped up.`,
+        (name, quarter) => `Hey ${name}! Here's your ${quarter} recap.`,
+        (name, quarter) => `${name}, let's look at how ${quarter} shaped up.`,
         (name, quarter) => `Hey ${name}, wrapping up ${quarter} for you.`,
-        (name, quarter) => `${name}, your ${quarter} numbers are in. Let\'s talk about it.`,
+        (name, quarter) => `${name}, your ${quarter} numbers are in. Let's talk about it.`,
+        (name, quarter) => `${name}! ${quarter} is officially in the books.`,
+        (name, quarter) => `Alright ${name}, here's the ${quarter} breakdown.`,
+        (name, quarter) => `${name}, wanted to share your ${quarter} review with you.`,
+        (name, quarter) => `Hey ${name}, just put together your ${quarter} summary.`,
+        (name, quarter) => `${name}, let me walk you through how ${quarter} went.`,
+        (name, quarter) => `Quick ${quarter} debrief for you, ${name}.`,
+        (name, quarter) => `${name}! Big picture look at your ${quarter} right here.`,
     ];
     const QTR_JUMP = [
         (label, delta, range) => `Big quarter for ${label}, ${delta}! (${range})`,
         (label, delta, range) => `${label} moved nicely this quarter, ${delta}. (${range})`,
         (label, delta, range) => `Standout improvement: ${label} at ${delta}. (${range})`,
+        (label, delta, range) => `${label} really came alive this quarter, ${delta}. (${range})`,
+        (label, delta, range) => `Over the quarter, ${label} grew by ${delta}. (${range}) That's real progress.`,
+        (label, delta, range) => `Your ${label} improvement of ${delta} was the story of the quarter. (${range})`,
+        (label, delta, range) => `The trajectory on ${label} this quarter was great, ${delta}. (${range})`,
+        (label, delta, range) => `${label} at ${delta} over the quarter shows sustained effort. (${range})`,
     ];
     const QTR_TWO_WINS = [
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} were strong all quarter.`,
         (l1, v1, l2, v2) => `Consistently solid on ${l1} (${v1}) and ${l2} (${v2}).`,
         (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Quarter-long wins right there.`,
+        (l1, v1, l2, v2) => `Sustained excellence on ${l1} (${v1}) and ${l2} (${v2}) all quarter.`,
+        (l1, v1, l2, v2) => `Two metrics that really defined your quarter: ${l1} at ${v1} and ${l2} at ${v2}.`,
+        (l1, v1, l2, v2) => `Keeping ${l1} at ${v1} and ${l2} at ${v2} for a full quarter is no small feat.`,
+        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} over three months? That's consistency.`,
+        (l1, v1, l2, v2) => `Your ${l1} (${v1}) and ${l2} (${v2}) were rock solid all quarter long.`,
     ];
     const QTR_ONE_WIN = [
         (label, val) => `${label} at ${val} was a highlight for the quarter.`,
         (label, val) => `Really solid quarter on ${label} at ${val}.`,
+        (label, val) => `${label} at ${val} over the full quarter is genuinely impressive.`,
+        (label, val) => `Your ${label} at ${val} was one of the standout numbers for the quarter.`,
+        (label, val) => `Got to recognize ${label} at ${val}. That kind of sustained performance is hard.`,
+        (label, val) => `${label} at ${val} for the quarter tells me you were locked in.`,
+        (label, val) => `${label} finishing the quarter at ${val}? That's great work.`,
+        (label, val) => `The consistency you showed on ${label} at ${val} this quarter was notable.`,
     ];
     const QTR_NO_WINS = [
         'This quarter was a grind but I see the effort.',
         'Not the quarter we wanted, but we\'re going to build on it.',
         'Tough quarter, but we\'ve got a clean slate ahead.',
+        'Some quarters test you. This was one of those. Let\'s come back stronger.',
+        'I appreciate the fight you put up this quarter even when the numbers were tough.',
+        'The effort was there this quarter. Let\'s channel it into results next time.',
+        'We learn the most from the hard quarters. Let\'s use this one.',
+        'Not the outcome we were after, but I\'m confident the next quarter tells a different story.',
     ];
     const QTR_FOCUS = [
-        (label, val, target) => `Heading into next quarter, let\'s target ${label} (${val} vs goal of ${target}).`,
+        (label, val, target) => `Heading into next quarter, let's target ${label} (${val} vs goal of ${target}).`,
         (label, val, target) => `For next quarter, the priority is ${label} (sitting at ${val}, target ${target}).`,
         (label, val, target) => `Main focus going forward: ${label} at ${val}, we need ${target}.`,
+        (label, val, target) => `The game plan for next quarter centers on ${label}. Currently ${val}, goal is ${target}.`,
+        (label, val, target) => `If there's one thing to own next quarter, it's ${label} at ${val}. Target is ${target}.`,
+        (label, val, target) => `I want ${label} to be the story of next quarter. We're at ${val}, let's push for ${target}.`,
+        (label, val, target) => `Next quarter starts with a focus on ${label}. Right now it's ${val}, we're aiming for ${target}.`,
+        (label, val, target) => `The biggest lever I see for next quarter is ${label} (${val} today, ${target} is where we want to be).`,
     ];
     const QTR_CONSISTENCY = [
         (on, total) => `You hit target on ${on} of ${total} metrics for the quarter.`,
         (on, total) => `${on} out of ${total} metrics at or above target this quarter.`,
+        (on, total) => `${on} of ${total} on target for a full quarter. That's discipline.`,
+        (on, total) => `Across ${total} metrics over three months, ${on} stayed on target. Well done.`,
+        (on, total) => `Finishing the quarter with ${on} of ${total} metrics on target shows real steadiness.`,
+        (on, total) => `${on} out of ${total} hitting target over the quarter. That kind of consistency matters.`,
     ];
     const QTR_CLOSERS = [
         'Let\'s carry this into next quarter. I\'m here if you want to go over anything.',
         'Solid quarter overall. Let me know if you want to sit down and talk through it.',
         'Good work this quarter. Let\'s keep building.',
         'On to the next one. Reach out if you need anything.',
+        'New quarter, fresh start. Let\'s make it a good one.',
+        'Appreciate everything you brought this quarter. I\'m here if you want to talk.',
+        'That\'s the quarter in review. Looking forward to what\'s next.',
+        'Here\'s to an even stronger quarter ahead. You\'ve got this.',
+        'Thanks for your work this quarter. Let\'s keep pushing forward together.',
+        'Quarter\'s done. Let\'s recharge and come back swinging.',
     ];
 
     // --- Data helpers ---
