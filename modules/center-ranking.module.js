@@ -557,7 +557,7 @@
 
             var scoreColor = function (s) {
                 if (s === 3) return '#2e7d32';
-                if (s === 2) return '#f57f17';
+                if (s === 2) return '#8bc34a';
                 return '#c62828';
             };
 
