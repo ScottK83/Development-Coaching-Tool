@@ -2443,9 +2443,7 @@ function handleTestPastedDataClick() {
 
         if (preview) {
             preview.style.display = 'block';
-            preview.style.background = '#d4edda';
-            preview.style.border = '2px solid #28a745';
-            preview.style.color = '#155724';
+            preview.className = 'validation-success';
             preview.innerHTML = `
                 ✅ <strong>Test Upload Passed (No Save Performed)</strong><br>
                 📅 Parse window: ${dateLabel}<br>
@@ -3648,6 +3646,15 @@ function normalizeTeamMembersForExistingWeeks() {
         const safeMembers = Array.isArray(members) ? members.map(name => String(name || '').trim()).filter(Boolean) : [];
         const filteredMembers = safeMembers.filter(name => validEmployees.has(name));
         normalized[weekKey] = filteredMembers;
+    });
+
+    // Auto-seed new week keys with DEFAULT_TEAM_MEMBERS so only your team is checked
+    validWeekKeys.forEach(function(weekKey) {
+        if (normalized[weekKey] && normalized[weekKey].length > 0) return;
+        var weekEmployees = (weeklyData[weekKey]?.employees || []).map(function(emp) { return String(emp?.name || '').trim(); }).filter(Boolean);
+        var weekSet = new Set(weekEmployees);
+        var seeded = DEFAULT_TEAM_MEMBERS.filter(function(name) { return weekSet.has(name); });
+        if (seeded.length > 0) normalized[weekKey] = seeded;
     });
 
     myTeamMembers = normalized;
