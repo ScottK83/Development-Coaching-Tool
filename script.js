@@ -857,6 +857,7 @@ function getTeamMembersForWeek(weekKey) {
     // Fall back to default team roster
     return DEFAULT_TEAM_MEMBERS;
 }
+window.getDefaultTeamMembers = function() { return DEFAULT_TEAM_MEMBERS; };
 function isTeamMember(weekKey, employeeName) {
     const members = getTeamMembersForWeek(weekKey);
     return members.length === 0 || members.includes(employeeName);

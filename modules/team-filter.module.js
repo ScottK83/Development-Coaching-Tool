@@ -86,6 +86,8 @@
             }
         });
         if (bestKey) return members[bestKey];
+        // Fall back to DEFAULT_TEAM_MEMBERS from script.js
+        if (typeof window.getDefaultTeamMembers === 'function') return window.getDefaultTeamMembers();
         return [];
     }
 
