@@ -6393,6 +6393,16 @@ function setAppVersionLabel(statusSuffix = '') {
 
 async function bootAppSafely() {
     setAppVersionLabel();
+
+    // Guarantee the UI is interactive regardless of what happens inside initApp.
+    // Event handlers and section restore MUST succeed even on a fatal startup error.
+    try { initializeEventHandlers(); } catch (e) { console.error('Early handler binding failed:', e); }
+    try { initializeKeyboardShortcuts(); } catch (e) { console.error('Early keyboard shortcut binding failed:', e); }
+    try { restoreLastViewedSection(); } catch (e) {
+        // Fallback: just show the dashboard
+        try { showOnlySection('dashboardSection'); } catch (_) {}
+    }
+
     try {
         await initApp();
         window.__appBootOk = true;
