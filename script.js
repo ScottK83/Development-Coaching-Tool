@@ -1114,13 +1114,18 @@ window.saveEmployeePreferredName = function(fullName) {
     renderEmployeesList();
 }
 
-// One-time seed: Miranda's team
-(function seedMirandaTeam() {
-    if (localStorage.getItem('devCoachingTool_supervisorSeeded_miranda')) return;
-    var mirandaAgents = ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor', 'Joann', 'Erika', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina Williams', 'Kassandra'];
+// One-time supervisor seeds
+(function seedSupervisorTeams() {
+    var seeds = [
+        { key: 'miranda', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor', 'Joann', 'Erika', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina Williams', 'Kassandra'] },
+        { key: 'kathy', supervisor: 'Kathy Cruz', agents: ['Michelle', 'Cordova', 'Erb', 'Frank', 'April Gonzalez', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul Sebastian', 'Dillon'] },
+        { key: 'angie', supervisor: 'Angie Delgado', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah', 'Dawn Martinez', 'Rachel', 'Ariell', 'Brandi', 'Cindy', 'Alexandra Rangel', 'Chrsti-Ann Thompson', 'Alejandra Valdez', 'Lonia', 'Crystal Vill'] }
+    ];
+    var needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
+    if (needsRun.length === 0) return;
+
     var existing = {};
     try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) {}
-    // Match against known employees using first-name prefix matching
     var allEmps = {};
     try {
         var wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
@@ -1134,16 +1139,20 @@ window.saveEmployeePreferredName = function(fullName) {
         });
     } catch (_e) {}
     var empNames = Object.keys(allEmps);
-    mirandaAgents.forEach(function(agent) {
-        // Try exact match first, then first-name match
-        var match = empNames.find(function(e) { return e === agent; });
-        if (!match) match = empNames.find(function(e) { return e.split(' ')[0].toLowerCase() === agent.split(' ')[0].toLowerCase(); });
-        if (match && !existing[match]) {
-            existing[match] = 'Miranda';
-        }
+
+    needsRun.forEach(function(seed) {
+        seed.agents.forEach(function(agent) {
+            var match = empNames.find(function(e) { return e === agent; });
+            if (!match) match = empNames.find(function(e) { return e.toLowerCase() === agent.toLowerCase(); });
+            if (!match) match = empNames.find(function(e) { return e.split(' ')[0].toLowerCase() === agent.split(' ')[0].toLowerCase(); });
+            if (!match) match = empNames.find(function(e) { var parts = e.split(' '); return parts.length > 1 && parts[parts.length - 1].toLowerCase() === agent.toLowerCase(); });
+            if (match && !existing[match]) {
+                existing[match] = seed.supervisor;
+            }
+        });
+        localStorage.setItem('devCoachingTool_supervisorSeeded_' + seed.key, '1');
     });
     localStorage.setItem('devCoachingTool_employeeSupervisors', JSON.stringify(existing));
-    localStorage.setItem('devCoachingTool_supervisorSeeded_miranda', '1');
 })();
 
 function getEmployeeSupervisors() {
