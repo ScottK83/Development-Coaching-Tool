@@ -81,6 +81,7 @@
 
     var _selectedPeriodKey = null;
     var _selectedPeriodSource = null;
+    var _matchupPeriodInitialized = false;
 
     // Metric definitions for matchup comparison
     // Each has: key (values obj key), label, lowerIsBetter flag, formatKey (for formatMetricDisplay)
@@ -275,6 +276,17 @@
     function renderMatchup() {
         var container = document.getElementById('subSectionTaMatchup');
         if (!container) return;
+
+        // Default to most recent YTD period on first render
+        if (!_matchupPeriodInitialized) {
+            _matchupPeriodInitialized = true;
+            var periods = _getAvailablePeriods();
+            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd'; });
+            if (ytdPeriod) {
+                _selectedPeriodKey = ytdPeriod.key;
+                _selectedPeriodSource = ytdPeriod.source || '';
+            }
+        }
 
         var currentSelectValue = _selectedPeriodKey ? (_selectedPeriodKey + '||' + _selectedPeriodSource) : '';
 

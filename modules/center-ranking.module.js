@@ -57,6 +57,7 @@
 
     // ── Period selector ──
     var _selectedRankingPeriodKey = null;
+    var _rankingPeriodInitialized = false;
 
     function _getAvailableRankingPeriods() {
         var periods = [];
@@ -406,6 +407,14 @@
     function renderCenterRanking() {
         var container = document.getElementById('centerRankingContent');
         if (!container) return;
+
+        // Default to most recent YTD period on first render
+        if (!_rankingPeriodInitialized) {
+            _rankingPeriodInitialized = true;
+            var periods = _getAvailableRankingPeriods();
+            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd'; });
+            if (ytdPeriod) _selectedRankingPeriodKey = ytdPeriod.key;
+        }
 
         var currentSelectValue = _selectedRankingPeriodKey || '';
 
