@@ -5325,6 +5325,39 @@ function getTrendSelectedEmployee() {
     return document.getElementById('trendEmployeeSelector')?.value || '';
 }
 
+function syncTrendCadenceQuickButtons() {
+    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
+    document.querySelectorAll('#trendCadenceQuickSelect .trend-cadence-btn').forEach(btn => {
+        const isActive = btn.dataset.period === periodType;
+        btn.style.background = isActive ? '#2f4f87' : '#ffffff';
+        btn.style.color = isActive ? '#ffffff' : '#2f4f87';
+        btn.style.borderColor = isActive ? '#2f4f87' : '#bfd6fb';
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function openTrendDrilldownForAssociate(associateName) {
+    const name = String(associateName || '').trim();
+    if (!name) return;
+
+    const employeeSelect = document.getElementById('trendEmployeeSelector');
+    if (!employeeSelect) return;
+
+    let option = Array.from(employeeSelect.options).find(opt => opt.value === name);
+    if (!option) {
+        option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        employeeSelect.appendChild(option);
+    }
+
+    employeeSelect.value = name;
+    renderTrendIntelligence();
+    renderTrendVisualizations();
+    renderCoachingImpactTracker();
+    showToast(`Drilled into ${name}`, 2200);
+}
+
 function buildTrendAiExplainPrompt() {
     const selectedEmployee = getTrendSelectedEmployee();
     const keys = getWeeklyKeysSorted();
@@ -5526,12 +5559,26 @@ function initializeTrendIntelligence() {
 
     // Attach event listeners once
     if (!trendIntelligenceListenersAttached) {
+        document.getElementById('trendCadenceQuickSelect')?.addEventListener('click', (event) => {
+            const button = event.target.closest('.trend-cadence-btn');
+            if (!button) return;
+            const periodType = button.dataset.period;
+            const periodSelect = document.getElementById('trendPeriodSelector');
+            if (!periodSelect || !periodType) return;
+
+            periodSelect.value = periodType;
+            syncTrendCadenceQuickButtons();
+            renderTrendIntelligence();
+            renderTrendVisualizations();
+        });
+
         document.getElementById('refreshTrendsBtn')?.addEventListener('click', () => {
             renderTrendIntelligence();
             renderTrendVisualizations();
         });
 
         document.getElementById('trendPeriodSelector')?.addEventListener('change', () => {
+            syncTrendCadenceQuickButtons();
             renderTrendIntelligence();
             renderTrendVisualizations();
         });
@@ -5554,10 +5601,16 @@ function initializeTrendIntelligence() {
             launchTrendCopilotPrompt(buildTrendAiGoalPrompt(), 'Select an associate to generate a 30-day goal');
         });
         document.getElementById('copyTrendCadenceBtn')?.addEventListener('click', copyTrendCadenceTracker);
+        document.getElementById('trendIntelligenceOutput')?.addEventListener('click', (event) => {
+            const button = event.target.closest('.trend-drilldown-btn[data-trend-associate]');
+            if (!button) return;
+            openTrendDrilldownForAssociate(button.getAttribute('data-trend-associate'));
+        });
         trendIntelligenceListenersAttached = true;
     }
 
     setTrendFocusMode(trendIntelligenceFocusMode);
+    syncTrendCadenceQuickButtons();
 
     // Initial render of visualizations
     renderTrendVisualizations();

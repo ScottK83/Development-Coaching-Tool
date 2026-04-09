@@ -6,6 +6,12 @@
         return typeof fn === 'function' ? fn(val) : String(val ?? '');
     }
 
+    function _escAttr(val) {
+        return _esc(val)
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getFilteredEmployees(week, options = {}) {
         const allEmployees = Array.isArray(week?.employees) ? week.employees : [];
         const includeFn = typeof options.isAssociateIncludedByTeamFilter === 'function'
@@ -450,8 +456,10 @@ Write the complete email.`;
         if (!names.length) return '';
         let html = `<div style="margin-bottom: 15px;">`;
         html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
-        html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor};">`;
-        html += names.join(', ');
+        html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor}; display: flex; gap: 8px; flex-wrap: wrap;">`;
+        names.forEach(name => {
+            html += `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" title="Open ${_esc(name)} trend detail" style="border: 1px solid ${borderColor}; background: #fff; color: #1f2f46; border-radius: 999px; padding: 6px 10px; font-size: 0.86em; font-weight: 600; cursor: pointer;">${_esc(name)}</button>`;
+        });
         html += `</div></div>`;
         return html;
     }
@@ -496,6 +504,10 @@ Write the complete email.`;
         html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
         html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
         html += buildGroupTrendNamedSectionHtml('✅ Consistent Performers:', '#1e88e5', '#e3f2fd', '#1e88e5', teamInsights.consistent);
+
+        html += `<div style="margin-top: 8px; margin-bottom: 15px; padding: 10px; background: #f7f9fc; border-radius: 6px; border: 1px solid #d9e2ef; color: #455a64; font-size: 0.9em;">`;
+        html += `<strong>Drill Down:</strong> click any associate above to jump into individual ${buckets.descriptor.shortLabel} insights.`;
+        html += `</div>`;
 
         html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
         html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;

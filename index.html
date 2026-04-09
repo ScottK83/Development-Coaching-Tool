@@ -122,7 +122,7 @@
 
                     </div>
                     <!-- Success message -->
-                    <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 2px solid #28a745; border-radius: 5px; color: #1a1a2e;">
+                    <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: var(--green-soft, #d4edda); border: 2px solid var(--green-text, #28a745); border-radius: 8px; color: var(--text-primary, #1a1a2e);">
                         <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
                         <p style="margin: 10px 0 0 0;">Click <strong>"📈 Metric Trends"</strong> at the top to generate trend emails.</p>
                         <div style="margin-top: 15px;">
@@ -1239,6 +1239,15 @@ Box 2 - Future Improvement Areas:
                             <!-- Current Mode Indicator -->
                             <div id="trendModeIndicator" style="padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; margin-bottom: 20px; font-weight: 600; display: none; text-align: center;">
                                 <span id="trendModeText">📊 Team-Wide Analysis Mode</span>
+                            </div>
+
+                            <div style="margin-bottom: 16px; padding: 12px; background: #f7faff; border: 1px solid #d9e8ff; border-radius: 8px;">
+                                <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">1) Choose Trend Cadence</div>
+                                <div id="trendCadenceQuickSelect" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button type="button" class="trend-cadence-btn" data-period="dod" style="padding: 9px 14px; border-radius: 999px; border: 1px solid #bfd6fb; background: #ffffff; color: #2f4f87; font-weight: 700; cursor: pointer;">DoD</button>
+                                    <button type="button" class="trend-cadence-btn" data-period="wow" style="padding: 9px 14px; border-radius: 999px; border: 1px solid #bfd6fb; background: #ffffff; color: #2f4f87; font-weight: 700; cursor: pointer;">WoW</button>
+                                    <button type="button" class="trend-cadence-btn" data-period="mom" style="padding: 9px 14px; border-radius: 999px; border: 1px solid #bfd6fb; background: #ffffff; color: #2f4f87; font-weight: 700; cursor: pointer;">MoM</button>
+                                </div>
                             </div>
 
                             <!-- Period & Employee Selection -->
