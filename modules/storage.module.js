@@ -38,6 +38,72 @@
         }
     }
 
+    function normalizeTransferPercentageValue(transfers, transfersCount, totalCalls) {
+        const parsedTransfers = parseFloat(transfers);
+        const parsedTransfersCount = parseInt(transfersCount, 10);
+        const parsedTotalCalls = parseInt(totalCalls, 10);
+
+        if (!Number.isFinite(parsedTransfers)) return transfers;
+        if (!Number.isFinite(parsedTransfersCount) || !Number.isFinite(parsedTotalCalls) || parsedTransfersCount < 0 || parsedTotalCalls <= 0) {
+            return parseFloat(parsedTransfers.toFixed(2));
+        }
+
+        const derivedTransfers = parseFloat(((parsedTransfersCount / parsedTotalCalls) * 100).toFixed(2));
+        const largeMismatch = Math.abs(parsedTransfers - derivedTransfers) >= 20;
+        const ratioMismatch = derivedTransfers > 0 && (parsedTransfers / derivedTransfers) >= 10;
+
+        if (largeMismatch && ratioMismatch) {
+            return derivedTransfers;
+        }
+
+        return parseFloat(parsedTransfers.toFixed(2));
+    }
+
+    function normalizeEmployeeMetricRow(employee) {
+        if (!employee || typeof employee !== 'object') return employee;
+
+        const normalizedTransfers = normalizeTransferPercentageValue(
+            employee.transfers,
+            employee.transfersCount,
+            employee.totalCalls
+        );
+
+        if (normalizedTransfers === employee.transfers) {
+            return employee;
+        }
+
+        return {
+            ...employee,
+            transfers: normalizedTransfers
+        };
+    }
+
+    function normalizePeriodEmployees(period) {
+        if (!period || !Array.isArray(period.employees)) return period;
+
+        let changed = false;
+        const employees = period.employees.map(employee => {
+            const normalized = normalizeEmployeeMetricRow(employee);
+            if (normalized !== employee) changed = true;
+            return normalized;
+        });
+
+        return changed ? { ...period, employees } : period;
+    }
+
+    function normalizeStoredDataSet(data) {
+        if (!data || typeof data !== 'object') return {};
+
+        let changed = false;
+        const normalized = Object.fromEntries(Object.entries(data).map(([key, period]) => {
+            const normalizedPeriod = normalizePeriodEmployees(period);
+            if (normalizedPeriod !== period) changed = true;
+            return [key, normalizedPeriod];
+        }));
+
+        return changed ? normalized : data;
+    }
+
     // ============================================
     // WEEKLY DATA
     // ============================================
@@ -48,13 +114,17 @@
             const saved = localStorage.getItem(namespacedKey);
             if (saved) {
                 const data = JSON.parse(saved);
-                return data && typeof data === 'object' ? data : {};
+                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
+                if (normalizedData !== data) {
+                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                }
+                return normalizedData;
             }
 
             const legacySaved = localStorage.getItem('weeklyData');
             if (legacySaved) {
                 const legacyData = JSON.parse(legacySaved);
-                const normalizedData = legacyData && typeof legacyData === 'object' ? legacyData : {};
+                const normalizedData = normalizeStoredDataSet(legacyData && typeof legacyData === 'object' ? legacyData : {});
                 localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
                 return normalizedData;
             }
@@ -88,7 +158,11 @@
             const saved = localStorage.getItem(namespacedKey);
             if (saved) {
                 const data = JSON.parse(saved);
-                return data && typeof data === 'object' ? data : {};
+                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
+                if (normalizedData !== data) {
+                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                }
+                return normalizedData;
             }
             return {};
         } catch (error) {

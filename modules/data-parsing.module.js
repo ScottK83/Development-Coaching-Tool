@@ -220,6 +220,27 @@
         return parseFloat(parsed.toFixed(2));
     }
 
+    function normalizeTransfersPercentage(transfers, transfersCount, totalCalls) {
+        const parsedTransfers = parseFloat(transfers);
+        const parsedTransfersCount = parseInt(transfersCount, 10);
+        const parsedTotalCalls = parseInt(totalCalls, 10);
+
+        if (!Number.isFinite(parsedTransfers)) return 0;
+        if (!Number.isFinite(parsedTransfersCount) || !Number.isFinite(parsedTotalCalls) || parsedTransfersCount < 0 || parsedTotalCalls <= 0) {
+            return parseFloat(parsedTransfers.toFixed(2));
+        }
+
+        const derivedTransfers = parseFloat(((parsedTransfersCount / parsedTotalCalls) * 100).toFixed(2));
+        const largeMismatch = Math.abs(parsedTransfers - derivedTransfers) >= 20;
+        const ratioMismatch = derivedTransfers > 0 && (parsedTransfers / derivedTransfers) >= 10;
+
+        if (largeMismatch && ratioMismatch) {
+            return derivedTransfers;
+        }
+
+        return parseFloat(parsedTransfers.toFixed(2));
+    }
+
     function parseSurveyPercentage(value) {
         if (!value && value !== 0) return '';
         if (value === 'N/A' || value === 'n/a' || value === '') return '';
@@ -538,6 +559,9 @@
                 ? parsedTotalCalls
                 : (surveyTotal > 0 ? surveyTotal : 0);
             
+            const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers)) || 0;
+            const parsedTransfersCount = parseInt(getCell(cells, colMap.transfersCount), 10) || 0;
+
             const employeeData = {
                 name: displayName,
                 firstName: firstName,
@@ -546,8 +570,8 @@
                 fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
                 overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
                 overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
-                transfers: parsePercentage(getCell(cells, colMap.transfers)) || 0,
-                transfersCount: parseInt(getCell(cells, colMap.transfersCount)) || 0,
+                transfers: normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls),
+                transfersCount: parsedTransfersCount,
                 aht: parseSeconds(getCell(cells, colMap.aht)) || '',
                 talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
                 acw: parseSeconds(getCell(cells, colMap.acw)),
