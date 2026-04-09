@@ -90,7 +90,7 @@
         { key: 'adherence',        label: 'Adherence',       lowerIsBetter: false, formatKey: 'scheduleAdherence' },
         { key: 'sentiment',        label: 'Sentiment',       lowerIsBetter: false, formatKey: 'overallSentiment' },
         { key: 'associateOverall', label: 'Assoc Overall',   lowerIsBetter: false, formatKey: 'cxRepOverall' },
-        { key: 'reliability',      label: 'Reliability',     lowerIsBetter: true,  formatKey: 'reliability', isTopLevel: true }
+        { key: 'reliability',      label: 'Reliability',     lowerIsBetter: true,  formatKey: 'reliability', isTopLevel: true, aggregate: 'sum' }
     ];
 
     /**
@@ -160,7 +160,8 @@
                 }).filter(function (v) { return v !== null && v !== undefined && !isNaN(v); });
 
                 if (vals.length > 0) {
-                    stats.averages[m.key] = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+                    var total = vals.reduce(function (a, b) { return a + b; }, 0);
+                    stats.averages[m.key] = m.aggregate === 'sum' ? total : total / vals.length;
                 } else {
                     stats.averages[m.key] = null;
                 }
