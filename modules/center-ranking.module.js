@@ -351,7 +351,7 @@
         rankings.forEach(function (r) {
             var ranks = r.metricRanks || {};
             var presentRanks = [];
-            ['aht', 'adherence', 'sentiment', 'associateOverall'].forEach(function (k) {
+            ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'].forEach(function (k) {
                 if (ranks[k] && ranks[k] > 0) presentRanks.push(ranks[k]);
             });
             r.compositeScore = presentRanks.length > 0
