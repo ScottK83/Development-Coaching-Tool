@@ -18,6 +18,9 @@
 
     // --- Phrase pools (randomized to avoid sounding templated) ---
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function getCurrentWeekdayName() {
+        return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    }
 
     const GREETINGS = [
         name => `Hey ${name}!`,
@@ -217,7 +220,7 @@
         name => `Hey ${name}, quick midweek update with some wins to celebrate.`,
         name => `${name}! We're halfway there and building strong. Quick look at the numbers. ⏱️`,
         name => `Checking in ${name} — the week is taking shape and you're in it.`,
-        name => `Hey ${name}, quick Wednesday update. Plenty to be proud of already. 📈`,
+        name => `Hey ${name}, quick ${getCurrentWeekdayName()} update. Plenty to be proud of already. 📈`,
         name => `${name}, midweek check — you're giving yourself a real shot this week.`,
         name => `Halfway through the week ${name}! Quick status update and some encouragement.`,
         name => `${name}! Real quick midweek look at the progress you've made.`,
