@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-09T17:14:19.890Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-04-09T17:14:41.717Z",
+  "reason": "team members updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-04-01|2026-04-06": {
@@ -13969,6 +13969,26 @@
       "Christi Martinez-Sharp"
     ],
     "2026-04-01|2026-04-06": [
+      "Robert Berrelleza",
+      "Kamella Dash",
+      "Alyssa Dimes",
+      "Desiree Clark",
+      "Sabrina Gage",
+      "Angelina Fierro",
+      "Esperanza Palomera",
+      "Matrece Muldrow",
+      "Destiny Cervantez",
+      "Esther Ramos",
+      "Jadyn Flowers",
+      "Kristin Villela",
+      "Erica Kallestewa",
+      "Betty Yanez",
+      "Oceane Ingram",
+      "James Garcia",
+      "Johnathan Padilla",
+      "Christi Martinez-Sharp"
+    ],
+    "2026-04-02|2026-04-08": [
       "Robert Berrelleza",
       "Kamella Dash",
       "Alyssa Dimes",
@@ -57040,7 +57060,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 220
+      "byteLength": 224
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -57074,8 +57094,8 @@
     },
     "devCoachingTool_myTeamMembers": {
       "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 685
+      "itemCount": 3,
+      "byteLength": 1027
     },
     "devCoachingTool_coachingHistory": {
       "valueType": "object",
