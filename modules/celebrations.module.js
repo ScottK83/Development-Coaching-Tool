@@ -24,8 +24,7 @@
         aht: { label: 'Average Handle Time', icon: '\u23F1\uFE0F', registry: 'aht' },
         adherence: { label: 'Schedule Adherence', icon: '\uD83D\uDCC5', registry: 'scheduleAdherence' },
         sentiment: { label: 'Overall Sentiment', icon: '\uD83D\uDCAD', registry: 'overallSentiment' },
-        associateOverall: { label: 'Rep Satisfaction', icon: '\uD83D\uDE0A', registry: 'cxRepOverall' },
-        reliability: { label: 'Reliability', icon: '\uD83C\uDFAF', registry: 'reliability' }
+        associateOverall: { label: 'Rep Satisfaction', icon: '\uD83D\uDE0A', registry: 'cxRepOverall' }
     };
 
     function _escapeHtml(str) {
@@ -178,22 +177,6 @@
 
             var achievements = [];
 
-            // Check composite rank
-            if (r.rank <= maxTier) {
-                var tier = getTierForRank(r.rank, tiers);
-                achievements.push({
-                    type: 'composite',
-                    key: 'composite',
-                    label: 'Overall Composite',
-                    icon: '\uD83C\uDFC6',
-                    rank: r.rank,
-                    tier: tier.value,
-                    tierLabel: tier.label,
-                    totalEmployees: data.totalEmployees,
-                    value: r.compositeScore.toFixed(1)
-                });
-            }
-
             // Check each individual metric rank
             Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
                 var metricRank = r.metricRanks?.[metricKey];
@@ -201,7 +184,7 @@
 
                 var meta = METRIC_RANK_LABELS[metricKey];
                 var tier = getTierForRank(metricRank, tiers);
-                var metricValue = metricKey === 'reliability' ? r.reliability : (r.values?.[metricKey] ?? null);
+                var metricValue = r.values?.[metricKey] ?? null;
 
                 achievements.push({
                     type: 'metric',
@@ -218,7 +201,6 @@
 
             if (achievements.length > 0) {
                 achievements.sort(function(a, b) {
-                    if (a.type !== b.type) return a.type === 'composite' ? -1 : 1;
                     return a.rank - b.rank;
                 });
                 results.push({
@@ -365,16 +347,16 @@
         function(name) { return '\uD83D\uDD25\uD83D\uDD25 ' + name + ' is on FIRE! \uD83D\uDD25\uD83D\uDD25'; }
     ];
 
-    var NUMBER_ONE_LINES = [
-        function(label) { return '\uD83E\uDD47 Ranked #1 in the ENTIRE center for ' + label + '!'; },
-        function(label) { return '\uD83D\uDC51 Number ONE out of everyone for ' + label + '!'; },
-        function(label) { return '\uD83C\uDFC6 THE top performer for ' + label + ' in the whole center!'; }
+    var ONLY_ONE_LINES = [
+        function(label) { return '\uD83E\uDD47 The ONLY associate to hit this for ' + label + '!'; },
+        function(label) { return '\uD83D\uDC51 Nobody else matched this ' + label + ' performance!'; },
+        function(label) { return '\uD83C\uDFC6 Stood alone at the top for ' + label + '!'; }
     ];
 
-    var TOP_LINES = [
-        function(label, rank, total) { return '\uD83C\uDFC5 Ranked #' + rank + ' out of ' + total + ' for ' + label + '!'; },
-        function(label, rank, total) { return '\u2B50 Top ' + rank + ' out of ' + total + ' in ' + label + '!'; },
-        function(label, rank, total) { return '\uD83D\uDCAA #' + rank + ' out of ' + total + ' in ' + label + '! That\'s elite!'; }
+    var STANDOUT_LINES = [
+        function(label) { return '\uD83C\uDFC5 Absolutely crushed it in ' + label + '!'; },
+        function(label) { return '\u2B50 Outstanding ' + label + ' performance!'; },
+        function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; }
     ];
 
     var SHOUTOUT_CLOSERS = [
@@ -391,7 +373,7 @@
         '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 SHOUT-OUT TIME! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89\n\nSome AMAZING performances from the team! Let\'s celebrate these wins:\n\n',
         '\uD83D\uDD25 TEAM WINS ALERT \uD83D\uDD25\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
         '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
-        '\uD83C\uDFC6 TOP PERFORMERS SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n'
+        '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n'
     ];
 
     var BATCH_CLOSERS = [
@@ -417,11 +399,16 @@
         lines.push(pick(SHOUTOUT_OPENERS)(person.firstName));
         lines.push('');
         person.achievements.forEach(function(a) {
-            var valStr = a.value !== null && a.value !== undefined ? ' (' + formatMetricValue(a.key, a.value) + ')' : '';
+            var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
             if (a.rank === 1) {
-                lines.push(pick(NUMBER_ONE_LINES)(a.label) + valStr);
+                lines.push(pick(ONLY_ONE_LINES)(a.label) + (valStr ? ' (' + valStr.trim() + ')' : ''));
             } else {
-                lines.push(pick(TOP_LINES)(a.label, a.rank, a.totalEmployees) + valStr);
+                // Lead with the fact/value
+                if (valStr) {
+                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!');
+                } else {
+                    lines.push(pick(STANDOUT_LINES)(a.label));
+                }
             }
         });
         if (dateRange) { lines.push(''); lines.push('\uD83D\uDCC5 ' + dateRange); }
@@ -438,11 +425,15 @@
             var emoji = person.achievements.some(function(a) { return a.rank === 1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
             msg += emoji + ' ' + person.firstName + '\n';
             person.achievements.forEach(function(a) {
-                var valStr = a.value !== null && a.value !== undefined ? ' (' + formatMetricValue(a.key, a.value) + ')' : '';
+                var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
                 if (a.rank === 1) {
-                    msg += '   \uD83E\uDD47 #1 in ' + a.label + valStr + '\n';
+                    msg += '   \uD83E\uDD47 Only one to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '') + '\n';
                 } else {
-                    msg += '   \u2B50 #' + a.rank + ' of ' + a.totalEmployees + ' in ' + a.label + valStr + '\n';
+                    if (valStr) {
+                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!\n';
+                    } else {
+                        msg += '   \u2B50 Outstanding ' + a.label + '!\n';
+                    }
                 }
             });
         });
@@ -475,11 +466,15 @@
         lines.push('I was looking at the numbers and I had to reach out because you are doing incredible things:');
         lines.push('');
         person.achievements.forEach(function(a) {
-            var valStr = a.value !== null && a.value !== undefined ? ' (' + formatMetricValue(a.key, a.value) + ')' : '';
+            var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
             if (a.rank === 1) {
-                lines.push('\uD83E\uDD47 You\'re ranked #1 in the entire center for ' + a.label + '!' + valStr);
+                lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : ''));
             } else {
-                lines.push('\uD83C\uDFC5 You\'re #' + a.rank + ' out of ' + a.totalEmployees + ' in ' + a.label + '!' + valStr);
+                if (valStr) {
+                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!');
+                } else {
+                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!');
+                }
             }
         });
         if (dateRange) { lines.push(''); lines.push('\uD83D\uDCC5 ' + dateRange); }
@@ -572,7 +567,7 @@
             html += '<div style="text-align:center; padding:60px 20px; color:#94a3b8;">';
             html += '<div style="font-size:3em; margin-bottom:16px;">\uD83C\uDFC6</div>';
             html += '<h3 style="color:#64748b; margin:0 0 8px 0;">No Celebrations for This Period</h3>';
-            html += '<p style="margin:0;">No team members ranked in the top ' + tiers[tiers.length - 1] + ' for the selected period.<br>Try a different period or adjust the threshold.</p>';
+            html += '<p style="margin:0;">No standout performances from team members for the selected period.<br>Try a different period or adjust the threshold.</p>';
             html += '</div>';
             container.innerHTML = html;
             bindCurrentViewControls(container);
@@ -599,25 +594,21 @@
         var html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">';
 
         celebrations.forEach(function(person) {
-            var bestRank = Math.min.apply(null, person.achievements.map(function(a) { return a.rank; }));
-            var bestBadge = getTierBadge(bestRank <= 1 ? 1 : bestRank <= 5 ? 5 : bestRank <= 10 ? 10 : bestRank);
-            var cardBorder = bestRank === 1 ? '#ffd700' : bestRank <= 5 ? '#c0c0c0' : '#cd7f32';
+            var hasOnlyOne = person.achievements.some(function(a) { return a.rank === 1; });
+            var cardBorder = hasOnlyOne ? '#ffd700' : '#667eea';
+            var cardGlow = hasOnlyOne ? '0 0 8px rgba(255,215,0,0.6)' : 'none';
 
-            html += '<div class="celebration-card" style="background:#fff; border-radius:10px; border:2px solid ' + cardBorder + '; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:' + bestBadge.glow + ';">';
+            html += '<div class="celebration-card" style="background:#fff; border-radius:10px; border:2px solid ' + cardBorder + '; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:' + cardGlow + ';">';
 
             // Header
             html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
             html += '<div style="font-weight:700; font-size:1.1em; color:#1a1a2e;">' + _escapeHtml(person.firstName) + '</div>';
             html += '<div style="display:flex; gap:4px;">';
-            var shownTiers = {};
-            person.achievements.forEach(function(a) {
-                var tierKey = a.rank === 1 ? 1 : a.tier;
-                if (!shownTiers[tierKey]) {
-                    shownTiers[tierKey] = true;
-                    var badge = getTierBadge(tierKey);
-                    html += '<span style="padding:3px 10px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:12px; font-size:0.8em; font-weight:700;">' + badge.text + '</span>';
-                }
-            });
+            if (hasOnlyOne) {
+                html += '<span style="padding:3px 10px; background:#ffd700; color:#7c5c00; border-radius:12px; font-size:0.8em; font-weight:700;">\uD83C\uDFC6 Only One!</span>';
+            } else {
+                html += '<span style="padding:3px 10px; background:#667eea; color:#fff; border-radius:12px; font-size:0.8em; font-weight:700;">\u2B50 Standout</span>';
+            }
             html += '</div></div>';
 
             // Date range
@@ -625,15 +616,23 @@
                 html += '<div style="font-size:0.8em; color:#64748b;">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</div>';
             }
 
-            // Achievement list
+            // Achievement list — fact-based, no ranking numbers
             html += '<div style="display:flex; flex-direction:column; gap:6px;">';
             person.achievements.forEach(function(a) {
-                var valStr = a.value !== null && a.value !== undefined ? ' <span style="color:#64748b;">(' + _escapeHtml(formatMetricValue(a.key, a.value)) + ')</span>' : '';
-                var rankEmoji = a.rank === 1 ? '\uD83E\uDD47' : a.rank <= 5 ? '\uD83E\uDD48' : '\uD83E\uDD49';
-                var bg = a.rank === 1 ? '#fffbeb' : a.rank <= 5 ? '#f0f9ff' : '#faf5ff';
-                var border = a.rank === 1 ? '#fbbf24' : a.rank <= 5 ? '#93c5fd' : '#c4b5fd';
+                var valStr = a.value !== null && a.value !== undefined ? _escapeHtml(formatMetricValue(a.key, a.value)) : '';
+                var emoji = a.rank === 1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
+                var bg = a.rank === 1 ? '#fffbeb' : '#f0f9ff';
+                var border = a.rank === 1 ? '#fbbf24' : '#93c5fd';
                 html += '<div style="padding:8px 12px; background:' + bg + '; border-left:3px solid ' + border + '; border-radius:4px; font-size:0.9em;">';
-                html += rankEmoji + ' <strong>' + _escapeHtml(a.label) + '</strong> - #' + a.rank + ' of ' + a.totalEmployees + valStr;
+                if (a.rank === 1) {
+                    html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong> — only one to hit this!' + (valStr ? ' <span style="color:#64748b;">(' + valStr + ')</span>' : '');
+                } else {
+                    if (valStr) {
+                        html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
+                    } else {
+                        html += emoji + ' Outstanding <strong>' + _escapeHtml(a.label) + '</strong>!';
+                    }
+                }
                 html += '</div>';
             });
             html += '</div>';
@@ -680,19 +679,19 @@
 
                 // Summary stats
                 html += '<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.85em;">';
-                html += '<span style="color:#64748b;"><strong>' + s.totalAppearances + '</strong> period' + (s.totalAppearances !== 1 ? 's' : '') + '</span>';
-                if (s.numberOneCount) html += '<span style="color:#b8860b;">\uD83E\uDD47 #1 x' + s.numberOneCount + '</span>';
-                if (s.top5Count) html += '<span style="color:#666;">\uD83E\uDD48 Top 5 x' + s.top5Count + '</span>';
-                if (s.top10Count > s.top5Count) html += '<span style="color:#8b4513;">\uD83E\uDD49 Top 10 x' + (s.top10Count - s.top5Count) + '</span>';
+                html += '<span style="color:#64748b;"><strong>' + s.totalAppearances + '</strong> period' + (s.totalAppearances !== 1 ? 's' : '') + ' recognized</span>';
+                if (s.numberOneCount) html += '<span style="color:#b8860b;">\uD83E\uDD47 Only one x' + s.numberOneCount + '</span>';
                 html += '</div>';
 
                 // Metric breakdown
-                var metricKeys = Object.keys(s.metricBreakdown);
+                var metricKeys = Object.keys(s.metricBreakdown).filter(function(mk) {
+                    return mk !== 'composite' && mk !== 'reliability';
+                });
                 if (metricKeys.length) {
                     html += '<div style="display:flex; flex-wrap:wrap; gap:4px;">';
                     metricKeys.forEach(function(mk) {
                         var meta = METRIC_RANK_LABELS[mk];
-                        var label = meta ? meta.label : (mk === 'composite' ? 'Composite' : mk);
+                        var label = meta ? meta.label : mk;
                         html += '<span style="padding:2px 8px; background:#f0f9ff; border:1px solid #bfdbfe; border-radius:8px; font-size:0.8em; color:#1e40af;">' + _escapeHtml(label) + ' x' + s.metricBreakdown[mk] + '</span>';
                     });
                     html += '</div>';
@@ -722,14 +721,16 @@
                 // People in this period
                 html += '<div style="padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px;">';
                 entry.entries.forEach(function(person) {
-                    var bestRank = Math.min.apply(null, person.achievements.map(function(a) { return a.rank; }));
-                    var badge = getTierBadge(bestRank <= 1 ? 1 : bestRank <= 5 ? 5 : bestRank <= 10 ? 10 : bestRank);
+                    var hasOnlyOne = person.achievements.some(function(a) { return a.rank === 1; });
                     html += '<div style="padding:8px 12px; background:#f8fafc; border:1px solid #e0e7ff; border-radius:8px; display:flex; align-items:center; gap:6px;">';
                     html += '<span style="font-weight:600; font-size:0.9em;">' + _escapeHtml(person.firstName || _getFirstName(person.name)) + '</span>';
                     person.achievements.forEach(function(a) {
-                        var rankEmoji = a.rank === 1 ? '\uD83E\uDD47' : a.rank <= 5 ? '\uD83E\uDD48' : '\uD83E\uDD49';
-                        var metaLabel = METRIC_RANK_LABELS[a.key]?.label || (a.key === 'composite' ? 'Composite' : a.key);
-                        html += '<span style="font-size:0.75em; padding:2px 6px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:8px;" title="' + _escapeHtml(metaLabel) + '">#' + a.rank + ' ' + _escapeHtml(metaLabel) + '</span>';
+                        if (a.key === 'composite' || a.key === 'reliability') return;
+                        var metaLabel = METRIC_RANK_LABELS[a.key]?.label || a.key;
+                        var emoji = a.rank === 1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
+                        var bg = a.rank === 1 ? '#ffd700' : '#667eea';
+                        var color = a.rank === 1 ? '#7c5c00' : '#fff';
+                        html += '<span style="font-size:0.75em; padding:2px 6px; background:' + bg + '; color:' + color + '; border-radius:8px;" title="' + _escapeHtml(metaLabel) + '">' + emoji + ' ' + _escapeHtml(metaLabel) + '</span>';
                     });
                     html += '</div>';
                 });

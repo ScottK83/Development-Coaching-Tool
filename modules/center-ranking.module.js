@@ -227,8 +227,7 @@
             { key: 'aht', field: 'values.aht', reverse: true },
             { key: 'adherence', field: 'values.adherence', reverse: false },
             { key: 'sentiment', field: 'values.sentiment', reverse: false },
-            { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
-            { key: 'reliability', field: 'reliability', reverse: true }
+            { key: 'associateOverall', field: 'values.associateOverall', reverse: false }
         ];
 
         metricRankKeys.forEach(function (mk) {
@@ -255,7 +254,7 @@
         rankings.forEach(function (r) {
             var ranks = r.metricRanks || {};
             var presentRanks = [];
-            ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'].forEach(function (k) {
+            ['aht', 'adherence', 'sentiment', 'associateOverall'].forEach(function (k) {
                 if (ranks[k] && ranks[k] > 0) presentRanks.push(ranks[k]);
             });
             r.compositeScore = presentRanks.length > 0
@@ -263,10 +262,9 @@
                 : Infinity;
         });
 
-        // Sort by composite score, reliability rank as tiebreaker
+        // Sort by composite score (lower = better)
         rankings.sort(function (a, b) {
-            if (a.compositeScore !== b.compositeScore) return a.compositeScore - b.compositeScore;
-            return (a.metricRanks?.reliability || 0) - (b.metricRanks?.reliability || 0);
+            return a.compositeScore - b.compositeScore;
         });
 
         rankings.forEach(function (r, i) { r.rank = i + 1; });
