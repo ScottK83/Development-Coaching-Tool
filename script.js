@@ -1114,6 +1114,38 @@ window.saveEmployeePreferredName = function(fullName) {
     renderEmployeesList();
 }
 
+// One-time seed: Miranda's team
+(function seedMirandaTeam() {
+    if (localStorage.getItem('devCoachingTool_supervisorSeeded_miranda')) return;
+    var mirandaAgents = ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor', 'Joann', 'Erika', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina Williams', 'Kassandra'];
+    var existing = {};
+    try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) {}
+    // Match against known employees using first-name prefix matching
+    var allEmps = {};
+    try {
+        var wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
+        var yd = JSON.parse(localStorage.getItem('devCoachingTool_ytdData') || '{}');
+        [wd, yd].forEach(function(ds) {
+            Object.values(ds || {}).forEach(function(period) {
+                (period?.employees || []).forEach(function(emp) {
+                    if (emp?.name) allEmps[emp.name] = true;
+                });
+            });
+        });
+    } catch (_e) {}
+    var empNames = Object.keys(allEmps);
+    mirandaAgents.forEach(function(agent) {
+        // Try exact match first, then first-name match
+        var match = empNames.find(function(e) { return e === agent; });
+        if (!match) match = empNames.find(function(e) { return e.split(' ')[0].toLowerCase() === agent.split(' ')[0].toLowerCase(); });
+        if (match && !existing[match]) {
+            existing[match] = 'Miranda';
+        }
+    });
+    localStorage.setItem('devCoachingTool_employeeSupervisors', JSON.stringify(existing));
+    localStorage.setItem('devCoachingTool_supervisorSeeded_miranda', '1');
+})();
+
 function getEmployeeSupervisors() {
     try {
         return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
