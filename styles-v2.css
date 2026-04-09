@@ -474,7 +474,7 @@
 .validation-success {
     background: #d4edda;
     border: 2px solid #28a745;
-    color: #155724;
+    color: #1a1a2e;
 }
 .validation-error {
     background: #f8d7da;
@@ -852,7 +852,7 @@ textarea:focus-visible {
     background: var(--green-soft);
     border: 1px solid var(--green);
     border-radius: var(--radius-sm);
-    color: var(--green-text);
+    color: var(--text-primary);
     font-size: 0.9em;
 }
 
@@ -1599,6 +1599,8 @@ textarea:focus-visible {
 [data-theme="dark"] [style*="color:#16a34a"] { color: var(--green) !important; }
 [data-theme="dark"] [style*="color: #155724"],
 [data-theme="dark"] [style*="color:#155724"] { color: var(--green-text) !important; }
+[data-theme="dark"] [style*="color: #1a1a2e"],
+[data-theme="dark"] [style*="color:#1a1a2e"] { color: var(--text-primary) !important; }
 [data-theme="dark"] [style*="color: #00695c"],
 [data-theme="dark"] [style*="color:#00695c"] { color: #5eead4 !important; }
 [data-theme="dark"] [style*="color: #c62828"],
