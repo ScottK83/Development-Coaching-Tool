@@ -4198,6 +4198,41 @@ function getLatestWeeklyKey() {
     return keys.length ? keys[keys.length - 1] : null;
 }
 
+function getTrendDataSource(periodType) {
+    return periodType === 'ytd' ? ytdData : weeklyData;
+}
+
+function getTrendMetadataType(periodType) {
+    if (periodType === 'dod') return 'daily';
+    if (periodType === 'mom') return 'month';
+    if (periodType === 'ytd') return 'ytd';
+    return 'week';
+}
+
+function getTrendKeysForPeriodType(periodType) {
+    const sourceData = getTrendDataSource(periodType);
+    const metadataType = getTrendMetadataType(periodType);
+
+    return Object.keys(sourceData || {})
+        .filter(key => (sourceData[key]?.metadata?.periodType || (periodType === 'ytd' ? 'ytd' : 'week')) === metadataType)
+        .sort((a, b) => parseWeekKeyDate(a, sourceData[a]) - parseWeekKeyDate(b, sourceData[b]));
+}
+
+function getTrendPeriodRecord(periodKey) {
+    return weeklyData[periodKey] || ytdData[periodKey] || null;
+}
+
+function getTrendPeriodLabel(periodKey) {
+    const period = getTrendPeriodRecord(periodKey);
+    return period?.metadata?.label || formatWeekLabel(periodKey) || periodKey;
+}
+
+function formatTrendBucketLabel(periodKeys) {
+    if (!Array.isArray(periodKeys) || periodKeys.length === 0) return 'No data';
+    if (periodKeys.length === 1) return getTrendPeriodLabel(periodKeys[0]);
+    return `${getTrendPeriodLabel(periodKeys[0])} -> ${getTrendPeriodLabel(periodKeys[periodKeys.length - 1])}`;
+}
+
 function getPreviousWeeklyKey(latestKey) {
     const keys = getWeeklyKeysSorted();
     const idx = keys.indexOf(latestKey);
@@ -4206,6 +4241,9 @@ function getPreviousWeeklyKey(latestKey) {
 }
 
 function getTrendPeriodDescriptor(periodType) {
+    if (periodType === 'dod') {
+        return { label: 'Day over Day', shortLabel: 'DoD', compareLabel: 'day' };
+    }
     if (periodType === 'mom') {
         return { label: 'Month over Month', shortLabel: 'MoM', compareLabel: 'month' };
     }
@@ -4217,7 +4255,9 @@ function getTrendPeriodDescriptor(periodType) {
 
 function getTrendComparisonBuckets(keys, periodType) {
     const descriptor = getTrendPeriodDescriptor(periodType);
-    if (!Array.isArray(keys) || keys.length === 0) {
+    const typedKeys = Array.isArray(keys) && keys.length ? keys : getTrendKeysForPeriodType(periodType);
+
+    if (!typedKeys.length) {
         return {
             descriptor,
             currentKeys: [],
@@ -4226,19 +4266,20 @@ function getTrendComparisonBuckets(keys, periodType) {
         };
     }
 
-    if (periodType === 'mom') {
+    if (periodType === 'mom' || periodType === 'dod' || periodType === 'wow') {
         return {
             descriptor,
-            currentKeys: keys.slice(-4),
-            previousKeys: keys.slice(-8, -4),
-            thirdKeys: keys.slice(-12, -8)
+            currentKeys: typedKeys.slice(-1),
+            previousKeys: typedKeys.slice(-2, -1),
+            thirdKeys: typedKeys.slice(-3, -2)
         };
     }
 
     if (periodType === 'ytd') {
+        const sourceData = getTrendDataSource(periodType);
         const yearBuckets = {};
-        keys.forEach(weekKey => {
-            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
+        typedKeys.forEach(weekKey => {
+            const parsed = parseWeekKeyDate(weekKey, sourceData[weekKey]);
             if (!parsed) return;
             const year = new Date(parsed).getFullYear();
             if (!yearBuckets[year]) yearBuckets[year] = [];
@@ -4258,9 +4299,9 @@ function getTrendComparisonBuckets(keys, periodType) {
 
     return {
         descriptor,
-        currentKeys: keys.slice(-1),
-        previousKeys: keys.slice(-2, -1),
-        thirdKeys: keys.slice(-3, -2)
+        currentKeys: typedKeys.slice(-1),
+        previousKeys: typedKeys.slice(-2, -1),
+        thirdKeys: typedKeys.slice(-3, -2)
     };
 }
 
@@ -4275,7 +4316,7 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     let periodsIncluded = 0;
 
     periodKeys.forEach(weekKey => {
-        const week = weeklyData[weekKey];
+        const week = getTrendPeriodRecord(weekKey);
         const employee = week?.employees?.find(emp => emp.name === employeeName);
         if (!employee) return;
 
@@ -4333,7 +4374,7 @@ function getEmployeeNamesForPeriod(periodKeys) {
     const teamFilterContext = getTeamSelectionContext();
 
     periodKeys.forEach(weekKey => {
-        const employees = weeklyData[weekKey]?.employees || [];
+        const employees = getTrendPeriodRecord(weekKey)?.employees || [];
         employees.forEach(emp => {
             if (emp?.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
                 names.add(emp.name);
@@ -4690,64 +4731,14 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, why
 
 function buildTrendSeriesData(metricKey, employeeName, keys, periodType) {
     const toMetricValue = (weekKey) => {
-        const employee = weeklyData[weekKey]?.employees?.find(e => e.name === employeeName);
+        const employee = getTrendPeriodRecord(weekKey)?.employees?.find(e => e.name === employeeName);
         const value = parseFloat(employee?.[metricKey]);
         return Number.isNaN(value) ? null : value;
     };
 
-    if (periodType === 'mom') {
-        const monthBuckets = {};
-        keys.forEach(weekKey => {
-            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
-            if (!parsed) return;
-            const date = new Date(parsed);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (!monthBuckets[monthKey]) {
-                monthBuckets[monthKey] = { label: date.toLocaleString('en-US', { month: 'short', year: '2-digit' }), values: [] };
-            }
-            const value = toMetricValue(weekKey);
-            if (value !== null) monthBuckets[monthKey].values.push(value);
-        });
-
-        return Object.keys(monthBuckets)
-            .sort()
-            .map(key => ({
-                label: monthBuckets[key].label,
-                value: monthBuckets[key].values.length
-                    ? monthBuckets[key].values.reduce((a, b) => a + b, 0) / monthBuckets[key].values.length
-                    : null
-            }))
-            .filter(item => item.value !== null)
-            .slice(-6);
-    }
-
-    if (periodType === 'ytd') {
-        const yearBuckets = {};
-        keys.forEach(weekKey => {
-            const parsed = parseWeekKeyDate(weekKey, weeklyData[weekKey]);
-            if (!parsed) return;
-            const year = new Date(parsed).getFullYear();
-            if (!yearBuckets[year]) yearBuckets[year] = [];
-            const value = toMetricValue(weekKey);
-            if (value !== null) yearBuckets[year].push(value);
-        });
-
-        return Object.keys(yearBuckets)
-            .map(year => parseInt(year, 10))
-            .sort((a, b) => a - b)
-            .map(year => ({
-                label: `${year}`,
-                value: yearBuckets[year].length
-                    ? yearBuckets[year].reduce((a, b) => a + b, 0) / yearBuckets[year].length
-                    : null
-            }))
-            .filter(item => item.value !== null)
-            .slice(-5);
-    }
-
     return keys
         .slice(-8)
-        .map(weekKey => ({ label: formatWeekLabel(weekKey), value: toMetricValue(weekKey) }))
+        .map(weekKey => ({ label: getTrendPeriodLabel(weekKey), value: toMetricValue(weekKey) }))
         .filter(item => item.value !== null);
 }
 
@@ -5000,6 +4991,235 @@ function renderTrendSimpleView() {
             </div>
         </div>
     `;
+}
+
+const TREND_TRACKER_METRICS = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+
+function buildTeamAggregateForPeriod(periodKeys) {
+    if (!Array.isArray(periodKeys) || periodKeys.length === 0) return null;
+
+    const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+    const weightedSums = {};
+    const weightedCounts = {};
+    let periodsIncluded = 0;
+    const teamFilterContext = getTeamSelectionContext();
+
+    periodKeys.forEach(periodKey => {
+        const period = getTrendPeriodRecord(periodKey);
+        const employees = (period?.employees || []).filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
+        if (!employees.length) return;
+
+        periodsIncluded += 1;
+
+        employees.forEach(employee => {
+            const totalCalls = parseInt(employee?.totalCalls, 10);
+            const surveyTotal = parseInt(employee?.surveyTotal, 10);
+
+            TREND_TRACKER_METRICS.forEach(metricKey => {
+                if (surveyBackedMetrics.has(metricKey) && (!Number.isInteger(surveyTotal) || surveyTotal <= 0)) return;
+
+                const value = parseFloat(employee?.[metricKey]);
+                if (!Number.isFinite(value)) return;
+
+                const weight = surveyBackedMetrics.has(metricKey)
+                    ? surveyTotal
+                    : (Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1);
+
+                if (weight > 0) {
+                    weightedSums[metricKey] = (weightedSums[metricKey] || 0) + (value * weight);
+                    weightedCounts[metricKey] = (weightedCounts[metricKey] || 0) + weight;
+                }
+            });
+        });
+    });
+
+    if (periodsIncluded === 0) return null;
+
+    const aggregate = {
+        name: 'Team',
+        periodsIncluded,
+        periodKeys: [...periodKeys]
+    };
+
+    Object.keys(weightedSums).forEach(metricKey => {
+        if (weightedCounts[metricKey] > 0) {
+            aggregate[metricKey] = weightedSums[metricKey] / weightedCounts[metricKey];
+        }
+    });
+
+    return aggregate;
+}
+
+function summarizeTrackerMetrics(currentAggregate, previousAggregate) {
+    if (!currentAggregate || !previousAggregate) return [];
+
+    return TREND_TRACKER_METRICS.map(metricKey => {
+        const currentValue = parseFloat(currentAggregate?.[metricKey]);
+        const previousValue = parseFloat(previousAggregate?.[metricKey]);
+        if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) return null;
+
+        return {
+            metricKey,
+            delta: metricDelta(metricKey, currentValue, previousValue),
+            currentValue,
+            previousValue,
+            label: METRICS_REGISTRY[metricKey]?.label || metricKey
+        };
+    }).filter(Boolean);
+}
+
+function pickTrackerFocusMetric(currentAggregate) {
+    if (!currentAggregate) return null;
+
+    return TREND_TRACKER_METRICS.map(metricKey => {
+        const currentValue = parseFloat(currentAggregate?.[metricKey]);
+        if (!Number.isFinite(currentValue)) return null;
+
+        return {
+            metricKey,
+            currentValue,
+            gap: Math.abs(metricGapToTarget(metricKey, currentValue)),
+            meetsTarget: metricMeetsTarget(metricKey, currentValue),
+            label: METRICS_REGISTRY[metricKey]?.label || metricKey
+        };
+    }).filter(Boolean).sort((a, b) => {
+        if (a.meetsTarget !== b.meetsTarget) return a.meetsTarget ? 1 : -1;
+        return b.gap - a.gap;
+    })[0] || null;
+}
+
+function formatTrackerDelta(metricKey, delta) {
+    const formatted = formatMetricDisplay(metricKey, Math.abs(delta));
+    return `${delta >= 0 ? '+' : '-'}${formatted}`;
+}
+
+function buildTrendCadenceSummary(periodType, selectedEmployee) {
+    const keys = getTrendKeysForPeriodType(periodType);
+    const buckets = getTrendComparisonBuckets(keys, periodType);
+    if (!buckets.currentKeys.length || !buckets.previousKeys.length) return null;
+
+    const currentAggregate = selectedEmployee
+        ? buildEmployeeAggregateForPeriod(selectedEmployee, buckets.currentKeys)
+        : buildTeamAggregateForPeriod(buckets.currentKeys);
+    const previousAggregate = selectedEmployee
+        ? buildEmployeeAggregateForPeriod(selectedEmployee, buckets.previousKeys)
+        : buildTeamAggregateForPeriod(buckets.previousKeys);
+
+    if (!currentAggregate || !previousAggregate) return null;
+
+    const metricSummaries = summarizeTrackerMetrics(currentAggregate, previousAggregate);
+    if (!metricSummaries.length) return null;
+
+    const topImprovement = metricSummaries.slice().sort((a, b) => b.delta - a.delta)[0] || null;
+    const topRisk = metricSummaries.slice().sort((a, b) => a.delta - b.delta)[0] || null;
+    const focusMetric = pickTrackerFocusMetric(currentAggregate);
+
+    return {
+        descriptor: getTrendPeriodDescriptor(periodType),
+        currentLabel: formatTrendBucketLabel(buckets.currentKeys),
+        previousLabel: formatTrendBucketLabel(buckets.previousKeys),
+        topImprovement,
+        topRisk,
+        focusMetric
+    };
+}
+
+function buildTrendCadenceTrackerText() {
+    const selectedEmployee = getTrendSelectedEmployee();
+    const scopeLabel = selectedEmployee ? selectedEmployee : 'Team';
+    const sections = [`Multi-Period Tracker for ${scopeLabel}`];
+
+    ['dod', 'wow', 'mom'].forEach(periodType => {
+        const summary = buildTrendCadenceSummary(periodType, selectedEmployee);
+        const descriptor = getTrendPeriodDescriptor(periodType);
+
+        sections.push('');
+        sections.push(descriptor.shortLabel);
+
+        if (!summary) {
+            sections.push('Not enough data yet.');
+            return;
+        }
+
+        sections.push(`${summary.previousLabel} -> ${summary.currentLabel}`);
+        if (summary.topImprovement) {
+            sections.push(`Improving: ${summary.topImprovement.label} ${formatTrackerDelta(summary.topImprovement.metricKey, summary.topImprovement.delta)}`);
+        }
+        if (summary.topRisk) {
+            sections.push(`Watch: ${summary.topRisk.label} ${formatTrackerDelta(summary.topRisk.metricKey, summary.topRisk.delta)}`);
+        }
+        if (summary.focusMetric) {
+            sections.push(`Current focus: ${summary.focusMetric.label} at ${formatMetricDisplay(summary.focusMetric.metricKey, summary.focusMetric.currentValue)}`);
+        }
+    });
+
+    return sections.join('\n');
+}
+
+function copyTrendCadenceTracker() {
+    const text = buildTrendCadenceTrackerText();
+    if (!text.trim()) {
+        showToast('No tracker summary available yet.', 2800);
+        return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('✅ Tracker summary copied', 2800))
+            .catch(() => showToast('Unable to copy tracker summary', 3000));
+        return;
+    }
+
+    showToast('Clipboard is not available in this browser.', 3000);
+}
+
+function renderTrendCadenceTracker() {
+    const container = document.getElementById('trendCadenceTrackerOutput');
+    if (!container) return;
+
+    const selectedEmployee = getTrendSelectedEmployee();
+    container.innerHTML = ['dod', 'wow', 'mom'].map(periodType => {
+        const summary = buildTrendCadenceSummary(periodType, selectedEmployee);
+        const descriptor = getTrendPeriodDescriptor(periodType);
+
+        if (!summary) {
+            return `<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
+                <div style="font-weight: 700; color: #2f4f87; margin-bottom: 6px;">${descriptor.shortLabel}</div>
+                <div style="color: #546e7a; font-size: 0.9em;">Not enough ${descriptor.compareLabel} data yet.</div>
+            </div>`;
+        }
+
+        const improvingText = summary.topImprovement
+            ? `${summary.topImprovement.label} ${formatTrackerDelta(summary.topImprovement.metricKey, summary.topImprovement.delta)}`
+            : 'No clear improvement yet';
+        const riskText = summary.topRisk
+            ? `${summary.topRisk.label} ${formatTrackerDelta(summary.topRisk.metricKey, summary.topRisk.delta)}`
+            : 'No clear drop yet';
+        const focusText = summary.focusMetric
+            ? `${summary.focusMetric.label} at ${formatMetricDisplay(summary.focusMetric.metricKey, summary.focusMetric.currentValue)}`
+            : 'No focus metric identified';
+
+        return `<div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
+            <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                <div style="font-weight: 700; color: #2f4f87;">${summary.descriptor.label}</div>
+                <div style="font-size: 0.82em; color: #546e7a;">${escapeHtml(summary.previousLabel)} -> ${escapeHtml(summary.currentLabel)}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
+                    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 4px;">Improving</div>
+                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(improvingText)}</div>
+                </div>
+                <div style="padding: 10px; border-radius: 6px; background: #fff4e5; border: 1px solid #ffe0b2;">
+                    <div style="font-weight: 700; color: #e65100; margin-bottom: 4px;">Watch</div>
+                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(riskText)}</div>
+                </div>
+                <div style="padding: 10px; border-radius: 6px; background: #eef3fb; border: 1px solid #c6d8f5;">
+                    <div style="font-weight: 700; color: #2f4f87; margin-bottom: 4px;">Current Focus</div>
+                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(focusText)}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function buildTrendGoalsSummaryHtml() {
@@ -5333,6 +5553,7 @@ function initializeTrendIntelligence() {
         document.getElementById('copilotGoalBtn')?.addEventListener('click', () => {
             launchTrendCopilotPrompt(buildTrendAiGoalPrompt(), 'Select an associate to generate a 30-day goal');
         });
+        document.getElementById('copyTrendCadenceBtn')?.addEventListener('click', copyTrendCadenceTracker);
         trendIntelligenceListenersAttached = true;
     }
 
@@ -5562,15 +5783,16 @@ function renderTrendIntelligence() {
     const selectedEmployee = document.getElementById('trendEmployeeSelector')?.value;
     const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
     const periodDescriptor = getTrendPeriodDescriptor(periodType);
-    const keys = getWeeklyKeysSorted();
+    const keys = getTrendKeysForPeriodType(periodType);
     
     if (keys.length < 2) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 weeks of data to see trends.</div>';
+        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Upload at least 2 ${periodDescriptor.compareLabel} periods to see ${periodDescriptor.shortLabel} trends.</div>`;
         const simpleContainer = document.getElementById('trendSimpleViewOutput');
         if (simpleContainer) {
-            simpleContainer.innerHTML = '<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Upload at least 2 weeks of data to unlock Simple View priorities.</div>';
+            simpleContainer.innerHTML = `<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Upload at least 2 ${periodDescriptor.compareLabel} periods to unlock Simple View priorities.</div>`;
         }
         if (modeIndicator) modeIndicator.style.display = 'none';
+        renderTrendCadenceTracker();
         return;
     }
 
@@ -5598,6 +5820,7 @@ function renderTrendIntelligence() {
 
     renderCoachingPriorityQueue();
     renderTrendSimpleView();
+    renderTrendCadenceTracker();
     renderCoachingImpactTracker();
 }
 
@@ -5614,7 +5837,7 @@ function renderTrendVisualizations() {
         return;
     }
 
-    const keys = getWeeklyKeysSorted();
+    const keys = getTrendKeysForPeriodType(periodType);
     if (keys.length < 2) {
         visualContainer.style.display = 'none';
         return;
@@ -5629,25 +5852,23 @@ function renderTrendVisualizations() {
     metricsToShow.forEach(metricKey => {
         trendData[metricKey] = buildTrendSeriesData(metricKey, employeeName, keys, periodType);
     });
-
     // Create bar charts for each metric
     chartsGrid.innerHTML = '';
     metricsToShow.forEach(metricKey => {
         const metric = METRICS_REGISTRY[metricKey];
         const data = trendData[metricKey];
-        
+
         if (!data || data.length < 2) return;
 
         const chartContainer = document.createElement('div');
         chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;';
-        
+
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'max-height: 250px;';
-        
+
         chartContainer.appendChild(canvas);
         chartsGrid.appendChild(chartContainer);
 
-        // Inline plugin to draw data labels on bars
         const dataLabelPlugin = {
             id: 'barDataLabels',
             afterDatasetsDraw(chart) {
@@ -5673,11 +5894,9 @@ function renderTrendVisualizations() {
             }
         };
 
-        // Destroy any existing chart on this canvas to prevent memory leak
         var _existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null;
         if (_existing) _existing.destroy();
 
-        // Create bar chart
         new Chart(canvas, {
             type: 'bar',
             data: {

@@ -1246,6 +1246,7 @@ Box 2 - Future Improvement Areas:
                                 <div>
                                     <label for="trendPeriodSelector" style="font-weight: 600; display: block; margin-bottom: 8px; color: #345a94; font-size: 0.95em;">Compare:</label>
                                     <select id="trendPeriodSelector" style="width: 100%; padding: 10px 12px; border: 2px solid #e3f2fd; border-radius: 6px; font-size: 0.95em; background: white; transition: border-color 0.2s;">
+                                        <option value="dod">Day over Day</option>
                                         <option value="wow">Week over Week</option>
                                         <option value="mom">Month over Month</option>
                                         <option value="ytd">Year to Date</option>
@@ -1272,6 +1273,14 @@ Box 2 - Future Improvement Areas:
                             </div>
 
                             <div id="trendSimpleViewOutput" style="margin-bottom: 20px;"></div>
+
+                            <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #cfe1ff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                                    <h4 style="margin: 0; color: #3c78c8;">🗓️ Multi-Period Tracker</h4>
+                                    <button type="button" id="copyTrendCadenceBtn" class="btn-secondary" style="background: #eef3fb; color: #2f4f87; padding: 10px 16px; border: 1px solid #c6d8f5; border-radius: 6px; font-weight: 600; cursor: pointer;">📋 Copy Tracker Summary</button>
+                                </div>
+                                <div id="trendCadenceTrackerOutput" style="display: grid; gap: 10px;"></div>
+                            </div>
 
                             <!-- Alerts/Insights -->
                             <div id="trendIntelligenceOutput" style="margin-bottom: 20px;"></div>
