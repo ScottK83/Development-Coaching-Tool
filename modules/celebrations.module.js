@@ -185,6 +185,7 @@
                 var meta = METRIC_RANK_LABELS[metricKey];
                 var tier = getTierForRank(metricRank, tiers);
                 var metricValue = r.values?.[metricKey] ?? null;
+                if (metricValue === null || metricValue === undefined) return;
 
                 achievements.push({
                     type: 'metric',
@@ -407,7 +408,7 @@
                 if (valStr) {
                     lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!');
                 } else {
-                    lines.push('\uD83C\uDF1F ' + a.label + ' — ranked ' + a.tierLabel + '!');
+                    lines.push(pick(STANDOUT_LINES)(a.label));
                 }
             }
         });
@@ -432,7 +433,7 @@
                     if (valStr) {
                         msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!\n';
                     } else {
-                        msg += '   \u2B50 ' + a.label + ' — ranked ' + a.tierLabel + '!\n';
+                        msg += '   \u2B50 Outstanding ' + a.label + '!\n';
                     }
                 }
             });
@@ -473,7 +474,7 @@
                 if (valStr) {
                     lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!');
                 } else {
-                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is ' + a.tierLabel + ' — outstanding!');
+                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!');
                 }
             }
         });
@@ -630,7 +631,7 @@
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
                     } else {
-                        html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong> — ' + _escapeHtml(a.tierLabel) + '!';
+                        html += emoji + ' Outstanding <strong>' + _escapeHtml(a.label) + '</strong>!';
                     }
                 }
                 html += '</div>';
