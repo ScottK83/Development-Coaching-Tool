@@ -151,6 +151,139 @@
         'Catch me anytime if you want to talk through anything.',
         'Onward. I\'m always just a message away.',
     ];
+    // --- Monday Kickoff phrase pools ---
+    const MK_OPENERS = [
+        name => `Happy Monday ${name}! 🌟 New week, let's talk about where you stand and where we're headed.`,
+        name => `Hey ${name}! ☀️ Kicking off the week with your numbers and a game plan.`,
+        name => `Morning ${name}! 🚀 Start of a new week — here's your snapshot and what to focus on.`,
+        name => `${name}! Monday check-in time. 📊 Let's celebrate what's working and lock in a plan.`,
+        name => `Good morning ${name}! 💪 Quick Monday rundown on your wins and where we can push.`,
+        name => `Hey ${name}, let's get this week started right. Here's where things landed. ☕`,
+        name => `${name}! Fresh week ahead. Let's look at what's going well and set a target. 🎯`,
+        name => `Top of the week ${name}! Here's your latest numbers and our focus for the days ahead.`,
+        name => `Rise and shine ${name}! 🌅 Let me share your numbers and set us up for a strong week.`,
+        name => `Monday's here ${name}! Quick peek at last week's results and what to aim for this week.`,
+        name => `${name}, new week, new opportunity. Let's see what we're working with. 📈`,
+        name => `Hey ${name}! Starting the week off by looking at your wins and setting a focus. Let's go!`,
+    ];
+    const MK_TRANSITION = [
+        'Now let\'s talk about where we can push this week.',
+        'On the flip side, here\'s where I think we can make a move.',
+        'That said, there\'s a spot where I think you can really level up.',
+        'Love the wins. Now here\'s the game plan for this week.',
+        'Let\'s build on that momentum with a focus area.',
+        'Now let\'s zero in on where we can improve.',
+        'Great foundation — here\'s where I want us to focus.',
+        'With those wins in mind, let\'s talk opportunity.',
+        'Alright, here\'s the play for this week.',
+        'Here\'s the one thing I want us to be intentional about.',
+    ];
+    const MK_FOCUS_SET = [
+        (label, val, target) => `This week, let's zero in on ${label}. You're at ${val}, and target is ${target}.`,
+        (label, val, target) => `Your focus this week: ${label}. Currently ${val}, we want ${target}.`,
+        (label, val, target) => `I want us to own ${label} this week. Sitting at ${val}, shooting for ${target}.`,
+        (label, val, target) => `The one to attack: ${label} at ${val}. Target is ${target} — let's close that gap.`,
+        (label, val, target) => `Let's put our energy into ${label}. You're at ${val} and ${target} is within reach.`,
+        (label, val, target) => `Game plan: get ${label} moving. Right now it's ${val}, we need ${target}.`,
+        (label, val, target) => `This week's mission: ${label}. At ${val}, the goal is ${target}. I think you can get there.`,
+        (label, val, target) => `If we nail one thing this week, let it be ${label}. You're at ${val}, target is ${target}.`,
+        (label, val, target) => `My ask for you this week: be intentional about ${label}. Currently ${val}, we're aiming for ${target}.`,
+        (label, val, target) => `Here's where I want your focus: ${label} at ${val}. Let's push toward ${target}.`,
+    ];
+    const MK_ALL_GOOD = [
+        'You\'re hitting target across the board — incredible work. Let\'s keep that going this week!',
+        'All metrics on target. That\'s rare and it\'s impressive. Keep doing what you\'re doing.',
+        'Everything is clicking right now. The goal this week is simple: maintain.',
+        'You\'re on target everywhere. That level of consistency is hard to achieve. Nice work.',
+    ];
+    const MK_CLOSERS = [
+        'Let\'s have a great week. I\'m here if you need anything! 💪',
+        'That\'s the plan. Let me know if you want to talk through anything.',
+        'Excited for this week. Reach out anytime.',
+        'You\'ve got this. Let\'s go make it happen. 🔥',
+        'Go crush it this week. My door\'s open.',
+        'Ready when you are. Let\'s have a strong week.',
+        'Looking forward to seeing you attack this. Let me know how I can help.',
+        'Go get it. I\'m in your corner. 🙌',
+        'Simple plan, big results. Let\'s do it.',
+        'That\'s the game plan. Now let\'s execute. 🚀',
+    ];
+
+    // --- Midweek Check-In phrase pools ---
+    const MW_OPENERS = [
+        name => `Hey ${name}! Quick midweek check-in. 📊`,
+        name => `${name}! Halfway through the week — let's see where things stand.`,
+        name => `Midweek pulse check, ${name}. How are we tracking?`,
+        name => `Hey ${name}, just touching base midweek. Here's the update.`,
+        name => `${name}! We're halfway there. Quick look at the numbers. ⏱️`,
+        name => `Checking in ${name} — wanted to see how the week is shaping up.`,
+        name => `Hey ${name}, quick Wednesday update for you. 📈`,
+        name => `${name}, midweek check — let's see if we're on pace.`,
+        name => `Halfway through the week ${name}! Here's a quick status update.`,
+        name => `${name}! Real quick midweek look at where things are.`,
+        name => `Just a quick midweek nudge, ${name}. Here's where you're at.`,
+        name => `Hey ${name}, wanted to touch base before the week gets away from us.`,
+    ];
+    const MW_FOCUS_RECALL = [
+        (label) => `Earlier this week we said ${label} was the focus.`,
+        (label) => `We set ${label} as your target this week.`,
+        (label) => `Remember, our game plan was to push on ${label}.`,
+        (label) => `Our focus area this week has been ${label}.`,
+        (label) => `We talked about zeroing in on ${label} this week.`,
+        (label) => `The plan was to attack ${label} this week.`,
+        (label) => `${label} was the metric we wanted to own this week.`,
+        (label) => `You've been working on ${label} this week.`,
+        (label) => `We identified ${label} as the one to move this week.`,
+        (label) => `This week's focus has been ${label}.`,
+    ];
+    const MW_ON_TRACK = [
+        (label, val, target) => `You're crushing it — ${label} at ${val} is already above the ${target} target! 🔥`,
+        (label, val, target) => `Great news: ${label} is at ${val}, which beats the ${target} target. Keep it up!`,
+        (label, val, target) => `${label} at ${val} is on target (${target}). Whatever you're doing, keep doing it. 💪`,
+        (label, val, target) => `Look at that — ${label} at ${val} is hitting the mark (${target}). Awesome work.`,
+        (label, val, target) => `You did it! ${label} at ${val} is where we want it (${target}). Nice job. ✅`,
+        (label, val, target) => `${label} coming in at ${val} — that's at or above ${target}. The focus is paying off!`,
+        (label, val, target) => `${label} at ${val} vs ${target} target? That's a win. You showed up for it.`,
+        (label, val, target) => `The work on ${label} is showing. ${val} against a ${target} target is solid.`,
+    ];
+    const MW_CLOSE = [
+        (label, val, target, gap) => `You're close — ${label} at ${val}, just ${gap} from the ${target} target. A few more days to lock this in!`,
+        (label, val, target, gap) => `${label} is at ${val}, only ${gap} away from ${target}. You can close that gap. 💪`,
+        (label, val, target, gap) => `Almost there on ${label}! At ${val}, you're ${gap} from hitting ${target}. Push through!`,
+        (label, val, target, gap) => `${label} at ${val} is so close to ${target} (just ${gap} away). Finish strong this week!`,
+        (label, val, target, gap) => `Getting there! ${label} at ${val}, ${gap} to go before hitting ${target}. You've got this.`,
+        (label, val, target, gap) => `The gap on ${label} is shrinking — ${val} vs ${target}, just ${gap} to go. Keep pushing.`,
+        (label, val, target, gap) => `${label}: ${val}. Target: ${target}. Gap: ${gap}. That's closeable. Let's finish the week strong.`,
+        (label, val, target, gap) => `You're in striking distance on ${label}. ${val} right now, ${target} is the goal. ${gap} to go. 🎯`,
+    ];
+    const MW_BEHIND = [
+        (label, val, target, gap) => `${label} is at ${val}, still ${gap} from the ${target} target. But we've got time — let's be intentional about it.`,
+        (label, val, target, gap) => `We've got some ground to cover on ${label} — ${val} vs ${target} (${gap} gap). Here's what can help:`,
+        (label, val, target, gap) => `${label} at ${val} is a stretch from ${target} (${gap} gap), but every call is a chance to move it.`,
+        (label, val, target, gap) => `Real talk: ${label} at ${val} needs work to reach ${target} (${gap} away). Let's make these last days count.`,
+        (label, val, target, gap) => `${label} is sitting at ${val} with a ${gap} gap to ${target}. Not where we want it, but the week isn't over.`,
+        (label, val, target, gap) => `The ${label} number at ${val} is behind target (${target}, ${gap} gap). Let's focus on what we can control.`,
+        (label, val, target, gap) => `${label}: ${val}. We need ${target}. That's a ${gap} gap, but I've seen you close bigger ones.`,
+        (label, val, target, gap) => `Not gonna sugarcoat it — ${label} at ${val} vs ${target} (${gap}) needs attention. But there's still time.`,
+    ];
+    const MW_NO_FOCUS_SET = [
+        'Here\'s a quick look at how the week is going so far.',
+        'Wanted to check in on how things are trending this week.',
+        'Quick midweek snapshot of where you\'re at.',
+    ];
+    const MW_CLOSERS = [
+        'Keep pushing — the week\'s not over yet! 💪',
+        'Few more days to make it happen. You got this.',
+        'Let me know if you want to talk strategy for the rest of the week.',
+        'Finish strong. I\'m here if you need anything.',
+        'Almost through the week. Let\'s end it on a high note. 🔥',
+        'Keep the foot on the gas. Reach out if you need me.',
+        'The finish line is in sight. Let\'s go. 🏁',
+        'You know what to do. Go get it.',
+        'Rest of the week is yours to own. Make it count.',
+        'That\'s the midweek update. Now let\'s close it out strong. 🚀',
+    ];
+
     const HF_OPENERS = [
         name => `Hey ${name}! \uD83C\uDF89`,
         name => `${name}! \uD83C\uDF89\uD83D\uDE4C`,
@@ -807,14 +940,18 @@
                 `<div><div style="font-weight:600; font-size:0.8em; color:#666; margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
             `</div>` +
             focalHtml +
-            `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;">` +
+            `<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:auto;">` +
                 (periodType === 'week'
-                    ? `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="flex:1; min-width:0; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83D\uDCAC Check-in</button>` +
+                    ? `<button type="button" class="pulse-kickoff-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                        `style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🌟 Mon Kickoff</button>` +
+                      `<button type="button" class="pulse-midweek-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                        `style="background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">📊 Midweek</button>` +
+                      `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
+                        `style="background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">💬 Check-in</button>` +
                       `<button type="button" class="pulse-highfive-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="flex:1; min-width:0; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">\uD83C\uDF89 High-Five</button>`
+                        `style="background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🎉 High-Five</button>`
                     : `<button type="button" class="pulse-review-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="flex-basis:100%; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">${getReviewButtonLabel(periodType)}</button>`) +
+                        `style="grid-column:1/-1; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">${getReviewButtonLabel(periodType)}</button>`) +
             `</div>` +
         `</div>`;
     }
@@ -966,6 +1103,204 @@
 
         message += `\n\n${pick(HF_CLOSERS)} \uD83D\uDE80`;
 
+        return message;
+    }
+
+    // --- Focal point persistence ---
+    const FOCAL_STORAGE_KEY = 'devCoachingTool_weeklyFocalPoints';
+
+    function saveFocalPoint(employeeName, weekKey, focalMetricKey, focalLabel, focalValue, focalTarget) {
+        try {
+            const raw = localStorage.getItem(FOCAL_STORAGE_KEY);
+            const all = raw ? JSON.parse(raw) : {};
+            if (!all[weekKey]) all[weekKey] = {};
+            all[weekKey][employeeName] = {
+                metricKey: focalMetricKey,
+                label: focalLabel,
+                value: focalValue,
+                target: focalTarget,
+                setDate: new Date().toISOString().slice(0, 10)
+            };
+            localStorage.setItem(FOCAL_STORAGE_KEY, JSON.stringify(all));
+        } catch (e) { /* storage full or unavailable */ }
+    }
+
+    function loadFocalPoint(employeeName, weekKey) {
+        try {
+            const raw = localStorage.getItem(FOCAL_STORAGE_KEY);
+            if (!raw) return null;
+            const all = JSON.parse(raw);
+            return all[weekKey]?.[employeeName] || null;
+        } catch (e) { return null; }
+    }
+
+    // --- Monday Kickoff message generation ---
+
+    async function generateMondayKickoffMessage(employeeName, latestKey, baselineKey) {
+        const period = getPeriodData(latestKey);
+        const emp = period?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+
+        const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+        if (!analysis) return null;
+
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
+        const biggestJump = getBiggestJump(weekDeltas);
+
+        const wins = allMetrics
+            .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
+            .sort((a, b) => {
+                if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
+                const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
+                const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
+                return mB - mA;
+            })
+            .slice(0, 3);
+
+        const focalPoint = pickFocalPoint(allMetrics);
+
+        // CELEBRATION section — lead with wins
+        let praiseText = '';
+        if (biggestJump && biggestJump.delta > 0) {
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
+            const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
+            if (otherWins.length > 0) {
+                praiseText += ` ${pick(PLUS_SOLID)(otherWins[0].label, fmtVal(otherWins[0]))}`;
+            }
+        } else if (wins.length >= 2) {
+            praiseText = pick(TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
+        } else if (wins.length === 1) {
+            praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
+        } else {
+            praiseText = pick(NO_WINS);
+        }
+
+        // FOCUS section — set the weekly focal point
+        let focusText = '';
+        if (focalPoint) {
+            focusText = `\n\n${pick(MK_TRANSITION)}\n\n🎯 ${pick(MK_FOCUS_SET)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
+
+            // Fetch a tip for the focal metric
+            try {
+                const allTips = typeof loadServerTips === 'function' ? await loadServerTips() : {};
+                const metricTips = allTips[focalPoint.metricKey] || [];
+                if (metricTips.length > 0) {
+                    const tip = typeof selectSmartTip === 'function'
+                        ? selectSmartTip({ employeeId: employeeName, metricKey: focalPoint.metricKey, severity: 'medium', tips: metricTips })
+                        : metricTips[Math.floor(Math.random() * metricTips.length)];
+                    if (tip) {
+                        const cleanTip = tip.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
+                        focusText += ` 💡 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
+                    }
+                }
+            } catch (e) { /* no tips */ }
+
+            // Persist the focal point for midweek recall
+            saveFocalPoint(employeeName, latestKey, focalPoint.metricKey, focalPoint.label, focalPoint.employeeValue, focalPoint.target);
+        } else {
+            focusText = `\n\n${pick(MK_ALL_GOOD)}`;
+        }
+
+        let message = `${pick(MK_OPENERS)(firstName)} ${praiseText}${focusText}\n\n${pick(MK_CLOSERS)}`;
+        return message;
+    }
+
+    // --- Midweek Check-In message generation ---
+
+    async function generateMidweekCheckinMessage(employeeName, latestKey, baselineKey) {
+        const period = getPeriodData(latestKey);
+        const emp = period?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+
+        const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+        if (!analysis) return null;
+
+        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+
+        // Try to recall the focal point set on Monday
+        const savedFocal = loadFocalPoint(employeeName, latestKey);
+
+        let message = pick(MW_OPENERS)(firstName);
+
+        if (savedFocal) {
+            const focalMetric = allMetrics.find(m => m.metricKey === savedFocal.metricKey);
+            message += ` ${pick(MW_FOCUS_RECALL)(savedFocal.label)}`;
+
+            if (focalMetric) {
+                const currentVal = fmtVal(focalMetric);
+                const targetVal = fmtTarget(focalMetric);
+                const meetsTarget = focalMetric.meetsTarget;
+                const reverse = typeof isReverseMetric === 'function' && isReverseMetric(focalMetric.metricKey);
+                const gap = Math.abs(focalMetric.employeeValue - focalMetric.target);
+                const gapStr = fmtVal(focalMetric.metricKey, gap);
+
+                // Determine if close (within 20% of target)
+                const closeThreshold = focalMetric.target * 0.2;
+                const isClose = gap <= closeThreshold && !meetsTarget;
+
+                if (meetsTarget) {
+                    message += ` ${pick(MW_ON_TRACK)(savedFocal.label, currentVal, targetVal)}`;
+                } else if (isClose) {
+                    message += ` ${pick(MW_CLOSE)(savedFocal.label, currentVal, targetVal, gapStr)}`;
+                } else {
+                    message += `\n\n${pick(MW_BEHIND)(savedFocal.label, currentVal, targetVal, gapStr)}`;
+
+                    // Add a tip for the struggling metric
+                    try {
+                        const allTips = typeof loadServerTips === 'function' ? await loadServerTips() : {};
+                        const metricTips = allTips[focalMetric.metricKey] || [];
+                        if (metricTips.length > 0) {
+                            const tip = typeof selectSmartTip === 'function'
+                                ? selectSmartTip({ employeeId: employeeName, metricKey: focalMetric.metricKey, severity: 'high', tips: metricTips })
+                                : metricTips[Math.floor(Math.random() * metricTips.length)];
+                            if (tip) {
+                                const cleanTip = tip.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
+                                message += ` 💡 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
+                            }
+                        }
+                    } catch (e) { /* no tips */ }
+                }
+            } else {
+                // Focal metric data not available in current period — encourage anyway
+                message += ` No updated data for ${savedFocal.label} yet, but keep being intentional about it.`;
+            }
+        } else {
+            // No focal point was set Monday — give a general midweek snapshot
+            message += ` ${pick(MW_NO_FOCUS_SET)}`;
+
+            const focalPoint = pickFocalPoint(allMetrics);
+            if (focalPoint) {
+                const currentVal = fmtVal(focalPoint);
+                const targetVal = fmtTarget(focalPoint);
+                message += `\n\n🎯 The metric I'd focus on for the rest of the week: ${focalPoint.label} at ${currentVal} (target ${targetVal}).`;
+            }
+
+            // Mention a win if there is one
+            const wins = allMetrics.filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track');
+            if (wins.length > 0) {
+                const topWin = wins[0];
+                message += ` On the bright side, ${topWin.label} at ${fmtVal(topWin)} is looking good.`;
+            }
+        }
+
+        message += `\n\n${pick(MW_CLOSERS)}`;
         return message;
     }
 
@@ -1124,6 +1459,8 @@
         const existing = document.getElementById('pulseCheckinModal');
         if (existing) existing.remove();
 
+        const isKickoff = messageType === 'kickoff';
+        const isMidweek = messageType === 'midweek';
         const isHighFive = messageType === 'highfive';
         const isMonthly = messageType === 'monthly';
         const isQuarterly = messageType === 'quarterly';
@@ -1133,9 +1470,18 @@
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
-        const titleIcon = isQuarterly ? '\uD83D\uDCC8' : isMonthly ? '\uD83D\uDCC5' : isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
-        const titleText = isQuarterly ? `Quarterly Review for ${escapeHtml(firstName)}` : isMonthly ? `Monthly Review for ${escapeHtml(firstName)}` : isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}` : `Check-in for ${escapeHtml(firstName)}`;
-        const copyGradient = isQuarterly
+        const titleIcon = isKickoff ? '🌟' : isMidweek ? '📊' : isQuarterly ? '\uD83D\uDCC8' : isMonthly ? '\uD83D\uDCC5' : isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
+        const titleText = isKickoff ? `Monday Kickoff for ${escapeHtml(firstName)}`
+            : isMidweek ? `Midweek Check-In for ${escapeHtml(firstName)}`
+            : isQuarterly ? `Quarterly Review for ${escapeHtml(firstName)}`
+            : isMonthly ? `Monthly Review for ${escapeHtml(firstName)}`
+            : isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}`
+            : `Check-in for ${escapeHtml(firstName)}`;
+        const copyGradient = isKickoff
+            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+            : isMidweek
+            ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
+            : isQuarterly
             ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
             : isMonthly
             ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
@@ -1173,7 +1519,7 @@
             } catch (e) { textarea.select(); }
         });
 
-        const generateFn = isQuarterly ? generateQuarterlyCheckinMessage : isMonthly ? generateMonthlyCheckinMessage : isHighFive ? generateHighFiveMessage : generateCheckinMessage;
+        const generateFn = isKickoff ? generateMondayKickoffMessage : isMidweek ? generateMidweekCheckinMessage : isQuarterly ? generateQuarterlyCheckinMessage : isMonthly ? generateMonthlyCheckinMessage : isHighFive ? generateHighFiveMessage : generateCheckinMessage;
         document.getElementById('pulseCheckinRegenerate').addEventListener('click', async () => {
             const regenBtn = document.getElementById('pulseCheckinRegenerate');
             regenBtn.textContent = '\u23F3 Regenerating...';
@@ -1338,6 +1684,60 @@
             });
         });
 
+        // Bind Monday Kickoff buttons
+        container.querySelectorAll('.pulse-kickoff-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const empName = this.dataset.employee;
+                const originalText = this.textContent;
+                this.textContent = '\u23F3 Generating...';
+                this.disabled = true;
+
+                try {
+                    const message = await generateMondayKickoffMessage(empName, latestKey, baselineKey);
+                    if (!message) {
+                        if (typeof showToast === 'function') showToast('Could not generate kickoff for ' + empName, 3000);
+                        return;
+                    }
+                    showCheckinModal(empName, message, latestKey, baselineKey, 'kickoff');
+
+                    try {
+                        await navigator.clipboard.writeText(message);
+                        if (typeof showToast === 'function') showToast('Monday Kickoff copied to clipboard!', 3000);
+                    } catch (e) { /* clipboard not available */ }
+                } finally {
+                    this.textContent = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // Bind Midweek Check-In buttons
+        container.querySelectorAll('.pulse-midweek-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const empName = this.dataset.employee;
+                const originalText = this.textContent;
+                this.textContent = '\u23F3 Generating...';
+                this.disabled = true;
+
+                try {
+                    const message = await generateMidweekCheckinMessage(empName, latestKey, baselineKey);
+                    if (!message) {
+                        if (typeof showToast === 'function') showToast('Could not generate midweek check-in for ' + empName, 3000);
+                        return;
+                    }
+                    showCheckinModal(empName, message, latestKey, baselineKey, 'midweek');
+
+                    try {
+                        await navigator.clipboard.writeText(message);
+                        if (typeof showToast === 'function') showToast('Midweek check-in copied to clipboard!', 3000);
+                    } catch (e) { /* clipboard not available */ }
+                } finally {
+                    this.textContent = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
         // Bind high-five buttons
         container.querySelectorAll('.pulse-highfive-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
@@ -1440,6 +1840,8 @@
         renderMorningPulse,
         generateCheckinMessage,
         generateHighFiveMessage,
+        generateMondayKickoffMessage,
+        generateMidweekCheckinMessage,
         generateMonthlyCheckinMessage,
         generateQuarterlyCheckinMessage
     };
