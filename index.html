@@ -1650,12 +1650,25 @@ Box 2 - Future Improvement Areas:
                 // Main Application
                 'script.js'
             ];
+            var lastScript = null;
             scripts.forEach(function(src) {
                 var s = document.createElement('script');
                 s.src = src + '?v=' + bust;
                 s.async = false;
+                s.onerror = function() { console.error('[DevCoach] Failed to load: ' + src); };
                 document.body.appendChild(s);
+                lastScript = s;
             });
+            // Guarantee boot after all scripts load
+            if (lastScript) {
+                lastScript.onload = function() {
+                    console.log('[DevCoach] script.js onload fired');
+                    if (typeof bootAppSafely === 'function' && !window.__appBootOk) {
+                        console.log('[DevCoach] Triggering boot from onload');
+                        bootAppSafely();
+                    }
+                };
+            }
         })();
     </script>
 </body>

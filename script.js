@@ -6315,8 +6315,21 @@ async function bootAppSafely() {
 // INITIALIZATION TRIGGER
 // ============================================
 
-// Initialize app — script.js is dynamically loaded so DOM is always ready by now
-bootAppSafely();
+// Initialize app — multiple strategies to guarantee boot
+console.log('[DevCoach] Init trigger reached, readyState=' + document.readyState);
+try {
+    bootAppSafely().catch(function(err) { console.error('[DevCoach] bootAppSafely rejected:', err); });
+    console.log('[DevCoach] bootAppSafely() called');
+} catch (e) {
+    console.error('[DevCoach] bootAppSafely() threw:', e);
+}
+// Fallback: if boot didn't run for any reason, retry after a short delay
+setTimeout(function() {
+    if (!window.__appBootOk) {
+        console.warn('[DevCoach] Fallback boot triggered');
+        try { bootAppSafely(); } catch(e) { console.error('[DevCoach] Fallback boot failed:', e); }
+    }
+}, 500);
 
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
