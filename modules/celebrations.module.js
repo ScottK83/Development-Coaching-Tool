@@ -407,7 +407,7 @@
                 if (valStr) {
                     lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!');
                 } else {
-                    lines.push(pick(STANDOUT_LINES)(a.label));
+                    lines.push('\uD83C\uDF1F ' + a.label + ' — ranked ' + a.tierLabel + '!');
                 }
             }
         });
@@ -432,7 +432,7 @@
                     if (valStr) {
                         msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!\n';
                     } else {
-                        msg += '   \u2B50 Outstanding ' + a.label + '!\n';
+                        msg += '   \u2B50 ' + a.label + ' — ranked ' + a.tierLabel + '!\n';
                     }
                 }
             });
@@ -473,7 +473,7 @@
                 if (valStr) {
                     lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!');
                 } else {
-                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!');
+                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is ' + a.tierLabel + ' — outstanding!');
                 }
             }
         });
@@ -630,7 +630,7 @@
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
                     } else {
-                        html += emoji + ' Outstanding <strong>' + _escapeHtml(a.label) + '</strong>!';
+                        html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong> — ' + _escapeHtml(a.tierLabel) + '!';
                     }
                 }
                 html += '</div>';
