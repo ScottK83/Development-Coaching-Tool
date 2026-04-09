@@ -312,7 +312,8 @@
             { key: 'aht', field: 'values.aht', reverse: true },
             { key: 'adherence', field: 'values.adherence', reverse: false },
             { key: 'sentiment', field: 'values.sentiment', reverse: false },
-            { key: 'associateOverall', field: 'values.associateOverall', reverse: false }
+            { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
+            { key: 'reliability', field: 'reliability', reverse: false }
         ];
 
         metricRankKeys.forEach(function (mk) {
