@@ -1119,7 +1119,7 @@ window.saveEmployeePreferredName = function(fullName) {
 (function seedSupervisorTeams() {
     var seeds = [
         { key: 'miranda_v2', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
-        { key: 'kayth_v2', supervisor: 'Kayth', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
+        { key: 'kathy_v2', supervisor: 'Kathy', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
         { key: 'angie_v2', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
         { key: 'sarah_v2', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gugora', 'Keshay', 'Aldo', 'Sophie', 'Holly', 'John', 'Pamela', 'Eilene', 'Trevor', 'Needra', 'Briana Z', 'Ekiecha'] },
         { key: 'schnelle_v2', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie', 'Alexis', 'Caylie', 'Caitlyn', 'Jenifer Henson', 'Lily', 'Kimmy', 'Anissa', 'Monica Madden', 'Crystal Nez', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela', 'Michelle Weibrecht', 'Rachael Wilson'] },
