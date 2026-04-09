@@ -495,14 +495,18 @@ Write the complete email.`;
     function buildGroupTrendBriefSummaryHtml(teamInsights, descriptor) {
         const downfalls = teamInsights.atRisk.concat(teamInsights.declining);
         const improvements = teamInsights.improving;
-        const improvementExamples = improvements.slice(0, 3).map(_esc).join(', ');
-        const downfallExamples = downfalls.slice(0, 3).map(_esc).join(', ');
+        const improvementExamples = improvements.slice(0, 3);
+        const downfallExamples = downfalls.slice(0, 3);
+        const chipsHtml = (names, borderColor) => {
+            if (!names.length) return '';
+            return `<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle;">${names.map(name => `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" style="border: 1px solid ${borderColor}; background: #fff; color: #1f2f46; border-radius: 999px; padding: 2px 8px; font-size: 0.8em; font-weight: 700; cursor: pointer;">${_esc(name)}</button>`).join('')}</span>`;
+        };
 
         return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #d4e3fb; border-radius: 8px; background: #f8fbff;">
             <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">Team Summary (${descriptor.shortLabel})</div>
             <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
-                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} trending up${improvementExamples ? ` (${improvementExamples})` : ''}.</div>
-                <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples ? ` (${downfallExamples})` : ''}.</div>
+                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} trending up${improvementExamples.length ? ` (${chipsHtml(improvementExamples, '#43a047')})` : ''}.</div>
+                <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples.length ? ` (${chipsHtml(downfallExamples, '#fb8c00')})` : ''}.</div>
             </div>
         </div>`;
     }
