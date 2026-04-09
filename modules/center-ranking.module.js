@@ -1,6 +1,38 @@
 (function () {
     'use strict';
 
+    // Supervisor color palette for row highlighting
+    var SUPERVISOR_COLORS = {
+        'Scott':    { bg: '#e3f2fd', dark: '#0d2137' },
+        'Miranda':  { bg: '#fce4ec', dark: '#2a1015' },
+        'Kathy Cruz': { bg: '#f3e5f5', dark: '#1f0f24' },
+        'Angie':    { bg: '#fff3e0', dark: '#2a1d08' },
+        'Sarah':    { bg: '#e8f5e9', dark: '#0d2010' },
+        'Schnelle': { bg: '#e0f7fa', dark: '#0a1f22' },
+        'Nicole':   { bg: '#fff9c4', dark: '#2a2508' }
+    };
+
+    function _getSupervisorColor(empName) {
+        try {
+            var sups = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}');
+            var sup = sups[empName];
+            if (sup && SUPERVISOR_COLORS[sup]) {
+                var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                return isDark ? SUPERVISOR_COLORS[sup].dark : SUPERVISOR_COLORS[sup].bg;
+            }
+        } catch (_e) {}
+        return null;
+    }
+
+    function _getSupervisorLightColor(empName) {
+        try {
+            var sups = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}');
+            var sup = sups[empName];
+            if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].bg;
+        } catch (_e) {}
+        return '#ccc';
+    }
+
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
         if (mod?.escapeHtml) return mod.escapeHtml(str);
@@ -401,8 +433,11 @@
 
         sorted.forEach(function (r, idx) {
             var isTeam = data.teamMembers.has(r.name);
-            var rowBg = isTeam ? '#e8eaf6' : (r.rank % 2 === 0 ? '#fafafa' : '#fff');
-            var fontWeight = isTeam ? 'bold' : 'normal';
+            var supColor = _getSupervisorColor(r.name);
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            var defaultBg = isDark ? (r.rank % 2 === 0 ? '#1a1f2e' : 'transparent') : (r.rank % 2 === 0 ? '#fafafa' : '#fff');
+            var rowBg = supColor || (isTeam ? (isDark ? '#0d2137' : '#e8eaf6') : defaultBg);
+            var fontWeight = (isTeam || supColor) ? 'bold' : 'normal';
 
             var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
                 r.trackStatusValue === 'on-track-successful' ? '#f57f17' : '#c62828';
@@ -418,9 +453,14 @@
             // Row number
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
 
-            // Name (highlight team members)
+            // Name (highlight team members, show supervisor color dot for rivals)
             html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
-            if (isTeam) html += '<span style="color: #1565c0;">&#9733; </span>';
+            if (isTeam) {
+                html += '<span style="color: #1565c0;">&#9733; </span>';
+            } else if (supColor) {
+                var _dotColor = _getSupervisorLightColor(r.name);
+                html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _dotColor + ';margin-right:4px;vertical-align:middle;"></span>';
+            }
             html += _escapeHtml(r.name) + '</td>';
 
             // Composite average rank
