@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-09T18:00:10.806Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-04-09T18:45:11.697Z",
+  "reason": "storage set: devCoachingTool_reliabilityTracker",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-04-08|2026-04-08": {
@@ -8438,16 +8438,6 @@
   "yearEndDraftStore": {},
   "employeePreferredNames": {},
   "appStorageSnapshot": {
-    "devCoachingTool_coachingHistory": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
-    },
-    "devCoachingTool_teamMemberSelectorExpanded": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 4
-    },
     "devCoachingTool_supervisorSeeded_nicole": {
       "valueType": "string",
       "itemCount": "",
@@ -8455,23 +8445,18 @@
     },
     "devCoachingTool_celebrationsHistory": {
       "valueType": "array",
-      "itemCount": 1,
-      "byteLength": 1151
-    },
-    "devCoachingTool_supervisorSeeded_miranda": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
-    },
-    "devCoachingTool_ytdData": {
-      "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 48352
+      "itemCount": 2,
+      "byteLength": 2548
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
       "byteLength": 9390
+    },
+    "devCoachingTool_callCenterAverages": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 866
     },
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
@@ -8483,60 +8468,140 @@
       "itemCount": "",
       "byteLength": 1
     },
-    "devCoachingTool_celebrationsInnerTab": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 12
-    },
     "devCoachingTool_sentimentPhraseDatabase": {
       "valueType": "object",
       "itemCount": 3,
       "byteLength": 75
     },
-    "devCoachingTool_callCenterAverages": {
-      "valueType": "object",
-      "itemCount": 3,
-      "byteLength": 866
-    },
-    "devCoachingTool_smartDefault_lastPeriodType": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 8
-    },
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 215
-    },
-    "devCoachingTool_repoSyncLastSuccess": {
-      "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 294
+      "byteLength": 227
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
     },
-    "devCoachingTool_supervisorSeeded_kathy": {
+    "devCoachingTool_tipUsageHistory": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 404
+    },
+    "devCoachingTool_supervisorSeeded_kathy_v2": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
-    },
-    "devCoachingTool_employeeSupervisors": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
     },
     "devCoachingTool_supervisorSeeded_sarah": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
     },
+    "devCoachingTool_employeeSupervisors": {
+      "valueType": "object",
+      "itemCount": 126,
+      "byteLength": 3254
+    },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
+    },
+    "devCoachingTool_morningPulseSelection": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 57
+    },
+    "devCoachingTool_supervisorSeeded_sarah_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_myTeamMembers": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_scott_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_supervisorSeeded_angela_allison_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_coachingHistory": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_schnelle_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_teamMemberSelectorExpanded": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 4
+    },
+    "devCoachingTool_supervisorSeeded_miranda": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_ytdData": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 48352
+    },
+    "devCoachingTool_supervisorSeeded_angie_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_reliabilityTracker": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 16
+    },
+    "devCoachingTool_supervisorSeeded_miranda_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_celebrationsInnerTab": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 12
+    },
+    "devCoachingTool_celebrationsSelection": {
+      "valueType": "object",
+      "itemCount": 2,
+      "byteLength": 54
+    },
+    "devCoachingTool_smartDefault_lastPeriodType": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 8
+    },
+    "devCoachingTool_supervisorSeeded_v2_migration": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 294
+    },
+    "devCoachingTool_supervisorSeeded_kathy": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     },
     "devCoachingTool_supervisorSeeded_schnelle": {
       "valueType": "string",
@@ -8548,15 +8613,10 @@
       "itemCount": 2,
       "byteLength": 92838
     },
-    "devCoachingTool_morningPulseSelection": {
-      "valueType": "object",
-      "itemCount": 2,
-      "byteLength": 57
-    },
-    "devCoachingTool_myTeamMembers": {
-      "valueType": "object",
-      "itemCount": 0,
-      "byteLength": 2
+    "devCoachingTool_supervisorSeeded_nicole_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     }
   }
 }
