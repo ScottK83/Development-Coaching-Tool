@@ -428,7 +428,7 @@
         var sortedTeams = data.teamNames
             .filter(function (n) { return n !== 'Unassigned'; })
             .map(function (n) { return data.teamStats[n]; })
-            .sort(function (a, b) { return a.totalComposite - b.totalComposite; });
+            .sort(function (a, b) { return (b.avgRating || 0) - (a.avgRating || 0); });
 
         var html = '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: #1a1a2e;">Team Power Rankings</h4>';
