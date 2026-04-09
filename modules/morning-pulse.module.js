@@ -871,10 +871,16 @@
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s));
 
-        const trendArrow = (dir, metricKey) => {
+        const trendArrow = (metric) => {
+            const dir = metric?.trendDirection;
+            const metricKey = metric?.metricKey;
             const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
             if (dir === 'improving') return `<span style="color:#2e7d32;" title="Improving">${reverse ? '\u25BC' : '\u25B2'}</span>`;
-            if (dir === 'declining') return `<span style="color:#e53935;" title="Declining">${reverse ? '\u25B2' : '\u25BC'}</span>`;
+            if (dir === 'declining') {
+                const declineColor = metric?.meetsTarget ? '#f9a825' : '#e53935';
+                const declineTitle = metric?.meetsTarget ? 'Declining (still above target)' : 'Declining';
+                return `<span style="color:${declineColor};" title="${declineTitle}">${reverse ? '\u25B2' : '\u25BC'}</span>`;
+            }
             return '<span style="color:#9e9e9e;" title="Stable">\u2015</span>';
         };
 
@@ -888,7 +894,7 @@
                     ? ` <span style="color:#1b5e20; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} ${deltaContextLabel})</span>`
                     : '';
                 return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
-                    `${trendArrow(m.trendDirection, m.metricKey)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
+                    `${trendArrow(m)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
             }).join('');
         } else {
             winsHtml = '<div style="font-size:0.85em; color:#999;">No metrics at target yet</div>';
@@ -900,10 +906,10 @@
             oppsHtml = opportunities.map(m => {
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
                 const deltaTag = wd && wd.delta !== 0
-                    ? ` <span style="color:${wd.delta > 0 ? '#1b5e20' : '#b71c1c'}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
+                    ? ` <span style="color:${wd.delta > 0 ? '#1b5e20' : (m.meetsTarget ? '#f9a825' : '#b71c1c')}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
                     : '';
                 return `<div style="font-size:0.85em; color:#c62828; padding:2px 0;">` +
-                    `${trendArrow(m.trendDirection, m.metricKey)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong> ` +
+                    `${trendArrow(m)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong> ` +
                     `<span style="color:#999;">(target: ${fmtTarget(m)})</span>${deltaTag}</div>`;
             }).join('');
         } else {
