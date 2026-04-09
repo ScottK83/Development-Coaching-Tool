@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.09.23'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.09.24'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -2013,14 +2013,14 @@ function handlePasteDataTextareaInput(event) {
         preview.className = 'validation-success';
         preview.innerHTML = `
             ✅ <strong>Data looks good!</strong><br>
-            📊 ${validation.employeeCount} employees detected<br>
-            👤 Preview: ${validation.preview.join(', ')}${validation.employeeCount > 3 ? '...' : ''}
+            📊 ${escapeHtml(String(validation.employeeCount))} employees detected<br>
+            👤 Preview: ${validation.preview.map(n => escapeHtml(n)).join(', ')}${validation.employeeCount > 3 ? '...' : ''}
         `;
     } else {
         preview.className = 'validation-error';
         preview.innerHTML = `
             ⚠️ <strong>Data validation issues:</strong><br>
-            ${validation.issues.map(i => `• ${i}`).join('<br>')}
+            ${validation.issues.map(i => `• ${escapeHtml(i)}`).join('<br>')}
         `;
     }
 }
@@ -4428,7 +4428,7 @@ function renderCoachingPriorityQueue() {
     const buckets = getTrendComparisonBuckets(keys, periodType);
 
     if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
-        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} queue generation.</div>`;
+        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${escapeHtml(buckets.descriptor.label)} queue generation.</div>`;
         return;
     }
 
@@ -5326,7 +5326,7 @@ function renderComplianceAlerts() {
     }
     const items = filteredLog.slice(-5).reverse().map(entry => {
         return `<div style="padding: 10px; border: 1px solid #f1d5d5; border-radius: 6px; background: #fff7f7;">
-            <strong>${entry.employeeId || 'Unknown'}</strong> • ${entry.flag} • ${new Date(entry.timestamp).toLocaleString()}
+            <strong>${escapeHtml(entry.employeeId || 'Unknown')}</strong> • ${escapeHtml(entry.flag || '')} • ${escapeHtml(new Date(entry.timestamp).toLocaleString())}
         </div>`;
     }).join('');
     container.innerHTML = items;
@@ -5376,10 +5376,10 @@ function renderCoachingLoadAwareness() {
 
     container.innerHTML = `
         <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Not coached in 30+ days:</strong> ${noRecent.length ? noRecent.join(', ') : 'None'}
+            <strong>Not coached in 30+ days:</strong> ${noRecent.length ? noRecent.map(n => escapeHtml(n)).join(', ') : 'None'}
         </div>
         <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>High coaching load:</strong> ${highLoad.length ? highLoad.join(', ') : 'None'}
+            <strong>High coaching load:</strong> ${highLoad.length ? highLoad.map(n => escapeHtml(n)).join(', ') : 'None'}
         </div>
     `;
 }
