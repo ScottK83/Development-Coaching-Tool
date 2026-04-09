@@ -6170,21 +6170,24 @@ async function initApp() {
     bindTeamFilterChangeHandlers();
     notifyTeamFilterChanged();
 
-    const restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
-    if (restoredFromRepo) {
-        // Re-load all in-memory variables from localStorage after restore
-        weeklyData = loadWeeklyData();
-        ytdData = loadYtdData();
-        coachingHistory = loadCoachingHistory();
-        callListeningLogs = loadCallListeningLogs();
-        sentimentPhraseDatabase = loadSentimentPhraseDatabase();
-        associateSentimentSnapshots = loadAssociateSentimentSnapshots();
-        loadTeamMembers();
-        cleanupStaleAutoYtds(); // re-run after restore to remove stale auto-YTDs from backup
-        saveYtdData(); // persist the cleanup
-        showToast('✅ Restored synced data for this browser profile.', 4000);
-        notifyTeamFilterChanged();
-    }
+    // Auto-restore runs in background so UI loads immediately
+    tryAutoRestoreFromRepoBackupOnEmptyState().then(function(restoredFromRepo) {
+        if (restoredFromRepo) {
+            // Re-load all in-memory variables from localStorage after restore
+            weeklyData = loadWeeklyData();
+            ytdData = loadYtdData();
+            coachingHistory = loadCoachingHistory();
+            callListeningLogs = loadCallListeningLogs();
+            sentimentPhraseDatabase = loadSentimentPhraseDatabase();
+            associateSentimentSnapshots = loadAssociateSentimentSnapshots();
+            loadTeamMembers();
+            cleanupStaleAutoYtds();
+            saveYtdData();
+            showToast('✅ Restored synced data for this browser profile.', 4000);
+            notifyTeamFilterChanged();
+            restoreLastViewedSection();
+        }
+    }).catch(function(err) { console.error('Auto-restore failed:', err); });
     
 
     if (Object.keys(weeklyData).length > 0) {
