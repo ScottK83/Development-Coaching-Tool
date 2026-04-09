@@ -133,7 +133,7 @@ window.addEventListener('error', (event) => {
     };
     localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(errorInfo));
     showToast('⚠️ An error occurred. Check Debug panel for details.', 5000);
-    event.preventDefault();
+    // Do NOT call event.preventDefault() — let the error show in the console
 });
 
 // Suppress unhandled promise rejections from source map loading
