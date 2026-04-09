@@ -330,7 +330,18 @@
             });
             sorted.forEach(function (emp, idx) {
                 if (!emp.metricRanks) emp.metricRanks = {};
-                emp.metricRanks[mk.key] = idx + 1;
+                // Tie handling: same value = same rank (standard competition ranking)
+                if (idx === 0) {
+                    emp.metricRanks[mk.key] = 1;
+                } else {
+                    var prevVal = mk.field.includes('.') ? sorted[idx - 1].values[mk.field.split('.')[1]] : sorted[idx - 1][mk.field];
+                    var curVal = mk.field.includes('.') ? emp.values[mk.field.split('.')[1]] : emp[mk.field];
+                    if (curVal === prevVal) {
+                        emp.metricRanks[mk.key] = sorted[idx - 1].metricRanks[mk.key];
+                    } else {
+                        emp.metricRanks[mk.key] = idx + 1;
+                    }
+                }
             });
         });
 
