@@ -1114,6 +1114,23 @@ window.saveEmployeePreferredName = function(fullName) {
     renderEmployeesList();
 }
 
+function getEmployeeSupervisors() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+    } catch (_e) { return {}; }
+}
+
+function setEmployeeSupervisor(name, supervisor) {
+    if (!name) return;
+    const sups = getEmployeeSupervisors();
+    if (supervisor && supervisor.trim()) {
+        sups[name] = supervisor.trim();
+    } else {
+        delete sups[name];
+    }
+    localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(sups));
+}
+
 function formatDateMMDDYYYY(dateString) {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-');
@@ -1741,6 +1758,11 @@ function bindNavigationHandlers() {
     document.getElementById('subNavTaSentiment')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaSentiment', 'subNavTaSentiment');
         ensureSentimentMountedInTrends();
+    });
+    document.getElementById('subNavTaMatchup')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaMatchup', 'subNavTaMatchup');
+        var matchupMod = window.DevCoachModules?.matchup;
+        if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
     });
 
     // --- Review Prep ---
@@ -6021,10 +6043,14 @@ function renderEmployeesList() {
         onDeleteEmployee: deleteEmployee,
         teamSelectionWeek,
         teamSelectionMembers,
+        supervisorAssignments: getEmployeeSupervisors(),
         onTeamSelectionChange: ({ weekKey, selectedMembers }) => {
             const normalizedWeekKey = String(weekKey || '').trim();
             if (!normalizedWeekKey) return;
             setTeamMembersForWeek(normalizedWeekKey, Array.isArray(selectedMembers) ? selectedMembers : []);
+        },
+        onSupervisorChange: ({ name, supervisor }) => {
+            setEmployeeSupervisor(name, supervisor);
         }
     });
 }
