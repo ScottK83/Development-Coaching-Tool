@@ -605,7 +605,7 @@
                 { score: r.scores.adherence, value: r.values.adherence, key: 'scheduleAdherence', rankKey: 'adherence' },
                 { score: r.scores.sentiment, value: r.values.sentiment, key: 'overallSentiment', rankKey: 'sentiment' },
                 { score: r.scores.associateOverall, value: r.values.associateOverall, key: 'cxRepOverall', rankKey: 'associateOverall' },
-                { score: null, value: r.reliability, key: 'reliability', rankKey: 'reliability' }
+                { score: r.scores.reliability, value: r.reliability, key: 'reliability', rankKey: 'reliability' }
             ];
 
             metricPairs.forEach(function (mp) {
