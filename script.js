@@ -6315,15 +6315,8 @@ async function bootAppSafely() {
 // INITIALIZATION TRIGGER
 // ============================================
 
-// Initialize app when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        bootAppSafely();
-    });
-} else {
-    // DOM already loaded (if script runs late)
-    bootAppSafely();
-}
+// Initialize app — script.js is dynamically loaded so DOM is always ready by now
+bootAppSafely();
 
 // ===== EXECUTIVE SUMMARY FUNCTIONS =====
 
