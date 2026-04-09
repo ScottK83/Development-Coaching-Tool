@@ -2655,9 +2655,16 @@ function handleDeleteSelectedWeekClick() {
         return;
     }
 
-    delete weeklyData[selectedWeek];
+    // Delete from whichever store holds this key (weekly, ytd, or both)
+    if (weeklyData[selectedWeek]) {
+        delete weeklyData[selectedWeek];
+        saveWeeklyData();
+    }
+    if (ytdData[selectedWeek]) {
+        delete ytdData[selectedWeek];
+        saveYtdData();
+    }
     delete myTeamMembers[selectedWeek];
-    saveWeeklyData();
     normalizeTeamMembersForExistingWeeks();
     saveTeamMembers();
 
@@ -2666,7 +2673,7 @@ function handleDeleteSelectedWeekClick() {
     populateDeleteEmployeeYearOptions();
     populateTeamMemberSelector();
     renderEmployeesList();
-    showToast('✅ Week deleted successfully');
+    showToast('✅ Period deleted successfully');
 
     const employeeSelect = document.getElementById('employeeSelect');
     if (employeeSelect) employeeSelect.value = '';
