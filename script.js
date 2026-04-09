@@ -1119,10 +1119,10 @@ window.saveEmployeePreferredName = function(fullName) {
     var seeds = [
         { key: 'miranda', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor', 'Joann', 'Erika', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina Williams', 'Kassandra'] },
         { key: 'kathy', supervisor: 'Kathy Cruz', agents: ['Michelle', 'Cordova', 'Erb', 'Frank', 'April Gonzalez', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul Sebastian', 'Dillon'] },
-        { key: 'angie', supervisor: 'Angie Delgado', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah', 'Dawn Martinez', 'Rachel', 'Ariell', 'Brandi', 'Cindy', 'Alexandra Rangel', 'Chrsti-Ann Thompson', 'Alejandra Valdez', 'Lonia', 'Crystal Vill'] },
+        { key: 'angie', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah', 'Dawn Martinez', 'Rachel', 'Ariell', 'Brandi', 'Cindy', 'Alexandra Rangel', 'Chrsti-Ann Thompson', 'Alejandra Valdez', 'Lonia', 'Crystal Vill'] },
         { key: 'sarah', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Ekiecha', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gug', 'Keshary Gui', 'Aldo', 'Sophie', 'Holluy', 'John M', 'Pamela Mu', 'Eiolene P', 'Trevor', 'Needra', 'Briana Z'] },
         { key: 'schnelle', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie Carb', 'Caylie', 'Caitlyn', 'Jenifer Hen', 'Lily', 'Kimmy', 'Anissa', 'Monica M', 'Crystal', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela T', 'Michelle Wei', 'Rachael W'] },
-        { key: 'nicole', supervisor: 'Nicole P', agents: ['Amy', 'Jessica B', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya', 'Geralene', 'Dawanda', 'Shawn', 'Ashley R', 'Cindy', 'Ebany', 'Monica String', 'Brayden', 'Jereca'] }
+        { key: 'nicole', supervisor: 'Nicole', agents: ['Amy', 'Jessica B', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya', 'Geralene', 'Dawanda', 'Shawn', 'Ashley R', 'Cindy', 'Ebany', 'Monica String', 'Brayden', 'Jereca'] }
     ];
     var needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
