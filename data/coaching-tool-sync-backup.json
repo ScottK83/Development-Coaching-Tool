@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-09T17:26:01.924Z",
-  "reason": "manual footer sync",
+  "generatedAt": "2026-04-09T17:26:07.651Z",
+  "reason": "upload to git",
   "sourceAppVersion": null,
   "weeklyData": {},
   "ytdData": {},
@@ -67,6 +67,11 @@
       "valueType": "object",
       "itemCount": 5,
       "byteLength": 228
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 263
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
