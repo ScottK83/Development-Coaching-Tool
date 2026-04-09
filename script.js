@@ -2321,6 +2321,24 @@ function handleLoadPastedDataClick() {
 
         if (periodType !== 'ytd') {
             upsertAutoYtdForYear(normalizedEndDate.getFullYear(), endDate);
+        } else {
+            // Real YTD uploaded — clean up stale auto-YTDs and rebuild if
+            // there are weekly periods after this YTD's end date.
+            const ytdYear = normalizedEndDate.getFullYear();
+            let latestWeeklyEnd = null;
+            Object.entries(weeklyData || {}).forEach(([k, v]) => {
+                const meta = v?.metadata || {};
+                const pt = meta.periodType || 'week';
+                if (!['daily', 'week', 'month', 'quarter', 'custom'].includes(pt)) return;
+                const edt = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
+                if (!edt) return;
+                const [y] = edt.split('-').map(Number);
+                if (y !== ytdYear) return;
+                if (!latestWeeklyEnd || edt > latestWeeklyEnd) latestWeeklyEnd = edt;
+            });
+            // If weekly data exists after (or at) this YTD, rebuild auto-YTD
+            // anchored to the new real upload. If none, just clean stale ones.
+            upsertAutoYtdForYear(ytdYear, latestWeeklyEnd || endDate);
         }
 
         saveWeeklyData();
