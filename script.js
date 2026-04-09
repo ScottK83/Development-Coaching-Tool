@@ -1495,8 +1495,14 @@ function initializeEventHandlers() {
 }
 
 function bindUploadAndPasteHandlers() {
+    // Track whether the user has manually clicked a period button.
+    // When true, date-change auto-detection is suppressed.
+    window._uploadPeriodManuallySelected = false;
+
     document.querySelectorAll('.upload-period-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            // Mark as manual selection if this was a real user click (not programmatic)
+            if (e.isTrusted) window._uploadPeriodManuallySelected = true;
             document.querySelectorAll('.upload-period-btn').forEach(button => {
                 if (button === btn) {
                     button.style.background = '#28a745';
@@ -1633,6 +1639,11 @@ function autoDetectPeriodFromDates() {
     const endDate = document.getElementById('pasteWeekEndingDate')?.value;
     if (!endDate) {
         updateDetectedBadge(null);
+        return;
+    }
+
+    // If the user manually clicked a period button, don't override their choice
+    if (window._uploadPeriodManuallySelected) {
         return;
     }
 
@@ -2359,6 +2370,7 @@ function handleLoadPastedDataClick() {
 
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';
+        window._uploadPeriodManuallySelected = false; // Reset for next upload
 
         showOnlySection('uploadSection');
 
