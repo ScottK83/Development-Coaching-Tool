@@ -35,7 +35,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.09.8'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.09.9'; // Version: YYYY.MM.DD.NN
 const DEBUG = true; // Set to true to enable console logging
 const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
 
@@ -1118,18 +1118,26 @@ window.saveEmployeePreferredName = function(fullName) {
 // One-time supervisor seeds
 (function seedSupervisorTeams() {
     var seeds = [
-        { key: 'miranda', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor', 'Joann', 'Erika', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina Williams', 'Kassandra'] },
-        { key: 'kathy', supervisor: 'Kathy Cruz', agents: ['Michelle', 'Cordova', 'Erb', 'Frank', 'April Gonzalez', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul Sebastian', 'Dillon'] },
-        { key: 'angie', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah', 'Dawn Martinez', 'Rachel', 'Ariell', 'Brandi', 'Cindy', 'Alexandra Rangel', 'Chrsti-Ann Thompson', 'Alejandra Valdez', 'Lonia', 'Crystal Vill'] },
-        { key: 'sarah', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Ekiecha', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gug', 'Keshary Gui', 'Aldo', 'Sophie', 'Holluy', 'John M', 'Pamela Mu', 'Eiolene P', 'Trevor', 'Needra', 'Briana Z'] },
-        { key: 'schnelle', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie Carb', 'Caylie', 'Caitlyn', 'Jenifer Hen', 'Lily', 'Kimmy', 'Anissa', 'Monica M', 'Crystal', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela T', 'Michelle Wei', 'Rachael W'] },
-        { key: 'nicole', supervisor: 'Nicole', agents: ['Amy', 'Jessica B', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya', 'Geralene', 'Dawanda', 'Shawn', 'Ashley R', 'Cindy', 'Ebany', 'Monica String', 'Brayden', 'Jereca'] }
+        { key: 'miranda_v2', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
+        { key: 'kayth_v2', supervisor: 'Kayth', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
+        { key: 'angie_v2', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
+        { key: 'sarah_v2', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gugora', 'Keshay', 'Aldo', 'Sophie', 'Holly', 'John', 'Pamela', 'Eilene', 'Trevor', 'Needra', 'Briana Z', 'Ekiecha'] },
+        { key: 'schnelle_v2', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie', 'Alexis', 'Caylie', 'Caitlyn', 'Jenifer Henson', 'Lily', 'Kimmy', 'Anissa', 'Monica Madden', 'Crystal Nez', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela', 'Michelle Weibrecht', 'Rachael Wilson'] },
+        { key: 'nicole_v2', supervisor: 'Nicole', agents: ['Amy', 'Jessica', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya Davis', 'Geralene', 'Dawanda', 'Shawn', 'Ashley', 'Cindy Robledo', 'Ebany', 'Monica Stringer', 'Brayden', 'Jereca'] },
+        { key: 'scott_v2', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
+        { key: 'angela_allison_v2', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
     ];
     var needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
 
+    // v2 migration: clear old assignments for a clean re-seed
     var existing = {};
-    try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) {}
+    if (!localStorage.getItem('devCoachingTool_supervisorSeeded_v2_migration')) {
+        localStorage.removeItem('devCoachingTool_employeeSupervisors');
+        localStorage.setItem('devCoachingTool_supervisorSeeded_v2_migration', '1');
+    } else {
+        try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) {}
+    }
     var allEmps = {};
     try {
         var wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
