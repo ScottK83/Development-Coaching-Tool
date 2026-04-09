@@ -6598,13 +6598,13 @@ async function generateQuickCheckin() {
         (metric, detail) => `\uD83C\uDFAF Your focus this week should be ${metric}${detail ? ' (currently at ' + detail + ')' : ''}.`,
         (metric, detail) => `\uD83C\uDFAF Let's zero in on ${metric}${detail ? ' \u2014 sitting at ' + detail + ' right now' : ''}.`,
         (metric, detail) => `\uD83C\uDFAF One area to focus on: ${metric}${detail ? ' (at ' + detail + ' currently)' : ''}.`,
-        (metric, detail) => `\uD83C\uDFAF I'd love to see a push on ${metric}${detail ? ' \u2014 you're at ' + detail : ''} this week.`,
+        (metric, detail) => `\uD83C\uDFAF I'd love to see a push on ${metric}${detail ? " \u2014 you're at " + detail : ''} this week.`,
         (metric, detail) => `\uD83C\uDFAF The one thing I want you dialing in on is ${metric}${detail ? ' (currently ' + detail + ')' : ''}.`,
-        (metric, detail) => `\uD83C\uDFAF Let's make ${metric} the priority${detail ? ' \u2014 right now it's at ' + detail : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Let's make ${metric} the priority${detail ? " \u2014 right now it's at " + detail : ''}.`,
         (metric, detail) => `\uD83C\uDFAF Area to level up: ${metric}${detail ? ' (at ' + detail + ')' : ''}.`,
         (metric, detail) => `\uD83C\uDFAF Where I'd focus your energy: ${metric}${detail ? ', currently at ' + detail : ''}.`,
         (metric, detail) => `\uD83C\uDFAF If there's one metric to lock in on it's ${metric}${detail ? ' (' + detail + ' right now)' : ''}.`,
-        (metric, detail) => `\uD83C\uDFAF Key opportunity this week: ${metric}${detail ? ' \u2014 you're at ' + detail + ' currently' : ''}.`,
+        (metric, detail) => `\uD83C\uDFAF Key opportunity this week: ${metric}${detail ? " \u2014 you're at " + detail + ' currently' : ''}.`,
     ];
 
     const QC_CLOSERS = [
