@@ -636,23 +636,21 @@
         var encodedPrompt = encodeURIComponent(prompt);
         var copilotUrl = 'https://copilot.microsoft.com/?showconv=1&sendquery=1&q=' + encodedPrompt;
 
-        // Try to open Copilot; if offline or browser blocks it, offer clipboard fallback
+        // Always copy prompt to clipboard first, then open Copilot
+        navigator.clipboard.writeText(prompt).then(function() {
+            showToast('\u2705 Prompt copied to clipboard! Paste it in CoPilot.', 5000);
+        }).catch(function() {
+            // silent - we still try to open the URL
+        });
+
         var windowRef = window.open(copilotUrl, '_blank');
 
-        // If window is null or blocked, provide clipboard alternative
+        // If window is null or blocked, provide manual fallback
         if (!windowRef) {
-            navigator.clipboard.writeText(prompt).then(function() {
-                showToast('\u2705 Prompt copied to clipboard! Open Copilot and paste it there.', 5000);
-                alert(title + ' prompt copied to clipboard.\n\n1. Go to https://copilot.microsoft.com\n2. Paste the prompt (Ctrl+V)\n3. Let CoPilot generate the email\n\nThis feature requires internet connection for Copilot.');
-            }).catch(function() {
-                // Fallback if clipboard also fails
-                var tempDiv = document.createElement('div');
-                tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
-                tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Clipboard failed. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
-                document.body.appendChild(tempDiv);
-            });
-        } else {
-            showToast('Opening CoPilot with your prompt...', 3000);
+            var tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
+            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
+            document.body.appendChild(tempDiv);
         }
     }
 

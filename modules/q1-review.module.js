@@ -397,7 +397,9 @@
         var metric = window.METRICS_REGISTRY;
         var lines = [];
 
-        lines.push('You are helping a call center supervisor prepare for a Q1 performance review conversation.');
+        lines.push('You are helping a call center supervisor write a Q1 check-in review for an employee.');
+        lines.push('The output will be pasted directly into the employee\'s Q1 check-in form under the "Business Connection" section.');
+        lines.push('Write ABOUT the employee in third person (e.g., "John has demonstrated..." or "[Employee Name] has shown..."), NOT as a conversation script.');
         lines.push('');
         lines.push('EMPLOYEE: ' + empData.name);
         lines.push('PERIOD: Q1 ' + q1Data.year + ' (' + q1Data.weeksInQ1 + ' weeks of data)');
@@ -437,16 +439,15 @@
 
         lines.push('');
         lines.push('INSTRUCTIONS:');
-        lines.push('Generate a Q1 review conversation guide for this employee. Include:');
-        lines.push('1. A warm, positive opening that acknowledges their Q1 work');
-        lines.push('2. Specific praise for their top 2-3 strengths with concrete examples of impact');
-        lines.push('3. A supportive, growth-oriented discussion of 1-2 key improvement areas');
-        lines.push('4. For each improvement area, suggest a specific, actionable goal for Q2');
-        lines.push('5. A motivating close that sets the tone for a strong Q2');
+        lines.push('Write a Q1 Business Connection check-in summary for this employee. This text will be pasted directly into their review form. Include:');
+        lines.push('1. An opening statement summarizing their overall Q1 performance');
+        lines.push('2. Highlight their top 2-3 strengths with specific metric results that show business impact');
+        lines.push('3. Identify 1-2 key development areas with specific, actionable goals for Q2');
+        lines.push('4. A closing statement on their trajectory and expected contributions going forward');
         lines.push('');
-        lines.push('TONE: Warm, genuine, and development-focused. This is a conversation, not a lecture.');
-        lines.push('Avoid corporate jargon. Be specific and human.');
-        lines.push('Keep the total guide to about 300-400 words.');
+        lines.push('TONE: Professional, supportive, and results-oriented. Written in third person about the employee.');
+        lines.push('This is formal review text, not a conversation script. Do not use "you" or write as if speaking to the employee.');
+        lines.push('Keep the total to about 200-300 words.');
 
         return lines.join('\n');
     }
