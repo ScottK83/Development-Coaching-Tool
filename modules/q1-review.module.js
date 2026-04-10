@@ -402,7 +402,10 @@
         lines.push('Write ABOUT the employee in third person (e.g., "John has demonstrated..." or "[Employee Name] has shown..."), NOT as a conversation script.');
         lines.push('');
         lines.push('EMPLOYEE: ' + empData.name);
-        lines.push('PERIOD: Q1 ' + q1Data.year + ' (' + q1Data.weeksInQ1 + ' weeks of data)');
+        var periodDetail = q1Data.dataSource === 'ytd' && q1Data.periodLabel
+            ? q1Data.periodLabel
+            : q1Data.weeksInQ1 + ' weeks of data';
+        lines.push('PERIOD: Q1 ' + q1Data.year + ' (' + periodDetail + ')');
         lines.push('COACHING SESSIONS THIS QUARTER: ' + empData.q1CoachingCount);
         lines.push('');
 
