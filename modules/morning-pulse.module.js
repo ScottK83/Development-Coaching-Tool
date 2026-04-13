@@ -868,19 +868,10 @@
         const deltaContextLabel = options.deltaContextLabel || 'this week';
         const periodType = options.periodType || 'week';
 
-        const wins = allMetrics
-            .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
-            .sort((a, b) => {
-                if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
-                const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
-                const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
-                return mB - mA;
-            })
-            .slice(0, 2);
-
-        // If multiple survey metrics show 0 (no surveys came back), that's really
-        // a single "no surveys" story — collapse to one slot so a real coaching
-        // opportunity can take the other.
+        // Survey metrics all share the same underlying sample. If any survey
+        // metric came back as a detractor (0), we can't honestly celebrate the
+        // other survey metrics from that same sample — e.g. FCR=100 with OE=0
+        // on a single survey is a detractor who happened to answer yes to FCR.
         const rawOpportunities = allMetrics
             .filter(m => m.classification === 'Needs Focus' || m.classification === 'Watch Area')
             .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0));
@@ -889,6 +880,18 @@
             && Number.isFinite(m.employeeValue)
             && m.employeeValue === 0
         );
+        const hasDetractorSurveys = zeroSurveyOpps.length >= 1;
+
+        const wins = allMetrics
+            .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
+            .filter(m => !(hasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
+            .sort((a, b) => {
+                if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
+                const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
+                const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
+                return mB - mA;
+            })
+            .slice(0, 2);
         const surveyCountForOpps = parseInt(emp?.surveyTotal, 10);
         const shouldCollapseSurveys = zeroSurveyOpps.length >= 2;
         const collapsedSurveyKey = shouldCollapseSurveys ? zeroSurveyOpps[0].metricKey : null;
@@ -1211,8 +1214,18 @@
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
         const biggestJump = getBiggestJump(weekDeltas);
 
+        // If any survey metric came back as a detractor (0), suppress the rest
+        // of the survey wins from the same sample — FCR=100 with OE=0 is still
+        // a detractor, not a win worth celebrating.
+        const kickoffHasDetractorSurveys = allMetrics.some(m =>
+            SURVEY_METRIC_KEYS.has(m.metricKey)
+            && Number.isFinite(m.employeeValue)
+            && m.employeeValue === 0
+        );
+
         const wins = allMetrics
             .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
+            .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
             .sort((a, b) => {
                 if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
                 const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
