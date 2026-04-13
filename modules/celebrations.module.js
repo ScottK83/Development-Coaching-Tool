@@ -172,6 +172,18 @@
         var maxTier = tiers[tiers.length - 1];
         var results = [];
 
+        // Count rank-1 holders per metric across the full center. Standard
+        // competition ranking gives every tied leader rank 1, so "only one to
+        // hit this" should only fire when exactly one person sits at rank 1.
+        var rank1CountsByMetric = {};
+        Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+            var count = 0;
+            data.rankings.forEach(function(r) {
+                if (r.metricRanks?.[metricKey] === 1) count++;
+            });
+            rank1CountsByMetric[metricKey] = count;
+        });
+
         data.rankings.forEach(function(r) {
             if (!data.teamMembers.has(r.name)) return;
 
@@ -193,6 +205,7 @@
                     label: meta.label,
                     icon: meta.icon,
                     rank: metricRank,
+                    soloRank1: metricRank === 1 && rank1CountsByMetric[metricKey] === 1,
                     tier: tier.value,
                     tierLabel: tier.label,
                     totalEmployees: data.totalEmployees,
@@ -270,7 +283,7 @@
                 name: person.name,
                 firstName: person.firstName,
                 achievements: person.achievements.map(function(a) {
-                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, tier: a.tier, totalEmployees: a.totalEmployees, value: a.value };
+                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, soloRank1: !!a.soloRank1, tier: a.tier, totalEmployees: a.totalEmployees, value: a.value };
                 })
             };
         });
@@ -319,7 +332,7 @@
                 s.periods.push(entry.dateRange || entry.periodKey);
 
                 person.achievements.forEach(function(a) {
-                    if (a.rank === 1) s.numberOneCount++;
+                    if (a.soloRank1) s.numberOneCount++;
                     if (a.rank <= 5) s.top5Count++;
                     if (a.rank <= 10) s.top10Count++;
                     if (!s.metricBreakdown[a.key]) s.metricBreakdown[a.key] = 0;
@@ -449,7 +462,7 @@
         lines.push('');
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
-            if (a.rank === 1) {
+            if (a.soloRank1) {
                 lines.push(pick(ONLY_ONE_LINES)(a.label) + (valStr ? ' (' + valStr.trim() + ')' : ''));
             } else {
                 // Lead with the fact/value
@@ -471,11 +484,11 @@
         var msg = pick(BATCH_INTRO);
         celebrations.forEach(function(person, idx) {
             if (idx > 0) msg += '\n\n---\n\n';
-            var emoji = person.achievements.some(function(a) { return a.rank === 1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
+            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
             msg += emoji + ' ' + person.firstName + '\n';
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
-                if (a.rank === 1) {
+                if (a.soloRank1) {
                     msg += '   \uD83E\uDD47 Only one to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '') + '\n';
                 } else {
                     if (valStr) {
@@ -549,7 +562,7 @@
         lines.push('');
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
-            if (a.rank === 1) {
+            if (a.soloRank1) {
                 lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : ''));
             } else {
                 if (valStr) {
@@ -676,7 +689,7 @@
         var html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">';
 
         celebrations.forEach(function(person) {
-            var hasOnlyOne = person.achievements.some(function(a) { return a.rank === 1; });
+            var hasOnlyOne = person.achievements.some(function(a) { return a.soloRank1; });
             var cardBorder = hasOnlyOne ? '#ffd700' : '#667eea';
             var cardGlow = hasOnlyOne ? '0 0 8px rgba(255,215,0,0.6)' : 'none';
 
@@ -702,11 +715,11 @@
             html += '<div style="display:flex; flex-direction:column; gap:6px;">';
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? _escapeHtml(formatMetricValue(a.key, a.value)) : '';
-                var emoji = a.rank === 1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
-                var bg = a.rank === 1 ? '#fffbeb' : '#f0f9ff';
-                var border = a.rank === 1 ? '#fbbf24' : '#93c5fd';
+                var emoji = a.soloRank1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
+                var bg = a.soloRank1 ? '#fffbeb' : '#f0f9ff';
+                var border = a.soloRank1 ? '#fbbf24' : '#93c5fd';
                 html += '<div style="padding:8px 12px; background:' + bg + '; border-left:3px solid ' + border + '; border-radius:4px; font-size:0.9em;">';
-                if (a.rank === 1) {
+                if (a.soloRank1) {
                     html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong> — only one to hit this!' + (valStr ? ' <span style="color:#64748b;">(' + valStr + ')</span>' : '');
                 } else {
                     if (valStr) {
@@ -803,15 +816,15 @@
                 // People in this period
                 html += '<div style="padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px;">';
                 entry.entries.forEach(function(person) {
-                    var hasOnlyOne = person.achievements.some(function(a) { return a.rank === 1; });
+                    var hasOnlyOne = person.achievements.some(function(a) { return a.soloRank1; });
                     html += '<div style="padding:8px 12px; background:#f8fafc; border:1px solid #e0e7ff; border-radius:8px; display:flex; align-items:center; gap:6px;">';
                     html += '<span style="font-weight:600; font-size:0.9em;">' + _escapeHtml(person.firstName || _getFirstName(person.name)) + '</span>';
                     person.achievements.forEach(function(a) {
                         if (a.key === 'composite' || a.key === 'reliability') return;
                         var metaLabel = METRIC_RANK_LABELS[a.key]?.label || a.key;
-                        var emoji = a.rank === 1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
-                        var bg = a.rank === 1 ? '#ffd700' : '#667eea';
-                        var color = a.rank === 1 ? '#7c5c00' : '#fff';
+                        var emoji = a.soloRank1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
+                        var bg = a.soloRank1 ? '#ffd700' : '#667eea';
+                        var color = a.soloRank1 ? '#7c5c00' : '#fff';
                         html += '<span style="font-size:0.75em; padding:2px 6px; background:' + bg + '; color:' + color + '; border-radius:8px;" title="' + _escapeHtml(metaLabel) + '">' + emoji + ' ' + _escapeHtml(metaLabel) + '</span>';
                     });
                     html += '</div>';
