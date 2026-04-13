@@ -1661,6 +1661,176 @@
         });
     }
 
+    // --- Run My Monday — one-pass kickoff flow ---
+
+    async function showRunMyMondayModal(container) {
+        const selection = loadPulseSelection();
+        const periodType = 'week';
+        const window_ = getPeriodWindow(periodType, selection.periodKey);
+        if (!window_) {
+            if (typeof showToast === 'function') showToast('No weekly data available yet.', 3000);
+            return;
+        }
+        const { latestKey, baselineKey } = window_;
+        const period = getPeriodData(latestKey);
+        if (!period) {
+            if (typeof showToast === 'function') showToast('Could not load the selected week.', 3000);
+            return;
+        }
+
+        const employees = getFilteredEmployees(period);
+        if (!employees.length) {
+            if (typeof showToast === 'function') showToast('No team members in the selected week.', 3000);
+            return;
+        }
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+
+        // Build card data + priority scoring so we can sort worst-first
+        const cardData = [];
+        employees.forEach(emp => {
+            const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+            if (!analysis || !analysis.allMetrics?.length) return;
+            const metrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+            const badge = getStatusBadge(metrics);
+            const needsFocus = metrics.filter(m => m.classification === 'Needs Focus').length;
+            const watch = metrics.filter(m => m.classification === 'Watch Area').length;
+            const priority = needsFocus * 10 + watch * 3;
+            cardData.push({ emp, analysis, badge, priority, needsFocus, watch });
+        });
+
+        cardData.sort((a, b) => b.priority - a.priority || a.emp.name.localeCompare(b.emp.name));
+
+        const summary = {
+            total: cardData.length,
+            needsSupport: cardData.filter(c => c.badge.label === 'Needs Support').length,
+            watch: cardData.filter(c => c.badge.label === 'Watch').length,
+            solid: cardData.filter(c => c.badge.label === 'Solid' || c.badge.label === 'Crushing It' || c.badge.label === 'Steady').length
+        };
+
+        const endDate = getPeriodDisplayLabel(periodType, latestKey);
+        const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
+        // Remove any existing modal
+        const existing = document.getElementById('runMyMondayModal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'runMyMondayModal';
+        overlay.className = 'modal-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+        overlay.innerHTML = `<div style="background:#fff; border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
+            `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
+                `<div>` +
+                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Monday — ${escapeHtml(endDate)}</h2>` +
+                    `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
+                        `${summary.total} team members \u2022 ` +
+                        `<span style="color:#c62828; font-weight:600;">${summary.needsSupport} needs support</span> \u2022 ` +
+                        `<span style="color:#ef6c00; font-weight:600;">${summary.watch} watch</span> \u2022 ` +
+                        `<span style="color:#2e7d32; font-weight:600;">${summary.solid} on track</span>` +
+                    `</div>` +
+                `</div>` +
+                `<button id="runMyMondayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:#999;">\u2715</button>` +
+            `</div>` +
+            `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
+                `Sorted by priority. Copy each message and send it, then click <strong>Done</strong> to mark the rep finished.` +
+            `</div>` +
+            `<div id="runMyMondayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
+                `<div style="text-align:center; color:#999; padding:30px;">\u23F3 Generating kickoffs\u2026</div>` +
+            `</div>` +
+            `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
+                `<div id="runMyMondayProgress" style="font-size:0.9em; color:#546e7a;">0 / ${summary.total} done</div>` +
+                `<button id="runMyMondayDoneAll" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:10px 18px; cursor:pointer; font-weight:bold;">Close</button>` +
+            `</div>` +
+        `</div>`;
+
+        document.body.appendChild(overlay);
+        document.getElementById('runMyMondayClose').addEventListener('click', () => overlay.remove());
+        document.getElementById('runMyMondayDoneAll').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        // Generate kickoffs sequentially to avoid tip-loader thrash, then render
+        const listEl = document.getElementById('runMyMondayList');
+        const progressEl = document.getElementById('runMyMondayProgress');
+        const doneSet = new Set();
+
+        const rendered = [];
+        for (const entry of cardData) {
+            let message = '';
+            try {
+                message = await generateMondayKickoffMessage(entry.emp.name, latestKey, baselineKey) || '';
+            } catch (e) { message = ''; }
+            rendered.push({ ...entry, message });
+        }
+
+        listEl.innerHTML = rendered.map((r, idx) => {
+            const safeName = escapeHtml(r.emp.name);
+            const badgeBg = r.badge.bg;
+            const badgeColor = r.badge.color;
+            const badgeLabel = escapeHtml(r.badge.label);
+            const badgeIcon = r.badge.icon;
+            return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid #e0e0e0; border-radius:10px; padding:14px; margin-bottom:12px; background:#fff;">` +
+                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">` +
+                    `<div style="font-weight:700; color:#1a237e;">${safeName}</div>` +
+                    `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${badgeColor}; background:${badgeBg};">${badgeIcon} ${badgeLabel}</div>` +
+                `</div>` +
+                `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:0.9em; color:#333; background:#fafafa; resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
+                `<div style="display:flex; gap:8px; margin-top:10px;">` +
+                    `<button class="rmm-copy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
+                    `<button class="rmm-regen" style="background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:9px 14px; cursor:pointer;">🔄 Regenerate</button>` +
+                    `<button class="rmm-done" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">✓ Done</button>` +
+                `</div>` +
+            `</div>`;
+        }).join('');
+
+        const updateProgress = () => {
+            progressEl.textContent = `${doneSet.size} / ${rendered.length} done`;
+        };
+
+        listEl.querySelectorAll('.rmm-rep-card').forEach(card => {
+            const idx = parseInt(card.dataset.repIndex, 10);
+            const repName = card.dataset.repName;
+            const textarea = card.querySelector('.rmm-rep-text');
+
+            card.querySelector('.rmm-copy').addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(textarea.value);
+                    if (typeof showToast === 'function') showToast(`Copied ${repName}`, 1500);
+                } catch (e) { textarea.select(); }
+            });
+
+            card.querySelector('.rmm-regen').addEventListener('click', async (e) => {
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                const originalText = btn.textContent;
+                btn.textContent = '\u23F3';
+                try {
+                    const msg = await generateMondayKickoffMessage(repName, latestKey, baselineKey);
+                    if (msg) textarea.value = msg;
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            });
+
+            card.querySelector('.rmm-done').addEventListener('click', () => {
+                if (doneSet.has(idx)) {
+                    doneSet.delete(idx);
+                    card.style.opacity = '1';
+                    card.style.background = '#fff';
+                } else {
+                    doneSet.add(idx);
+                    card.style.opacity = '0.55';
+                    card.style.background = '#f1f8e9';
+                }
+                updateProgress();
+            });
+        });
+    }
+
     // --- Main render ---
 
     function renderMorningPulse(container) {
@@ -1757,9 +1927,15 @@
             : periodType === 'month'
             ? 'Your team\'s monthly snapshot. Use each card to generate an individual monthly review.'
             : 'Your team\'s quarterly snapshot. Use each card to generate an individual quarterly review.';
-        html += controlsHtml + `<div style="margin-bottom:16px;">` +
-            `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Morning Pulse \u2014 ${rangeText}</h3>` +
-            `<p style="color:#666; margin:0; font-size:0.9em;">${pulseDescription}</p>` +
+        const runMyMondayBtnHtml = periodType === 'week'
+            ? `<button type="button" id="runMyMondayBtn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Monday</button>`
+            : '';
+        html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
+            `<div>` +
+                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Morning Pulse \u2014 ${rangeText}</h3>` +
+                `<p style="color:#666; margin:0; font-size:0.9em;">${pulseDescription}</p>` +
+            `</div>` +
+            runMyMondayBtnHtml +
         `</div>`;
 
         // Summary bar
@@ -1777,6 +1953,22 @@
 
         container.innerHTML = html;
         bindPulseControls(container);
+
+        // Bind Run My Monday button
+        const runMyMondayBtn = container.querySelector('#runMyMondayBtn');
+        if (runMyMondayBtn) {
+            runMyMondayBtn.addEventListener('click', async () => {
+                runMyMondayBtn.disabled = true;
+                const originalText = runMyMondayBtn.textContent;
+                runMyMondayBtn.textContent = '\u23F3 Building\u2026';
+                try {
+                    await showRunMyMondayModal(container);
+                } finally {
+                    runMyMondayBtn.textContent = originalText;
+                    runMyMondayBtn.disabled = false;
+                }
+            });
+        }
 
         // Bind check-in buttons
         container.querySelectorAll('.pulse-checkin-btn').forEach(btn => {

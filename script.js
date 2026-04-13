@@ -1995,6 +1995,16 @@ function bindCoachingFormHandlers() {
     document.getElementById('exportDataBtn')?.addEventListener('click', exportToExcel);
     document.getElementById('exportCoachingHistoryBtn')?.addEventListener('click', downloadCoachingHistoryCSV);
     document.getElementById('uploadMoreDataBtn')?.addEventListener('click', handleUploadMoreDataClick);
+    document.getElementById('uploadUndoBtn')?.addEventListener('click', () => {
+        const snap = loadUploadUndoSnapshot();
+        if (!snap) return;
+        if (!confirm(`Undo upload for ${snap.label}? This will restore the previous data for that period.`)) return;
+        undoLastUpload();
+    });
+    document.getElementById('uploadUndoDismissBtn')?.addEventListener('click', () => {
+        clearUploadUndoSnapshot();
+    });
+    refreshUploadUndoBanner();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         document.getElementById('dataFileInput').click();
     });
@@ -2221,6 +2231,132 @@ function syncWeeklyViewAfterPastedUpload(weekKey) {
     }
 }
 
+// ============================================
+// UPLOAD UNDO SNAPSHOT
+// ============================================
+const UPLOAD_UNDO_STORAGE_KEY = STORAGE_PREFIX + 'lastUploadUndo';
+const UPLOAD_HEADER_FINGERPRINT_KEY = STORAGE_PREFIX + 'lastUploadHeaderFingerprint';
+const UPLOAD_METRIC_COVERAGE_KEY = STORAGE_PREFIX + 'lastUploadMetricCoverage';
+
+// Metric keys tracked for drift detection
+const DRIFT_METRIC_KEYS = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+
+function computeMetricCoverage(employees) {
+    if (!Array.isArray(employees) || !employees.length) return {};
+    const coverage = {};
+    DRIFT_METRIC_KEYS.forEach(key => {
+        const populated = employees.filter(e => {
+            const v = e?.[key];
+            return v !== '' && v !== null && v !== undefined && Number.isFinite(parseFloat(v));
+        }).length;
+        coverage[key] = populated / employees.length;
+    });
+    return coverage;
+}
+
+function captureUploadUndoSnapshot({ store, weekKey, previousValue, label, periodType }) {
+    try {
+        const snapshot = {
+            timestamp: new Date().toISOString(),
+            store,
+            weekKey,
+            previousValue: previousValue || null,
+            label: label || weekKey,
+            periodType: periodType || 'week'
+        };
+        localStorage.setItem(UPLOAD_UNDO_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (e) {
+        console.warn('[undo] Failed to capture snapshot:', e);
+    }
+}
+
+function loadUploadUndoSnapshot() {
+    try {
+        const raw = localStorage.getItem(UPLOAD_UNDO_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function clearUploadUndoSnapshot() {
+    try { localStorage.removeItem(UPLOAD_UNDO_STORAGE_KEY); } catch (e) { /* noop */ }
+    refreshUploadUndoBanner();
+}
+
+function undoLastUpload() {
+    const snap = loadUploadUndoSnapshot();
+    if (!snap) {
+        showToast('Nothing to undo.', 3000);
+        return;
+    }
+    const targetStore = snap.store === 'ytd' ? ytdData : weeklyData;
+    if (snap.previousValue) {
+        targetStore[snap.weekKey] = snap.previousValue;
+    } else {
+        delete targetStore[snap.weekKey];
+    }
+    saveWeeklyData();
+    saveYtdData();
+    populateDeleteWeekDropdown();
+    populateUploadedDataDropdown();
+    populateTeamMemberSelector();
+    clearUploadUndoSnapshot();
+    showToast(`↩️ Undid upload for ${snap.label}`, 4000);
+}
+
+function refreshUploadUndoBanner() {
+    const banner = document.getElementById('uploadUndoBanner');
+    if (!banner) return;
+    const snap = loadUploadUndoSnapshot();
+    if (!snap) {
+        banner.style.display = 'none';
+        return;
+    }
+    const whenLabel = document.getElementById('uploadUndoWhen');
+    const targetLabel = document.getElementById('uploadUndoTarget');
+    if (whenLabel) {
+        const d = new Date(snap.timestamp);
+        whenLabel.textContent = d.toLocaleString();
+    }
+    if (targetLabel) targetLabel.textContent = snap.label;
+    banner.style.display = 'flex';
+}
+
+// ============================================
+// UPLOAD DRIFT VALIDATION (hard errors)
+// ============================================
+function buildUploadDriftErrors(employees) {
+    const errors = [];
+    if (!Array.isArray(employees) || !employees.length) return errors;
+
+    const coverage = computeMetricCoverage(employees);
+    const populatedCount = Object.values(coverage).filter(c => c >= 0.5).length;
+    if (populatedCount < 3) {
+        errors.push(`Only ${populatedCount} metric column(s) detected with meaningful data. Check that you pasted the full table with headers — column mapping may have drifted.`);
+    }
+
+    try {
+        const raw = localStorage.getItem(UPLOAD_METRIC_COVERAGE_KEY);
+        if (raw) {
+            const prev = JSON.parse(raw);
+            const droppedMetrics = DRIFT_METRIC_KEYS.filter(k =>
+                (prev[k] || 0) >= 0.8 && (coverage[k] || 0) <= 0.1
+            );
+            if (droppedMetrics.length >= 3) {
+                errors.push(`These metrics had data last upload but are empty now: ${droppedMetrics.join(', ')}. That usually means a header changed or the wrong columns are selected.`);
+            }
+        }
+    } catch (e) { /* noop — no baseline yet */ }
+
+    return errors;
+}
+
+function saveUploadMetricCoverage(employees) {
+    try {
+        const coverage = computeMetricCoverage(employees);
+        localStorage.setItem(UPLOAD_METRIC_COVERAGE_KEY, JSON.stringify(coverage));
+    } catch (e) { /* noop */ }
+}
+
 function buildMetricsUploadQualityWarnings(employees) {
     const safeEmployees = Array.isArray(employees) ? employees : [];
     if (!safeEmployees.length) return [];
@@ -2316,6 +2452,12 @@ function handleLoadPastedDataClick() {
             return;
         }
 
+        const driftErrors = buildUploadDriftErrors(employees);
+        if (driftErrors.length) {
+            alert(`🛑 Upload blocked — possible column drift:\n\n${driftErrors.join('\n\n')}\n\nFix the paste and try again. If this is intentional, use the "Clear drift baseline" button in Settings.`);
+            return;
+        }
+
         const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
         if (qualityWarnings.length) {
             const proceed = confirm(`⚠️ Upload quality warning:\n\n${qualityWarnings.join('\n')}\n\nContinue saving this upload?`);
@@ -2354,6 +2496,14 @@ function handleLoadPastedDataClick() {
         const selectedYearEndProfile = (yearEndProfileSelect?.value || 'auto').trim();
         const uploadContext = buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile);
         const { label, normalizedEndDate, metadata } = uploadContext;
+
+        captureUploadUndoSnapshot({
+            store: periodType === 'ytd' ? 'ytd' : 'weekly',
+            weekKey,
+            previousValue: existingData ? JSON.parse(JSON.stringify(existingData)) : null,
+            label,
+            periodType
+        });
 
         targetStore[weekKey] = {
             employees,
@@ -2401,6 +2551,9 @@ function handleLoadPastedDataClick() {
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';
         uploadPeriodManuallySelected = false; // Reset for next upload
+
+        saveUploadMetricCoverage(employees);
+        refreshUploadUndoBanner();
 
         showOnlySection('uploadSection');
 

@@ -129,6 +129,16 @@
                             <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
                         </div>
                     </div>
+                    <!-- Undo last upload banner -->
+                    <div id="uploadUndoBanner" style="display: none; margin-top: 16px; padding: 12px 16px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="color: #5d4037; font-size: 0.95em;">
+                            ↩️ Last upload: <strong id="uploadUndoTarget">—</strong> at <span id="uploadUndoWhen">—</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="uploadUndoBtn" style="background: #f57c00; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Undo</button>
+                            <button type="button" id="uploadUndoDismissBtn" style="background: transparent; color: #6d4c41; border: 1px solid #a1887f; border-radius: 4px; padding: 8px 14px; cursor: pointer;">Dismiss</button>
+                        </div>
+                    </div>
                 </section>
             </div>
             </section>
