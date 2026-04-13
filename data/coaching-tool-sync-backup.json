@@ -1,4 +1,122 @@
 {
-  "deletedAt": "2026-04-13T23:41:19.685Z",
-  "data": null
+  "generatedAt": "2026-04-13T23:41:44.033Z",
+  "reason": "manual footer sync",
+  "sourceAppVersion": null,
+  "weeklyData": {},
+  "ytdData": {},
+  "coachingHistory": {},
+  "callListeningLogs": {},
+  "sentimentPhraseDatabase": {},
+  "associateSentimentSnapshots": {},
+  "myTeamMembers": {},
+  "callCenterAverages": {},
+  "ptoTracker": {},
+  "reliabilityTracker": {},
+  "attendanceTracker": {},
+  "followUpHistory": {
+    "entries": []
+  },
+  "hotTipHistory": {
+    "entries": []
+  },
+  "yearEndAnnualGoalsStore": {},
+  "yearEndDraftStore": {},
+  "employeePreferredNames": {},
+  "appStorageSnapshot": {
+    "devCoachingTool_coachingHistory": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_schnelle_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_metricCoachingTips": {
+      "valueType": "object",
+      "itemCount": 12,
+      "byteLength": 9390
+    },
+    "devCoachingTool_ytdData": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_angie_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_callListeningSyncConfig": {
+      "valueType": "object",
+      "itemCount": 4,
+      "byteLength": 116
+    },
+    "devCoachingTool_supervisorSeeded_miranda_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_sentimentPhraseDatabase": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_v2_migration": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_uiNavState": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 228
+    },
+    "devCoachingTool_callListeningLogs": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_employeeSupervisors": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_kathy_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_associateSentimentSnapshots": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_weeklyData": {
+      "valueType": "object",
+      "itemCount": 0,
+      "byteLength": 2
+    },
+    "devCoachingTool_supervisorSeeded_nicole_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_supervisorSeeded_sarah_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_supervisorSeeded_angela_allison_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_supervisorSeeded_scott_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    }
+  }
 }
