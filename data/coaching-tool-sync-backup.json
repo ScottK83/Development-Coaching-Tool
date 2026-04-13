@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-13T22:58:59.987Z",
-  "reason": "call center averages updated",
+  "generatedAt": "2026-04-13T22:59:19.667Z",
+  "reason": "manual footer sync",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-04-08|2026-04-08": {
@@ -19644,8 +19644,8 @@
   "appStorageSnapshot": {
     "devCoachingTool_celebrationsHistory": {
       "valueType": "array",
-      "itemCount": 2,
-      "byteLength": 2786
+      "itemCount": 3,
+      "byteLength": 6050
     },
     "devCoachingTool_supervisorSeeded_nicole": {
       "valueType": "string",
@@ -19685,7 +19685,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 217
+      "byteLength": 224
     },
     "devCoachingTool_weeklyFocalPoints": {
       "valueType": "object",
@@ -19810,7 +19810,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 282
+      "byteLength": 294
     },
     "devCoachingTool_supervisorSeeded_kathy": {
       "valueType": "string",
