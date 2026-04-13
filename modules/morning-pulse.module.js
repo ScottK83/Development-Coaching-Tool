@@ -899,10 +899,13 @@
             .map(m => {
                 if (m.metricKey !== collapsedSurveyKey) return m;
                 const count = Number.isFinite(surveyCountForOpps) ? surveyCountForOpps : 0;
+                const override = count > 0
+                    ? `${count} detractor survey${count === 1 ? '' : 's'} this week`
+                    : 'No surveys this week';
                 return {
                     ...m,
                     label: 'Surveys',
-                    displayOverride: `${count} survey${count === 1 ? '' : 's'} this week`
+                    displayOverride: override
                 };
             })
             .slice(0, 2);
