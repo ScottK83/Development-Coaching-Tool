@@ -1253,7 +1253,7 @@
             && m.employeeValue === 0
         );
 
-        const wins = allMetrics
+        const allWinsSorted = allMetrics
             .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
             .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
             .sort((a, b) => {
@@ -1261,25 +1261,28 @@
                 const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
                 const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
                 return mB - mA;
-            })
-            .slice(0, 3);
+            });
+        const wins = allWinsSorted.slice(0, 3);
 
         const focalPoint = pickFocalPoint(allMetrics);
 
         // When two or more survey metrics are at 100%, call it out as
         // "X perfect surveys" instead of listing each survey metric individually.
-        const perfectSurveyWins = wins.filter(w =>
+        // Look across *all* wins (not just the top 3) so a non-survey win
+        // like positive words can still be paired with perfect surveys even
+        // when 3+ survey metrics would otherwise crowd out the slice.
+        const allPerfectSurveyWins = allWinsSorted.filter(w =>
             SURVEY_METRIC_KEYS.has(w.metricKey)
             && Number.isFinite(w.employeeValue)
             && w.employeeValue >= 100
         );
         const surveyCount = parseInt(emp?.surveyTotal, 10);
-        const hasPerfectSurveys = perfectSurveyWins.length >= 2 && Number.isFinite(surveyCount) && surveyCount > 0;
+        const hasPerfectSurveys = allPerfectSurveyWins.length >= 2 && Number.isFinite(surveyCount) && surveyCount > 0;
         const surveysText = hasPerfectSurveys
             ? `${surveyCount} survey${surveyCount === 1 ? '' : 's'}`
             : '';
         const nonPerfectSurveyWins = hasPerfectSurveys
-            ? wins.filter(w => !perfectSurveyWins.includes(w))
+            ? allWinsSorted.filter(w => !allPerfectSurveyWins.includes(w))
             : wins;
 
         // CELEBRATION section — lead with wins
