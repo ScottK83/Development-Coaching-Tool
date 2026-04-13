@@ -882,7 +882,7 @@
         );
         const hasDetractorSurveys = zeroSurveyOpps.length >= 1;
 
-        const wins = allMetrics
+        const rawWins = allMetrics
             .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
             .filter(m => !(hasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
             .sort((a, b) => {
@@ -890,8 +890,34 @@
                 const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
                 const mB = b.targetType === 'min' ? b.employeeValue - b.target : b.target - b.employeeValue;
                 return mB - mA;
-            })
-            .slice(0, 2);
+            });
+
+        // If 2+ survey metrics came back perfect, collapse them to one
+        // "X perfect surveys" row so the other slot can highlight a real
+        // non-survey win.
+        const perfectSurveyWins = rawWins.filter(m =>
+            SURVEY_METRIC_KEYS.has(m.metricKey)
+            && Number.isFinite(m.employeeValue)
+            && m.employeeValue >= 100
+        );
+        const surveyCountForWins = parseInt(emp?.surveyTotal, 10);
+        const shouldCollapsePerfect = perfectSurveyWins.length >= 2
+            && Number.isFinite(surveyCountForWins)
+            && surveyCountForWins > 0;
+        const perfectKeySet = shouldCollapsePerfect
+            ? new Set(perfectSurveyWins.map(m => m.metricKey))
+            : null;
+        const wins = (shouldCollapsePerfect
+            ? [
+                {
+                    ...perfectSurveyWins[0],
+                    label: 'Surveys',
+                    displayOverride: `${surveyCountForWins} perfect survey${surveyCountForWins === 1 ? '' : 's'} this week`
+                },
+                ...rawWins.filter(m => !perfectKeySet.has(m.metricKey))
+              ]
+            : rawWins
+        ).slice(0, 2);
         const surveyCountForOpps = parseInt(emp?.surveyTotal, 10);
         const shouldCollapseSurveys = zeroSurveyOpps.length >= 2;
         const collapsedSurveyKey = shouldCollapseSurveys ? zeroSurveyOpps[0].metricKey : null;
@@ -936,6 +962,10 @@
         let winsHtml = '';
         if (wins.length) {
             winsHtml = wins.map(m => {
+                if (m.displayOverride) {
+                    return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
+                        `<span style="color:#9e9e9e;">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                }
                 // Find this metric's week delta if available
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
                 const deltaTag = wd && wd.delta > 0
