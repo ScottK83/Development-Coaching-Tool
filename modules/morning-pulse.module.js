@@ -139,19 +139,33 @@
         'Listen, not every week lands perfectly. What matters is you keep showing up.',
         'I appreciate the consistency in your effort even when the numbers are stubborn.',
     ];
-    const FOCUS_INTROS = [
-        (label, val, target) => `One thing to zero in on: ${label} (at ${val}, target is ${target}).`,
-        (label, val, target) => `Let's work on getting ${label} closer to target (${val} vs ${target}).`,
-        (label, val, target) => `Area to focus on: ${label} sitting at ${val}, we want ${target}.`,
-        (label, val, target) => `Your focus this week: ${label} (currently ${val}, target ${target}).`,
-        (label, val, target) => `If I had to pick one thing to zero in on, it'd be ${label}. You're at ${val}, target is ${target}.`,
-        (label, val, target) => `The one I want us to tackle together: ${label} at ${val}, needs to get to ${target}.`,
-        (label, val, target) => `Let's put some energy into ${label} this week. Sitting at ${val}, shooting for ${target}.`,
-        (label, val, target) => `I think ${label} is your biggest opportunity right now. At ${val}, target is ${target}.`,
-        (label, val, target) => `Quick thing to keep in mind: ${label} is at ${val} and we're aiming for ${target}.`,
-        (label, val, target) => `Where I think you can move the needle most: ${label} (${val} right now, ${target} is the goal).`,
-        (label, val, target) => `Something to be intentional about: ${label} at ${val}. The target is ${target} and I think you can get there.`,
-        (label, val, target) => `My suggestion? Put a little extra focus on ${label}. You're at ${val}, we need ${target}.`,
+    // --- Focus framing pools, keyed by how week vs YTD look together ---
+    //
+    // "persistent" — both last week AND YTD are missing target (real trend)
+    // "ytd_only"    — YTD is behind target but last week was fine (reverse the slide)
+    // "week_only"   — last week dipped but YTD is solid (one-week blip)
+    // "fallback"    — no YTD context available at all
+    const FOCUS_PERSISTENT = [
+        (label, weekVal, ytdVal, target) => `One thing to zero in on: ${label}. Last week was ${weekVal} and YTD is sitting at ${ytdVal} (target ${target}) — this one needs real attention.`,
+        (label, weekVal, ytdVal, target) => `Let's work on ${label} together. Last week at ${weekVal}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
+        (label, weekVal, ytdVal, target) => `The one I really want us to tackle: ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
+        (label, weekVal, ytdVal, target) => `${label} is the focus. Week landed at ${weekVal}, YTD at ${ytdVal}, target ${target} — it keeps missing and I want us to change that.`,
+    ];
+    const FOCUS_YTD_ONLY = [
+        (label, weekVal, ytdVal, target) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. Last week was better at ${weekVal} — let's stack more weeks like that and pull the YTD back up.`,
+        (label, weekVal, ytdVal, target) => `Last week you had ${label} at ${weekVal}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so we need to keep that momentum going.`,
+        (label, weekVal, ytdVal, target) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but last week's ${weekVal} shows you can do it — let's repeat.`,
+    ];
+    const FOCUS_WEEK_DIP = [
+        (label, weekVal, ytdVal, target) => `Quick note on ${label}: last week dipped to ${weekVal} but your YTD is solid at ${ytdVal} (target ${target}). Not worried, just want to shake off the blip.`,
+        (label, weekVal, ytdVal, target) => `${label} had an off week at ${weekVal}, but your YTD at ${ytdVal} is still above target (${target}). Let's get back to normal this week.`,
+        (label, weekVal, ytdVal, target) => `Only watch-out: ${label} landed at ${weekVal} last week. YTD ${ytdVal} vs target ${target} says you're fine — just don't let two in a row slip.`,
+    ];
+    const FOCUS_FALLBACK = [
+        (label, val, target) => `One thing to zero in on: ${label}. Last week at ${val}, target is ${target}.`,
+        (label, val, target) => `Let's work on getting ${label} closer to target (last week ${val} vs ${target}).`,
+        (label, val, target) => `Area to focus on: ${label} came in at ${val} last week, we want ${target}.`,
+        (label, val, target) => `If I had to pick one thing, it'd be ${label}. Last week ${val}, target is ${target}.`,
     ];
     const CLOSERS = [
         'Keep it up! Let me know if you need anything.',
@@ -196,17 +210,30 @@
         'Alright, here\'s the play for this week.',
         'Here\'s the one thing I want us to be intentional about.',
     ];
-    const MK_FOCUS_SET = [
-        (label, val, target) => `This week, let's zero in on ${label}. You're at ${val}, and target is ${target}.`,
-        (label, val, target) => `Your focus this week: ${label}. Currently ${val}, we want ${target}.`,
-        (label, val, target) => `I want us to own ${label} this week. Sitting at ${val}, shooting for ${target}.`,
-        (label, val, target) => `The one to attack: ${label} at ${val}. Target is ${target} — let's close that gap.`,
-        (label, val, target) => `Let's put our energy into ${label}. You're at ${val} and ${target} is within reach.`,
-        (label, val, target) => `Game plan: get ${label} moving. Right now it's ${val}, we need ${target}.`,
-        (label, val, target) => `This week's mission: ${label}. At ${val}, the goal is ${target}. I think you can get there.`,
-        (label, val, target) => `If we nail one thing this week, let it be ${label}. You're at ${val}, target is ${target}.`,
-        (label, val, target) => `My ask for you this week: be intentional about ${label}. Currently ${val}, we're aiming for ${target}.`,
-        (label, val, target) => `Here's where I want your focus: ${label} at ${val}. Let's push toward ${target}.`,
+    // --- Monday kickoff focus pools, keyed by week vs YTD combo ---
+    const MK_FOCUS_PERSISTENT = [
+        (label, weekVal, ytdVal, target) => `This week, let's zero in on ${label}. Last week was ${weekVal} and YTD is at ${ytdVal} vs target ${target} — it's been a pattern and I want us to break it.`,
+        (label, weekVal, ytdVal, target) => `The one to attack: ${label}. Week at ${weekVal}, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
+        (label, weekVal, ytdVal, target) => `Game plan: get ${label} moving. Last week ${weekVal}, YTD ${ytdVal}, we need ${target}. I'll help however you need.`,
+        (label, weekVal, ytdVal, target) => `This week's mission: ${label}. Last week ${weekVal}, YTD ${ytdVal} vs target ${target}. I think you can get there — let's lock in.`,
+        (label, weekVal, ytdVal, target) => `My ask for you this week: be intentional about ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
+    ];
+    const MK_FOCUS_YTD_ONLY = [
+        (label, weekVal, ytdVal, target) => `Love that last week's ${label} was ${weekVal} — now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
+        (label, weekVal, ytdVal, target) => `Your focus: stack another week like last week's ${label} (${weekVal}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
+        (label, weekVal, ytdVal, target) => `${label} is the one to keep pushing. Last week at ${weekVal} was the right direction — YTD is at ${ytdVal}, target ${target}, so let's keep stringing good weeks together.`,
+        (label, weekVal, ytdVal, target) => `Here's the one to own: ${label}. Last week's ${weekVal} shows you can hit it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
+    ];
+    const MK_FOCUS_WEEK_DIP = [
+        (label, weekVal, ytdVal, target) => `Only thing on my radar: ${label} dipped to ${weekVal} last week. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-week thing — just don't let it become two.`,
+        (label, weekVal, ytdVal, target) => `Watch-out for this week: ${label}. Last week was ${weekVal}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
+        (label, weekVal, ytdVal, target) => `One thing to keep in mind: ${label} had an off week at ${weekVal}. YTD at ${ytdVal}, target ${target} — you're fine, just shake off the dip.`,
+    ];
+    const MK_FOCUS_FALLBACK = [
+        (label, val, target) => `This week, let's zero in on ${label}. Last week was ${val}, target is ${target}.`,
+        (label, val, target) => `The one to attack: ${label}. Last week ${val} vs target ${target} — let's close that gap.`,
+        (label, val, target) => `This week's mission: ${label}. Last week ${val}, target ${target}. I think you can get there.`,
+        (label, val, target) => `My ask for you this week: be intentional about ${label}. Last week ${val}, aiming for ${target}.`,
     ];
     const MK_ALL_GOOD = [
         'You\'re hitting target across the board — incredible work. Let\'s keep that going this week!',
@@ -812,6 +839,123 @@
         return null;
     }
 
+    // Fetch YTD-level metric analysis for a single employee, for cross-checking
+    // weekly numbers against longer-run performance. Returns a Map keyed by
+    // metricKey. Returns null if no YTD data is available.
+    function getYtdMetricsMapForEmployee(employeeName) {
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const ytdKeys = Object.keys(ytd);
+        if (!ytdKeys.length) return null;
+
+        // Prefer the most recently-ending YTD period (real uploads sort
+        // alongside auto-generated ones; latest end date wins either way).
+        const latestKey = ytdKeys
+            .map(k => {
+                const endText = ytd[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+                return { k, end: new Date(endText) };
+            })
+            .filter(x => !isNaN(x.end))
+            .sort((a, b) => b.end - a.end)[0]?.k;
+        if (!latestKey) return null;
+
+        const ytdPeriod = ytd[latestKey];
+        const emp = ytdPeriod?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
+            || window.analyzeTrendMetrics;
+        if (!analyzeFn) return null;
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+
+        const analysis = analyzeFn(emp, centerAvgs, null, null, {
+            employeeName: employeeName,
+            weekKey: latestKey,
+            periodType: 'ytd'
+        });
+        if (!analysis?.allMetrics) return null;
+
+        const map = new Map();
+        analysis.allMetrics.forEach(m => map.set(m.metricKey, m));
+        return map;
+    }
+
+    // Smart focal-point picker that weighs YTD context alongside the week.
+    // Returns the chosen focal point enriched with:
+    //   - ytdValue       (null if no YTD)
+    //   - ytdContext     'persistent' | 'ytd_only' | 'week_only' | 'fallback'
+    // Priority: persistent > ytd_only > week_only, so a real multi-week
+    // problem always outranks a single-week dip.
+    function pickFocalPointSmart(weekMetrics, ytdMap) {
+        if (!ytdMap) {
+            const fallback = pickFocalPoint(weekMetrics);
+            if (!fallback) return null;
+            return { ...fallback, ytdValue: null, ytdContext: 'fallback' };
+        }
+
+        const candidates = weekMetrics.map(m => {
+            const ytd = ytdMap.get(m.metricKey);
+            const ytdMiss = ytd ? (ytd.classification === 'Needs Focus' || ytd.classification === 'Watch Area') : false;
+            const weekMiss = m.classification === 'Needs Focus' || m.classification === 'Watch Area';
+            let context = null;
+            if (weekMiss && ytdMiss) context = 'persistent';
+            else if (ytdMiss && !weekMiss) context = 'ytd_only';
+            else if (weekMiss && !ytdMiss) context = 'week_only';
+            if (!context) return null;
+            return {
+                metric: m,
+                ytd,
+                context,
+                // Priority score: persistent worst, then ytd_only, then week_only
+                priority: context === 'persistent' ? 0 : context === 'ytd_only' ? 1 : 2,
+                // Secondary: risk = YTD gap (for the YTD-driven contexts) or
+                // week gap (for week-only dips)
+                risk: context === 'week_only'
+                    ? (m.gapFromTarget || 0)
+                    : (ytd?.gapFromTarget || 0)
+            };
+        }).filter(Boolean);
+
+        if (!candidates.length) return null;
+
+        candidates.sort((a, b) => {
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return b.risk - a.risk;
+        });
+
+        const chosen = candidates[0];
+        return {
+            ...chosen.metric,
+            ytdValue: chosen.ytd?.employeeValue ?? null,
+            ytdContext: chosen.context
+        };
+    }
+
+    // Build the focal-text section of a Monday kickoff or weekly check-in
+    // based on the chosen smart focal point. Picks the right randomized
+    // template pool for the context.
+    function buildFocalText(focal, pools) {
+        if (!focal) return '';
+        const label = focal.label;
+        const target = fmtTarget(focal);
+        const weekVal = fmtVal(focal);
+        const ytdVal = focal.ytdValue !== null && focal.ytdValue !== undefined
+            ? fmtVal(focal.metricKey, focal.ytdValue)
+            : null;
+        if (focal.ytdContext === 'persistent' && ytdVal !== null) {
+            return pick(pools.persistent)(label, weekVal, ytdVal, target);
+        }
+        if (focal.ytdContext === 'ytd_only' && ytdVal !== null) {
+            return pick(pools.ytdOnly)(label, weekVal, ytdVal, target);
+        }
+        if (focal.ytdContext === 'week_only' && ytdVal !== null) {
+            return pick(pools.weekDip)(label, weekVal, ytdVal, target);
+        }
+        return pick(pools.fallback)(label, weekVal, target);
+    }
+
     function getStatusBadge(allMetrics) {
         const needsFocus = allMetrics.filter(m => m.classification === 'Needs Focus').length;
         const exceeding = allMetrics.filter(m => m.classification === 'Exceeding Expectation').length;
@@ -1011,7 +1155,7 @@
         if (focalPoint) {
             const dirLabel = focalPoint.trendDirection === 'declining' ? ' and declining' : '';
             focalHtml = `<div style="padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800; font-size:0.85em;">` +
-                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)} \u2014 currently ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
+                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)} \u2014 last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
         } else {
             focalHtml = `<div style="padding:8px; background:#e8f5e9; border-radius:4px; border-left:3px solid #4caf50; font-size:0.85em;">` +
                 `<strong>\u2705 On track!</strong> Keep up the consistency.</div>`;
@@ -1080,7 +1224,8 @@
             })
             .slice(0, 2);
 
-        const focalPoint = pickFocalPoint(allMetrics);
+        const ytdMap = getYtdMetricsMapForEmployee(employeeName);
+        const focalPoint = pickFocalPointSmart(allMetrics, ytdMap);
 
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
@@ -1113,7 +1258,7 @@
                 }
             } catch (e) { /* no tips */ }
 
-            focusText = `\uD83C\uDFAF ${pick(FOCUS_INTROS)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
+            focusText = `\uD83C\uDFAF ${buildFocalText(focalPoint, { persistent: FOCUS_PERSISTENT, ytdOnly: FOCUS_YTD_ONLY, weekDip: FOCUS_WEEK_DIP, fallback: FOCUS_FALLBACK })}`;
             if (tipText) {
                 const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
                 focusText += ` \uD83D\uDCA1 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
@@ -1264,7 +1409,8 @@
             });
         const wins = allWinsSorted.slice(0, 3);
 
-        const focalPoint = pickFocalPoint(allMetrics);
+        const ytdMap = getYtdMetricsMapForEmployee(employeeName);
+        const focalPoint = pickFocalPointSmart(allMetrics, ytdMap);
 
         // When two or more survey metrics are at 100%, call it out as
         // "X perfect surveys" instead of listing each survey metric individually.
@@ -1311,7 +1457,8 @@
         // FOCUS section — set the weekly focal point
         let focusText = '';
         if (focalPoint) {
-            focusText = `\n\n${pick(MK_TRANSITION)}\n\n🎯 ${pick(MK_FOCUS_SET)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
+            const focalPhrase = buildFocalText(focalPoint, { persistent: MK_FOCUS_PERSISTENT, ytdOnly: MK_FOCUS_YTD_ONLY, weekDip: MK_FOCUS_WEEK_DIP, fallback: MK_FOCUS_FALLBACK });
+            focusText = `\n\n${pick(MK_TRANSITION)}\n\n🎯 ${focalPhrase}`;
 
             // Fetch a tip for the focal metric
             try {
