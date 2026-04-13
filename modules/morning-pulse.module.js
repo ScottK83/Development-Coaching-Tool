@@ -878,9 +878,33 @@
             })
             .slice(0, 2);
 
-        const opportunities = allMetrics
+        // If multiple survey metrics show 0 (no surveys came back), that's really
+        // a single "no surveys" story — collapse to one slot so a real coaching
+        // opportunity can take the other.
+        const rawOpportunities = allMetrics
             .filter(m => m.classification === 'Needs Focus' || m.classification === 'Watch Area')
-            .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0))
+            .sort((a, b) => (b.gapFromTarget || 0) - (a.gapFromTarget || 0));
+        const zeroSurveyOpps = rawOpportunities.filter(m =>
+            SURVEY_METRIC_KEYS.has(m.metricKey)
+            && Number.isFinite(m.employeeValue)
+            && m.employeeValue === 0
+        );
+        const surveyCountForOpps = parseInt(emp?.surveyTotal, 10);
+        const shouldCollapseSurveys = zeroSurveyOpps.length >= 2;
+        const collapsedSurveyKey = shouldCollapseSurveys ? zeroSurveyOpps[0].metricKey : null;
+        const opportunities = rawOpportunities
+            .filter(m => !shouldCollapseSurveys
+                || !SURVEY_METRIC_KEYS.has(m.metricKey)
+                || m.metricKey === collapsedSurveyKey)
+            .map(m => {
+                if (m.metricKey !== collapsedSurveyKey) return m;
+                const count = Number.isFinite(surveyCountForOpps) ? surveyCountForOpps : 0;
+                return {
+                    ...m,
+                    label: 'Surveys',
+                    displayOverride: `${count} survey${count === 1 ? '' : 's'} this week`
+                };
+            })
             .slice(0, 2);
 
         const firstName = typeof getEmployeeNickname === 'function'
@@ -922,6 +946,10 @@
         let oppsHtml = '';
         if (opportunities.length) {
             oppsHtml = opportunities.map(m => {
+                if (m.displayOverride) {
+                    return `<div style="font-size:0.85em; color:#c62828; padding:2px 0;">` +
+                        `<span style="color:#9e9e9e;">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                }
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
                 const deltaTag = wd && wd.delta !== 0
                     ? ` <span style="color:${wd.delta > 0 ? '#1b5e20' : (m.meetsTarget ? '#f9a825' : '#b71c1c')}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
