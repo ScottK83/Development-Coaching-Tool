@@ -172,8 +172,10 @@
     }
 
     // Render the dropdown options into the select element. Pending
-    // options come first, already-uploaded options are grouped below
-    // and labeled with a checkmark + re-upload hint.
+    // options come first and are selectable; already-uploaded options
+    // are grouped below and rendered as disabled (visible as a
+    // progress indicator but not clickable, so the user can't
+    // accidentally re-upload the same period).
     function renderDropdown(selectEl, options) {
         if (!selectEl) return;
         const prev = selectEl.value;
@@ -205,10 +207,11 @@
         }
         if (uploaded.length) {
             const grp = document.createElement('optgroup');
-            grp.label = 'Already uploaded (click to re-upload)';
+            grp.label = 'Already uploaded';
             uploaded.forEach(opt => {
                 const el = document.createElement('option');
                 el.value = opt.id;
+                el.disabled = true;
                 const when = opt.uploadedAt ? new Date(opt.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
                 el.textContent = `✓ ${opt.label}${when ? ` — uploaded ${when}` : ''}`;
                 el.dataset.periodType = opt.periodType;
@@ -219,10 +222,11 @@
             selectEl.appendChild(grp);
         }
 
-        // Restore previous selection if still present
-        if (prev && Array.from(selectEl.options).some(o => o.value === prev)) {
-            selectEl.value = prev;
-        }
+        // Restore previous selection only if it's still in the pending
+        // list. A just-uploaded option becomes disabled and we don't
+        // want it to stay "selected" — reset to the placeholder.
+        const stillPending = prev && pending.some(o => o.id === prev);
+        selectEl.value = stillPending ? prev : '';
     }
 
     // When the user picks an option, sync its dates + period type
@@ -299,6 +303,22 @@
             || {};
         const options = annotateUploadState(computeUploadOptions(new Date()), weekly, ytd);
         renderDropdown(selectEl, options);
+
+        // If the just-uploaded option cleared the selection, also
+        // reset the YTD date picker, summary line, and legacy date
+        // inputs so the UI doesn't dangle with stale values.
+        if (!selectEl.value) {
+            const ytdPicker = document.getElementById('uploadWizardYtdDatePicker');
+            const ytdInput = document.getElementById('uploadWizardYtdEnd');
+            const summaryEl = document.getElementById('uploadWizardSummary');
+            if (ytdPicker) ytdPicker.style.display = 'none';
+            if (ytdInput) ytdInput.value = '';
+            if (summaryEl) {
+                summaryEl.style.display = 'none';
+                summaryEl.textContent = '';
+            }
+            applySelectionToLegacyInputs(null);
+        }
     }
 
     function bind() {
