@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-09T22:11:20.738Z",
-  "reason": "manual footer sync",
+  "generatedAt": "2026-04-13T18:14:03.191Z",
+  "reason": "ytd data updated",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-04-08|2026-04-08": {
@@ -13927,6 +13927,415 @@
         "yearEndReviewYear": "2026",
         "uploadedAt": "2026-04-09T22:11:04.239Z"
       }
+    },
+    "2026-04-06|2026-04-12": {
+      "employees": [
+        {
+          "name": "Robert Berrelleza",
+          "firstName": "Robert",
+          "scheduleAdherence": 94.1,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 10.76,
+          "transfersCount": 17,
+          "aht": 336,
+          "talkTime": 302,
+          "acw": 25,
+          "holdTime": 9,
+          "reliability": 0,
+          "overallSentiment": 94.8,
+          "positiveWord": 95.2,
+          "negativeWord": 91.8,
+          "managingEmotions": 97.3,
+          "surveyTotal": 2,
+          "totalCalls": 158
+        },
+        {
+          "name": "Destiny Cervantez",
+          "firstName": "Destiny",
+          "scheduleAdherence": 95.89,
+          "cxRepOverall": 100,
+          "fcr": 75,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 11.73,
+          "transfersCount": 19,
+          "aht": 493,
+          "talkTime": 366,
+          "acw": 117,
+          "holdTime": 11,
+          "reliability": 0,
+          "overallSentiment": 88.6,
+          "positiveWord": 78.9,
+          "negativeWord": 90.7,
+          "managingEmotions": 96.3,
+          "surveyTotal": 4,
+          "totalCalls": 162
+        },
+        {
+          "name": "Desiree Clark",
+          "firstName": "Desiree",
+          "scheduleAdherence": 90.52,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "overallExperienceTop3": "",
+          "transfers": 6.84,
+          "transfersCount": 8,
+          "aht": 514,
+          "talkTime": 442,
+          "acw": 69,
+          "holdTime": 3,
+          "reliability": 0,
+          "overallSentiment": 90.8,
+          "positiveWord": 87.9,
+          "negativeWord": 89.7,
+          "managingEmotions": 94.8,
+          "surveyTotal": 0,
+          "totalCalls": 117
+        },
+        {
+          "name": "Kamella Dash",
+          "firstName": "Kamella",
+          "scheduleAdherence": 94.1,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 7.79,
+          "transfersCount": 12,
+          "aht": 474,
+          "talkTime": 422,
+          "acw": 40,
+          "holdTime": 12,
+          "reliability": 0,
+          "overallSentiment": 94.2,
+          "positiveWord": 97.3,
+          "negativeWord": 89.3,
+          "managingEmotions": 96,
+          "surveyTotal": 2,
+          "totalCalls": 154
+        },
+        {
+          "name": "Alyssa Dimes",
+          "firstName": "Alyssa",
+          "scheduleAdherence": 94.88,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 9.4,
+          "transfersCount": 14,
+          "aht": 497,
+          "talkTime": 367,
+          "acw": 52,
+          "holdTime": 78,
+          "reliability": 0,
+          "overallSentiment": 94.6,
+          "positiveWord": 98,
+          "negativeWord": 91.2,
+          "managingEmotions": 94.6,
+          "surveyTotal": 1,
+          "totalCalls": 149
+        },
+        {
+          "name": "Angelina Fierro",
+          "firstName": "Angelina",
+          "scheduleAdherence": 92.86,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 12.32,
+          "transfersCount": 17,
+          "aht": 479,
+          "talkTime": 421,
+          "acw": 57,
+          "holdTime": 0,
+          "reliability": 0,
+          "overallSentiment": 94.2,
+          "positiveWord": 99.3,
+          "negativeWord": 87.7,
+          "managingEmotions": 95.7,
+          "surveyTotal": 1,
+          "totalCalls": 138
+        },
+        {
+          "name": "Jadyn Flowers",
+          "firstName": "Jadyn",
+          "scheduleAdherence": 94.55,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 9.32,
+          "transfersCount": 15,
+          "aht": 274,
+          "talkTime": 244,
+          "acw": 30,
+          "holdTime": 0,
+          "reliability": 0.8,
+          "overallSentiment": 89.2,
+          "positiveWord": 90.1,
+          "negativeWord": 82.1,
+          "managingEmotions": 95.4,
+          "surveyTotal": 1,
+          "totalCalls": 161
+        },
+        {
+          "name": "Sabrina Gage",
+          "firstName": "Sabrina",
+          "scheduleAdherence": 97.49,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 7.1,
+          "transfersCount": 12,
+          "aht": 418,
+          "talkTime": 244,
+          "acw": 168,
+          "holdTime": 6,
+          "reliability": 0,
+          "overallSentiment": 88.6,
+          "positiveWord": 81.3,
+          "negativeWord": 86.7,
+          "managingEmotions": 97.6,
+          "surveyTotal": 1,
+          "totalCalls": 169
+        },
+        {
+          "name": "James Garcia",
+          "firstName": "James",
+          "scheduleAdherence": 93.03,
+          "cxRepOverall": 0,
+          "fcr": 100,
+          "overallExperience": 0,
+          "overallExperienceTop3": "",
+          "transfers": 8.28,
+          "transfersCount": 12,
+          "aht": 315,
+          "talkTime": 225,
+          "acw": 59,
+          "holdTime": 31,
+          "reliability": 0,
+          "overallSentiment": 87.3,
+          "positiveWord": 69.8,
+          "negativeWord": 93.5,
+          "managingEmotions": 98.6,
+          "surveyTotal": 1,
+          "totalCalls": 145
+        },
+        {
+          "name": "Oceane Ingram",
+          "firstName": "Oceane",
+          "scheduleAdherence": 90.13,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 17.69,
+          "transfersCount": 23,
+          "aht": 515,
+          "talkTime": 252,
+          "acw": 244,
+          "holdTime": 20,
+          "reliability": 0,
+          "overallSentiment": 98.2,
+          "positiveWord": 100,
+          "negativeWord": 95.3,
+          "managingEmotions": 99.2,
+          "surveyTotal": 1,
+          "totalCalls": 130
+        },
+        {
+          "name": "Erica Kallestewa",
+          "firstName": "Erica",
+          "scheduleAdherence": 93.04,
+          "cxRepOverall": 0,
+          "fcr": 100,
+          "overallExperience": 0,
+          "overallExperienceTop3": "",
+          "transfers": 3.65,
+          "transfersCount": 5,
+          "aht": 480,
+          "talkTime": 413,
+          "acw": 63,
+          "holdTime": 5,
+          "reliability": 0,
+          "overallSentiment": 89.6,
+          "positiveWord": 86.7,
+          "negativeWord": 87.4,
+          "managingEmotions": 94.8,
+          "surveyTotal": 1,
+          "totalCalls": 137
+        },
+        {
+          "name": "Christi Martinez-Sharp",
+          "firstName": "Christi",
+          "scheduleAdherence": 84.18,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 10.98,
+          "transfersCount": 9,
+          "aht": 480,
+          "talkTime": 340,
+          "acw": 100,
+          "holdTime": 40,
+          "reliability": 0,
+          "overallSentiment": 95.4,
+          "positiveWord": 100,
+          "negativeWord": 88.6,
+          "managingEmotions": 97.5,
+          "surveyTotal": 1,
+          "totalCalls": 82
+        },
+        {
+          "name": "Matrece Muldrow",
+          "firstName": "Matrece",
+          "scheduleAdherence": 98.26,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 8.5,
+          "transfersCount": 13,
+          "aht": 293,
+          "talkTime": 273,
+          "acw": 2,
+          "holdTime": 18,
+          "reliability": 8.5,
+          "overallSentiment": 92.3,
+          "positiveWord": 85.4,
+          "negativeWord": 92.7,
+          "managingEmotions": 98.7,
+          "surveyTotal": 2,
+          "totalCalls": 153
+        },
+        {
+          "name": "Johnathan Padilla",
+          "firstName": "Johnathan",
+          "scheduleAdherence": 75.69,
+          "cxRepOverall": "",
+          "fcr": "",
+          "overallExperience": "",
+          "overallExperienceTop3": "",
+          "transfers": 6.9,
+          "transfersCount": 12,
+          "aht": 243,
+          "talkTime": 185,
+          "acw": 45,
+          "holdTime": 13,
+          "reliability": 0,
+          "overallSentiment": 91.2,
+          "positiveWord": 93.2,
+          "negativeWord": 84,
+          "managingEmotions": 96.3,
+          "surveyTotal": 0,
+          "totalCalls": 174
+        },
+        {
+          "name": "Esperanza Palomera",
+          "firstName": "Esperanza",
+          "scheduleAdherence": 95.2,
+          "cxRepOverall": 100,
+          "fcr": 0,
+          "overallExperience": 0,
+          "overallExperienceTop3": "",
+          "transfers": 7.19,
+          "transfersCount": 11,
+          "aht": 477,
+          "talkTime": 400,
+          "acw": 50,
+          "holdTime": 27,
+          "reliability": 0,
+          "overallSentiment": 92.5,
+          "positiveWord": 94,
+          "negativeWord": 90.7,
+          "managingEmotions": 92.7,
+          "surveyTotal": 1,
+          "totalCalls": 153
+        },
+        {
+          "name": "Esther Ramos",
+          "firstName": "Esther",
+          "scheduleAdherence": 96.67,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 0.63,
+          "transfersCount": 1,
+          "aht": 467,
+          "talkTime": 445,
+          "acw": 23,
+          "holdTime": 0,
+          "reliability": 0,
+          "overallSentiment": 89.5,
+          "positiveWord": 87.6,
+          "negativeWord": 85,
+          "managingEmotions": 96.1,
+          "surveyTotal": 1,
+          "totalCalls": 158
+        },
+        {
+          "name": "Kristin Villela",
+          "firstName": "Kristin",
+          "scheduleAdherence": 95.91,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 8.11,
+          "transfersCount": 12,
+          "aht": 490,
+          "talkTime": 398,
+          "acw": 51,
+          "holdTime": 41,
+          "reliability": 0,
+          "overallSentiment": 92.5,
+          "positiveWord": 96.6,
+          "negativeWord": 84.2,
+          "managingEmotions": 96.6,
+          "surveyTotal": 1,
+          "totalCalls": 148
+        },
+        {
+          "name": "Betty Yanez",
+          "firstName": "Betty",
+          "scheduleAdherence": 92.99,
+          "cxRepOverall": 100,
+          "fcr": 100,
+          "overallExperience": 100,
+          "overallExperienceTop3": "",
+          "transfers": 7.58,
+          "transfersCount": 10,
+          "aht": 645,
+          "talkTime": 636,
+          "acw": 0,
+          "holdTime": 9,
+          "reliability": 0,
+          "overallSentiment": 93.4,
+          "positiveWord": 98.5,
+          "negativeWord": 88.5,
+          "managingEmotions": 93.1,
+          "surveyTotal": 1,
+          "totalCalls": 132
+        }
+      ],
+      "metadata": {
+        "startDate": "2026-04-06",
+        "endDate": "2026-04-12",
+        "label": "Week ending Apr 12, 2026",
+        "periodType": "week",
+        "yearEndTargetProfile": "auto",
+        "yearEndReviewYear": "2026",
+        "uploadedAt": "2026-04-13T18:13:58.134Z"
+      }
     }
   },
   "ytdData": {
@@ -16841,25 +17250,25 @@
   "yearEndDraftStore": {},
   "employeePreferredNames": {},
   "appStorageSnapshot": {
-    "devCoachingTool_supervisorSeeded_nicole": {
-      "valueType": "string",
-      "itemCount": "",
-      "byteLength": 1
-    },
     "devCoachingTool_celebrationsHistory": {
       "valueType": "array",
       "itemCount": 2,
       "byteLength": 2548
     },
-    "devCoachingTool_metricCoachingTips": {
-      "valueType": "object",
-      "itemCount": 12,
-      "byteLength": 9390
+    "devCoachingTool_supervisorSeeded_nicole": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
       "itemCount": 6,
       "byteLength": 1788
+    },
+    "devCoachingTool_metricCoachingTips": {
+      "valueType": "object",
+      "itemCount": 12,
+      "byteLength": 9390
     },
     "devCoachingTool_callListeningSyncConfig": {
       "valueType": "object",
@@ -16879,17 +17288,17 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 215
+      "byteLength": 224
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
       "itemCount": 0,
       "byteLength": 2
     },
-    "devCoachingTool_tipUsageHistory": {
+    "devCoachingTool_employeeSupervisors": {
       "valueType": "object",
-      "itemCount": 1,
-      "byteLength": 404
+      "itemCount": 126,
+      "byteLength": 3254
     },
     "devCoachingTool_supervisorSeeded_kathy_v2": {
       "valueType": "string",
@@ -16901,10 +17310,10 @@
       "itemCount": "",
       "byteLength": 1
     },
-    "devCoachingTool_employeeSupervisors": {
+    "devCoachingTool_tipUsageHistory": {
       "valueType": "object",
-      "itemCount": 126,
-      "byteLength": 3254
+      "itemCount": 1,
+      "byteLength": 404
     },
     "devCoachingTool_associateSentimentSnapshots": {
       "valueType": "object",
@@ -16916,7 +17325,7 @@
       "itemCount": 2,
       "byteLength": 57
     },
-    "devCoachingTool_supervisorSeeded_sarah_v2": {
+    "devCoachingTool_supervisorSeeded_angela_allison_v2": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
@@ -16931,7 +17340,7 @@
       "itemCount": "",
       "byteLength": 1
     },
-    "devCoachingTool_supervisorSeeded_angela_allison_v2": {
+    "devCoachingTool_supervisorSeeded_sarah_v2": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
@@ -16956,20 +17365,20 @@
       "itemCount": "",
       "byteLength": 1
     },
-    "devCoachingTool_ytdData": {
+    "devCoachingTool_reliabilityTracker": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 48354
+      "byteLength": 16
     },
     "devCoachingTool_supervisorSeeded_angie_v2": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
     },
-    "devCoachingTool_reliabilityTracker": {
+    "devCoachingTool_ytdData": {
       "valueType": "object",
       "itemCount": 1,
-      "byteLength": 16
+      "byteLength": 48354
     },
     "devCoachingTool_supervisorSeeded_miranda_v2": {
       "valueType": "string",
@@ -16989,7 +17398,7 @@
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 9
+      "byteLength": 6
     },
     "devCoachingTool_supervisorSeeded_v2_migration": {
       "valueType": "string",
@@ -16999,7 +17408,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 294
+      "byteLength": 284
     },
     "devCoachingTool_supervisorSeeded_kathy": {
       "valueType": "string",
@@ -17013,10 +17422,15 @@
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 235197
+      "itemCount": 6,
+      "byteLength": 242181
     },
     "devCoachingTool_supervisorSeeded_nicole_v2": {
+      "valueType": "string",
+      "itemCount": "",
+      "byteLength": 1
+    },
+    "devCoachingTool_trendQueueLegendExpanded": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
