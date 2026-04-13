@@ -903,7 +903,7 @@
                 if (m.metricKey !== collapsedSurveyKey) return m;
                 const count = Number.isFinite(surveyCountForOpps) ? surveyCountForOpps : 0;
                 const override = count > 0
-                    ? `${count} detractor survey${count === 1 ? '' : 's'} this week`
+                    ? `${count} low-score survey${count === 1 ? '' : 's'} this week`
                     : 'No surveys this week';
                 return {
                     ...m,
