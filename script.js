@@ -2031,6 +2031,8 @@ function bindDataAdminHandlers() {
     document.getElementById('deleteEmployeeYearBtn')?.addEventListener('click', handleDeleteEmployeeYearClick);
     document.getElementById('deleteSelectedSentimentBtn')?.addEventListener('click', handleDeleteSelectedSentimentClick);
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', handleDeleteAllDataClick);
+    document.getElementById('backupMetricDataBtn')?.addEventListener('click', handleBackupMetricDataClick);
+    document.getElementById('resetMetricDataBtn')?.addEventListener('click', handleResetMetricDataClick);
     populateDeleteWeekDropdown();
     initializeRedFlag();
 }
@@ -2816,6 +2818,79 @@ function handleDataFileInputChange(event) {
         }
     };
     reader.readAsText(file);
+}
+
+function handleBackupMetricDataClick() {
+    const weeklyCount = Object.keys(weeklyData || {}).length;
+    const ytdCount = Object.keys(ytdData || {}).length;
+    if (weeklyCount === 0 && ytdCount === 0) {
+        alert('Nothing to back up — no weekly or YTD data has been uploaded yet.');
+        return;
+    }
+
+    const backup = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        appVersion: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : null),
+        weeklyData: weeklyData || {},
+        ytdData: ytdData || {}
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `coaching-tool-metric-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (typeof showToast === 'function') {
+        showToast(`Backed up ${weeklyCount} weekly + ${ytdCount} YTD period${(weeklyCount + ytdCount) === 1 ? '' : 's'}`, 3000);
+    }
+}
+
+async function handleResetMetricDataClick() {
+    const weeklyCount = Object.keys(weeklyData || {}).length;
+    const ytdCount = Object.keys(ytdData || {}).length;
+
+    const confirmation = prompt(
+        `♻️ Reset Metric Data\n\n` +
+        `This will wipe every uploaded period:\n` +
+        `  • ${weeklyCount} weekly/daily/monthly/quarterly period${weeklyCount === 1 ? '' : 's'}\n` +
+        `  • ${ytdCount} YTD period${ytdCount === 1 ? '' : 's'}\n\n` +
+        `Kept intact:\n` +
+        `  • Coaching history\n` +
+        `  • Team members\n` +
+        `  • Tips\n` +
+        `  • Attendance tracker\n` +
+        `  • Pattern memory\n` +
+        `  • Sentiment data\n` +
+        `  • Employee nicknames\n\n` +
+        `Back up first via "Download Backup" if you haven't.\n\n` +
+        `Type "RESET" to confirm:`
+    );
+    if (confirmation !== 'RESET') {
+        alert('Reset cancelled.');
+        return;
+    }
+
+    const storage = window.DevCoachModules?.storage;
+    weeklyData = {};
+    ytdData = {};
+    if (storage?.saveWeeklyData) storage.saveWeeklyData(weeklyData);
+    if (storage?.saveYtdData) storage.saveYtdData(ytdData);
+
+    currentPeriod = null;
+    coachingLatestWeekKey = null;
+
+    try { if (typeof updatePeriodDropdown === 'function') updatePeriodDropdown(); } catch (e) { /* ok */ }
+    try { if (typeof populateDeleteWeekDropdown === 'function') populateDeleteWeekDropdown(); } catch (e) { /* ok */ }
+
+    alert(`✅ Metric data reset. ${weeklyCount + ytdCount} period${(weeklyCount + ytdCount) === 1 ? '' : 's'} cleared. The page will now reload.`);
+    location.reload();
 }
 
 async function handleDeleteAllDataClick() {

@@ -1127,6 +1127,18 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #0d6efd;">
+                        <h3 style="color: #0d6efd; margin-top: 0;">💾 Backup Metric Data</h3>
+                        <p style="color: #555; margin-bottom: 15px;">Download a JSON file of every uploaded period (weekly + YTD) so you can restore it later if needed. Does <strong>not</strong> include coaching history, team selections, or tips — only the raw metric uploads.</p>
+                        <button type="button" id="backupMetricDataBtn" class="btn-secondary" style="background: #0d6efd; color: white; font-size: 1em; padding: 12px 24px;">📥 Download Backup</button>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #fd7e14;">
+                        <h3 style="color: #fd7e14; margin-top: 0;">♻️ Reset Metric Data</h3>
+                        <p style="color: #555; margin-bottom: 15px;">Wipe every uploaded period (weekly + YTD) so you can start fresh with the new dropdown-driven upload flow. Keeps coaching history, team members, tips, attendance, and pattern memory intact. <strong>Back up first.</strong></p>
+                        <button type="button" id="resetMetricDataBtn" class="btn-secondary" style="background: #fd7e14; color: white; font-size: 1em; padding: 12px 24px;">♻️ Reset Metric Data</button>
+                    </div>
+
                     <div style="padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 8px;">
                         <h3 style="color: #dc3545; margin-top: 0;">⚠️ Danger Zone</h3>
                         <p style="color: #721c24; margin-bottom: 15px;">This will permanently delete ALL uploaded data, coaching history, and sync backup. This action cannot be undone!</p>
