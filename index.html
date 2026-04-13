@@ -136,6 +136,17 @@
                         </div>
                         <button type="button" id="dataIntegrityScanBtn" style="background: #7b1fa2; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Scan Data Health</button>
                     </div>
+                    <!-- Storage quota monitor -->
+                    <div id="storageQuotaWidget" style="display: none; margin-top: 12px; padding: 12px 16px; background: #e8eaf6; border: 1px solid #9fa8da; border-radius: 8px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 240px;">
+                            <div style="font-weight: 600; color: #283593; font-size: 0.9em; margin-bottom: 6px;">💾 Local storage usage</div>
+                            <div style="height: 10px; background: #c5cae9; border-radius: 5px; overflow: hidden;">
+                                <div id="storageQuotaBar" style="height: 100%; width: 0%; background: #66bb6a; transition: width 0.3s, background 0.3s;"></div>
+                            </div>
+                            <div id="storageQuotaLabel" style="font-size: 0.82em; color: #546e7a; margin-top: 4px;">—</div>
+                        </div>
+                        <button type="button" id="archiveOldWeeksBtn" style="background: #3949ab; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Archive 6+ month old weeks</button>
+                    </div>
                     <!-- Undo last upload banner -->
                     <div id="uploadUndoBanner" style="display: none; margin-top: 16px; padding: 12px 16px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px; align-items: center; justify-content: space-between; gap: 12px;">
                         <div style="color: #5d4037; font-size: 0.95em;">

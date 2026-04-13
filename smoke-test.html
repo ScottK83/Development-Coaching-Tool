@@ -30,6 +30,8 @@
     <script src="modules/metric-profiles.module.js"></script>
     <script src="modules/error-monitor.module.js"></script>
     <script src="modules/shared-utils.module.js"></script>
+    <script src="modules/data-integrity.module.js"></script>
+    <script src="modules/pattern-memory.module.js"></script>
     <script src="modules/tips.module.js"></script>
     <script src="modules/pto.module.js"></script>
     <script src="modules/red-flag.module.js"></script>
@@ -78,7 +80,8 @@
         // 2. Check each expected module registered
         const expectedModules = [
             'metricsRegistry', 'storage', 'dataParsing', 'metricProfiles',
-            'errorMonitor', 'sharedUtils', 'navigation', 'debug', 'teamFilter',
+            'errorMonitor', 'sharedUtils', 'dataIntegrity', 'patternMemory',
+            'navigation', 'debug', 'teamFilter',
             'repoSync', 'onOffTracker', 'coachingEmail', 'yearEndComments',
             'executiveSummary', 'metricTrends', 'metrics', 'sentiment', 'yearEnd',
             'uiUtils', 'emailFormatter', 'coachingAnalysis', 'coaching',
@@ -139,6 +142,152 @@
             check('Reliability detects review-coding mismatch day', (rec.reviewCodingCandidates || []).length === 1);
             check('Mismatch day is included in PTOST correctionCandidates', (rec.correctionCandidates || []).length === 1);
             check('Mismatch keeps reliability exposure at 0h', Number(rec.sameDayNoPtostHours || 0) === 0);
+        }
+
+        // ==========================================================
+        // Functional tests: parsePastedData with a canned upload
+        // ==========================================================
+        const parseFn = window.DevCoachModules?.dataParsing?.parsePastedData;
+        if (typeof parseFn === 'function') {
+            const header = ['Name', 'TotalCalls', 'Transfers%', '# Transfers', 'AHT', 'TalkTime', 'HoldTime', 'ACW', 'Adherence', 'ManageEmotions', 'AvoidNegWords', 'PosWords', 'OverallSentiment', 'FCR%', 'Unused', 'RepSat', 'Unused2', 'OverallExp', 'OESurveyTotal', 'InOfficeShrink', 'OOOShrink', 'TotalShrink', 'ReliabilityHours'].join('\t');
+            const row1 = ['Smith, Alice', '150', '4.5', '7', '420', '280', '25', '55', '94.5', '96', '88', '92', '91', '72.5', '', '82', '', '78', '12', '2', '3', '5', '14'].join('\t');
+            const row2 = ['Doe, Bob', '200', '5.2', '10', '445', '300', '28', '58', '92', '94', '85', '90', '89', '68', '', '80', '', '76', '15', '2.5', '3.5', '6', '15'].join('\t');
+            const paste = `${header}\n${row1}\n${row2}`;
+            try {
+                const parsed = parseFn(paste, '2026-04-06', '2026-04-12');
+                check('parsePastedData returns 2 employees', Array.isArray(parsed) && parsed.length === 2);
+                if (parsed.length >= 1) {
+                    check('parsePastedData sets name as "First Last"', parsed[0].name === 'Alice Smith');
+                    check('parsePastedData parses totalCalls', parsed[0].totalCalls === 150);
+                    check('parsePastedData parses FCR percent', parseFloat(parsed[0].fcr) === 72.5);
+                    check('parsePastedData parses adherence', parseFloat(parsed[0].scheduleAdherence) === 94.5);
+                }
+            } catch (e) {
+                check('parsePastedData throws: ' + e.message, false);
+            }
+        }
+
+        // ==========================================================
+        // Data integrity scan tests
+        // ==========================================================
+        const runIntegrity = window.DevCoachModules?.dataIntegrity?.runDataIntegrityScan;
+        if (typeof runIntegrity === 'function') {
+            // Impossible data: surveys > calls
+            const bad = {
+                '2026-04-06|2026-04-12': {
+                    employees: [{ name: 'Alice', totalCalls: 10, surveyTotal: 50, fcr: 80 }],
+                    metadata: { periodType: 'week', endDate: '2026-04-12' }
+                }
+            };
+            const badResult = runIntegrity(bad, {});
+            check('Integrity flags surveys > calls', badResult.issues.some(i => i.category === 'Impossible data' && /surveys/i.test(i.message)));
+
+            // Duplicate employees in one upload
+            const dup = {
+                '2026-04-06|2026-04-12': {
+                    employees: [
+                        { name: 'Bob', totalCalls: 100, fcr: 70 },
+                        { name: 'Bob', totalCalls: 110, fcr: 72 }
+                    ],
+                    metadata: { periodType: 'week', endDate: '2026-04-12' }
+                }
+            };
+            const dupResult = runIntegrity(dup, {});
+            check('Integrity flags duplicate rows', dupResult.issues.some(i => i.category === 'Duplicate rows'));
+
+            // Metric jumps week-over-week
+            const jumps = {
+                '2026-03-30|2026-04-05': {
+                    employees: [{ name: 'Carol', totalCalls: 150, scheduleAdherence: 95 }],
+                    metadata: { periodType: 'week', endDate: '2026-04-05' }
+                },
+                '2026-04-06|2026-04-12': {
+                    employees: [{ name: 'Carol', totalCalls: 160, scheduleAdherence: 80 }],
+                    metadata: { periodType: 'week', endDate: '2026-04-12' }
+                }
+            };
+            const jumpResult = runIntegrity(jumps, {});
+            check('Integrity flags big metric swings', jumpResult.issues.some(i => i.category === 'Big metric swing'));
+
+            // Clean data should produce no issues for these categories
+            const clean = {
+                '2026-04-06|2026-04-12': {
+                    employees: [{ name: 'Dave', totalCalls: 150, surveyTotal: 12, fcr: 75, scheduleAdherence: 93 }],
+                    metadata: { periodType: 'week', endDate: '2026-04-12' }
+                }
+            };
+            const cleanResult = runIntegrity(clean, {});
+            check('Integrity does not false-flag clean single upload', !cleanResult.issues.some(i => i.category === 'Impossible data' || i.category === 'Duplicate rows'));
+        }
+
+        // ==========================================================
+        // Pattern memory detector tests
+        // ==========================================================
+        const runPatterns = window.DevCoachModules?.patternMemory?.runPatternScan;
+        if (typeof runPatterns === 'function') {
+            // Build a 5-week sustained decline in FCR for one rep
+            const decliningWeekly = {};
+            const declineValues = [80, 76, 72, 68, 64];
+            declineValues.forEach((v, i) => {
+                const end = `2026-03-${String(8 + i * 7).padStart(2, '0')}`;
+                const start = `2026-03-${String(2 + i * 7).padStart(2, '0')}`;
+                decliningWeekly[`${start}|${end}`] = {
+                    employees: [{ name: 'Eve', totalCalls: 150, fcr: v }],
+                    metadata: { periodType: 'week', endDate: end }
+                };
+            });
+            const declineResult = runPatterns(decliningWeekly);
+            const eveRep = declineResult.reps.find(r => r.name === 'Eve');
+            check('Pattern memory detects sustained decline', eveRep && eveRep.patterns.some(p => p.type === 'declining'));
+
+            // 5-week sustained improvement
+            const improvingWeekly = {};
+            [65, 70, 75, 80, 85].forEach((v, i) => {
+                const end = `2026-03-${String(8 + i * 7).padStart(2, '0')}`;
+                const start = `2026-03-${String(2 + i * 7).padStart(2, '0')}`;
+                improvingWeekly[`${start}|${end}`] = {
+                    employees: [{ name: 'Frank', totalCalls: 150, fcr: v }],
+                    metadata: { periodType: 'week', endDate: end }
+                };
+            });
+            const impResult = runPatterns(improvingWeekly);
+            const frankRep = impResult.reps.find(r => r.name === 'Frank');
+            check('Pattern memory detects sustained improvement', frankRep && frankRep.patterns.some(p => p.type === 'improving'));
+
+            // Cliff drop: stable history then sudden plunge
+            const cliffWeekly = {};
+            [85, 86, 84, 85, 86, 87, 85, 50].forEach((v, i) => {
+                const end = `2026-02-${String(8 + i * 7).padStart(2, '0')}`;
+                const start = `2026-02-${String(2 + i * 7).padStart(2, '0')}`;
+                const key = `${start}|${end}`;
+                cliffWeekly[key] = {
+                    employees: [{ name: 'Gwen', totalCalls: 150, fcr: v }],
+                    metadata: { periodType: 'week', endDate: end }
+                };
+            });
+            const cliffResult = runPatterns(cliffWeekly);
+            const gwenRep = cliffResult.reps.find(r => r.name === 'Gwen');
+            check('Pattern memory detects cliff drop', gwenRep && gwenRep.patterns.some(p => p.type === 'cliff-drop'));
+
+            // Insufficient history
+            const tiny = {
+                '2026-04-06|2026-04-12': {
+                    employees: [{ name: 'Hank', totalCalls: 150, fcr: 75 }],
+                    metadata: { periodType: 'week', endDate: '2026-04-12' }
+                }
+            };
+            const tinyResult = runPatterns(tiny);
+            check('Pattern memory reports insufficient history', tinyResult.summary?.insufficientHistory === true);
+        }
+
+        // ==========================================================
+        // Metric profile sanity checks (2026 targets)
+        // ==========================================================
+        const targets2026 = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[2026];
+        if (targets2026) {
+            check('2026 adherence target is 93', targets2026.scheduleAdherence?.value === 93);
+            check('2026 FCR target is 73', targets2026.fcr?.value === 73);
+            check('2026 AHT target is max 426', targets2026.aht?.type === 'max' && targets2026.aht?.value === 426);
         }
 
         // Summary

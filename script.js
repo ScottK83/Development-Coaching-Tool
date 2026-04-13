@@ -2008,7 +2008,9 @@ function bindCoachingFormHandlers() {
         const fn = window.DevCoachModules?.dataIntegrity?.showDataIntegrityModal || window.showDataIntegrityModal;
         if (typeof fn === 'function') fn();
     });
+    document.getElementById('archiveOldWeeksBtn')?.addEventListener('click', () => archiveOldWeeks(6));
     refreshUploadUndoBanner();
+    refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         document.getElementById('dataFileInput').click();
     });
@@ -2233,6 +2235,103 @@ function syncWeeklyViewAfterPastedUpload(weekKey) {
             }
         }
     }
+}
+
+// ============================================
+// STORAGE QUOTA MONITOR
+// ============================================
+const STORAGE_QUOTA_BYTES = LOCALSTORAGE_MAX_SIZE_MB * 1024 * 1024;
+
+function measureLocalStorageUsage() {
+    let total = 0;
+    const perKey = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            const value = localStorage.getItem(key) || '';
+            const bytes = (key.length + value.length) * 2;
+            total += bytes;
+            perKey.push({ key, bytes });
+        }
+    } catch (e) { /* ignore */ }
+    perKey.sort((a, b) => b.bytes - a.bytes);
+    return { totalBytes: total, perKey };
+}
+
+function refreshStorageQuotaWidget() {
+    const widget = document.getElementById('storageQuotaWidget');
+    if (!widget) return;
+    const { totalBytes } = measureLocalStorageUsage();
+    const pct = Math.min(100, (totalBytes / STORAGE_QUOTA_BYTES) * 100);
+    const mbUsed = (totalBytes / (1024 * 1024)).toFixed(2);
+    const bar = document.getElementById('storageQuotaBar');
+    const label = document.getElementById('storageQuotaLabel');
+    let color = '#66bb6a';
+    if (pct >= 90) color = '#ef5350';
+    else if (pct >= 80) color = '#ffa726';
+    else if (pct >= 60) color = '#ffee58';
+    if (bar) {
+        bar.style.width = pct.toFixed(1) + '%';
+        bar.style.background = color;
+    }
+    if (label) {
+        label.textContent = `${mbUsed} MB / ${LOCALSTORAGE_MAX_SIZE_MB} MB (${pct.toFixed(0)}%)`;
+        label.style.color = pct >= 80 ? '#c62828' : '#546e7a';
+    }
+    widget.style.display = 'flex';
+}
+
+function getArchivableWeekKeys(cutoffDate) {
+    if (!weeklyData) return [];
+    return Object.keys(weeklyData).filter(key => {
+        const period = weeklyData[key];
+        const pt = period?.metadata?.periodType || 'week';
+        if (!['week', 'custom', 'daily'].includes(pt)) return false;
+        const endDateStr = period?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : key);
+        if (!endDateStr) return false;
+        const endDate = new Date(endDateStr + 'T00:00:00');
+        return endDate < cutoffDate;
+    }).sort();
+}
+
+function archiveOldWeeks(monthsToKeep = 6) {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - monthsToKeep);
+    const keysToArchive = getArchivableWeekKeys(cutoff);
+    if (!keysToArchive.length) {
+        showToast(`No weekly uploads older than ${monthsToKeep} months to archive.`, 4000);
+        return;
+    }
+
+    if (!confirm(`Archive ${keysToArchive.length} weekly upload(s) older than ${monthsToKeep} months?\n\nA JSON file will be downloaded first. After the download, those weeks will be removed from local storage to free up space. You can re-import the JSON later if needed.`)) {
+        return;
+    }
+
+    const archive = {};
+    keysToArchive.forEach(key => { archive[key] = weeklyData[key]; });
+
+    try {
+        const blob = new Blob([JSON.stringify({ version: 1, archivedAt: new Date().toISOString(), monthsKept: monthsToKeep, weeks: archive }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `devcoach-archive-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        alert('Could not generate the archive download. Aborting — no data was removed.');
+        return;
+    }
+
+    keysToArchive.forEach(key => { delete weeklyData[key]; });
+    saveWeeklyData();
+    populateDeleteWeekDropdown();
+    populateUploadedDataDropdown();
+    refreshStorageQuotaWidget();
+    showToast(`Archived ${keysToArchive.length} upload(s). Older data downloaded as JSON.`, 5000);
 }
 
 // ============================================
@@ -2558,6 +2657,7 @@ function handleLoadPastedDataClick() {
 
         saveUploadMetricCoverage(employees);
         refreshUploadUndoBanner();
+        refreshStorageQuotaWidget();
 
         showOnlySection('uploadSection');
 
