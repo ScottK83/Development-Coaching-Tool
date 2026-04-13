@@ -1836,9 +1836,17 @@
         }
     }
 
-    // Initialize - called when the Morning Pulse tab is activated
+    // Initialize - called when the Morning Pulse tab is activated.
+    // Always snap to the newest available period so fresh uploads appear
+    // without requiring the user to touch the dropdown.
     function initializeMorningPulse() {
         const container = document.getElementById('morningPulseContainer');
+        const current = loadPulseSelection();
+        const periodType = current.periodType || 'week';
+        const keys = getPeriodKeys(periodType);
+        if (keys.length) {
+            savePulseSelection({ periodType, periodKey: keys[keys.length - 1] });
+        }
         renderMorningPulse(container);
     }
 
