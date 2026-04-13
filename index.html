@@ -129,6 +129,13 @@
                             <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
                         </div>
                     </div>
+                    <!-- Data health check launcher -->
+                    <div style="margin-top: 16px; padding: 12px 16px; background: #f3e5f5; border: 1px solid #ba68c8; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="color: #4a148c; font-size: 0.95em;">
+                            🔍 Run a scan across all uploads to surface anomalies and data quality issues.
+                        </div>
+                        <button type="button" id="dataIntegrityScanBtn" style="background: #7b1fa2; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Scan Data Health</button>
+                    </div>
                     <!-- Undo last upload banner -->
                     <div id="uploadUndoBanner" style="display: none; margin-top: 16px; padding: 12px 16px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px; align-items: center; justify-content: space-between; gap: 12px;">
                         <div style="color: #5d4037; font-size: 0.95em;">
@@ -1641,6 +1648,7 @@ Box 2 - Future Improvement Areas:
                 'modules/metric-profiles.module.js',
                 'modules/error-monitor.module.js',
                 'modules/shared-utils.module.js',
+                'modules/data-integrity.module.js',
                 // Feature Modules
                 'modules/tips.module.js',
                 'modules/pto.module.js',

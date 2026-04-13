@@ -2004,6 +2004,10 @@ function bindCoachingFormHandlers() {
     document.getElementById('uploadUndoDismissBtn')?.addEventListener('click', () => {
         clearUploadUndoSnapshot();
     });
+    document.getElementById('dataIntegrityScanBtn')?.addEventListener('click', () => {
+        const fn = window.DevCoachModules?.dataIntegrity?.showDataIntegrityModal || window.showDataIntegrityModal;
+        if (typeof fn === 'function') fn();
+    });
     refreshUploadUndoBanner();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
         document.getElementById('dataFileInput').click();
