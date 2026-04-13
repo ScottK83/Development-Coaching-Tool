@@ -2513,19 +2513,22 @@ function handleLoadPastedDataClick() {
     const isYtdSelected = isSelected('ytd');
     const isWeekInProgressSelected = isSelected('week-in-progress');
 
+    // Trust an explicit start date from the input whenever one is
+    // present — the upload wizard populates this for every period
+    // type (including month and quarter) so the key matches what the
+    // dropdown computed. Only fall back to computed starts when the
+    // input is empty (legacy free-form upload path).
+    const explicitStart = document.getElementById('pasteStartDate')?.value || '';
     let startDate;
-    if (isCustomSelected || isWeekInProgressSelected) {
-        // Both custom ranges and in-progress weeks read the explicit start
-        // date from the input (populated by the wizard or the user).
-        startDate = document.getElementById('pasteStartDate')?.value;
-        if (!startDate) {
-            alert('⚠️ Please select a start date.');
-            return;
-        }
+    if (explicitStart) {
+        startDate = explicitStart;
         if (startDate > endDate) {
             alert('⚠️ Start date cannot be after end date.');
             return;
         }
+    } else if (isCustomSelected || isWeekInProgressSelected) {
+        alert('⚠️ Please select a start date.');
+        return;
     } else if (isDailySelected) {
         startDate = endDate; // Daily: start = end (same day)
     } else if (isYtdSelected) {
@@ -2698,17 +2701,18 @@ function handleTestPastedDataClick() {
     let endDate = weekEndingDate;
     let startDate = '';
 
-    // Check if Daily or Custom is selected
     const testDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
         document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
-    const testCustomBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
     const isTestDaily = !!testDailyBtn;
-    const isTestCustom = !!testCustomBtn;
+
+    // Same rule as the real save path: if an explicit start date is
+    // present (wizard or user), trust it. Only compute a fallback
+    // when both the input and end date are missing.
+    const testExplicitStart = document.getElementById('pasteStartDate')?.value || '';
 
     if (weekEndingDate) {
-        if (isTestCustom) {
-            startDate = document.getElementById('pasteStartDate')?.value || weekEndingDate;
+        if (testExplicitStart) {
+            startDate = testExplicitStart;
         } else if (isTestDaily) {
             startDate = weekEndingDate;
         } else {
@@ -2719,8 +2723,8 @@ function handleTestPastedDataClick() {
     } else {
         const today = new Date();
         endDate = today.toISOString().split('T')[0];
-        if (isTestCustom) {
-            startDate = document.getElementById('pasteStartDate')?.value || endDate;
+        if (testExplicitStart) {
+            startDate = testExplicitStart;
         } else if (isTestDaily) {
             startDate = endDate;
         } else {
