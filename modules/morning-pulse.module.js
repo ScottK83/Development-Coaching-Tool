@@ -1930,12 +1930,18 @@
         const runMyMondayBtnHtml = periodType === 'week'
             ? `<button type="button" id="runMyMondayBtn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Monday</button>`
             : '';
+        const patternMemoryBtnHtml = periodType === 'week'
+            ? `<button type="button" id="patternMemoryBtn" style="background:#fff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`
+            : '';
         html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
             `<div>` +
                 `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Morning Pulse \u2014 ${rangeText}</h3>` +
                 `<p style="color:#666; margin:0; font-size:0.9em;">${pulseDescription}</p>` +
             `</div>` +
-            runMyMondayBtnHtml +
+            `<div style="display:flex; gap:10px; flex-shrink:0;">` +
+                patternMemoryBtnHtml +
+                runMyMondayBtnHtml +
+            `</div>` +
         `</div>`;
 
         // Summary bar
@@ -1967,6 +1973,15 @@
                     runMyMondayBtn.textContent = originalText;
                     runMyMondayBtn.disabled = false;
                 }
+            });
+        }
+
+        // Bind Pattern Memory button
+        const patternMemoryBtn = container.querySelector('#patternMemoryBtn');
+        if (patternMemoryBtn) {
+            patternMemoryBtn.addEventListener('click', () => {
+                const fn = window.DevCoachModules?.patternMemory?.showPatternMemoryModal || window.showPatternMemoryModal;
+                if (typeof fn === 'function') fn();
             });
         }
 
