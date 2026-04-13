@@ -97,6 +97,21 @@
         (l1, v1, l2, v2) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you've got a lot working for you.`,
         (l1, v1, l2, v2) => `You nailed it on ${l1} (${v1}) and ${l2} (${v2}) this week.`,
     ];
+    const SURVEY_METRIC_KEYS = new Set(['fcr', 'overallExperience', 'overallExperienceTop3', 'cxRepOverall']);
+    const PERFECT_SURVEYS_SOLO = [
+        (surveys) => `${surveys} perfect this week — can't do better than that.`,
+        (surveys) => `${surveys} — every single one a perfect score. That's special.`,
+        (surveys) => `Flawless on all ${surveys}. Huge.`,
+        (surveys) => `${surveys} and not one off the mark. Beautiful.`,
+        (surveys) => `All ${surveys} perfect. That doesn't happen by accident.`,
+    ];
+    const PERFECT_SURVEYS_PLUS = [
+        (surveys, label, val) => `${surveys} — every one perfect. And ${label} at ${val} on top of it? Unreal week.`,
+        (surveys, label, val) => `Flawless on ${surveys} plus ${label} at ${val}. That's a statement week.`,
+        (surveys, label, val) => `All ${surveys} perfect, and ${label} sitting at ${val}. Wow.`,
+        (surveys, label, val) => `${surveys} without a single miss, and ${label} at ${val} to go with it. Love it.`,
+        (surveys, label, val) => `${surveys} all perfect scores, and ${label} (${val}) right there with them.`,
+    ];
     const ONE_WIN = [
         (label, val) => `${label} at ${val} is looking great!`,
         (label, val) => `Solid work on ${label} at ${val}!`,
@@ -1177,9 +1192,32 @@
 
         const focalPoint = pickFocalPoint(allMetrics);
 
+        // When two or more survey metrics are at 100%, call it out as
+        // "X perfect surveys" instead of listing each survey metric individually.
+        const perfectSurveyWins = wins.filter(w =>
+            SURVEY_METRIC_KEYS.has(w.metricKey)
+            && Number.isFinite(w.employeeValue)
+            && w.employeeValue >= 100
+        );
+        const surveyCount = parseInt(emp?.surveyTotal, 10);
+        const hasPerfectSurveys = perfectSurveyWins.length >= 2 && Number.isFinite(surveyCount) && surveyCount > 0;
+        const surveysText = hasPerfectSurveys
+            ? `${surveyCount} survey${surveyCount === 1 ? '' : 's'}`
+            : '';
+        const nonPerfectSurveyWins = hasPerfectSurveys
+            ? wins.filter(w => !perfectSurveyWins.includes(w))
+            : wins;
+
         // CELEBRATION section — lead with wins
         let praiseText = '';
-        if (biggestJump && biggestJump.delta > 0) {
+        if (hasPerfectSurveys) {
+            const secondWin = nonPerfectSurveyWins[0];
+            if (secondWin) {
+                praiseText = pick(PERFECT_SURVEYS_PLUS)(surveysText, secondWin.label, fmtVal(secondWin));
+            } else {
+                praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
+            }
+        } else if (biggestJump && biggestJump.delta > 0) {
             praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
