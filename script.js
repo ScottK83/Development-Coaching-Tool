@@ -1662,6 +1662,9 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
     enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
 
+    // Dropdown-driven upload wizard (replaces free-form period + date entry)
+    window.DevCoachModules?.uploadWizard?.bind?.();
+
     // Auto-detect period type when either date changes
     document.getElementById('pasteWeekEndingDate')?.addEventListener('change', autoDetectPeriodFromDates);
     document.getElementById('pasteStartDate')?.addEventListener('change', autoDetectPeriodFromDates);
@@ -2183,6 +2186,8 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
         label = `Daily: ${normalizedEndDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'week') {
         label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (periodType === 'week-in-progress') {
+        label = `Week in progress: ${startDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'month') {
         label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
     } else if (periodType === 'quarter') {
@@ -2500,22 +2505,21 @@ function handleLoadPastedDataClick() {
     const endDate = weekEndingDate;
 
     // Check which period type button is selected
-    const selectedDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
-    const selectedCustomBtn = document.querySelector('.upload-period-btn[data-period="custom"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="custom"][style*="background:#28a745"]');
-    const isDailySelected = !!selectedDailyBtn;
-    const isCustomSelected = !!selectedCustomBtn;
-
-    const selectedYtdBtn = document.querySelector('.upload-period-btn[data-period="ytd"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="ytd"][style*="background:#28a745"]');
-    const isYtdSelected = !!selectedYtdBtn;
+    const isSelected = (period) =>
+        !!(document.querySelector(`.upload-period-btn[data-period="${period}"][style*="background: rgb(40, 167, 69)"]`) ||
+           document.querySelector(`.upload-period-btn[data-period="${period}"][style*="background:#28a745"]`));
+    const isDailySelected = isSelected('daily');
+    const isCustomSelected = isSelected('custom');
+    const isYtdSelected = isSelected('ytd');
+    const isWeekInProgressSelected = isSelected('week-in-progress');
 
     let startDate;
-    if (isCustomSelected) {
+    if (isCustomSelected || isWeekInProgressSelected) {
+        // Both custom ranges and in-progress weeks read the explicit start
+        // date from the input (populated by the wizard or the user).
         startDate = document.getElementById('pasteStartDate')?.value;
         if (!startDate) {
-            alert('⚠️ Please select a start date for your custom range.');
+            alert('⚠️ Please select a start date.');
             return;
         }
         if (startDate > endDate) {
@@ -2625,7 +2629,7 @@ function handleLoadPastedDataClick() {
             Object.entries(weeklyData || {}).forEach(([k, v]) => {
                 const meta = v?.metadata || {};
                 const pt = meta.periodType || 'week';
-                if (!['daily', 'week', 'month', 'quarter', 'custom'].includes(pt)) return;
+                if (!['daily', 'week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(pt)) return;
                 const edt = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
                 if (!edt) return;
                 const [y] = edt.split('-').map(Number);
@@ -2652,6 +2656,7 @@ function handleLoadPastedDataClick() {
         populateDeleteWeekDropdown();
         populateUploadedDataDropdown();
         populateTeamMemberSelector();
+        window.DevCoachModules?.uploadWizard?.refresh?.();
 
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         document.getElementById('pasteDataTextarea').value = '';

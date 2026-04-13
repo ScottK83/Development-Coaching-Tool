@@ -3330,7 +3330,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
         })
         .filter(item => {
             if (!item.endDate) return false;
-            if (!['daily', 'week', 'month', 'quarter', 'custom'].includes(item.periodType)) return false;
+            if (!['daily', 'week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(item.periodType)) return false;
             if (item.endDate.getFullYear() !== yearNum) return false;
             if (item.endDate > uptoEndDate) return false;
             // If we have an anchor, only include periods that START after the anchor's end date
