@@ -134,7 +134,7 @@
         var isSurveyWeighted = SURVEY_WEIGHTED_METRICS[metricKey];
 
         // Filter to one source type to avoid double-counting overlapping periods
-        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
         Object.entries(allData).forEach(function(entry) {
             var weekData = entry[1];
@@ -215,7 +215,7 @@
 
         var previousPeriodEnd = null;
 
-        if (periodType === 'week') {
+        if (periodType === 'week' || periodType === 'week-in-progress') {
             previousPeriodEnd = new Date(endDate);
             previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 7);
         } else if (periodType === 'month') {
@@ -295,7 +295,7 @@
         var teamFilterContext = getTeamSelectionContext();
 
         // Filter to one source type to avoid double-counting overlapping periods
-        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
         allWeeks.forEach(function(weekKey) {
             var week = weeklyData[weekKey];

@@ -88,8 +88,8 @@
         });
 
         periods.sort(function(a, b) {
-            var aDate = a.endDate || a.key.split('|')[0] || '';
-            var bDate = b.endDate || b.key.split('|')[0] || '';
+            var aDate = a.endDate || a.key.split('|')[1] || '';
+            var bDate = b.endDate || b.key.split('|')[1] || '';
             return bDate.localeCompare(aDate);
         });
         return periods;
@@ -98,7 +98,13 @@
     function _fmtPeriodLabel(key, type) {
         var parts = key.split('|');
         var endDate = parts[1] || parts[0] || '';
-        var prefix = type === 'ytd' ? 'YTD' : type === 'month' ? 'Monthly' : type === 'quarter' ? 'Quarterly' : type === 'daily' ? 'Daily' : 'Weekly';
+        var prefix;
+        if (type === 'ytd') prefix = 'YTD';
+        else if (type === 'month') prefix = 'Monthly';
+        else if (type === 'quarter') prefix = 'Quarterly';
+        else if (type === 'daily') prefix = 'Daily';
+        else if (type === 'week-in-progress') prefix = 'Week in progress';
+        else prefix = 'Weekly';
         return prefix + ' ending ' + endDate;
     }
 

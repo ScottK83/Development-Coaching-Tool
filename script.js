@@ -1231,7 +1231,7 @@ function getActivePeriodContext() {
     let timeReference = 'this period';
     if (currentPeriodType === 'daily') {
         timeReference = 'today';
-    } else if (currentPeriodType === 'week') {
+    } else if (currentPeriodType === 'week' || currentPeriodType === 'week-in-progress') {
         timeReference = 'this week';
     } else if (currentPeriodType === 'month') {
         timeReference = 'this month';

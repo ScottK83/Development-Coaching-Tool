@@ -321,7 +321,8 @@
         var periodTypeLabel = periodType === 'ytd' ? 'YTD' :
             periodType === 'month' ? 'Monthly' :
             periodType === 'quarter' ? 'Quarterly' :
-            periodType === 'daily' ? 'Daily' : 'Weekly';
+            periodType === 'daily' ? 'Daily' :
+            periodType === 'week-in-progress' ? 'Week in progress' : 'Weekly';
         var weekLabel = periodTypeLabel + ' data through ' + formatWeekLabel(weekKey);
         renderDashboard(container, needCoaching, teamStats, weekLabel);
     }

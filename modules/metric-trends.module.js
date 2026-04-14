@@ -730,7 +730,7 @@ function displayMetricsPreview(employeeName, weekKey) {
 
     const surveyTotal = Number.isFinite(parseInt(employee.surveyTotal, 10)) ? parseInt(employee.surveyTotal, 10) : 0;
     const periodType = String(periodData?.metadata?.periodType || 'period').toLowerCase();
-    const periodTypeLabel = periodType === 'daily' ? 'day' : periodType === 'week' ? 'week' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : periodType === 'ytd' ? 'YTD period' : 'period';
+    const periodTypeLabel = periodType === 'daily' ? 'day' : periodType === 'week' ? 'week' : periodType === 'week-in-progress' ? 'partial week' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : periodType === 'ytd' ? 'YTD period' : 'period';
     const periodLabel = String(periodData?.metadata?.label || weekKey || '').trim();
     if (metricsPreviewSurveyCount) {
         metricsPreviewSurveyCount.textContent = `Surveys in loaded ${periodTypeLabel}: ${surveyTotal}${periodLabel ? ` • ${periodLabel}` : ''}`;
@@ -2646,7 +2646,7 @@ function drawTrendMetricsTableBody(ctx, y, options) {
 
             let groupLabel;
             if (group === 'Survey') {
-                if (metadata.periodType === 'week') {
+                if (metadata.periodType === 'week' || metadata.periodType === 'week-in-progress') {
                     groupLabel = `${groupEmoji} ${group} (${surveyTotal} this week | ${ytdSurveyTotal} YTD)`;
                 } else {
                     groupLabel = `${groupEmoji} ${group} (${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)`;
@@ -3352,7 +3352,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     let extensionPeriods = allPeriods;
     let sourceType = 'mixed';
     if (!anchor && allPeriods.length) {
-        const sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        const sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         sourceType = sourceTypePriority.find(type => allPeriods.some(item => item.periodType === type)) || allPeriods[0]?.periodType;
         extensionPeriods = allPeriods.filter(item => item.periodType === sourceType);
     }

@@ -62,7 +62,7 @@
         var wData = _getWeeklyData();
 
         // Filter to one source type (prefer 'week')
-        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
         q1Keys.forEach(function (weekKey) {
             var period = wData[weekKey];

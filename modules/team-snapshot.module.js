@@ -137,10 +137,14 @@
             periods.push({ key: key, label: label, type: pType, source: 'ytd' });
         });
 
-        // Sort newest first
+        // Sort newest first, using the end date (parts[1]) — parts[0] is
+        // the start date and would invert ordering for month/quarter
+        // entries whose correct start is far before their end.
         periods.sort(function(a, b) {
-            var aDate = a.key.split('|')[0] || '';
-            var bDate = b.key.split('|')[0] || '';
+            var aParts = a.key.split('|');
+            var bParts = b.key.split('|');
+            var aDate = aParts[1] || aParts[0] || '';
+            var bDate = bParts[1] || bParts[0] || '';
             return bDate.localeCompare(aDate);
         });
 
@@ -149,8 +153,14 @@
 
     function formatPeriodLabel(key, type) {
         var parts = key.split('|');
-        var endDate = parts[0] || '';
-        var prefix = type === 'daily' ? 'Daily:' : type === 'week' ? 'Week ending' : type === 'month' ? 'Month ending' : 'YTD ending';
+        var endDate = parts[1] || parts[0] || '';
+        var prefix;
+        if (type === 'daily') prefix = 'Daily:';
+        else if (type === 'week') prefix = 'Week ending';
+        else if (type === 'week-in-progress') prefix = 'Week in progress through';
+        else if (type === 'month') prefix = 'Month ending';
+        else if (type === 'quarter') prefix = 'Quarter ending';
+        else prefix = 'YTD ending';
         return prefix + ' ' + endDate;
     }
 

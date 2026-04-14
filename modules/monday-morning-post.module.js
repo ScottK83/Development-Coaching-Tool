@@ -148,10 +148,11 @@
                 var q = Math.ceil((d.getMonth() + 1) / 3);
                 return 'Q' + q + ' ' + d.getFullYear();
             }
-            // week / daily / custom
+            // week / week-in-progress / daily / custom
             var mm = String(d.getMonth() + 1).padStart(2, '0');
             var dd = String(d.getDate()).padStart(2, '0');
             var yyyy = d.getFullYear();
+            if (type === 'week-in-progress') return 'Week in progress through ' + mm + '/' + dd + '/' + yyyy;
             return 'Week ending ' + mm + '/' + dd + '/' + yyyy;
         } catch (e) {
             return endDate;

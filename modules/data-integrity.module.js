@@ -40,7 +40,7 @@
         return Object.keys(weeklyData)
             .filter(k => {
                 const pt = weeklyData[k]?.metadata?.periodType;
-                return !pt || pt === 'week' || pt === 'custom';
+                return !pt || pt === 'week' || pt === 'week-in-progress' || pt === 'custom';
             })
             .sort();
     }

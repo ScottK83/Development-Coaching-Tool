@@ -114,7 +114,7 @@
         // Filter to one source type to avoid double-counting overlapping periods
         // (e.g., weekly + monthly/quarterly covering the same timeframe).
         // Matches buildYtdAggregateForYear's sourceTypePriority logic.
-        var sourceTypePriority = ['week', 'month', 'quarter', 'custom', 'daily'];
+        var sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
         yearKeys.forEach(function (weekKey) {
             var period = wData[weekKey];
