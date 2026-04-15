@@ -1558,6 +1558,203 @@
         'other':    { label: 'Other',       bg: '#f5f5f5', color: '#666',    icon: '—' }
     };
 
+    // ============================================
+    // DISCREPANCY VIEW (simplified default)
+    // ============================================
+    // Shows only what disagrees: Verint vs Payroll side-by-side,
+    // PTOST running total against the 40h cap, and a dense action list.
+    // Full timeline / KPI cards live in the Classic view behind a tab.
+    function buildDiscrepancyViewHtml(r, employeeName) {
+        var timeline = r.timeline || [];
+        var ptostUsed = round2(Number(r.ptostHoursUsed || 0));
+        var ptostRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - ptostUsed));
+        var ptostPct = Math.min(100, (ptostUsed / PTOST_BUFFER_LIMIT) * 100);
+        var ptostColor = ptostPct >= 100 ? '#b71c1c' : ptostPct >= 75 ? '#e65100' : '#2e7d32';
+        var sameDayAgainst = round2(Number(r.sameDayNoPtostHours || 0));
+        var discCount = (r.discrepancies || []).length;
+        var reviewCount = (r.reviewCodingCandidates || []).length;
+        var pcCount = (r.pcIssueCandidates || []).length;
+
+        // Collect every day where something disagrees or counts against reliability
+        var rows = [];
+        (timeline || []).forEach(function(t) {
+            var exposure = round2(Number(t.sameDayExposureHours || 0));
+            var overage = round2(Number(t.ptostOverage || 0));
+            var flags = t.flags || [];
+            var hasDiscrepancy = flags.some(function(f) { return String(f).toUpperCase().indexOf('DISCREPANCY') >= 0; });
+            var hasPcIssue = flags.some(function(f) { return String(f).toUpperCase().indexOf('PC ISSUE') >= 0; });
+            var hasReview = flags.some(function(f) { return String(f).toLowerCase().indexOf('review coding') >= 0; });
+            var hasPartial = flags.some(function(f) { return String(f).indexOf('Partial day') >= 0; });
+
+            if (exposure <= 0 && overage <= 0 && !hasDiscrepancy && !hasPcIssue && !hasReview && !hasPartial) return;
+
+            var verintDesc = (t.verint || []).map(function(v) {
+                return (v.activity || v.type || '') + (v.hours ? ' (' + round2(v.hours) + 'h)' : '');
+            }).filter(Boolean).join(', ') || '—';
+
+            var nonRegPayroll = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
+            var payrollDesc = nonRegPayroll.map(function(p) {
+                var s = p.trc;
+                if (p.taskCode) s += '/' + p.taskCode;
+                if (p.quantity) s += ' ' + round2(p.quantity) + 'h';
+                return s;
+            }).join(', ');
+            var payrollReg = (t.payroll || []).filter(function(p) { return p.trc === 'REG' && p.clockIn; });
+            if (payrollReg.length > 0) {
+                var regHrs = round2(payrollReg.reduce(function(s, p) { return s + Number(p.quantity || 0); }, 0));
+                payrollDesc = (payrollDesc ? payrollDesc + ' + ' : '') + 'REG ' + regHrs + 'h @ ' + (payrollReg[0].clockIn || '');
+            }
+            if (!payrollDesc) payrollDesc = '—';
+
+            var hrs = exposure > 0 ? exposure
+                : overage > 0 ? overage
+                : round2((t.verint || []).reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
+
+            var problem, color, action;
+            if (hasDiscrepancy) {
+                problem = '⚠ Verint absent, Payroll REG'; color = '#b71c1c';
+                action = 'Payroll wrong — send correction';
+            } else if (hasReview) {
+                problem = '⚠ Verint Same Day vs Payroll PTO'; color = '#e65100';
+                action = 'Re-code to PTOST (if buffer remains)';
+            } else if (hasPcIssue) {
+                problem = 'PC issue — Verint tardy, clocked in'; color = '#1565c0';
+                action = 'Document as system issue';
+            } else if (overage > 0) {
+                problem = 'PTOST over 40h cap'; color = '#e65100';
+                action = 'Counts against reliability';
+            } else if (exposure > 0) {
+                problem = 'Same Day without PTOST'; color = '#b71c1c';
+                action = 'Counts against reliability';
+            } else if (hasPartial) {
+                problem = 'Partial day — review'; color = '#78909c';
+                action = 'Confirm payroll matches';
+            } else {
+                problem = '—'; color = '#78909c'; action = '—';
+            }
+
+            rows.push({
+                dateStr: t.dateStr,
+                verint: verintDesc,
+                payroll: payrollDesc,
+                hrs: hrs,
+                problem: problem,
+                color: color,
+                action: action
+            });
+        });
+
+        // PTOST ledger — every day that moved the running total
+        var ptostLedger = [];
+        (timeline || []).forEach(function(t) {
+            if (t.ptostRunning == null) return;
+            var dayPtost = (t.payroll || []).filter(function(p) { return p.trc === 'PTOST'; })
+                .reduce(function(s, p) { return s + Number(p.quantity || 0); }, 0);
+            if (dayPtost <= 0) {
+                dayPtost = (t.verint || []).filter(function(v) { return v.type === 'ptost' || v.type === 'tardy-ptost'; })
+                    .reduce(function(s, v) { return s + Number(v.hours || 0); }, 0);
+            }
+            if (dayPtost <= 0) return;
+            ptostLedger.push({
+                dateStr: t.dateStr,
+                hrs: round2(dayPtost),
+                running: round2(t.ptostRunning),
+                protected: t.ptostProtected !== false,
+                overage: round2(Number(t.ptostOverage || 0))
+            });
+        });
+
+        var html = '';
+        html += '<div id="relDiscView">';
+
+        // Verdict tiles
+        html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;">';
+        html += '<div style="padding:12px; background:#fff; border:1px solid #ffcdd2; border-radius:8px; text-align:center;">';
+        html += '<div style="font-size:1.8em; font-weight:800; color:#b71c1c;">' + sameDayAgainst + 'h</div>';
+        html += '<div style="font-size:0.78em; color:#666;">Against reliability</div></div>';
+        html += '<div style="padding:12px; background:#fff; border:1px solid #b2dfdb; border-radius:8px;">';
+        html += '<div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="font-size:1.6em; font-weight:800; color:' + ptostColor + ';">' + ptostUsed + '<span style="font-size:0.55em; color:#90a4ae;"> / 40h</span></div><div style="font-size:0.75em; color:#607d8b;">' + ptostRemaining + 'h left</div></div>';
+        html += '<div style="margin-top:6px; height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + ptostPct + '%; background:' + ptostColor + ';"></div></div>';
+        html += '<div style="font-size:0.75em; color:#607d8b; text-align:center; margin-top:4px;">PTOST buffer</div></div>';
+        html += '<div style="padding:12px; background:#fff; border:1px solid #ffe0b2; border-radius:8px; text-align:center;">';
+        html += '<div style="font-size:1.8em; font-weight:800; color:#e65100;">' + (discCount + reviewCount) + '</div>';
+        html += '<div style="font-size:0.78em; color:#666;">Payroll discrepancies</div></div>';
+        html += '<div style="padding:12px; background:#fff; border:1px solid #bbdefb; border-radius:8px; text-align:center;">';
+        html += '<div style="font-size:1.8em; font-weight:800; color:#1565c0;">' + pcCount + '</div>';
+        html += '<div style="font-size:0.78em; color:#666;">PC issue candidates</div></div>';
+        html += '</div>';
+
+        // Discrepancy table — only rows that disagree or count
+        html += '<div style="margin-bottom:14px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">';
+        html += '<div style="padding:10px 14px; background:#fafafa; border-bottom:1px solid #e0e0e0; font-weight:700; color:#37474f;">What needs attention (' + rows.length + ')</div>';
+        if (rows.length === 0) {
+            html += '<div style="padding:20px; text-align:center; color:#2e7d32; font-weight:600;">✓ Verint and Payroll agree. Nothing to review.</div>';
+        } else {
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0; white-space:nowrap;">Date</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Verint says</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Payroll says</th>';
+            html += '<th style="padding:8px 10px; text-align:center; border-bottom:1px solid #e0e0e0; white-space:nowrap;">Hours</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Problem</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Action</th>';
+            html += '</tr></thead><tbody>';
+            rows.forEach(function(row) {
+                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                html += '<td style="padding:8px 10px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.dateStr) + '</td>';
+                html += '<td style="padding:8px 10px; color:#455a64;">' + escapeHtml(row.verint) + '</td>';
+                html += '<td style="padding:8px 10px; color:#455a64;">' + escapeHtml(row.payroll) + '</td>';
+                html += '<td style="padding:8px 10px; text-align:center; font-weight:700;">' + row.hrs + 'h</td>';
+                html += '<td style="padding:8px 10px; color:' + row.color + '; font-weight:600;">' + escapeHtml(row.problem) + '</td>';
+                html += '<td style="padding:8px 10px; color:#455a64; font-size:0.92em;">' + escapeHtml(row.action) + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+        }
+        html += '</div>';
+
+        // PTOST ledger
+        if (ptostLedger.length > 0) {
+            html += '<div style="margin-bottom:14px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">';
+            html += '<div style="padding:10px 14px; background:#fafafa; border-bottom:1px solid #e0e0e0; font-weight:700; color:#37474f;">PTOST ledger — running total vs 40h cap</div>';
+            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+            html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
+            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Date</th>';
+            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid #e0e0e0;">PTOST this day</th>';
+            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid #e0e0e0;">Running total</th>';
+            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Status</th>';
+            html += '</tr></thead><tbody>';
+            ptostLedger.forEach(function(row) {
+                var statusText, statusColor, rowBg = '';
+                if (row.overage > 0) {
+                    statusText = '✗ Over cap (+' + row.overage + 'h against)'; statusColor = '#b71c1c'; rowBg = 'background:#fff5f5;';
+                } else if (row.protected) {
+                    statusText = '✓ Protected'; statusColor = '#2e7d32';
+                } else {
+                    statusText = '⚠ Over cap'; statusColor = '#e65100'; rowBg = 'background:#fff8e1;';
+                }
+                html += '<tr style="border-bottom:1px solid #f0f0f0;' + rowBg + '">';
+                html += '<td style="padding:6px 10px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.dateStr) + '</td>';
+                html += '<td style="padding:6px 10px; text-align:center;">' + row.hrs + 'h</td>';
+                html += '<td style="padding:6px 10px; text-align:center; font-weight:700;">' + row.running + 'h</td>';
+                html += '<td style="padding:6px 10px; color:' + statusColor + '; font-weight:600;">' + statusText + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+
+        // Action bar — same buttons as classic so nothing is lost
+        html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
+        html += '<button type="button" id="relDiscCopySummary" style="padding:8px 16px; background:#37474f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📋 Copy Manager Summary</button>';
+        if ((discCount + reviewCount + pcCount) > 0) {
+            html += '<button type="button" id="relDiscEmailCorrections" style="padding:8px 16px; background:#0d47a1; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Open Corrections Email</button>';
+        }
+        html += '</div>';
+
+        html += '</div>'; // end relDiscView
+        return html;
+    }
+
     function renderEmployeeDetail(container, employeeName) {
         var store = loadStore();
         var emp = store.employees?.[employeeName];
@@ -1620,6 +1817,18 @@
         html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:' + sourceBg + '; color:' + sourceColor + '; font-size:0.83em; border:1px solid #e0e0e0;">';
         html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
+
+        // Tab bar — Discrepancies (default) / Classic
+        html += '<div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid #e0e0e0;">';
+        html += '<button type="button" id="relTabDisc" data-tab="disc" style="padding:8px 16px; border:none; background:#00695c; color:#fff; cursor:pointer; font-weight:700; border-radius:6px 6px 0 0; font-size:0.9em;">Discrepancies</button>';
+        html += '<button type="button" id="relTabClassic" data-tab="classic" style="padding:8px 16px; border:none; background:#eceff1; color:#455a64; cursor:pointer; font-weight:600; border-radius:6px 6px 0 0; font-size:0.9em;">Classic view</button>';
+        html += '</div>';
+
+        // Render discrepancy view (default visible)
+        html += buildDiscrepancyViewHtml(r, employeeName);
+
+        // Everything below here is the Classic view — wrapped and hidden by default
+        html += '<div id="relClassicWrap" style="display:none;">';
 
         var needsReviewCount = timeline.filter(function(t) {
             return (t.flags || []).some(function(f) {
@@ -1948,9 +2157,35 @@
         }
 
         html += '</div>';
-        html += '</div>';
+        html += '</div>'; // end relClassicWrap
+        html += '</div>'; // end outer panel
 
         container.innerHTML = html;
+
+        // Tab toggle: Discrepancies (default) / Classic
+        function setTab(which) {
+            var discBtn = document.getElementById('relTabDisc');
+            var classicBtn = document.getElementById('relTabClassic');
+            var discView = document.getElementById('relDiscView');
+            var classicWrap = document.getElementById('relClassicWrap');
+            if (!discBtn || !classicBtn || !discView || !classicWrap) return;
+            var active = which === 'classic' ? classicBtn : discBtn;
+            var inactive = which === 'classic' ? discBtn : classicBtn;
+            active.style.background = '#00695c'; active.style.color = '#fff';
+            inactive.style.background = '#eceff1'; inactive.style.color = '#455a64';
+            discView.style.display = which === 'classic' ? 'none' : '';
+            classicWrap.style.display = which === 'classic' ? '' : 'none';
+        }
+        document.getElementById('relTabDisc')?.addEventListener('click', function() { setTab('disc'); });
+        document.getElementById('relTabClassic')?.addEventListener('click', function() { setTab('classic'); });
+
+        // Wire the Discrepancy view's action buttons to reuse Classic view handlers
+        document.getElementById('relDiscCopySummary')?.addEventListener('click', function() {
+            document.getElementById('relCopySummary')?.click();
+        });
+        document.getElementById('relDiscEmailCorrections')?.addEventListener('click', function() {
+            document.getElementById('relEmailCorrections')?.click();
+        });
 
         // Bind close
         document.getElementById('relCloseDetail')?.addEventListener('click', function() {
