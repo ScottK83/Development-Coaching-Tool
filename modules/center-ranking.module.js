@@ -644,14 +644,14 @@
 
             var scoreColor = function (s) {
                 if (s === 3) return '#2e7d32';
-                if (s === 2) return '#8bc34a';
+                if (s === 2) return '#1565c0';
                 return '#c62828';
             };
 
             // Rank cell formatting per spec
             var rankBg = '', rankColor = '';
             if (r.rank <= 26) { rankBg = '#1F4E79'; rankColor = '#FFFFFF'; }
-            else if (r.rank >= 105) { rankBg = '#FFF2CC'; rankColor = '#7F6000'; }
+            else if (r.rank >= 105) { rankBg = '#c62828'; rankColor = '#FFFFFF'; }
 
             var teamBorder = isTeam ? 'outline: 2px solid #2e7d32; outline-offset: -2px; ' : '';
             html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
