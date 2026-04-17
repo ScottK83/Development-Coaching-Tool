@@ -1224,7 +1224,7 @@ function formatWeekLabel(weekKey) {
 }
 
 function getActivePeriodContext() {
-    const metadataSource = currentPeriodType === 'ytd' ? ytdData : weeklyData;
+    const metadataSource = getPeriodDataStore(currentPeriodType);
     const metadata = currentPeriod && metadataSource[currentPeriod]?.metadata ? metadataSource[currentPeriod].metadata : null;
     
     // Determine friendly time reference based on period type
@@ -1360,21 +1360,13 @@ function updateEmployeeDropdown() {
     
     const employees = new Set();
     const teamFilterContext = getTeamSelectionContext();
-    
-    // For week/month/quarter: currentPeriod is the weekKey
-    if (currentPeriod && weeklyData[currentPeriod] && currentPeriodType !== 'ytd') {
-        weeklyData[currentPeriod].employees.forEach(emp => {
-            if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
-                employees.add(emp.name);
-            }
-        });
-    } else if (currentPeriodType === 'ytd' && currentPeriod && ytdData[currentPeriod]) {
-        ytdData[currentPeriod].employees.forEach(emp => {
-            if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
-                employees.add(emp.name);
-            }
-        });
-    }
+
+    const periodRecord = currentPeriod ? getPeriodDataStore(currentPeriodType)[currentPeriod] : null;
+    (periodRecord?.employees || []).forEach(emp => {
+        if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
+            employees.add(emp.name);
+        }
+    });
     
     Array.from(employees).sort().forEach(name => {
         const option = document.createElement('option');
@@ -1385,20 +1377,9 @@ function updateEmployeeDropdown() {
 }
 
 function getEmployeeDataForPeriod(employeeName) {
-    // For week/month/quarter: currentPeriod is the weekKey - look it up directly
-    if (currentPeriod && weeklyData[currentPeriod] && currentPeriodType !== 'ytd') {
-        const week = weeklyData[currentPeriod];
-        if (week && week.employees) {
-            return week.employees.find(emp => emp.name === employeeName);
-        }
-    } else if (currentPeriodType === 'ytd' && currentPeriod && ytdData[currentPeriod]) {
-        const ytdPeriod = ytdData[currentPeriod];
-        if (ytdPeriod && ytdPeriod.employees) {
-            return ytdPeriod.employees.find(emp => emp.name === employeeName);
-        }
-    }
-    
-    return null;
+    if (!currentPeriod) return null;
+    const record = getPeriodDataStore(currentPeriodType)[currentPeriod];
+    return record?.employees?.find(emp => emp.name === employeeName) || null;
 }
 
 function updatePeriodDropdown() {
@@ -1408,8 +1389,8 @@ function updatePeriodDropdown() {
     dropdown.innerHTML = '<option value="">-- Choose a date range --</option>';
     
     const periods = [];
-    
-    const sourceData = currentPeriodType === 'ytd' ? ytdData : weeklyData;
+
+    const sourceData = getPeriodDataStore(currentPeriodType);
     Object.keys(sourceData).forEach(weekKey => {
         const metadata = sourceData[weekKey].metadata;
         const storedPeriodType = metadata.periodType || 'week';
@@ -2581,7 +2562,7 @@ function handleLoadPastedDataClick() {
         const weekKey = `${startDate}|${endDate}`;
 
         // Check if data already exists for this period and warn about what's missing/changing
-        const targetStore = periodType === 'ytd' ? ytdData : weeklyData;
+        const targetStore = getPeriodDataStore(periodType);
         const existingData = targetStore[weekKey];
         if (existingData && existingData.employees && existingData.employees.length > 0) {
             const existingCount = existingData.employees.length;
@@ -4540,8 +4521,44 @@ function getLatestWeeklyKey() {
     return keys.length ? keys[keys.length - 1] : null;
 }
 
-function getTrendDataSource(periodType) {
+function getPeriodDataStore(periodType) {
     return periodType === 'ytd' ? ytdData : weeklyData;
+}
+
+// Weighted team averages across a set of employees within a single period.
+// Matches the aggregation rule (never average-of-averages): weight by
+// surveyTotal for survey-backed metrics, totalCalls otherwise.
+const SURVEY_WEIGHTED_METRIC_KEYS = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+function buildTeamWeightedAverages(employees, metricKeys) {
+    const out = {};
+    (metricKeys || []).forEach(key => { out[key] = null; });
+    if (!Array.isArray(employees) || !employees.length) return out;
+
+    const sums = {};
+    const weights = {};
+    employees.forEach(emp => {
+        if (!emp) return;
+        const totalCalls = parseInt(emp.totalCalls, 10);
+        const surveyTotal = parseInt(emp.surveyTotal, 10);
+        metricKeys.forEach(key => {
+            const value = parseFloat(emp[key]);
+            if (!Number.isFinite(value)) return;
+            let w;
+            if (SURVEY_WEIGHTED_METRIC_KEYS.has(key)) {
+                w = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+            } else {
+                w = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
+            }
+            if (w <= 0) return;
+            sums[key] = (sums[key] || 0) + value * w;
+            weights[key] = (weights[key] || 0) + w;
+        });
+    });
+
+    metricKeys.forEach(key => {
+        if (weights[key] > 0) out[key] = sums[key] / weights[key];
+    });
+    return out;
 }
 
 function getTrendMetadataType(periodType) {
@@ -4552,7 +4569,7 @@ function getTrendMetadataType(periodType) {
 }
 
 function getTrendKeysForPeriodType(periodType) {
-    const sourceData = getTrendDataSource(periodType);
+    const sourceData = getPeriodDataStore(periodType);
     const metadataType = getTrendMetadataType(periodType);
 
     return Object.keys(sourceData || {})
@@ -4618,7 +4635,7 @@ function getTrendComparisonBuckets(keys, periodType) {
     }
 
     if (periodType === 'ytd') {
-        const sourceData = getTrendDataSource(periodType);
+        const sourceData = getPeriodDataStore(periodType);
         const yearBuckets = {};
         typedKeys.forEach(weekKey => {
             const parsed = parseWeekKeyDate(weekKey, sourceData[weekKey]);
@@ -6465,19 +6482,13 @@ function buildTodaysFocusData() {
     if (!latestEmployees.length) return null;
 
     const metricsToUse = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
-    const averages = {};
-    metricsToUse.forEach(key => {
-        const vals = latestEmployees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
-        averages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    });
+    const averages = buildTeamWeightedAverages(latestEmployees, metricsToUse);
 
-    const prevAverages = {};
+    let prevAverages = {};
+    metricsToUse.forEach(key => { prevAverages[key] = null; });
     if (prevWeek?.employees) {
         const previousEmployees = getFilteredEmployeesForPeriod(prevWeek, teamFilterContext);
-        metricsToUse.forEach(key => {
-            const vals = previousEmployees.map(emp => emp[key]).filter(v => v !== '' && v !== undefined && v !== null);
-            prevAverages[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-        });
+        prevAverages = buildTeamWeightedAverages(previousEmployees, metricsToUse);
     }
 
     let teamWin = null;
