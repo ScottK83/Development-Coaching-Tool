@@ -635,11 +635,11 @@
             // Status colors
             var statusColor, statusBg, statusText;
             if (r.trackStatusValue === 'on-track-exceptional') {
-                statusColor = '#006100'; statusBg = '#C6EFCE'; statusText = 'Exceptional';
+                statusColor = '#fff'; statusBg = '#2e7d32'; statusText = 'Exceptional';
             } else if (r.trackStatusValue === 'on-track-successful') {
-                statusColor = '#1F4E79'; statusBg = '#D6E4F0'; statusText = 'Successful';
+                statusColor = '#fff'; statusBg = '#1565c0'; statusText = 'Successful';
             } else {
-                statusColor = '#9C0006'; statusBg = '#FFC7CE'; statusText = 'Off Track';
+                statusColor = '#fff'; statusBg = '#c62828'; statusText = 'Off Track';
             }
 
             var scoreColor = function (s) {
