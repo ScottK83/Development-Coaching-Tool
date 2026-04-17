@@ -6,6 +6,9 @@
     // Cross-week behavioral pattern detection per rep
     // ============================================
 
+    // Per-module scope filter: metrics we surface cross-week patterns for.
+    // Excludes ACW and hold time because their week-to-week variance
+    // rarely signals coachable change — they're support metrics.
     const TRACKED_METRICS = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
     const LOOKBACK_WEEKS = 12;
     const MIN_WEEKS_FOR_PATTERN = 4;
@@ -18,8 +21,7 @@
     }
 
     function isReverseKey(metricKey) {
-        if (typeof window.isReverseMetric === 'function') return window.isReverseMetric(metricKey);
-        return ['aht', 'acw', 'holdTime', 'transfers', 'reliability'].includes(metricKey);
+        return window.METRICS_REGISTRY?.[metricKey]?.isReverse === true;
     }
 
     function metricLabel(metricKey) {

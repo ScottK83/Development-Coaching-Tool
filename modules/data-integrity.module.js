@@ -6,6 +6,9 @@
     // Anomaly detection across weekly uploads
     // ============================================
 
+    // Per-module scope filter: metrics whose data-quality we scan. Broader
+    // than pattern-memory's list because "impossible values" and "big swings"
+    // checks are useful for ACW/hold-time too.
     const TRACKED_METRICS = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'acw', 'holdTime', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
     const JUMP_THRESHOLDS = {
         scheduleAdherence: 10,

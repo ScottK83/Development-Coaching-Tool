@@ -6,12 +6,16 @@
 (function() {
     'use strict';
 
+    // `target` values here are a year-less convenience fallback (currently
+    // 2026 values). For year-aware lookups use metric-profiles.getYearTarget.
+    // `isReverse: true` means "lower is better" — single source for this flag.
     const METRICS_REGISTRY = {
         scheduleAdherence: {
             key: 'scheduleAdherence',
             label: 'Schedule Adherence',
             icon: '📅',
             target: { type: 'min', value: 93 },
+            isReverse: false,
             unit: '%',
             columnIndex: 8,
             chartType: 'line',
@@ -23,6 +27,7 @@
             label: 'Rep Satisfaction',
             icon: '😊',
             target: { type: 'min', value: 82 },
+            isReverse: false,
             unit: '%',
             columnIndex: 15,
             chartType: 'line',
@@ -34,6 +39,7 @@
             label: 'First Call Resolution',
             icon: '✅',
             target: { type: 'min', value: 73 },
+            isReverse: false,
             unit: '%',
             columnIndex: 13,
             chartType: 'line',
@@ -45,6 +51,7 @@
             label: 'Overall Experience',
             icon: '⭐',
             target: { type: 'min', value: 75 },
+            isReverse: false,
             unit: '%',
             columnIndex: 17,
             chartType: null,
@@ -56,6 +63,7 @@
             label: 'Transfers',
             icon: '🔄',
             target: { type: 'max', value: 6 },
+            isReverse: true,
             unit: '%',
             columnIndex: 2,
             chartType: 'bar',
@@ -67,6 +75,7 @@
             label: 'Total Calls Answered',
             icon: '📞',
             target: null,
+            isReverse: false,
             unit: '#',
             columnIndex: 1,
             chartType: 'bar',
@@ -78,6 +87,7 @@
             label: 'Number of Transfers',
             icon: '🔢',
             target: { type: 'max', value: 20 },
+            isReverse: true,
             unit: '#',
             columnIndex: 3,
             chartType: 'bar',
@@ -89,6 +99,7 @@
             label: 'Overall Sentiment',
             icon: '💭',
             target: { type: 'min', value: 88 },
+            isReverse: false,
             unit: '%',
             columnIndex: 12,
             chartType: 'line',
@@ -100,6 +111,7 @@
             label: 'Positive Word',
             icon: '👍',
             target: { type: 'min', value: 86 },
+            isReverse: false,
             unit: '%',
             columnIndex: 11,
             chartType: 'line',
@@ -111,6 +123,7 @@
             label: 'Avoid Negative Words',
             icon: '⚠️',
             target: { type: 'min', value: 83 },
+            isReverse: false,
             unit: '%',
             columnIndex: 10,
             chartType: 'line',
@@ -122,6 +135,7 @@
             label: 'Managing Emotions',
             icon: '😌',
             target: { type: 'min', value: 95 },
+            isReverse: false,
             unit: '%',
             columnIndex: 9,
             chartType: 'line',
@@ -133,6 +147,7 @@
             label: 'Average Handle Time',
             icon: '⏱️',
             target: { type: 'max', value: 426 },
+            isReverse: true,
             unit: 'sec',
             columnIndex: 4,
             chartType: 'line',
@@ -144,6 +159,7 @@
             label: 'After Call Work',
             icon: '📝',
             target: { type: 'max', value: 60 },
+            isReverse: true,
             unit: 'sec',
             columnIndex: 7,
             chartType: 'bar',
@@ -155,6 +171,7 @@
             label: 'Hold Time',
             icon: '⏳',
             target: { type: 'max', value: 30 },
+            isReverse: true,
             unit: 'sec',
             columnIndex: 6,
             chartType: 'bar',
@@ -166,6 +183,7 @@
             label: 'Reliability',
             icon: '🎯',
             target: { type: 'max', value: 16 },
+            isReverse: true,
             unit: 'hrs',
             columnIndex: 22,
             chartType: 'bar',
@@ -174,10 +192,16 @@
         }
     };
 
+    function isReverseMetric(metricKey) {
+        return METRICS_REGISTRY[metricKey]?.isReverse === true;
+    }
+
     // Expose globally so script.js and all modules can use it directly
     window.METRICS_REGISTRY = METRICS_REGISTRY;
+    window.isReverseMetric = isReverseMetric;
 
     // Also register in module system
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricsRegistry = METRICS_REGISTRY;
+    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric };
 })();

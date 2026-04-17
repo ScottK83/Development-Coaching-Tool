@@ -93,9 +93,7 @@
     }
 
     function isReverseMetric(key) {
-        return typeof window.isReverseMetric === 'function'
-            ? window.isReverseMetric(key)
-            : ['transfers', 'transfersCount', 'aht', 'holdTime', 'acw', 'reliability'].includes(key);
+        return window.METRICS_REGISTRY?.[key]?.isReverse === true;
     }
 
     function formatMetricDisplay(key, value) {

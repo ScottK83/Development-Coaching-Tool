@@ -33,6 +33,12 @@
         }
     };
 
+    // Year-end rating bands. Only the five metrics scored at year-end
+    // (adherence, rep satisfaction, sentiment, reliability, AHT) get bands.
+    // Other metrics (FCR, positive/negative word, managing emotions, ACW,
+    // hold time, overall experience) are tracked but not banded for year-end.
+    // Callers should use `hasRatingBand(metricKey, year)` before assuming
+    // `getRatingScore` will return a value.
     const RATING_BANDS_BY_YEAR = {
         2025: {
             scheduleAdherence: {
@@ -59,11 +65,6 @@
                 type: 'max',
                 score3: { max: 428 },
                 score2: { max: 448 }
-            },
-            transfers: {
-                type: 'max',
-                score3: { max: 4 },
-                score2: { max: 6 }
             }
         },
         2026: {
@@ -91,11 +92,6 @@
                 type: 'max',
                 score3: { max: 414 },
                 score2: { max: 434 }
-            },
-            transfers: {
-                type: 'max',
-                score3: { max: 4 },
-                score2: { max: 6 }
             }
         }
     };
@@ -137,12 +133,19 @@
         return null;
     }
 
+    function hasRatingBand(metricKey, year) {
+        const yearNum = parseInt(year, 10);
+        if (!Number.isInteger(yearNum)) return false;
+        return Boolean(RATING_BANDS_BY_YEAR[yearNum]?.[metricKey]);
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricProfiles = {
         TARGETS_BY_YEAR,
         RATING_BANDS_BY_YEAR,
         getYearTarget,
         getRatingScore,
-        getRatingBandColor
+        getRatingBandColor,
+        hasRatingBand
     };
 })();

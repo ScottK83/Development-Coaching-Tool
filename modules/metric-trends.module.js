@@ -2093,10 +2093,14 @@ function getMetricOrder() {
 // PHASE 3 - METRIC ROW RENDERER
 // ============================================
 
+// Canonical definition lives on window.isReverseMetric (set by metrics-registry).
+// Kept as a local alias so nearby code reads naturally; delegates at call time
+// so registry changes take effect without edits here.
 function isReverseMetric(metricKey) {
-    // Lower is better for these metrics
-    const reverseMetrics = ['transfers', 'transfersCount', 'aht', 'holdTime', 'acw', 'reliability'];
-    return reverseMetrics.includes(metricKey);
+    if (typeof window.isReverseMetric === 'function' && window.isReverseMetric !== isReverseMetric) {
+        return window.isReverseMetric(metricKey);
+    }
+    return window.METRICS_REGISTRY?.[metricKey]?.isReverse === true;
 }
 
 function resolveTrendMetricYtdDisplay(metric, isSurveyMetric, ytdValue, ytdSurveyTotal) {
@@ -4086,7 +4090,7 @@ function generateAllTrendEmails() {
     window.showTrendsWithTipsPanel = showTrendsWithTipsPanel;
     window.buildTrendCoachingPrompt = buildTrendCoachingPrompt;
     window.getMetricOrder = getMetricOrder;
-    window.isReverseMetric = isReverseMetric;
+    // window.isReverseMetric is owned by modules/metrics-registry.module.js
     window.resolveTrendMetricYtdDisplay = resolveTrendMetricYtdDisplay;
     window.resolveTrendRowBackgroundColor = resolveTrendRowBackgroundColor;
     window.resolveTrendCenterComparisonDisplay = resolveTrendCenterComparisonDisplay;

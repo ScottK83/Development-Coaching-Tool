@@ -25,13 +25,10 @@
         return null;
     }
 
-    // NOTE: This function is duplicated in metric-trends, monday-morning-post,
-    // and executive-summary modules. This is the canonical version (exported).
-    // Future: other modules should import from here instead of re-defining.
+    // Canonical source of truth for `isReverse` is each metric's
+    // `isReverse` field in METRICS_REGISTRY. Delegate here.
     function isReverseMetric(metricKey) {
-        // Lower is better for these metrics
-        const reverseMetrics = ['transfers', 'transfersCount', 'aht', 'holdTime', 'acw', 'reliability'];
-        return reverseMetrics.includes(metricKey);
+        return window.METRICS_REGISTRY?.[metricKey]?.isReverse === true;
     }
 
     function isMetricMeetingTarget(metricKey, value, target) {
