@@ -470,7 +470,11 @@
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
+                var kpiMet = 0;
+                if (r.scores) { ['aht','adherence','sentiment','associateOverall','reliability'].forEach(function(k) { if (r.scores[k] >= 2) kpiMet++; }); }
+                var kpiColor = kpiMet >= 4 ? '#2e7d32' : kpiMet >= 3 ? '#e65100' : '#c62828';
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Avg rank: ' + r.compositeScore.toFixed(1) + '</div>';
+                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + kpiMet + '/5 KPIs met</span></div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Reliability: ' + _formatMetricDisplay('reliability', r.reliability) + ' (#' + (r.metricRanks?.reliability || '?') + ')</div>';
                 html += '</div>';
             });

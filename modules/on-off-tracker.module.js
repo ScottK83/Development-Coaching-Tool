@@ -890,26 +890,6 @@
             '<div style="font-size: 0.8em; font-weight: 600;">Off Track</div></div>';
         html += '</div>';
 
-        // KPIs Met cards row
-        var kpiCardColors = [
-            { bg: '#ffcdd2', color: '#b71c1c', border: '' },           // 0/5
-            { bg: '#ffebee', color: '#c62828', border: '' },           // 1/5
-            { bg: '#fff8e1', color: '#e65100', border: '' },           // 2/5
-            { bg: '#fff9c4', color: '#f57f17', border: '' },           // 3/5
-            { bg: '#e8f5e9', color: '#2e7d32', border: '' },           // 4/5
-            { bg: '#00b050', color: '#fff', border: '' }               // 5/5
-        ];
-        html += '<div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">';
-        [5, 4, 3, 2, 1, 0].forEach(function(count) {
-            var group = groups[count] || [];
-            var c = kpiCardColors[count];
-            var borderStyle = count === 5 ? '' : 'border: 1px solid ' + c.color + '33;';
-            html += '<div style="flex: 1; min-width: 90px; padding: 10px 6px; border-radius: 8px; background: ' + c.bg + '; color: ' + c.color + '; text-align: center; ' + borderStyle + '">' +
-                '<div style="font-size: 1.5em; font-weight: 800;">' + group.length + '</div>' +
-                '<div style="font-size: 0.75em; font-weight: 600;">' + count + '/5 KPIs</div></div>';
-        });
-        html += '</div>';
-
         // Off Track detail (who and why)
         if (offTrack.length > 0) {
             html += '<div style="margin-bottom: 16px; padding: 14px; background: #fff5f5; border-radius: 8px; border-left: 4px solid #ff1a1a;">';
