@@ -160,6 +160,9 @@ window.addEventListener('beforeunload', (e) => {
 
 let weeklyData = {};
 let ytdData = {};
+// Ephemeral daily rows (purged when a weekly/larger upload covers the same date).
+// Kept in its own localStorage key so it has a separate 4MB budget.
+let dailyData = {};
 let currentPeriodType = 'week';
 let currentPeriod = null;
 
@@ -203,6 +206,15 @@ function saveYtdData() {
     const result = window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
     queueRepoSync('ytd data updated');
     return result;
+}
+function loadDailyData() {
+    return window.DevCoachModules?.storage?.loadDailyData?.() || {};
+}
+// Note: daily data is intentionally NOT pushed to the repo-sync queue.
+// Dailies are ephemeral (purged when a weekly upload lands), so syncing them
+// to the GitHub backup would create churn without value.
+function saveDailyData() {
+    return window.DevCoachModules?.storage?.saveDailyData?.(dailyData);
 }
 function loadCoachingHistory() {
     return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
@@ -2275,7 +2287,7 @@ function getArchivableWeekKeys(cutoffDate) {
     return Object.keys(weeklyData).filter(key => {
         const period = weeklyData[key];
         const pt = period?.metadata?.periodType || 'week';
-        if (!['week', 'custom', 'daily'].includes(pt)) return false;
+        if (!['week', 'custom'].includes(pt)) return false;
         const endDateStr = period?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : key);
         if (!endDateStr) return false;
         const endDate = new Date(endDateStr + 'T00:00:00');
@@ -2379,14 +2391,16 @@ function undoLastUpload() {
         showToast('Nothing to undo.', 3000);
         return;
     }
-    const targetStore = snap.store === 'ytd' ? ytdData : weeklyData;
+    const targetStore = snap.store === 'ytd' ? ytdData
+        : snap.store === 'daily' ? dailyData
+        : weeklyData;
     if (snap.previousValue) {
         targetStore[snap.weekKey] = snap.previousValue;
     } else {
         delete targetStore[snap.weekKey];
     }
-    saveWeeklyData();
-    saveYtdData();
+    if (snap.store === 'daily') saveDailyData();
+    else { saveWeeklyData(); saveYtdData(); }
     populateDeleteWeekDropdown();
     populateUploadedDataDropdown();
     populateTeamMemberSelector();
@@ -2591,7 +2605,7 @@ function handleLoadPastedDataClick() {
         const { label, normalizedEndDate, metadata } = uploadContext;
 
         captureUploadUndoSnapshot({
-            store: periodType === 'ytd' ? 'ytd' : 'weekly',
+            store: periodType === 'ytd' ? 'ytd' : periodType === 'daily' ? 'daily' : 'weekly',
             weekKey,
             previousValue: existingData ? JSON.parse(JSON.stringify(existingData)) : null,
             label,
@@ -2603,9 +2617,14 @@ function handleLoadPastedDataClick() {
             metadata
         };
 
-        if (periodType !== 'ytd') {
+        // YTD auto-rebuild is driven by weekly/monthly/quarterly/custom uploads
+        // only. Daily uploads are ephemeral and do not feed YTD (they'd
+        // overweight short time-spans), and the 'ytd' branch below handles the
+        // real-YTD rebuild case.
+        const feedsYtd = periodType !== 'ytd' && periodType !== 'daily';
+        if (feedsYtd) {
             upsertAutoYtdForYear(normalizedEndDate.getFullYear(), endDate);
-        } else {
+        } else if (periodType === 'ytd') {
             // Real YTD uploaded — clean up stale auto-YTDs and rebuild if
             // there are weekly periods after this YTD's end date.
             const ytdYear = normalizedEndDate.getFullYear();
@@ -2613,7 +2632,7 @@ function handleLoadPastedDataClick() {
             Object.entries(weeklyData || {}).forEach(([k, v]) => {
                 const meta = v?.metadata || {};
                 const pt = meta.periodType || 'week';
-                if (!['daily', 'week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(pt)) return;
+                if (!['week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(pt)) return;
                 const edt = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
                 if (!edt) return;
                 const [y] = edt.split('-').map(Number);
@@ -2625,8 +2644,20 @@ function handleLoadPastedDataClick() {
             upsertAutoYtdForYear(ytdYear, latestWeeklyEnd || endDate);
         }
 
-        saveWeeklyData();
-        saveYtdData();
+        // Purge dailies now superseded by a larger period upload: they covered
+        // this same date range, and the new upload is authoritative.
+        let purgedDailyCount = 0;
+        if (periodType !== 'daily') {
+            purgedDailyCount = purgeDailiesCoveredBy(startDate, endDate);
+        }
+
+        if (periodType === 'daily') {
+            saveDailyData();
+        } else {
+            saveWeeklyData();
+            saveYtdData();
+            if (purgedDailyCount > 0) saveDailyData();
+        }
 
         // Auto-calculate center averages when uploading 30+ employees
         if (employees.length >= 30) {
@@ -2871,8 +2902,10 @@ async function handleResetMetricDataClick() {
     const storage = window.DevCoachModules?.storage;
     weeklyData = {};
     ytdData = {};
+    dailyData = {};
     if (storage?.saveWeeklyData) storage.saveWeeklyData(weeklyData);
     if (storage?.saveYtdData) storage.saveYtdData(ytdData);
+    if (storage?.saveDailyData) storage.saveDailyData(dailyData);
 
     currentPeriod = null;
     coachingLatestWeekKey = null;
@@ -2926,6 +2959,7 @@ async function handleDeleteAllDataClick() {
     // Reset all in-memory state
     weeklyData = {};
     ytdData = {};
+    dailyData = {};
     myTeamMembers = {};
     callListeningLogs = {};
     coachingHistory = {};
@@ -3039,7 +3073,7 @@ function handleDeleteSelectedWeekClick() {
         return;
     }
 
-    // Delete from whichever store holds this key (weekly, ytd, or both)
+    // Delete from whichever store holds this key (weekly, ytd, daily, or any combination)
     if (weeklyData[selectedWeek]) {
         delete weeklyData[selectedWeek];
         saveWeeklyData();
@@ -3047,6 +3081,10 @@ function handleDeleteSelectedWeekClick() {
     if (ytdData[selectedWeek]) {
         delete ytdData[selectedWeek];
         saveYtdData();
+    }
+    if (dailyData[selectedWeek]) {
+        delete dailyData[selectedWeek];
+        saveDailyData();
     }
     delete myTeamMembers[selectedWeek];
     normalizeTeamMembersForExistingWeeks();
@@ -3946,7 +3984,7 @@ function populateDeleteWeekDropdown() {
 
     dropdown.innerHTML = '<option value="">-- Choose a week --</option>';
 
-    const allData = Object.assign({}, weeklyData, ytdData);
+    const allData = Object.assign({}, weeklyData, ytdData, dailyData);
     const weeks = Object.keys(allData).map(weekKey => {
         const weekData = allData[weekKey];
         const endDateStr = weekKey.split('|')[1];
@@ -4522,7 +4560,30 @@ function getLatestWeeklyKey() {
 }
 
 function getPeriodDataStore(periodType) {
-    return periodType === 'ytd' ? ytdData : weeklyData;
+    if (periodType === 'ytd') return ytdData;
+    // 'daily' = data periodType; 'dod' = day-over-day trend comparison mode.
+    if (periodType === 'daily' || periodType === 'dod') return dailyData;
+    return weeklyData;
+}
+
+// Drops any dailyData rows whose date falls inside [rangeStart, rangeEnd]
+// (inclusive). Used when a larger period upload (week/month/quarter/custom/YTD)
+// supersedes the ephemeral daily rows for the same dates. Returns the count
+// removed so the caller can decide whether to persist dailyData.
+function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
+    if (!rangeStart || !rangeEnd) return 0;
+    let removed = 0;
+    Object.keys(dailyData).forEach(key => {
+        const meta = dailyData[key]?.metadata || {};
+        // Daily key format is "YYYY-MM-DD|YYYY-MM-DD" with start === end.
+        const dayDate = meta.endDate || (key.includes('|') ? key.split('|')[1] : '');
+        if (!dayDate) return;
+        if (dayDate >= rangeStart && dayDate <= rangeEnd) {
+            delete dailyData[key];
+            removed += 1;
+        }
+    });
+    return removed;
 }
 
 // Weighted team averages across a set of employees within a single period.
@@ -4578,7 +4639,7 @@ function getTrendKeysForPeriodType(periodType) {
 }
 
 function getTrendPeriodRecord(periodKey) {
-    return weeklyData[periodKey] || ytdData[periodKey] || null;
+    return weeklyData[periodKey] || ytdData[periodKey] || dailyData[periodKey] || null;
 }
 
 function getTrendPeriodLabel(periodKey) {
@@ -6895,6 +6956,7 @@ async function initApp() {
     // Load data from localStorage
     weeklyData = loadWeeklyData();
     ytdData = loadYtdData();
+    dailyData = loadDailyData();
     coachingHistory = loadCoachingHistory();
     callListeningLogs = loadCallListeningLogs();
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
@@ -6917,6 +6979,7 @@ async function initApp() {
             // Re-load all in-memory variables from localStorage after restore
             weeklyData = loadWeeklyData();
             ytdData = loadYtdData();
+            dailyData = loadDailyData();
             coachingHistory = loadCoachingHistory();
             callListeningLogs = loadCallListeningLogs();
             sentimentPhraseDatabase = loadSentimentPhraseDatabase();
@@ -6989,6 +7052,7 @@ async function initApp() {
     window.addEventListener('beforeunload', () => {
         saveWeeklyData();
         saveYtdData();
+        saveDailyData();
         saveCoachingHistory();
         saveCallListeningLogs();
         saveSentimentPhraseDatabase();

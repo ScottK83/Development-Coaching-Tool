@@ -149,6 +149,44 @@
     }
 
     // ============================================
+    // DAILY DATA
+    // ============================================
+    // Separate store from weeklyData. Daily rows are ephemeral: they power
+    // "yesterday" check-ins and partial-week displays, and are purged when a
+    // weekly (or larger) upload covering the same date arrives. Kept in its
+    // own localStorage key so it has its own 4MB budget and can't crowd out
+    // the canonical weekly/YTD data.
+
+    function loadDailyData() {
+        try {
+            const namespacedKey = STORAGE_PREFIX + 'dailyData';
+            const saved = localStorage.getItem(namespacedKey);
+            if (saved) {
+                const data = JSON.parse(saved);
+                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
+                if (normalizedData !== data) {
+                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                }
+                return normalizedData;
+            }
+            return {};
+        } catch (error) {
+            console.error('Error loading daily data:', error);
+            return {};
+        }
+    }
+
+    function saveDailyData(dailyDataRef) {
+        try {
+            if (!saveWithSizeCheck('dailyData', dailyDataRef)) {
+                console.error('Failed to save daily data due to size');
+            }
+        } catch (error) {
+            console.error('Error saving daily data:', error);
+        }
+    }
+
+    // ============================================
     // YTD DATA
     // ============================================
 
@@ -533,6 +571,9 @@
         // Weekly data
         loadWeeklyData,
         saveWeeklyData,
+        // Daily data (ephemeral, separate 4MB budget)
+        loadDailyData,
+        saveDailyData,
         // YTD data
         loadYtdData,
         saveYtdData,

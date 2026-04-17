@@ -3330,7 +3330,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
         })
         .filter(item => {
             if (!item.endDate) return false;
-            if (!['daily', 'week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(item.periodType)) return false;
+            if (!['week', 'week-in-progress', 'month', 'quarter', 'custom'].includes(item.periodType)) return false;
             if (item.endDate.getFullYear() !== yearNum) return false;
             if (item.endDate > uptoEndDate) return false;
             // If we have an anchor, only include periods that START after the anchor's end date
@@ -3352,7 +3352,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     let extensionPeriods = allPeriods;
     let sourceType = 'mixed';
     if (!anchor && allPeriods.length) {
-        const sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
+        const sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom'];
         sourceType = sourceTypePriority.find(type => allPeriods.some(item => item.periodType === type)) || allPeriods[0]?.periodType;
         extensionPeriods = allPeriods.filter(item => item.periodType === sourceType);
     }
