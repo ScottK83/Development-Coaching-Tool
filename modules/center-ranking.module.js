@@ -147,8 +147,8 @@
     }
 
     /**
-     * Score an employee using the On/Off track 5-metric system.
-     * Returns { ratingAverage, trackLabel, scores, values, reliability } or null.
+     * Score an employee using the 5-KPI system (3/2/1 per KPI).
+     * Returns { scores, values, kpisMet, scoreSum, kpiScore, trackLabel, trackStatusValue, ... } or null.
      */
     function scoreEmployee(emp, year) {
         var onOff = window.DevCoachModules?.onOffTracker;
@@ -157,29 +157,43 @@
         var result = onOff.calculateYearEndOnOffMirror(emp, year);
         if (!result) return null;
 
-        // For center ranking, include employees even if they're missing some
-        // metrics. Calculate a partial rating average from available scores.
         var scores = result.scores || {};
-        var ratingAverage = result.ratingAverage;
-        var trackLabel = result.trackLabel || 'N/A';
-        var trackStatusValue = result.trackStatusValue || 'unknown';
+        var SCORE_KEYS = ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'];
 
-        if (!result.isComplete) {
-            var validScores = Object.values(scores).filter(function (s) { return s !== null; });
-            if (validScores.length === 0) return null;
-            var sum = validScores.reduce(function (a, b) { return a + b; }, 0);
-            ratingAverage = sum / validScores.length;
-            if (ratingAverage <= 1.79) {
-                trackLabel = 'Off Track'; trackStatusValue = 'off-track';
-            } else if (ratingAverage <= 2.79) {
-                trackLabel = 'On Track/Successful'; trackStatusValue = 'on-track-successful';
-            } else {
-                trackLabel = 'On Track/Exceptional'; trackStatusValue = 'on-track-exceptional';
-            }
+        // Require at least one valid score
+        var validScores = SCORE_KEYS.map(function (k) { return scores[k]; }).filter(function (s) { return s !== null && s !== undefined; });
+        if (validScores.length === 0) return null;
+
+        // KPIs Met: count of KPIs scoring 2 (Meets) or 3 (Exceeds)
+        var kpisMet = 0;
+        SCORE_KEYS.forEach(function (k) {
+            if (scores[k] !== null && scores[k] !== undefined && scores[k] >= 2) kpisMet++;
+        });
+
+        // Score Sum: sum of all 5 individual KPI scores (treat missing as 1)
+        var scoreSum = 0;
+        SCORE_KEYS.forEach(function (k) {
+            scoreSum += (scores[k] !== null && scores[k] !== undefined) ? scores[k] : 1;
+        });
+
+        // KPI Score = Score Sum / 5
+        var kpiScore = scoreSum / 5;
+
+        // Track Status from Score Sum
+        var trackLabel, trackStatusValue;
+        if (scoreSum >= 14) {
+            trackLabel = 'Exceptional'; trackStatusValue = 'on-track-exceptional';
+        } else if (scoreSum >= 9) {
+            trackLabel = 'Successful'; trackStatusValue = 'on-track-successful';
+        } else {
+            trackLabel = 'Off Track'; trackStatusValue = 'off-track';
         }
 
         return {
-            ratingAverage: ratingAverage,
+            kpisMet: kpisMet,
+            scoreSum: scoreSum,
+            kpiScore: kpiScore,
+            ratingAverage: kpiScore,
             trackLabel: trackLabel,
             trackStatusValue: trackStatusValue,
             scores: scores,
@@ -292,10 +306,12 @@
 
     /**
      * Shared scoring + ranking logic. Takes an array of employee objects,
-     * scores each one, assigns per-metric ranks and composite rank.
+     * scores each one, assigns per-metric ranks, then sorts by 4-level
+     * priority: KPIs Met → Score Sum → KPI Rank Total → Tiebreaker.
      * Returns the sorted rankings array.
      */
     function _scoreAndRank(employees, year) {
+        var METRIC_KEYS = ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'];
         var rankings = [];
         employees.forEach(function (emp) {
             if (!emp || !emp.name) return;
@@ -304,6 +320,9 @@
 
             rankings.push({
                 name: emp.name,
+                kpisMet: score.kpisMet,
+                scoreSum: score.scoreSum,
+                kpiScore: score.kpiScore,
                 ratingAverage: score.ratingAverage,
                 trackLabel: score.trackLabel,
                 trackStatusValue: score.trackStatusValue,
@@ -314,30 +333,28 @@
             });
         });
 
-        // Rank by each individual metric (lower rank = better)
+        // ── Step 5: Individual KPI Ranks ──
         var metricRankKeys = [
-            { key: 'aht', field: 'values.aht', reverse: true },
-            { key: 'adherence', field: 'values.adherence', reverse: false },
+            { key: 'aht', field: 'values.aht', reverse: true },       // lower is better
+            { key: 'adherence', field: 'values.adherence', reverse: false },  // higher is better
             { key: 'sentiment', field: 'values.sentiment', reverse: false },
             { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
-            { key: 'reliability', field: 'reliability', reverse: true }
+            { key: 'reliability', field: 'reliability', reverse: true }  // lower is better
         ];
 
         metricRankKeys.forEach(function (mk) {
             var sorted = rankings.slice().sort(function (a, b) {
                 var aVal = mk.field.includes('.') ? a.values[mk.field.split('.')[1]] : a[mk.field];
                 var bVal = mk.field.includes('.') ? b.values[mk.field.split('.')[1]] : b[mk.field];
-                // Treat null/undefined/NaN as worst possible rank
                 var aNull = aVal === null || aVal === undefined || (typeof aVal === 'number' && isNaN(aVal));
                 var bNull = bVal === null || bVal === undefined || (typeof bVal === 'number' && isNaN(bVal));
                 if (aNull && bNull) return 0;
-                if (aNull) return 1;  // a goes to bottom
-                if (bNull) return -1; // b goes to bottom
+                if (aNull) return 1;
+                if (bNull) return -1;
                 return mk.reverse ? (aVal - bVal) : (bVal - aVal);
             });
             sorted.forEach(function (emp, idx) {
                 if (!emp.metricRanks) emp.metricRanks = {};
-                // Tie handling: same value = same rank (standard competition ranking)
                 if (idx === 0) {
                     emp.metricRanks[mk.key] = 1;
                 } else {
@@ -352,26 +369,67 @@
             });
         });
 
-        // Composite rank = average of only present metric ranks (lower = better).
-        // Missing metrics are excluded from the average so employees aren't
-        // artificially boosted or penalized for missing data.
+        // ── KPI Rank Total = sum of all 5 individual ranks (lower = better) ──
+        var worstRank = rankings.length + 1;
         rankings.forEach(function (r) {
             var ranks = r.metricRanks || {};
-            var presentRanks = [];
-            ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'].forEach(function (k) {
-                if (ranks[k] && ranks[k] > 0) presentRanks.push(ranks[k]);
+            var total = 0;
+            METRIC_KEYS.forEach(function (k) {
+                total += (ranks[k] && ranks[k] > 0) ? ranks[k] : worstRank;
             });
-            r.compositeScore = presentRanks.length > 0
-                ? presentRanks.reduce(function (a, b) { return a + b; }, 0) / presentRanks.length
-                : Infinity;
+            r.kpiRankTotal = total;
         });
 
-        // Sort by composite score (lower = better)
+        // ── Step 6: Tiebreaker (min-max normalized average) ──
+        var metricMinMax = {};
+        METRIC_KEYS.forEach(function (mk) {
+            var vals = rankings.map(function (r) {
+                var v = mk === 'reliability' ? r.reliability : r.values[mk];
+                return (v !== null && v !== undefined && !isNaN(v)) ? v : null;
+            }).filter(function (v) { return v !== null; });
+            metricMinMax[mk] = {
+                min: vals.length ? Math.min.apply(null, vals) : 0,
+                max: vals.length ? Math.max.apply(null, vals) : 0
+            };
+        });
+
+        rankings.forEach(function (r) {
+            var normalized = [];
+            var _norm = function (val, key, invert) {
+                if (val === null || val === undefined || isNaN(val)) return;
+                var mm = metricMinMax[key];
+                var range = mm.max - mm.min;
+                if (range === 0) { normalized.push(0.5); return; }
+                normalized.push(invert ? (mm.max - val) / range : (val - mm.min) / range);
+            };
+            _norm(r.values.adherence, 'adherence', false);
+            _norm(r.reliability, 'reliability', true);
+            _norm(r.values.aht, 'aht', true);
+            _norm(r.values.associateOverall, 'associateOverall', false);
+            _norm(r.values.sentiment, 'sentiment', false);
+
+            r.tiebreaker = normalized.length > 0
+                ? normalized.reduce(function (a, b) { return a + b; }, 0) / normalized.length
+                : 0;
+        });
+
+        // ── Step 7: Final Rank — 4-level priority sort ──
         rankings.sort(function (a, b) {
-            return a.compositeScore - b.compositeScore;
+            // Priority 1: KPIs Met (most first — descending)
+            if (a.kpisMet !== b.kpisMet) return b.kpisMet - a.kpisMet;
+            // Priority 2: Score Sum (highest first — descending)
+            if (a.scoreSum !== b.scoreSum) return b.scoreSum - a.scoreSum;
+            // Priority 3: KPI Rank Total (lowest first — ascending)
+            if (a.kpiRankTotal !== b.kpiRankTotal) return a.kpiRankTotal - b.kpiRankTotal;
+            // Priority 4: Tiebreaker (highest first — descending)
+            return b.tiebreaker - a.tiebreaker;
         });
 
         rankings.forEach(function (r, i) { r.rank = i + 1; });
+
+        // Backward-compat: compositeScore (lower = better, used by matchup module)
+        rankings.forEach(function (r) { r.compositeScore = r.rank; });
+
         return rankings;
     }
 
@@ -447,7 +505,7 @@
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #1565c0;">';
         html += '<strong>Center Rankings</strong> &mdash; ' + data.totalEmployees + ' employees scored';
-        html += '<br><span style="color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by On/Off Track score (reliability as tiebreaker)</span>';
+        html += '<br><span style="color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
         html += '</div>';
 
         // Team summary
@@ -470,12 +528,10 @@
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
-                var kpiMet = 0;
-                if (r.scores) { ['aht','adherence','sentiment','associateOverall','reliability'].forEach(function(k) { if (r.scores[k] >= 2) kpiMet++; }); }
-                var kpiColor = kpiMet >= 4 ? '#2e7d32' : kpiMet >= 3 ? '#e65100' : '#c62828';
-                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Avg rank: ' + r.compositeScore.toFixed(1) + '</div>';
-                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + kpiMet + '/5 KPIs met</span></div>';
-                html += '<div style="font-size: 0.8em; color: #888;">Reliability: ' + _formatMetricDisplay('reliability', r.reliability) + ' (#' + (r.metricRanks?.reliability || '?') + ')</div>';
+                var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
+                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/15 (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
+                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
+                html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
                 html += '</div>';
             });
 
@@ -484,7 +540,7 @@
 
         // Store data for re-sorting
         _lastRankingData = data;
-        _currentSort = { key: 'composite', dir: 'asc' };
+        _currentSort = { key: 'rank', dir: 'asc' };
 
         // Full ranking table
         html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
@@ -493,7 +549,7 @@
         html += '</div>';
 
         container.innerHTML = html;
-        renderRankingTable('composite', 'asc');
+        renderRankingTable('rank', 'asc');
 
         // Bind period selector
         var sel = document.getElementById('rankingPeriodSelect');
@@ -518,8 +574,12 @@
     var _currentSort = { key: 'composite', dir: 'asc' };
 
     var SORT_COLUMNS = [
-        { key: 'composite', label: 'Avg Rank', getValue: function(r) { return r.compositeScore; }, reverse: false },
-        { key: 'score', label: 'Score', getValue: function(r) { return r.ratingAverage; }, reverse: true },
+        { key: 'rank', label: 'Rank', getValue: function(r) { return r.rank; }, reverse: false },
+        { key: 'kpisMet', label: 'KPIs Met', getValue: function(r) { return r.kpisMet; }, reverse: true },
+        { key: 'scoreSum', label: 'Score Sum', getValue: function(r) { return r.scoreSum; }, reverse: true },
+        { key: 'kpiScore', label: 'KPI Score', getValue: function(r) { return r.kpiScore; }, reverse: true },
+        { key: 'kpiRankTotal', label: 'Rank Total', getValue: function(r) { return r.kpiRankTotal; }, reverse: false },
+        { key: 'tiebreaker', label: 'Tiebreaker', getValue: function(r) { return r.tiebreaker; }, reverse: true },
         { key: 'aht', label: 'AHT', getValue: function(r) { return r.values.aht; }, reverse: false },
         { key: 'adherence', label: 'Adherence', getValue: function(r) { return r.values.adherence; }, reverse: true },
         { key: 'sentiment', label: 'Sentiment', getValue: function(r) { return r.values.sentiment; }, reverse: true },
@@ -535,8 +595,8 @@
         // Sort rankings
         var col = SORT_COLUMNS.find(function(c) { return c.key === sortKey; });
         var sorted = data.rankings.slice().sort(function(a, b) {
-            var aVal = col ? col.getValue(a) : a.compositeScore;
-            var bVal = col ? col.getValue(b) : b.compositeScore;
+            var aVal = col ? col.getValue(a) : a.rank;
+            var bVal = col ? col.getValue(b) : b.rank;
             aVal = aVal !== null && aVal !== undefined ? aVal : (sortDir === 'asc' ? Infinity : -Infinity);
             bVal = bVal !== null && bVal !== undefined ? bVal : (sortDir === 'asc' ? Infinity : -Infinity);
             return sortDir === 'asc' ? (aVal - bVal) : (bVal - aVal);
@@ -548,31 +608,41 @@
             return sortDir === 'asc' ? ' <span style="color: #1565c0;">&#9650;</span>' : ' <span style="color: #1565c0;">&#9660;</span>';
         };
 
-        var html = '<div>';
+        var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="' + thStyle + ' width: 30px;">#</th>';
+        html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
-        html += '<th class="rank-sort-header" data-sort="composite" style="' + thStyle + '">Avg' + arrow('composite') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="score" style="' + thStyle + '">Score' + arrow('score') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="scoreSum" style="' + thStyle + '">Score Sum' + arrow('scoreSum') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="kpiScore" style="' + thStyle + '">KPI Score' + arrow('kpiScore') + '</th>';
         html += '<th style="' + thStyle + '">Status</th>';
         html += '<th class="rank-sort-header" data-sort="aht" style="' + thStyle + '">AHT' + arrow('aht') + '</th>';
         html += '<th class="rank-sort-header" data-sort="adherence" style="' + thStyle + '">Adh' + arrow('adherence') + '</th>';
         html += '<th class="rank-sort-header" data-sort="sentiment" style="' + thStyle + '">Sent' + arrow('sentiment') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">Assoc' + arrow('associateOverall') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">CX Adv' + arrow('associateOverall') + '</th>';
         html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Rel' + arrow('reliability') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="kpiRankTotal" style="' + thStyle + '">Rank Tot' + arrow('kpiRankTotal') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="tiebreaker" style="' + thStyle + '">TB' + arrow('tiebreaker') + '</th>';
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r, idx) {
             var isTeam = data.teamMembers.has(r.name);
             var supColor = _getSupervisorColor(r.name);
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            var defaultBg = isDark ? (r.rank % 2 === 0 ? '#1a1f2e' : 'transparent') : (r.rank % 2 === 0 ? '#fafafa' : '#fff');
+            var defaultBg = isDark ? (idx % 2 === 0 ? '#1a1f2e' : 'transparent') : (idx % 2 === 0 ? '#fafafa' : '#fff');
             var rowBg = supColor || (isTeam ? (isDark ? '#0d2a1a' : '#e8f5e9') : defaultBg);
             var fontWeight = (isTeam || supColor) ? 'bold' : 'normal';
 
-            var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
-                r.trackStatusValue === 'on-track-successful' ? '#8bc34a' : '#c62828';
+            // Status colors
+            var statusColor, statusBg, statusText;
+            if (r.trackStatusValue === 'on-track-exceptional') {
+                statusColor = '#006100'; statusBg = '#C6EFCE'; statusText = 'Exceptional';
+            } else if (r.trackStatusValue === 'on-track-successful') {
+                statusColor = ''; statusBg = ''; statusText = 'Successful';
+            } else {
+                statusColor = '#9C0006'; statusBg = '#FFC7CE'; statusText = 'Off Track';
+            }
 
             var scoreColor = function (s) {
                 if (s === 3) return '#2e7d32';
@@ -580,13 +650,20 @@
                 return '#c62828';
             };
 
+            // Rank cell formatting per spec
+            var rankBg = '', rankColor = '';
+            if (r.rank <= 26) { rankBg = '#1F4E79'; rankColor = '#FFFFFF'; }
+            else if (r.rank >= 105) { rankBg = '#FFF2CC'; rankColor = '#7F6000'; }
+
             var teamBorder = isTeam ? 'outline: 2px solid #2e7d32; outline-offset: -2px; ' : '';
             html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
 
-            // Row number
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
+            // Rank
+            var rankStyle = 'padding: 4px 3px; text-align: center; font-weight: bold;';
+            if (rankBg) rankStyle += ' background: ' + rankBg + '; color: ' + rankColor + ';';
+            html += '<td style="' + rankStyle + '">' + r.rank + '</td>';
 
-            // Name (highlight team members, show supervisor color dot for rivals)
+            // Name
             html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
             if (isTeam) {
                 html += '<span style="color: #1565c0;">&#9733; </span>';
@@ -596,20 +673,24 @@
             }
             html += _escapeHtml(r.name) + '</td>';
 
-            // Composite average rank
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + r.compositeScore.toFixed(1) + '</td>';
+            // KPIs Met
+            var kpiMetColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + kpiMetColor + ';">' + r.kpisMet + '/5</td>';
 
-            // 1-3 Score (rating average)
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + statusColor + ';">' + r.ratingAverage.toFixed(2) + '</td>';
+            // Score Sum
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + r.scoreSum + '</td>';
+
+            // KPI Score
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + scoreColor(Math.round(r.kpiScore)) + ';">' + r.kpiScore.toFixed(1) + '</td>';
 
             // Status badge
-            html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: white; background: ' + statusColor + ';">';
-            if (r.trackStatusValue === 'on-track-exceptional') html += 'Exceptional';
-            else if (r.trackStatusValue === 'on-track-successful') html += 'Successful';
-            else html += 'Off Track';
-            html += '</span></td>';
+            if (statusBg) {
+                html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: ' + statusColor + '; background: ' + statusBg + ';">' + statusText + '</span></td>';
+            } else {
+                html += '<td style="padding: 4px 3px; text-align: center;"><span style="font-size: 0.72em; font-weight: bold;">' + statusText + '</span></td>';
+            }
 
-            // Individual scores with values
+            // Individual metric cells
             var metricPairs = [
                 { score: r.scores.aht, value: r.values.aht, key: 'aht', rankKey: 'aht' },
                 { score: r.scores.adherence, value: r.values.adherence, key: 'scheduleAdherence', rankKey: 'adherence' },
@@ -620,20 +701,25 @@
 
             metricPairs.forEach(function (mp) {
                 var display = mp.value !== null && mp.value !== undefined ? _formatMetricDisplay(mp.key, mp.value) : '--';
-                var color = mp.score !== null ? scoreColor(mp.score) : '#333';
                 var metricRank = r.metricRanks?.[mp.rankKey] || '?';
-                var rankColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
+                var rankTextColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
                 var scoreBadge = mp.score !== null
                     ? '<span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; color: white; background: ' + scoreColor(mp.score) + '; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
                     : '';
-                // Show survey count next to Assoc Overall
                 var surveyBadge = '';
                 if (mp.rankKey === 'associateOverall' && r.surveyTotal > 0) {
                     surveyBadge = ' <span style="font-size: 0.68em; color: #888;">(' + r.surveyTotal + ')</span>';
                 }
-                html += '<td style="padding: 4px 3px; text-align: center; color: ' + color + '; white-space: nowrap;">' +
-                    scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankColor + ';">#' + metricRank + '</span></td>';
+                var cellColor = mp.score !== null ? scoreColor(mp.score) : '#333';
+                html += '<td style="padding: 4px 3px; text-align: center; color: ' + cellColor + '; white-space: nowrap;">' +
+                    scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankTextColor + ';">#' + metricRank + '</span></td>';
             });
+
+            // KPI Rank Total
+            html += '<td style="padding: 4px 3px; text-align: center;">' + r.kpiRankTotal + '</td>';
+
+            // Tiebreaker
+            html += '<td style="padding: 4px 3px; text-align: center;">' + r.tiebreaker.toFixed(3) + '</td>';
 
             html += '</tr>';
         });
