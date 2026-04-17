@@ -205,16 +205,25 @@ Severity legend: 🔴 real bug / risk · 🟠 rot / tech debt · 🟡 minor clea
 
 ---
 
-## Summary
+## Summary — Session 1 closed
 
-| Severity | Count | Decision needed |
+Executed in batches, one commit + push per batch:
+
+| Batch | Findings | Commit |
 |---|---|---|
-| 🔴 Real bugs / risks | 10 | F-1 through F-10 |
-| 🟠 Dead code / orphans | 3 | F-11, F-12; F-13 deferred |
-| 🟠 Tech debt / rot | 8 | F-14 through F-21 (F-17, F-18 deferred) |
-| 🟡 Minor cleanup | 6 | F-22 through F-27 (F-25 deferred) |
-| 🟢 Cosmetic / no-op | 3 | F-28 through F-30 (all keep) |
+| A | F-1, F-20, F-21 (constants deduplication) | `c11e1903` |
+| B | F-2, F-3, F-4 (error handling consolidation) | `a85fed84` |
+| C | F-5, F-6, F-7, F-26 (metric single source of truth) | `a1564751` |
+| D | F-9, F-14, F-15, F-16 (storage hygiene) | `1ccd1956` |
+| E | F-8, F-10 (parsePastedData split + debug log gate) | `46220064` |
+| F | F-11, F-12, F-19, F-24 (delete orphans + stale comments) | `55d1224d` |
+| G | F-27 (MEMORY.md update) | — (memory is outside repo) |
 
-**Your move:** mark `[KEEP]` or `[FIX]` (and any notes) next to each decision line above. When you come back, I'll apply every `[FIX]` in dependency order, commit + push after each logical batch, then queue Session 2 (Upload flow).
+**Keep-as-designed:** F-22, F-23, F-28, F-29, F-30.
 
-**Most impactful starter batch (if you want a quick win):** F-1 (STORAGE_PREFIX), F-5 (target duplication), F-11 (orphan CSS), F-12 (orphan smoke-test), F-20/F-21 (dupe constants). Each is low-risk and cleans up measurable chunks.
+**Deferred to later sessions:**
+- F-13 (year-end.module.js stub) → Session 5 (Review Prep)
+- F-17, F-18 (hidden legacy period controls) → Session 2 (Upload flow)
+- F-25 (orphan `window.show*Modal` globals) → Session 6 (cross-cutting)
+
+Ready to queue Session 2 (Upload flow) when you are.
