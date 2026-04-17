@@ -335,59 +335,65 @@
     // MAIN DATA PARSING
     // ============================================
 
-    // REFACTOR: This function is ~250 lines. Break into:
-    // - detectColumnMapping(headerRow) — column detection logic
-    // - parseEmployeeRow(cells, colMap) — single-row parsing
-    // - validateEmployeeData(employeeData) — integrity checks
-    function parsePastedData(pastedText, startDate, endDate) {
-        const lines = pastedText
-            .split('\n')
-            .map(line => String(line || '').replace(/\r/g, ''))
-            .filter(line => line.trim().length > 0);
-        
-        if (lines.length < 2) {
-            throw new Error('Data appears incomplete. Please paste header row and data rows.');
-        }
-        
-        const headerLine = lines[0];
-        const hasNameHeader = headerLine.toLowerCase().includes('name');
-        
-        if (!hasNameHeader) {
-            throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
-        }
-        
-        const headers = headerLine.split('\t').map(h => h.toLowerCase());
-        
-        const findColumnIndex = (keywords) => {
-            const matchesKeyword = (header, keyword) => {
-                const hLower = header.toLowerCase();
-                const kLower = keyword.toLowerCase();
-                
-                if (hLower === kLower) return true;
-                
-                const normalize = (str) => str.replace(/[\s\-_]+/g, '|').replace(/[^a-z0-9|]/g, '');
-                const normalizedHeader = normalize(hLower);
-                const normalizedKeyword = normalize(kLower);
-                
-                if (normalizedHeader.includes(normalizedKeyword)) return true;
-                
-                const keywordWords = kLower.split(/[\s\-_]+/).filter(w => w.length > 0);
-                let searchPos = 0;
-                for (const word of keywordWords) {
-                    const foundPos = hLower.indexOf(word, searchPos);
-                    if (foundPos === -1) return false;
-                    searchPos = foundPos + word.length;
-                }
-                return true;
-            };
-            
-            if (Array.isArray(keywords)) {
-                return headers.findIndex(h => keywords.some(k => matchesKeyword(h, k)));
+    // ---- Helpers: shared across detect/parse below ----
+
+    function headerFindColumnIndex(headers, keywords) {
+        const matchesKeyword = (header, keyword) => {
+            const hLower = header.toLowerCase();
+            const kLower = keyword.toLowerCase();
+
+            if (hLower === kLower) return true;
+
+            const normalize = (str) => str.replace(/[\s\-_]+/g, '|').replace(/[^a-z0-9|]/g, '');
+            if (normalize(hLower).includes(normalize(kLower))) return true;
+
+            const keywordWords = kLower.split(/[\s\-_]+/).filter(w => w.length > 0);
+            let searchPos = 0;
+            for (const word of keywordWords) {
+                const foundPos = hLower.indexOf(word, searchPos);
+                if (foundPos === -1) return false;
+                searchPos = foundPos + word.length;
             }
-            return headers.findIndex(h => matchesKeyword(h, keywords));
+            return true;
         };
-        
+
+        if (Array.isArray(keywords)) {
+            return headers.findIndex(h => keywords.some(k => matchesKeyword(h, k)));
+        }
+        return headers.findIndex(h => matchesKeyword(h, keywords));
+    }
+
+    function getCell(cells, colIndex) {
+        if (colIndex < 0) return '';
+        const value = cells[colIndex];
+        return (value === null || value === undefined) ? '' : value;
+    }
+
+    function normalizeRawCell(value) {
+        const text = String(value ?? '').replace(/\u00A0/g, ' ').trim();
+        if (!text || text === '(Blank)' || text === 'N/A') return null;
+
+        const cleaned = text.replace(/,/g, '');
+        if (cleaned.endsWith('%')) {
+            const pct = parseFloat(cleaned);
+            return Number.isNaN(pct) ? text : pct;
+        }
+
+        const numeric = Number(cleaned);
+        if (!Number.isNaN(numeric) && cleaned !== '') {
+            return numeric;
+        }
+
+        return text;
+    }
+
+    // Detect which column holds each metric based on header text. Falls back
+    // to the canonical positional mapping (DEFAULT_COLUMN_INDEX) when header
+    // detection matches very few columns (≤2) — typical of "just values" pastes.
+    function detectColumnMapping(headerLine) {
+        const headers = headerLine.split('\t').map(h => h.toLowerCase());
         const headerColumnCount = headers.length;
+        const findColumnIndex = (keywords) => headerFindColumnIndex(headers, keywords);
 
         const colMapDetected = {
             name: findColumnIndex(['name', 'employee', 'associate']),
@@ -449,14 +455,11 @@
 
         const resolveColumnIndex = (mappedIndex, fallbackKey) => {
             if (mappedIndex >= 0) return mappedIndex;
-
             if (!usePositionalFallback) return -1;
-
             const fallbackIndex = DEFAULT_COLUMN_INDEX[fallbackKey];
             if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < headerColumnCount) {
                 return fallbackIndex;
             }
-
             return -1;
         };
 
@@ -465,133 +468,136 @@
             colMap[key] = resolveColumnIndex(colMapDetected[key], key);
         });
 
-        // Debug: log column mapping with header names
-        console.log('📊 COLUMN MAPPING DEBUG:');
-        console.log('  Headers:', headers.map((h, i) => i + ':' + h).join(' | '));
-        Object.keys(colMap).forEach(key => {
-            var idx = colMap[key];
-            console.log('  ' + key + ' → col ' + idx + (idx >= 0 ? ' ("' + headers[idx] + '")' : ' (not found)'));
-        });
+        if (window.DEBUG) {
+            console.log('📊 COLUMN MAPPING DEBUG:');
+            console.log('  Headers:', headers.map((h, i) => i + ':' + h).join(' | '));
+            Object.keys(colMap).forEach(key => {
+                const idx = colMap[key];
+                console.log('  ' + key + ' → col ' + idx + (idx >= 0 ? ' ("' + headers[idx] + '")' : ' (not found)'));
+            });
+        }
 
-        const getCell = (cells, colIndex) => {
-            if (colIndex < 0) return '';
-            const value = cells[colIndex];
-            return (value === null || value === undefined) ? '' : value;
-        };
+        return { headers, colMap };
+    }
 
-        const normalizeRawCell = (value) => {
-            const text = String(value ?? '').replace(/\u00A0/g, ' ').trim();
-            if (!text || text === '(Blank)' || text === 'N/A') return null;
-
-            const cleaned = text.replace(/,/g, '');
-            if (cleaned.endsWith('%')) {
-                const pct = parseFloat(cleaned);
-                return Number.isNaN(pct) ? text : pct;
+    function splitName(nameField) {
+        let firstName = '', lastName = '';
+        const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
+        if (lastFirstMatch) {
+            lastName = lastFirstMatch[1].trim();
+            firstName = lastFirstMatch[2].trim();
+        } else {
+            const parts = nameField.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                firstName = parts[0];
+                lastName = parts.slice(1).join(' ');
+            } else if (parts.length === 1) {
+                firstName = parts[0];
             }
+        }
+        return { firstName, lastName };
+    }
 
-            const numeric = Number(cleaned);
-            if (!Number.isNaN(numeric) && cleaned !== '') {
-                return numeric;
-            }
+    // Build the canonical employee row from parsed cells + the detected col map.
+    function parseEmployeeRow(cells, colMap) {
+        const nameField = getCell(cells, colMap.name);
+        if (!String(nameField || '').trim()) return null;
 
-            return text;
+        const { firstName, lastName } = splitName(nameField);
+        const displayName = `${firstName} ${lastName}`.trim();
+
+        const totalCallsRaw = getCell(cells, colMap.totalCalls);
+        const parsedTotalCalls = parseInt(totalCallsRaw, 10);
+        const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
+        const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
+        const totalCalls = Number.isInteger(parsedTotalCalls)
+            ? parsedTotalCalls
+            : (surveyTotal > 0 ? surveyTotal : 0);
+
+        const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers)) || 0;
+        const parsedTransfersCount = parseInt(getCell(cells, colMap.transfersCount), 10) || 0;
+
+        return {
+            name: displayName,
+            firstName: firstName,
+            scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
+            cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
+            fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
+            overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
+            overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
+            transfers: normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls),
+            transfersCount: parsedTransfersCount,
+            aht: parseSeconds(getCell(cells, colMap.aht)) || '',
+            talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
+            acw: parseSeconds(getCell(cells, colMap.acw)),
+            holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
+            reliability: parseHours(getCell(cells, colMap.reliability)) || 0,
+            overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
+            positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
+            negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
+            managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
+            surveyTotal: surveyTotal,
+            totalCalls: totalCalls
         };
-        
-        const employees = [];
+    }
+
+    function validateEmployeeData(employeeData) {
+        if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
+            console.warn(`⚠️ DATA INTEGRITY WARNING: ${employeeData.name}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}).`);
+        }
+    }
+
+    function parsePastedData(pastedText, startDate, endDate) {
+        const lines = pastedText
+            .split('\n')
+            .map(line => String(line || '').replace(/\r/g, ''))
+            .filter(line => line.trim().length > 0);
+
+        if (lines.length < 2) {
+            throw new Error('Data appears incomplete. Please paste header row and data rows.');
+        }
+
+        const headerLine = lines[0];
+        if (!headerLine.toLowerCase().includes('name')) {
+            throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
+        }
+
+        const { headers, colMap } = detectColumnMapping(headerLine);
+
+        // First pass: parse rows into cell arrays, filter blank/nameless rows.
         const parsedRows = [];
-        
         for (let i = 1; i < lines.length; i++) {
             const rawRow = lines[i];
-            
             if (!rawRow.trim()) continue;
-            
+
             let cells;
             try {
-                if (rawRow.includes('\t')) {
-                    cells = rawRow.split('\t').map(normalizeRawCell);
-                } else {
-                    const parsed = parsePowerBIRow(rawRow);
-                    cells = parsed;
-                }
+                cells = rawRow.includes('\t')
+                    ? rawRow.split('\t').map(normalizeRawCell)
+                    : parsePowerBIRow(rawRow);
             } catch (error) {
                 console.warn(`[data-parsing] Skipped row ${i}: ${error.message}`);
                 continue;
             }
 
             if (!cells.length) continue;
-
-            const nameCell = getCell(cells, colMap.name);
-            if (!String(nameCell || '').trim()) continue;
+            if (!String(getCell(cells, colMap.name) || '').trim()) continue;
 
             parsedRows.push(cells);
         }
 
+        // Heuristic column fix-up after we've seen some data.
         autoCorrectHoldTimeColumn(colMap, headers, parsedRows);
 
+        // Second pass: build canonical employee rows.
+        const employees = [];
         for (let i = 0; i < parsedRows.length; i++) {
-            const cells = parsedRows[i];
-            
-            const nameField = getCell(cells, colMap.name);
-            if (!String(nameField || '').trim()) continue;
-            let firstName = '', lastName = '';
-            
-            const lastFirstMatch = nameField.match(/^([^,]+),\s*(.+)$/);
-            if (lastFirstMatch) {
-                lastName = lastFirstMatch[1].trim();
-                firstName = lastFirstMatch[2].trim();
-            } else {
-                const parts = nameField.trim().split(/\s+/);
-                if (parts.length >= 2) {
-                    firstName = parts[0];
-                    lastName = parts.slice(1).join(' ');
-                } else if (parts.length === 1) {
-                    firstName = parts[0];
-                }
-            }
-            
-            const displayName = `${firstName} ${lastName}`.trim();
-            
-            const totalCallsRaw = getCell(cells, colMap.totalCalls);
-            const parsedTotalCalls = parseInt(totalCallsRaw, 10);
-            const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
-            const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
-            const totalCalls = Number.isInteger(parsedTotalCalls)
-                ? parsedTotalCalls
-                : (surveyTotal > 0 ? surveyTotal : 0);
-            
-            const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers)) || 0;
-            const parsedTransfersCount = parseInt(getCell(cells, colMap.transfersCount), 10) || 0;
-
-            const employeeData = {
-                name: displayName,
-                firstName: firstName,
-                scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
-                cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
-                fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
-                overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
-                overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
-                transfers: normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls),
-                transfersCount: parsedTransfersCount,
-                aht: parseSeconds(getCell(cells, colMap.aht)) || '',
-                talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
-                acw: parseSeconds(getCell(cells, colMap.acw)),
-                holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
-                reliability: parseHours(getCell(cells, colMap.reliability)) || 0,
-                overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
-                positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
-                negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
-                managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
-                surveyTotal: surveyTotal,
-                totalCalls: totalCalls
-            };
-            
-            if (employeeData.surveyTotal > employeeData.totalCalls && employeeData.totalCalls > 0) {
-                console.warn(`⚠️ DATA INTEGRITY WARNING: ${displayName}: surveyTotal (${employeeData.surveyTotal}) > totalCalls (${employeeData.totalCalls}).`);
-            }
-            
+            const employeeData = parseEmployeeRow(parsedRows[i], colMap);
+            if (!employeeData) continue;
+            validateEmployeeData(employeeData);
             employees.push(employeeData);
         }
-        
+
         return employees;
     }
 
