@@ -1,35 +1,30 @@
 /* ========================================
    DEVELOPMENT COACHING TOOL
-   Complete rewrite with proper encoding and parsing
    ======================================== */
 
 /* ========================================
-   ?? DESIGN INTENT & DEVELOPMENT GUIDELINES
+   DESIGN INTENT & DEVELOPMENT GUIDELINES
    ========================================
-   
+
    This application prioritizes deterministic behavior over heuristics.
    - Avoid "smart guessing" unless explicitly requested
    - Prefer explicit mappings and clear failure modes
    - Maintain predictable, testable code paths
-   
-   CRITICAL RULES FOR MODIFICATIONS:
-   
-   ? Do not add new metric definitions, targets, labels, or tips 
-      unless modifying the centralized metric configuration
-   
-   ? Do not duplicate logic that already exists
-      Always search for an existing helper before creating a new one
-   
-   ? Do not add new parsing logic
-      Use existing: parsePercentage, parseSurveyPercentage, 
-      parseSeconds, and parseHours functions
-   
-   ? Do not modify header mapping behavior without explicit instruction
-   
-   ? If code can be reused, refactor instead of copy/paste
-   ? Keep data transformations explicit and traceable
-   ? Document any deviation from these guidelines with reasoning
-   
+
+   RULES FOR MODIFICATIONS:
+
+   - Do not add new metric definitions, targets, labels, or tips unless
+     modifying the centralized metric configuration (metrics-registry +
+     metric-profiles).
+   - Do not duplicate logic that already exists. Always search for an
+     existing helper before creating a new one.
+   - Do not add new parsing logic. Use existing helpers: parsePercentage,
+     parseSurveyPercentage, parseSeconds, parseHours.
+   - Do not modify header mapping behavior without explicit instruction.
+   - If code can be reused, refactor instead of copy/paste.
+   - Keep data transformations explicit and traceable.
+   - Document any deviation from these guidelines with reasoning.
+
    ======================================== */
 
 // ============================================
@@ -405,8 +400,8 @@ function escapeHtml(text) {
     return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) ?? String(text ?? '');
 }
 
-// REFACTOR: Uses inline style.cssText — migrate to CSS class (e.g., .toast) in styles.css.
-// This pattern repeats across the codebase; styles.css already has utility classes.
+// Uses inline style.cssText for the toast. styles-v2.css has utility
+// classes but no .toast yet; candidate for future CSS migration.
 function showToast(message, duration = 5000) {
     const toast = document.createElement('div');
     toast.textContent = message;
