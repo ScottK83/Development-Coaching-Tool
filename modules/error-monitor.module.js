@@ -3,11 +3,33 @@
 
     // ============================================
     // ERROR LOGGING & MONITORING SERVICE
+    // Canonical owner of window.error, window.unhandledrejection,
+    // and console.error capture. Also writes the `lastError`
+    // single-record convenience key consumed by the debug panel.
     // ============================================
 
-    const ERROR_LOG_KEY = 'devCoachErrorLog';
+    const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+    const ERROR_LOG_KEY = STORAGE_PREFIX + 'errorLog';
+    const LEGACY_ERROR_LOG_KEY = 'devCoachErrorLog';
+    const LAST_ERROR_KEY = STORAGE_PREFIX + 'lastError';
     const MAX_LOG_ENTRIES = 100;
     const ERROR_REPORTING_ENDPOINT = null; // Set to your Sentry or custom endpoint
+
+    // Source-map / library noise to drop from both console and captured errors.
+    const SUPPRESSED_PATTERNS = [
+        /JSON\.parse.*\.map/i,
+        /source map error/i,
+        /failed to load source map/i,
+        /uncaught syntaxerror.*json/i,
+        /chart\.umd\.js\.map/i,
+        /lib-chart\.js\.map/i,
+        /\.map$/i
+    ];
+
+    function isSuppressed(msg) {
+        if (!msg) return false;
+        return SUPPRESSED_PATTERNS.some(p => p.test(msg));
+    }
 
     class ErrorMonitor {
         constructor() {
@@ -40,6 +62,7 @@
 
             this.addLog(entry);
             this.errorCount.error++;
+            this.writeLastError(entry.message, entry.context);
 
             // Send to remote if configured
             if (ERROR_REPORTING_ENDPOINT) {
@@ -134,27 +157,41 @@
             this.saveLogs();
         }
 
-        /**
-         * Save logs to localStorage
-         */
         saveLogs() {
             try {
                 localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(this.logs.slice(0, MAX_LOG_ENTRIES)));
             } catch (e) {
-                console.error('Failed to save error logs:', e);
+                // intentionally silent — must not recurse into error logging
             }
         }
 
-        /**
-         * Load logs from localStorage
-         */
         loadLogs() {
             try {
                 const stored = localStorage.getItem(ERROR_LOG_KEY);
-                return stored ? JSON.parse(stored) : [];
+                if (stored) return JSON.parse(stored);
+                // One-shot migration from pre-namespace key
+                const legacy = localStorage.getItem(LEGACY_ERROR_LOG_KEY);
+                if (legacy) {
+                    localStorage.setItem(ERROR_LOG_KEY, legacy);
+                    try { localStorage.removeItem(LEGACY_ERROR_LOG_KEY); } catch (_e) {}
+                    return JSON.parse(legacy);
+                }
+                return [];
             } catch (e) {
                 return [];
             }
+        }
+
+        writeLastError(message, context = {}) {
+            try {
+                localStorage.setItem(LAST_ERROR_KEY, JSON.stringify({
+                    message,
+                    source: context.source || 'error-monitor',
+                    line: context.lineno,
+                    column: context.colno,
+                    timestamp: new Date().toISOString()
+                }));
+            } catch (_e) { /* storage may be full */ }
         }
 
         /**
@@ -216,30 +253,50 @@
         /**
          * Setup global error handlers
          */
-        setupGlobalHandlers() {
-            // Unhandled errors
-            window.addEventListener('error', (event) => {
-                if (event.error) {
-                    this.logError(event.error, {
-                        source: 'global_error_handler',
-                        filename: event.filename,
-                        lineno: event.lineno,
-                        colno: event.colno
-                    });
+        maybeShowToast(message) {
+            try {
+                if (typeof window.showToast === 'function') {
+                    window.showToast('⚠️ ' + message, 5000);
                 }
+            } catch (_e) { /* toast is best-effort */ }
+        }
+
+        setupGlobalHandlers() {
+            // Unhandled errors (canonical handler — script.js does not duplicate)
+            window.addEventListener('error', (event) => {
+                const msg = event?.message || '';
+                if (isSuppressed(msg) || (event?.filename && event.filename.includes('.map'))) {
+                    return; // bootstrap.js capture-phase listener already prevented default
+                }
+                this.logError(event.error || new Error(msg), {
+                    source: 'global_error_handler',
+                    filename: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno
+                });
+                this.maybeShowToast('An error occurred. Check Debug panel for details.');
             });
 
             // Unhandled promise rejections
             window.addEventListener('unhandledrejection', (event) => {
-                this.logError(event.reason || new Error('Unhandled Promise Rejection'), {
+                const reason = event?.reason;
+                const msg = (reason?.message || String(reason || '')).toLowerCase();
+                if (isSuppressed(msg) || msg.includes('source map') || msg.includes('.map')) {
+                    event.preventDefault();
+                    return;
+                }
+                this.logError(reason || new Error('Unhandled Promise Rejection'), {
                     source: 'unhandled_rejection'
                 });
             });
 
-            // Console errors (optional - can be noisy)
+            // Console errors — capture + suppress map noise + silence DevTools output in prod
             const originalConsoleError = console.error;
             let inConsoleErrorOverride = false; // reentrance guard
             console.error = (...args) => {
+                const msg = args.join(' ');
+                if (isSuppressed(msg)) return; // drop source-map noise entirely
+
                 if (!inConsoleErrorOverride && args[0] && typeof args[0] === 'string' && !args[0].includes('[DevCoach]')) {
                     inConsoleErrorOverride = true;
                     try {
@@ -251,7 +308,10 @@
                         inConsoleErrorOverride = false;
                     }
                 }
-                originalConsoleError.apply(console, args);
+
+                if (window.DEBUG) {
+                    originalConsoleError.apply(console, args);
+                }
             };
         }
     }

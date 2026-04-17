@@ -41,30 +41,17 @@ const DEBUG = window.location.hostname === 'localhost' || window.location.hostna
 const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
 
 // ============================================
-// ERROR HANDLING & SUPPRESSION
+// ERROR HANDLING
 // ============================================
-// Suppress all source map and network-related warnings that clutter the console
-const SUPPRESSED_PATTERNS = [
-    /JSON\.parse.*\.map/i,
-    /source map error/i,
-    /failed to load source map/i,
-    /uncaught syntaxerror.*json/i,
-    /chart\.umd\.js\.map/i,
-    /lib-chart\.js\.map/i
-];
-
-const isSuppressed = (msg) => {
-    if (!msg) return false;
-    return SUPPRESSED_PATTERNS.some(pattern => pattern.test(msg));
-};
+// Console wrapping, window.error, and window.unhandledrejection are owned
+// by modules/error-monitor.module.js. bootstrap.js handles source-map noise
+// at the capture phase before error-monitor loads. Do not re-wrap here.
 
 function logAppError(message, error, context = {}) {
     const errObj = error instanceof Error
         ? error
         : new Error(error?.message || String(error || message));
 
-    // Intentionally defensive: empty catches prevent infinite error loops
-    // when error-reporting infrastructure itself fails
     try {
         window.DevCoachModules?.errorMonitor?.logError?.(errObj, {
             source: 'script',
@@ -79,75 +66,18 @@ function logAppError(message, error, context = {}) {
             stack: errObj.stack || null
         });
     } catch (_e) { /* prevent infinite loop if debug module fails */ }
-
-    try {
-        localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify({
-            message: message + ': ' + errObj.message,
-            source: context?.source || 'script',
-            timestamp: new Date().toISOString()
-        }));
-    } catch (_e) { /* localStorage may be full or unavailable */ }
 }
 
 window.getRecentAppErrors = function(limit = 20) {
     return (window.DevCoachModules?.errorMonitor?.getLogs?.({ type: 'error' }) || []).slice(0, limit);
 };
 
+// In production, silence verbose console output. console.error is handled
+// by error-monitor (captures + silences DevTools in prod).
 if (!DEBUG) {
-    let lastErrorCapture = null;
     console.log = () => {};
     console.warn = () => {};
-    console.error = (...args) => {
-        const msg = args.join(' ');
-        if (isSuppressed(msg)) return;
-        lastErrorCapture = { message: msg, timestamp: new Date().toISOString() };
-        try { localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(lastErrorCapture)); } catch(_e) {}
-    };
-} else {
-    // DEBUG mode: suppress annoyances, keep real errors
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    console.error = (...args) => {
-        const msg = args.join(' ');
-        if (isSuppressed(msg)) return;
-        originalError.apply(console, args);
-    };
-    console.warn = (...args) => {
-        const msg = args.join(' ');
-        if (isSuppressed(msg)) return;
-        originalWarn.apply(console, args);
-    };
 }
-
-// Global error handler - catches runtime errors
-window.addEventListener('error', (event) => {
-    const msg = event.message || '';
-    if (isSuppressed(msg) || (event.filename && event.filename.includes('.map'))) {
-        event.preventDefault();
-        return;
-    }
-
-    const errorInfo = {
-        message: event.message,
-        source: event.filename,
-        line: event.lineno,
-        column: event.colno,
-        timestamp: new Date().toISOString()
-    };
-    localStorage.setItem(STORAGE_PREFIX + 'lastError', JSON.stringify(errorInfo));
-    showToast('⚠️ An error occurred. Check Debug panel for details.', 5000);
-    // Do NOT call event.preventDefault() — let the error show in the console
-});
-
-// Suppress unhandled promise rejections from source map loading
-window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason || {};
-    const msg = (reason.message || String(reason)).toLowerCase();
-    if (isSuppressed(msg) || msg.includes('source map') || msg.includes('.map')) {
-        event.preventDefault();
-        return;
-    }
-});
 
 // Unsaved changes tracking
 window.addEventListener('beforeunload', (e) => {
