@@ -48,9 +48,7 @@
             } else if (storage?.saveTeamMembers) {
                 storage.saveTeamMembers(toSave);
             }
-            if (typeof window.queueRepoSync === 'function') {
-                window.queueRepoSync('team members updated');
-            }
+            // Repo sync fires automatically via the localStorage.setItem hook
         } catch (error) {
             console.error('Error saving team members:', error);
         }

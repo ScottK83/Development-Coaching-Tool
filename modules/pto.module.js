@@ -80,9 +80,7 @@ function savePtoStore(store) {
         console.error('[PTO] Failed to save PTO data - localStorage may be full');
         showToast('ERROR: Could not save payroll data. Storage may be full.', 8000);
     }
-    if (ok && typeof window.queueRepoSync === 'function') {
-        window.queueRepoSync('pto tracker updated');
-    }
+    // Repo sync fires automatically via the localStorage.setItem hook
     return ok;
 }
 

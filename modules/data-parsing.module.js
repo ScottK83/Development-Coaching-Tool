@@ -606,6 +606,7 @@
         parseSurveyPercentage,
         parseSeconds,
         parseHours,
+        normalizeTransfersPercentage,
         validatePastedData,
         parsePastedData,
         // Constants

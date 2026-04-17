@@ -124,17 +124,15 @@ function loadWeeklyData() {
     return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
 }
 function saveWeeklyData() {
-    const result = window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
-    queueRepoSync('weekly data updated');
-    return result;
+    // Repo sync is triggered automatically by the localStorage.setItem hook
+    // installed in repo-sync.module.js — no explicit queueRepoSync call needed.
+    return window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
 }
 function loadYtdData() {
     return window.DevCoachModules?.storage?.loadYtdData?.() || {};
 }
 function saveYtdData() {
-    const result = window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
-    queueRepoSync('ytd data updated');
-    return result;
+    return window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
 }
 function loadDailyData() {
     return window.DevCoachModules?.storage?.loadDailyData?.() || {};
@@ -149,25 +147,19 @@ function loadCoachingHistory() {
     return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
 }
 function saveCoachingHistory() {
-    const result = window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
-    queueRepoSync('coaching history updated');
-    return result;
+    return window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
 }
 function loadSentimentPhraseDatabase() {
     return window.DevCoachModules?.storage?.loadSentimentPhraseDatabase?.();
 }
 function saveSentimentPhraseDatabase() {
-    const result = window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
-    queueRepoSync('sentiment phrase database updated');
-    return result;
+    return window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
 }
 function loadAssociateSentimentSnapshots() {
     return window.DevCoachModules?.storage?.loadAssociateSentimentSnapshots?.() || {};
 }
 function saveAssociateSentimentSnapshots() {
-    const result = window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
-    queueRepoSync('associate sentiment snapshots updated');
-    return result;
+    return window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
 }
 
 // ============================================
@@ -776,7 +768,6 @@ function loadTeamMembers() {
 }
 function saveTeamMembers() {
     window.DevCoachModules?.storage?.saveTeamMembers?.(myTeamMembers);
-    queueRepoSync('team members updated');
 }
 function setTeamMembersForWeek(weekKey, memberNames) {
     myTeamMembers[weekKey] = memberNames;
@@ -888,7 +879,6 @@ function loadCallCenterAverages() {
 function saveCallCenterAverages(averages) {
     try {
         localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
-        queueRepoSync('call center averages updated');
     } catch (error) {
         console.error('Error saving call center averages:', error);
     }
@@ -3255,7 +3245,6 @@ function loadYearEndAnnualGoalsStore() {
 function saveYearEndAnnualGoalsStore(store) {
     try {
         localStorage.setItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY, JSON.stringify(store || {}));
-        queueRepoSync('year-end annual goals updated');
     } catch (error) {
         console.error('Error saving year-end annual goals store:', error);
     }
@@ -3274,7 +3263,6 @@ function loadYearEndDraftStore() {
 function saveYearEndDraftStore(store) {
     try {
         localStorage.setItem(YEAR_END_DRAFT_STORAGE_KEY, JSON.stringify(store || {}));
-        queueRepoSync('year-end draft updated');
     } catch (error) {
         console.error('Error saving year-end draft store:', error);
     }
@@ -3527,6 +3515,9 @@ function getBackupFootprintScore(payload) {
     return window.DevCoachModules?.repoSync?.getBackupFootprintScore?.(payload) ?? 0;
 }
 
+// Public wrapper for manual repo-sync triggers (e.g., explicit "Sync Now" buttons,
+// reasons unrelated to a storage write). Storage writes trigger sync automatically
+// via the localStorage.setItem hook in repo-sync.module.js.
 function queueRepoSync(reason = 'updated') {
     return window.DevCoachModules?.repoSync?.queueRepoSync?.(reason);
 }

@@ -38,25 +38,17 @@
         }
     }
 
+    // Delegates to data-parsing module (loaded after storage but before any
+    // storage function is called at runtime). Keeps a single source for the
+    // transfer-percentage normalization rule.
     function normalizeTransferPercentageValue(transfers, transfersCount, totalCalls) {
+        const fn = window.DevCoachModules?.dataParsing?.normalizeTransfersPercentage;
+        if (typeof fn === 'function') {
+            return fn(transfers, transfersCount, totalCalls);
+        }
+        // Conservative fallback if data-parsing hasn't loaded (never in practice)
         const parsedTransfers = parseFloat(transfers);
-        const parsedTransfersCount = parseInt(transfersCount, 10);
-        const parsedTotalCalls = parseInt(totalCalls, 10);
-
-        if (!Number.isFinite(parsedTransfers)) return transfers;
-        if (!Number.isFinite(parsedTransfersCount) || !Number.isFinite(parsedTotalCalls) || parsedTransfersCount < 0 || parsedTotalCalls <= 0) {
-            return parseFloat(parsedTransfers.toFixed(2));
-        }
-
-        const derivedTransfers = parseFloat(((parsedTransfersCount / parsedTotalCalls) * 100).toFixed(2));
-        const largeMismatch = Math.abs(parsedTransfers - derivedTransfers) >= 20;
-        const ratioMismatch = derivedTransfers > 0 && (parsedTransfers / derivedTransfers) >= 10;
-
-        if (largeMismatch && ratioMismatch) {
-            return derivedTransfers;
-        }
-
-        return parseFloat(parsedTransfers.toFixed(2));
+        return Number.isFinite(parsedTransfers) ? parseFloat(parsedTransfers.toFixed(2)) : transfers;
     }
 
     function normalizeEmployeeMetricRow(employee) {
@@ -136,15 +128,17 @@
         }
     }
 
-    // NOTE: Some save functions return boolean (saveReliabilityTracker), others return void.
-    // Future: standardize all save functions to return boolean from saveWithSizeCheck.
+    // All save* functions return boolean: true on success, false on failure
+    // (size cap exceeded, quota, JSON error, etc.). Callers can ignore the
+    // return value if they don't care about the outcome.
     function saveWeeklyData(weeklyDataRef) {
         try {
-            if (!saveWithSizeCheck('weeklyData', weeklyDataRef)) {
-                console.error('Failed to save weekly data due to size');
-            }
+            const ok = saveWithSizeCheck('weeklyData', weeklyDataRef);
+            if (!ok) console.error('Failed to save weekly data due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving weekly data:', error);
+            return false;
         }
     }
 
@@ -178,11 +172,12 @@
 
     function saveDailyData(dailyDataRef) {
         try {
-            if (!saveWithSizeCheck('dailyData', dailyDataRef)) {
-                console.error('Failed to save daily data due to size');
-            }
+            const ok = saveWithSizeCheck('dailyData', dailyDataRef);
+            if (!ok) console.error('Failed to save daily data due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving daily data:', error);
+            return false;
         }
     }
 
@@ -211,11 +206,12 @@
 
     function saveYtdData(ytdDataRef) {
         try {
-            if (!saveWithSizeCheck('ytdData', ytdDataRef)) {
-                console.error('Failed to save YTD data due to size');
-            }
+            const ok = saveWithSizeCheck('ytdData', ytdDataRef);
+            if (!ok) console.error('Failed to save YTD data due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving YTD data:', error);
+            return false;
         }
     }
 
@@ -237,11 +233,12 @@
 
     function saveCoachingHistory(coachingHistoryRef) {
         try {
-            if (!saveWithSizeCheck('coachingHistory', coachingHistoryRef)) {
-                console.error('Failed to save coaching history due to size');
-            }
+            const ok = saveWithSizeCheck('coachingHistory', coachingHistoryRef);
+            if (!ok) console.error('Failed to save coaching history due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving coaching history:', error);
+            return false;
         }
     }
 
@@ -279,11 +276,12 @@
 
     function saveSentimentPhraseDatabase(sentimentPhraseDatabaseRef) {
         try {
-            if (!saveWithSizeCheck(SENTIMENT_PHRASE_DB_STORAGE_KEY, sentimentPhraseDatabaseRef || {})) {
-                console.error('Failed to save sentiment phrase database due to size');
-            }
+            const ok = saveWithSizeCheck(SENTIMENT_PHRASE_DB_STORAGE_KEY, sentimentPhraseDatabaseRef || {});
+            if (!ok) console.error('Failed to save sentiment phrase database due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving sentiment phrase database:', error);
+            return false;
         }
     }
 
@@ -360,11 +358,12 @@
 
     function saveAssociateSentimentSnapshots(associateSentimentSnapshotsRef) {
         try {
-            if (!saveWithSizeCheck(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, associateSentimentSnapshotsRef || {})) {
-                console.error('Failed to save associate sentiment snapshots due to size');
-            }
+            const ok = saveWithSizeCheck(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, associateSentimentSnapshotsRef || {});
+            if (!ok) console.error('Failed to save associate sentiment snapshots due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving associate sentiment snapshots:', error);
+            return false;
         }
     }
 
@@ -386,8 +385,10 @@
     function saveTeamMembers(teamMembersRef) {
         try {
             localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(teamMembersRef));
+            return true;
         } catch (error) {
             console.error('Error saving team members:', error);
+            return false;
         }
     }
 
@@ -405,8 +406,10 @@
     function saveCallCenterAverages(averages) {
         try {
             localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
+            return true;
         } catch (error) {
             console.error('Error saving call center averages:', error);
+            return false;
         }
     }
 
@@ -415,8 +418,10 @@
             const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
             nicknames[employeeFullName] = nickname;
             localStorage.setItem(STORAGE_PREFIX + 'employeeNicknames', JSON.stringify(nicknames));
+            return true;
         } catch (error) {
             console.error('Error saving nickname:', error);
+            return false;
         }
     }
 
@@ -444,8 +449,10 @@
     function saveUserTips(tips) {
         try {
             localStorage.setItem(STORAGE_PREFIX + 'coachingTips', JSON.stringify(tips));
+            return true;
         } catch (error) {
             console.error('Error saving user tips:', error);
+            return false;
         }
     }
 
@@ -462,8 +469,10 @@
     function saveTipUsageHistory(history) {
         try {
             localStorage.setItem(STORAGE_PREFIX + 'tipUsageHistory', JSON.stringify(history));
+            return true;
         } catch (error) {
             console.error('Error saving tip usage history:', error);
+            return false;
         }
     }
 
@@ -484,11 +493,12 @@
 
     function saveFollowUpHistory(data) {
         try {
-            if (!saveWithSizeCheck('followUpHistory', data || { entries: [] })) {
-                console.error('Failed to save follow-up history due to size');
-            }
+            const ok = saveWithSizeCheck('followUpHistory', data || { entries: [] });
+            if (!ok) console.error('Failed to save follow-up history due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving follow-up history:', error);
+            return false;
         }
     }
 
@@ -509,11 +519,12 @@
 
     function saveHotTipHistory(data) {
         try {
-            if (!saveWithSizeCheck('hotTipHistory', data || { entries: [] })) {
-                console.error('Failed to save hot tip history due to size');
-            }
+            const ok = saveWithSizeCheck('hotTipHistory', data || { entries: [] });
+            if (!ok) console.error('Failed to save hot tip history due to size');
+            return ok;
         } catch (error) {
             console.error('Error saving hot tip history:', error);
+            return false;
         }
     }
 
