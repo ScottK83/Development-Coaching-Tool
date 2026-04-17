@@ -2085,6 +2085,7 @@ function handleCopilotOutputInput(event) {
 
 function handleUploadMoreDataClick() {
     document.getElementById('uploadSuccessMessage').style.display = 'none';
+    hideUploadColumnInspector();
     document.getElementById('pasteDataTextarea').value = '';
     document.getElementById('pasteWeekEndingDate').value = '';
     showOnlySection('uploadSection');
@@ -2355,6 +2356,107 @@ function computeMetricCoverage(employees) {
         coverage[key] = populated / employees.length;
     });
     return coverage;
+}
+
+// Renders a post-upload summary panel that tells the user exactly what the
+// parser saw — which metrics have data, which rows have the raw counts
+// needed for true week-to-date math, and which are display-only. Key for
+// daily uploads: without totalCalls, AHT/adherence etc. can only be
+// simple-averaged, which drifts from the real weekly number.
+function renderUploadColumnInspector(employees, periodType) {
+    const panel = document.getElementById('uploadColumnInspector');
+    const meta = document.getElementById('uploadColumnInspectorMeta');
+    const list = document.getElementById('uploadColumnInspectorList');
+    const footer = document.getElementById('uploadColumnInspectorFooter');
+    if (!panel || !meta || !list) return;
+
+    const rows = Array.isArray(employees) ? employees : [];
+    if (!rows.length) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const populated = (key) => rows.filter(e => {
+        const v = e?.[key];
+        return v !== '' && v !== null && v !== undefined && Number.isFinite(parseFloat(v));
+    }).length;
+
+    // Metrics grouped by how they're scoped for daily check-ins.
+    // `wtdWeight` = 'totalCalls' | 'surveyTotal' | null (cumulative/no-weight)
+    const DAILY_KEY_METRICS = [
+        { key: 'totalCalls',         label: 'Volume (total calls)',          wtdWeight: null },
+        { key: 'aht',                label: 'AHT',                           wtdWeight: 'totalCalls' },
+        { key: 'scheduleAdherence',  label: 'Adherence',                     wtdWeight: 'totalCalls' },
+        { key: 'positiveWord',       label: 'Positive words',                wtdWeight: 'totalCalls' },
+        { key: 'negativeWord',       label: 'Avoid negative words',          wtdWeight: 'totalCalls' },
+        { key: 'managingEmotions',   label: 'Manage emotions',               wtdWeight: 'totalCalls' }
+    ];
+    const OTHER_METRICS = [
+        { key: 'overallSentiment',   label: 'Overall sentiment',             wtdWeight: 'totalCalls' },
+        { key: 'transfers',          label: 'Transfers',                     wtdWeight: 'totalCalls' },
+        { key: 'cxRepOverall',       label: 'RepSat',                        wtdWeight: 'surveyTotal' },
+        { key: 'fcr',                label: 'FCR',                           wtdWeight: 'surveyTotal' },
+        { key: 'overallExperience',  label: 'Overall experience',            wtdWeight: 'surveyTotal' },
+        { key: 'reliability',        label: 'Reliability',                   wtdWeight: null }
+    ];
+
+    const isDaily = periodType === 'daily';
+    const metricsToShow = isDaily ? DAILY_KEY_METRICS : DAILY_KEY_METRICS.concat(OTHER_METRICS);
+
+    const totalCallsCoverage = populated('totalCalls');
+    const surveyTotalCoverage = populated('surveyTotal');
+
+    meta.textContent = `${rows.length} employees • period: ${periodType} • totalCalls present on ${totalCallsCoverage}/${rows.length} rows`
+        + (surveyTotalCoverage > 0 ? ` • surveyTotal present on ${surveyTotalCoverage}/${rows.length}` : '');
+
+    list.innerHTML = '';
+    let missingWeightCount = 0;
+    metricsToShow.forEach(({ key, label, wtdWeight }) => {
+        const count = populated(key);
+        const hasData = count > 0;
+        let statusIcon, statusText, statusColor;
+        if (!hasData) {
+            statusIcon = '—';
+            statusText = 'no data in this upload';
+            statusColor = '#9e9e9e';
+        } else if (!wtdWeight) {
+            statusIcon = '✓';
+            statusText = `${count}/${rows.length} rows — cumulative, no weighting needed`;
+            statusColor = '#2e7d32';
+        } else {
+            const weightCount = wtdWeight === 'surveyTotal' ? surveyTotalCoverage : totalCallsCoverage;
+            if (weightCount > 0) {
+                statusIcon = '✓';
+                statusText = `${count}/${rows.length} rows — weighted by ${wtdWeight} (WTD math will be accurate)`;
+                statusColor = '#2e7d32';
+            } else {
+                statusIcon = '⚠';
+                statusText = `${count}/${rows.length} rows — but ${wtdWeight} missing; partial-week rollup will be display-only`;
+                statusColor = '#ef6c00';
+                missingWeightCount += 1;
+            }
+        }
+        const li = document.createElement('li');
+        li.innerHTML = `<span style="color: ${statusColor}; font-weight: bold;">${statusIcon}</span> <strong>${label}:</strong> ${statusText}`;
+        list.appendChild(li);
+    });
+
+    if (footer) {
+        if (isDaily && missingWeightCount > 0) {
+            footer.textContent = `⚠ ${missingWeightCount} metric(s) lack the raw counts needed for accurate week-to-date math. Those tiles will show yesterday's number only.`;
+        } else if (isDaily) {
+            footer.textContent = '✓ All six daily metrics have the raw counts needed for accurate week-to-date rollups.';
+        } else {
+            footer.textContent = '';
+        }
+    }
+
+    panel.style.display = 'block';
+}
+
+function hideUploadColumnInspector() {
+    const panel = document.getElementById('uploadColumnInspector');
+    if (panel) panel.style.display = 'none';
 }
 
 function captureUploadUndoSnapshot({ store, weekKey, previousValue, label, periodType }) {
@@ -2674,6 +2776,7 @@ function handleLoadPastedDataClick() {
         window.DevCoachModules?.uploadWizard?.refresh?.();
 
         document.getElementById('uploadSuccessMessage').style.display = 'block';
+        renderUploadColumnInspector(employees, periodType);
         document.getElementById('pasteDataTextarea').value = '';
         uploadPeriodManuallySelected = false; // Reset for next upload
 

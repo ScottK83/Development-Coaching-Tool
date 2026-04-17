@@ -58,6 +58,22 @@
         const thisWeekMon = addDays(now, -daysBackToMon);
         const lastWeekMon = addDays(thisWeekMon, -7);
         const lastWeekSun = addDays(thisWeekMon, -1);
+        const yesterday = addDays(now, -1);
+
+        // 0. Daily — user picks a specific day (defaults to yesterday).
+        //    Dailies are ephemeral: they power "yesterday's check-in" and
+        //    partial-week views, and get purged when a weekly upload for
+        //    the same week lands.
+        options.push({
+            id: 'daily',
+            label: 'Daily data (pick a day — defaults to yesterday)',
+            periodType: 'daily',
+            startDate: null,
+            endDate: null,
+            requiresDailyDatePick: true,
+            defaultDate: isoDate(yesterday),
+            priority: 0
+        });
 
         // 1. This week in progress (Mon -> today). Always available,
         //    even on Monday (1 day of data = partial week).
@@ -136,9 +152,10 @@
     // weeklyData / ytdData. For the YTD option, we don't mark it
     // uploaded (since end date is user-picked), but we record the
     // most recent existing YTD so the summary can display it.
-    function annotateUploadState(options, weeklyStore, ytdStore) {
+    function annotateUploadState(options, weeklyStore, ytdStore, dailyStore) {
         const weekly = weeklyStore || {};
         const ytd = ytdStore || {};
+        const daily = dailyStore || {};
 
         // Find most recent YTD by end date
         let latestYtdEnd = null;
@@ -150,11 +167,24 @@
             }
         });
 
+        // Build a set of daily dates already uploaded (YYYY-MM-DD).
+        const dailyUploadedDates = new Set();
+        Object.keys(daily).forEach(k => {
+            const endText = daily[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+            if (endText) dailyUploadedDates.add(endText);
+        });
+
         return options.map(opt => {
             if (opt.periodType === 'ytd') {
                 return {
                     ...opt,
                     latestYtdEnd: latestYtdEnd ? latestYtdEnd.endText : null
+                };
+            }
+            if (opt.periodType === 'daily') {
+                return {
+                    ...opt,
+                    dailyUploadedDates: Array.from(dailyUploadedDates).sort()
                 };
             }
             if (!opt.endDate) return opt;
@@ -200,7 +230,12 @@
                 el.dataset.startDate = opt.startDate || '';
                 el.dataset.endDate = opt.endDate || '';
                 if (opt.requiresEndDatePick) el.dataset.requiresEndDatePick = '1';
+                if (opt.requiresDailyDatePick) el.dataset.requiresDailyDatePick = '1';
+                if (opt.defaultDate) el.dataset.defaultDate = opt.defaultDate;
                 if (opt.latestYtdEnd) el.dataset.latestYtdEnd = opt.latestYtdEnd;
+                if (Array.isArray(opt.dailyUploadedDates) && opt.dailyUploadedDates.length) {
+                    el.dataset.dailyUploadedDates = opt.dailyUploadedDates.join(',');
+                }
                 grp.appendChild(el);
             });
             selectEl.appendChild(grp);
@@ -232,7 +267,7 @@
     // When the user picks an option, sync its dates + period type
     // into the legacy hidden inputs and "click" the matching
     // period-type button so the existing save path reads them.
-    function applySelectionToLegacyInputs(option, ytdEndOverride) {
+    function applySelectionToLegacyInputs(option, dateOverride) {
         const startInput = document.getElementById('pasteStartDate');
         const endInput = document.getElementById('pasteWeekEndingDate');
         if (!option) {
@@ -240,10 +275,20 @@
             if (endInput) endInput.value = '';
             return;
         }
-        const endDate = ytdEndOverride || option.endDate || '';
-        const startDate = option.periodType === 'ytd' && endDate
-            ? `${endDate.slice(0, 4)}-01-01`
-            : option.startDate || '';
+        // For YTD, dateOverride is the end date. For daily, it's the single day
+        // (start === end). For everything else, we use the fixed dates in the option.
+        let startDate;
+        let endDate;
+        if (option.periodType === 'daily') {
+            endDate = dateOverride || option.defaultDate || '';
+            startDate = endDate;
+        } else if (option.periodType === 'ytd') {
+            endDate = dateOverride || option.endDate || '';
+            startDate = endDate ? `${endDate.slice(0, 4)}-01-01` : '';
+        } else {
+            endDate = option.endDate || '';
+            startDate = option.startDate || '';
+        }
 
         if (startInput) startInput.value = startDate;
         if (endInput) endInput.value = endDate;
@@ -254,14 +299,27 @@
         if (btn) btn.click();
     }
 
-    function updateSummary(summaryEl, option, ytdEndOverride) {
+    function updateSummary(summaryEl, option, dateOverride) {
         if (!summaryEl) return;
         if (!option) {
             summaryEl.style.display = 'none';
             summaryEl.textContent = '';
             return;
         }
-        const endDate = ytdEndOverride || option.endDate;
+        // Daily — single-day save.
+        if (option.periodType === 'daily') {
+            const day = dateOverride || option.defaultDate;
+            if (!day) {
+                summaryEl.style.display = 'block';
+                summaryEl.textContent = 'Pick which day this data is for.';
+                return;
+            }
+            const d = new Date(day);
+            summaryEl.style.display = 'block';
+            summaryEl.textContent = `Will save as daily — ${fmtLong(d)}. (Ephemeral; cleared when a weekly upload covers this date.)`;
+            return;
+        }
+        const endDate = dateOverride || option.endDate;
         if (!endDate) {
             // YTD with no end date picked yet
             summaryEl.style.display = 'block';
@@ -278,6 +336,34 @@
         const endD = new Date(endDate);
         summaryEl.style.display = 'block';
         summaryEl.textContent = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
+    }
+
+    // Renders a per-weekday checklist for the current week into a summary
+    // element: which days have been uploaded to dailyData, which are still
+    // missing. Helps the user see daily-upload progress at a glance.
+    function renderDailyWeekSummary(summaryEl, uploadedDates, today = new Date()) {
+        if (!summaryEl) return;
+        const now = startOfDay(today);
+        const dow = now.getDay();
+        const daysBackToMon = dow === 0 ? 6 : dow - 1;
+        const weekMon = addDays(now, -daysBackToMon);
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const uploadedSet = new Set((uploadedDates || '').split(',').filter(Boolean));
+
+        const parts = [];
+        for (let i = 0; i < 7; i++) {
+            const d = addDays(weekMon, i);
+            if (d > now) break; // Don't show future days
+            const iso = isoDate(d);
+            const mark = uploadedSet.has(iso) ? '✓' : '—';
+            parts.push(`${dayNames[i]} ${mark}`);
+        }
+        if (!parts.length) {
+            summaryEl.style.display = 'none';
+            return;
+        }
+        summaryEl.style.display = 'block';
+        summaryEl.textContent = `This week so far: ${parts.join(' · ')}`;
     }
 
     function toggleCustomMode(on) {
@@ -301,18 +387,30 @@
         const ytd = (typeof ytdData !== 'undefined' ? ytdData : null)
             || window.DevCoachModules?.storage?.loadYtdData?.()
             || {};
-        const options = annotateUploadState(computeUploadOptions(new Date()), weekly, ytd);
+        const daily = (typeof dailyData !== 'undefined' ? dailyData : null)
+            || window.DevCoachModules?.storage?.loadDailyData?.()
+            || {};
+        const options = annotateUploadState(computeUploadOptions(new Date()), weekly, ytd, daily);
         renderDropdown(selectEl, options);
 
         // If the just-uploaded option cleared the selection, also
-        // reset the YTD date picker, summary line, and legacy date
+        // reset the YTD/daily date pickers, summary line, and legacy date
         // inputs so the UI doesn't dangle with stale values.
         if (!selectEl.value) {
             const ytdPicker = document.getElementById('uploadWizardYtdDatePicker');
             const ytdInput = document.getElementById('uploadWizardYtdEnd');
+            const dailyPicker = document.getElementById('uploadWizardDailyDatePicker');
+            const dailyInput = document.getElementById('uploadWizardDailyDate');
+            const dailyWeekSummary = document.getElementById('uploadWizardDailyWeekSummary');
             const summaryEl = document.getElementById('uploadWizardSummary');
             if (ytdPicker) ytdPicker.style.display = 'none';
             if (ytdInput) ytdInput.value = '';
+            if (dailyPicker) dailyPicker.style.display = 'none';
+            if (dailyInput) dailyInput.value = '';
+            if (dailyWeekSummary) {
+                dailyWeekSummary.style.display = 'none';
+                dailyWeekSummary.textContent = '';
+            }
             if (summaryEl) {
                 summaryEl.style.display = 'none';
                 summaryEl.textContent = '';
@@ -328,6 +426,9 @@
 
         const ytdPicker = document.getElementById('uploadWizardYtdDatePicker');
         const ytdInput = document.getElementById('uploadWizardYtdEnd');
+        const dailyPicker = document.getElementById('uploadWizardDailyDatePicker');
+        const dailyInput = document.getElementById('uploadWizardDailyDate');
+        const dailyWeekSummary = document.getElementById('uploadWizardDailyWeekSummary');
         const summaryEl = document.getElementById('uploadWizardSummary');
         const customToggle = document.getElementById('uploadWizardCustomToggle');
 
@@ -342,6 +443,9 @@
                 startDate: opt.dataset.startDate || null,
                 endDate: opt.dataset.endDate || null,
                 requiresEndDatePick: opt.dataset.requiresEndDatePick === '1',
+                requiresDailyDatePick: opt.dataset.requiresDailyDatePick === '1',
+                defaultDate: opt.dataset.defaultDate || null,
+                dailyUploadedDates: opt.dataset.dailyUploadedDates || '',
                 latestYtdEnd: opt.dataset.latestYtdEnd || null
             };
         }
@@ -350,16 +454,30 @@
             const option = currentOptionFromDropdown();
             if (!option) {
                 if (ytdPicker) ytdPicker.style.display = 'none';
+                if (dailyPicker) dailyPicker.style.display = 'none';
                 applySelectionToLegacyInputs(null);
                 updateSummary(summaryEl, null);
                 return;
             }
             if (option.requiresEndDatePick) {
                 if (ytdPicker) ytdPicker.style.display = 'block';
+                if (dailyPicker) dailyPicker.style.display = 'none';
                 applySelectionToLegacyInputs(option, ytdInput?.value || null);
                 updateSummary(summaryEl, option, ytdInput?.value || null);
+            } else if (option.requiresDailyDatePick) {
+                if (ytdPicker) ytdPicker.style.display = 'none';
+                if (dailyPicker) dailyPicker.style.display = 'block';
+                // Seed with defaultDate (yesterday) if user hasn't picked yet.
+                if (dailyInput && !dailyInput.value && option.defaultDate) {
+                    dailyInput.value = option.defaultDate;
+                }
+                const chosen = dailyInput?.value || option.defaultDate || null;
+                applySelectionToLegacyInputs(option, chosen);
+                updateSummary(summaryEl, option, chosen);
+                renderDailyWeekSummary(dailyWeekSummary, option.dailyUploadedDates);
             } else {
                 if (ytdPicker) ytdPicker.style.display = 'none';
+                if (dailyPicker) dailyPicker.style.display = 'none';
                 applySelectionToLegacyInputs(option);
                 updateSummary(summaryEl, option);
             }
@@ -371,6 +489,15 @@
                 if (!option) return;
                 applySelectionToLegacyInputs(option, ytdInput.value);
                 updateSummary(summaryEl, option, ytdInput.value);
+            });
+        }
+
+        if (dailyInput) {
+            dailyInput.addEventListener('change', () => {
+                const option = currentOptionFromDropdown();
+                if (!option) return;
+                applySelectionToLegacyInputs(option, dailyInput.value);
+                updateSummary(summaryEl, option, dailyInput.value);
             });
         }
 

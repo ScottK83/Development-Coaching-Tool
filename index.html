@@ -89,6 +89,12 @@
                                 <input type="date" id="uploadWizardYtdEnd" style="width: 100%; max-width: 260px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                                 <div style="margin-top: 4px; color: #666; font-size: 0.8em;">Pick the last day the YTD data covers (Jan 1 → this date).</div>
                             </div>
+                            <div id="uploadWizardDailyDatePicker" style="display: none; margin-top: 10px;">
+                                <label for="uploadWizardDailyDate" style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em;">Day:</label>
+                                <input type="date" id="uploadWizardDailyDate" style="width: 100%; max-width: 260px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                                <div style="margin-top: 4px; color: #666; font-size: 0.8em;">Defaults to yesterday. Daily rows are ephemeral — they're purged when the weekly upload for that week arrives.</div>
+                                <div id="uploadWizardDailyWeekSummary" style="display: none; margin-top: 8px; padding: 6px 10px; background: #fff3e0; border-left: 3px solid #ff9800; border-radius: 4px; font-size: 0.82em; color: #5d4037;"></div>
+                            </div>
                             <div id="uploadWizardSummary" style="display: none; margin-top: 10px; padding: 8px 12px; background: #e3f2fd; border-left: 3px solid #0d6efd; border-radius: 4px; font-size: 0.88em; color: #0d47a1;"></div>
                             <div style="margin-top: 10px;">
                                 <button type="button" id="uploadWizardCustomToggle" style="background: none; border: none; color: #0d6efd; font-size: 0.85em; cursor: pointer; text-decoration: underline; padding: 0;">Need custom dates?</button>
@@ -141,7 +147,13 @@
                     <!-- Success message -->
                     <div id="uploadSuccessMessage" style="display: none; margin-top: 20px; padding: 15px; background: var(--green-soft, #d4edda); border: 2px solid var(--green-text, #28a745); border-radius: 8px; color: var(--text-primary, #1a1a2e);">
                         <h3 style="margin: 0;">✅ Data Uploaded Successfully!</h3>
-                        <p style="margin: 10px 0 0 0;">Click <strong>"📈 Metric Trends"</strong> at the top to generate trend emails.</p>
+                        <p id="uploadSuccessSubtitle" style="margin: 10px 0 0 0;">Click <strong>"📈 Metric Trends"</strong> at the top to generate trend emails.</p>
+                        <div id="uploadColumnInspector" style="display: none; margin-top: 14px; padding: 12px 14px; background: #ffffff; border: 1px solid #cdeacf; border-radius: 6px; color: #1a1a2e;">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: #1b5e20;">🔍 What we saw in the paste</div>
+                            <div id="uploadColumnInspectorMeta" style="font-size: 0.88em; color: #455a64; margin-bottom: 8px;"></div>
+                            <ul id="uploadColumnInspectorList" style="margin: 0; padding-left: 20px; font-size: 0.88em; line-height: 1.6;"></ul>
+                            <div id="uploadColumnInspectorFooter" style="margin-top: 10px; font-size: 0.82em; color: #6d4c41;"></div>
+                        </div>
                         <div style="margin-top: 15px;">
                             <button type="button" id="uploadMoreDataBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 1em;">📤 Upload More Data</button>
                         </div>
