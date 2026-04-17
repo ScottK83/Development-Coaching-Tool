@@ -9,10 +9,10 @@
     // ============================================
     // CONSTANTS
     // ============================================
-    const STORAGE_PREFIX = 'devCoachingTool_';
-    const SENTIMENT_PHRASE_DB_STORAGE_KEY = 'sentimentPhraseDatabase';
-    const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = 'associateSentimentSnapshots';
-    const LOCALSTORAGE_MAX_SIZE_MB = 4;
+    const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+    const SENTIMENT_PHRASE_DB_STORAGE_KEY = window.DevCoachConstants?.SENTIMENT_PHRASE_DB_STORAGE_KEY || 'sentimentPhraseDatabase';
+    const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = window.DevCoachConstants?.ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY || 'associateSentimentSnapshots';
+    const LOCALSTORAGE_MAX_SIZE_MB = window.DevCoachConstants?.LOCALSTORAGE_MAX_SIZE_MB || 4;
 
     // ============================================
     // STORAGE HELPERS

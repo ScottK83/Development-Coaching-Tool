@@ -10,7 +10,7 @@
     // ============================================
     // CONSTANTS
     // ============================================
-    const STORAGE_PREFIX = 'devCoachingTool_';
+    const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
     const DEBUG_MAX_ENTRIES = 50;
     const DEBUG_LOG_STORAGE_KEY = STORAGE_PREFIX + 'debugLog';
 

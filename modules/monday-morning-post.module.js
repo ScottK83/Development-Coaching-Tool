@@ -7,7 +7,7 @@
 (function () {
     'use strict';
 
-    var STORAGE_PREFIX = 'devCoachingTool_';
+    var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
 
     // Metrics to skip in the team post (volume/cumulative, or redundant)
     var POST_SKIP_METRICS = { totalCalls: true, reliability: true, transfersCount: true };

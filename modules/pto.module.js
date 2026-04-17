@@ -6,7 +6,7 @@
 // ============================================
 
 var PTO_TRACKING_YEAR = 2026;
-var STORAGE_PREFIX = 'devCoachingTool_';
+var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
 var DEFAULT_ANNUAL_ALLOTMENT = 120;
 
 // TRC codes that count against PTO balance

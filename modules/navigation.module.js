@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var STORAGE_PREFIX = 'devCoachingTool_';
+    var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     var UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
 
     function showOnlySection(sectionId) {

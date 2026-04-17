@@ -37,9 +37,8 @@
 // ============================================
 const APP_VERSION = '2026.04.17.4'; // Version: YYYY.MM.DD.NN
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
-// NOTE: This prefix is also defined independently in repo-sync.module.js and other modules.
-// Future: export from a single shared-constants module to prevent divergence.
-const STORAGE_PREFIX = 'devCoachingTool_'; // Namespace for localStorage keys
+// Sourced from modules/constants.module.js (loaded first).
+const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
 
 // ============================================
 // ERROR HANDLING & SUPPRESSION
@@ -253,7 +252,7 @@ function saveWithSizeCheck(key, data) {
 // ============================================
 const TOP_PHRASES_COUNT = 5;
 const MIN_PHRASE_VALUE = 0;
-const LOCALSTORAGE_MAX_SIZE_MB = 4;
+const LOCALSTORAGE_MAX_SIZE_MB = window.DevCoachConstants?.LOCALSTORAGE_MAX_SIZE_MB || 4;
 const REGEX_TIMEOUT_MS = 100;
 const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
@@ -316,8 +315,8 @@ const SENTIMENT_UNUSED_SUGGESTIONS = 3;
 const SENTIMENT_MIN_PHRASES_FOR_BOTTOM = 5;
 const SENTIMENT_CUSTOMER_CONTEXT_COUNT = 3;
 const SENTIMENT_EMOTION_LOW_THRESHOLD = 5;
-const SENTIMENT_PHRASE_DB_STORAGE_KEY = 'sentimentPhraseDatabase';
-const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = 'associateSentimentSnapshots';
+const SENTIMENT_PHRASE_DB_STORAGE_KEY = window.DevCoachConstants?.SENTIMENT_PHRASE_DB_STORAGE_KEY || 'sentimentPhraseDatabase';
+const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = window.DevCoachConstants?.ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY || 'associateSentimentSnapshots';
 
 // ============================================
 // TARGET METRICS
