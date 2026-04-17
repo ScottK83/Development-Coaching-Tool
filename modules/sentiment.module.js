@@ -811,11 +811,12 @@
         debugLog(`📊 PARSE COMPLETE [fileType=${fileType}] - Percentages: callsDetected=${report.callsDetected}, totalCalls=${report.totalCalls}, percentage=${report.percentage}%, inKeywordsSection=${report.inKeywordsSection}`);
 
         if (report.percentage === 0) {
-            console.error(`⚠️ WARNING: ${fileType} percentage is 0. This might mean:`);
-            console.error(`   - No Interactions line was found in the file`);
-            console.error(`   - The regex didn't match the email format`);
-            console.error(`   - The Keywords section was never detected (inKeywordsSection=${report.inKeywordsSection})`);
-            console.error(`   - All ${allInteractionsMatches.length} Interactions matches were before keywords section`);
+            debugLog(`⚠️ WARNING: ${fileType} percentage is 0. Likely causes:`, {
+                noInteractionsLine: true,
+                regexMismatch: true,
+                keywordsSectionNotDetected: !report.inKeywordsSection,
+                interactionsBeforeKeywords: allInteractionsMatches.length
+            });
         }
     }
 
@@ -1101,9 +1102,6 @@
                 statusDiv.textContent = `❌ Error parsing file`;
                 statusDiv.style.color = '#f44336';
                 console.error('File parsing error:', error);
-                if (isEmotions) {
-                    console.error('🎭 MANAGING EMOTIONS ERROR:', error);
-                }
                 hideLoadingSpinner();
                 showToast(`❌ Failed to parse ${fileType} file: ${error.message}`, 5000);
             }
@@ -1216,11 +1214,15 @@
             return;
         }
 
-        // Calculate date range (14 days prior to pull date)
+        // Calculate date range (14 days prior to pull date).
+        // Parse YYYY-MM-DD manually so we stay in local time — using
+        // new Date(string) + toISOString() converts to UTC and can
+        // land a day early in non-UTC timezones.
         const endDate = pullDate;
-        const pullDateObj = new Date(pullDate);
+        const [py, pm, pd] = pullDate.split('-').map(Number);
+        const pullDateObj = new Date(py, pm - 1, pd);
         pullDateObj.setDate(pullDateObj.getDate() - 14);
-        const startDate = pullDateObj.toISOString().split('T')[0];
+        const startDate = `${pullDateObj.getFullYear()}-${String(pullDateObj.getMonth() + 1).padStart(2, '0')}-${String(pullDateObj.getDate()).padStart(2, '0')}`;
 
         // Initialize snapshot storage
         if (!associateSentimentSnapshots[associate]) {

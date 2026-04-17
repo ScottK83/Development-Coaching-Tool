@@ -45,6 +45,14 @@
         return x;
     }
 
+    // Parse YYYY-MM-DD as a local Date (avoids UTC day-shift).
+    function parseLocalDate(isoStr) {
+        if (!isoStr) return new Date(NaN);
+        const [y, m, d] = String(isoStr).split('-').map(Number);
+        if (!y || !m || !d) return new Date(NaN);
+        return new Date(y, m - 1, d);
+    }
+
     // Given today, compute the full list of upload options.
     //
     // The list is deterministic and doesn't yet know about upload
@@ -313,7 +321,7 @@
                 summaryEl.textContent = 'Pick which day this data is for.';
                 return;
             }
-            const d = new Date(day);
+            const d = parseLocalDate(day);
             summaryEl.style.display = 'block';
             summaryEl.textContent = `Will save as daily — ${fmtLong(d)}. (Ephemeral; cleared when a weekly upload covers this date.)`;
             return;
@@ -331,8 +339,8 @@
         const start = option.periodType === 'ytd'
             ? `${endDate.slice(0, 4)}-01-01`
             : option.startDate;
-        const startD = new Date(start);
-        const endD = new Date(endDate);
+        const startD = parseLocalDate(start);
+        const endD = parseLocalDate(endDate);
         summaryEl.style.display = 'block';
         summaryEl.textContent = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
     }
@@ -452,6 +460,7 @@
                 if (dailyPicker) dailyPicker.style.display = 'none';
                 applySelectionToHiddenInputs(option, ytdInput?.value || null);
                 updateSummary(summaryEl, option, ytdInput?.value || null);
+                if (ytdInput && !ytdInput.value) ytdInput.focus();
             } else if (option.requiresDailyDatePick) {
                 if (ytdPicker) ytdPicker.style.display = 'none';
                 if (dailyPicker) dailyPicker.style.display = 'block';
@@ -463,6 +472,7 @@
                 applySelectionToHiddenInputs(option, chosen);
                 updateSummary(summaryEl, option, chosen);
                 renderDailyWeekSummary(dailyWeekSummary, option.dailyUploadedDates);
+                if (dailyInput) dailyInput.focus();
             } else {
                 if (ytdPicker) ytdPicker.style.display = 'none';
                 if (dailyPicker) dailyPicker.style.display = 'none';

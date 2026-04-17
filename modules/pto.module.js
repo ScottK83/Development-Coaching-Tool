@@ -41,7 +41,9 @@ var currentPtoEmployee = '';
 
 function showToast(msg, ms) {
     if (typeof window.showToast === 'function') { window.showToast(msg, ms); return; }
-    console.log('[PTO]', msg);
+    // window.showToast is defined in script.js which loads after this module.
+    // If we hit the fallback, something loaded out of order — make it loud.
+    console.warn('[PTO] window.showToast unavailable — user-facing message dropped:', msg);
 }
 
 function escapeHtml(str) {
@@ -1217,7 +1219,7 @@ function initializePtoTracker() {
         select.dataset.bound = 'true';
     }
 
-    var pdfBtn = document.getElementById('ptoPdfBtn') || document.getElementById('showUploadPtoPdfBtn');
+    var pdfBtn = document.getElementById('showUploadPtoPdfBtn');
     var pdfInput = document.getElementById('ptoPdfInput');
     if (pdfBtn && pdfInput && !pdfBtn.dataset.bound) {
         pdfBtn.addEventListener('click', function() {

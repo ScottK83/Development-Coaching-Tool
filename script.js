@@ -1439,7 +1439,7 @@ function bindUploadAndPasteHandlers() {
         const files = Array.from(this.files || []);
         if (!files.length) return;
         let loaded = 0;
-        let errors = 0;
+        const failedFiles = [];
         for (let i = 0; i < files.length; i++) {
             try {
                 await window.DevCoachModules?.reliability?.handleVerintUpload?.(files[i]);
@@ -1450,16 +1450,16 @@ function bindUploadAndPasteHandlers() {
                     source: 'upload.verint',
                     fileName: files[i].name
                 });
-                errors++;
-                if (typeof showToast === 'function') {
-                    const msg = err?.message ? (': ' + err.message) : '';
-                    showToast('Failed ' + files[i].name + msg, 6000);
-                }
+                failedFiles.push({ name: files[i].name, reason: err?.message || 'unknown error' });
             }
         }
         if (typeof showToast === 'function') {
-            if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
-            else showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+            if (failedFiles.length) {
+                const lines = failedFiles.map(f => `• ${f.name} — ${f.reason}`).join('\n');
+                showToast(`${loaded} loaded, ${failedFiles.length} failed:\n${lines}`, 8000);
+            } else {
+                showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+            }
         }
         this.value = '';
     });
@@ -1477,7 +1477,7 @@ function bindUploadAndPasteHandlers() {
                 return;
             }
             let loaded = 0;
-            let errors = 0;
+            const failedFiles = [];
             for (let i = 0; i < files.length; i++) {
                 try {
                     await window.DevCoachModules.reliability.handlePayrollUpload(files[i]);
@@ -1488,12 +1488,16 @@ function bindUploadAndPasteHandlers() {
                         source: 'upload.payroll',
                         fileName: files[i].name
                     });
-                    errors++;
+                    failedFiles.push({ name: files[i].name, reason: err?.message || 'unknown error' });
                 }
             }
             if (typeof showToast === 'function') {
-                if (errors > 0) showToast(loaded + ' loaded, ' + errors + ' failed. Check console.', 5000);
-                else showToast(loaded + ' payroll file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+                if (failedFiles.length) {
+                    const lines = failedFiles.map(f => `• ${f.name} — ${f.reason}`).join('\n');
+                    showToast(`${loaded} loaded, ${failedFiles.length} failed:\n${lines}`, 8000);
+                } else {
+                    showToast(loaded + ' payroll file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
+                }
             }
         this.value = '';
     });
@@ -2649,6 +2653,8 @@ function handleTestPastedDataClick() {
         showToast(`✅ Test Upload passed for ${employees.length} employees (no data saved).`, 4500);
     } catch (error) {
         console.error('Error in test parse:', error);
+        const preview = document.getElementById('dataValidationPreview');
+        if (preview) preview.style.display = 'none';
         alert(`⚠️ Test Upload failed: ${error.message}\n\nNo data was saved.`);
     }
 }
