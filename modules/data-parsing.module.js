@@ -566,7 +566,7 @@
                 name: displayName,
                 firstName: firstName,
                 scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
-                cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)) || parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
+                cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
                 fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
                 overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
                 overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),

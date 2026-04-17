@@ -665,12 +665,22 @@
         });
     }
 
+    /**
+     * Reset the period selector so the next render re-picks the best YTD period.
+     * Call after new data uploads so rankings reflect the latest data.
+     */
+    function resetPeriodSelection() {
+        _rankingPeriodInitialized = false;
+        _selectedRankingPeriodKey = null;
+    }
+
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.centerRanking = {
         renderCenterRanking: renderCenterRanking,
         buildCenterRankings: buildCenterRankings,
-        buildRankingsForPeriod: buildRankingsForPeriod
+        buildRankingsForPeriod: buildRankingsForPeriod,
+        resetPeriodSelection: resetPeriodSelection
     };
 
     window.renderCenterRanking = renderCenterRanking;

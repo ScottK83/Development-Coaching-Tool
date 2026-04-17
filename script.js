@@ -1140,23 +1140,23 @@ window.saveEmployeePreferredName = function(fullName) {
 // and to simplify team roster updates.
 (function seedSupervisorTeams() {
     const seeds = [
-        { key: 'miranda_v2', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
-        { key: 'kathy_v2', supervisor: 'Kathy', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
-        { key: 'angie_v2', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
-        { key: 'sarah_v2', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gugora', 'Keshay', 'Aldo', 'Sophie', 'Holly', 'John', 'Pamela', 'Eilene', 'Trevor', 'Needra', 'Briana Z', 'Ekiecha'] },
-        { key: 'schnelle_v2', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie', 'Alexis', 'Caylie', 'Caitlyn', 'Jenifer Henson', 'Lily', 'Kimmy', 'Anissa', 'Monica Madden', 'Crystal Nez', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela', 'Michelle Weibrecht', 'Rachael Wilson'] },
-        { key: 'nicole_v2', supervisor: 'Nicole', agents: ['Amy', 'Jessica', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya Davis', 'Geralene', 'Dawanda', 'Shawn', 'Ashley', 'Cindy Robledo', 'Ebany', 'Monica Stringer', 'Brayden', 'Jereca'] },
-        { key: 'scott_v2', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
-        { key: 'angela_allison_v2', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
+        { key: 'miranda_v3', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
+        { key: 'kathy_v3', supervisor: 'Kathy', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
+        { key: 'angie_v3', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
+        { key: 'sarah_v3', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gugora', 'Keshay', 'Aldo', 'Sophie', 'Holly', 'John', 'Pamela', 'Eilene', 'Trevor', 'Needra', 'Briana Z', 'Ekiecha'] },
+        { key: 'schnelle_v3', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie', 'Alexis', 'Caylie', 'Caitlyn', 'Jenifer Henson', 'Lily', 'Kimmy', 'Anissa', 'Monica Madden', 'Crystal Nez', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela', 'Michelle Weibrecht', 'Rachael Wilson'] },
+        { key: 'nicole_v3', supervisor: 'Nicole', agents: ['Amy', 'Jessica', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya Davis', 'Geralene', 'Dawanda', 'Shawn', 'Ashley', 'Cindy Robledo', 'Ebany', 'Monica Stringer', 'Brayden', 'Jereca'] },
+        { key: 'scott_v3', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
+        { key: 'angela_allison_v3', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
     ];
     const needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
 
-    // v2 migration: clear old assignments for a clean re-seed
+    // v3 migration: clear old assignments for a clean re-seed
     let existing = {};
-    if (!localStorage.getItem('devCoachingTool_supervisorSeeded_v2_migration')) {
+    if (!localStorage.getItem('devCoachingTool_supervisorSeeded_v3_migration')) {
         localStorage.removeItem('devCoachingTool_employeeSupervisors');
-        localStorage.setItem('devCoachingTool_supervisorSeeded_v2_migration', '1');
+        localStorage.setItem('devCoachingTool_supervisorSeeded_v3_migration', '1');
     } else {
         try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
     }
@@ -2668,6 +2668,7 @@ function handleLoadPastedDataClick() {
         saveUploadMetricCoverage(employees);
         refreshUploadUndoBanner();
         refreshStorageQuotaWidget();
+        window.DevCoachModules?.centerRanking?.resetPeriodSelection?.();
 
         showOnlySection('uploadSection');
 
