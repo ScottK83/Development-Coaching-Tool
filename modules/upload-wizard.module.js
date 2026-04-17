@@ -3,17 +3,19 @@
 
     // ============================================
     // UPLOAD WIZARD MODULE
-    // Dropdown-driven upload period picker.
+    // Dropdown-driven upload period picker — the only path for
+    // choosing what period an upload covers. Computes a rolling list
+    // of sensible options from today's date (last completed week,
+    // this week in progress, last completed month, last completed
+    // quarter, YTD, daily) and annotates each with its upload state
+    // so the dropdown doubles as a to-do list: unselected = not yet
+    // uploaded.
     //
-    // Instead of asking the user to manually pick a period type and
-    // type in start/end dates, this module computes a rolling list of
-    // sensible options from today's date (last completed week, this
-    // week in progress, last completed month, last completed quarter,
-    // YTD) and annotates each with its upload state so the dropdown
-    // doubles as a to-do list: unselected = not yet uploaded.
-    //
-    // Selection is synced into the legacy period-type buttons and
-    // date inputs so the existing save path keeps working unchanged.
+    // Writes the user's selection to three hidden inputs in index.html:
+    //   #uploadPeriodType    — the period kind (week, ytd, daily, ...)
+    //   #pasteStartDate      — inclusive range start (YYYY-MM-DD)
+    //   #pasteWeekEndingDate — inclusive range end   (YYYY-MM-DD)
+    // The save path in script.js reads those three values.
     // ============================================
 
     const MS_PER_DAY = 86_400_000;
@@ -264,13 +266,14 @@
         selectEl.value = stillPending ? prev : '';
     }
 
-    // When the user picks an option, sync its dates + period type
-    // into the legacy hidden inputs and "click" the matching
-    // period-type button so the existing save path reads them.
-    function applySelectionToLegacyInputs(option, dateOverride) {
+    // Sync the selected option into the three hidden inputs that drive
+    // the save path: #uploadPeriodType, #pasteStartDate, #pasteWeekEndingDate.
+    function applySelectionToHiddenInputs(option, dateOverride) {
+        const typeInput = document.getElementById('uploadPeriodType');
         const startInput = document.getElementById('pasteStartDate');
         const endInput = document.getElementById('pasteWeekEndingDate');
         if (!option) {
+            if (typeInput) typeInput.value = '';
             if (startInput) startInput.value = '';
             if (endInput) endInput.value = '';
             return;
@@ -290,13 +293,9 @@
             startDate = option.startDate || '';
         }
 
+        if (typeInput) typeInput.value = option.periodType || '';
         if (startInput) startInput.value = startDate;
         if (endInput) endInput.value = endDate;
-
-        // Click the matching period-type button so resolveSelectedUploadPeriodType
-        // reads the right type. Buttons are hidden but still in the DOM.
-        const btn = document.querySelector(`.upload-period-btn[data-period="${option.periodType}"]`);
-        if (btn) btn.click();
     }
 
     function updateSummary(summaryEl, option, dateOverride) {
@@ -366,15 +365,6 @@
         summaryEl.textContent = `This week so far: ${parts.join(' · ')}`;
     }
 
-    function toggleCustomMode(on) {
-        const legacyBtns = document.getElementById('legacyPeriodControls');
-        const legacyDates = document.getElementById('legacyDateRow');
-        const wizard = document.getElementById('uploadWizardContainer');
-        if (legacyBtns) legacyBtns.style.display = on ? 'block' : 'none';
-        if (legacyDates) legacyDates.style.display = on ? 'flex' : 'none';
-        if (wizard) wizard.style.opacity = on ? '0.5' : '1';
-    }
-
     // Refresh the dropdown using current weeklyData / ytdData. Called
     // on initial render and whenever an upload completes (so the
     // dropdown instantly reflects the new upload state).
@@ -415,7 +405,7 @@
                 summaryEl.style.display = 'none';
                 summaryEl.textContent = '';
             }
-            applySelectionToLegacyInputs(null);
+            applySelectionToHiddenInputs(null);
         }
     }
 
@@ -430,8 +420,6 @@
         const dailyInput = document.getElementById('uploadWizardDailyDate');
         const dailyWeekSummary = document.getElementById('uploadWizardDailyWeekSummary');
         const summaryEl = document.getElementById('uploadWizardSummary');
-        const customToggle = document.getElementById('uploadWizardCustomToggle');
-
         refresh();
 
         function currentOptionFromDropdown() {
@@ -455,14 +443,14 @@
             if (!option) {
                 if (ytdPicker) ytdPicker.style.display = 'none';
                 if (dailyPicker) dailyPicker.style.display = 'none';
-                applySelectionToLegacyInputs(null);
+                applySelectionToHiddenInputs(null);
                 updateSummary(summaryEl, null);
                 return;
             }
             if (option.requiresEndDatePick) {
                 if (ytdPicker) ytdPicker.style.display = 'block';
                 if (dailyPicker) dailyPicker.style.display = 'none';
-                applySelectionToLegacyInputs(option, ytdInput?.value || null);
+                applySelectionToHiddenInputs(option, ytdInput?.value || null);
                 updateSummary(summaryEl, option, ytdInput?.value || null);
             } else if (option.requiresDailyDatePick) {
                 if (ytdPicker) ytdPicker.style.display = 'none';
@@ -472,13 +460,13 @@
                     dailyInput.value = option.defaultDate;
                 }
                 const chosen = dailyInput?.value || option.defaultDate || null;
-                applySelectionToLegacyInputs(option, chosen);
+                applySelectionToHiddenInputs(option, chosen);
                 updateSummary(summaryEl, option, chosen);
                 renderDailyWeekSummary(dailyWeekSummary, option.dailyUploadedDates);
             } else {
                 if (ytdPicker) ytdPicker.style.display = 'none';
                 if (dailyPicker) dailyPicker.style.display = 'none';
-                applySelectionToLegacyInputs(option);
+                applySelectionToHiddenInputs(option);
                 updateSummary(summaryEl, option);
             }
         });
@@ -487,7 +475,7 @@
             ytdInput.addEventListener('change', () => {
                 const option = currentOptionFromDropdown();
                 if (!option) return;
-                applySelectionToLegacyInputs(option, ytdInput.value);
+                applySelectionToHiddenInputs(option, ytdInput.value);
                 updateSummary(summaryEl, option, ytdInput.value);
             });
         }
@@ -496,19 +484,11 @@
             dailyInput.addEventListener('change', () => {
                 const option = currentOptionFromDropdown();
                 if (!option) return;
-                applySelectionToLegacyInputs(option, dailyInput.value);
+                applySelectionToHiddenInputs(option, dailyInput.value);
                 updateSummary(summaryEl, option, dailyInput.value);
             });
         }
 
-        if (customToggle) {
-            let customOn = false;
-            customToggle.addEventListener('click', () => {
-                customOn = !customOn;
-                toggleCustomMode(customOn);
-                customToggle.textContent = customOn ? 'Back to quick picker' : 'Need custom dates?';
-            });
-        }
     }
 
     // Public API

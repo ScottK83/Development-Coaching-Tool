@@ -95,23 +95,6 @@
                                 <div id="uploadWizardDailyWeekSummary" style="display: none; margin-top: 8px; padding: 6px 10px; background: #fff3e0; border-left: 3px solid #ff9800; border-radius: 4px; font-size: 0.82em; color: #5d4037;"></div>
                             </div>
                             <div id="uploadWizardSummary" style="display: none; margin-top: 10px; padding: 8px 12px; background: #e3f2fd; border-left: 3px solid #0d6efd; border-radius: 4px; font-size: 0.88em; color: #0d47a1;"></div>
-                            <div style="margin-top: 10px;">
-                                <button type="button" id="uploadWizardCustomToggle" style="background: none; border: none; color: #0d6efd; font-size: 0.85em; cursor: pointer; text-decoration: underline; padding: 0;">Need custom dates?</button>
-                            </div>
-                        </div>
-
-                        <!-- Legacy period-type controls: kept in the DOM for save-path compatibility, hidden by default. Surfaced via the wizard's "custom dates" escape hatch. -->
-                        <div id="legacyPeriodControls" style="display: none; margin-bottom: 15px;">
-                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Period Type: <span id="periodAutoDetectHint" style="font-weight: normal; color: #666; font-size: 0.85em;"></span></label>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button type="button" class="upload-period-btn" data-period="daily" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Daily</button>
-                                <button type="button" class="upload-period-btn" data-period="week" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Week</button>
-                                <button type="button" class="upload-period-btn" data-period="week-in-progress" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Week In Progress</button>
-                                <button type="button" class="upload-period-btn" data-period="month" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Month</button>
-                                <button type="button" class="upload-period-btn" data-period="quarter" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Quarter</button>
-                                <button type="button" class="upload-period-btn" data-period="ytd" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">YTD</button>
-                                <button type="button" class="upload-period-btn" data-period="custom" style="padding: 8px 16px; border: 2px solid #ddd; background: white; color: #666; border-radius: 4px; cursor: pointer;">Custom</button>
-                            </div>
                         </div>
 
                         <div style="margin-bottom: 15px;">
@@ -124,18 +107,10 @@
                             <div style="margin-top: 6px; color: #666; font-size: 0.85em;">Use this when uploading year-end data that should follow 2025 targets.</div>
                         </div>
 
-                        <div id="legacyDateRow" style="display: none; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px;">
-                            <div id="customStartDateContainer" style="flex: 1; min-width: 180px;">
-                                <label for="pasteStartDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">From (optional):</label>
-                                <input type="date" id="pasteStartDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                                <div style="margin-top: 4px; color: #999; font-size: 0.8em;">Leave blank for auto-detect</div>
-                            </div>
-                            <div style="flex: 1; min-width: 180px;">
-                                <label id="pasteWeekEndingLabel" for="pasteWeekEndingDate" style="font-size: 0.9em; font-weight: bold; display: block; margin-bottom: 5px;">Through:</label>
-                                <input type="date" id="pasteWeekEndingDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 1em;">
-                                <div id="pasteWeekEndingHint" style="margin-top: 4px; color: #999; font-size: 0.8em;">End date of the data</div>
-                            </div>
-                        </div>
+                        <!-- Hidden state written by upload-wizard.module.js and read by the save path in script.js. -->
+                        <input type="hidden" id="uploadPeriodType">
+                        <input type="hidden" id="pasteStartDate">
+                        <input type="hidden" id="pasteWeekEndingDate">
                         <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                             <button type="button" id="loadPastedDataBtn" class="btn-secondary" style="background: #28a745; color: white; padding: 10px 24px; white-space: nowrap; font-weight: bold; font-size: 1em;">📊 Load Data</button>
                             <button type="button" id="testPastedDataBtn" class="btn-secondary" style="background: #1565c0; color: white; padding: 10px 24px; white-space: nowrap; font-weight: bold; font-size: 1em;">🧪 Test Upload (No Save)</button>

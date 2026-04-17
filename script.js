@@ -105,7 +105,6 @@ let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
 let sentimentListenersAttached = false;
-let uploadPeriodManuallySelected = false;
 
 // ============================================
 // STORAGE HELPERS (defined early for guaranteed availability)
@@ -517,21 +516,6 @@ function showLoadingSpinner(message = 'Processing...') {
 function hideLoadingSpinner() {
     const spinner = document.getElementById('globalLoadingSpinner');
     if (spinner) spinner.remove();
-}
-
-function enableDatePickerOpen(input) {
-    if (!input) return;
-    const openPicker = () => {
-        if (typeof input.showPicker === 'function') {
-            try {
-                input.showPicker();
-            } catch (error) {
-                // Ignore if browser disallows programmatic picker
-            }
-        }
-    };
-    input.addEventListener('click', openPicker);
-    input.addEventListener('focus', openPicker);
 }
 
 // ============================================
@@ -1434,57 +1418,8 @@ function initializeEventHandlers() {
 // REFACTOR: ~140 lines — split into bindVerintHandlers(), bindPayrollHandlers(),
 // bindSentimentHandlers(), bindPasteHandlers().
 function bindUploadAndPasteHandlers() {
-    // Track whether the user has manually clicked a period button.
-    // When true, date-change auto-detection is suppressed.
-    uploadPeriodManuallySelected = false;
-
-    document.querySelectorAll('.upload-period-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // Mark as manual selection if this was a real user click (not programmatic)
-            if (e.isTrusted) uploadPeriodManuallySelected = true;
-            document.querySelectorAll('.upload-period-btn').forEach(button => {
-                if (button === btn) {
-                    button.style.background = '#28a745';
-                    button.style.borderColor = '#28a745';
-                    button.style.color = 'white';
-                } else {
-                    button.style.background = 'white';
-                    button.style.borderColor = '#ddd';
-                    button.style.color = '#666';
-                }
-            });
-            // Update date label based on period type
-            const period = btn.dataset.period;
-            const label = document.getElementById('pasteWeekEndingLabel');
-            const hint = document.getElementById('pasteWeekEndingHint');
-            const customStartContainer = document.getElementById('customStartDateContainer');
-            if (label && hint) {
-                // Show/hide custom start date picker
-                if (customStartContainer) {
-                    customStartContainer.style.display = period === 'custom' ? 'block' : 'none';
-                }
-                if (period === 'daily') {
-                    label.textContent = 'Date:';
-                    hint.textContent = 'Select the date for this daily data.';
-                } else if (period === 'week') {
-                    label.textContent = 'Week Ending (Sunday):';
-                    hint.textContent = 'Week runs Monday - Sunday';
-                } else if (period === 'month') {
-                    label.textContent = 'Month Ending Date:';
-                    hint.textContent = 'Last day of the month period.';
-                } else if (period === 'quarter') {
-                    label.textContent = 'Quarter Ending Date:';
-                    hint.textContent = 'Last day of the quarter period.';
-                } else if (period === 'ytd') {
-                    label.textContent = 'YTD Ending Date:';
-                    hint.textContent = 'Last day of the YTD period.';
-                } else if (period === 'custom') {
-                    label.textContent = 'End Date:';
-                    hint.textContent = 'Select your custom date range.';
-                }
-            }
-        });
-    });
+    // Period type is driven entirely by the upload wizard dropdown.
+    // It writes to the #uploadPeriodType hidden input; the save path reads it.
 
     document.getElementById('showUploadMetricsBtn')?.addEventListener('click', () => {
         const container = document.getElementById('pasteDataContainer');
@@ -1567,103 +1502,9 @@ function bindUploadAndPasteHandlers() {
     document.getElementById('pasteDataTextarea')?.addEventListener('input', handlePasteDataTextareaInput);
     document.getElementById('loadPastedDataBtn')?.addEventListener('click', handleLoadPastedDataClick);
     document.getElementById('testPastedDataBtn')?.addEventListener('click', handleTestPastedDataClick);
-    enableDatePickerOpen(document.getElementById('pasteWeekEndingDate'));
 
-    // Dropdown-driven upload wizard (replaces free-form period + date entry)
+    // Dropdown-driven upload wizard — owns period type and date selection.
     window.DevCoachModules?.uploadWizard?.bind?.();
-
-    // Auto-detect period type when either date changes
-    document.getElementById('pasteWeekEndingDate')?.addEventListener('change', autoDetectPeriodFromDates);
-    document.getElementById('pasteStartDate')?.addEventListener('change', autoDetectPeriodFromDates);
-}
-
-function autoDetectPeriodFromDates() {
-    const endDate = document.getElementById('pasteWeekEndingDate')?.value;
-    if (!endDate) {
-        updateDetectedBadge(null);
-        return;
-    }
-
-    // If the user manually clicked a period button, don't override their choice
-    if (uploadPeriodManuallySelected) {
-        return;
-    }
-
-    const startDate = document.getElementById('pasteStartDate')?.value;
-
-    // If both dates provided, use range detection
-    if (startDate) {
-        const detected = detectUploadPeriodTypeByRange(startDate, endDate);
-        selectPeriodButton(detected);
-        updateDetectedBadge(detected);
-        return;
-    }
-
-    // Single date — use heuristics
-    const endDateObj = new Date(endDate + 'T00:00:00');
-    const dayOfWeek = endDateObj.getDay();
-    const month = endDateObj.getMonth();
-    const day = endDateObj.getDate();
-    const year = endDateObj.getFullYear();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffFromToday = Math.round((today - endDateObj) / (1000 * 60 * 60 * 24));
-
-    // Sunday → week ending
-    if (dayOfWeek === 0) {
-        selectPeriodButton('week');
-        updateDetectedBadge('week');
-        return;
-    }
-
-    // End of month
-    const nextDay = new Date(year, month, day + 1);
-    if (nextDay.getMonth() !== month) {
-        if (QUARTER_END_MONTHS.has(month)) {
-            selectPeriodButton('quarter');
-            updateDetectedBadge('quarter');
-        } else {
-            selectPeriodButton('month');
-            updateDetectedBadge('month');
-        }
-        return;
-    }
-
-    // Recent date, past first week of month → likely YTD
-    if (diffFromToday <= 5 && diffFromToday >= -1 && day > 7) {
-        const jan1 = new Date(year, 0, 1);
-        const daysFromJan1 = Math.round((endDateObj - jan1) / (1000 * 60 * 60 * 24));
-        if (daysFromJan1 > 30) {
-            selectPeriodButton('ytd');
-            updateDetectedBadge('ytd');
-            return;
-        }
-    }
-
-    // Today/yesterday early in month → daily
-    if (diffFromToday >= 0 && diffFromToday <= 1 && day <= 7) {
-        selectPeriodButton('daily');
-        updateDetectedBadge('daily');
-        return;
-    }
-
-    // Fallback → week
-    selectPeriodButton('week');
-    updateDetectedBadge('week');
-}
-
-function selectPeriodButton(periodType) {
-    const btn = document.querySelector(`.upload-period-btn[data-period="${periodType}"]`);
-    if (btn) btn.click();
-}
-
-function updateDetectedBadge(periodType) {
-    const hint = document.getElementById('periodAutoDetectHint');
-    if (!hint) return;
-    if (!periodType) { hint.textContent = ''; return; }
-
-    const labels = { daily: 'Daily', week: 'Week', month: 'Month', quarter: 'Quarter', ytd: 'YTD', custom: 'Custom' };
-    hint.textContent = `(auto-detected: ${labels[periodType] || periodType})`;
 }
 
 function initializeDashboard() {
@@ -2070,15 +1911,11 @@ function detectUploadPeriodTypeByRange(startDate, endDate) {
 }
 
 function resolveSelectedUploadPeriodType(detectedPeriodType) {
-    // Respect the user's explicit selection — don't auto-override
-    const selectedBtn = document.querySelector('.upload-period-btn[style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[style*="background:#28a745"]');
-    if (selectedBtn) {
-        return selectedBtn.dataset.period;
-    }
-
-    // No button selected, use detection
-    return detectedPeriodType;
+    // Period type is owned by the upload wizard, written to the hidden
+    // #uploadPeriodType input. If nothing is selected (shouldn't happen
+    // via the UI but defensive anyway), fall back to range-based detection.
+    const selected = document.getElementById('uploadPeriodType')?.value;
+    return selected || detectedPeriodType;
 }
 
 function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEndProfile) {
@@ -2515,14 +2352,12 @@ function handleLoadPastedDataClick() {
 
     const endDate = weekEndingDate;
 
-    // Check which period type button is selected
-    const isSelected = (period) =>
-        !!(document.querySelector(`.upload-period-btn[data-period="${period}"][style*="background: rgb(40, 167, 69)"]`) ||
-           document.querySelector(`.upload-period-btn[data-period="${period}"][style*="background:#28a745"]`));
-    const isDailySelected = isSelected('daily');
-    const isCustomSelected = isSelected('custom');
-    const isYtdSelected = isSelected('ytd');
-    const isWeekInProgressSelected = isSelected('week-in-progress');
+    // Period type is set by the upload wizard dropdown (hidden input).
+    const selectedPeriodType = document.getElementById('uploadPeriodType')?.value || '';
+    const isDailySelected = selectedPeriodType === 'daily';
+    const isCustomSelected = selectedPeriodType === 'custom';
+    const isYtdSelected = selectedPeriodType === 'ytd';
+    const isWeekInProgressSelected = selectedPeriodType === 'week-in-progress';
 
     // Trust an explicit start date from the input whenever one is
     // present — the upload wizard populates this for every period
@@ -2692,7 +2527,6 @@ function handleLoadPastedDataClick() {
         document.getElementById('uploadSuccessMessage').style.display = 'block';
         renderUploadColumnInspector(employees, periodType);
         document.getElementById('pasteDataTextarea').value = '';
-        uploadPeriodManuallySelected = false; // Reset for next upload
 
         saveUploadMetricCoverage(employees);
         refreshUploadUndoBanner();
@@ -2731,9 +2565,7 @@ function handleTestPastedDataClick() {
     let endDate = weekEndingDate;
     let startDate = '';
 
-    const testDailyBtn = document.querySelector('.upload-period-btn[data-period="daily"][style*="background: rgb(40, 167, 69)"]') ||
-        document.querySelector('.upload-period-btn[data-period="daily"][style*="background:#28a745"]');
-    const isTestDaily = !!testDailyBtn;
+    const isTestDaily = (document.getElementById('uploadPeriodType')?.value || '') === 'daily';
 
     // Same rule as the real save path: if an explicit start date is
     // present (wizard or user), trust it. Only compute a fallback
