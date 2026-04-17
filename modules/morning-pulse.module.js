@@ -619,6 +619,35 @@
             .sort();
     }
 
+    // Returns { mondayIso, todayIso, yesterdayIso, dailyKeysThisWeek[] }.
+    // Daily keys are sorted ascending by end date. Empty array if no daily
+    // rows fall inside the current Monday..today window.
+    function getThisWeekDailyWindow() {
+        const daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const dow = now.getDay();
+        const daysBackToMon = dow === 0 ? 6 : dow - 1;
+        const monday = new Date(now);
+        monday.setDate(monday.getDate() - daysBackToMon);
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const iso = d => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+        const mondayIso = iso(monday);
+        const todayIso = iso(now);
+        const yesterdayIso = iso(yesterday);
+        const dailyKeysThisWeek = Object.keys(daily).filter(k => {
+            const end = daily[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+            return end && end >= mondayIso && end <= todayIso;
+        }).sort();
+        return { mondayIso, todayIso, yesterdayIso, dailyKeysThisWeek };
+    }
+
     function loadPulseSelection() {
         try {
             const raw = localStorage.getItem(PULSE_SELECTION_STORAGE_KEY);
@@ -1692,6 +1721,142 @@
 
     // --- Summary bar ---
 
+    // Per-rep daily check-in block: yesterday's six operational metrics and
+    // the week-to-date weighted rollup, computed from dailyData rows between
+    // this past Monday and today. Returns '' when there's no daily data
+    // for the current week (so Morning Pulse hides the whole section).
+    //
+    // Metrics are scoped to what's meaningful at single-day granularity:
+    // volume, AHT, adherence, and the three sentiment scores. Survey-based
+    // metrics (RepSat/FCR/OE) are intentionally left out — they need days
+    // of surveys to stabilize.
+    const DAILY_CHECKIN_METRICS = [
+        { key: 'totalCalls',        label: 'Volume',     reverse: false, weight: null },
+        { key: 'aht',               label: 'AHT',        reverse: true,  weight: 'totalCalls' },
+        { key: 'scheduleAdherence', label: 'Adherence',  reverse: false, weight: 'totalCalls' },
+        { key: 'positiveWord',      label: '+Word',      reverse: false, weight: 'totalCalls' },
+        { key: 'negativeWord',      label: 'Avoid Neg',  reverse: false, weight: 'totalCalls' },
+        { key: 'managingEmotions',  label: 'Emotions',   reverse: false, weight: 'totalCalls' }
+    ];
+
+    function formatDailyCell(metricKey, value) {
+        if (value === null || value === undefined || Number.isNaN(value)) return '<span style="color:#bdbdbd;">—</span>';
+        if (metricKey === 'totalCalls') return Math.round(value).toString();
+        return fmtVal(metricKey, value);
+    }
+
+    // Per-rep weighted rollup across a list of daily rows. Returns an object
+    // keyed by metric with the weighted mean (or simple sum for totalCalls).
+    function computeRepWtdFromDailies(dailyRows) {
+        const out = {};
+        DAILY_CHECKIN_METRICS.forEach(m => { out[m.key] = null; });
+        if (!dailyRows.length) return out;
+
+        DAILY_CHECKIN_METRICS.forEach(m => {
+            if (m.key === 'totalCalls') {
+                let sum = 0, found = false;
+                dailyRows.forEach(r => {
+                    const v = parseFloat(r[m.key]);
+                    if (Number.isFinite(v)) { sum += v; found = true; }
+                });
+                out[m.key] = found ? sum : null;
+                return;
+            }
+            let weighted = 0, totalWeight = 0;
+            dailyRows.forEach(r => {
+                const v = parseFloat(r[m.key]);
+                if (!Number.isFinite(v)) return;
+                let w = 1;
+                if (m.weight) {
+                    const wv = parseInt(r[m.weight], 10);
+                    w = Number.isInteger(wv) && wv > 0 ? wv : 0;
+                }
+                if (w <= 0) return;
+                weighted += v * w;
+                totalWeight += w;
+            });
+            out[m.key] = totalWeight > 0 ? weighted / totalWeight : null;
+        });
+        return out;
+    }
+
+    function buildDailyCheckinSection() {
+        const daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        const { yesterdayIso, dailyKeysThisWeek } = getThisWeekDailyWindow();
+        if (!dailyKeysThisWeek.length) return '';
+
+        // Build per-rep map: name -> { yesterday: emp|null, weekRows: emp[] }.
+        const repMap = new Map();
+        dailyKeysThisWeek.forEach(k => {
+            const end = daily[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+            (daily[k]?.employees || []).forEach(emp => {
+                if (!emp?.name) return;
+                if (!repMap.has(emp.name)) repMap.set(emp.name, { yesterday: null, weekRows: [] });
+                const entry = repMap.get(emp.name);
+                entry.weekRows.push(emp);
+                if (end === yesterdayIso) entry.yesterday = emp;
+            });
+        });
+
+        // Filter by current team selection.
+        const ctx = typeof getTeamSelectionContext === 'function' ? getTeamSelectionContext() : null;
+        const reps = Array.from(repMap.keys())
+            .filter(name => typeof isAssociateIncludedByTeamFilter === 'function'
+                ? isAssociateIncludedByTeamFilter(name, ctx)
+                : true)
+            .sort((a, b) => a.localeCompare(b));
+        if (!reps.length) return '';
+
+        // Build the section header.
+        const yesterdayLabel = new Date(yesterdayIso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        const uploadedCount = dailyKeysThisWeek.length;
+        const header = `<div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;">` +
+            `<div>` +
+                `<h4 style="margin:0; color:#1a237e; font-size:1.05em;">📅 Daily Check-in</h4>` +
+                `<div style="font-size:0.85em; color:#666; margin-top:2px;">Yesterday (${yesterdayLabel}) + week-to-date weighted rollup · ${uploadedCount} day${uploadedCount === 1 ? '' : 's'} uploaded this week · ${reps.length} rep${reps.length === 1 ? '' : 's'}</div>` +
+            `</div>` +
+        `</div>`;
+
+        // Build the metric-column header row.
+        const metricHeaders = DAILY_CHECKIN_METRICS.map(m =>
+            `<th colspan="2" style="padding:6px 8px; font-size:0.78em; color:#475569; text-align:center; border-bottom:1px solid #e0e7ff;">${m.label}</th>`
+        ).join('');
+        const subHeaders = DAILY_CHECKIN_METRICS.map(() =>
+            `<th style="padding:4px 8px; font-size:0.72em; color:#94a3b8; font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">yest</th>` +
+            `<th style="padding:4px 8px; font-size:0.72em; color:#94a3b8; font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">WTD</th>`
+        ).join('');
+
+        // Build per-rep rows.
+        const rows = reps.map(name => {
+            const entry = repMap.get(name);
+            const wtd = computeRepWtdFromDailies(entry.weekRows);
+            const yest = entry.yesterday || {};
+            const cells = DAILY_CHECKIN_METRICS.map(m => {
+                const yVal = parseFloat(yest[m.key]);
+                const wVal = wtd[m.key];
+                const yCell = formatDailyCell(m.key, Number.isFinite(yVal) ? yVal : null);
+                const wCell = formatDailyCell(m.key, wVal);
+                return `<td style="padding:6px 8px; text-align:right; font-size:0.88em; color:#334155;">${yCell}</td>` +
+                       `<td style="padding:6px 8px; text-align:right; font-size:0.88em; font-weight:600; color:#1e293b;">${wCell}</td>`;
+            }).join('');
+            const safeName = typeof escapeHtml === 'function' ? escapeHtml(name) : name;
+            return `<tr><td style="padding:6px 10px; font-weight:600; color:#1a237e; border-bottom:1px solid #f1f5f9; white-space:nowrap;">${safeName}</td>${cells}</tr>`;
+        }).join('');
+
+        return `<div style="margin-bottom:20px; padding:14px 16px; background:#fff; border:1px solid #e0e7ff; border-radius:10px;">` +
+            header +
+            `<div style="overflow-x:auto;">` +
+                `<table style="width:100%; border-collapse:collapse; min-width:640px;">` +
+                    `<thead>` +
+                        `<tr><th style="padding:6px 10px;"></th>${metricHeaders}</tr>` +
+                        `<tr><th></th>${subHeaders}</tr>` +
+                    `</thead>` +
+                    `<tbody>${rows}</tbody>` +
+                `</table>` +
+            `</div>` +
+        `</div>`;
+    }
+
     function buildSummaryBar(cardData, numUploads, periodType, hasComparison) {
         const counts = { red: 0, yellow: 0, green: 0, blue: 0, gray: 0 };
         cardData.forEach(d => {
@@ -2096,6 +2261,14 @@
 
         // Summary bar
         html += buildSummaryBar(cardData, allRecentKeys.length, periodType, Boolean(baselineKey));
+
+        // Daily check-in (shown only when periodType === 'week' and dailies
+        // have been uploaded this week). Sits between the team summary and
+        // the per-rep card grid so reps who need a "yesterday" nudge are
+        // surfaced before the full weekly drill-down.
+        if (periodType === 'week') {
+            html += buildDailyCheckinSection();
+        }
 
         // Card grid
         html += `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px;">`;
