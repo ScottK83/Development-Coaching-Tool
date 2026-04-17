@@ -622,8 +622,6 @@
         html += '<th class="rank-sort-header" data-sort="sentiment" style="' + thStyle + '">Sent' + arrow('sentiment') + '</th>';
         html += '<th class="rank-sort-header" data-sort="associateOverall" style="' + thStyle + '">CX Adv' + arrow('associateOverall') + '</th>';
         html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Rel' + arrow('reliability') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="kpiRankTotal" style="' + thStyle + '">Rank Tot' + arrow('kpiRankTotal') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="tiebreaker" style="' + thStyle + '">TB' + arrow('tiebreaker') + '</th>';
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r, idx) {
@@ -639,7 +637,7 @@
             if (r.trackStatusValue === 'on-track-exceptional') {
                 statusColor = '#006100'; statusBg = '#C6EFCE'; statusText = 'Exceptional';
             } else if (r.trackStatusValue === 'on-track-successful') {
-                statusColor = ''; statusBg = ''; statusText = 'Successful';
+                statusColor = '#1F4E79'; statusBg = '#D6E4F0'; statusText = 'Successful';
             } else {
                 statusColor = '#9C0006'; statusBg = '#FFC7CE'; statusText = 'Off Track';
             }
@@ -684,11 +682,7 @@
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + scoreColor(Math.round(r.kpiScore)) + ';">' + r.kpiScore.toFixed(1) + '</td>';
 
             // Status badge
-            if (statusBg) {
-                html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: ' + statusColor + '; background: ' + statusBg + ';">' + statusText + '</span></td>';
-            } else {
-                html += '<td style="padding: 4px 3px; text-align: center;"><span style="font-size: 0.72em; font-weight: bold;">' + statusText + '</span></td>';
-            }
+            html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: ' + statusColor + '; background: ' + statusBg + ';">' + statusText + '</span></td>';
 
             // Individual metric cells
             var metricPairs = [
@@ -714,12 +708,6 @@
                 html += '<td style="padding: 4px 3px; text-align: center; color: ' + cellColor + '; white-space: nowrap;">' +
                     scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankTextColor + ';">#' + metricRank + '</span></td>';
             });
-
-            // KPI Rank Total
-            html += '<td style="padding: 4px 3px; text-align: center;">' + r.kpiRankTotal + '</td>';
-
-            // Tiebreaker
-            html += '<td style="padding: 4px 3px; text-align: center;">' + r.tiebreaker.toFixed(3) + '</td>';
 
             html += '</tr>';
         });
