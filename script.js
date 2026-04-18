@@ -1509,6 +1509,51 @@ function bindUploadAndPasteHandlers() {
 
     // Dropdown-driven upload wizard — owns period type and date selection.
     window.DevCoachModules?.uploadWizard?.bind?.();
+
+    // Two year-end year inputs live on different pages but should agree:
+    //   #uploadYearEndProfile (Upload page select: auto/2025/2026)
+    //   #yearEndReviewYear    (Review Prep > Year-End: number input)
+    bindYearEndProfileSync();
+}
+
+const YEAR_END_PROFILE_STORAGE_KEY = STORAGE_PREFIX + 'selectedYearEndYear';
+
+function bindYearEndProfileSync() {
+    const profileSelect = document.getElementById('uploadYearEndProfile');
+    const reviewYearInput = document.getElementById('yearEndReviewYear');
+    if (!profileSelect && !reviewYearInput) return;
+
+    // Restore last-set year on load. 'auto' means "infer from end date" and
+    // is not a value we persist for the year input.
+    let stored = '';
+    try { stored = localStorage.getItem(YEAR_END_PROFILE_STORAGE_KEY) || ''; } catch (_e) {}
+    if (stored && /^\d{4}$/.test(stored)) {
+        if (profileSelect && Array.from(profileSelect.options).some(o => o.value === stored)) {
+            profileSelect.value = stored;
+        }
+        if (reviewYearInput && !reviewYearInput.value) {
+            reviewYearInput.value = stored;
+        }
+    }
+
+    if (profileSelect) {
+        profileSelect.addEventListener('change', () => {
+            const val = (profileSelect.value || '').trim();
+            if (val === 'auto') return; // don't overwrite a user-typed review year
+            if (reviewYearInput) reviewYearInput.value = val;
+            try { localStorage.setItem(YEAR_END_PROFILE_STORAGE_KEY, val); } catch (_e) {}
+        });
+    }
+    if (reviewYearInput) {
+        reviewYearInput.addEventListener('change', () => {
+            const val = (reviewYearInput.value || '').trim();
+            if (!/^\d{4}$/.test(val)) return;
+            if (profileSelect && Array.from(profileSelect.options).some(o => o.value === val)) {
+                profileSelect.value = val;
+            }
+            try { localStorage.setItem(YEAR_END_PROFILE_STORAGE_KEY, val); } catch (_e) {}
+        });
+    }
 }
 
 function initializeDashboard() {
@@ -2436,8 +2481,9 @@ function handleLoadPastedDataClick() {
         if (existingData && existingData.employees && existingData.employees.length > 0) {
             const existingCount = existingData.employees.length;
             const newCount = employees.length;
-            // Check which metrics the new upload has that old didn't, and vice versa
-            const metricKeys = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+            // Check which metrics the new upload has that old didn't, and vice versa.
+            // Same metric set used by drift detection (DRIFT_METRIC_KEYS).
+            const metricKeys = DRIFT_METRIC_KEYS;
             const metricLabels = { scheduleAdherence: 'Adherence', cxRepOverall: 'RepSat', fcr: 'FCR', overallExperience: 'OE', transfers: 'Transfers', aht: 'AHT', overallSentiment: 'Sentiment', positiveWord: '+Word', negativeWord: '-Word', managingEmotions: 'Emotions', reliability: 'Reliability' };
             const hasData = (emps, key) => emps.some(e => e[key] !== '' && e[key] !== 0 && e[key] !== null && e[key] !== undefined);
             const oldHas = metricKeys.filter(k => hasData(existingData.employees, k));

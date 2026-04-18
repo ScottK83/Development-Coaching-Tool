@@ -1142,6 +1142,25 @@
 
         modal.style.display = 'flex';
 
+        // Disable submit until associate + pull date are populated.
+        const submitBtn = document.getElementById('sentimentUploadSubmitBtn');
+        const associateSelect = document.getElementById('sentimentUploadAssociate');
+        const pullDateInput = document.getElementById('sentimentUploadPullDate');
+        const updateSubmitState = () => {
+            if (!submitBtn) return;
+            const ready = !!associateSelect?.value && !!pullDateInput?.value;
+            submitBtn.disabled = !ready;
+            submitBtn.style.opacity = ready ? '1' : '0.55';
+            submitBtn.style.cursor = ready ? 'pointer' : 'not-allowed';
+        };
+        if (submitBtn && !submitBtn.dataset.gateBound) {
+            submitBtn.dataset.gateBound = 'true';
+            associateSelect?.addEventListener('change', updateSubmitState);
+            pullDateInput?.addEventListener('change', updateSubmitState);
+            pullDateInput?.addEventListener('input', updateSubmitState);
+        }
+        updateSubmitState();
+
         // Close on overlay click (outside modal content)
         if (!modal.dataset.overlayBound) {
             modal.addEventListener('click', function(e) {
@@ -1220,9 +1239,8 @@
         // land a day early in non-UTC timezones.
         const endDate = pullDate;
         const [py, pm, pd] = pullDate.split('-').map(Number);
-        const pullDateObj = new Date(py, pm - 1, pd);
-        pullDateObj.setDate(pullDateObj.getDate() - 14);
-        const startDate = `${pullDateObj.getFullYear()}-${String(pullDateObj.getMonth() + 1).padStart(2, '0')}-${String(pullDateObj.getDate()).padStart(2, '0')}`;
+        const start = new Date(py, pm - 1, pd - 14);
+        const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
 
         // Initialize snapshot storage
         if (!associateSentimentSnapshots[associate]) {

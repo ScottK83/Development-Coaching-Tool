@@ -122,15 +122,26 @@ Severity: 🔴 real bug / risk · 🟠 rot / tech debt · 🟡 minor cleanup · 
 
 ## Summary
 
-| Severity | Count | IDs |
+## Summary — Session 2 closed
+
+Operator decisions:
+- **U-8** — delete the legacy block (uploads happen day-by-day via wizard)
+- **U-13** — sync the two year-end selectors
+
+Executed in batches:
+
+| Batch | Findings | Commit |
 |---|---|---|
-| 🔴 Real bugs / risks | 6 | U-1 through U-6 |
-| 🟠 Dead code / rot | 5 | U-7 through U-11 |
-| 🟠 Tech debt | 2 | U-12, U-13 |
-| 🟡 Minor cleanup | 6 | U-14 through U-19 |
+| A | U-3, U-8 (legacy period controls deleted, period-type now reads hidden input) | `78f23a19` |
+| B | U-1, U-2, U-4, U-5, U-6, U-7, U-14, U-15, U-17, U-19 | `fdc543d0` |
+| C | U-10 (partial), U-13, U-16, U-18 | this commit |
 
-Two items need your judgment call before I proceed:
-- **U-8** — is "Need custom dates?" still a workflow you use? If not, we delete a whole block.
-- **U-13** — should the two year-end profile selectors be linked, or kept independent on purpose?
+**Verified, no fix needed:**
+- **U-11** — `saveWeeklyData()` + `saveYtdData()` after a non-daily upload are both required; `upsertAutoYtdForYear` may have mutated `ytdData` independently of weekly. The two `localStorage.setItem` calls debounce to a single repo-sync request via SYNC_DEBOUNCE_MS.
 
-Everything else I can fix batched like Session 1. Say the word and I'll kick off.
+**Deferred to later sessions:**
+- **U-9** — extracting the shared date-range logic between `handleLoadPastedDataClick` and `handleTestPastedDataClick` would be a real refactor (different validation rules, different defaults). Risk of regression exceeds value at this point.
+- **U-10 (rest)** — script.js has 14+ different metric arrays across the file, not just 3 in upload code. Consolidating beyond DRIFT_METRIC_KEYS would be a cross-cutting refactor — left for Session 7.
+- **U-12** — splitting the sentiment upload UI/parse layer is a meaningful refactor of a working flow. Deferred to Session 7.
+
+Ready for Session 3 (My Team — Morning Pulse, Coaching, Snapshot, Call Listening, Attendance) when you are.
