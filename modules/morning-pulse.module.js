@@ -1381,7 +1381,7 @@
                 label: focalLabel,
                 value: focalValue,
                 target: focalTarget,
-                setDate: new Date().toISOString().slice(0, 10)
+                setDate: window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().slice(0, 10)
             };
             localStorage.setItem(FOCAL_STORAGE_KEY, JSON.stringify(all));
         } catch (e) { /* storage full or unavailable */ }

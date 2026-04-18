@@ -1594,8 +1594,9 @@ function bindNavigationHandlers() {
         if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
     document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
+        // Celebrations init happens on the My Team button (above) — subnav clicks
+        // are navigation-only since the module is already bound.
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
-        if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
     document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');
@@ -7031,121 +7032,8 @@ async function bootAppSafely() {
 // Uses latest uploaded data + coaching tips bank to build a Copilot prompt
 // -----------------------------------------------------------------------------
 
-function getLatestWeekKeyForCoaching() {
-    var mod = window.DevCoachModules?.coachingEmail;
-    return mod?.getLatestWeekKeyForCoaching ? mod.getLatestWeekKeyForCoaching() : null;
-}
-
-function resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn) {
-    status.style.display = 'none';
-    panel.style.display = 'none';
-    promptArea.value = '';
-
-    if (outlookSection && outlookBody && outlookBtn) {
-        outlookSection.style.display = 'none';
-        outlookBody.value = '';
-        outlookBtn.disabled = true;
-        outlookBtn.style.opacity = '0.6';
-        outlookBtn.style.cursor = 'not-allowed';
-    }
-
-    select.innerHTML = '<option value="">-- Choose an associate --</option>';
-}
-
-function populateCoachingEmployeeSelectOptions(select, employees) {
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    });
-}
-
-function getCoachingLatestPeriodEmployees(coachingWeekKey) {
-    const latestWeek = weeklyData[coachingWeekKey] || ytdData[coachingWeekKey];
-    const teamFilterContext = getTeamSelectionContext();
-    const employees = (latestWeek.employees || [])
-        .filter(emp => emp && emp.name)
-        .filter(emp => isAssociateIncludedByTeamFilter(emp.name, teamFilterContext))
-        .map(emp => emp.name)
-        .sort();
-
-    return { latestWeek, employees };
-}
-
-function setCoachingLatestPeriodStatus(status, coachingWeekKey, latestWeek) {
-    const periodType = latestWeek?.metadata?.periodType || 'week';
-    const label = latestWeek?.metadata?.label;
-    if (label) {
-        status.textContent = `Using latest period: ${label}`;
-    } else {
-        const endDate = latestWeek?.metadata?.endDate
-            ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-            : (coachingWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingWeekKey.split('|')[1]) : coachingWeekKey);
-        const prefix = periodType === 'ytd' ? 'YTD through' : periodType === 'month' ? 'Month of' : 'Week of';
-        status.textContent = `Using latest period: ${prefix} ${endDate}`;
-    }
-    status.style.display = 'block';
-}
-
-function bindCoachingOutlookInputState(outlookBody, outlookBtn) {
-    if (!outlookBody || !outlookBtn) return;
-    bindElementOnce(outlookBody, 'input', (e) => {
-        const hasContent = e.target.value.trim().length > 0;
-        outlookBtn.disabled = !hasContent;
-        outlookBtn.style.opacity = hasContent ? '1' : '0.6';
-        outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-    });
-}
-
-function bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn) {
-    const deleteLatestBtn = document.getElementById('deleteLatestCoachingBtn');
-    const clearHistoryBtn = document.getElementById('clearCoachingHistoryBtn');
-
-    bindElementOnce(select, 'change', updateCoachingEmailDisplay);
-    bindElementOnce(generateBtn, 'click', generateCoachingPromptAndCopy);
-    bindElementOnce(deleteLatestBtn, 'click', deleteLatestCoachingEntry);
-    bindElementOnce(clearHistoryBtn, 'click', clearCoachingHistoryForEmployee);
-    bindElementOnce(outlookBtn, 'click', generateOutlookEmailFromCoPilot);
-}
-
 function initializeCoachingEmail() {
-    var mod = window.DevCoachModules?.coachingEmail;
-    if (mod?.initializeCoachingEmail) return mod.initializeCoachingEmail();
-
-    const select = document.getElementById('coachingEmployeeSelect');
-    const status = document.getElementById('coachingEmailStatus');
-    const panel = document.getElementById('coachingMetricsPanel');
-    const promptArea = document.getElementById('coachingPromptArea');
-    const generateBtn = document.getElementById('generateCoachingPromptBtn');
-    const outlookSection = document.getElementById('coachingOutlookSection');
-    const outlookBody = document.getElementById('coachingOutlookBody');
-    const outlookBtn = document.getElementById('generateOutlookEmailBtn');
-
-    if (!select || !status || !panel || !promptArea || !generateBtn) return;
-
-    resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn);
-
-    const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-    if ((!weeklyData || Object.keys(weeklyData).length === 0) && Object.keys(ytd).length === 0) {
-        status.textContent = 'No data available. Upload data first to generate coaching emails.';
-        status.style.display = 'block';
-        return;
-    }
-
-    coachingLatestWeekKey = getLatestWeekKeyForCoaching();
-    if (!coachingLatestWeekKey || !(weeklyData[coachingLatestWeekKey] || ytd[coachingLatestWeekKey])) {
-        status.textContent = 'Unable to find the latest data period.';
-        status.style.display = 'block';
-        return;
-    }
-
-    const { latestWeek, employees } = getCoachingLatestPeriodEmployees(coachingLatestWeekKey);
-    populateCoachingEmployeeSelectOptions(select, employees);
-    setCoachingLatestPeriodStatus(status, coachingLatestWeekKey, latestWeek);
-    bindCoachingOutlookInputState(outlookBody, outlookBtn);
-    bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn);
-    bindQuickCheckinHandlers();
+    return window.DevCoachModules?.coachingEmail?.initializeCoachingEmail?.();
 }
 
 // ============================================

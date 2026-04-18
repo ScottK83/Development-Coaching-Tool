@@ -84,14 +84,24 @@ Severity: 🔴 real bug / risk · 🟠 rot / tech debt · 🟡 minor cleanup · 
 
 ---
 
-## Summary
+## Summary — Session 3 closed
 
-| Severity | Count | IDs |
+Operator: "fix all". Worked through findings, verified or applied each.
+
+| Finding | Status | Notes |
 |---|---|---|
-| 🔴 Real bugs / risks | 4 | T-1 through T-4 |
-| 🟠 Rot / duplication | 3 | T-5, T-6, T-7 |
-| 🟡 Minor cleanup | 4 | T-8, T-9, T-10, T-11 (deferred) |
+| T-1 reliability double-binding | ❌ false alarm | `container.innerHTML = html` rewrites the panel each render, killing old listeners. No fix needed. |
+| T-2 UTC date drift in 4 modules | ✅ fixed | Added `formatLocalDate()` to shared-utils, replaced 4 callers. |
+| T-3 morning-pulse 19 click bindings | ❌ false alarm | Same pattern — `container.innerHTML = html` at :2283 wipes children before re-binding. |
+| T-4 `initializeCelebrations` called twice | ✅ fixed | Removed the redundant call from the Morning Pulse subnav handler. |
+| T-5 coaching-email duplicate fallback | ✅ fixed | Deleted the fallback + 7 dead helper functions in script.js (~100 lines). |
+| T-6 team-snapshot reads from localStorage | ✅ fixed | Now prefers `window.weeklyData/ytdData/myTeamMembers` (in-memory canonical) with storage fallback. |
+| T-7 reliability dead storage fallback | ✅ fixed | Storage module is foundation-tier and always available — fallback deleted. |
+| T-8 morning-pulse + celebrations direct localStorage | ⏸ skipped | Payloads are tiny (selection lists, threshold) — saveWithSizeCheck cap is irrelevant. Not real risk. |
+| T-9 navigation `btn.click()` pattern | ❌ false alarm | The simulated click triggers per-subnav init handlers. Replacing with direct display calls would lose those side effects. |
+| T-10 reliability tab state | ✅ fixed | Persisted to `container.dataset.activeTab`, restored on re-render. |
+| T-11 call-listening shell | Deferred | Session 7 cross-cutting cleanup. |
 
-**Most impactful:** T-1 (reliability double-binding — real risk of duplicate sends), T-2 (UTC date drift in 4 modules — affects "today" logic across timezone boundaries).
+**Lesson learned:** the explore-agent flagged 3 false positives (T-1, T-3, T-9) by missing patterns: `innerHTML =` wipes children, and `btn.click()` is intentional indirection. Verification before fixing saved the rewrites.
 
-Mark `[KEEP]` or `[FIX]` next to each decision line when ready. Or just say "fix all" — same workflow as Sessions 1 & 2.
+Ready for Session 4 (Trends — Intelligence, Charts, Rankings, Futures, Sentiment) when you are.

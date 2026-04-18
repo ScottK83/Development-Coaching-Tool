@@ -83,30 +83,21 @@
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
+    // Prefer in-memory globals (canonical, mutated synchronously by upload + delete
+    // flows). Fall back to storage module if the globals aren't bound yet.
     function getWeeklyData() {
-        // Try the live global first, fall back to loading from storage
-        var storage = window.DevCoachModules?.storage;
-        if (storage?.loadWeeklyData) return storage.loadWeeklyData();
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
-            return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
+        if (typeof window.weeklyData === 'object' && window.weeklyData) return window.weeklyData;
+        return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     }
 
     function getYtdData() {
-        var storage = window.DevCoachModules?.storage;
-        if (storage?.loadYtdData) return storage.loadYtdData();
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
-            return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
+        if (typeof window.ytdData === 'object' && window.ytdData) return window.ytdData;
+        return window.DevCoachModules?.storage?.loadYtdData?.() || {};
     }
 
     function getMyTeamMembers() {
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
-            return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
+        if (typeof window.myTeamMembers === 'object' && window.myTeamMembers) return window.myTeamMembers;
+        return window.DevCoachModules?.storage?.loadTeamMembers?.() || {};
     }
 
     // ============================================

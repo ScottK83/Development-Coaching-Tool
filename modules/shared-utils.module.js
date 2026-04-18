@@ -42,6 +42,24 @@
     }
 
     /**
+     * Format a Date as YYYY-MM-DD in the local timezone.
+     * Using `.toISOString().slice(0, 10)` returns the UTC date, which
+     * drifts into tomorrow for any local time past UTC-midnight —
+     * so "today" can appear as tomorrow's date. This helper always
+     * returns the calendar date the user is actually in.
+     * @param {Date} [date]
+     * @returns {string}
+     */
+    function formatLocalDate(date = new Date()) {
+        const d = (date instanceof Date) ? date : new Date(date);
+        if (Number.isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    /**
      * Get the configured CC email address for coaching emails
      */
     function getCoachingCcEmail() {
@@ -75,6 +93,7 @@
         toNonEmptyString,
         joinWithConjunction,
         escapeHtml,
+        formatLocalDate,
         openMailtoDraft,
         getCoachingCcEmail
     };

@@ -12,18 +12,11 @@
     // ============================================
 
     function loadStore() {
-        var mod = window.DevCoachModules?.storage;
-        if (mod?.loadReliabilityTracker) return mod.loadReliabilityTracker();
-        try {
-            var saved = localStorage.getItem('devCoachingTool_' + STORAGE_KEY);
-            return saved ? JSON.parse(saved) : { employees: {} };
-        } catch (e) { return { employees: {} }; }
+        return window.DevCoachModules.storage.loadReliabilityTracker();
     }
 
     function saveStore(store) {
-        var mod = window.DevCoachModules?.storage;
-        if (mod?.saveReliabilityTracker) return mod.saveReliabilityTracker(store);
-        try { localStorage.setItem('devCoachingTool_' + STORAGE_KEY, JSON.stringify(store)); } catch (e) { console.error('Reliability save error:', e); }
+        return window.DevCoachModules.storage.saveReliabilityTracker(store);
     }
 
     // ============================================
@@ -474,7 +467,7 @@
         var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
-        var stamp = new Date().toISOString().slice(0, 10);
+        var stamp = window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().slice(0, 10);
         a.href = url;
         a.download = 'reliability-actions-' + getFirstName(employeeName).toLowerCase() + '-' + stamp + '.csv';
         document.body.appendChild(a);
@@ -2162,7 +2155,8 @@
 
         container.innerHTML = html;
 
-        // Tab toggle: Discrepancies (default) / Classic
+        // Tab toggle: Discrepancies (default) / Classic. Persist on container
+        // dataset so re-rendering the same employee preserves the user's tab.
         function setTab(which) {
             var discBtn = document.getElementById('relTabDisc');
             var classicBtn = document.getElementById('relTabClassic');
@@ -2175,9 +2169,11 @@
             inactive.style.background = '#eceff1'; inactive.style.color = '#455a64';
             discView.style.display = which === 'classic' ? 'none' : '';
             classicWrap.style.display = which === 'classic' ? '' : 'none';
+            container.dataset.activeTab = which;
         }
         document.getElementById('relTabDisc')?.addEventListener('click', function() { setTab('disc'); });
         document.getElementById('relTabClassic')?.addEventListener('click', function() { setTab('classic'); });
+        if (container.dataset.activeTab === 'classic') setTab('classic');
 
         // Wire the Discrepancy view's action buttons to reuse Classic view handlers
         document.getElementById('relDiscCopySummary')?.addEventListener('click', function() {

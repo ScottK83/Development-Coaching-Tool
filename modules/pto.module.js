@@ -1080,7 +1080,7 @@ function showAddEntryForm() {
     if (!container) return;
     if (document.getElementById('ptoAddEntryForm')) return;
 
-    var today = new Date().toISOString().slice(0, 10);
+    var today = window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().slice(0, 10);
     var form = document.createElement('div');
     form.id = 'ptoAddEntryForm';
     form.style.cssText = 'padding:12px 16px;background:#f8f0ff;border:1px solid #d0b8e8;border-radius:8px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;';

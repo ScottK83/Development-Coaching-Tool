@@ -159,7 +159,8 @@
 
         const parsed = new Date(dateString);
         if (!Number.isNaN(parsed.getTime())) {
-            return parsed.toISOString().split('T')[0];
+            const fn = window.DevCoachModules?.sharedUtils?.formatLocalDate;
+            return typeof fn === 'function' ? fn(parsed) : parsed.toISOString().split('T')[0];
         }
 
         return '';
