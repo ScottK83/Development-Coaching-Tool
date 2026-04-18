@@ -25,6 +25,14 @@
         reliability: 'avgReliability'
     };
 
+    // Guard so initializeMetricTrends() can be called multiple times (it is
+    // — from script.js:381 the section init, :1635 the subnav handler, and
+    // :1872 a legacy stub) without re-binding listeners on persistent buttons.
+    let metricTrendsListenersBound = false;
+
+    const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+    const LAST_TREND_PERIOD_KEY = STORAGE_PREFIX + 'lastTrendPeriod';
+
     // Maps registry metric keys → center average storage keys
     const TREND_METRIC_MAPPINGS = {
         scheduleAdherence: 'adherence',
@@ -71,9 +79,9 @@ function initializeMetricTrends() {
         const monday = new Date(year, month - 1, day);
 
         if (!isNaN(monday.getTime())) {
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            avgWeekSunday.value = sunday.toISOString().split('T')[0];
+            const sunday = new Date(year, month - 1, day + 6);
+            const fmt = window.DevCoachModules?.sharedUtils?.formatLocalDate;
+            avgWeekSunday.value = typeof fmt === 'function' ? fmt(sunday) : sunday.toISOString().split('T')[0];
         }
     });
     }
@@ -105,19 +113,24 @@ function initializeMetricTrends() {
 
 
 
-    // Populate uploaded data dropdown and set up listener
+    // Populate uploaded data dropdown (refresh on every visit so new uploads
+    // appear in the dropdown). Listener attachment happens once below.
     populateUploadedDataDropdown();
-    setupUploadedDataListener();
 
     // Populate trend generation dropdowns (starts with blank selections)
     populateTrendPeriodDropdown();
     initializeEmployeeDropdown();
 
-    // Load existing averages when date/type changes
-    setupAveragesLoader();
-
-    // Set up event listeners
-    setupMetricTrendsListeners();
+    // Listener attachment is one-shot — these functions call addEventListener
+    // on persistent index.html elements with no per-call cleanup, so calling
+    // them twice was stacking handlers (duplicate emails after re-visiting
+    // the section). Guard with a module-level flag.
+    if (!metricTrendsListenersBound) {
+        metricTrendsListenersBound = true;
+        setupUploadedDataListener();
+        setupAveragesLoader();
+        setupMetricTrendsListeners();
+    }
 
     // Inline listener: Save Call Center Averages button
     const saveAvgBtn = document.getElementById('saveAvgBtn');
@@ -291,7 +304,7 @@ function populateTrendPeriodDropdown() {
     trendPeriodSelect.innerHTML = options;
 
     // Restore last selected period
-    const savedPeriod = localStorage.getItem('devCoachingTool_lastTrendPeriod');
+    const savedPeriod = localStorage.getItem(LAST_TREND_PERIOD_KEY);
     if (savedPeriod && filteredPeriods.includes(savedPeriod)) {
         trendPeriodSelect.value = savedPeriod;
         populateEmployeeDropdownForPeriod(savedPeriod);
@@ -301,7 +314,7 @@ function populateTrendPeriodDropdown() {
     if (!trendPeriodSelect.dataset.bound) {
         trendPeriodSelect.addEventListener('change', (e) => {
             const val = e.target.value;
-            if (val) localStorage.setItem('devCoachingTool_lastTrendPeriod', val);
+            if (val) localStorage.setItem(LAST_TREND_PERIOD_KEY, val);
             populateEmployeeDropdownForPeriod(val);
         });
         trendPeriodSelect.dataset.bound = 'true';
@@ -1099,7 +1112,7 @@ function getSelectedTrendSentimentSnapshot(employeeName) {
     if (!Array.isArray(snapshots)) return null;
 
     const matchingSnapshot = snapshots.find(s => s.timeframeStart === startDate && s.timeframeEnd === endDate) || null;
-    if (matchingSnapshot) {
+    if (matchingSnapshot && window.DEBUG) {
         console.log('📊 Using selected sentiment snapshot:', matchingSnapshot);
     }
     return matchingSnapshot;
@@ -1388,7 +1401,7 @@ function openTrendEmailOutlook(emailSubject, employeeName) {
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
-        console.log('Mailto link clicked');
+        if (window.DEBUG) console.log('Mailto link clicked');
     } catch(e) {
         console.error('Error opening mailto:', e);
     }
@@ -2875,7 +2888,7 @@ function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboa
             const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
             const htmlClipboardItem = new ClipboardItem({ 'text/html': htmlBlob });
             navigator.clipboard.write([htmlClipboardItem]).then(() => {
-                console.log('HTML email with embedded image copied to clipboard');
+                if (window.DEBUG) console.log('HTML email with embedded image copied to clipboard');
                 showToast('✅ Email with image ready to paste!', 3000);
                 if (onClipboardReady) onClipboardReady();
             }).catch(err => {
@@ -2883,7 +2896,7 @@ function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboa
                 navigator.clipboard.write([
                     new ClipboardItem({ 'image/png': pngBlob })
                 ]).then(() => {
-                    console.log('Image copied to clipboard (HTML failed)');
+                    if (window.DEBUG) console.log('Image copied to clipboard (HTML failed)');
                     showToast('✅ Image copied to clipboard!', 3000);
                     if (onClipboardReady) onClipboardReady();
                 }).catch(err2 => {
@@ -2893,7 +2906,7 @@ function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboa
                 });
             });
         } else {
-            console.log('Clipboard API not available, downloading instead');
+            if (window.DEBUG) console.log('Clipboard API not available, downloading instead');
             downloadImageFallback(pngBlob, empName, period);
             if (onClipboardReady) onClipboardReady();
         }

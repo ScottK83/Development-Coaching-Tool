@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
+
     // Supervisor color palette for row highlighting
     var SUPERVISOR_COLORS = {
         'Scott':           { bg: '#e3f2fd', dark: '#0d2137' },
@@ -15,7 +17,7 @@
 
     function _getSupervisorColor(empName) {
         try {
-            var sups = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}');
+            var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) {
                 var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -27,7 +29,7 @@
 
     function _getSupervisorLightColor(empName) {
         try {
-            var sups = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}');
+            var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].bg;
         } catch (_e) { /* localStorage parse failure — fall through to default */ }

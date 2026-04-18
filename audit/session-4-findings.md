@@ -69,14 +69,18 @@ Severity: 🔴 real bug / risk · 🟠 rot / tech debt · 🟡 minor cleanup · 
 
 ---
 
-## Summary
+## Summary — Session 4 closed
 
-| Severity | Count | IDs |
+Operator: "fix all".
+
+| Finding | Status | Notes |
 |---|---|---|
-| 🔴 Real bugs / risks | 3 | TR-1, TR-2, TR-3 |
-| 🟠 Rot / duplication | 2 | TR-4, TR-5 |
-| 🟡 Minor cleanup | 2 | TR-6, TR-7 (no-op) |
+| TR-1 metric-trends listener stacking | ✅ fixed | Added `metricTrendsListenersBound` module-level guard. Bindings only attach once; subsequent calls only refresh dropdowns. |
+| TR-2 UTC drift on week-Sunday calc | ✅ fixed | Computes Sunday with local Y/M/D constructor, formats with `formatLocalDate()` from shared-utils. |
+| TR-3 5 ungated console.log calls | ✅ fixed | Wrapped each in `if (window.DEBUG)`. |
+| TR-4 hardcoded core metric arrays | ✅ partially fixed | Added `CORE_PERFORMANCE_METRICS` + `CORE_SURVEY_METRICS` to metrics-registry. Replaced 8 inline arrays in trend-intelligence. Left futures `FUTURES_METRICS` (13 items) and `RATE_METRICS` (13 items) — they're legitimately broader, not the same scope. |
+| TR-5 hardcoded prefix strings | ✅ fixed | metric-trends now uses `LAST_TREND_PERIOD_KEY` constant; center-ranking uses `STORAGE_PREFIX` from `DevCoachConstants`. |
+| TR-6 sentiment ungated console.warn | ✅ fixed | Gated behind `SENTIMENT_DEBUG`. |
+| TR-7 trend-intelligence has 0 listeners | n/a | Verified, no fix needed. |
 
-**Most impactful:** **TR-1** is the worst finding so far in the audit — a real production bug that triples your trend emails after navigating around. **TR-2** is the same UTC-drift class as Session 3's T-2.
-
-Mark `[KEEP]` or `[FIX]` per item, or say "fix all".
+Ready for Session 5 (Review Prep — Score Card, Quarterly, Year-End) when you are.

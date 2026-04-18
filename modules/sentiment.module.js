@@ -717,7 +717,7 @@
             return dateMatch[1].trim();
         }
 
-        console.warn(`⚠️ Found "${label} date" line but couldn't parse: "${line}"`);
+        if (SENTIMENT_DEBUG) console.warn(`⚠️ Found "${label} date" line but couldn't parse: "${line}"`);
         return '';
     }
 

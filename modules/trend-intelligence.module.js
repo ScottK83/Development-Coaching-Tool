@@ -204,7 +204,7 @@ Write the complete email.`;
         const metricsRegistry = context.metricsRegistry || {};
 
         if (thirdEmp) {
-            ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'].forEach(metricKey => {
+            (window.CORE_PERFORMANCE_METRICS || ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht']).forEach(metricKey => {
                 const a = currentEmp[metricKey];
                 const b = prevEmp[metricKey];
                 const c = thirdEmp[metricKey];
@@ -243,7 +243,7 @@ Write the complete email.`;
         const metricMeetsTarget = context.metricMeetsTarget || (() => false);
         const metricsRegistry = context.metricsRegistry || {};
 
-        const meetsAllTargets = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+        const meetsAllTargets = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).every(metricKey =>
             metricMeetsTarget(metricKey, currentEmp[metricKey])
         );
 
@@ -252,7 +252,7 @@ Write the complete email.`;
             rationale.push('Target consistency rule: all core target metrics are currently at or above goal.');
         }
 
-        ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].forEach(metricKey => {
+        (window.CORE_SURVEY_METRICS || ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr']).forEach(metricKey => {
             const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return;
@@ -282,7 +282,7 @@ Write the complete email.`;
     function buildIndividualTrendBriefSummaryHtml(currentEmp, prevEmp, descriptor, context = {}) {
         const metricDelta = context.metricDelta || (() => 0);
         const metricsRegistry = context.metricsRegistry || {};
-        const trackedMetrics = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
+        const trackedMetrics = window.CORE_PERFORMANCE_METRICS || ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
 
         const deltas = trackedMetrics.map(metricKey => {
             const currentValue = parseFloat(currentEmp?.[metricKey]);
@@ -406,7 +406,7 @@ Write the complete email.`;
 
     function hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp, context = {}) {
         const metricDelta = context.metricDelta || (() => 0);
-        return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+        return (window.CORE_SURVEY_METRICS || ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr']).some(metricKey => {
             const a = currentEmp[metricKey];
             const b = prevEmp[metricKey];
             const c = thirdEmp[metricKey];
@@ -419,7 +419,7 @@ Write the complete email.`;
 
     function hasGroupSuddenDrop(currentEmp, prevEmp, context = {}) {
         const metricDelta = context.metricDelta || (() => 0);
-        return ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence'].some(metricKey => {
+        return (window.CORE_SURVEY_METRICS || ['overallSentiment', 'overallExperience', 'fcr', 'scheduleAdherence']).some(metricKey => {
             const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return false;
@@ -430,7 +430,7 @@ Write the complete email.`;
 
     function hasGroupImprovement(currentEmp, prevEmp, context = {}) {
         const metricDelta = context.metricDelta || (() => 0);
-        return ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr'].some(metricKey => {
+        return (window.CORE_SURVEY_METRICS || ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr']).some(metricKey => {
             const current = currentEmp[metricKey];
             const prev = prevEmp[metricKey];
             if (current === undefined || prev === undefined) return false;
@@ -441,7 +441,7 @@ Write the complete email.`;
 
     function isGroupConsistentPerformer(currentEmp, context = {}) {
         const metricMeetsTarget = context.metricMeetsTarget || (() => false);
-        return ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+        return (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).every(metricKey =>
             metricMeetsTarget(metricKey, currentEmp[metricKey])
         );
     }

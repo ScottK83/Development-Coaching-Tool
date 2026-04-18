@@ -196,12 +196,35 @@
         return METRICS_REGISTRY[metricKey]?.isReverse === true;
     }
 
+    // Canonical metric groupings used across the app. Any module that needs
+    // "the core metrics" (score-card, trend intelligence, futures projections,
+    // etc.) should import from here instead of redeclaring its own subset.
+    // If the core set changes, update these two arrays and every caller
+    // picks it up.
+    const CORE_PERFORMANCE_METRICS = [
+        'scheduleAdherence',
+        'overallExperience',
+        'fcr',
+        'overallSentiment',
+        'transfers',
+        'aht'
+    ];
+
+    const CORE_SURVEY_METRICS = [
+        'scheduleAdherence',
+        'overallExperience',
+        'fcr',
+        'overallSentiment'
+    ];
+
     // Expose globally so script.js and all modules can use it directly
     window.METRICS_REGISTRY = METRICS_REGISTRY;
     window.isReverseMetric = isReverseMetric;
+    window.CORE_PERFORMANCE_METRICS = CORE_PERFORMANCE_METRICS;
+    window.CORE_SURVEY_METRICS = CORE_SURVEY_METRICS;
 
     // Also register in module system
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricsRegistry = METRICS_REGISTRY;
-    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric };
+    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
 })();
