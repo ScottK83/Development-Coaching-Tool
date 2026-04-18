@@ -10,11 +10,13 @@
     const SENTIMENT_PHRASE_DB_STORAGE_KEY = 'sentimentPhraseDatabase';
     const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = 'associateSentimentSnapshots';
     const LOCALSTORAGE_MAX_SIZE_MB = 4;
+    const COPILOT_URL = 'https://copilot.microsoft.com';
 
     window.DevCoachConstants = {
         STORAGE_PREFIX,
         SENTIMENT_PHRASE_DB_STORAGE_KEY,
         ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY,
-        LOCALSTORAGE_MAX_SIZE_MB
+        LOCALSTORAGE_MAX_SIZE_MB,
+        COPILOT_URL
     };
 })();

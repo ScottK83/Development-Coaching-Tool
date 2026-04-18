@@ -766,7 +766,7 @@
                 if (typeof window.openCopilotWithPrompt === 'function') {
                     window.openCopilotWithPrompt(textarea ? textarea.value : '');
                 } else {
-                    window.open('https://copilot.microsoft.com', '_blank');
+                    window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
                 }
             });
         }

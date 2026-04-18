@@ -401,26 +401,12 @@
                 usingFallback: false
             };
         }
-
-        const METRIC_RATING_BANDS_BY_YEAR = window.METRIC_RATING_BANDS_BY_YEAR || {};
-        const inlineBands = METRIC_RATING_BANDS_BY_YEAR?.[yearNum];
-        if (inlineBands) {
-            return {
-                bands: inlineBands,
-                sourceLabel: `${yearNum} inline rating bands`,
-                usingFallback: false
-            };
-        }
-
+        // No profile configured for this year — surface it as a fallback
+        // state so the legend can display a "No rating profile" note instead
+        // of stale hardcoded numbers.
         return {
-            bands: {
-                aht: { type: 'max', score3: { max: 419 }, score2: { max: 460 } },
-                scheduleAdherence: { type: 'min', score3: { min: 94.5 }, score2: { min: 92.5 } },
-                overallSentiment: { type: 'min', score3: { min: 90.1 }, score2: { min: 87.5 } },
-                cxRepOverall: { type: 'min', score3: { min: 82 }, score2: { min: 79.5 } },
-                reliability: { type: 'max', score3: { max: 16 }, score2: { max: 24 } }
-            },
-            sourceLabel: 'default mirror fallback bands',
+            bands: {},
+            sourceLabel: `No rating profile configured for ${yearNum}`,
             usingFallback: true
         };
     }

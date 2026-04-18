@@ -506,7 +506,8 @@
                 .then(() => {
                     _showToast('Year-end prompt copied. Paste into Copilot with Ctrl+V.', 4000);
                     if (!copilotWindow) {
-                        alert('Year-end prompt copied to clipboard.\n\nOpen https://copilot.microsoft.com and paste with Ctrl+V.');
+                        const url = window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com';
+                        alert(`Year-end prompt copied to clipboard.\n\nOpen ${url} and paste with Ctrl+V.`);
                     }
                 })
                 .catch(() => {
@@ -543,7 +544,7 @@
         inputData.promptArea.value = prompt;
         setYearEndPromptButtonFeedback(inputData.button);
 
-        const copilotWindow = window.open('https://copilot.microsoft.com', '_blank');
+        const copilotWindow = window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
         copyYearEndPromptWithFallbacks(prompt, copilotWindow);
     }
 

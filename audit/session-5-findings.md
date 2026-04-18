@@ -52,15 +52,18 @@ Severity: 🔴 real bug / risk · 🟠 rot / tech debt · 🟡 minor cleanup · 
 
 ---
 
-## Summary
+## Summary — Session 5 closed
 
-| Severity | Count | IDs |
+Operator: "fix all". All three findings applied.
+
+| Finding | Status | Notes |
 |---|---|---|
-| 🟠 Rot / dead code | 3 | R-1, R-2, R-3 |
-| 🟢 Verified clean | 4 | R-4 through R-7 (no-op) |
+| R-1 dead fallback tiers in on-off-tracker | ✅ fixed | Deleted tier-2 (`window.METRIC_RATING_BANDS_BY_YEAR` — never set) and tier-3 (stale hardcoded bands). Now returns empty bands + clear "No rating profile configured for {year}" label when a year has no profile. |
+| R-2 orphan yearEndDraftContext global | ✅ fixed | Deleted declaration (script.js:100) and null-reset (script.js:2871). The real variable is module-scoped. |
+| R-3 Copilot URL hardcoded in 3 places | ✅ fixed | Added `COPILOT_URL` to DevCoachConstants. All 3 call sites updated to read from constants with literal fallback. |
+| R-4 year-end.module.js stub false alarm | n/a | Verified not a stub. |
+| R-5 initializeOnOffTracker guarded | n/a | Already safe via bindElementOnce. |
+| R-6 year-end-comments bindOnce | n/a | Already safe. |
+| R-7 q1-review innerHTML-rebuild | n/a | Already safe. |
 
-No real bugs found in Review Prep. Modules are the cleanest subsystem of the app so far — bindOnce helper + innerHTML-rebuild patterns are used consistently.
-
-**Most impactful:** R-1 (delete the dead fallback tiers before they become a silent failure mode).
-
-Mark `[KEEP]` or `[FIX]` per item, or say "fix all".
+Ready for Session 6 (Follow Up + Settings + Dashboard) when you are.

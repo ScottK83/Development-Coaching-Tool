@@ -97,7 +97,6 @@ let lastError = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
 let coachingHistory = {};
-let yearEndDraftContext = null;
 let callListeningLogs = {};
 // Repo sync state is managed by repo-sync.module.js (IIFE-scoped)
 let teamFilterChangeHandlersBound = false;
@@ -2868,7 +2867,6 @@ async function handleDeleteAllDataClick() {
     sentimentPhraseDatabase = null;
     associateSentimentSnapshots = {};
     coachingLatestWeekKey = null;
-    yearEndDraftContext = null;
 
     // Refresh the page for a clean state
     const remoteMsg = remoteResult.ok ? ' and server backup' : '';
