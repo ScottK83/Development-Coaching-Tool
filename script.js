@@ -5125,7 +5125,21 @@ function selectSmartTip({ employeeId, metricKey, severity, tips }) {
     const recentlyUsed = new Set(metricHistory.filter(h => new Date(h.usedAt).getTime() >= cutoff).map(h => h.tip));
 
     const available = tips.filter(tip => !recentlyUsed.has(tip));
-    const pickFrom = available.length ? available : tips;
+    let pickFrom;
+    if (available.length) {
+        pickFrom = available;
+    } else {
+        const lastUsedByTip = {};
+        metricHistory.forEach(h => {
+            const t = new Date(h.usedAt).getTime();
+            if (!lastUsedByTip[h.tip] || t > lastUsedByTip[h.tip]) {
+                lastUsedByTip[h.tip] = t;
+            }
+        });
+        const sortedByAge = [...tips].sort((a, b) => (lastUsedByTip[a] || 0) - (lastUsedByTip[b] || 0));
+        const poolSize = Math.max(1, Math.ceil(sortedByAge.length / 4));
+        pickFrom = sortedByAge.slice(0, poolSize);
+    }
     const severityFiltered = pickFrom.filter(tip => {
         if (severity === 'high') return tip.length <= 120;
         if (severity === 'low') return tip.length >= 60;
