@@ -949,21 +949,12 @@
 
         if (!candidates.length) return null;
 
-        // Prefer Overall Sentiment over its individual components when both
-        // are candidates — coach the parent metric first, fall back to the
-        // individual word/emotion drivers only when Overall Sentiment is fine.
-        const INDIVIDUAL_SENTIMENT_KEYS = new Set(['positiveWord', 'negativeWord', 'managingEmotions']);
-        const hasOverallSentiment = candidates.some(c => c.metric.metricKey === 'overallSentiment');
-        const filteredCandidates = hasOverallSentiment
-            ? candidates.filter(c => !INDIVIDUAL_SENTIMENT_KEYS.has(c.metric.metricKey))
-            : candidates;
-
-        filteredCandidates.sort((a, b) => {
+        candidates.sort((a, b) => {
             if (a.priority !== b.priority) return a.priority - b.priority;
             return b.risk - a.risk;
         });
 
-        const chosen = filteredCandidates[0];
+        const chosen = candidates[0];
         return {
             ...chosen.metric,
             ytdValue: chosen.ytd?.employeeValue ?? null,
@@ -1435,18 +1426,19 @@
             && m.employeeValue === 0
         );
 
-        // Prefer Overall Sentiment over its individual drivers (positive/negative
-        // words, managing emotions) in the celebration section too — same rule
-        // as the focal point picker. If Overall Sentiment is a win, drop the
-        // individual sentiment metrics so we don't celebrate "100% positive
-        // words" when "Overall Sentiment" is already the headline story.
+        // Only when Overall Sentiment is *exceptional* (Exceeding Expectation —
+        // not merely On Track) do we suppress the individual sentiment drivers
+        // so the kickoff leads with the headline metric. If Overall Sentiment
+        // is just on track, let positiveWord/negativeWord/managingEmotions
+        // surface normally so we can still celebrate the specific drivers.
         const KICKOFF_INDIVIDUAL_SENTIMENT = new Set(['positiveWord', 'negativeWord', 'managingEmotions']);
-        const kickoffWinPool = allMetrics
+        const kickoffHasExceptionalOverallSentiment = allMetrics.some(m =>
+            m.metricKey === 'overallSentiment' && m.classification === 'Exceeding Expectation'
+        );
+        const allWinsSorted = allMetrics
             .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
-            .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)));
-        const kickoffHasOverallSentimentWin = kickoffWinPool.some(m => m.metricKey === 'overallSentiment');
-        const allWinsSorted = kickoffWinPool
-            .filter(m => !(kickoffHasOverallSentimentWin && KICKOFF_INDIVIDUAL_SENTIMENT.has(m.metricKey)))
+            .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
+            .filter(m => !(kickoffHasExceptionalOverallSentiment && KICKOFF_INDIVIDUAL_SENTIMENT.has(m.metricKey)))
             .sort((a, b) => {
                 if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
                 const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
@@ -1455,14 +1447,10 @@
             });
         const wins = allWinsSorted.slice(0, 3);
 
-        // Same rule for the biggest WoW jump: if Overall Sentiment is a win,
-        // skip individual sentiment metrics so the jump celebration doesn't
-        // say "Positive Words jumped +X%" alongside an Overall Sentiment win.
-        const biggestJump = getBiggestJump(
-            kickoffHasOverallSentimentWin
-                ? weekDeltas.filter(d => !KICKOFF_INDIVIDUAL_SENTIMENT.has(d.metricKey))
-                : weekDeltas
-        );
+        // Keep the biggest WoW jump unfiltered — celebrating "Positive Words
+        // +5%" or "Managing Emotions +3%" is a great improvement story that
+        // Scott wants to see even when Overall Sentiment is exceptional.
+        const biggestJump = getBiggestJump(weekDeltas);
 
         const ytdMap = getYtdMetricsMapForEmployee(employeeName);
         const focalPoint = pickFocalPointSmart(allMetrics, ytdMap);
