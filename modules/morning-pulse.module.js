@@ -1425,7 +1425,6 @@
 
         const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
-        const biggestJump = getBiggestJump(weekDeltas);
 
         // If any survey metric came back as a detractor (0), suppress the rest
         // of the survey wins from the same sample — FCR=100 with OE=0 is still
@@ -1436,9 +1435,18 @@
             && m.employeeValue === 0
         );
 
-        const allWinsSorted = allMetrics
+        // Prefer Overall Sentiment over its individual drivers (positive/negative
+        // words, managing emotions) in the celebration section too — same rule
+        // as the focal point picker. If Overall Sentiment is a win, drop the
+        // individual sentiment metrics so we don't celebrate "100% positive
+        // words" when "Overall Sentiment" is already the headline story.
+        const KICKOFF_INDIVIDUAL_SENTIMENT = new Set(['positiveWord', 'negativeWord', 'managingEmotions']);
+        const kickoffWinPool = allMetrics
             .filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track')
-            .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)))
+            .filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)));
+        const kickoffHasOverallSentimentWin = kickoffWinPool.some(m => m.metricKey === 'overallSentiment');
+        const allWinsSorted = kickoffWinPool
+            .filter(m => !(kickoffHasOverallSentimentWin && KICKOFF_INDIVIDUAL_SENTIMENT.has(m.metricKey)))
             .sort((a, b) => {
                 if (a.classification !== b.classification) return a.classification === 'Exceeding Expectation' ? -1 : 1;
                 const mA = a.targetType === 'min' ? a.employeeValue - a.target : a.target - a.employeeValue;
@@ -1446,6 +1454,15 @@
                 return mB - mA;
             });
         const wins = allWinsSorted.slice(0, 3);
+
+        // Same rule for the biggest WoW jump: if Overall Sentiment is a win,
+        // skip individual sentiment metrics so the jump celebration doesn't
+        // say "Positive Words jumped +X%" alongside an Overall Sentiment win.
+        const biggestJump = getBiggestJump(
+            kickoffHasOverallSentimentWin
+                ? weekDeltas.filter(d => !KICKOFF_INDIVIDUAL_SENTIMENT.has(d.metricKey))
+                : weekDeltas
+        );
 
         const ytdMap = getYtdMetricsMapForEmployee(employeeName);
         const focalPoint = pickFocalPointSmart(allMetrics, ytdMap);
