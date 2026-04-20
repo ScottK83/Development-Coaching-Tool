@@ -1139,11 +1139,20 @@
                     return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
                         `<span style="color:#9e9e9e;">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
                 }
-                // Find this metric's week delta if available
+                // Find this metric's week delta if available. Show "+X" for
+                // genuine improvements, "maintained" when the delta rounds to
+                // zero (still a win worth recognizing), nothing for declines.
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
-                const deltaTag = wd && wd.delta > 0
-                    ? ` <span style="color:#1b5e20; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} ${deltaContextLabel})</span>`
-                    : '';
+                let deltaTag = '';
+                if (wd) {
+                    const unit = window.METRICS_REGISTRY?.[m.metricKey]?.unit || '%';
+                    const zeroBand = (unit === 'sec' || unit === '#') ? 0.5 : 0.05;
+                    if (wd.delta > zeroBand) {
+                        deltaTag = ` <span style="color:#1b5e20; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} ${deltaContextLabel})</span>`;
+                    } else if (Math.abs(wd.delta) <= zeroBand) {
+                        deltaTag = ` <span style="color:#1b5e20; font-size:0.85em;">(maintained ${deltaContextLabel})</span>`;
+                    }
+                }
                 return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
                     `${trendArrow(m)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
             }).join('');
