@@ -359,5 +359,4 @@
         runPatternScan,
         showPatternMemoryModal
     };
-    window.showPatternMemoryModal = showPatternMemoryModal;
 })();

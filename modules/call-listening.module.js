@@ -59,7 +59,7 @@ Requirements:
         const showToast = typeof options.showToast === 'function' ? options.showToast : () => {};
         const alertFn = typeof options.alertFn === 'function' ? options.alertFn : () => {};
         const clipboardWriteText = options.clipboardWriteText;
-        const copilotWindow = openWindow('https://copilot.microsoft.com', '_blank');
+        const copilotWindow = openWindow(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
 
         if (typeof clipboardWriteText === 'function') {
             clipboardWriteText(prompt)

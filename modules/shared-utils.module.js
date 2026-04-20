@@ -64,7 +64,8 @@
      */
     function getCoachingCcEmail() {
         try {
-            return localStorage.getItem('devCoachingTool_ccEmail') || '';
+            const prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+            return localStorage.getItem(prefix + 'ccEmail') || '';
         } catch (_e) {
             return '';
         }

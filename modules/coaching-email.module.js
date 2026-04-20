@@ -488,7 +488,7 @@ Generate the coaching email for ${preferredName} now.`;
 
     function openCopilotForCoachingPrompt() {
         setTimeout(() => {
-            window.open('https://copilot.microsoft.com', '_blank');
+            window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
         }, 500);
     }
 

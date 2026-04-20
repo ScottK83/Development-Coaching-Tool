@@ -221,7 +221,7 @@ The email should be ready to send as-is. Just give me the complete email to ${fi
 
         nav.clipboard.writeText(prompt).then(() => {
             context.alert?.('Ctrl+V and Enter to paste.\nThen copy the next screen and come back to this window.');
-            win.open('https://copilot.microsoft.com', '_blank');
+            win.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
             const outputSection = doc.getElementById('copilotOutputSection');
             if (outputSection) {
                 outputSection.style.display = 'block';

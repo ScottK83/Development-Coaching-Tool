@@ -14,7 +14,7 @@
 
     // Volume-only metrics excluded from pulse messages (no target to coach against)
     const PULSE_EXCLUDED_METRICS = ['totalCalls', 'reliability', 'transfersCount'];
-    const PULSE_SELECTION_STORAGE_KEY = 'devCoachingTool_morningPulseSelection';
+    const PULSE_SELECTION_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'morningPulseSelection';
 
     // --- Phrase pools (randomized to avoid sounding templated) ---
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -1369,7 +1369,7 @@
     }
 
     // --- Focal point persistence ---
-    const FOCAL_STORAGE_KEY = 'devCoachingTool_weeklyFocalPoints';
+    const FOCAL_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'weeklyFocalPoints';
 
     function saveFocalPoint(employeeName, weekKey, focalMetricKey, focalLabel, focalValue, focalTarget) {
         try {
@@ -2303,7 +2303,7 @@
         const patternMemoryBtn = container.querySelector('#patternMemoryBtn');
         if (patternMemoryBtn) {
             patternMemoryBtn.addEventListener('click', () => {
-                const fn = window.DevCoachModules?.patternMemory?.showPatternMemoryModal || window.showPatternMemoryModal;
+                const fn = window.DevCoachModules?.patternMemory?.showPatternMemoryModal;
                 if (typeof fn === 'function') fn();
             });
         }

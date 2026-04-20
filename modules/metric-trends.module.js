@@ -1669,7 +1669,7 @@ function attachTrendTipsModalHandlers(options) {
         if (!textarea) return;
         navigator.clipboard.writeText(textarea.value).then(() => {
             showToast('✅ Prompt copied! Opening Copilot...', 2000);
-            window.open('https://copilot.microsoft.com', '_blank');
+            window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
         }).catch(() => {
             textarea.select();
             showToast('⚠️ Unable to copy prompt', 2000);

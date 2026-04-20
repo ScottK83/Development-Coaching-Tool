@@ -369,5 +369,4 @@
         runDataIntegrityScan,
         showDataIntegrityModal
     };
-    window.showDataIntegrityModal = showDataIntegrityModal;
 })();

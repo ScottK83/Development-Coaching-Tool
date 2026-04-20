@@ -1058,21 +1058,21 @@ window.saveEmployeePreferredName = function(fullName) {
         { key: 'scott_v3', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
         { key: 'angela_allison_v3', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
     ];
-    const needsRun = seeds.filter(function(s) { return !localStorage.getItem('devCoachingTool_supervisorSeeded_' + s.key); });
+    const needsRun = seeds.filter(function(s) { return !localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_' + s.key); });
     if (needsRun.length === 0) return;
 
     // v3 migration: clear old assignments for a clean re-seed
     let existing = {};
-    if (!localStorage.getItem('devCoachingTool_supervisorSeeded_v3_migration')) {
-        localStorage.removeItem('devCoachingTool_employeeSupervisors');
-        localStorage.setItem('devCoachingTool_supervisorSeeded_v3_migration', '1');
+    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v3_migration')) {
+        localStorage.removeItem(STORAGE_PREFIX + 'employeeSupervisors');
+        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v3_migration', '1');
     } else {
-        try { existing = JSON.parse(localStorage.getItem('devCoachingTool_employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
+        try { existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
     }
     const allEmps = {};
     try {
-        const wd = JSON.parse(localStorage.getItem('devCoachingTool_weeklyData') || '{}');
-        const yd = JSON.parse(localStorage.getItem('devCoachingTool_ytdData') || '{}');
+        const wd = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'weeklyData') || '{}');
+        const yd = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'ytdData') || '{}');
         [wd, yd].forEach(function(ds) {
             Object.values(ds || {}).forEach(function(period) {
                 (period?.employees || []).forEach(function(emp) {
@@ -1093,9 +1093,9 @@ window.saveEmployeePreferredName = function(fullName) {
                 existing[match] = seed.supervisor;
             }
         });
-        localStorage.setItem('devCoachingTool_supervisorSeeded_' + seed.key, '1');
+        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_' + seed.key, '1');
     });
-    localStorage.setItem('devCoachingTool_employeeSupervisors', JSON.stringify(existing));
+    localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(existing));
 })();
 
 function getEmployeeSupervisors() {
@@ -1805,7 +1805,7 @@ function bindCoachingFormHandlers() {
         clearUploadUndoSnapshot();
     });
     document.getElementById('dataIntegrityScanBtn')?.addEventListener('click', () => {
-        const fn = window.DevCoachModules?.dataIntegrity?.showDataIntegrityModal || window.showDataIntegrityModal;
+        const fn = window.DevCoachModules?.dataIntegrity?.showDataIntegrityModal;
         if (typeof fn === 'function') fn();
     });
     document.getElementById('archiveOldWeeksBtn')?.addEventListener('click', () => archiveOldWeeks(6));
@@ -2855,7 +2855,7 @@ async function handleDeleteAllDataClick() {
     keysToRemove.forEach(key => localStorage.removeItem(key));
 
     // Suppress auto-restore from repo backup after intentional delete
-    sessionStorage.setItem('devCoachingTool_deleteAllJustRan', '1');
+    sessionStorage.setItem(STORAGE_PREFIX + 'deleteAllJustRan', '1');
 
     // Reset all in-memory state
     weeklyData = {};
@@ -4828,7 +4828,7 @@ function renderCoachingPriorityQueue() {
         return;
     }
 
-    const coreMetrics = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+    const coreMetrics = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
     const queue = {
         coachNow: [],
         recognizeNow: [],
@@ -4966,7 +4966,7 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
         }
     });
 
-    const meetsAllCore = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(metricKey =>
+    const meetsAllCore = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).every(metricKey =>
         metricMeetsTarget(metricKey, currentEmp[metricKey])
     );
 
@@ -5328,7 +5328,7 @@ function renderTrendSimpleView() {
     `;
 }
 
-const TREND_TRACKER_METRICS = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+const TREND_TRACKER_METRICS = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
 
 function buildTeamAggregateForPeriod(periodKeys) {
     if (!Array.isArray(periodKeys) || periodKeys.length === 0) return null;
@@ -6062,7 +6062,7 @@ async function generateOneOnOnePrep() {
         return;
     }
 
-    const metricsToUse = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
+    const metricsToUse = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
     const wins = metricsToUse.filter(key => metricMeetsTarget(key, current[key])).slice(0, 2);
     const trends = previous ? metricsToUse.map(key => ({
         key,
@@ -6143,14 +6143,14 @@ function renderRecognitionIntelligence() {
             mostImproved.push({ name: emp.name, delta: sentimentDelta });
         }
 
-        const recoveryMetric = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].find(key =>
+        const recoveryMetric = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).find(key =>
             !metricMeetsTarget(key, prevEmp[key]) && metricMeetsTarget(key, emp[key])
         );
         if (recoveryMetric) {
             recoveryWins.push(`${escapeHtml(emp.name)} (${METRICS_REGISTRY[recoveryMetric]?.label || recoveryMetric})`);
         }
 
-        const consistent = ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment'].every(key => metricMeetsTarget(key, emp[key]));
+        const consistent = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).every(key => metricMeetsTarget(key, emp[key]));
         const recentCoaching = resolveCoachingHistoryForEmployee(emp.name).find(h =>
             new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000
         );
@@ -6251,7 +6251,7 @@ function renderTrendVisualizations() {
     visualContainer.style.display = 'block';
 
     // Get data for selected employee across periods
-    const metricsToShow = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
+    const metricsToShow = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
     const trendData = {};
 
     metricsToShow.forEach(metricKey => {

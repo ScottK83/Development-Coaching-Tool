@@ -14,9 +14,10 @@
     //  - History view with per-person year stats
     // ============================================
 
-    var THRESHOLD_STORAGE_KEY = 'devCoachingTool_celebrationsThreshold';
-    var HISTORY_STORAGE_KEY = 'devCoachingTool_celebrationsHistory';
-    var SELECTION_STORAGE_KEY = 'devCoachingTool_celebrationsSelection';
+    var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
+    var THRESHOLD_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsThreshold';
+    var HISTORY_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsHistory';
+    var SELECTION_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsSelection';
     var DEFAULT_TIERS = [1, 5, 10];
 
     // Metric rank keys from center-ranking module -> friendly labels
@@ -1010,7 +1011,7 @@
     // Inner tab toggle
     // =====================
 
-    var INNER_TAB_STORAGE_KEY = 'devCoachingTool_celebrationsInnerTab';
+    var INNER_TAB_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsInnerTab';
 
     function getActiveInnerTab() {
         try {

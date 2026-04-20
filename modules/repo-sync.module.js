@@ -1244,8 +1244,8 @@
 
     async function tryAutoRestoreFromRepoBackupOnEmptyState() {
         // Skip auto-restore if user just intentionally deleted all data
-        if (sessionStorage.getItem('devCoachingTool_deleteAllJustRan') === '1') {
-            sessionStorage.removeItem('devCoachingTool_deleteAllJustRan');
+        if (sessionStorage.getItem(STORAGE_PREFIX + 'deleteAllJustRan') === '1') {
+            sessionStorage.removeItem(STORAGE_PREFIX + 'deleteAllJustRan');
             return false;
         }
 
