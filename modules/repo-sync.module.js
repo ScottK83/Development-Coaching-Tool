@@ -660,7 +660,7 @@
             appendCsvAsSheet(workbook, changeLogCsv, 'Change Log');
             appendCsvAsSheet(workbook, metrics2026Csv, 'Metrics 2026');
 
-            const dateStamp = new Date().toISOString().split('T')[0];
+            const dateStamp = window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().split('T')[0];
             const fileName = `Performance-Intelligence-Ledger-${dateStamp}.xlsx`;
             XLSX.writeFile(workbook, fileName);
             showToast('Intelligence ledger exported to .xlsx', 3000);

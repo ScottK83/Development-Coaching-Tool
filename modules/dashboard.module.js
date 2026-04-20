@@ -15,13 +15,11 @@
         return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Prefer in-memory globals (canonical, mutated synchronously by upload + delete
+    // flows). Fall back to storage module if the globals aren't bound yet.
     function getWeeklyData() {
-        var storage = window.DevCoachModules?.storage;
-        if (storage?.loadWeeklyData) return storage.loadWeeklyData() || {};
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
-            return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
+        if (typeof window.weeklyData === 'object' && window.weeklyData) return window.weeklyData;
+        return window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     }
 
     function getTeamFilterContext() {
@@ -222,7 +220,7 @@
 
     function getRandomTip() {
         try {
-            var raw = localStorage.getItem('devCoachingTool_metricCoachingTips');
+            var raw = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
             var tips = raw ? JSON.parse(raw) : {};
             var allTips = [];
             var keys = Object.keys(tips);
@@ -264,12 +262,8 @@
     }
 
     function getYtdData() {
-        var storage = window.DevCoachModules?.storage;
-        if (storage?.loadYtdData) return storage.loadYtdData() || {};
-        try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'ytdData');
-            return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
+        if (typeof window.ytdData === 'object' && window.ytdData) return window.ytdData;
+        return window.DevCoachModules?.storage?.loadYtdData?.() || {};
     }
 
     function initializeDashboard() {
