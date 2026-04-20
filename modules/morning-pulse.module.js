@@ -949,12 +949,21 @@
 
         if (!candidates.length) return null;
 
-        candidates.sort((a, b) => {
+        // Prefer Overall Sentiment over its individual components when both
+        // are candidates — coach the parent metric first, fall back to the
+        // individual word/emotion drivers only when Overall Sentiment is fine.
+        const INDIVIDUAL_SENTIMENT_KEYS = new Set(['positiveWord', 'negativeWord', 'managingEmotions']);
+        const hasOverallSentiment = candidates.some(c => c.metric.metricKey === 'overallSentiment');
+        const filteredCandidates = hasOverallSentiment
+            ? candidates.filter(c => !INDIVIDUAL_SENTIMENT_KEYS.has(c.metric.metricKey))
+            : candidates;
+
+        filteredCandidates.sort((a, b) => {
             if (a.priority !== b.priority) return a.priority - b.priority;
             return b.risk - a.risk;
         });
 
-        const chosen = candidates[0];
+        const chosen = filteredCandidates[0];
         return {
             ...chosen.metric,
             ytdValue: chosen.ytd?.employeeValue ?? null,
