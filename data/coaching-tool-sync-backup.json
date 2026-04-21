@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-20T18:45:54.192Z",
-  "reason": "storage set: devCoachingTool_ytdData",
+  "generatedAt": "2026-04-21T18:31:14.443Z",
+  "reason": "storage set: devCoachingTool_callCenterAverages",
   "sourceAppVersion": null,
   "weeklyData": {
     "2026-01-01|2026-03-31": {
@@ -14436,6 +14436,18 @@
       "overallExperience": 76.52,
       "reliability": 14.8,
       "lastUpdated": "2026-04-20T17:44:22.613Z"
+    },
+    "2026-04-20|2026-04-20": {
+      "adherence": 73.41,
+      "transfers": 14.31,
+      "sentiment": 92.44,
+      "positiveWord": 92.36,
+      "negativeWord": 88.86,
+      "managingEmotions": 96.09,
+      "aht": 454.3,
+      "acw": 63.12,
+      "reliability": 0.58,
+      "lastUpdated": "2026-04-21T18:31:09.280Z"
     }
   },
   "ptoTracker": {},
@@ -14463,8 +14475,8 @@
     },
     "devCoachingTool_callCenterAverages": {
       "valueType": "object",
-      "itemCount": 5,
-      "byteLength": 1532
+      "itemCount": 6,
+      "byteLength": 1763
     },
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
@@ -14494,12 +14506,17 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 233
+      "byteLength": 228
     },
     "devCoachingTool_supervisorSeeded_scott_v3": {
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
+    },
+    "devCoachingTool_weeklyFocalPoints": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 375
     },
     "devCoachingTool_callListeningLogs": {
       "valueType": "object",
@@ -14516,6 +14533,11 @@
       "itemCount": "",
       "byteLength": 1
     },
+    "devCoachingTool_tipUsageHistory": {
+      "valueType": "object",
+      "itemCount": 3,
+      "byteLength": 543
+    },
     "devCoachingTool_supervisorSeeded_v3_migration": {
       "valueType": "string",
       "itemCount": "",
@@ -14530,6 +14552,11 @@
       "valueType": "object",
       "itemCount": 2,
       "byteLength": 57
+    },
+    "devCoachingTool_dailyData": {
+      "valueType": "object",
+      "itemCount": 1,
+      "byteLength": 46052
     },
     "devCoachingTool_supervisorSeeded_angela_allison_v2": {
       "valueType": "string",
@@ -14594,7 +14621,7 @@
     "devCoachingTool_smartDefault_lastPeriodType": {
       "valueType": "string",
       "itemCount": "",
-      "byteLength": 6
+      "byteLength": 7
     },
     "devCoachingTool_supervisorSeeded_v2_migration": {
       "valueType": "string",
@@ -14604,7 +14631,7 @@
     "devCoachingTool_repoSyncLastSuccess": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 313
+      "byteLength": 302
     },
     "devCoachingTool_supervisorSeeded_angela_allison_v3": {
       "valueType": "string",
@@ -14619,7 +14646,7 @@
     "devCoachingTool_lastUploadMetricCoverage": {
       "valueType": "object",
       "itemCount": 11,
-      "byteLength": 235
+      "byteLength": 269
     },
     "devCoachingTool_weeklyData": {
       "valueType": "object",
