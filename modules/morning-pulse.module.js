@@ -268,6 +268,26 @@
         name => `${name}! Real quick midweek look at the progress you've made.`,
         name => `Quick midweek nudge, ${name}. You're moving in the right direction.`,
         name => `Hey ${name}, touching base midweek with a little extra encouragement.`,
+        name => `${name}, taking a quick pulse on the week.`,
+        name => `Hey ${name} — wanted to check in real quick. 📊`,
+        name => `${name}! Pulled up the numbers midweek and wanted to share what I'm seeing.`,
+        name => `${getCurrentWeekdayName()} check-in, ${name}. You've been putting in work.`,
+        name => `${name}, dropping in midweek with a quick look at where you stand.`,
+        name => `Had to reach out, ${name} — this week is shaping up.`,
+        name => `${name}, wanted to pop in with a midweek update.`,
+        name => `Quick check-in, ${name}. Let's see how the week is landing.`,
+        name => `${name}! Midweek and I'm liking what I see. 👀`,
+        name => `Hey ${name}, pausing to give you some midweek feedback.`,
+        name => `${name}, just ran the midweek numbers and wanted to share.`,
+        name => `Been watching your week, ${name}. Quick note midweek.`,
+        name => `${name}, real quick — wanted you to see where you're tracking.`,
+        name => `${name}! Stealing a minute of your ${getCurrentWeekdayName()} to talk numbers.`,
+        name => `Hey ${name}, sliding in with a midweek read.`,
+        name => `${name} — three days in and I've got thoughts. 📊`,
+        name => `Appreciate you, ${name}. Quick midweek note.`,
+        name => `${name}, don't want to interrupt — just a quick midweek status.`,
+        name => `Before you get deep into the afternoon, ${name}, a quick check-in.`,
+        name => `${name}, stepped away from the dashboard to send you this midweek note.`,
     ];
     const MW_FOCUS_RECALL = [
         (label) => `Earlier this week we said ${label} was the focus.`,
@@ -280,6 +300,16 @@
         (label) => `You've been working on ${label} this week.`,
         (label) => `We identified ${label} as the one to move this week.`,
         (label) => `This week's focus has been ${label}.`,
+        (label) => `Monday we zeroed in on ${label} as the metric to move.`,
+        (label) => `The one we locked in on this week: ${label}.`,
+        (label) => `You've had ${label} in your sights since Monday.`,
+        (label) => `${label} was the priority we landed on to start the week.`,
+        (label) => `We chose ${label} as the lever to pull this week.`,
+        (label) => `The number you've been hunting this week is ${label}.`,
+        (label) => `${label} is where we pointed the attention this week.`,
+        (label) => `Our commitment this week was to lean into ${label}.`,
+        (label) => `Coming into the week, the call was to move ${label}.`,
+        (label) => `${label} is the one we put on the board Monday.`,
     ];
     const MW_ON_TRACK = [
         (label, val, target) => `You're crushing it — ${label} at ${val} is already above the ${target} target! 🔥`,
@@ -290,6 +320,15 @@
         (label, val, target) => `${label} at ${val} is at or above ${target}. The focus is clearly paying off!`,
         (label, val, target) => `${label} at ${val} vs ${target} target? That's a win worth celebrating.`,
         (label, val, target) => `The work on ${label} is showing. ${val} against a ${target} target is legit progress.`,
+        (label, val, target) => `${label} at ${val} is through the ${target} bar. That's what showing up looks like. 🎯`,
+        (label, val, target) => `Already hitting it on ${label} — ${val} vs ${target} target. Fantastic.`,
+        (label, val, target) => `This is the stuff. ${label} at ${val}, target was ${target}. Nailed it.`,
+        (label, val, target) => `Goal met. ${label} sitting at ${val} (target ${target}). Keep it rolling.`,
+        (label, val, target) => `You're there. ${label} at ${val} cleared ${target}. That's the formula.`,
+        (label, val, target) => `${label}: ${val}. Target: ${target}. Verdict: done deal. 🔥`,
+        (label, val, target) => `The ${label} number (${val}) is past ${target}. Don't let up, but take a second to feel good about that.`,
+        (label, val, target) => `Over the line already — ${label} at ${val}, target ${target}. Big deal.`,
+        (label, val, target) => `${label} at ${val} is a real midweek statement. ${target} was the ask and you're past it.`,
     ];
     const MW_CLOSE = [
         (label, val, target, gap) => `You're close — ${label} at ${val}, just ${gap} from ${target}. That's exciting momentum.`,
@@ -300,6 +339,15 @@
         (label, val, target, gap) => `The gap on ${label} is shrinking — ${val} vs ${target}, just ${gap} to go. Keep building.`,
         (label, val, target, gap) => `${label}: ${val}. Target: ${target}. Gap: ${gap}. That's absolutely closeable this week.`,
         (label, val, target, gap) => `You're in striking distance on ${label}. ${val} now, ${target} goal, ${gap} to go. 🎯`,
+        (label, val, target, gap) => `${label} is within reach — ${val} now, ${target} target, only ${gap} between. 💪`,
+        (label, val, target, gap) => `You can see the finish line on ${label}. ${val} today, ${gap} from ${target}.`,
+        (label, val, target, gap) => `${label} is knocking on the door — ${val} vs ${target}, just ${gap}. One good stretch closes it.`,
+        (label, val, target, gap) => `Super close on ${label}. ${val} vs ${target}, ${gap} gap. A couple intentional calls gets you there.`,
+        (label, val, target, gap) => `${label} at ${val} is a whisper away from ${target}. Only ${gap} separates you.`,
+        (label, val, target, gap) => `You're on the doorstep of ${label}. ${val}, need ${target}, gap of ${gap}. 🎯`,
+        (label, val, target, gap) => `Almost — ${label} at ${val}, ${gap} shy of ${target}. That's a finish-the-week problem, nothing bigger.`,
+        (label, val, target, gap) => `${label} is trending right where we want it. ${val} now, ${gap} from ${target}. Stay on it.`,
+        (label, val, target, gap) => `You're setting up ${label} to land. ${val} vs ${target}, ${gap} left on the table.`,
     ];
     const MW_BEHIND = [
         (label, val, target, gap) => `${label} is at ${val}, still ${gap} from the ${target} target. But we've got time — let's be intentional about it.`,
@@ -310,23 +358,78 @@
         (label, val, target, gap) => `The ${label} number at ${val} is behind target (${target}, ${gap} gap). Let's focus on what we can control.`,
         (label, val, target, gap) => `${label}: ${val}. We need ${target}. That's a ${gap} gap, but I've seen you close bigger ones.`,
         (label, val, target, gap) => `Not gonna sugarcoat it — ${label} at ${val} vs ${target} (${gap}) needs attention. But there's still time.`,
+        (label, val, target, gap) => `Want to be straight with you on ${label} — ${val} with ${gap} to go to ${target}. Let's tighten up.`,
+        (label, val, target, gap) => `${label} at ${val} is off the pace (${target}, ${gap} gap). Here's where we pivot:`,
+        (label, val, target, gap) => `${label} needs a push. ${val} today, ${target} goal, ${gap} between. Two days can still move it.`,
+        (label, val, target, gap) => `The ${label} number (${val}) isn't where we want it yet — ${gap} shy of ${target}. Let's get intentional.`,
+        (label, val, target, gap) => `${label} is trailing at ${val} vs ${target}, and that's ${gap} of daylight. Time to refocus.`,
+        (label, val, target, gap) => `On ${label}, we're at ${val} with a ${gap} climb to ${target}. Not ideal, but fixable with focus.`,
+        (label, val, target, gap) => `I won't dress it up — ${label} at ${val} needs real attention to hit ${target} (${gap} to go). Let's go work.`,
+        (label, val, target, gap) => `${label} is the one that needs love right now. ${val} against ${target}, ${gap} gap. Doable with intention.`,
+        (label, val, target, gap) => `Gonna call it — ${label} at ${val} is behind (${gap} from ${target}). Let's finish the week pushing on this.`,
     ];
     const MW_NO_FOCUS_SET = [
         'Here\'s a quick look at how the week is going so far.',
         'Wanted to check in on how things are trending this week.',
         'Quick midweek snapshot of where you\'re at.',
+        'Pulling the curtain back on where you stand this week.',
+        'Wanted to send over a quick read on the week so far.',
+        'Here\'s the midweek picture as I see it.',
+        'Dropping in with a snapshot of how the week is shaping up.',
+        'A quick look at the week before you close it out.',
+        'Wanted to get eyes on where the week sits right now.',
+        'Here\'s where things stand with a couple days to go.',
+        'Scanned the numbers and wanted to share what I\'m seeing.',
+        'Quick read on the week before it gets away from us.',
     ];
+    const MW_NO_DATA_YET = [
+        (label) => ` No updated data for ${label} yet, but keep being intentional about it.`,
+        (label) => ` No fresh numbers on ${label} yet — stay locked in on it.`,
+        (label) => ` ${label} hasn't refreshed yet, but keep treating it like it's the one.`,
+        (label) => ` Haven't seen the ${label} numbers update, but don't take your foot off it.`,
+        (label) => ` We don't have new ${label} data yet, but the work still matters.`,
+        (label) => ` ${label} isn't showing fresh yet — keep pushing like it is.`,
+    ];
+    const MW_FALLBACK_FOCUS = [
+        (label, cur, tgt) => `\n\n🎯 The metric I'd focus on for the rest of the week: ${label} at ${cur} (target ${tgt}).`,
+        (label, cur, tgt) => `\n\n🎯 If you ask me what to lean into the rest of the week: ${label} (${cur} vs ${tgt}).`,
+        (label, cur, tgt) => `\n\n🎯 Here's the one I'd chase down: ${label} at ${cur}, target ${tgt}.`,
+        (label, cur, tgt) => `\n\n🎯 The lever worth pulling the rest of this week: ${label} (${cur}, target ${tgt}).`,
+        (label, cur, tgt) => `\n\n🎯 My suggested focus the next couple days: ${label}, sitting at ${cur} against a ${tgt} target.`,
+        (label, cur, tgt) => `\n\n🎯 Where I'd spend the attention: ${label} — ${cur} right now, ${tgt} is the goal.`,
+    ];
+    const MW_BRIGHT_SIDE = [
+        (label, val) => ` On the bright side, ${label} at ${val} is looking good.`,
+        (label, val) => ` The good news: ${label} at ${val} is right where we want it.`,
+        (label, val) => ` Want to point out — ${label} at ${val} is a bright spot.`,
+        (label, val) => ` One thing to feel good about: ${label} at ${val}.`,
+        (label, val) => ` Worth mentioning — ${label} at ${val} is holding strong.`,
+        (label, val) => ` And don't miss it — ${label} at ${val} is a win.`,
+    ];
+    const MW_TIP_PREFIXES = ['💡', '🛠️', '👉', '🎯', '📌'];
     const MW_CLOSERS = [
         'Proud of you. Let me know how I can help.',
         'Proud of you. Let me know how I can help as you finish the week.',
         'Proud of you. Let me know how I can help keep this momentum going.',
         'Proud of you. Let me know how I can help you close strong.',
-        'Proud of you. Let me know how I can help with the next step.',
-        'Proud of you. Let me know how I can help for the rest of the week.',
-        'Proud of you. Let me know how I can help you build on this.',
-        'Proud of you. Let me know how I can help from here.',
-        'Proud of you. Let me know how I can help you finish on a high note.',
-        'Proud of you. Let me know how I can help.',
+        'Proud of the work you\'re putting in — holler if I can do anything to support.',
+        'You know where to find me if anything comes up. Finish strong.',
+        'Keep at it — I\'m in your corner if you need something.',
+        'You\'re doing the work. Let me know what would help from my end.',
+        'Hit me up if anything gets in the way. Love what you\'re doing.',
+        'Backing you the rest of the week — shout if you need something.',
+        'If there\'s anything I can take off your plate, say the word.',
+        'Grateful to have you on the team. Reach out if you need a hand.',
+        'Whatever you need from me, just ask. Close it out strong.',
+        'I see the effort. Tell me how I can make this easier for you.',
+        'Keep being you. Let me know if I can help in any way.',
+        'You\'ve got this. Ping me if something needs unblocking.',
+        'Finish the week the way you\'ve started it. I\'m here if you need me.',
+        'Appreciate what you\'re bringing. Let me know how I can support.',
+        'In your corner the rest of the week. Hit me up if you need anything.',
+        'Keep building. Door\'s open if you want to talk it through.',
+        'Thanks for the effort. Tell me what would help from here.',
+        'Go close it out. Message me anytime.',
     ];
 
     const HF_OPENERS = [
@@ -1595,14 +1698,14 @@
                                 : metricTips[Math.floor(Math.random() * metricTips.length)];
                             if (tip) {
                                 const cleanTip = tip.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
-                                message += ` 💡 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
+                                message += ` ${pick(MW_TIP_PREFIXES)} ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
                             }
                         }
                     } catch (e) { /* no tips */ }
                 }
             } else {
                 // Focal metric data not available in current period — encourage anyway
-                message += ` No updated data for ${savedFocal.label} yet, but keep being intentional about it.`;
+                message += pick(MW_NO_DATA_YET)(savedFocal.label);
             }
         } else {
             // No focal point was set Monday — give a general midweek snapshot
@@ -1612,14 +1715,14 @@
             if (focalPoint) {
                 const currentVal = fmtVal(focalPoint);
                 const targetVal = fmtTarget(focalPoint);
-                message += `\n\n🎯 The metric I'd focus on for the rest of the week: ${focalPoint.label} at ${currentVal} (target ${targetVal}).`;
+                message += pick(MW_FALLBACK_FOCUS)(focalPoint.label, currentVal, targetVal);
             }
 
             // Mention a win if there is one
             const wins = allMetrics.filter(m => m.classification === 'Exceeding Expectation' || m.classification === 'On Track');
             if (wins.length > 0) {
                 const topWin = wins[0];
-                message += ` On the bright side, ${topWin.label} at ${fmtVal(topWin)} is looking good.`;
+                message += pick(MW_BRIGHT_SIDE)(topWin.label, fmtVal(topWin));
             }
         }
 
