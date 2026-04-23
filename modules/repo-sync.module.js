@@ -408,8 +408,17 @@
                         }
 
                         const countEntries = obj => (obj && typeof obj === 'object') ? Object.keys(obj).length : 0;
+                        const weeklyByType = {};
+                        Object.values(payload.weeklyData || {}).forEach(p => {
+                            const t = p?.metadata?.periodType || 'week';
+                            weeklyByType[t] = (weeklyByType[t] || 0) + 1;
+                        });
+                        const typeBreakdown = Object.keys(weeklyByType).length
+                            ? Object.entries(weeklyByType).map(([k, v]) => `${k}: ${v}`).join(', ')
+                            : 'none';
                         const preview = {
                             weekly: countEntries(payload.weeklyData),
+                            weeklyByType: typeBreakdown,
                             ytd: countEntries(payload.ytdData),
                             team: countEntries(payload.myTeamMembers),
                             coaching: countEntries(payload.coachingHistory),
@@ -427,7 +436,7 @@
 
                         const proceedMsg = [
                             'Worker has the following data:',
-                            `• Weekly periods: ${preview.weekly}`,
+                            `• Weekly periods: ${preview.weekly} (${preview.weeklyByType})`,
                             `• YTD periods: ${preview.ytd}`,
                             `• Team members: ${preview.team}`,
                             `• Coaching history: ${preview.coaching}`,
