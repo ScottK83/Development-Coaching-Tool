@@ -1726,6 +1726,12 @@ function bindNavigationHandlers() {
         var matchupMod = window.DevCoachModules?.matchup;
         if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
     });
+    document.getElementById('subNavTaPatterns')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaPatterns', 'subNavTaPatterns');
+        var stab = window.DevCoachModules?.metricStability;
+        var container = document.getElementById('subSectionTaPatterns');
+        if (stab?.render && container) stab.render(container);
+    });
 
     // --- Review Prep ---
     document.getElementById('reviewPrepBtn')?.addEventListener('click', () => {

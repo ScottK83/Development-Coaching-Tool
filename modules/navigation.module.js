@@ -76,15 +76,16 @@
 
     // --- Trends & Analysis sub-sections ---
 
-    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment', 'subSectionTaMatchup'];
-    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment', 'subNavTaMatchup'];
+    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment', 'subSectionTaMatchup', 'subSectionTaPatterns'];
+    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment', 'subNavTaMatchup', 'subNavTaPatterns'];
     var TRENDS_SUB_TO_BTN = {
         subSectionTaTrendIntelligence: 'subNavTaIntelligence',
         subSectionTaMetricTrends: 'subNavTaMetricCharts',
         subSectionTaCenterRanking: 'subNavTaRankings',
         subSectionTaFutures: 'subNavTaFutures',
         subSectionTaSentiment: 'subNavTaSentiment',
-        subSectionTaMatchup: 'subNavTaMatchup'
+        subSectionTaMatchup: 'subNavTaMatchup',
+        subSectionTaPatterns: 'subNavTaPatterns'
     };
 
     function showTrendsSubSection(subSectionId, activeButtonId) {
