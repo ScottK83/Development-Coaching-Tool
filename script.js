@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.04.20.7'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.04.23.1'; // Version: YYYY.MM.DD.NN
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
 // Sourced from modules/constants.module.js (loaded first).
 const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
@@ -6883,30 +6883,33 @@ async function initApp() {
     bindTeamFilterChangeHandlers();
     notifyTeamFilterChanged();
 
-    // Auto-restore runs in background so UI loads immediately.
-    // Show a brief toast if local state is empty so user knows restore is attempting.
-    const hasLocalData = Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0;
-    if (!hasLocalData) {
+    // When local state is empty, wait for auto-restore before first UI render.
+    // This avoids intermittent "empty dashboard/rankings until refresh" behavior.
+    let restoredFromRepo = false;
+    const hadLocalDataAtBoot = Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0;
+    if (!hadLocalDataAtBoot) {
         showToast('Checking for synced data...', 3000);
-    }
-    tryAutoRestoreFromRepoBackupOnEmptyState().then(function(restoredFromRepo) {
-        if (restoredFromRepo) {
-            // Re-load all in-memory variables from localStorage after restore
-            weeklyData = loadWeeklyData();
-            ytdData = loadYtdData();
-            dailyData = loadDailyData();
-            coachingHistory = loadCoachingHistory();
-            callListeningLogs = loadCallListeningLogs();
-            sentimentPhraseDatabase = loadSentimentPhraseDatabase();
-            associateSentimentSnapshots = loadAssociateSentimentSnapshots();
-            loadTeamMembers();
-            cleanupStaleAutoYtds();
-            saveYtdData();
-            showToast('✅ Restored synced data for this browser profile.', 4000);
-            notifyTeamFilterChanged();
-            restoreLastViewedSection();
+        try {
+            restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
+        } catch (err) {
+            console.error('Auto-restore failed:', err);
         }
-    }).catch(function(err) { console.error('Auto-restore failed:', err); });
+    }
+    if (restoredFromRepo) {
+        // Re-load all in-memory variables from localStorage after restore.
+        weeklyData = loadWeeklyData();
+        ytdData = loadYtdData();
+        dailyData = loadDailyData();
+        coachingHistory = loadCoachingHistory();
+        callListeningLogs = loadCallListeningLogs();
+        sentimentPhraseDatabase = loadSentimentPhraseDatabase();
+        associateSentimentSnapshots = loadAssociateSentimentSnapshots();
+        loadTeamMembers();
+        cleanupStaleAutoYtds();
+        saveYtdData();
+        showToast('✅ Restored synced data for this browser profile.', 4000);
+        notifyTeamFilterChanged();
+    }
     
 
     // Initialize default coaching tips (first load only)
@@ -6953,7 +6956,7 @@ async function initApp() {
     // Restore last viewed section/sub-section on refresh
     restoreLastViewedSection();
     
-    // If we have data, update the period dropdown
+    // If we have data, update period/team controls from the final startup snapshot.
     if (Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0) {
         updatePeriodDropdown();
         populateDeleteWeekDropdown();
