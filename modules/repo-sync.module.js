@@ -403,9 +403,47 @@
                     try {
                         setCallListeningSyncStatus('Fetching backup from repo...', 'info');
                         const payload = await fetchRepoBackupPayload();
-                        if (!hasMeaningfulBackupData(payload)) {
-                            throw new Error('No repo backup data found to restore. The backup file may be empty or missing.');
+                        if (!payload || typeof payload !== 'object') {
+                            throw new Error('Worker returned no payload. Check Worker URL and shared secret.');
                         }
+
+                        const countEntries = obj => (obj && typeof obj === 'object') ? Object.keys(obj).length : 0;
+                        const preview = {
+                            weekly: countEntries(payload.weeklyData),
+                            ytd: countEntries(payload.ytdData),
+                            team: countEntries(payload.myTeamMembers),
+                            coaching: countEntries(payload.coachingHistory),
+                            callLogs: countEntries(payload.callListeningLogs),
+                            sentiment: countEntries(payload.associateSentimentSnapshots),
+                            pto: countEntries(payload.ptoTracker),
+                            centerAvgs: countEntries(payload.callCenterAverages),
+                            generatedAt: payload.generatedAt || 'unknown'
+                        };
+                        console.log('[Repo Restore] Worker payload preview:', preview);
+
+                        if (!hasMeaningfulBackupData(payload)) {
+                            throw new Error(`Worker returned an empty payload. Counts: weekly=${preview.weekly} ytd=${preview.ytd} team=${preview.team}. generatedAt=${preview.generatedAt}. Push fresh data from Work PC and try again.`);
+                        }
+
+                        const proceedMsg = [
+                            'Worker has the following data:',
+                            `• Weekly periods: ${preview.weekly}`,
+                            `• YTD periods: ${preview.ytd}`,
+                            `• Team members: ${preview.team}`,
+                            `• Coaching history: ${preview.coaching}`,
+                            `• Call listening: ${preview.callLogs}`,
+                            `• Sentiment snapshots: ${preview.sentiment}`,
+                            `• PTO records: ${preview.pto}`,
+                            `• Center averages: ${preview.centerAvgs}`,
+                            `• Generated: ${preview.generatedAt}`,
+                            '',
+                            'Overwrite local with this? If a number looks wrong, cancel and check what Work PC pushed.'
+                        ].join('\n');
+                        if (!confirm(proceedMsg)) {
+                            setCallListeningSyncStatus('Restore cancelled. Local data unchanged.', 'info');
+                            return;
+                        }
+
                         setCallListeningSyncStatus('Applying backup data...', 'info');
 
                         await withRepoSyncHydrationLock(async () => {
@@ -417,19 +455,19 @@
                         repoSyncConflictPromptMutedUntil = 0;
                         saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
 
-                        // Verify data was actually saved
                         const verifyWeekly = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
                         const verifyKeys = verifyWeekly ? Object.keys(JSON.parse(verifyWeekly)).length : 0;
-                        console.log(`[Repo Restore] Verification: weeklyData has ${verifyKeys} periods in localStorage`);
+                        const verifyTeam = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers') || '{}');
+                        const verifyTeamKeys = Object.keys(verifyTeam).length;
+                        console.log(`[Repo Restore] Verification: weeklyData=${verifyKeys} periods, myTeamMembers=${verifyTeamKeys} entries`);
 
-                        setCallListeningSyncStatus(`Restore complete (${verifyKeys} periods). Reloading...`, 'success');
-                        showToast(`Restored ${verifyKeys} weekly periods. Reloading...`, 3500);
-                        // Force a true hard reload to re-read localStorage into memory
+                        setCallListeningSyncStatus(`Restore complete (${verifyKeys} weekly / ${verifyTeamKeys} team). Reloading...`, 'success');
+                        showToast(`Restored ${verifyKeys} weekly, ${verifyTeamKeys} team members. Reloading...`, 3500);
                         setTimeout(() => window.location.reload(true), 1500);
                     } catch (error) {
                         console.error('Force restore failed:', error);
                         setCallListeningSyncStatus(`Restore failed: ${error.message}`, 'error');
-                        showToast(`Restore failed: ${error.message}`, 4000);
+                        alert(`Restore failed:\n\n${error.message}`);
                     }
                 });
             });
