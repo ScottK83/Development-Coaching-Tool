@@ -66,6 +66,48 @@
     // reliability is total hours for the year, not a weekly rate
     var SKIP_ON_DASHBOARD = { transfersCount: true, reliability: true };
 
+    // The five year-end scored KPIs (must match metric-profiles rating bands)
+    var YEAR_END_KPIS = [
+        { key: 'scheduleAdherence', label: 'Adh', full: 'Adherence' },
+        { key: 'aht', label: 'AHT', full: 'AHT' },
+        { key: 'overallSentiment', label: 'Sent', full: 'Sentiment' },
+        { key: 'cxRepOverall', label: 'RepSat', full: 'Rep Sat' },
+        { key: 'reliability', label: 'Rel', full: 'Reliability' }
+    ];
+
+    function scoreYearEndKpi(metricKey, value, year) {
+        var num = parseFloat(value);
+        if (!isFinite(num)) return null;
+        if (typeof window.getMetricRatingScore === 'function') {
+            return window.getMetricRatingScore(metricKey, num, year);
+        }
+        return null;
+    }
+
+    function evaluateYearEndKpis(emp, year) {
+        var scores = YEAR_END_KPIS.map(function(kpi) {
+            return {
+                key: kpi.key,
+                label: kpi.label,
+                full: kpi.full,
+                score: scoreYearEndKpi(kpi.key, emp[kpi.key], year)
+            };
+        });
+        var onTrack = 0, exceptional = 0;
+        for (var i = 0; i < scores.length; i++) {
+            var s = scores[i].score;
+            if (s >= 2) onTrack++;
+            if (s === 3) exceptional++;
+        }
+        return {
+            name: emp.name || 'Unknown',
+            firstName: getFirstName(emp),
+            scores: scores,
+            onTrackCount: onTrack,
+            exceptionalCount: exceptional
+        };
+    }
+
     function evaluateEmployee(emp) {
         var registry = window.METRICS_REGISTRY || {};
         var metrics = window.DevCoachModules?.metrics || {};
@@ -154,7 +196,75 @@
             'font-size: 0.8em; font-weight: 600; background: #dcfce7; color: #166534;">' + escapeHtml(text) + '</span>';
     }
 
-    function renderDashboard(container, priorities, teamStats, weekLabel) {
+    function renderKpiDot(score, label) {
+        var bg, color, title;
+        if (score === 3) { bg = '#16a34a'; color = '#fff'; title = label + ': Exceptional'; }
+        else if (score === 2) { bg = '#ca8a04'; color = '#fff'; title = label + ': Successful'; }
+        else if (score === 1) { bg = '#dc2626'; color = '#fff'; title = label + ': Off-track'; }
+        else { bg = '#e2e8f0'; color = '#64748b'; title = label + ': No data'; }
+        return '<span title="' + escapeHtml(title) + '" style="display: inline-block; padding: 2px 7px; margin: 0 2px; ' +
+            'border-radius: 8px; font-size: 0.7em; font-weight: 700; background: ' + bg + '; color: ' + color + ';">' +
+            escapeHtml(label) + '</span>';
+    }
+
+    function renderKpiScorecard(evaluated) {
+        if (!evaluated.length) return '';
+
+        var buckets = [[], [], [], [], [], []]; // index = onTrackCount (0..5)
+        for (var i = 0; i < evaluated.length; i++) {
+            buckets[evaluated[i].onTrackCount].push(evaluated[i]);
+        }
+        for (var b = 0; b < buckets.length; b++) {
+            buckets[b].sort(function(a, b2) {
+                if (b2.exceptionalCount !== a.exceptionalCount) return b2.exceptionalCount - a.exceptionalCount;
+                return a.firstName.localeCompare(b2.firstName);
+            });
+        }
+
+        var html = '<h3 style="margin: 8px 0 6px 0; font-size: 1.1em; color: #475569;">Year-End KPI Scorecard</h3>';
+        html += '<p style="margin: 0 0 12px 0; color: #94a3b8; font-size: 0.78em;">' +
+            'Adh · AHT · Sent · RepSat · Rel &mdash; ' +
+            '<span style="color:#166534;font-weight:600;">green</span>=Exceptional, ' +
+            '<span style="color:#92400e;font-weight:600;">yellow</span>=Successful, ' +
+            '<span style="color:#991b1b;font-weight:600;">red</span>=Off-track' +
+            '</p>';
+
+        for (var bucket = 5; bucket >= 0; bucket--) {
+            var list = buckets[bucket];
+            if (!list.length) continue;
+            var bucketColor = bucket === 5 ? '#166534' : bucket >= 3 ? '#ca8a04' : '#991b1b';
+            var bucketBg = bucket === 5 ? '#dcfce7' : bucket >= 3 ? '#fef3c7' : '#fee2e2';
+
+            html += '<div style="margin-bottom: 10px; padding: 10px 14px; background: white; border-radius: 10px; ' +
+                'border: 1px solid #e2e8f0; border-left: 4px solid ' + bucketColor + ';">';
+            html += '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">';
+            html += '<span style="display: inline-block; padding: 3px 10px; background: ' + bucketBg +
+                '; color: ' + bucketColor + '; border-radius: 12px; font-size: 0.85em; font-weight: 700;">' +
+                bucket + ' of 5 on-track</span>';
+            html += '<span style="color: #64748b; font-size: 0.82em;">' + list.length + ' ' +
+                (list.length === 1 ? 'rep' : 'reps') + '</span>';
+            html += '</div>';
+
+            html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
+            for (var k = 0; k < list.length; k++) {
+                var e = list[k];
+                html += '<div style="display: flex; align-items: center; gap: 8px;">';
+                html += '<span style="min-width: 120px; font-weight: 600; color: #1e293b; font-size: 0.9em;">' +
+                    escapeHtml(e.firstName) + '</span>';
+                html += '<span>';
+                for (var s = 0; s < e.scores.length; s++) {
+                    html += renderKpiDot(e.scores[s].score, e.scores[s].label);
+                }
+                html += '</span>';
+                html += '</div>';
+            }
+            html += '</div></div>';
+        }
+
+        return html;
+    }
+
+    function renderDashboard(container, priorities, teamStats, weekLabel, kpiEvaluated) {
         var html = '';
 
         // Header
@@ -174,6 +284,9 @@
             '<div style="font-size: 2em; font-weight: 700; color: #991b1b;">' + teamStats.needCoaching + '</div>' +
             '<div style="font-size: 0.82em; color: #991b1b;">Need Coaching</div></div>';
         html += '</div>';
+
+        // Year-End KPI Scorecard (bucketed 5→0 on-track)
+        html += renderKpiScorecard(kpiEvaluated || []);
 
         // Coaching priorities
         if (priorities.length > 0) {
@@ -270,14 +383,15 @@
         var container = document.getElementById('dashboardContent');
         if (!container) return;
 
-        var wData = Object.assign({}, getWeeklyData(), getYtdData());
+        // Dashboard is YTD-only — real YTD uploads are the source of truth
+        var wData = getYtdData();
         var weekKey = getLatestWeekKey(wData);
 
         if (!weekKey) {
             container.innerHTML = '<div style="text-align: center; padding: 60px 20px;">' +
                 '<div style="font-size: 3em; margin-bottom: 16px;">📊</div>' +
                 '<h2 style="color: #475569; margin: 0 0 8px 0;">Welcome to the Coaching Tool</h2>' +
-                '<p style="color: #94a3b8; margin: 0 0 20px 0;">Upload your first week of data to see coaching priorities.</p>' +
+                '<p style="color: #94a3b8; margin: 0 0 20px 0;">Upload a YTD report to see coaching priorities.</p>' +
                 '<button type="button" onclick="showOnlySection(\'uploadSection\')" ' +
                 'style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; ' +
                 'font-size: 1em; cursor: pointer; font-weight: 600;">Upload Data</button></div>';
@@ -310,15 +424,15 @@
             starNames: meetingAll.map(function(e) { return e.firstName; }).sort()
         };
 
+        // Year-end KPI scorecard — score the 5 year-end KPIs with rating bands
         var periodMeta = wData[weekKey]?.metadata || {};
-        var periodType = periodMeta.periodType || 'week';
-        var periodTypeLabel = periodType === 'ytd' ? 'YTD' :
-            periodType === 'month' ? 'Monthly' :
-            periodType === 'quarter' ? 'Quarterly' :
-            periodType === 'daily' ? 'Daily' :
-            periodType === 'week-in-progress' ? 'Week in progress' : 'Weekly';
-        var weekLabel = periodTypeLabel + ' data through ' + formatWeekLabel(weekKey);
-        renderDashboard(container, needCoaching, teamStats, weekLabel);
+        var reviewYear = typeof window.getPeriodReviewYear === 'function'
+            ? window.getPeriodReviewYear(weekKey, wData[weekKey])
+            : NaN;
+        var kpiEvaluated = employees.map(function(emp) { return evaluateYearEndKpis(emp, reviewYear); });
+
+        var weekLabel = 'YTD data through ' + formatWeekLabel(weekKey);
+        renderDashboard(container, needCoaching, teamStats, weekLabel, kpiEvaluated);
     }
 
     function coachNow(employeeName) {
