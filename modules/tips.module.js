@@ -203,6 +203,7 @@ positiveWord,Say 'I noticed' instead of 'the system shows' - personal observatio
 positiveWord,Use 'let's' - it makes customer a partner not a recipient
 positiveWord,Say 'here's the plan' - gives the call structure and momentum
 positiveWord,Use 'of course' instead of 'sure' - sounds more professional and warm
+positiveWord,Start your greeting with positive words - reps scoring 100 on positive words open with 'Thank you for being a part of APS - my name is [your name] - how may I help you today?' then once the customer shares why they called respond with 'Absolutely I can definitely help with that'
 negativeWord,Replace 'unfortunately' with 'what I can do is...' to focus on solutions
 negativeWord,Never say 'I don't know' - say 'Great question let me find that answer for you'
 negativeWord,Avoid 'but' - use 'and' or 'however' to sound less contradictory
