@@ -1747,7 +1747,7 @@
     // Per-rep daily check-in block: yesterday's six operational metrics and
     // the week-to-date weighted rollup, computed from dailyData rows between
     // this past Monday and today. Returns '' when there's no daily data
-    // for the current week (so Morning Pulse hides the whole section).
+    // for the current week (so Weekly Pulse hides the whole section).
     //
     // Metrics are scoped to what's meaningful at single-day granularity:
     // volume, AHT, adherence, and the three sentiment scores. Survey-based
@@ -2273,7 +2273,7 @@
             : '';
         html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
             `<div>` +
-                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Morning Pulse \u2014 ${rangeText}</h3>` +
+                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Weekly Pulse \u2014 ${rangeText}</h3>` +
                 `<p style="color:#666; margin:0; font-size:0.9em;">${pulseDescription}</p>` +
             `</div>` +
             `<div style="display:flex; gap:10px; flex-shrink:0;">` +
@@ -2501,7 +2501,7 @@
         }
     }
 
-    // Initialize - called when the Morning Pulse tab is activated.
+    // Initialize - called when the Weekly Pulse tab is activated.
     // Always snap to the newest available period so fresh uploads appear
     // without requiring the user to touch the dropdown.
     function initializeMorningPulse() {
