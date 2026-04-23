@@ -11,6 +11,35 @@ export default {
       });
     }
 
+    // GET /files/<name> serves uploaded files from R2 uploads/.
+    // Top-level navigations (window.open) don't send Origin, so we accept
+    // either Origin or Referer matching ALLOWED_ORIGIN.
+    if (request.method === 'GET') {
+      const url = new URL(request.url);
+      const filesMatch = url.pathname.match(/^\/files\/(.+)$/);
+      if (!filesMatch) {
+        return new Response('Not Found', { status: 404 });
+      }
+      const refererOrigin = safeOrigin(request.headers.get('referer'));
+      const requestOrigin = String(request.headers.get('origin') || '').trim();
+      const sourceOrigin = requestOrigin || refererOrigin;
+      if (!isAllowedOrigin(sourceOrigin, allowedOrigin)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      if (!env.COACHING_BUCKET) {
+        return new Response('Bucket not configured', { status: 500 });
+      }
+      const fileName = decodeURIComponent(filesMatch[1]).split(/[\\/]/).pop();
+      const obj = await env.COACHING_BUCKET.get(`uploads/${fileName}`);
+      if (!obj) {
+        return new Response('File not found', { status: 404 });
+      }
+      const headers = new Headers();
+      headers.set('Content-Type', obj.httpMetadata?.contentType || guessContentType(fileName));
+      headers.set('Cache-Control', 'no-store');
+      return new Response(obj.body, { status: 200, headers });
+    }
+
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', {
         status: 405,
@@ -26,15 +55,13 @@ export default {
     const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
     if (expectedSyncSecret) {
       const providedSyncSecret = String(request.headers.get('x-sync-secret') || '').trim();
-      // Use constant-time comparison to prevent timing attacks
       if (!providedSyncSecret || !timingSafeEqual(providedSyncSecret, expectedSyncSecret)) {
         return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401, corsHeaders(requestOrigin, allowedOrigin));
       }
     }
 
-    // KV binding required for sync/retrieve
-    if (!env.COACHING_DATA) {
-      return json({ error: 'Missing KV namespace binding: COACHING_DATA' }, 500, corsHeaders(requestOrigin, allowedOrigin));
+    if (!env.COACHING_BUCKET) {
+      return json({ error: 'Missing R2 bucket binding: COACHING_BUCKET' }, 500, corsHeaders(requestOrigin, allowedOrigin));
     }
 
     try {
@@ -43,64 +70,42 @@ export default {
       const cors = corsHeaders(requestOrigin, allowedOrigin);
 
       // ============================================
-      // RETRIEVE: Read backup from KV
+      // RETRIEVE: Read latest backup from R2
       // ============================================
       if (mode === 'retrieve') {
-        const stored = await env.COACHING_DATA.get('backup', { type: 'json' });
-        if (!stored) {
+        const obj = await env.COACHING_BUCKET.get('state/latest.json');
+        if (!obj) {
           return json({ ok: false, error: 'No backup found in storage.' }, 404, cors);
         }
+        const stored = await obj.json();
         return json({ ok: true, mode: 'retrieve', payload: stored, generatedAt: stored?.generatedAt || null }, 200, cors);
       }
 
       // ============================================
-      // DELETE ALL: Wipe KV backup and GitHub backup file
+      // DELETE ALL: Wipe latest backup (snapshots stay as safety net)
       // ============================================
       if (mode === 'deleteAll') {
-        await env.COACHING_DATA.delete('backup');
-
-        // Also clear the GitHub backup file if configured (non-blocking)
-        if (env.GH_TOKEN && env.GH_OWNER && env.GH_REPO) {
-          const branch = env.GH_BRANCH || 'main';
-          const dataDir = env.GH_DATA_DIR || 'data';
-          try {
-            await upsertRepoFile({
-              env, branch,
-              path: `${dataDir}/coaching-tool-sync-backup.json`,
-              message: 'chore(data): delete all coaching data',
-              content: JSON.stringify({ deletedAt: new Date().toISOString(), data: null }, null, 2)
-            });
-          } catch (ghErr) {
-            console.error('GitHub delete failed (non-blocking):', ghErr.message);
-          }
-        }
-
+        await env.COACHING_BUCKET.delete('state/latest.json');
+        await env.COACHING_BUCKET.delete('state/coachingHistory.csv');
         return json({ ok: true, mode: 'deleteAll', deletedAt: new Date().toISOString() }, 200, cors);
       }
 
       // ============================================
-      // UPLOAD FILE: Still uses GitHub for file storage
+      // UPLOAD FILE: Store binary file in R2 uploads/
       // ============================================
       if (mode === 'uploadFile') {
-        if (!env.GH_TOKEN || !env.GH_OWNER || !env.GH_REPO) {
-          return json({ error: 'Missing GitHub config for file uploads.' }, 500, cors);
-        }
-        const branch = env.GH_BRANCH || 'main';
-        const dataDir = env.GH_DATA_DIR || 'data';
-        const uploadResult = await handleUploadFileToRepo({ env, body, branch, dataDir });
+        const uploadResult = await handleUploadFileToR2({ env, body });
         return json({
           ok: true,
           mode: 'uploadFile',
-          branch,
           path: uploadResult.path,
           fileName: uploadResult.fileName,
-          commit: uploadResult.commitSha,
           generatedAt: new Date().toISOString()
         }, 200, cors);
       }
 
       // ============================================
-      // SYNC: Write backup to KV (+ optional GitHub)
+      // SYNC: Write backup to R2 (latest + dated snapshot)
       // ============================================
       const reason = String(body?.reason || 'updated').trim() || 'updated';
       const generatedAt = new Date().toISOString();
@@ -130,8 +135,9 @@ export default {
 
       const incomingHasData = hasMeaningfulData(fullBackupPayload);
 
-      // Check existing backup for regression guard
-      const existingBackup = await env.COACHING_DATA.get('backup', { type: 'json' });
+      // Regression guard: read existing latest backup
+      const existingObj = await env.COACHING_BUCKET.get('state/latest.json');
+      const existingBackup = existingObj ? await existingObj.json() : null;
       const existingHasData = hasMeaningfulData(existingBackup);
       const incomingSummary = summarizeFreshness(fullBackupPayload);
       const existingSummary = summarizeFreshness(existingBackup);
@@ -155,43 +161,28 @@ export default {
         }, 409, cors);
       }
 
-      // Write to KV
-      await env.COACHING_DATA.put('backup', JSON.stringify(fullBackupPayload));
+      const serialized = JSON.stringify(fullBackupPayload);
+      const jsonHeaders = { httpMetadata: { contentType: 'application/json' } };
 
-      // Optional: also write to GitHub if configured (non-blocking)
-      if (env.GH_TOKEN && env.GH_OWNER && env.GH_REPO) {
-        const branch = env.GH_BRANCH || 'main';
-        const dataDir = env.GH_DATA_DIR || 'data';
-        try {
-          await upsertRepoFile({
-            env, branch,
-            path: `${dataDir}/coaching-tool-sync-backup.json`,
-            message: `chore(data): sync full coaching backup (${reason})`,
-            content: JSON.stringify(fullBackupPayload, null, 2)
-          });
-        } catch (ghErr) {
-          console.error('GitHub sync failed (non-blocking):', ghErr.message);
-        }
+      // Write latest + dated snapshot (snapshots overwrite within same day)
+      const snapshotKey = `state/snapshots/${generatedAt.slice(0, 10)}.json`;
+      await Promise.all([
+        env.COACHING_BUCKET.put('state/latest.json', serialized, jsonHeaders),
+        env.COACHING_BUCKET.put(snapshotKey, serialized, jsonHeaders)
+      ]);
 
-        // Human-readable coaching history CSV for Excel review.
-        const coachingCsv = typeof body?.coachingHistoryCsv === 'string' ? body.coachingHistoryCsv : '';
-        if (coachingCsv.trim()) {
-          try {
-            await upsertRepoFile({
-              env, branch,
-              path: `${dataDir}/coachingHistory.csv`,
-              message: `chore(data): sync coaching history CSV (${reason})`,
-              content: sanitizeText(coachingCsv)
-            });
-          } catch (ghErr) {
-            console.error('GitHub CSV sync failed (non-blocking):', ghErr.message);
-          }
-        }
+      // Human-readable coaching history CSV for Excel review
+      const coachingCsv = typeof body?.coachingHistoryCsv === 'string' ? body.coachingHistoryCsv : '';
+      if (coachingCsv.trim()) {
+        await env.COACHING_BUCKET.put('state/coachingHistory.csv', sanitizeText(coachingCsv), {
+          httpMetadata: { contentType: 'text/csv; charset=utf-8' }
+        });
       }
 
       return json({
         ok: true,
         generatedAt,
+        snapshotKey,
         incomingSummary,
         existingSummary
       }, 200, cors);
@@ -219,8 +210,6 @@ function json(data, status = 200, headers = corsHeaders()) {
 
 function corsHeaders(requestOrigin = '', allowedOrigin = '') {
   const safeRequest = String(requestOrigin || '').trim();
-  // Use the request origin in the CORS header if it passes the allowlist check
-  // This is necessary for Cloudflare Pages subdomain deployments
   const origin = isAllowedOrigin(safeRequest, allowedOrigin) ? safeRequest : String(allowedOrigin || '').trim();
   if (!origin) {
     return {
@@ -237,14 +226,20 @@ function corsHeaders(requestOrigin = '', allowedOrigin = '') {
   };
 }
 
+function safeOrigin(referer) {
+  try {
+    if (!referer) return '';
+    return new URL(referer).origin;
+  } catch (e) {
+    return '';
+  }
+}
+
 function isAllowedOrigin(requestOrigin, allowedOrigin) {
   const safeAllowed = String(allowedOrigin || '').trim();
-  // Default-deny: if ALLOWED_ORIGIN is not configured, reject all origins
   if (!safeAllowed) return false;
   const safeRequest = String(requestOrigin || '').trim();
-  // Exact match
   if (safeRequest === safeAllowed) return true;
-  // Allow Cloudflare Pages deployment subdomains (e.g. abc123.development-coaching-tool.pages.dev)
   try {
     const allowedHost = new URL(safeAllowed).hostname;
     const requestHost = new URL(safeRequest).hostname;
@@ -253,14 +248,10 @@ function isAllowedOrigin(requestOrigin, allowedOrigin) {
   return false;
 }
 
-/**
- * Constant-time string comparison to prevent timing attacks
- */
 function timingSafeEqual(a, b) {
   const strA = String(a);
   const strB = String(b);
   if (strA.length !== strB.length) {
-    // Still do a comparison to avoid length-based timing leak
     let result = strA.length ^ strB.length;
     for (let i = 0; i < strA.length; i++) {
       result |= strA.charCodeAt(i) ^ (strB.charCodeAt(i % strB.length) || 0);
@@ -377,94 +368,36 @@ function sanitizeForRepo(value, keyHint = '') {
 }
 
 // ============================================
-// GITHUB FILE UPLOAD (for Excel/file uploads only)
+// FILE UPLOADS (Excel etc. -> R2 uploads/)
 // ============================================
 
-async function githubRequest(env, path, options = {}) {
-  const response = await fetch(`https://api.github.com${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${env.GH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'dev-coaching-tool-sync-worker',
-      ...(options.headers || {})
-    }
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`GitHub API ${response.status}: ${errorText}`);
-  }
-  return response.json();
-}
-
-async function getExistingFileSha(env, branch, path) {
-  try {
-    const file = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}?ref=${encodeURIComponent(branch)}`);
-    return file?.sha || null;
-  } catch (e) {
-    if (String(e.message || '').includes('404')) return null;
-    throw e;
-  }
-}
-
-async function upsertRepoFile({ env, branch, path, message, content }) {
-  const encodedContent = btoa(unescape(encodeURIComponent(content)));
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const sha = await getExistingFileSha(env, branch, path);
-      const payload = { message, content: encodedContent, branch };
-      if (sha) payload.sha = sha;
-      const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      return { commitSha: result?.commit?.sha || null };
-    } catch (e) {
-      if (attempt < 3 && String(e.message || '').toLowerCase().includes('409')) {
-        await new Promise(r => setTimeout(r, attempt * 250));
-        continue;
-      }
-      throw e;
-    }
-  }
-}
-
-/**
- * Upload a file using pre-encoded base64 content (binary-safe, no double-encoding)
- */
-async function upsertRepoFileBase64({ env, branch, path, message, contentBase64 }) {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const sha = await getExistingFileSha(env, branch, path);
-      const payload = { message, content: contentBase64, branch };
-      if (sha) payload.sha = sha;
-      const result = await githubRequest(env, `/repos/${env.GH_OWNER}/${env.GH_REPO}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      return { commitSha: result?.commit?.sha || null };
-    } catch (e) {
-      if (attempt < 3 && String(e.message || '').toLowerCase().includes('409')) {
-        await new Promise(r => setTimeout(r, attempt * 250));
-        continue;
-      }
-      throw e;
-    }
-  }
-}
-
-async function handleUploadFileToRepo({ env, body, branch, dataDir }) {
+async function handleUploadFileToR2({ env, body }) {
   const rawFileName = String(body?.fileName || '').trim();
   const fileName = rawFileName.split(/[\\/]/).pop().trim()
     .replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^-+/g, '').replace(/-+$/g, '');
   if (!fileName) throw new Error('Missing or invalid fileName.');
   const contentBase64 = String(body?.fileContentBase64 || '').replace(/\s+/g, '');
   if (!contentBase64) throw new Error('Missing fileContentBase64.');
-  const uploadsDir = String(env.GH_UPLOADS_DIR || `${dataDir}/uploads`).trim();
-  const path = `${uploadsDir}/${fileName}`;
-  // Pass base64 content directly to avoid double-encode corruption with binary files
-  const result = await upsertRepoFileBase64({ env, branch, path, message: `chore(data): upload file ${fileName}`, contentBase64 });
-  return { fileName, path, commitSha: result.commitSha };
+
+  // Decode base64 to bytes for R2
+  const binaryString = atob(contentBase64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+
+  const path = `uploads/${fileName}`;
+  const contentType = guessContentType(fileName);
+  await env.COACHING_BUCKET.put(path, bytes, {
+    httpMetadata: { contentType }
+  });
+  return { fileName, path };
+}
+
+function guessContentType(fileName) {
+  const lower = String(fileName).toLowerCase();
+  if (lower.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (lower.endsWith('.xls')) return 'application/vnd.ms-excel';
+  if (lower.endsWith('.csv')) return 'text/csv; charset=utf-8';
+  if (lower.endsWith('.json')) return 'application/json';
+  if (lower.endsWith('.txt')) return 'text/plain; charset=utf-8';
+  return 'application/octet-stream';
 }

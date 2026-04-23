@@ -3,13 +3,8 @@ main = "index.js"
 compatibility_date = "2026-02-25"
 
 [vars]
-GH_OWNER = "ScottK83"
-GH_REPO = "Development-Coaching-Tool"
-GH_BRANCH = "main"
-GH_DATA_DIR = "data"
-GH_UPLOADS_DIR = "data/uploads"
 ALLOWED_ORIGIN = "https://development-coaching-tool.pages.dev"
 
-[[kv_namespaces]]
-binding = "COACHING_DATA"
-id = "04f2f1b2ce5b46ef9c4c371a5ac2ddfc"
+[[r2_buckets]]
+binding = "COACHING_BUCKET"
+bucket_name = "coaching-tool-data"

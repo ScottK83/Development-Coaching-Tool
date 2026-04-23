@@ -1,69 +1,49 @@
-# Call Listening Repo Sync Worker
+# Coaching Tool Sync Worker
 
-This Worker receives app data from the browser and commits synced files to this GitHub repo.
+Cloudflare Worker that backs the app's cloud sync. All app state is stored in
+an R2 bucket (`coaching-tool-data`) — no GitHub commits, no KV.
 
-## Files Updated in Repo
+## R2 layout
 
-- `data/call-listening-logs.json`
-- `data/call-listening-logs.csv`
-- `data/coaching-tool-sync-backup.json` (full app backup)
+- `state/latest.json` — most recent full backup (read by `mode: 'retrieve'`)
+- `state/snapshots/YYYY-MM-DD.json` — one snapshot per UTC date, written on every sync
+- `state/coachingHistory.csv` — human-readable CSV (overwrites)
+- `uploads/<filename>` — files uploaded via `mode: 'uploadFile'`
 
-A GitHub Action then regenerates:
+## Endpoints
 
-- `data/call-listening-logs.xlsx`
-- `data/Development-Coaching-Tool.xlsx`
-- `data/PTO-Tracking.xlsx`
+POST `/`:
 
-## 1) Configure Worker
+- `{mode: 'retrieve'}` — returns latest backup
+- `{mode: 'deleteAll'}` — deletes `state/latest.json` and `state/coachingHistory.csv`. Snapshots remain.
+- `{mode: 'uploadFile', fileName, fileContentBase64}` — writes binary to `uploads/<fileName>`
+- (no mode) — full sync; payload is the JSON state blob
 
-From repo root:
+GET `/files/<fileName>`:
 
-```powershell
-Push-Location cloudflare-sync-worker
-npx wrangler secret put GH_TOKEN
-# Paste a GitHub token with repo contents write access
+- Streams `uploads/<fileName>` from R2. Origin/Referer must match `ALLOWED_ORIGIN`.
+
+## One-time setup
+
+```bash
+# 1. Create the bucket (one time per Cloudflare account)
+npx wrangler r2 bucket create coaching-tool-data
+
+# 2. Optional shared secret (recommended)
 npx wrangler secret put SYNC_SHARED_SECRET
-# Recommended: set a shared secret the app must send in X-Sync-Secret
-npx wrangler secret put ALLOWED_ORIGIN
-# Optional but recommended for private access: exact site origin allowed to call worker (example: https://your-site.pages.dev)
+
+# 3. Deploy
 npx wrangler deploy
-Pop-Location
 ```
 
-The default owner/repo/branch are already set in `wrangler.toml`.
-
-## 2) Enable Auto-Sync in App
-
-1. Open `Coaching & Analysis` -> `🎧 Call Listening`
-2. Paste your deployed Worker URL into `Auto-Sync Worker URL`
-3. If `SYNC_SHARED_SECRET` is set in the worker, paste the same value into `Sync Shared Secret (optional)`
-4. Keep `Auto-sync on save` checked
-
-Every save/update/delete in the app that writes tracked data now syncs to repo.
+`ALLOWED_ORIGIN` is set in `wrangler.toml` and applies to both POST sync and
+GET file downloads.
 
 ## Notes
 
-- If Worker URL is blank, the app continues local-only storage.
-- If sync fails, the app shows the failure in the `callListeningSyncStatus` line but still keeps local data.
-- If worker secret auth is enabled and the app secret is wrong/missing, sync returns `401 Unauthorized`.
-- If `ALLOWED_ORIGIN` is set and request origin does not match exactly, sync returns `403 Forbidden`.
-- Worker now blocks stale/regressive payloads with `409 DATA_REGRESSION_GUARD` to prevent older browser profiles from overwriting newer repo data.
-
-## Manual Smoke Test (Workflow Dispatch)
-
-Use this when you want to quickly verify XLSX generation without waiting for a data-change push.
-
-1. Open GitHub -> `Actions` -> `Build Development Coaching Tool XLSX`
-2. Click `Run workflow`
-3. Choose branch `main`
-4. Click `Run workflow` to start the job
-
-Expected result:
-
-- Workflow completes with `success`
-- Artifacts in repo are up to date:
-  - `data/call-listening-logs.xlsx`
-  - `data/Development-Coaching-Tool.xlsx` (or skipped if backup JSON is invalid)
-  - `data/PTO-Tracking.xlsx`
-
-If it fails, open the failed run logs and check the `Build XLSX from CSV` step first.
+- KV is no longer used. The bucket is the single source of truth.
+- Snapshots are append-only (one per day). Historical snapshots are not
+  deleted by `deleteAll` — that's the rollback safety net.
+- File uploads are limited by R2 single-PUT size (~5 GiB). Free tier: 10 GB
+  storage, 1M Class A ops/month, 10M Class B ops/month.
+- The worker rejects regressive sync payloads with `409 DATA_REGRESSION_GUARD`.

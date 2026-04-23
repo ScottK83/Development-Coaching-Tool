@@ -366,7 +366,6 @@
         const openFullExcelBtn = document.getElementById('openFullBackupExcelBtn');
         const openPtoExcelBtn = document.getElementById('openPtoExcelBtn');
         const uploadExcelBtn = document.getElementById('uploadExcelToRepoBtn');
-        const openRepoUploadsFolderBtn = document.getElementById('openRepoUploadsFolderBtn');
 
         if (!syncEndpointInput || !autoSyncCheckbox || !syncNowBtn || !openFullExcelBtn) {
             return;
@@ -476,12 +475,6 @@
             });
             uploadExcelBtn.dataset.bound = 'true';
         }
-        if (openRepoUploadsFolderBtn && !openRepoUploadsFolderBtn.dataset.bound) {
-            openRepoUploadsFolderBtn.addEventListener('click', () => {
-                openRepoUploadsFolder();
-            });
-            openRepoUploadsFolderBtn.dataset.bound = 'true';
-        }
         if (!syncEndpointInput.dataset.bound) {
             const persistEndpointConfig = () => {
                 const nextConfig = getCallListeningSyncConfigFromUI();
@@ -585,15 +578,13 @@
     }
 
     function openRepoExcelFile(fileName) {
-        const githubUrl = `https://github.com/ScottK83/Development-Coaching-Tool/raw/main/data/${encodeURIComponent(fileName)}?t=${Date.now()}`;
-        const baseUrl = window?.location?.origin;
-        const localUrl = baseUrl && baseUrl !== 'null' ? `${baseUrl}/data/${fileName}` : '';
-        const fileUrl = githubUrl || localUrl;
-
-        if (!fileUrl) {
-            showToast('Could not build Excel file URL.', 3500);
+        const config = loadCallListeningSyncConfig();
+        const endpoint = String(config?.endpoint || '').trim().replace(/\/+$/, '');
+        if (!endpoint) {
+            showToast('Worker URL not configured. Check Sync settings.', 3500);
             return;
         }
+        const fileUrl = `${endpoint}/files/${encodeURIComponent(fileName)}?t=${Date.now()}`;
 
         if (fileName === 'call-listening-logs.xlsx') {
             const totalCallLogs = getTotalCallListeningLogCount();
@@ -605,11 +596,6 @@
         window.open(fileUrl, '_blank');
     }
 
-    function openRepoUploadsFolder() {
-        const uploadsFolderUrl = 'https://github.com/ScottK83/Development-Coaching-Tool/tree/main/data/uploads';
-        window.open(uploadsFolderUrl, '_blank');
-    }
-
     async function fetchReferenceCsvFromWorkspaceOrRepo(fileName) {
         const origin = window?.location?.origin;
         const cacheBust = `cb=${Date.now()}`;
@@ -618,8 +604,6 @@
         if (origin && origin !== 'null') {
             candidates.push(`${origin}/data/${fileName}?${cacheBust}`);
         }
-
-        candidates.push(`https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/${encodeURIComponent(fileName)}?${cacheBust}`);
 
         for (const url of candidates) {
             try {
@@ -1118,26 +1102,7 @@
             console.warn('[Repo Restore] Worker fetch failed:', error.message);
         }
 
-        // Fallback: try GitHub raw (in case Worker KV is empty/not yet migrated)
-        const fallbackUrls = [
-            `https://raw.githubusercontent.com/ScottK83/Development-Coaching-Tool/main/data/coaching-tool-sync-backup.json?cb=${Date.now()}`
-        ];
-        for (const url of fallbackUrls) {
-            try {
-                console.log('[Repo Restore] Trying fallback:', url);
-                const response = await fetch(url, { cache: 'no-store' });
-                if (!response.ok) continue;
-                const payload = await response.json();
-                if (payload && hasMeaningfulBackupData(payload)) {
-                    console.log('[Repo Restore] Fallback succeeded:', Object.keys(payload.weeklyData || {}).length, 'weekly,', Object.keys(payload.ytdData || {}).length, 'ytd periods,', Object.keys(payload.reliabilityTracker?.employees || {}).length, 'reliability employees');
-                    return payload;
-                }
-            } catch (error) {
-                console.warn('[Repo Restore] Fallback failed:', error.message);
-            }
-        }
-
-        console.error('[Repo Restore] All sources failed');
+        console.error('[Repo Restore] Worker fetch failed and no fallback configured');
         return null;
     }
 
@@ -1545,7 +1510,6 @@
         arrayBufferToBase64,
         uploadExcelFileToRepo,
         openRepoExcelFile,
-        openRepoUploadsFolder,
         fetchReferenceCsvFromWorkspaceOrRepo,
         appendCsvAsSheet,
         exportIntelligenceLedgerWorkbook,
