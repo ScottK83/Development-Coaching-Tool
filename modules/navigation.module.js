@@ -4,6 +4,35 @@
     var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     var UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
 
+    // CSS uses .top-nav-btn[style*="gradient"] to style the active top-nav
+    // button, so toggling the active state means moving an inline gradient
+    // from one button to another.
+    var SECTION_TO_TOP_NAV_BTN = {
+        dashboardSection: 'dashboardBtn',
+        uploadSection: 'homeBtn',
+        coachingEmailSection: 'coachingEmailBtn',
+        trendsAnalysisSection: 'trendsAnalysisBtn',
+        reviewPrepSection: 'reviewPrepBtn',
+        redFlagSection: 'redFlagBtn',
+        manageDataSection: 'manageDataBtn'
+    };
+    var ACTIVE_TOP_NAV_GRADIENT = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+    function setActiveTopNav(sectionId) {
+        var activeBtnId = SECTION_TO_TOP_NAV_BTN[sectionId];
+        Object.values(SECTION_TO_TOP_NAV_BTN).forEach(function(btnId) {
+            var btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (btnId === activeBtnId) {
+                btn.style.background = ACTIVE_TOP_NAV_GRADIENT;
+                btn.style.color = 'white';
+            } else {
+                btn.style.background = '';
+                btn.style.color = '';
+            }
+        });
+    }
+
     function showOnlySection(sectionId) {
         // Hide all sections
         var sections = document.querySelectorAll('section[id$="Section"], form[id$="Form"]');
@@ -17,6 +46,8 @@
             targetSection.style.display = 'block';
             saveUiNavState({ sectionId: sectionId });
         }
+
+        setActiveTopNav(sectionId);
     }
 
     // --- Generic sub-section show/hide helper ---
