@@ -1237,15 +1237,29 @@
         console.log('[Repo Restore] Applying payload with keys:', Object.keys(payload || {}));
         console.log('[Repo Restore] weeklyData periods:', Object.keys(keys.weeklyData).length);
 
+        const writeFailures = [];
         let savedCount = 0;
         for (const [key, data] of Object.entries(keys)) {
             if (data === null || data === undefined) continue;
+            const incomingSize = (() => { try { return JSON.stringify(data).length; } catch (_) { return 0; } })();
+            const incomingCount = (data && typeof data === 'object' && !Array.isArray(data)) ? Object.keys(data).length : 0;
             const ok = safeSaveToStorage(key, data);
-            if (ok) savedCount++;
-            else console.warn('[Repo Restore] Failed to save:', key);
+            if (ok) {
+                const stored = localStorage.getItem(STORAGE_PREFIX + key) || '';
+                const storedCount = (() => {
+                    try { const p = JSON.parse(stored); return (p && typeof p === 'object' && !Array.isArray(p)) ? Object.keys(p).length : 0; } catch (_) { return 0; }
+                })();
+                if (incomingCount > 0 && storedCount !== incomingCount) {
+                    writeFailures.push(`${key}: wrote ${incomingCount} entries but localStorage has ${storedCount}`);
+                    console.warn(`[Repo Restore] Mismatch on ${key}: incoming=${incomingCount} stored=${storedCount}`);
+                }
+                savedCount++;
+            } else {
+                writeFailures.push(`${key}: safeSaveToStorage returned false (incoming ${incomingCount} entries, ${(incomingSize/1024/1024).toFixed(2)}MB)`);
+                console.warn('[Repo Restore] Failed to save:', key, `incoming=${incomingCount} size=${incomingSize}`);
+            }
         }
 
-        // Follow-up and hot tip history
         if (payload?.followUpHistory && typeof payload.followUpHistory === 'object') {
             safeSaveToStorage('followUpHistory', payload.followUpHistory);
         }
@@ -1254,6 +1268,10 @@
         }
 
         console.log(`[Repo Restore] Saved ${savedCount} data keys to localStorage`);
+        if (writeFailures.length) {
+            console.error('[Repo Restore] Write failures:', writeFailures);
+            alert(`Repo restore had write failures — data may be incomplete:\n\n${writeFailures.join('\n')}`);
+        }
     }
 
     function loadRepoBackupAppliedAt() {
