@@ -1224,15 +1224,22 @@
         const remoteGeneratedAtMs = parseTimeMs(payload?.generatedAt);
         const latestLocalMs = getLatestLocalRepoDataTimestampMs();
 
+        const isWorkPc = !!loadCallListeningSyncConfig()?.isWorkPc;
+
         if (localHasData) {
             if (!remoteGeneratedAtMs || (latestLocalMs > 0 && remoteGeneratedAtMs <= latestLocalMs)) {
                 return false;
             }
 
-            const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
-            const shouldRestore = confirm(`Your data was updated on another computer on ${remoteWhen}.\n\nClick OK to sync this PC with that newer data.\nClick Cancel to keep this PC's current data as-is.`);
-            if (!shouldRestore) {
-                return false;
+            // Work PC is the writer — confirm before letting cloud overwrite local,
+            // since divergence here usually means something to investigate. On
+            // read-only devices (non-work PCs) we just pull silently.
+            if (isWorkPc) {
+                const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
+                const shouldRestore = confirm(`Your data was updated on another computer on ${remoteWhen}.\n\nClick OK to sync this PC with that newer data.\nClick Cancel to keep this PC's current data as-is.`);
+                if (!shouldRestore) {
+                    return false;
+                }
             }
         }
 
@@ -1241,6 +1248,11 @@
         });
 
         saveRepoBackupAppliedAt(new Date().toISOString());
+
+        if (localHasData && !isWorkPc) {
+            const remoteWhen = new Date(remoteGeneratedAtMs).toLocaleString();
+            showToast(`Pulled latest from cloud (${remoteWhen})`, 3500);
+        }
 
         return true;
     }
