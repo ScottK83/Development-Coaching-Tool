@@ -378,8 +378,10 @@
             } else if (metrics.weightedCounts[metricKey] > 0) {
                 averages[metricKey] = metrics.weightedSums[metricKey] / metrics.weightedCounts[metricKey];
             } else {
-                // Fallback to simple average if no weights available
-                averages[metricKey] = values.reduce(function(sum, value) { return sum + value; }, 0) / values.length;
+                // No valid weights (e.g. survey-weighted metric with zero survey totals).
+                // Surface as null instead of a misleading unweighted mean — simple-average
+                // is forbidden by project rule (see feedback_metric_aggregation).
+                averages[metricKey] = null;
             }
         });
         return averages;

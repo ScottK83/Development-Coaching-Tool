@@ -875,19 +875,27 @@ const DEFAULT_METRIC_TIPS = {
 };
 
 function initializeDefaultTips() {
-    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
-    if (stored) {
-        return;
-    }
-
+    // Always refresh metricCoachingTips from the embedded CSV so edits
+    // to the tip library propagate to callers that read the stored copy.
+    // loadServerTips already layers user edits (modifiedServerTips) and
+    // deletions (deletedServerTips) on top of the CSV, so the refresh
+    // preserves customizations. User-authored tips live in a separate key
+    // (userCustomTips) and are untouched here.
     loadServerTips().then(serverTips => {
         if (Object.keys(serverTips).length > 0) {
             localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(serverTips));
-        } else {
+            return;
+        }
+        // CSV returned nothing — only seed defaults if nothing is stored yet.
+        const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+        if (!stored) {
             localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
         }
     }).catch(() => {
-        localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+        const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+        if (!stored) {
+            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+        }
     });
 }
 

@@ -126,9 +126,12 @@
     }
 
     function saveCelebrationSelection(sel) {
-        try {
-            localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(sel));
-        } catch (e) { /* ok */ }
+        var save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+        if (save) {
+            save('celebrationsSelection', sel);
+            return;
+        }
+        try { localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(sel)); } catch (e) { /* ok */ }
     }
 
     function formatDateFriendly(dateStr) {
@@ -261,9 +264,12 @@
     }
 
     function saveHistory(history) {
-        try {
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-        } catch (e) { /* ok */ }
+        var save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+        if (save) {
+            save('celebrationsHistory', history);
+            return;
+        }
+        try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history)); } catch (e) { /* ok */ }
     }
 
     /**
