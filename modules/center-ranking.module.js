@@ -474,12 +474,27 @@
         var container = document.getElementById('centerRankingContent');
         if (!container) return;
 
-        // Default to most recent YTD period on first render
+        // Drop the remembered key if it no longer resolves (period was deleted,
+        // replaced by cleanup, or hydrated from a different source mid-session).
+        if (_selectedRankingPeriodKey) {
+            var wData = _getWeeklyData();
+            var yData = _getYtdData();
+            if (!wData[_selectedRankingPeriodKey] && !yData[_selectedRankingPeriodKey]) {
+                _selectedRankingPeriodKey = null;
+                _rankingPeriodInitialized = false;
+            }
+        }
+
+        // Default to most recent YTD period on first render. Only mark as
+        // initialized once a YTD is actually found — otherwise a later render
+        // (after data hydrates) will re-attempt the auto-pick.
         if (!_rankingPeriodInitialized) {
-            _rankingPeriodInitialized = true;
             var periods = _getAvailableRankingPeriods();
             var ytdPeriod = periods.find(function(p) { return p.type === 'ytd'; });
-            if (ytdPeriod) _selectedRankingPeriodKey = ytdPeriod.key;
+            if (ytdPeriod) {
+                _selectedRankingPeriodKey = ytdPeriod.key;
+                _rankingPeriodInitialized = true;
+            }
         }
 
         var currentSelectValue = _selectedRankingPeriodKey || '';
@@ -487,8 +502,16 @@
         var data;
         if (_selectedRankingPeriodKey) {
             data = buildRankingsForPeriod(_selectedRankingPeriodKey);
-        } else {
+        }
+        // Fall back to the best-available source if the selected period
+        // produced nothing. Covers stale keys, insufficient employees in the
+        // selected period, and mid-session data swaps.
+        if (!data || data.rankings.length === 0) {
             data = buildCenterRankings();
+            if (data && data.rankings.length > 0) {
+                _selectedRankingPeriodKey = data.periodKey || null;
+                currentSelectValue = _selectedRankingPeriodKey || '';
+            }
         }
 
         if (!data || data.rankings.length === 0) {
