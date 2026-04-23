@@ -85,16 +85,20 @@
             priority: 0
         });
 
-        // 1. This week in progress (Mon -> today). Always available,
-        //    even on Monday (1 day of data = partial week).
-        options.push({
-            id: 'week-in-progress',
-            label: `This week in progress (${fmtShort(thisWeekMon)} – ${fmtShort(now)})`,
-            periodType: 'week-in-progress',
-            startDate: isoDate(thisWeekMon),
-            endDate: isoDate(now),
-            priority: 1
-        });
+        // 1. This week in progress (Mon -> yesterday). Today's data
+        //    isn't available yet (PowerBI publishes the prior day), so
+        //    the range ends at yesterday. Skipped on Monday since there
+        //    are no complete days in the current week yet.
+        if (yesterday >= thisWeekMon) {
+            options.push({
+                id: 'week-in-progress',
+                label: `This week in progress (${fmtShort(thisWeekMon)} – ${fmtShort(yesterday)})`,
+                periodType: 'week-in-progress',
+                startDate: isoDate(thisWeekMon),
+                endDate: isoDate(yesterday),
+                priority: 1
+            });
+        }
 
         // 2. Last completed week
         options.push({
