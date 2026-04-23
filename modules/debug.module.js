@@ -193,6 +193,18 @@
         const currentPeriodType = window.currentPeriodType || 'unknown';
         const currentPeriod = window.currentPeriod || null;
 
+        const weeklyKeys = Object.keys(weeklyData || {}).sort().map(k => ({
+            key: k,
+            periodType: weeklyData[k]?.metadata?.periodType || '(undefined)',
+            employees: weeklyData[k]?.employees?.length || 0
+        }));
+
+        let rawWeeklyLocalStorageCount = 0;
+        try {
+            const raw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
+            if (raw) rawWeeklyLocalStorageCount = Object.keys(JSON.parse(raw)).length;
+        } catch (_) { /* ignore */ }
+
         return {
             url: window.location.href,
             userAgent: navigator.userAgent,
@@ -200,6 +212,8 @@
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             timestamp: new Date().toISOString(),
             weeklyDataCount: Object.keys(weeklyData || {}).length,
+            rawWeeklyLocalStorageCount,
+            weeklyKeys,
             ytdDataCount: Object.keys(ytdData || {}).length,
             weeklyPeriodTypes: getPeriodTypeCounts(weeklyData),
             ytdPeriodTypes: getPeriodTypeCounts(ytdData),
@@ -248,6 +262,8 @@
 
         dataEl.textContent = JSON.stringify({
             weeklyDataCount: snapshot.weeklyDataCount,
+            rawWeeklyLocalStorageCount: snapshot.rawWeeklyLocalStorageCount,
+            weeklyKeys: snapshot.weeklyKeys,
             ytdDataCount: snapshot.ytdDataCount,
             weeklyPeriodTypes: snapshot.weeklyPeriodTypes,
             ytdPeriodTypes: snapshot.ytdPeriodTypes,
