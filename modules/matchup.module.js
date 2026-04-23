@@ -236,8 +236,8 @@
      */
     function _renderPeriodSelector(selectedValue) {
         var periods = _getAvailablePeriods();
-        var typeOrder = ['ytd', 'quarter', 'month', 'week', 'daily'];
-        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', week: 'Weekly', daily: 'Daily' };
+        var typeOrder = ['ytd', 'quarter', 'month', 'week', 'week-in-progress', 'daily'];
+        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
         var grouped = {};
         periods.forEach(function(p) {
             var t = p.type || 'week';
