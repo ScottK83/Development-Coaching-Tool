@@ -634,9 +634,6 @@ function appendCoachingLogEntry(entry) {
         coachingHistory[entry.employeeId] = [];
     }
     coachingHistory[entry.employeeId].push(entry);
-    if (coachingHistory[entry.employeeId].length > 200) {
-        coachingHistory[entry.employeeId] = coachingHistory[entry.employeeId].slice(-200);
-    }
     saveCoachingHistory();
 }
 
@@ -653,22 +650,20 @@ function getCoachingHistoryForEmployee(employeeId) {
  * @returns {string} CSV string with headers and all coaching entries
  */
 function exportCoachingHistoryToCSV() {
-    let csv = 'Employee,Week Ending,Metrics Coached,AI Assisted,Generated At\n';
-    
+    // Proper CSV quoting: wrap every field in quotes and double any internal
+    // quotes. Safe for commas, quotes, and newlines in employee names,
+    // timestamps, and metric lists.
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = ['Employee,Week Ending,Metrics Coached,AI Assisted,Generated At'];
     Object.entries(coachingHistory).forEach(([employeeId, entries]) => {
-        entries.forEach(entry => {
+        (entries || []).forEach(entry => {
             const metricsStr = (entry.metricsCoached || []).join(';');
             const aiStr = entry.aiAssisted ? 'Yes' : 'No';
             const timestamp = entry.generatedAt ? new Date(entry.generatedAt).toLocaleString() : '';
-            
-            // Escape commas in metric list
-            const escapedMetrics = metricsStr.includes(',') ? `"${metricsStr}"` : metricsStr;
-            
-            csv += `${employeeId},${entry.weekEnding || ''},${escapedMetrics},${aiStr},${timestamp}\n`;
+            rows.push([q(employeeId), q(entry.weekEnding || ''), q(metricsStr), q(aiStr), q(timestamp)].join(','));
         });
     });
-    
-    return csv;
+    return rows.join('\n') + '\n';
 }
 
 /**

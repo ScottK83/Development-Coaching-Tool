@@ -172,6 +172,21 @@ export default {
         } catch (ghErr) {
           console.error('GitHub sync failed (non-blocking):', ghErr.message);
         }
+
+        // Human-readable coaching history CSV for Excel review.
+        const coachingCsv = typeof body?.coachingHistoryCsv === 'string' ? body.coachingHistoryCsv : '';
+        if (coachingCsv.trim()) {
+          try {
+            await upsertRepoFile({
+              env, branch,
+              path: `${dataDir}/coachingHistory.csv`,
+              message: `chore(data): sync coaching history CSV (${reason})`,
+              content: sanitizeText(coachingCsv)
+            });
+          } catch (ghErr) {
+            console.error('GitHub CSV sync failed (non-blocking):', ghErr.message);
+          }
+        }
       }
 
       return json({

@@ -912,7 +912,8 @@
             executiveSummaryNotes: safeLoadJson('executiveSummaryNotes') || {},
             userCustomTips: safeLoadJson('userCustomTips') || {},
             appStorageSnapshot: getAllAppStorageSnapshot(),
-            callListeningCsv: window.exportCallListeningLogsToCSV?.() || ''
+            callListeningCsv: window.exportCallListeningLogsToCSV?.() || '',
+            coachingHistoryCsv: window.exportCoachingHistoryToCSV?.() || ''
         };
     }
 
