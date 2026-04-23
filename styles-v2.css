@@ -446,6 +446,70 @@
     color: var(--text-secondary) !important;
 }
 
+/* Widgets toggled via JS .style.display: browser re-serializes inline colors
+   to rgb(...), so [style*="background: #..."] substring selectors stop
+   matching. Target these by id explicitly. */
+[data-theme="dark"] #storageQuotaWidget {
+    background: var(--bg-surface-raised) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="dark"] #storageQuotaWidget #storageQuotaLabel {
+    color: var(--text-secondary) !important;
+}
+[data-theme="dark"] #storageQuotaWidget > div > div:first-child {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #uploadSuccessMessage {
+    background: var(--green-soft) !important;
+    border-color: var(--green-text) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadSuccessMessage h3,
+[data-theme="dark"] #uploadSuccessMessage p,
+[data-theme="dark"] #uploadSuccessMessage strong {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #uploadColumnInspector {
+    background: var(--bg-surface-raised) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadColumnInspector div,
+[data-theme="dark"] #uploadColumnInspector li,
+[data-theme="dark"] #uploadColumnInspector ul {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadColumnInspectorMeta,
+[data-theme="dark"] #uploadColumnInspectorFooter {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] #uploadUndoBanner {
+    background: var(--yellow-soft) !important;
+    border-color: var(--yellow-text) !important;
+}
+[data-theme="dark"] #uploadUndoBanner > div:first-child {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadUndoBanner #uploadUndoDismissBtn {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-strong) !important;
+}
+
+[data-theme="dark"] #uploadWizardSummary {
+    background: var(--bg-surface-raised) !important;
+    border-left-color: var(--brand) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadWizardDailyWeekSummary {
+    background: var(--bg-surface-raised) !important;
+    border-left-color: var(--yellow-text) !important;
+    color: var(--text-primary) !important;
+}
+
 /* Full-width panels/sections in dark mode */
 [data-theme="dark"] [style*="background: #e0e7ff"],
 [data-theme="dark"] [style*="background:#e0e7ff"],

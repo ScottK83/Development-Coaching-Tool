@@ -2065,13 +2065,17 @@ function refreshStorageQuotaWidget() {
     if (!widget) return;
     const { totalBytes } = measureLocalStorageUsage();
     const pct = Math.min(100, (totalBytes / STORAGE_QUOTA_BYTES) * 100);
+    if (pct < 70) {
+        widget.style.display = 'none';
+        return;
+    }
     const mbUsed = (totalBytes / (1024 * 1024)).toFixed(2);
     const bar = document.getElementById('storageQuotaBar');
     const label = document.getElementById('storageQuotaLabel');
     let color = '#66bb6a';
     if (pct >= 90) color = '#ef5350';
     else if (pct >= 80) color = '#ffa726';
-    else if (pct >= 60) color = '#ffee58';
+    else color = '#ffee58';
     if (bar) {
         bar.style.width = pct.toFixed(1) + '%';
         bar.style.background = color;
