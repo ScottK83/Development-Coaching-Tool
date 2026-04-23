@@ -1768,8 +1768,10 @@ function ensureReviewPrepMounted(subSectionId) {
     var container = document.getElementById('reviewPrepContent');
     var subSection = document.getElementById(subSectionId);
     if (!container || !subSection) return;
-    if (subSection.parentElement === container) return;
-    container.appendChild(subSection);
+    if (subSection.parentElement !== container) container.appendChild(subSection);
+    // Always restore display: My Team's nav can hide these sub-sections by ID
+    // after they've been moved here, so re-show on every mount.
+    subSection.style.display = 'block';
 }
 
 // --- Generic DOM mount helper for Trends & Analysis ---
@@ -1779,8 +1781,9 @@ function ensureTrendsMounted(sourceId, targetId) {
     var target = document.getElementById(targetId);
     var source = document.getElementById(sourceId);
     if (!target || !source) return;
-    if (source.parentElement === target) return;
-    target.appendChild(source);
+    if (source.parentElement !== target) target.appendChild(source);
+    // Always restore display: My Team's nav can hide these sub-sections by ID
+    // after they've been moved here, so re-show on every mount.
     source.style.display = 'block';
 }
 
