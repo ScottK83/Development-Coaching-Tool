@@ -1667,9 +1667,13 @@ function bindNavigationHandlers() {
         if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
     document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
-        // Celebrations init happens on the My Team button (above) — subnav clicks
-        // are navigation-only since the module is already bound.
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
+        // initializeCelebrations also binds the inner-tab click handlers, so
+        // running it on every subnav click (not just the My Team entry) keeps
+        // the section usable after a refresh lands directly here.
+        if (window.DevCoachModules?.celebrations?.initializeCelebrations) {
+            window.DevCoachModules.celebrations.initializeCelebrations();
+        }
     });
     document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');
