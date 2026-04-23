@@ -7088,8 +7088,11 @@ async function initApp() {
     // Restore smart defaults
     restoreSmartDefaults();
     
-    // Ensure data is saved before page unload (survives Ctrl+Shift+R)
+    // Ensure data is saved before page unload (survives Ctrl+Shift+R).
+    // Skip when a repo restore just wrote fresh data straight to localStorage —
+    // otherwise these saves would overwrite it with stale in-memory globals.
     window.addEventListener('beforeunload', () => {
+        if (window.__skipBeforeunloadSave) return;
         saveWeeklyData();
         saveYtdData();
         saveDailyData();
@@ -7097,7 +7100,7 @@ async function initApp() {
         saveCallListeningLogs();
         saveSentimentPhraseDatabase();
         saveAssociateSentimentSnapshots();
-        
+
     });
     
     // Auto-sync remains event-driven via data saves/storage updates.

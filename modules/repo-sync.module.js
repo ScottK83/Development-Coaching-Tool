@@ -472,6 +472,7 @@
 
                         setCallListeningSyncStatus(`Restore complete (${verifyKeys} weekly / ${verifyTeamKeys} team). Reloading...`, 'success');
                         showToast(`Restored ${verifyKeys} weekly, ${verifyTeamKeys} team members. Reloading...`, 3500);
+                        window.__skipBeforeunloadSave = true;
                         setTimeout(() => window.location.reload(true), 1500);
                     } catch (error) {
                         console.error('Force restore failed:', error);
@@ -1481,6 +1482,7 @@
                 clearRepoSyncAutoPause();
                 showToast('Restored latest repo backup. Sync is now aligned.', 4000);
                 setCallListeningSyncStatus('Restore complete. This browser now matches repo data.', 'success');
+                window.__skipBeforeunloadSave = true;
                 setTimeout(() => window.location.reload(), 500);
                 return true;
             }
