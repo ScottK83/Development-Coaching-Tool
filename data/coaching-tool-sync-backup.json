@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T17:37:27.363Z",
+  "generatedAt": "2026-04-23T17:54:56.151Z",
   "reason": "manual footer sync",
   "sourceAppVersion": null,
   "weeklyData": {
@@ -20182,7 +20182,7 @@
     "devCoachingTool_metricCoachingTips": {
       "valueType": "object",
       "itemCount": 12,
-      "byteLength": 23042
+      "byteLength": 23324
     },
     "devCoachingTool_supervisorSeeded_kathy_v3": {
       "valueType": "string",
@@ -20212,7 +20212,7 @@
     "devCoachingTool_uiNavState": {
       "valueType": "object",
       "itemCount": 5,
-      "byteLength": 224
+      "byteLength": 220
     },
     "devCoachingTool_supervisorSeeded_scott_v3": {
       "valueType": "string",
@@ -20313,6 +20313,11 @@
       "valueType": "string",
       "itemCount": "",
       "byteLength": 1
+    },
+    "devCoachingTool_repoSyncLastSuccess": {
+      "valueType": "object",
+      "itemCount": 5,
+      "byteLength": 284
     },
     "devCoachingTool_supervisorSeeded_sarah_v3": {
       "valueType": "string",
