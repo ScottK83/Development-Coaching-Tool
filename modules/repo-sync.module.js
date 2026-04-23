@@ -478,7 +478,40 @@
             forcePushBtn.addEventListener('click', async () => {
                 await runWithButtonBusyState(forcePushBtn, 'Uploading...', async () => {
                     getCallListeningSyncConfigFromUI();
-                    setCallListeningSyncStatus('Uploading local data to GIT...', 'info');
+
+                    const payload = buildRepoSyncPayload('upload preview');
+                    const countEntries = obj => (obj && typeof obj === 'object') ? Object.keys(obj).length : 0;
+                    const weeklyByType = {};
+                    Object.values(payload.weeklyData || {}).forEach(p => {
+                        const t = p?.metadata?.periodType || 'week';
+                        weeklyByType[t] = (weeklyByType[t] || 0) + 1;
+                    });
+                    const typeBreakdown = Object.keys(weeklyByType).length
+                        ? Object.entries(weeklyByType).map(([k, v]) => `${k}: ${v}`).join(', ')
+                        : 'none';
+
+                    const previewMsg = [
+                        'About to push this local data to the Worker (overwrite):',
+                        `• Weekly periods: ${countEntries(payload.weeklyData)} (${typeBreakdown})`,
+                        `• YTD periods: ${countEntries(payload.ytdData)}`,
+                        `• Team members: ${countEntries(payload.myTeamMembers)}`,
+                        `• Coaching history: ${countEntries(payload.coachingHistory)}`,
+                        `• Call listening: ${countEntries(payload.callListeningLogs)}`,
+                        `• Sentiment snapshots: ${countEntries(payload.associateSentimentSnapshots)}`,
+                        `• PTO records: ${countEntries(payload.ptoTracker)}`,
+                        `• Center averages: ${countEntries(payload.callCenterAverages)}`,
+                        '',
+                        'Look at the weekly breakdown above — is "week-in-progress" present if you just uploaded a WIP? If not, the WIP was never saved to local storage on this device.',
+                        '',
+                        'Push this to the Worker?'
+                    ].join('\n');
+
+                    if (!confirm(previewMsg)) {
+                        setCallListeningSyncStatus('Upload cancelled.', 'info');
+                        return;
+                    }
+
+                    setCallListeningSyncStatus('Uploading local data to Worker...', 'info');
                     await syncRepoData('upload to git', { force: true, allowDataRegression: true });
                 });
             });
