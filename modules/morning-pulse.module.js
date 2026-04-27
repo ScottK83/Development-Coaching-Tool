@@ -1118,10 +1118,16 @@
         return metric.target + '';
     }
 
-    function fmtRange(metricKey, baseVal, latestVal) {
+    function fmtRange(metricKey, baseVal, latestVal, periodType) {
         const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
-        if (reverse) return `down from ${fmtVal(metricKey, baseVal)} to ${fmtVal(metricKey, latestVal)}`;
-        return `${fmtVal(metricKey, baseVal)} \u2192 ${fmtVal(metricKey, latestVal)}`;
+        const priorLabel = periodType === 'quarter' ? "last quarter's"
+            : periodType === 'month' ? "last month's"
+            : "last week's";
+        const currentLabel = periodType === 'quarter' ? "this quarter's"
+            : periodType === 'month' ? "this month's"
+            : "this week's";
+        if (reverse) return `down from ${priorLabel} ${fmtVal(metricKey, baseVal)} to ${currentLabel} ${fmtVal(metricKey, latestVal)}`;
+        return `${priorLabel} ${fmtVal(metricKey, baseVal)} \u2192 ${currentLabel} ${fmtVal(metricKey, latestVal)}`;
     }
 
     function fmtDelta(metricKey, delta) {
@@ -1288,7 +1294,7 @@
         if (biggestJump && biggestJump.delta > 0) {
             jumpHtml = `<div style="padding:6px 10px; background:#e8f5e9; border-radius:4px; font-size:0.83em; color:#1b5e20; border-left:3px solid #4caf50;">` +
                 `\uD83D\uDE80 <strong>Biggest improvement:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} ${deltaContextLabel} ` +
-                `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue)})</div>`;
+                `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, periodType)})</div>`;
         }
 
         // Focal point
@@ -1371,7 +1377,7 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'));
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
@@ -1451,7 +1457,7 @@
         let message = pick(HF_OPENERS)(firstName);
 
         if (biggestJump && biggestJump.delta > 0) {
-            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue))} \uD83D\uDD25`;
+            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'))} \uD83D\uDD25`;
         } else if (wins.length >= 2) {
             message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]))} \uD83D\uDD25\uD83D\uDCAA`;
         } else if (wins.length === 1) {
@@ -1596,7 +1602,7 @@
                 praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
             }
         } else if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'));
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
                 praiseText += ` ${pick(PLUS_SOLID)(otherWins[0].label, fmtVal(otherWins[0]))}`;
@@ -1797,7 +1803,7 @@
 
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(reviewCopy.jump)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue));
+            praiseText = pick(reviewCopy.jump)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, periodType));
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
