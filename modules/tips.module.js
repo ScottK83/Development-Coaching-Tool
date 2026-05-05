@@ -68,7 +68,7 @@ transfers,Stay on the line until the next agent picks up - don't abandon them in
 transfers,If call drops during transfer - call customer back immediately - don't wait
 transfers,Build relationships with other departments so warm transfers are smoother
 transfers,Know what your department can and can't do - over-transferring costs you ownership
-transfers,If you're new - shadow a tenured rep for a day to learn what THEY handle
+transfers,Reach out to a peer with low transfers to see how they're handling them
 transfers,Resist the urge to transfer just because a call is getting hard - that's where learning happens
 transfers,Check if a tool or permission upgrade would let you handle more - ask your supe
 transfers,Apologize in advance for any wait: 'They may have a short wait - thanks for hanging in'
