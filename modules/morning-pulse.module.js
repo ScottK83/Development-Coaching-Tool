@@ -1185,7 +1185,7 @@
         const surveyCountForWins = parseInt(emp?.surveyTotal, 10);
         const shouldCollapsePerfect = perfectSurveyWins.length >= 2
             && Number.isFinite(surveyCountForWins)
-            && surveyCountForWins > 0;
+            && surveyCountForWins >= 3;
         const perfectKeySet = shouldCollapsePerfect
             ? new Set(perfectSurveyWins.map(m => m.metricKey))
             : null;
@@ -1584,7 +1584,7 @@
             && w.employeeValue >= 100
         );
         const surveyCount = parseInt(emp?.surveyTotal, 10);
-        const hasPerfectSurveys = allPerfectSurveyWins.length >= 2 && Number.isFinite(surveyCount) && surveyCount > 0;
+        const hasPerfectSurveys = allPerfectSurveyWins.length >= 2 && Number.isFinite(surveyCount) && surveyCount >= 3;
         const surveysText = hasPerfectSurveys
             ? `${surveyCount} survey${surveyCount === 1 ? '' : 's'}`
             : '';
