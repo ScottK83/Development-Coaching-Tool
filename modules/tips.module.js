@@ -12,7 +12,7 @@ scheduleAdherence,Review your Verint schedule every Sunday night so you know you
 scheduleAdherence,Keep your workstation logged in during breaks to avoid login delays
 scheduleAdherence,Have your supervisor's number saved - call immediately if you'll be late
 scheduleAdherence,Plan bathroom breaks during natural call lulls - don't wait until urgent
-scheduleAdherence,If system issues make you late - report it immediately for exception coding
+scheduleAdherence,If system issues make you late - report it right away so we can give you next steps and keep you in adherence
 scheduleAdherence,Set a recurring daily alarm 10 minutes before shift starts for routine consistency
 scheduleAdherence,Group bathroom breaks with scheduled breaks when possible - saves adherence minutes
 scheduleAdherence,Log out of personal apps before break ends so you're ready to take calls
