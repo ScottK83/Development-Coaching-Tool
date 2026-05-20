@@ -85,14 +85,16 @@
 
     /* ── Period helpers ── */
 
-    // Completed weekly periods for the current year, oldest → newest.
-    function _currentYearWeekKeys() {
+    // Weekly periods for the current year, oldest → newest. Completed weeks
+    // only by default; pass includeInProgress to also pick up a partial
+    // (week-in-progress) upload as the most recent point.
+    function _currentYearWeekKeys(includeInProgress) {
         var wData = _weeklyData();
         var year = _year();
         var keys = Object.keys(wData).filter(function (k) {
             var p = wData[k];
             var pType = (p && p.metadata && p.metadata.periodType) || 'week';
-            if (pType !== 'week') return false;
+            if (pType !== 'week' && !(includeInProgress && pType === 'week-in-progress')) return false;
             var endStr = (p && p.metadata && p.metadata.endDate) || (k.indexOf('|') !== -1 ? k.split('|')[1] : '');
             return parseInt(String(endStr).split('-')[0], 10) === year;
         });
@@ -100,6 +102,10 @@
             return String(_endDate(a)).localeCompare(String(_endDate(b)));
         });
         return keys;
+    }
+    function _periodType(key) {
+        var p = _weeklyData()[key];
+        return (p && p.metadata && p.metadata.periodType) || 'week';
     }
     function _endDate(key) {
         var p = _weeklyData()[key];
@@ -175,6 +181,7 @@
     // Returns a weight-sorted list of cheers for one employee.
     function buildCheersForEmployee(emp, weekInfo, periods) {
         var metrics = emp.metrics || {};
+        var thisWeek = periods.wowCurInProgress ? 'this week so far' : 'this week';
 
         // 1. Week-over-week and monthly improvements.
         var wowByMetric = {}, monByMetric = {};
@@ -216,7 +223,7 @@
                     var text = _closeText(mk, m, weekInfo);
                     if (wowByMetric[mk]) {
                         text += ' And it is already moving the right way, ' + _fmt(mk, wowByMetric[mk].prev) +
-                            ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' this week.';
+                            ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.';
                     }
                     cheers.push({ weight: 100, metricKey: mk, icon: _metricIcon(mk), kind: 'close', text: text });
                     return;
@@ -227,7 +234,7 @@
                 cheers.push({
                     weight: 70, metricKey: mk, icon: _metricIcon(mk), kind: 'wow',
                     text: 'Your ' + label + ' improved from ' + _fmt(mk, wowByMetric[mk].prev) +
-                        ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' this week.'
+                        ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.'
                 });
                 return;
             }
@@ -275,11 +282,15 @@
         var fData = futures.buildFuturesData();
         if (!fData || !fData.employees || !fData.employees.length) return null;
 
-        var weekKeys = _currentYearWeekKeys();
+        // Monthly bucketing uses completed weeks only; week-over-week also
+        // counts a partial (in-progress) week as the latest point.
+        var weekKeys = _currentYearWeekKeys(false);
+        var wowKeys = _currentYearWeekKeys(true);
 
-        // Week-over-week: the two most recent completed weeks.
-        var wowCur = weekKeys.length >= 2 ? weekKeys[weekKeys.length - 1] : null;
-        var wowPrev = weekKeys.length >= 2 ? weekKeys[weekKeys.length - 2] : null;
+        // Week-over-week: the two most recent weekly points.
+        var wowCur = wowKeys.length >= 2 ? wowKeys[wowKeys.length - 1] : null;
+        var wowPrev = wowKeys.length >= 2 ? wowKeys[wowKeys.length - 2] : null;
+        var wowCurInProgress = wowCur ? (_periodType(wowCur) === 'week-in-progress') : false;
 
         // Monthly: the two most recent fully-elapsed calendar months.
         var now = new Date();
@@ -293,7 +304,7 @@
         var monCur = elapsed.length >= 2 ? elapsed[elapsed.length - 1] : null;
         var monPrev = elapsed.length >= 2 ? elapsed[elapsed.length - 2] : null;
 
-        var periods = { wowCur: wowCur, wowPrev: wowPrev, monCur: monCur, monPrev: monPrev, monthsMap: monthsMap };
+        var periods = { wowCur: wowCur, wowPrev: wowPrev, wowCurInProgress: wowCurInProgress, monCur: monCur, monPrev: monPrev, monthsMap: monthsMap };
 
         var people = [];
         fData.employees.forEach(function (emp) {
@@ -367,6 +378,14 @@
         return lines.join('\n');
     }
 
+    // All team members' cheer messages in one document, divider-separated.
+    function buildAllCheers(people) {
+        if (!people || !people.length) return 'No cheers to share right now.';
+        return people.map(function (p) {
+            return buildCheerMessage(p);
+        }).join('\n\n--------------------\n\n');
+    }
+
     /* ── Kind badges ── */
 
     var KIND_BADGE = {
@@ -401,8 +420,9 @@
         html += '<div style="margin-top:6px; color:#047857;">';
         html += 'YTD source: ' + _escapeHtml(data.dataSource || 'n/a') + ' &nbsp;•&nbsp; ';
         html += (p.wowCur && p.wowPrev)
-            ? 'Week over week: ' + _escapeHtml(_weekLabel(p.wowPrev)) + ' vs ' + _escapeHtml(_weekLabel(p.wowCur))
-            : 'Week over week: needs two completed weekly uploads';
+            ? 'Week over week: ' + _escapeHtml(_weekLabel(p.wowPrev)) + ' vs ' + _escapeHtml(_weekLabel(p.wowCur)) +
+                (p.wowCurInProgress ? ' (in progress)' : '')
+            : 'Week over week: needs two weekly uploads';
         html += ' &nbsp;•&nbsp; ';
         html += (p.monCur && p.monPrev)
             ? 'Monthly: ' + _escapeHtml(_monthName(p.monPrev)) + ' vs ' + _escapeHtml(_monthName(p.monCur))
@@ -419,9 +439,12 @@
             return;
         }
 
-        html += '<div style="margin-bottom:12px; color:#64748b; font-size:0.9em;">📣 ' +
+        html += '<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">';
+        html += '<button type="button" id="cheerCopyAll" style="padding:12px 24px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:1em; cursor:pointer; box-shadow:0 2px 8px rgba(5,150,105,0.3);">📋 Copy All Cheers</button>';
+        html += '<span style="color:#64748b; font-size:0.9em;">📣 ' +
             data.people.length + ' of ' + data.totalTeam + ' team member' + (data.totalTeam !== 1 ? 's' : '') +
-            ' have something to cheer.</div>';
+            ' have something to cheer.</span>';
+        html += '</div>';
 
         html += renderCheerCards(data.people);
 
@@ -472,19 +495,28 @@
     }
 
     function bindCheerButtons(container, people) {
+        var copyAll = container.querySelector('#cheerCopyAll');
+        if (copyAll) {
+            copyAll.addEventListener('click', function () {
+                showCheerModal('All Cheer Messages', buildAllCheers(people), function () {
+                    return buildAllCheers(people);
+                });
+            });
+        }
         container.querySelectorAll('.cheer-msg-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var person = people.find(function (x) { return x.name === btn.dataset.employee; });
                 if (!person) return;
-                showCheerModal(person);
+                showCheerModal(person.firstName + ' - Cheer Message', buildCheerMessage(person), function () {
+                    return buildCheerMessage(person);
+                });
             });
         });
     }
 
     /* ── Modal ── */
 
-    function showCheerModal(person) {
-        var message = buildCheerMessage(person);
+    function showCheerModal(title, message, regenerateFn) {
         try {
             navigator.clipboard.writeText(message);
             if (typeof showToast === 'function') showToast('Copied to clipboard!', 2000);
@@ -497,7 +529,7 @@
         overlay.innerHTML =
             '<div style="background:#fff; border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
                 '<div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
-                    '<h3 style="margin:0; color:#1a1a2e;">📣 ' + _escapeHtml(person.firstName) + ' - Cheer Message</h3>' +
+                    '<h3 style="margin:0; color:#1a1a2e;">📣 ' + _escapeHtml(title) + '</h3>' +
                     '<button type="button" id="cheerModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:#999;">✕</button>' +
                 '</div>' +
                 '<div style="padding:20px; overflow-y:auto; flex:1;">' +
@@ -522,17 +554,22 @@
             } catch (e) { textarea.select(); }
         });
 
-        overlay.querySelector('#cheerModalRegenerate').addEventListener('click', function () {
-            var newMessage = buildCheerMessage(person);
-            var textarea = overlay.querySelector('#cheerModalText');
-            if (textarea && newMessage) {
-                textarea.value = newMessage;
-                try {
-                    navigator.clipboard.writeText(newMessage);
-                    if (typeof showToast === 'function') showToast('Regenerated & copied!', 2000);
-                } catch (e) { /* ok */ }
-            }
-        });
+        var regenBtn = overlay.querySelector('#cheerModalRegenerate');
+        if (regenerateFn) {
+            regenBtn.addEventListener('click', function () {
+                var newMessage = regenerateFn();
+                var textarea = overlay.querySelector('#cheerModalText');
+                if (textarea && newMessage) {
+                    textarea.value = newMessage;
+                    try {
+                        navigator.clipboard.writeText(newMessage);
+                        if (typeof showToast === 'function') showToast('Regenerated & copied!', 2000);
+                    } catch (e) { /* ok */ }
+                }
+            });
+        } else {
+            regenBtn.style.display = 'none';
+        }
     }
 
     /* ── Module export ── */
