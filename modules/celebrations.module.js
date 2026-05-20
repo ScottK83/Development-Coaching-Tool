@@ -1019,10 +1019,17 @@
 
     var INNER_TAB_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsInnerTab';
 
+    // All inner tabs in the Celebrations sub-section.
+    var INNER_TABS = {
+        celebrations: { container: 'celebrationsContainer', btn: 'innerNavCelebrations', activeBg: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)', activeBorder: '#ea580c' },
+        morningPulse: { container: 'morningPulseContainer', btn: 'innerNavMorningPulse', activeBg: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', activeBorder: '#2563eb' },
+        cheerleader:  { container: 'cheerleaderContainer', btn: 'innerNavCheerleader', activeBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', activeBorder: '#059669' }
+    };
+
     function getActiveInnerTab() {
         try {
             var val = localStorage.getItem(INNER_TAB_STORAGE_KEY);
-            return val === 'morningPulse' ? 'morningPulse' : 'celebrations';
+            return INNER_TABS[val] ? val : 'celebrations';
         } catch (e) { return 'celebrations'; }
     }
 
@@ -1031,25 +1038,35 @@
     }
 
     function switchInnerTab(tab) {
-        var celebrationsContainer = document.getElementById('celebrationsContainer');
-        var pulseContainer = document.getElementById('morningPulseContainer');
-        var btnCelebrations = document.getElementById('innerNavCelebrations');
-        var btnPulse = document.getElementById('innerNavMorningPulse');
+        if (!INNER_TABS[tab]) tab = 'celebrations';
 
+        // Toggle container visibility and button styling for every tab.
+        Object.keys(INNER_TABS).forEach(function(key) {
+            var cfg = INNER_TABS[key];
+            var cont = document.getElementById(cfg.container);
+            var btn = document.getElementById(cfg.btn);
+            var isActive = key === tab;
+            if (cont) cont.style.display = isActive ? 'block' : 'none';
+            if (btn) {
+                btn.style.background = isActive ? cfg.activeBg : '#e2e8f0';
+                btn.style.color = isActive ? '#fff' : '#64748b';
+                btn.style.borderBottom = '3px solid ' + (isActive ? cfg.activeBorder : 'transparent');
+            }
+        });
+
+        // Render the active tab's content.
         if (tab === 'morningPulse') {
-            if (celebrationsContainer) celebrationsContainer.style.display = 'none';
-            if (pulseContainer) pulseContainer.style.display = 'block';
-            if (btnCelebrations) { btnCelebrations.style.background = '#e2e8f0'; btnCelebrations.style.color = '#64748b'; btnCelebrations.style.borderBottom = '3px solid transparent'; }
-            if (btnPulse) { btnPulse.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)'; btnPulse.style.color = '#fff'; btnPulse.style.borderBottom = '3px solid #2563eb'; }
-            if (window.DevCoachModules?.morningPulse?.renderMorningPulse) {
-                window.DevCoachModules.morningPulse.renderMorningPulse(pulseContainer);
+            var pulse = window.DevCoachModules?.morningPulse;
+            if (pulse?.renderMorningPulse) {
+                pulse.renderMorningPulse(document.getElementById('morningPulseContainer'));
+            }
+        } else if (tab === 'cheerleader') {
+            var cheer = window.DevCoachModules?.cheerleading;
+            if (cheer?.renderCheerleading) {
+                cheer.renderCheerleading(document.getElementById('cheerleaderContainer'));
             }
         } else {
-            if (pulseContainer) pulseContainer.style.display = 'none';
-            if (celebrationsContainer) celebrationsContainer.style.display = 'block';
-            if (btnPulse) { btnPulse.style.background = '#e2e8f0'; btnPulse.style.color = '#64748b'; btnPulse.style.borderBottom = '3px solid transparent'; }
-            if (btnCelebrations) { btnCelebrations.style.background = 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'; btnCelebrations.style.color = '#fff'; btnCelebrations.style.borderBottom = '3px solid #ea580c'; }
-            // Check if we should show history or current
+            var celebrationsContainer = document.getElementById('celebrationsContainer');
             var sel = loadCelebrationSelection();
             if (sel.view === 'history') {
                 renderHistoryView(celebrationsContainer);
@@ -1061,17 +1078,13 @@
     }
 
     function bindInnerNav() {
-        var btnCelebrations = document.getElementById('innerNavCelebrations');
-        var btnPulse = document.getElementById('innerNavMorningPulse');
-
-        if (btnCelebrations && !btnCelebrations._celebBound) {
-            btnCelebrations._celebBound = true;
-            btnCelebrations.addEventListener('click', function() { switchInnerTab('celebrations'); });
-        }
-        if (btnPulse && !btnPulse._celebBound) {
-            btnPulse._celebBound = true;
-            btnPulse.addEventListener('click', function() { switchInnerTab('morningPulse'); });
-        }
+        Object.keys(INNER_TABS).forEach(function(tab) {
+            var btn = document.getElementById(INNER_TABS[tab].btn);
+            if (btn && !btn._celebBound) {
+                btn._celebBound = true;
+                btn.addEventListener('click', function() { switchInnerTab(tab); });
+            }
+        });
     }
 
     // =====================
