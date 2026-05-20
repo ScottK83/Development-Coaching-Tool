@@ -20,7 +20,7 @@
     // ============================================
 
     // "Knocking on the door": within this fraction of the target.
-    var CLOSE_REL = 0.04;
+    var CLOSE_REL = 0.01;
     // Minimum relative move before a week/month change is worth a cheer.
     var MIN_DELTA_REL = 0.01;
 
