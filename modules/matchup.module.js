@@ -312,7 +312,7 @@
         if (!_matchupPeriodInitialized) {
             _matchupPeriodInitialized = true;
             var periods = _getAvailablePeriods();
-            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd'; });
+            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd' && p.count >= 30; });
             if (ytdPeriod) {
                 _selectedPeriodKey = ytdPeriod.key;
                 _selectedPeriodSource = ytdPeriod.source || '';

@@ -165,6 +165,7 @@
         // Require at least one valid score
         var validScores = SCORE_KEYS.map(function (k) { return scores[k]; }).filter(function (s) { return s !== null && s !== undefined; });
         if (validScores.length === 0) return null;
+        var measuredCount = validScores.length;
 
         // KPIs Met: count of KPIs scoring 2 (Meets) or 3 (Exceeds)
         var kpisMet = 0;
@@ -172,35 +173,42 @@
             if (scores[k] !== null && scores[k] !== undefined && scores[k] >= 2) kpisMet++;
         });
 
-        // Score Sum: sum of all 5 individual KPI scores (treat missing as 1)
-        var scoreSum = 0;
-        SCORE_KEYS.forEach(function (k) {
-            scoreSum += (scores[k] !== null && scores[k] !== undefined) ? scores[k] : 1;
-        });
+        // Score Sum: total of MEASURED KPI scores only. Blank KPIs are not
+        // back-filled — a missing slot must neither pad nor drag the total.
+        var scoreSum = validScores.reduce(function (a, b) { return a + b; }, 0);
 
-        // KPI Score = Score Sum / 5
-        var kpiScore = scoreSum / 5;
+        // KPI Score = average score across the KPIs the agent actually has
+        // data for (1.0-3.0 scale).
+        var kpiScore = scoreSum / measuredCount;
 
-        // Track Status from Score Sum
+        // Track band from the per-KPI average, so the cutoffs scale to however
+        // many KPIs were measured. 2.8 = old 14/15 Exceptional, 1.8 = old 9/15
+        // Successful. An agent with 3 blank KPIs is judged on the 2 real ones.
         var trackLabel, trackStatusValue;
-        if (scoreSum >= 14) {
+        if (kpiScore >= 2.8) {
             trackLabel = 'Exceptional'; trackStatusValue = 'on-track-exceptional';
-        } else if (scoreSum >= 9) {
+        } else if (kpiScore >= 1.8) {
             trackLabel = 'Successful'; trackStatusValue = 'on-track-successful';
         } else {
             trackLabel = 'Off Track'; trackStatusValue = 'off-track';
         }
 
+        // Reliability: keep a genuinely missing value as null, not 0 — 0 is a
+        // legitimate perfect score, so coercing blanks to 0 would crown them.
+        var reliabilityVal = parseFloat(emp.reliability);
+        if (isNaN(reliabilityVal)) reliabilityVal = null;
+
         return {
             kpisMet: kpisMet,
             scoreSum: scoreSum,
+            measuredCount: measuredCount,
             kpiScore: kpiScore,
             ratingAverage: kpiScore,
             trackLabel: trackLabel,
             trackStatusValue: trackStatusValue,
             scores: scores,
             values: result.values || {},
-            reliability: parseFloat(emp.reliability) || 0,
+            reliability: reliabilityVal,
             surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
             totalCalls: parseInt(emp.totalCalls, 10) || 0
         };
@@ -315,9 +323,16 @@
      */
     function _scoreAndRank(employees, year) {
         var METRIC_KEYS = ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'];
+
+        // Dedupe by name (last row wins) so a doubled upload row can't be
+        // scored twice and skew every other employee's metric ranks.
+        var _byName = {};
+        (employees || []).forEach(function (emp) {
+            if (emp && emp.name) _byName[emp.name] = emp;
+        });
+
         var rankings = [];
-        employees.forEach(function (emp) {
-            if (!emp || !emp.name) return;
+        Object.values(_byName).forEach(function (emp) {
             var score = scoreEmployee(emp, year);
             if (!score) return;
 
@@ -325,6 +340,7 @@
                 name: emp.name,
                 kpisMet: score.kpisMet,
                 scoreSum: score.scoreSum,
+                measuredCount: score.measuredCount,
                 kpiScore: score.kpiScore,
                 ratingAverage: score.ratingAverage,
                 trackLabel: score.trackLabel,
@@ -346,30 +362,42 @@
             { key: 'reliability', field: 'reliability', reverse: true }  // lower is better
         ];
 
+        var _isNullVal = function (v) {
+            return v === null || v === undefined || (typeof v === 'number' && isNaN(v));
+        };
+
         metricRankKeys.forEach(function (mk) {
+            var getVal = function (e) {
+                return mk.field.includes('.') ? e.values[mk.field.split('.')[1]] : e[mk.field];
+            };
             var sorted = rankings.slice().sort(function (a, b) {
-                var aVal = mk.field.includes('.') ? a.values[mk.field.split('.')[1]] : a[mk.field];
-                var bVal = mk.field.includes('.') ? b.values[mk.field.split('.')[1]] : b[mk.field];
-                var aNull = aVal === null || aVal === undefined || (typeof aVal === 'number' && isNaN(aVal));
-                var bNull = bVal === null || bVal === undefined || (typeof bVal === 'number' && isNaN(bVal));
+                var aVal = getVal(a), bVal = getVal(b);
+                var aNull = _isNullVal(aVal), bNull = _isNullVal(bVal);
                 if (aNull && bNull) return 0;
-                if (aNull) return 1;
+                if (aNull) return 1;   // missing values sink to the end
                 if (bNull) return -1;
                 return mk.reverse ? (aVal - bVal) : (bVal - aVal);
             });
+            var lastRank = 0, lastVal;
             sorted.forEach(function (emp, idx) {
                 if (!emp.metricRanks) emp.metricRanks = {};
-                if (idx === 0) {
-                    emp.metricRanks[mk.key] = 1;
-                } else {
-                    var prevVal = mk.field.includes('.') ? sorted[idx - 1].values[mk.field.split('.')[1]] : sorted[idx - 1][mk.field];
-                    var curVal = mk.field.includes('.') ? emp.values[mk.field.split('.')[1]] : emp[mk.field];
-                    if (curVal === prevVal) {
-                        emp.metricRanks[mk.key] = sorted[idx - 1].metricRanks[mk.key];
-                    } else {
-                        emp.metricRanks[mk.key] = idx + 1;
-                    }
+                var val = getVal(emp);
+                // No data for this metric — leave the rank null. It displays as
+                // '?' and the KPI Rank Total step below substitutes the worst
+                // rank, so a blank metric can never out-rank a measured one.
+                if (_isNullVal(val)) {
+                    emp.metricRanks[mk.key] = null;
+                    return;
                 }
+                // Standard 1-2-2-4 ranking, with an epsilon tie test so decimal
+                // values that display identically aren't split into two ranks.
+                if (idx === 0 || _isNullVal(lastVal) || Math.abs(val - lastVal) >= 1e-9) {
+                    emp.metricRanks[mk.key] = idx + 1;
+                } else {
+                    emp.metricRanks[mk.key] = lastRank;
+                }
+                lastRank = emp.metricRanks[mk.key];
+                lastVal = val;
             });
         });
 
@@ -426,7 +454,9 @@
             // Priority 3: KPI Rank Total (lowest first — ascending)
             if (a.kpiRankTotal !== b.kpiRankTotal) return a.kpiRankTotal - b.kpiRankTotal;
             // Priority 4: Tiebreaker (highest first — descending)
-            return b.tiebreaker - a.tiebreaker;
+            if (Math.abs(a.tiebreaker - b.tiebreaker) > 1e-9) return b.tiebreaker - a.tiebreaker;
+            // Priority 5: Name — deterministic order for otherwise-identical employees
+            return a.name.localeCompare(b.name);
         });
 
         rankings.forEach(function (r, i) { r.rank = i + 1; });
@@ -492,7 +522,7 @@
         // (after data hydrates) will re-attempt the auto-pick.
         if (!_rankingPeriodInitialized) {
             var periods = _getAvailableRankingPeriods();
-            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd'; });
+            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd' && p.count >= 30; });
             if (ytdPeriod) {
                 _selectedRankingPeriodKey = ytdPeriod.key;
                 _rankingPeriodInitialized = true;
@@ -556,7 +586,7 @@
                 html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
                 var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
-                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/15 (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
+                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
                 html += '</div>';
