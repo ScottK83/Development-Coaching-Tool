@@ -90,13 +90,15 @@
     var _matchupPeriodInitialized = false;
 
     // Metric definitions for matchup comparison
-    // Each has: key (values obj key), label, lowerIsBetter flag, formatKey (for formatMetricDisplay)
+    // Each has: key (values obj key), label, lowerIsBetter flag, formatKey (for formatMetricDisplay).
+    // weightBy controls team aggregation — 'calls' weights by call volume, 'survey' by survey
+    // count, 'sum' totals the values. Never simple-average rate metrics across agents.
     var MATCHUP_METRICS = [
-        { key: 'aht',              label: 'AHT',             lowerIsBetter: true,  formatKey: 'aht' },
-        { key: 'adherence',        label: 'Adherence',       lowerIsBetter: false, formatKey: 'scheduleAdherence' },
-        { key: 'sentiment',        label: 'Sentiment',       lowerIsBetter: false, formatKey: 'overallSentiment' },
-        { key: 'associateOverall', label: 'Assoc Overall',   lowerIsBetter: false, formatKey: 'cxRepOverall' },
-        { key: 'reliability',      label: 'Reliability',     lowerIsBetter: true,  formatKey: 'reliability', isTopLevel: true, aggregate: 'sum' }
+        { key: 'aht',              label: 'AHT',             lowerIsBetter: true,  formatKey: 'aht',               weightBy: 'calls' },
+        { key: 'adherence',        label: 'Adherence',       lowerIsBetter: false, formatKey: 'scheduleAdherence', weightBy: 'calls' },
+        { key: 'sentiment',        label: 'Sentiment',       lowerIsBetter: false, formatKey: 'overallSentiment',  weightBy: 'calls' },
+        { key: 'associateOverall', label: 'Assoc Overall',   lowerIsBetter: false, formatKey: 'cxRepOverall',      weightBy: 'survey' },
+        { key: 'reliability',      label: 'Reliability',     lowerIsBetter: true,  formatKey: 'reliability', isTopLevel: true, weightBy: 'sum' }
     ];
 
     /**
@@ -161,16 +163,38 @@
             var stats = { name: name, count: members.length, averages: {}, totalComposite: 0, wins: 0, losses: 0, ties: 0 };
 
             MATCHUP_METRICS.forEach(function (m) {
-                var vals = members.map(function (r) {
+                var _val = function (r) {
                     return m.isTopLevel ? r[m.key] : (r.values ? r.values[m.key] : null);
-                }).filter(function (v) { return v !== null && v !== undefined && !isNaN(v); });
+                };
 
-                if (vals.length > 0) {
-                    var total = vals.reduce(function (a, b) { return a + b; }, 0);
-                    stats.averages[m.key] = m.aggregate === 'sum' ? total : total / vals.length;
-                } else {
-                    stats.averages[m.key] = null;
+                // Cumulative metrics (reliability) total their values.
+                if (m.weightBy === 'sum') {
+                    var sumVals = members.map(_val).filter(function (v) {
+                        return v !== null && v !== undefined && !isNaN(v);
+                    });
+                    stats.averages[m.key] = sumVals.length > 0
+                        ? sumVals.reduce(function (a, b) { return a + b; }, 0)
+                        : null;
+                    return;
                 }
+
+                // Rate metrics use a volume-weighted average so high-volume agents
+                // pull the team number — matching Team Snapshot's computeTeamMetricValue.
+                var wSum = 0, wTotal = 0;
+                members.forEach(function (r) {
+                    var v = _val(r);
+                    if (v === null || v === undefined || isNaN(v)) return;
+                    var w;
+                    if (m.weightBy === 'survey') {
+                        w = r.surveyTotal > 0 ? r.surveyTotal : 0;
+                    } else {
+                        w = r.totalCalls > 0 ? r.totalCalls : 1;
+                    }
+                    if (w <= 0) return;
+                    wSum += v * w;
+                    wTotal += w;
+                });
+                stats.averages[m.key] = wTotal > 0 ? wSum / wTotal : null;
             });
 
             // Average composite rank

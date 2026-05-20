@@ -201,7 +201,8 @@
             scores: scores,
             values: result.values || {},
             reliability: parseFloat(emp.reliability) || 0,
-            surveyTotal: parseInt(emp.surveyTotal, 10) || 0
+            surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
+            totalCalls: parseInt(emp.totalCalls, 10) || 0
         };
     }
 
@@ -331,7 +332,8 @@
                 scores: score.scores,
                 values: score.values,
                 reliability: score.reliability,
-                surveyTotal: score.surveyTotal
+                surveyTotal: score.surveyTotal,
+                totalCalls: score.totalCalls
             });
         });
 
