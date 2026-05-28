@@ -1328,9 +1328,13 @@
                       `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
                         `style="background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">💬 Check-in</button>` +
                       `<button type="button" class="pulse-highfive-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🎉 High-Five</button>`
+                        `style="background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🎉 High-Five</button>` +
+                      `<button type="button" class="pulse-growth-btn" data-employee="${escapeHtml(emp.name)}" data-period="${periodType}" ` +
+                        `style="grid-column:1/-1; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">📈 Growth</button>`
                     : `<button type="button" class="pulse-review-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="grid-column:1/-1; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">${getReviewButtonLabel(periodType)}</button>`) +
+                        `style="grid-column:1/-1; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">${getReviewButtonLabel(periodType)}</button>` +
+                      `<button type="button" class="pulse-growth-btn" data-employee="${escapeHtml(emp.name)}" data-period="${periodType}" ` +
+                        `style="grid-column:1/-1; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">📈 Growth Check</button>`) +
             `</div>` +
         `</div>`;
     }
@@ -1849,6 +1853,357 @@
         message += `\n\n${pick(reviewCopy.closers)}`;
 
         return message;
+    }
+
+    // --- Growth message generation (WoW / MoM / QoQ / YTD) ---
+
+    const GROWTH_COMPARISON_TYPES = ['wow', 'mom', 'qoq', 'ytd'];
+
+    const GROWTH_LABELS = {
+        wow: { short: 'WoW', long: 'week over week', currentNoun: 'this week', priorNoun: 'last week' },
+        mom: { short: 'MoM', long: 'month over month', currentNoun: 'this month', priorNoun: 'last month' },
+        qoq: { short: 'QoQ', long: 'quarter over quarter', currentNoun: 'this quarter', priorNoun: 'last quarter' },
+        ytd: { short: 'YTD', long: 'year to date', currentNoun: 'this YTD snapshot', priorNoun: 'your prior YTD snapshot' }
+    };
+
+    const GROWTH_GREETINGS = [
+        (name, longLabel) => `Hey ${name}! 📈 Pulled your ${longLabel} growth — wanted to share what stood out.`,
+        (name, longLabel) => `${name}! Got your ${longLabel} numbers in front of me, here's how you're trending.`,
+        (name, longLabel) => `Morning ${name}! Quick ${longLabel} growth check for you.`,
+        (name, longLabel) => `${name}, taking a look at ${longLabel} for you — here's the rundown.`,
+        (name, longLabel) => `Hey ${name}! Wanted to share your ${longLabel} trajectory.`,
+        (name, longLabel) => `${name}! Sat down with your ${longLabel} numbers, here's what I saw.`
+    ];
+
+    const GROWTH_RANGE_LINE = [
+        (currentLabel, priorLabel) => `Comparing ${currentLabel} to ${priorLabel}:`,
+        (currentLabel, priorLabel) => `Looking at ${priorLabel} → ${currentLabel}:`,
+        (currentLabel, priorLabel) => `Side-by-side: ${priorLabel} vs ${currentLabel}.`
+    ];
+
+    const GROWTH_NO_MOVE = [
+        `Your numbers held pretty steady — no big swings either direction.`,
+        `Things have been holding flat — nothing major moved.`,
+        `Numbers stayed mostly level — no big movement to call out.`
+    ];
+
+    const GROWTH_CLOSERS = [
+        `Keep climbing! 🚀`,
+        `Proud of the trajectory — let's keep it going.`,
+        `Great direction. Keep stacking the wins.`,
+        `Solid effort showing up in the numbers.`,
+        `Excited to see where you take it next.`
+    ];
+
+    function getGrowthComparisonContext(comparisonType) {
+        if (comparisonType === 'wow') {
+            const keys = getPeriodKeys('week');
+            if (keys.length < 2) return null;
+            const latestKey = keys[keys.length - 1];
+            const baselineKey = keys[keys.length - 2];
+            return {
+                comparisonType,
+                latestKey,
+                baselineKey,
+                currentLabel: `the week of ${getPeriodDisplayLabel('week', latestKey)}`,
+                priorLabel: `the week of ${getPeriodDisplayLabel('week', baselineKey)}`,
+                periodForFmt: 'week',
+                analysisPeriodType: 'week'
+            };
+        }
+        if (comparisonType === 'mom') {
+            const keys = getPeriodKeys('month');
+            if (keys.length < 2) return null;
+            const latestKey = keys[keys.length - 1];
+            const baselineKey = keys[keys.length - 2];
+            return {
+                comparisonType,
+                latestKey,
+                baselineKey,
+                currentLabel: getMonthName(latestKey),
+                priorLabel: getMonthName(baselineKey),
+                periodForFmt: 'month',
+                analysisPeriodType: 'month'
+            };
+        }
+        if (comparisonType === 'qoq') {
+            const keys = getPeriodKeys('quarter');
+            if (keys.length < 2) return null;
+            const latestKey = keys[keys.length - 1];
+            const baselineKey = keys[keys.length - 2];
+            return {
+                comparisonType,
+                latestKey,
+                baselineKey,
+                currentLabel: getQuarterName(latestKey),
+                priorLabel: getQuarterName(baselineKey),
+                periodForFmt: 'quarter',
+                analysisPeriodType: 'quarter'
+            };
+        }
+        if (comparisonType === 'ytd') {
+            const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+            const sorted = Object.keys(ytd)
+                .map(k => {
+                    const endText = ytd[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+                    return { k, end: new Date(endText) };
+                })
+                .filter(x => !isNaN(x.end))
+                .sort((a, b) => a.end - b.end)
+                .map(x => x.k);
+            if (sorted.length < 2) return null;
+            const latestKey = sorted[sorted.length - 1];
+            const baselineKey = sorted[sorted.length - 2];
+            const fmtYtd = (key) => {
+                const meta = ytd[key]?.metadata?.endDate;
+                if (meta && typeof formatDateMMDDYYYY === 'function') return formatDateMMDDYYYY(meta);
+                return meta || key;
+            };
+            return {
+                comparisonType,
+                latestKey,
+                baselineKey,
+                currentLabel: `YTD as of ${fmtYtd(latestKey)}`,
+                priorLabel: `prior YTD snapshot (${fmtYtd(baselineKey)})`,
+                periodForFmt: 'week',
+                analysisPeriodType: 'ytd'
+            };
+        }
+        return null;
+    }
+
+    function getEmployeeFromAnyPeriod(periodKey, employeeName) {
+        if (!periodKey) return null;
+        const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const period = weekly[periodKey] || ytd[periodKey];
+        return period?.employees?.find(e => e.name === employeeName) || null;
+    }
+
+    function getGrowthNoiseThreshold(metricKey) {
+        const unit = window.METRICS_REGISTRY?.[metricKey]?.unit || '%';
+        if (unit === 'sec') return 3;
+        if (unit === 'hrs') return 0.3;
+        if (unit === '#') return 1;
+        return 0.5;
+    }
+
+    function computeGrowthDeltas(latestEmp, baselineEmp) {
+        const registry = typeof METRICS_REGISTRY !== 'undefined' ? METRICS_REGISTRY : {};
+        const out = [];
+        Object.keys(registry).filter(k => !PULSE_EXCLUDED_METRICS.includes(k)).forEach(metricKey => {
+            const baseVal = parseFloat(baselineEmp[metricKey]);
+            const latestVal = parseFloat(latestEmp[metricKey]);
+            if (!Number.isFinite(baseVal) || !Number.isFinite(latestVal)) return;
+            const delta = typeof metricDelta === 'function'
+                ? metricDelta(metricKey, latestVal, baseVal)
+                : latestVal - baseVal;
+            if (Math.abs(delta) < getGrowthNoiseThreshold(metricKey)) return;
+            out.push({
+                metricKey,
+                label: registry[metricKey]?.label || metricKey,
+                baseValue: baseVal,
+                latestValue: latestVal,
+                delta,
+                absDelta: Math.abs(delta)
+            });
+        });
+        return out;
+    }
+
+    function pickGrowthFocalPoint(latestEmp, analysisPeriodType, latestKey) {
+        const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
+            || window.analyzeTrendMetrics;
+        if (!analyzeFn) return null;
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+        const analysis = analyzeFn(latestEmp, centerAvgs, null, null, {
+            employeeName: latestEmp.name,
+            weekKey: latestKey,
+            periodType: analysisPeriodType
+        });
+        const allMetrics = (analysis?.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        return pickFocalPoint(allMetrics);
+    }
+
+    async function generateGrowthMessage(employeeName, comparisonType) {
+        const ctx = getGrowthComparisonContext(comparisonType);
+        if (!ctx) return null;
+
+        const latestEmp = getEmployeeFromAnyPeriod(ctx.latestKey, employeeName);
+        const baselineEmp = getEmployeeFromAnyPeriod(ctx.baselineKey, employeeName);
+        if (!latestEmp || !baselineEmp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const labelInfo = GROWTH_LABELS[comparisonType];
+        const deltas = computeGrowthDeltas(latestEmp, baselineEmp);
+        const improvements = deltas.filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+        const declines = deltas.filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 2);
+
+        let message = `${pick(GROWTH_GREETINGS)(firstName, labelInfo.long)}\n\n`;
+        message += `${pick(GROWTH_RANGE_LINE)(ctx.currentLabel, ctx.priorLabel)}`;
+
+        if (improvements.length === 0 && declines.length === 0) {
+            message += `\n\n${pick(GROWTH_NO_MOVE)}`;
+        } else {
+            if (improvements.length) {
+                message += `\n\nGrowing 🚀`;
+                improvements.forEach(d => {
+                    message += `\n• ${d.label}: ${fmtDelta(d.metricKey, d.delta)} (${fmtVal(d.metricKey, d.baseValue)} → ${fmtVal(d.metricKey, d.latestValue)})`;
+                });
+            }
+            if (declines.length) {
+                message += `\n\nSlipped a bit 🔻`;
+                declines.forEach(d => {
+                    message += `\n• ${d.label}: ${fmtDelta(d.metricKey, d.delta)} (${fmtVal(d.metricKey, d.baseValue)} → ${fmtVal(d.metricKey, d.latestValue)})`;
+                });
+            }
+        }
+
+        const focalPoint = pickGrowthFocalPoint(latestEmp, ctx.analysisPeriodType, ctx.latestKey);
+        if (focalPoint) {
+            let tipText = '';
+            try {
+                const allTips = typeof loadServerTips === 'function' ? await loadServerTips() : {};
+                const metricTips = allTips[focalPoint.metricKey] || [];
+                if (metricTips.length > 0) {
+                    const tip = typeof selectSmartTip === 'function'
+                        ? selectSmartTip({ employeeId: employeeName, metricKey: focalPoint.metricKey, severity: 'medium', tips: metricTips })
+                        : metricTips[Math.floor(Math.random() * metricTips.length)];
+                    if (tip) tipText = tip;
+                }
+            } catch (e) { /* no tips */ }
+
+            message += `\n\n🎯 Focus area: ${focalPoint.label} sitting at ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}.`;
+            if (tipText) {
+                const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
+                message += ` 💡 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
+            }
+        }
+
+        message += `\n\n${pick(GROWTH_CLOSERS)}`;
+        return message;
+    }
+
+    function getAvailableGrowthComparisons() {
+        return GROWTH_COMPARISON_TYPES.filter(type => getGrowthComparisonContext(type) !== null);
+    }
+
+    async function showGrowthModal(employeeName, defaultComparison) {
+        const existing = document.getElementById('pulseGrowthModal');
+        if (existing) existing.remove();
+
+        const available = getAvailableGrowthComparisons();
+        if (!available.length) {
+            if (typeof showToast === 'function') showToast('Need at least two periods of data to compare growth.', 3000);
+            return;
+        }
+        const initial = available.includes(defaultComparison) ? defaultComparison : available[0];
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+        const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
+        const overlay = document.createElement('div');
+        overlay.id = 'pulseGrowthModal';
+        overlay.className = 'modal-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+        const periodBtns = GROWTH_COMPARISON_TYPES.map(type => {
+            const enabled = available.includes(type);
+            const isActive = type === initial;
+            const baseStyle = 'border:1px solid #cbd5e1; border-radius:6px; padding:8px 14px; font-weight:bold; font-size:0.85em; cursor:pointer;';
+            const activeStyle = 'background:linear-gradient(135deg,#10b981,#059669); color:#fff; border-color:transparent;';
+            const inactiveStyle = 'background:#fff; color:#334155;';
+            const disabledStyle = 'background:#f1f5f9; color:#94a3b8; cursor:not-allowed;';
+            const style = !enabled ? `${baseStyle} ${disabledStyle}` : isActive ? `${baseStyle} ${activeStyle}` : `${baseStyle} ${inactiveStyle}`;
+            const disabledAttr = enabled ? '' : ' disabled';
+            return `<button type="button" class="growth-period-btn" data-comparison="${type}" style="${style}"${disabledAttr}>${GROWTH_LABELS[type].short}</button>`;
+        }).join('');
+
+        overlay.innerHTML = `<div style="background:white; border-radius:12px; max-width:600px; width:100%; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
+            `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">` +
+                `<h3 style="margin:0; color:#1a237e;">📈 Growth check for ${escapeHtml(firstName)}</h3>` +
+                `<button id="pulseGrowthClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:#999; padding:4px 8px;">✕</button>` +
+            `</div>` +
+            `<div style="font-size:0.85em; color:#475569; margin-bottom:8px;">Pick a comparison period:</div>` +
+            `<div id="pulseGrowthPeriods" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">${periodBtns}</div>` +
+            `<textarea id="pulseGrowthText" style="width:100%; height:240px; padding:14px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; color:#333; background:#f9f9f9; resize:vertical; font-family:inherit;">⏳ Generating…</textarea>` +
+            `<div style="display:flex; gap:10px; margin-top:14px;">` +
+                `<button id="pulseGrowthCopy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">📋 Copy to Clipboard</button>` +
+                `<button id="pulseGrowthRegenerate" style="flex:1; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🔄 Regenerate</button>` +
+            `</div>` +
+        `</div>`;
+
+        document.body.appendChild(overlay);
+
+        let currentComparison = initial;
+        const textarea = overlay.querySelector('#pulseGrowthText');
+
+        async function regenerate(autoCopy) {
+            textarea.value = '⏳ Generating…';
+            try {
+                const msg = await generateGrowthMessage(employeeName, currentComparison);
+                if (msg) {
+                    textarea.value = msg;
+                    if (autoCopy) {
+                        try {
+                            await navigator.clipboard.writeText(msg);
+                            if (typeof showToast === 'function') showToast('Growth message copied!', 2000);
+                        } catch (e) { /* ok */ }
+                    }
+                } else {
+                    textarea.value = 'Not enough data for that comparison yet.';
+                }
+            } catch (e) {
+                textarea.value = 'Could not build a growth message — check console for details.';
+                console.error('growth message error', e);
+            }
+        }
+
+        function updatePeriodHighlight() {
+            overlay.querySelectorAll('.growth-period-btn').forEach(btn => {
+                if (btn.disabled) return;
+                const isActive = btn.dataset.comparison === currentComparison;
+                if (isActive) {
+                    btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'transparent';
+                } else {
+                    btn.style.background = '#fff';
+                    btn.style.color = '#334155';
+                    btn.style.borderColor = '#cbd5e1';
+                }
+            });
+        }
+
+        overlay.querySelectorAll('.growth-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                currentComparison = btn.dataset.comparison;
+                updatePeriodHighlight();
+                regenerate(false);
+            });
+        });
+
+        overlay.querySelector('#pulseGrowthClose').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        overlay.querySelector('#pulseGrowthCopy').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(textarea.value);
+                if (typeof showToast === 'function') showToast('Copied!', 2000);
+            } catch (e) { textarea.select(); }
+        });
+
+        overlay.querySelector('#pulseGrowthRegenerate').addEventListener('click', () => regenerate(true));
+
+        regenerate(true);
     }
 
     // --- Summary bar ---
@@ -2548,6 +2903,26 @@
             });
         });
 
+        // Bind growth buttons (week, month, and quarter views)
+        container.querySelectorAll('.pulse-growth-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const empName = this.dataset.employee;
+                const cardPeriod = this.dataset.period || 'week';
+                const defaultComparison = cardPeriod === 'quarter' ? 'qoq'
+                    : cardPeriod === 'month' ? 'mom'
+                    : 'wow';
+                const originalText = this.textContent;
+                this.textContent = '⏳ Opening...';
+                this.disabled = true;
+                try {
+                    await showGrowthModal(empName, defaultComparison);
+                } finally {
+                    this.textContent = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
         // Bind month / quarter review buttons
         if (periodType !== 'week') {
             container.querySelectorAll('.pulse-review-btn').forEach(btn => {
@@ -2634,7 +3009,9 @@
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
         generateMonthlyCheckinMessage,
-        generateQuarterlyCheckinMessage
+        generateQuarterlyCheckinMessage,
+        generateGrowthMessage,
+        showGrowthModal
     };
 })();
 
