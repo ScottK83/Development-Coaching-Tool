@@ -146,7 +146,7 @@
             key: 'aht',
             label: 'Average Handle Time',
             icon: '⏱️',
-            target: { type: 'max', value: 426 },
+            target: { type: 'max', value: 414 },
             isReverse: true,
             unit: 'sec',
             columnIndex: 4,

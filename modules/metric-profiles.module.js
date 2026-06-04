@@ -26,7 +26,7 @@
             positiveWord: { type: 'min', value: 86 },
             negativeWord: { type: 'min', value: 83 },
             managingEmotions: { type: 'min', value: 95 },
-            aht: { type: 'max', value: 426 },
+            aht: { type: 'max', value: 414 },
             acw: { type: 'max', value: 60 },
             holdTime: { type: 'max', value: 30 },
             reliability: { type: 'max', value: 18 }
