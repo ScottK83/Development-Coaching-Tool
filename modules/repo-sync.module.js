@@ -187,7 +187,8 @@
         STORAGE_PREFIX + 'associateSentimentSnapshots',
         STORAGE_PREFIX + 'executiveSummaryNotes',
         STORAGE_PREFIX + 'ptoTracker',
-        STORAGE_PREFIX + 'reliabilityTracker'
+        STORAGE_PREFIX + 'reliabilityTracker',
+        STORAGE_PREFIX + 'yoyBaseline2025'
     ]);
 
     function shouldSyncForStorageKey(key) {
@@ -976,6 +977,7 @@
             employeePreferredNames: safeLoadJson('employeePreferredNames') || {},
             executiveSummaryNotes: safeLoadJson('executiveSummaryNotes') || {},
             userCustomTips: safeLoadJson('userCustomTips') || {},
+            yoyBaseline2025: safeLoadJson('yoyBaseline2025') || null,
             appStorageSnapshot: getAllAppStorageSnapshot(),
             callListeningCsv: window.exportCallListeningLogsToCSV?.() || '',
             coachingHistoryCsv: window.exportCoachingHistoryToCSV?.() || ''
@@ -1232,7 +1234,10 @@
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames),
             executiveSummaryNotes: coerceObject(payload?.executiveSummaryNotes),
-            userCustomTips: coerceObject(payload?.userCustomTips)
+            userCustomTips: coerceObject(payload?.userCustomTips),
+            // null when the backup has no 2025 baseline — skipped by the loop
+            // below so it never overwrites an existing local baseline.
+            yoyBaseline2025: coerceNullableObject(payload?.yoyBaseline2025)
         };
 
         console.log('[Repo Restore] Applying payload with keys:', Object.keys(payload || {}));
