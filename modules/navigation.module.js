@@ -107,8 +107,8 @@
 
     // --- Trends & Analysis sub-sections ---
 
-    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment', 'subSectionTaMatchup', 'subSectionTaPatterns'];
-    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment', 'subNavTaMatchup', 'subNavTaPatterns'];
+    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment', 'subSectionTaMatchup', 'subSectionTaYoY', 'subSectionTaPatterns'];
+    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment', 'subNavTaMatchup', 'subNavTaYoY', 'subNavTaPatterns'];
     var TRENDS_SUB_TO_BTN = {
         subSectionTaTrendIntelligence: 'subNavTaIntelligence',
         subSectionTaMetricTrends: 'subNavTaMetricCharts',
@@ -116,6 +116,7 @@
         subSectionTaFutures: 'subNavTaFutures',
         subSectionTaSentiment: 'subNavTaSentiment',
         subSectionTaMatchup: 'subNavTaMatchup',
+        subSectionTaYoY: 'subNavTaYoY',
         subSectionTaPatterns: 'subNavTaPatterns'
     };
 

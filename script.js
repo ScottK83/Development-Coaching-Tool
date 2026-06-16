@@ -1730,6 +1730,12 @@ function bindNavigationHandlers() {
         var matchupMod = window.DevCoachModules?.matchup;
         if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
     });
+    document.getElementById('subNavTaYoY')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaYoY', 'subNavTaYoY');
+        if (window.DevCoachModules?.yoyComparison?.renderYoYComparison) {
+            window.DevCoachModules.yoyComparison.renderYoYComparison();
+        }
+    });
     document.getElementById('subNavTaPatterns')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaPatterns', 'subNavTaPatterns');
         var stab = window.DevCoachModules?.metricStability;
