@@ -24,6 +24,7 @@
     // ── Module state ──
     var _selectedMetric = 'scheduleAdherence';
     var _show2025 = true;
+    var _myTeamOnly = false;
     var _sort = { key: 'improvement', dir: 'desc' };
 
     // ── Small helpers ──
@@ -49,6 +50,19 @@
     function _num(v) {
         var n = parseFloat(v);
         return isNaN(n) ? null : n;
+    }
+
+    // Is there a team selection to filter by? (controls whether the checkbox
+    // can do anything — if no team is selected, "my team only" would be empty.)
+    function _teamFilterContext() {
+        var tf = window.DevCoachModules && window.DevCoachModules.teamFilter;
+        if (!tf || !tf.getTeamSelectionContext) return null;
+        try { return tf.getTeamSelectionContext(); } catch (_e) { return null; }
+    }
+    function _inMyTeam(name, ctx) {
+        var tf = window.DevCoachModules && window.DevCoachModules.teamFilter;
+        if (!tf || !tf.isAssociateIncludedByTeamFilter) return true;
+        return tf.isAssociateIncludedByTeamFilter(name, ctx);
     }
 
     // ── Baseline (2025) storage ──
@@ -144,10 +158,12 @@
         });
 
         var reverse = _isReverse(metricKey);
+        var teamCtx = _myTeamOnly ? _teamFilterContext() : null;
         var rows = [];
 
         current.employees.forEach(function (cur) {
             if (!cur || !cur.name) return;
+            if (_myTeamOnly && !_inMyTeam(cur.name, teamCtx)) return;
             var prior = priorByName[cur.name];
             if (!prior) return; // only show reps present in BOTH years
 
@@ -300,6 +316,9 @@
         });
         html += '</select>';
         html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
+        html += '<input type="checkbox" id="yoyMyTeam"' + (_myTeamOnly ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">My team only';
+        html += '</label>';
+        html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyShow2025"' + (_show2025 ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">Show 2025 numbers';
         html += '</label>';
         html += '</div>';
@@ -315,6 +334,11 @@
         var chk = document.getElementById('yoyShow2025');
         if (chk) chk.addEventListener('change', function () {
             _show2025 = chk.checked;
+            _renderTable();
+        });
+        var teamChk = document.getElementById('yoyMyTeam');
+        if (teamChk) teamChk.addEventListener('change', function () {
+            _myTeamOnly = teamChk.checked;
             _renderTable();
         });
 
@@ -354,6 +378,12 @@
         html += '<span style="color:#c62828; font-weight:600;">▼ ' + declined + ' declined</span> · ';
         html += '<span style="color:#777;">' + flat + ' flat</span>';
         html += '<span style="color:#999; font-size:0.85em;"> &nbsp;|&nbsp; ' + data.matched + ' reps matched · ' + _escapeHtml(data.currentLabel) + '</span>';
+        if (_myTeamOnly) {
+            var ctx = _teamFilterContext();
+            if (!ctx || !ctx.isFiltering) {
+                html += '<br><span style="color:#e65100; font-size:0.8em;">⚠ "My team only" is on, but no team is selected — showing everyone. Pick your team via the team filter to narrow this.</span>';
+            }
+        }
         html += reverse ? '<br><span style="color:#999; font-size:0.8em;">Lower is better for this metric — a drop counts as an improvement.</span>' : '';
         html += '</div>';
 
