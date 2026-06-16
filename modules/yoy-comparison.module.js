@@ -25,7 +25,9 @@
     var _selectedMetric = 'scheduleAdherence';
     var _show2025 = true;
     var _myTeamOnly = false;
+    var _viewMode = 'single'; // 'single' (one metric, change cols) | 'allKpis' (rankings-style side-by-side)
     var _sort = { key: 'improvement', dir: 'desc' };
+    var _allKpiSort = { key: 'name', dir: 'asc' };
 
     // ── Small helpers ──
     function _escapeHtml(str) {
@@ -307,25 +309,40 @@
         if (available.indexOf(_selectedMetric) < 0) _selectedMetric = available[0] || 'scheduleAdherence';
 
         var html = '<div style="margin-bottom:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">';
-        html += '<label style="font-weight:600; color:#555; font-size:0.9em;">Metric:</label>';
+        html += '<label style="font-weight:600; color:#555; font-size:0.9em;">View:</label>';
+        html += '<select id="yoyViewSelect" style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;">';
+        html += '<option value="single"' + (_viewMode === 'single' ? ' selected' : '') + '>Single metric</option>';
+        html += '<option value="allKpis"' + (_viewMode === 'allKpis' ? ' selected' : '') + '>All KPIs side-by-side</option>';
+        html += '</select>';
+        var metricDisp = (_viewMode === 'single') ? '' : ' style="display:none;"';
+        html += '<span id="yoyMetricControl"' + metricDisp + '>';
+        html += '<label style="font-weight:600; color:#555; font-size:0.9em; margin-right:8px;">Metric:</label>';
         html += '<select id="yoyMetricSelect" style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em; min-width:220px;">';
         available.forEach(function (k) {
             var m = _metricMeta(k);
             var sel = (k === _selectedMetric) ? ' selected' : '';
             html += '<option value="' + _escapeHtml(k) + '"' + sel + '>' + _escapeHtml((m.icon ? m.icon + ' ' : '') + m.label) + '</option>';
         });
-        html += '</select>';
+        html += '</select></span>';
         html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyMyTeam"' + (_myTeamOnly ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">My team only';
         html += '</label>';
         html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyShow2025"' + (_show2025 ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">Show 2025 numbers';
         html += '</label>';
+        html += '<button type="button" id="yoySummaryBtn" class="btn-primary" style="margin-left:auto; padding:6px 14px;">📋 Summarize for my leader</button>';
         html += '</div>';
         html += '<div id="yoyTableWrap"></div>';
 
         wrap.innerHTML = html;
 
+        var viewSel = document.getElementById('yoyViewSelect');
+        if (viewSel) viewSel.addEventListener('change', function () {
+            _viewMode = viewSel.value;
+            var mc = document.getElementById('yoyMetricControl');
+            if (mc) mc.style.display = (_viewMode === 'single') ? '' : 'none';
+            _renderTable();
+        });
         var sel = document.getElementById('yoyMetricSelect');
         if (sel) sel.addEventListener('change', function () {
             _selectedMetric = sel.value;
@@ -341,11 +358,14 @@
             _myTeamOnly = teamChk.checked;
             _renderTable();
         });
+        var sumBtn = document.getElementById('yoySummaryBtn');
+        if (sumBtn) sumBtn.addEventListener('click', _showSummaryModal);
 
         _renderTable();
     }
 
     function _renderTable() {
+        if (_viewMode === 'allKpis') { _renderAllKpiTable(); return; }
         var wrap = document.getElementById('yoyTableWrap');
         if (!wrap) return;
 
@@ -450,6 +470,133 @@
         });
     }
 
+    // ── All-KPIs side-by-side (rankings-style): one row per rep, one column
+    //    per KPI, each cell showing 2026 value with the 2025 value + delta. ──
+    function _buildAllKpiRows() {
+        var baseline = _loadBaseline();
+        var current = _getCurrentYearData();
+        if (!baseline || !current) return null;
+
+        var priorByName = {};
+        baseline.employees.forEach(function (e) { if (e && e.name) priorByName[e.name] = e; });
+
+        var teamCtx = _myTeamOnly ? _teamFilterContext() : null;
+        var reg = window.METRICS_REGISTRY || {};
+        var metrics = COMPARE_METRICS.filter(function (k) { return reg[k]; });
+        var rows = [];
+
+        current.employees.forEach(function (cur) {
+            if (!cur || !cur.name) return;
+            if (_myTeamOnly && !_inMyTeam(cur.name, teamCtx)) return;
+            var prior = priorByName[cur.name];
+            if (!prior) return;
+
+            var cells = {};
+            metrics.forEach(function (k) {
+                var pv = _num(prior[k]), cv = _num(cur[k]);
+                var delta = (pv !== null && cv !== null) ? (cv - pv) : null;
+                var pct = (delta !== null && pv !== null && pv !== 0) ? (delta / Math.abs(pv)) * 100 : null;
+                var improvement = (delta === null) ? null : (_isReverse(k) ? -delta : delta);
+                cells[k] = { prior: pv, current: cv, delta: delta, pct: pct, improvement: improvement };
+            });
+            rows.push({ name: cur.name, metrics: cells });
+        });
+
+        return { rows: rows, metrics: metrics, currentLabel: current.label, matched: rows.length };
+    }
+
+    function _renderAllKpiTable() {
+        var wrap = document.getElementById('yoyTableWrap');
+        if (!wrap) return;
+
+        var data = _buildAllKpiRows();
+        if (!data) {
+            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">Upload current-year data to compare against your 2025 baseline.</p>';
+            return;
+        }
+        if (!data.rows.length) {
+            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">No matching employees between 2025 and ' + new Date().getFullYear() + '. Names must match across both data sets.</p>';
+            return;
+        }
+
+        // Sort
+        var sk = _allKpiSort.key, sd = _allKpiSort.dir;
+        var sorted = data.rows.slice().sort(function (a, b) {
+            if (sk === 'name') {
+                var c = String(a.name).localeCompare(String(b.name));
+                return sd === 'asc' ? c : -c;
+            }
+            var nl = sd === 'asc' ? Infinity : -Infinity;
+            var av = a.metrics[sk] ? a.metrics[sk].improvement : null;
+            var bv = b.metrics[sk] ? b.metrics[sk].improvement : null;
+            av = (av === null || av === undefined || isNaN(av)) ? nl : av;
+            bv = (bv === null || bv === undefined || isNaN(bv)) ? nl : bv;
+            return sd === 'asc' ? (av - bv) : (bv - av);
+        });
+
+        var curYear = new Date().getFullYear();
+        var thBase = 'padding:8px 6px; border-bottom:2px solid #ddd; cursor:pointer; user-select:none; font-size:0.8em; white-space:nowrap;';
+        function arrow(key) {
+            if (key !== _allKpiSort.key) return ' <span style="opacity:0.3;">&#8597;</span>';
+            return _allKpiSort.dir === 'asc' ? ' <span style="color:#5e35b1;">&#9650;</span>' : ' <span style="color:#5e35b1;">&#9660;</span>';
+        }
+
+        var html = '';
+        html += '<div style="margin-bottom:12px; padding:10px 14px; background:#f5f5f5; border-radius:8px; font-size:0.85em; color:#555;">';
+        html += '<strong>2025 → ' + curYear + ' side-by-side</strong> &mdash; ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
+        html += '</div>';
+
+        html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
+        html += '<thead><tr style="background:#f5f5f5;">';
+        html += '<th class="yoyk-sort" data-sort="name" style="' + thBase + ' text-align:left; position:sticky; left:0; background:#f5f5f5;">Name' + arrow('name') + '</th>';
+        data.metrics.forEach(function (k) {
+            var m = _metricMeta(k);
+            html += '<th class="yoyk-sort" data-sort="' + _escapeHtml(k) + '" style="' + thBase + ' text-align:center;" title="' + _escapeHtml(m.label) + '">' + _escapeHtml((m.icon || '') + ' ' + m.label) + arrow(k) + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        sorted.forEach(function (r, idx) {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            var bg = idx % 2 === 0 ? (isDark ? '#1a1f2e' : '#fafafa') : (isDark ? 'transparent' : '#fff');
+            html += '<tr style="background:' + bg + '; border-bottom:1px solid #eee;">';
+            html += '<td style="padding:6px; white-space:nowrap; font-weight:600; position:sticky; left:0; background:' + bg + ';">' + _escapeHtml(r.name) + '</td>';
+            data.metrics.forEach(function (k) {
+                var c = r.metrics[k] || {};
+                var curDisp = _formatMetricDisplay(k, c.current);
+                var sub = '';
+                if (c.delta !== null) {
+                    var good = c.improvement > 1e-9, bad = c.improvement < -1e-9;
+                    var color = good ? '#2e7d32' : bad ? '#c62828' : '#777';
+                    var icon = good ? '▲' : bad ? '▼' : '–';
+                    var sign = c.delta > 0 ? '+' : '';
+                    var deltaDisp = _formatDelta(k, c.delta);
+                    var priorPart = _show2025 ? ('<span style="color:#999;">' + _formatMetricDisplay(k, c.prior) + '</span> ') : '';
+                    sub = '<div style="font-size:0.76em; margin-top:1px;">' + priorPart + '<span style="color:' + color + ';">' + icon + sign + deltaDisp + '</span></div>';
+                } else if (_show2025 && c.prior !== null && c.prior !== undefined) {
+                    sub = '<div style="font-size:0.76em; margin-top:1px; color:#999;">' + _formatMetricDisplay(k, c.prior) + ' →</div>';
+                }
+                html += '<td style="padding:6px 8px; text-align:center; white-space:nowrap;"><div style="font-weight:600;">' + curDisp + '</div>' + sub + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        wrap.innerHTML = html;
+
+        wrap.querySelectorAll('.yoyk-sort').forEach(function (th) {
+            th.addEventListener('click', function () {
+                var key = th.dataset.sort;
+                if (_allKpiSort.key === key) {
+                    _allKpiSort.dir = _allKpiSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    _allKpiSort.key = key;
+                    _allKpiSort.dir = (key === 'name') ? 'asc' : 'desc';
+                }
+                _renderAllKpiTable();
+            });
+        });
+    }
+
     // Format a raw delta using the metric's natural units, without a sign
     // (the sign/arrow is applied by the caller). Percent metrics show points.
     function _formatDelta(key, delta) {
@@ -474,6 +621,129 @@
             av = (av === null || av === undefined || (typeof av === 'number' && isNaN(av))) ? nullLast : av;
             bv = (bv === null || bv === undefined || (typeof bv === 'number' && isNaN(bv))) ? nullLast : bv;
             return dir === 'asc' ? (av - bv) : (bv - av);
+        });
+    }
+
+    // ── Leader summary: plain-text recap of how each rep moved, built to be
+    //    spoken to a leader or pasted into an AI tool. Respects "My team only". ──
+    function _changePhrase(key, c, improved) {
+        var m = _metricMeta(key);
+        var arrow = improved ? '↑' : '↓';
+        var pctStr = (c.pct !== null) ? (' [' + (c.pct > 0 ? '+' : '') + c.pct.toFixed(1) + '%]') : '';
+        return m.label + ' ' + arrow + _formatDelta(key, c.delta) +
+            ' (' + _formatMetricDisplay(key, c.prior) + ' → ' + _formatMetricDisplay(key, c.current) + ')' + pctStr;
+    }
+
+    function _buildSummaryText() {
+        var data = _buildAllKpiRows();
+        var curYear = new Date().getFullYear();
+        if (!data || !data.rows.length) {
+            return 'No year-over-year comparison data available. Load a 2025 baseline and current-year data first.';
+        }
+
+        var lines = [];
+        lines.push('Year-over-Year Performance Summary — 2025 vs ' + curYear);
+        lines.push('Scope: ' + (_myTeamOnly ? 'My team' : 'All reps') + ' (' + data.matched + ' reps matched) | Current data: ' + data.currentLabel);
+        lines.push('Note: "improved/declined" already accounts for lower-is-better metrics (AHT, ACW, Hold Time, Reliability, Transfers).');
+        lines.push('');
+
+        // Cross-metric highlights, ranked by direction-aware % change so points
+        // and seconds are comparable.
+        var entries = [];
+        data.rows.forEach(function (r) {
+            data.metrics.forEach(function (k) {
+                var c = r.metrics[k];
+                if (!c || c.delta === null || c.pct === null) return;
+                entries.push({ name: r.name, key: k, c: c, sip: _isReverse(k) ? -c.pct : c.pct });
+            });
+        });
+        var ups = entries.filter(function (e) { return e.sip > 0.0001; }).sort(function (a, b) { return b.sip - a.sip; });
+        var downs = entries.filter(function (e) { return e.sip < -0.0001; }).sort(function (a, b) { return a.sip - b.sip; });
+
+        lines.push('TOP IMPROVEMENTS:');
+        if (ups.length) ups.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ' — ' + _changePhrase(e.key, e.c, true)); });
+        else lines.push('  (none)');
+        lines.push('');
+        lines.push('TOP DECLINES:');
+        if (downs.length) downs.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ' — ' + _changePhrase(e.key, e.c, false)); });
+        else lines.push('  (none)');
+        lines.push('');
+        lines.push('BY REP:');
+        lines.push('');
+
+        data.rows.slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); }).forEach(function (r) {
+            var up = [], down = [];
+            data.metrics.forEach(function (k) {
+                var c = r.metrics[k];
+                if (!c || c.delta === null) return;
+                if (c.improvement > 1e-9) up.push(_changePhrase(k, c, true));
+                else if (c.improvement < -1e-9) down.push(_changePhrase(k, c, false));
+            });
+            lines.push(r.name + ' — ' + up.length + ' up / ' + down.length + ' down');
+            if (up.length) lines.push('  Improved: ' + up.join('; '));
+            if (down.length) lines.push('  Declined: ' + down.join('; '));
+            lines.push('');
+        });
+
+        return lines.join('\n');
+    }
+
+    function _showSummaryModal() {
+        var text = _buildSummaryText();
+        var existing = document.getElementById('yoySummaryOverlay');
+        if (existing) existing.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'yoySummaryOverlay';
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#fff; color:#222; border-radius:10px; max-width:780px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.35);';
+
+        var head = document.createElement('div');
+        head.style.cssText = 'padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;';
+        head.innerHTML = '<strong style="font-size:1.05em;">📋 Leader Summary</strong>' +
+            '<span style="font-size:0.82em; color:#777;">Review, then copy &amp; paste into your notes or an AI tool.</span>';
+
+        var body = document.createElement('div');
+        body.style.cssText = 'padding:14px 18px; overflow:auto;';
+        var ta = document.createElement('textarea');
+        ta.id = 'yoySummaryText';
+        ta.style.cssText = 'width:100%; box-sizing:border-box; height:50vh; font-family:monospace; font-size:0.82em; line-height:1.4; padding:10px; border:1px solid #ccc; border-radius:6px; white-space:pre; resize:vertical;';
+        ta.value = text;
+        body.appendChild(ta);
+
+        var foot = document.createElement('div');
+        foot.style.cssText = 'padding:12px 18px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end; align-items:center;';
+        foot.innerHTML =
+            '<span id="yoyCopyStatus" style="font-size:0.85em; color:#2e7d32; margin-right:auto;"></span>' +
+            '<button type="button" id="yoyCopyBtn" class="btn-primary" style="padding:7px 16px;">Copy to clipboard</button>' +
+            '<button type="button" id="yoyCloseSummary" class="btn-secondary" style="padding:7px 16px;">Close</button>';
+
+        box.appendChild(head);
+        box.appendChild(body);
+        box.appendChild(foot);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function close() { overlay.remove(); }
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+        document.getElementById('yoyCloseSummary').addEventListener('click', close);
+
+        document.getElementById('yoyCopyBtn').addEventListener('click', function () {
+            var status = document.getElementById('yoyCopyStatus');
+            var val = ta.value;
+            function ok() { if (status) status.textContent = '✓ Copied'; }
+            function fail() {
+                ta.focus(); ta.select();
+                try { document.execCommand('copy'); ok(); }
+                catch (_e) { if (status) { status.style.color = '#c62828'; status.textContent = 'Press Ctrl+C to copy'; } }
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(val).then(ok).catch(fail);
+            } else {
+                fail();
+            }
         });
     }
 
