@@ -585,6 +585,21 @@
                 });
             });
         }
+
+        var midYearBtn = document.getElementById('onOffMidYearBtn');
+        if (midYearBtn) {
+            _bindElementOnce(midYearBtn, 'click', generateMidYearReviewPrompt);
+        }
+        var midYearCopyBtn = document.getElementById('onOffMidYearCopyBtn');
+        if (midYearCopyBtn) {
+            _bindElementOnce(midYearCopyBtn, 'click', function() {
+                var text = document.getElementById('onOffMidYearText')?.textContent || '';
+                navigator.clipboard.writeText(text).then(function() {
+                    var toast = window.DevCoachModules?.uiUtils?.showToast;
+                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
+                });
+            });
+        }
     }
 
     function updateOnOffTrackerDisplay() {
@@ -622,13 +637,11 @@
         panel.style.display = 'block';
     }
 
-    /* ── Quick Check-in Prompt ── */
+    /* ── Shared metric context for check-in / mid-year prompts ── */
 
-    function generateQuickCheckinPrompt() {
+    function _buildOnOffMetricContext() {
         var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
         var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
-        var output = document.getElementById('onOffCheckinOutput');
-        var textEl = document.getElementById('onOffCheckinText');
 
         if (!employeeName || !reviewYear) {
             alert('Please select an associate first.');
@@ -727,6 +740,20 @@
             }
         });
 
+        return { firstName: firstName, strengths: strengths, focusAreas: focusAreas, reviewYear: reviewYear };
+    }
+
+    /* ── Quick Check-in Prompt (casual Teams message) ── */
+
+    function generateQuickCheckinPrompt() {
+        var ctx = _buildOnOffMetricContext();
+        if (!ctx) return;
+        var firstName = ctx.firstName;
+        var strengths = ctx.strengths;
+        var focusAreas = ctx.focusAreas;
+        var output = document.getElementById('onOffCheckinOutput');
+        var textEl = document.getElementById('onOffCheckinText');
+
         // Build the prompt
         // Framing note: this is written in first person ("help me polish my notes")
         // rather than a "you are a supervisor, do not mention scores" persona. The
@@ -789,6 +816,84 @@
         // Auto-open Copilot
         if (typeof window.openCopilotWithPrompt === 'function') {
             window.openCopilotWithPrompt(prompt, 'Quick Check-in for ' + firstName);
+        }
+    }
+
+    /* ── Mid-Year Review Prompt (formal, for Success Factors) ── */
+
+    function generateMidYearReviewPrompt() {
+        var ctx = _buildOnOffMetricContext();
+        if (!ctx) return;
+        var firstName = ctx.firstName;
+        var strengths = ctx.strengths;
+        var focusAreas = ctx.focusAreas;
+        var reviewYear = ctx.reviewYear;
+        var output = document.getElementById('onOffMidYearOutput');
+        var textEl = document.getElementById('onOffMidYearText');
+
+        // First-person "I am a supervisor writing review comments" framing, matching
+        // the year-end generator that already passes Microsoft Copilot's filter.
+        var prompt = 'I am a call center supervisor writing mid-year review comments for ' + firstName + ' that I will paste into our Success Factors review system. This is a mid-year checkpoint for ' + reviewYear + ', not a final review, so the year is still in progress and there is time to grow.\n\n';
+
+        prompt += 'Performance so far this year:\n';
+
+        if (strengths.length) {
+            prompt += '\nStrengths and progress to recognize:\n';
+            strengths.forEach(function(s) {
+                var valText = s.val !== null ? s.val + ' ' + s.unit : 'no data';
+                prompt += '- ' + s.label + ': ' + valText + ' (meeting or exceeding goal)\n';
+            });
+        }
+
+        if (focusAreas.length) {
+            prompt += '\nAreas of opportunity that need focused improvement:\n';
+            focusAreas.forEach(function(f) {
+                var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
+                var line = '- ' + f.label + ': currently ' + valText;
+                if (f.targetText) line += ', ' + f.targetText;
+                if (f.gapText) line += ' (' + f.gapText + ')';
+                prompt += line + '\n';
+                if (f.stretchText) prompt += '  A realistic first milestone: ' + f.stretchText + '\n';
+                if (f.tips && f.tips.length) {
+                    f.tips.forEach(function(tip) {
+                        prompt += '  Coaching focus: ' + tip + '\n';
+                    });
+                }
+            });
+        } else {
+            prompt += '\nAreas of opportunity: none are flagged this period. Encourage continued consistency and a stretch goal.\n';
+        }
+
+        prompt += '\nWrite polished mid-year review text that I can paste into two Success Factors boxes:\n';
+        prompt += '1) Progress and strengths at the mid-year point\n';
+        prompt += '2) Areas of focus and development for the rest of the year\n';
+        prompt += '\nRequirements:\n';
+        prompt += '- Professional and appropriate for a formal HR review system, but warm and human, not robotic or overly corporate\n';
+        prompt += '- Come from a place of growth, development, and positivity, framing the opportunities as a clear path forward\n';
+        prompt += '- At the same time be direct about the areas of opportunity. Name them plainly and set a clear expectation that improvement is needed, while staying supportive and coaching oriented\n';
+        prompt += '- Use present and ongoing tense since this is a mid-year checkpoint (phrasing like "so far this year", "has been", "is currently", "for the rest of the year"). Do NOT write as if the year is already over\n';
+        prompt += '- When referencing a metric, include the metric value and its goal, and how far away it is using the numbers above\n';
+        prompt += '- Weave the coaching focus points in naturally as concrete next steps, do not just list them\n';
+        prompt += '- Box 1 should emphasize genuine strengths and forward momentum\n';
+        prompt += '- Box 2 must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
+        prompt += '- Keep each box concise, about 3 to 6 sentences each\n';
+        prompt += '- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)\n';
+        prompt += '- Do NOT use em dashes (—). Use commas or periods instead.\n';
+        prompt += '- Return in this exact format only:\n';
+        prompt += 'Box 1 - Progress & Strengths:\n[text]\n\nBox 2 - Areas of Focus:\n[text]';
+
+        if (textEl) textEl.textContent = prompt;
+        if (output) output.style.display = 'block';
+
+        // Auto-copy to clipboard
+        navigator.clipboard.writeText(prompt).then(function() {
+            var toast = window.DevCoachModules?.uiUtils?.showToast;
+            if (toast) toast('Mid-year prompt copied! Paste into Copilot, then paste the result into Success Factors.', 3500);
+        }).catch(function() {});
+
+        // Auto-open Copilot
+        if (typeof window.openCopilotWithPrompt === 'function') {
+            window.openCopilotWithPrompt(prompt, 'Mid-Year Review for ' + firstName);
         }
     }
 
@@ -1085,6 +1190,7 @@
         initializeOnOffTracker,
         updateOnOffTrackerDisplay,
         generateTeamOnOffSummary,
-        generateQuickCheckinPrompt
+        generateQuickCheckinPrompt,
+        generateMidYearReviewPrompt
     };
 })();

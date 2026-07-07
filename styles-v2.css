@@ -1763,12 +1763,15 @@ textarea:focus-visible {
    "background: rgb(240, 249, 255)", which defeats the [style*="#hex"] dark
    overrides above and leaves a light box. Target by ID so background and text
    flip together regardless of hex-vs-rgb serialization. */
-#onOffCheckinText { color: #1e293b !important; }
-[data-theme="dark"] #onOffCheckinOutput {
+#onOffCheckinText,
+#onOffMidYearText { color: #1e293b !important; }
+[data-theme="dark"] #onOffCheckinOutput,
+[data-theme="dark"] #onOffMidYearOutput {
     background: var(--bg-surface-raised) !important;
     border-color: var(--border-strong) !important;
 }
-[data-theme="dark"] #onOffCheckinText { color: var(--text-primary) !important; }
+[data-theme="dark"] #onOffCheckinText,
+[data-theme="dark"] #onOffMidYearText { color: var(--text-primary) !important; }
 
 [data-theme="dark"] #verintSummarySection {
     background: var(--bg-surface-raised) !important;
