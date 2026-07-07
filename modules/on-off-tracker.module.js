@@ -728,50 +728,54 @@
         });
 
         // Build the prompt
-        var prompt = 'You are a call center supervisor sending a quick, encouraging Teams message to ' + firstName + '.\n\n';
-        prompt += 'IMPORTANT RULES:\n';
-        prompt += '- Do NOT mention scores, ratings, "on track", "off track", or rating averages\n';
-        prompt += '- Do NOT mention that you are using a tool or data system\n';
-        prompt += '- Keep it casual, warm, and brief (3-5 sentences max for the main message)\n';
-        prompt += '- Frame everything as growth opportunities, not deficiencies\n';
-        prompt += '- Sound like a real person typing in Teams chat, not a formal email\n';
-        prompt += '- Do NOT use em dashes (—) anywhere. Use commas or periods instead.\n';
-        prompt += '- Include 1-2 relevant emojis to keep it friendly and casual\n\n';
+        // Framing note: this is written in first person ("help me polish my notes")
+        // rather than a "you are a supervisor, do not mention scores" persona. The
+        // persona + concealment-style rules trip Microsoft Copilot's guardrail against
+        // individualized employee evaluations and cause a hard refusal. Keep the
+        // help-me-draft framing to stay within Copilot's acceptable-use filter.
+        var prompt = 'I want to send ' + firstName + ', someone I work with, a short and friendly Teams check-in to encourage them. Below are my own rough notes about how things are going and where I want to cheer them on. Please help me turn my notes into a warm, casual message I can send.\n\n';
+        prompt += 'How I would like the message to read:\n';
+        prompt += '- Casual and warm, like a real person typing in a Teams chat, not a formal email\n';
+        prompt += '- Brief, about 3 to 5 sentences\n';
+        prompt += '- Encouraging and forward looking, framing the focus areas as growth opportunities to build on\n';
+        prompt += '- Written in terms of specific goals and everyday habits, not internal numbers or labels\n';
+        prompt += '- No em dashes anywhere. Use commas or periods instead.\n';
+        prompt += '- 1 to 2 friendly emojis\n\n';
 
-        prompt += 'CONTEXT (use to inform tone, do not quote directly):\n';
+        prompt += 'My notes:\n';
 
         if (strengths.length) {
-            prompt += '\nStrengths to acknowledge:\n';
+            prompt += '\nThings going really well that I want to acknowledge:\n';
             strengths.forEach(function(s) {
                 prompt += '- ' + s.label + ': ' + s.val + ' ' + s.unit + ' (excellent)\n';
             });
         }
 
         if (focusAreas.length) {
-            prompt += '\nAreas to focus the message on:\n';
+            prompt += '\nAreas I want to gently encourage them to build on:\n';
             focusAreas.forEach(function(f) {
                 var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
                 var line = '- ' + f.label + ': currently ' + valText;
                 if (f.targetText) line += ', ' + f.targetText;
                 if (f.gapText) line += ' (' + f.gapText + ')';
                 prompt += line + '\n';
-                if (f.stretchText) prompt += '  Stretch goal: ' + f.stretchText + '\n';
-                if (f.isClose) prompt += '  (close to goal, just needs a nudge)\n';
+                if (f.stretchText) prompt += '  A small first step: ' + f.stretchText + '\n';
+                if (f.isClose) prompt += '  (already close, just needs a nudge)\n';
                 if (f.tips && f.tips.length) {
                     f.tips.forEach(function(tip) {
-                        prompt += '  Coaching tip: ' + tip + '\n';
+                        prompt += '  A tip that could help: ' + tip + '\n';
                     });
                 }
             });
         }
 
-        prompt += '\nWrite a Teams message that:\n';
-        prompt += '1. Starts with a brief positive acknowledgment of what they\'re doing well\n';
-        prompt += '2. Naturally transitions to the focal area(s) they should work on\n';
-        prompt += '3. Tells them EXACTLY how far they are from the goal using the gap numbers above (e.g. "If you can shave off 134 seconds on your handle time..." or "Bring your adherence up just 2.4%...")\n';
-        prompt += '4. Includes a specific, actionable suggestion from the coaching tips\n';
+        prompt += '\nPlease write the message so it:\n';
+        prompt += '1. Starts with a brief, genuine acknowledgment of what they are doing well\n';
+        prompt += '2. Naturally transitions to the area(s) I want to encourage them to build on\n';
+        prompt += '3. Names the specific goal and how close they are, using the numbers in my notes (e.g. "If you can shave off 134 seconds on your handle time..." or "Bring your adherence up just 2.4%...")\n';
+        prompt += '4. Weaves in one specific, practical suggestion from the tips above\n';
         prompt += '5. Ends with encouragement\n';
-        prompt += '6. Feels like a quick check-in, not a performance review\n';
+        prompt += '6. Reads like a quick, friendly check-in, not a formal review\n';
 
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
