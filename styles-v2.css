@@ -246,6 +246,8 @@
 [data-theme="dark"] strong,
 [data-theme="dark"] td,
 [data-theme="dark"] th,
+[data-theme="dark"] pre,
+[data-theme="dark"] code,
 [data-theme="dark"] h1, [data-theme="dark"] h2,
 [data-theme="dark"] h3, [data-theme="dark"] h4,
 [data-theme="dark"] h5, [data-theme="dark"] h6 {
