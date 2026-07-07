@@ -1757,6 +1757,29 @@ textarea:focus-visible {
     color: var(--text-primary) !important;
 }
 
+/* --- Prompt / summary output boxes ---
+   These containers have their display toggled by JS. Writing to element.style
+   re-serializes the inline style attribute, turning "background: #f0f9ff" into
+   "background: rgb(240, 249, 255)", which defeats the [style*="#hex"] dark
+   overrides above and leaves a light box. Target by ID so background and text
+   flip together regardless of hex-vs-rgb serialization. */
+#onOffCheckinText { color: #1e293b !important; }
+[data-theme="dark"] #onOffCheckinOutput {
+    background: var(--bg-surface-raised) !important;
+    border-color: var(--border-strong) !important;
+}
+[data-theme="dark"] #onOffCheckinText { color: var(--text-primary) !important; }
+
+[data-theme="dark"] #verintSummarySection {
+    background: var(--bg-surface-raised) !important;
+    border-color: var(--border-strong) !important;
+}
+[data-theme="dark"] #verintSummaryOutput {
+    background: var(--bg-surface-sunken) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+
 /* --- Debug panel --- */
 [data-theme="dark"] #debugSection pre,
 [data-theme="dark"] #debugSection code {
