@@ -932,7 +932,7 @@
             prompt += '- Largely positive and reinforcing. Acknowledge strong overall performance and frame the focus area(s) as fine-tuning to keep building on.\n';
         }
 
-        prompt += '\nWrite polished mid-year review text that I can paste into two Success Factors boxes:\n';
+        prompt += '\nWrite polished mid-year review text organized into two sections that I can paste into Success Factors:\n';
         prompt += '1) Progress and strengths at the mid-year point\n';
         prompt += '2) Areas of focus and development for the rest of the year\n';
         prompt += '\nRequirements:\n';
@@ -942,13 +942,13 @@
         prompt += '- Use present and ongoing tense since this is a mid-year checkpoint (phrasing like "so far this year", "has been", "is currently", "for the rest of the year"). Do NOT write as if the year is already over\n';
         prompt += '- When referencing a metric, include the metric value and its goal, and how far away it is using the numbers above\n';
         prompt += '- Weave the coaching focus points in naturally as concrete next steps, do not just list them\n';
-        prompt += '- Box 1 should emphasize genuine strengths and forward momentum\n';
-        prompt += '- Box 2 must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
+        prompt += '- The Progress and Strengths section should emphasize genuine strengths and forward momentum\n';
+        prompt += '- The Areas of Focus section must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
         prompt += '- Keep each box concise, about 3 to 6 sentences each\n';
         prompt += '- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)\n';
         prompt += '- Do NOT use em dashes (—). Use commas or periods instead.\n';
-        prompt += '- Return in this exact format only:\n';
-        prompt += 'Box 1 - Progress & Strengths:\n[text]\n\nBox 2 - Areas of Focus:\n[text]';
+        prompt += '- Return in this exact format only, using these two headings and nothing else. Do NOT label the sections "Box 1" or "Box 2":\n';
+        prompt += 'Progress & Strengths:\n[text]\n\nAreas of Focus:\n[text]';
 
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
