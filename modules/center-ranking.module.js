@@ -4,15 +4,17 @@
     var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
 
     // Supervisor color palette for row highlighting
+    // bg = light-mode row tint, dark = dark-mode row tint, dot = vivid accent for
+    // the name-cell indicator (needs to read clearly on BOTH row backgrounds).
     var SUPERVISOR_COLORS = {
-        'Scott':           { bg: '#e3f2fd', dark: '#0d2137' },
-        'Miranda':         { bg: '#fce4ec', dark: '#2a1015' },
-        'Kathy':           { bg: '#f3e5f5', dark: '#1f0f24' },
-        'Angie':           { bg: '#fff3e0', dark: '#2a1d08' },
-        'Sarah':           { bg: '#e8f5e9', dark: '#0d2010' },
-        'Schnelle':        { bg: '#e0f7fa', dark: '#0a1f22' },
-        'Nicole':          { bg: '#fff9c4', dark: '#2a2508' },
-        'Angela Allison':  { bg: '#f1f8e9', dark: '#1a2410' }
+        'Scott':           { bg: '#e3f2fd', dark: '#0d2137', dot: '#1e88e5' },
+        'Miranda':         { bg: '#fce4ec', dark: '#2a1015', dot: '#ec407a' },
+        'Kathy':           { bg: '#f3e5f5', dark: '#1f0f24', dot: '#ab47bc' },
+        'Angie':           { bg: '#fff3e0', dark: '#2a1d08', dot: '#fb8c00' },
+        'Sarah':           { bg: '#e8f5e9', dark: '#0d2010', dot: '#43a047' },
+        'Schnelle':        { bg: '#e0f7fa', dark: '#0a1f22', dot: '#00acc1' },
+        'Nicole':          { bg: '#fff9c4', dark: '#2a2508', dot: '#fdd835' },
+        'Angela Allison':  { bg: '#f1f8e9', dark: '#1a2410', dot: '#7cb342' }
     };
 
     function _getSupervisorColor(empName) {
@@ -27,13 +29,13 @@
         return null;
     }
 
-    function _getSupervisorLightColor(empName) {
+    function _getSupervisorDotColor(empName) {
         try {
             var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
             var sup = sups[empName];
-            if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].bg;
+            if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].dot;
         } catch (_e) { /* localStorage parse failure — fall through to default */ }
-        return '#ccc';
+        return '#90a4ae';
     }
 
     function _escapeHtml(str) {
@@ -723,8 +725,8 @@
             if (isTeam) {
                 html += '<span style="color: #1565c0;">&#9733; </span>';
             } else if (supColor) {
-                var _dotColor = _getSupervisorLightColor(r.name);
-                html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _dotColor + ';margin-right:4px;vertical-align:middle;"></span>';
+                var _dotColor = _getSupervisorDotColor(r.name);
+                html += '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + _dotColor + ';box-shadow:0 0 0 1px rgba(0,0,0,0.25);margin-right:5px;vertical-align:middle;"></span>';
             }
             html += _escapeHtml(r.name) + '</td>';
 
