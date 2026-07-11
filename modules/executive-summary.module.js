@@ -635,12 +635,16 @@
 
     function openCopilotWithPrompt(prompt, title) {
         title = title || 'CoPilot';
-        var encodedPrompt = encodeURIComponent(prompt);
-        var copilotUrl = 'https://copilot.microsoft.com/?showconv=1&sendquery=1&q=' + encodedPrompt;
+        // Open the plain Copilot URL and let the user paste from the clipboard.
+        // We deliberately do NOT use a ?sendquery=1&q=<prompt> auto-submit
+        // deep-link: auto-submitting a large pre-filled query on a fresh page
+        // load is a strong bot signal and was triggering Cloudflare bot
+        // challenges (error 600010) on copilot.microsoft.com.
+        var copilotUrl = (window.DevCoachConstants && window.DevCoachConstants.COPILOT_URL) || 'https://copilot.microsoft.com';
 
         // Always copy prompt to clipboard first, then open Copilot
         navigator.clipboard.writeText(prompt).then(function() {
-            showToast('\u2705 Prompt copied to clipboard! Paste it in CoPilot.', 5000);
+            showToast('\u2705 Prompt copied to clipboard! Paste it in CoPilot with Ctrl+V.', 5000);
         }).catch(function() {
             // silent - we still try to open the URL
         });
