@@ -670,10 +670,27 @@
 
         var focusAreas = [];
         var strengths = [];
+        var metCount = 0;
+        var totalScored = 0;
 
         Object.keys(metricMap).forEach(function(k) {
             var m = metricMap[k];
             if (m.score === null) return;
+
+            // Count how many KPIs are meeting their company target. Used to set the
+            // mid-year review tone. "Met" = value satisfies the target; when no
+            // target is configured, fall back to on-track score (2 or better).
+            var yearTargets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+            var metTargetDef = yearTargets[m.key];
+            var isMet;
+            if (metTargetDef && m.val !== null) {
+                isMet = metTargetDef.type === 'min' ? (m.val >= metTargetDef.value) : (m.val <= metTargetDef.value);
+            } else {
+                isMet = m.score >= 2;
+            }
+            totalScored++;
+            if (isMet) metCount++;
+
             if (m.score <= 1) {
                 // Get tips
                 var tips = [];
@@ -740,7 +757,15 @@
             }
         });
 
-        return { firstName: firstName, strengths: strengths, focusAreas: focusAreas, reviewYear: reviewYear };
+        return {
+            firstName: firstName,
+            strengths: strengths,
+            focusAreas: focusAreas,
+            reviewYear: reviewYear,
+            metCount: metCount,
+            totalScored: totalScored,
+            notMetCount: Math.max(0, totalScored - metCount)
+        };
     }
 
     /* ── Quick Check-in Prompt (casual Teams message) ── */
@@ -828,6 +853,9 @@
         var strengths = ctx.strengths;
         var focusAreas = ctx.focusAreas;
         var reviewYear = ctx.reviewYear;
+        var metCount = ctx.metCount;
+        var totalScored = ctx.totalScored;
+        var notMetCount = ctx.notMetCount;
         var output = document.getElementById('onOffMidYearOutput');
         var textEl = document.getElementById('onOffMidYearText');
 
@@ -862,6 +890,26 @@
             });
         } else {
             prompt += '\nAreas of opportunity: none are flagged this period. Encourage continued consistency and a stretch goal.\n';
+        }
+
+        prompt += '\nKPI standing: ' + firstName + ' is currently meeting ' + metCount + ' of ' + totalScored + ' key metrics.\n';
+
+        // Tone escalates with how many KPIs are being missed. At 3+ missed (e.g.
+        // meeting only 2 of 5), the review must carry real urgency and include a
+        // professional, non-threatening note about possible future disciplinary
+        // action if improvement is not shown.
+        if (notMetCount >= 3) {
+            prompt += '\nTONE FOR THIS REVIEW (important):\n';
+            prompt += '- ' + firstName + ' is meeting only ' + metCount + ' of ' + totalScored + ' key metrics, so this review needs to be direct and carry real urgency while staying professional and respectful.\n';
+            prompt += '- Make it clear that a significant, focused improvement push is needed across the areas of opportunity, and that meaningful, measurable progress is expected through the rest of the year.\n';
+            prompt += '- Include a clear but professionally worded statement, not harsh or threatening, that if the needed improvement is not demonstrated over the coming period it could lead to formal performance management up to and including disciplinary action. Frame it as an outcome we want to work together to avoid, not a threat.\n';
+            prompt += '- Balance the urgency with genuine support: reaffirm that I am invested in their success and will provide coaching and resources to help them close these gaps.\n';
+        } else if (notMetCount === 2) {
+            prompt += '\nTONE FOR THIS REVIEW:\n';
+            prompt += '- Be encouraging but clearly firm that focused improvement is needed in the areas of opportunity, and set a direct expectation that steady, visible progress should show through the rest of the year.\n';
+        } else {
+            prompt += '\nTONE FOR THIS REVIEW:\n';
+            prompt += '- Largely positive and reinforcing. Acknowledge strong overall performance and frame the focus area(s) as fine-tuning to keep building on.\n';
         }
 
         prompt += '\nWrite polished mid-year review text that I can paste into two Success Factors boxes:\n';
