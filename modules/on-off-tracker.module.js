@@ -586,20 +586,6 @@
             });
         }
 
-        var midYearBtn = document.getElementById('onOffMidYearBtn');
-        if (midYearBtn) {
-            _bindElementOnce(midYearBtn, 'click', generateMidYearReviewPrompt);
-        }
-        var midYearCopyBtn = document.getElementById('onOffMidYearCopyBtn');
-        if (midYearCopyBtn) {
-            _bindElementOnce(midYearCopyBtn, 'click', function() {
-                var text = document.getElementById('onOffMidYearText')?.textContent || '';
-                navigator.clipboard.writeText(text).then(function() {
-                    var toast = window.DevCoachModules?.uiUtils?.showToast;
-                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
-                });
-            });
-        }
     }
 
     function updateOnOffTrackerDisplay() {
@@ -845,16 +831,7 @@
 
     /* ── Mid-Year Review Prompt (formal, for Success Factors) ── */
 
-    // Score Card shortcut button: reuses the On/Off tracker selectors.
-    function generateMidYearReviewPrompt() {
-        var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
-        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
-        var ctx = _buildOnOffMetricContext(employeeName, reviewYear);
-        if (!ctx) return;
-        _renderMidYearPrompt(ctx, 'onOffMidYearOutput', 'onOffMidYearText');
-    }
-
-    // Dedicated Mid-Year tab: reads its own selectors.
+    // Mid-Year tab: reads its own selectors and renders the Success Factors prompt.
     function generateMidYearReviewTab() {
         var employeeName = document.getElementById('midYearEmployeeSelect')?.value;
         var reviewYear = document.getElementById('midYearReviewYear')?.value;
@@ -1289,7 +1266,6 @@
         updateOnOffTrackerDisplay,
         generateTeamOnOffSummary,
         generateQuickCheckinPrompt,
-        generateMidYearReviewPrompt,
         generateMidYearReviewTab,
         initializeMidYearTab
     };
