@@ -1239,7 +1239,7 @@
 
     function _loadMidYearMeta(name, year) {
         var entry = _getMidYearMetaMap()[_midYearMetaKey(name, year)];
-        return entry && typeof entry === 'object' ? entry : { notes: '', statusOverride: 'auto' };
+        return entry && typeof entry === 'object' ? entry : { notes: '', statusOverride: 'auto', posted: false };
     }
 
     function _saveMidYearMeta(name, year, meta) {
@@ -1262,9 +1262,11 @@
         var year = document.getElementById('midYearReviewYear')?.value;
         var notesEl = document.getElementById('midYearNotes');
         var statusEl = document.getElementById('midYearStatusOverride');
+        var postedEl = document.getElementById('midYearPosted');
         var meta = _loadMidYearMeta(name, year);
         if (notesEl) notesEl.value = meta.notes || '';
         if (statusEl) statusEl.value = meta.statusOverride || 'auto';
+        if (postedEl) postedEl.checked = !!meta.posted;
     }
 
     function _persistMidYearMetaFields() {
@@ -1273,7 +1275,8 @@
         if (!name) return;
         _saveMidYearMeta(name, year, {
             notes: (document.getElementById('midYearNotes')?.value || ''),
-            statusOverride: (document.getElementById('midYearStatusOverride')?.value || 'auto')
+            statusOverride: (document.getElementById('midYearStatusOverride')?.value || 'auto'),
+            posted: !!document.getElementById('midYearPosted')?.checked
         });
     }
 
@@ -1284,6 +1287,7 @@
         var copyBtn = document.getElementById('midYearCopyBtn');
         var notesEl = document.getElementById('midYearNotes');
         var statusEl = document.getElementById('midYearStatusOverride');
+        var postedEl = document.getElementById('midYearPosted');
         var status = document.getElementById('midYearStatus');
 
         if (!employeeSelect || !reviewYearInput || !generateBtn) return;
@@ -1306,6 +1310,11 @@
         // Persist notes/status as they are edited.
         if (notesEl) _bindElementOnce(notesEl, 'input', _persistMidYearMetaFields);
         if (statusEl) _bindElementOnce(statusEl, 'change', _persistMidYearMetaFields);
+        if (postedEl) _bindElementOnce(postedEl, 'change', function() {
+            _persistMidYearMetaFields();
+            var toast = window.DevCoachModules?.uiUtils?.showToast;
+            if (toast) toast(postedEl.checked ? 'Marked as posted.' : 'Unmarked as posted.', 2000);
+        });
         _syncMidYearMetaFields();
 
         _bindElementOnce(generateBtn, 'click', generateMidYearReviewTab);
