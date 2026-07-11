@@ -492,7 +492,7 @@ Box 2 - Future Improvement Areas:
                         <div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #00838f;">
                             <h3 style="color: #00695c; margin-top: 0;">📝 Mid-Year Review Setup</h3>
                             <div id="midYearStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #e0f2f1; border-left: 4px solid #00838f; border-radius: 4px; color: #00695c;"></div>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1.3fr auto; gap: 12px; align-items: end;">
                                 <div>
                                     <label for="midYearEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Select Associate:</label>
                                     <select id="midYearEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
@@ -504,8 +504,21 @@ Box 2 - Future Improvement Areas:
                                     <input type="number" id="midYearReviewYear" min="2020" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
                                 </div>
                                 <div>
+                                    <label for="midYearStatusOverride" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">Status:</label>
+                                    <select id="midYearStatusOverride" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                        <option value="auto">Auto (from KPIs)</option>
+                                        <option value="on">On Track</option>
+                                        <option value="off">Off Track</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <button type="button" id="midYearGenerateBtn" style="background: linear-gradient(135deg, #00acc1 0%, #00838f 100%); color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold;">📝 Generate Mid-Year Review</button>
                                 </div>
+                            </div>
+                            <div style="margin-top: 14px;">
+                                <label for="midYearNotes" style="font-weight: bold; display: block; margin-bottom: 8px; color: #333;">What they're working on / development notes (optional):</label>
+                                <textarea id="midYearNotes" rows="3" placeholder="e.g. Selected to assist with offline res docs to pull customer documents. Gave Percipio link to learn more about APS." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; resize: vertical; font-family: inherit;"></textarea>
+                                <div style="font-size: 0.8em; color: #777; margin-top: 4px;">Saved automatically per associate. Woven into the review to recognize their growth and contributions.</div>
                             </div>
                         </div>
 

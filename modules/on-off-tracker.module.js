@@ -837,10 +837,14 @@
         var reviewYear = document.getElementById('midYearReviewYear')?.value;
         var ctx = _buildOnOffMetricContext(employeeName, reviewYear);
         if (!ctx) return;
-        _renderMidYearPrompt(ctx, 'midYearOutput', 'midYearText');
+        var notes = document.getElementById('midYearNotes')?.value || '';
+        var statusOverride = document.getElementById('midYearStatusOverride')?.value || 'auto';
+        _renderMidYearPrompt(ctx, 'midYearOutput', 'midYearText', notes, statusOverride);
     }
 
-    function _renderMidYearPrompt(ctx, outputId, textId) {
+    function _renderMidYearPrompt(ctx, outputId, textId, notes, statusOverride) {
+        notes = (notes || '').trim();
+        statusOverride = statusOverride || 'auto';
         var firstName = ctx.firstName;
         var strengths = ctx.strengths;
         var focusAreas = ctx.focusAreas;
@@ -873,7 +877,10 @@
                 if (f.targetText) line += ', ' + f.targetText;
                 if (f.gapText) line += ' (' + f.gapText + ')';
                 prompt += line + '\n';
-                if (f.stretchText) prompt += '  A realistic first milestone: ' + f.stretchText + '\n';
+                // Skip stretch text for near-target (score 2) items: it phrases the
+                // gap as "only X away from exceptional", which Scott does not want in
+                // review files. Keep the "first step" milestone for below-target items.
+                if (f.stretchText && !f.isClose) prompt += '  A realistic first milestone: ' + f.stretchText + '\n';
                 if (f.tips && f.tips.length) {
                     f.tips.forEach(function(tip) {
                         prompt += '  Coaching focus: ' + tip + '\n';
@@ -884,19 +891,40 @@
             prompt += '\nAreas of opportunity: none are flagged this period. Encourage continued consistency and a stretch goal.\n';
         }
 
+        if (notes) {
+            prompt += '\nAdditional context from me about what ' + firstName + ' is working on and doing. Recognize this genuinely in the review and weave it in naturally, do not quote it word for word:\n';
+            prompt += notes + '\n';
+        }
+
         prompt += '\nKPI standing: ' + firstName + ' is currently meeting ' + metCount + ' of ' + totalScored + ' key metrics.\n';
 
-        // Tone escalates with how many KPIs are being missed. At 3+ missed (e.g.
-        // meeting only 2 of 5), the review must carry real urgency and include a
+        // Determine review tone. A manual status override wins; otherwise the tone
+        // escalates with how many KPIs are being missed. The strong tier includes a
         // professional, non-threatening note about possible future disciplinary
         // action if improvement is not shown.
-        if (notMetCount >= 3) {
+        var tier;
+        if (statusOverride === 'off') tier = 'strong';
+        else if (statusOverride === 'on') tier = 'positive';
+        else if (notMetCount >= 3) tier = 'strong';
+        else if (notMetCount === 2) tier = 'firm';
+        else tier = 'positive';
+
+        if (statusOverride === 'off') {
+            prompt += 'Supervisor assessment: I am marking ' + firstName + ' as OFF TRACK for this review period. Treat this as needing a real improvement push regardless of the metric snapshot above.\n';
+        } else if (statusOverride === 'on') {
+            prompt += 'Supervisor assessment: I consider ' + firstName + ' ON TRACK overall for this review period.\n';
+        }
+
+        if (tier === 'strong') {
+            var strongIntro = statusOverride === 'off'
+                ? firstName + ' is off track for this review period, so this review needs to be direct and carry real urgency while staying professional and respectful.'
+                : firstName + ' is meeting only ' + metCount + ' of ' + totalScored + ' key metrics, so this review needs to be direct and carry real urgency while staying professional and respectful.';
             prompt += '\nTONE FOR THIS REVIEW (important):\n';
-            prompt += '- ' + firstName + ' is meeting only ' + metCount + ' of ' + totalScored + ' key metrics, so this review needs to be direct and carry real urgency while staying professional and respectful.\n';
+            prompt += '- ' + strongIntro + '\n';
             prompt += '- Make it clear that a significant, focused improvement push is needed across the areas of opportunity, and that meaningful, measurable progress is expected through the rest of the year.\n';
             prompt += '- Include a clear but professionally worded statement, not harsh or threatening, that if the needed improvement is not demonstrated over the coming period it could lead to formal performance management up to and including disciplinary action. Frame it as an outcome we want to work together to avoid, not a threat.\n';
             prompt += '- Balance the urgency with genuine support: reaffirm that I am invested in their success and will provide coaching and resources to help them close these gaps.\n';
-        } else if (notMetCount === 2) {
+        } else if (tier === 'firm') {
             prompt += '\nTONE FOR THIS REVIEW:\n';
             prompt += '- Be encouraging but clearly firm that focused improvement is needed in the areas of opportunity, and set a direct expectation that steady, visible progress should show through the rest of the year.\n';
         } else {
@@ -1194,11 +1222,68 @@
 
     /* ── Mid-Year Review tab (Review Prep) ── */
 
+    // Per-associate notes + status override, persisted in localStorage keyed by
+    // "Name|Year" so switching associates keeps each person's context.
+    function _midYearMetaKey(name, year) {
+        return (name || '') + '|' + (year || '');
+    }
+
+    function _getMidYearMetaMap() {
+        try {
+            var prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+            return JSON.parse(localStorage.getItem(prefix + 'midYearMeta') || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function _loadMidYearMeta(name, year) {
+        var entry = _getMidYearMetaMap()[_midYearMetaKey(name, year)];
+        return entry && typeof entry === 'object' ? entry : { notes: '', statusOverride: 'auto' };
+    }
+
+    function _saveMidYearMeta(name, year, meta) {
+        if (!name) return;
+        var map = _getMidYearMetaMap();
+        map[_midYearMetaKey(name, year)] = meta;
+        var save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+        if (typeof save === 'function') {
+            save('midYearMeta', map);
+        } else {
+            try {
+                var prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+                localStorage.setItem(prefix + 'midYearMeta', JSON.stringify(map));
+            } catch (e) { /* ignore quota errors */ }
+        }
+    }
+
+    function _syncMidYearMetaFields() {
+        var name = document.getElementById('midYearEmployeeSelect')?.value;
+        var year = document.getElementById('midYearReviewYear')?.value;
+        var notesEl = document.getElementById('midYearNotes');
+        var statusEl = document.getElementById('midYearStatusOverride');
+        var meta = _loadMidYearMeta(name, year);
+        if (notesEl) notesEl.value = meta.notes || '';
+        if (statusEl) statusEl.value = meta.statusOverride || 'auto';
+    }
+
+    function _persistMidYearMetaFields() {
+        var name = document.getElementById('midYearEmployeeSelect')?.value;
+        var year = document.getElementById('midYearReviewYear')?.value;
+        if (!name) return;
+        _saveMidYearMeta(name, year, {
+            notes: (document.getElementById('midYearNotes')?.value || ''),
+            statusOverride: (document.getElementById('midYearStatusOverride')?.value || 'auto')
+        });
+    }
+
     function initializeMidYearTab() {
         var employeeSelect = document.getElementById('midYearEmployeeSelect');
         var reviewYearInput = document.getElementById('midYearReviewYear');
         var generateBtn = document.getElementById('midYearGenerateBtn');
         var copyBtn = document.getElementById('midYearCopyBtn');
+        var notesEl = document.getElementById('midYearNotes');
+        var statusEl = document.getElementById('midYearStatusOverride');
         var status = document.getElementById('midYearStatus');
 
         if (!employeeSelect || !reviewYearInput || !generateBtn) return;
@@ -1214,6 +1299,14 @@
                 : 'No employee data found yet. Upload yearly metrics first.';
             status.style.display = 'block';
         }
+
+        // Load any saved notes/status when the associate or year changes.
+        _bindElementOnce(employeeSelect, 'change', _syncMidYearMetaFields);
+        _bindElementOnce(reviewYearInput, 'input', _syncMidYearMetaFields);
+        // Persist notes/status as they are edited.
+        if (notesEl) _bindElementOnce(notesEl, 'input', _persistMidYearMetaFields);
+        if (statusEl) _bindElementOnce(statusEl, 'change', _persistMidYearMetaFields);
+        _syncMidYearMetaFields();
 
         _bindElementOnce(generateBtn, 'click', generateMidYearReviewTab);
         if (copyBtn) {
