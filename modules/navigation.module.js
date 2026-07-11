@@ -87,7 +87,7 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
     var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionMorningPulse: 'subNavMorningPulse',
@@ -129,11 +129,12 @@
 
     // --- Review Prep sub-sections ---
 
-    var REVIEW_SUB_SECTIONS = ['subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionYearEnd'];
-    var REVIEW_NAV_BUTTONS = ['subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpYearEnd'];
+    var REVIEW_SUB_SECTIONS = ['subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionYearEnd'];
+    var REVIEW_NAV_BUTTONS = ['subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpMidYear', 'subNavRpYearEnd'];
     var REVIEW_SUB_TO_BTN = {
         subSectionOnOffTracker: 'subNavRpScoreCard',
         subSectionQ1Review: 'subNavRpQuarterly',
+        subSectionMidYear: 'subNavRpMidYear',
         subSectionYearEnd: 'subNavRpYearEnd'
     };
 
@@ -217,6 +218,7 @@
         subSectionSentiment:        { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaSentiment' },
         subSectionOnOffTracker:     { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
         subSectionQ1Review:         { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
+        subSectionMidYear:          { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionMidYear' },
         subSectionYearEnd:          { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionYearEnd' },
         subSectionPto:              { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionReliability' },
         // Dissolved wrapper IDs → defaults

@@ -1760,6 +1760,11 @@ function bindNavigationHandlers() {
         showReviewPrepSubSection('subSectionQ1Review', 'subNavRpQuarterly');
         if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
     });
+    document.getElementById('subNavRpMidYear')?.addEventListener('click', () => {
+        ensureReviewPrepMounted('subSectionMidYear');
+        showReviewPrepSubSection('subSectionMidYear', 'subNavRpMidYear');
+        initializeMidYearTab();
+    });
     document.getElementById('subNavRpYearEnd')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionYearEnd');
         showReviewPrepSubSection('subSectionYearEnd', 'subNavRpYearEnd');
@@ -8085,6 +8090,10 @@ function resolveOnOffTrackerFactsSummaryText(latestPeriod) {
 
 function initializeOnOffTracker() {
     return window.DevCoachModules?.onOffTracker?.initializeOnOffTracker?.();
+}
+
+function initializeMidYearTab() {
+    return window.DevCoachModules?.onOffTracker?.initializeMidYearTab?.();
 }
 
 function updateOnOffTrackerDisplay() {

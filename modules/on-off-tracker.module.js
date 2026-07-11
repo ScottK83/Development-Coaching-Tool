@@ -639,10 +639,7 @@
 
     /* ── Shared metric context for check-in / mid-year prompts ── */
 
-    function _buildOnOffMetricContext() {
-        var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
-        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
-
+    function _buildOnOffMetricContext(employeeName, reviewYear) {
         if (!employeeName || !reviewYear) {
             alert('Please select an associate first.');
             return;
@@ -771,7 +768,9 @@
     /* ── Quick Check-in Prompt (casual Teams message) ── */
 
     function generateQuickCheckinPrompt() {
-        var ctx = _buildOnOffMetricContext();
+        var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
+        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
+        var ctx = _buildOnOffMetricContext(employeeName, reviewYear);
         if (!ctx) return;
         var firstName = ctx.firstName;
         var strengths = ctx.strengths;
@@ -846,9 +845,25 @@
 
     /* ── Mid-Year Review Prompt (formal, for Success Factors) ── */
 
+    // Score Card shortcut button: reuses the On/Off tracker selectors.
     function generateMidYearReviewPrompt() {
-        var ctx = _buildOnOffMetricContext();
+        var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
+        var reviewYear = document.getElementById('onOffTrackerReviewYear')?.value;
+        var ctx = _buildOnOffMetricContext(employeeName, reviewYear);
         if (!ctx) return;
+        _renderMidYearPrompt(ctx, 'onOffMidYearOutput', 'onOffMidYearText');
+    }
+
+    // Dedicated Mid-Year tab: reads its own selectors.
+    function generateMidYearReviewTab() {
+        var employeeName = document.getElementById('midYearEmployeeSelect')?.value;
+        var reviewYear = document.getElementById('midYearReviewYear')?.value;
+        var ctx = _buildOnOffMetricContext(employeeName, reviewYear);
+        if (!ctx) return;
+        _renderMidYearPrompt(ctx, 'midYearOutput', 'midYearText');
+    }
+
+    function _renderMidYearPrompt(ctx, outputId, textId) {
         var firstName = ctx.firstName;
         var strengths = ctx.strengths;
         var focusAreas = ctx.focusAreas;
@@ -856,8 +871,8 @@
         var metCount = ctx.metCount;
         var totalScored = ctx.totalScored;
         var notMetCount = ctx.notMetCount;
-        var output = document.getElementById('onOffMidYearOutput');
-        var textEl = document.getElementById('onOffMidYearText');
+        var output = document.getElementById(outputId);
+        var textEl = document.getElementById(textId);
 
         // First-person "I am a supervisor writing review comments" framing, matching
         // the year-end generator that already passes Microsoft Copilot's filter.
@@ -1200,6 +1215,41 @@
         container.innerHTML = html;
     }
 
+    /* ── Mid-Year Review tab (Review Prep) ── */
+
+    function initializeMidYearTab() {
+        var employeeSelect = document.getElementById('midYearEmployeeSelect');
+        var reviewYearInput = document.getElementById('midYearReviewYear');
+        var generateBtn = document.getElementById('midYearGenerateBtn');
+        var copyBtn = document.getElementById('midYearCopyBtn');
+        var status = document.getElementById('midYearStatus');
+
+        if (!employeeSelect || !reviewYearInput || !generateBtn) return;
+
+        if (!reviewYearInput.value) {
+            reviewYearInput.value = String(new Date().getFullYear());
+        }
+
+        var employees = populateOnOffTrackerEmployeeSelect(employeeSelect);
+        if (status) {
+            status.textContent = employees.length
+                ? 'Loaded ' + employees.length + ' associates. Select an associate and review year, then generate.'
+                : 'No employee data found yet. Upload yearly metrics first.';
+            status.style.display = 'block';
+        }
+
+        _bindElementOnce(generateBtn, 'click', generateMidYearReviewTab);
+        if (copyBtn) {
+            _bindElementOnce(copyBtn, 'click', function() {
+                var text = document.getElementById('midYearText')?.textContent || '';
+                navigator.clipboard.writeText(text).then(function() {
+                    var toast = window.DevCoachModules?.uiUtils?.showToast;
+                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
+                });
+            });
+        }
+    }
+
     /* ── Export ── */
 
     window.DevCoachModules = window.DevCoachModules || {};
@@ -1239,6 +1289,8 @@
         updateOnOffTrackerDisplay,
         generateTeamOnOffSummary,
         generateQuickCheckinPrompt,
-        generateMidYearReviewPrompt
+        generateMidYearReviewPrompt,
+        generateMidYearReviewTab,
+        initializeMidYearTab
     };
 })();
