@@ -119,13 +119,17 @@ function loadWeeklyData() {
 function saveWeeklyData() {
     // Repo sync is triggered automatically by the localStorage.setItem hook
     // installed in repo-sync.module.js — no explicit queueRepoSync call needed.
-    return window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
+    var ok = window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
+    if (ok === false) notifyStorageSaveFailed('weekly performance data');
+    return ok;
 }
 function loadYtdData() {
     return window.DevCoachModules?.storage?.loadYtdData?.() || {};
 }
 function saveYtdData() {
-    return window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
+    var ok = window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
+    if (ok === false) notifyStorageSaveFailed('YTD data');
+    return ok;
 }
 function loadDailyData() {
     return window.DevCoachModules?.storage?.loadDailyData?.() || {};
@@ -140,19 +144,44 @@ function loadCoachingHistory() {
     return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
 }
 function saveCoachingHistory() {
-    return window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
+    var ok = window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
+    if (ok === false) notifyStorageSaveFailed('coaching history');
+    return ok;
 }
 function loadSentimentPhraseDatabase() {
     return window.DevCoachModules?.storage?.loadSentimentPhraseDatabase?.();
 }
 function saveSentimentPhraseDatabase() {
-    return window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
+    var ok = window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
+    if (ok === false) notifyStorageSaveFailed('sentiment phrase data');
+    return ok;
 }
 function loadAssociateSentimentSnapshots() {
     return window.DevCoachModules?.storage?.loadAssociateSentimentSnapshots?.() || {};
 }
 function saveAssociateSentimentSnapshots() {
-    return window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
+    var ok = window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
+    if (ok === false) notifyStorageSaveFailed('sentiment snapshots');
+    return ok;
+}
+
+// Surfaces a storage-full save failure that would otherwise be silent: the
+// in-memory data updates and the UI re-renders, but nothing persists and the
+// GitHub backup never captures it. Toasts immediately; throttles the blocking
+// alert so a bulk operation can't spam it.
+var _lastStorageFailAlert = 0;
+function notifyStorageSaveFailed(label) {
+    try {
+        var toast = window.DevCoachModules?.uiUtils?.showToast;
+        if (toast) toast('⚠️ Could not save ' + label + ' — browser storage is full. Archive old weeks in Settings.', 6000);
+    } catch (_e) { /* toast unavailable */ }
+    var now = Date.now();
+    if (now - _lastStorageFailAlert > 30000) {
+        _lastStorageFailAlert = now;
+        try {
+            alert('⚠️ Storage is full.\n\nCould not save ' + label + '. Your most recent changes are NOT saved and will be lost on reload.\n\nFree up space by archiving old weeks (Settings → Sync & Backup / Delete Data), then redo the last action.');
+        } catch (_e) { /* alert unavailable */ }
+    }
 }
 
 // ============================================
@@ -2139,7 +2168,14 @@ function syncWeeklyViewAfterPastedUpload(weekKey) {
 // ============================================
 // STORAGE QUOTA MONITOR
 // ============================================
-const STORAGE_QUOTA_BYTES = LOCALSTORAGE_MAX_SIZE_MB * 1024 * 1024;
+const STORAGE_QUOTA_BYTES = LOCALSTORAGE_MAX_SIZE_MB * 1024 * 1024; // per-key cap (size guard)
+// Total localStorage budget for the origin (~5MB in all major browsers). The
+// meter tracks TOTAL usage against this, because many keys can each stay under
+// the per-key cap yet together hit the origin wall. We do NOT use
+// navigator.storage.estimate(): it reports disk-based quota (often GBs) and does
+// not reflect the fixed ~5MB localStorage ceiling, so it would under-report.
+const STORAGE_TOTAL_BUDGET_BYTES = 5 * 1024 * 1024;
+const STORAGE_TOTAL_BUDGET_MB = 5;
 
 function measureLocalStorageUsage() {
     let total = 0;
@@ -2162,7 +2198,7 @@ function refreshStorageQuotaWidget() {
     const widget = document.getElementById('storageQuotaWidget');
     if (!widget) return;
     const { totalBytes } = measureLocalStorageUsage();
-    const pct = Math.min(100, (totalBytes / STORAGE_QUOTA_BYTES) * 100);
+    const pct = Math.min(100, (totalBytes / STORAGE_TOTAL_BUDGET_BYTES) * 100);
     if (pct < 70) {
         widget.style.display = 'none';
         return;
@@ -2179,7 +2215,7 @@ function refreshStorageQuotaWidget() {
         bar.style.background = color;
     }
     if (label) {
-        label.textContent = `${mbUsed} MB / ${LOCALSTORAGE_MAX_SIZE_MB} MB (${pct.toFixed(0)}%)`;
+        label.textContent = `${mbUsed} MB / ${STORAGE_TOTAL_BUDGET_MB} MB (${pct.toFixed(0)}%)`;
         label.style.color = pct >= 80 ? '#c62828' : '#546e7a';
     }
     widget.style.display = 'flex';
