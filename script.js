@@ -1913,7 +1913,6 @@ function bindCoachingFormHandlers() {
     document.getElementById('specificPeriod')?.addEventListener('change', handleSpecificPeriodChange);
     document.getElementById('employeeSelect')?.addEventListener('change', handleEmployeeSelectChange);
     document.getElementById('employeeSearch')?.addEventListener('input', handleEmployeeSearchInput);
-    document.getElementById('generateCopilotPromptBtn')?.addEventListener('click', generateCopilotPrompt);
     document.getElementById('copilotOutputText')?.addEventListener('input', handleCopilotOutputInput);
     document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', generateVerintSummary);
     Object.keys(METRICS_REGISTRY).forEach(metricKey => {
@@ -6755,42 +6754,6 @@ function copyTodaysFocus() {
     });
 }
 
-// ============================================
-// COPILOT PROMPT GENERATION (HUMAN-IN-LOOP)
-// ============================================
-
-async function generateCopilotPrompt() {
-    const moduleApi = window.DevCoachModules?.copilotPrompt;
-    if (!moduleApi?.generateCopilotPrompt) {
-        showToast('CoPilot Prompt module not available. Refresh and try again.', 3500);
-        return;
-    }
-
-    await moduleApi.generateCopilotPrompt({
-        document,
-        window,
-        navigator,
-        console,
-        alert,
-        showToast,
-        saveNickname,
-        getEmployeeDataForPeriod,
-        getActivePeriodContext,
-        evaluateMetricsForCoaching,
-        currentPeriodType,
-        ytdData,
-        weeklyData,
-        currentPeriod,
-        loadServerTips,
-        getMetricSeverity,
-        selectSmartTip,
-        associateSentimentSnapshots,
-        getCoachingContext,
-        buildConfidenceInsight,
-        detectComplianceFlags,
-        logComplianceFlag
-    });
-}
 
 function generateVerintSummary() {
     const moduleApi = window.DevCoachModules?.copilotPrompt;
