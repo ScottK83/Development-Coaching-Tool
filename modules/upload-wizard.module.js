@@ -53,6 +53,13 @@
         return new Date(y, m - 1, d);
     }
 
+    // Monday of the week containing d (weeks run Mon -> Sun).
+    function mondayOf(d) {
+        const x = startOfDay(d);
+        const dow = x.getDay();
+        return addDays(x, dow === 0 ? -6 : -(dow - 1));
+    }
+
     // Given today, compute the full list of upload options.
     //
     // The list is deterministic and doesn't yet know about upload
@@ -162,6 +169,66 @@
         return options;
     }
 
+    // Find completed weeks with no weekly upload, so gaps in the
+    // week-over-week trend line are visible and fillable.
+    //
+    // The scan window runs from the earliest week already on file
+    // through the last completed week — weeks before the first upload
+    // aren't gaps, they're just before the user started — and reaches
+    // back at most a year, since trend views never look further. Only real
+    // 'week' uploads count as coverage: a month/quarter/YTD upload
+    // spanning the same dates gives no weekly granularity, and a
+    // week-in-progress row isn't a finished week.
+    //
+    // Returns { weeks, totalMissing, shownCount } with weeks ordered
+    // most-recent-first and capped at maxOptions.
+    function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
+        const weekly = weeklyStore || {};
+        const lastWeekMon = addDays(mondayOf(today), -7);
+
+        const uploadedMondays = new Set();
+        let earliestMon = null;
+        Object.keys(weekly).forEach(k => {
+            const meta = weekly[k]?.metadata || {};
+            if ((meta.periodType || 'week') !== 'week') return;
+            const startText = meta.startDate || (k.includes('|') ? k.split('|')[0] : '');
+            const start = parseLocalDate(startText);
+            if (isNaN(start)) return;
+            const mon = mondayOf(start);
+            uploadedMondays.add(isoDate(mon));
+            if (!earliestMon || mon < earliestMon) earliestMon = mon;
+        });
+
+        if (!earliestMon) return { weeks: [], totalMissing: 0, shownCount: 0 };
+
+        const oldestScanned = addDays(lastWeekMon, -7 * 51);
+        const scanFrom = earliestMon > oldestScanned ? earliestMon : oldestScanned;
+
+        const missing = [];
+        for (let mon = scanFrom; mon <= lastWeekMon; mon = addDays(mon, 7)) {
+            const iso = isoDate(mon);
+            if (uploadedMondays.has(iso)) continue;
+            const sun = addDays(mon, 6);
+            const weeksAgo = Math.round((lastWeekMon - mon) / (7 * MS_PER_DAY)) + 1;
+            missing.push({
+                id: `week-${iso}`,
+                label: `${fmtShort(mon)} – ${fmtLong(sun)} (${weeksAgo} week${weeksAgo === 1 ? '' : 's'} ago)`,
+                periodType: 'week',
+                startDate: iso,
+                endDate: isoDate(sun),
+                isMissingWeek: true,
+                priority: 2.5
+            });
+        }
+
+        missing.reverse(); // most recent gap first — likeliest to be filled
+        return {
+            weeks: missing.slice(0, maxOptions),
+            totalMissing: missing.length,
+            shownCount: Math.min(missing.length, maxOptions)
+        };
+    }
+
     // Annotate each option with upload state by looking it up in
     // weeklyData / ytdData. For the YTD option, we don't mark it
     // uploaded (since end date is user-picked), but we record the
@@ -230,28 +297,37 @@
         placeholder.textContent = '-- Select a period --';
         selectEl.appendChild(placeholder);
 
-        const pending = options.filter(o => !o.isUploaded);
+        const pending = options.filter(o => !o.isUploaded && !o.isMissingWeek);
+        const missing = options.filter(o => !o.isUploaded && o.isMissingWeek);
         const uploaded = options.filter(o => o.isUploaded);
+
+        function appendOption(grp, opt, prefix) {
+            const el = document.createElement('option');
+            el.value = opt.id;
+            el.textContent = `${prefix || ''}${opt.label}`;
+            el.dataset.periodType = opt.periodType;
+            el.dataset.startDate = opt.startDate || '';
+            el.dataset.endDate = opt.endDate || '';
+            if (opt.requiresEndDatePick) el.dataset.requiresEndDatePick = '1';
+            if (opt.requiresDailyDatePick) el.dataset.requiresDailyDatePick = '1';
+            if (opt.defaultDate) el.dataset.defaultDate = opt.defaultDate;
+            if (opt.latestYtdEnd) el.dataset.latestYtdEnd = opt.latestYtdEnd;
+            if (Array.isArray(opt.dailyUploadedDates) && opt.dailyUploadedDates.length) {
+                el.dataset.dailyUploadedDates = opt.dailyUploadedDates.join(',');
+            }
+            grp.appendChild(el);
+        }
 
         if (pending.length) {
             const grp = document.createElement('optgroup');
             grp.label = 'Pending';
-            pending.forEach(opt => {
-                const el = document.createElement('option');
-                el.value = opt.id;
-                el.textContent = opt.label;
-                el.dataset.periodType = opt.periodType;
-                el.dataset.startDate = opt.startDate || '';
-                el.dataset.endDate = opt.endDate || '';
-                if (opt.requiresEndDatePick) el.dataset.requiresEndDatePick = '1';
-                if (opt.requiresDailyDatePick) el.dataset.requiresDailyDatePick = '1';
-                if (opt.defaultDate) el.dataset.defaultDate = opt.defaultDate;
-                if (opt.latestYtdEnd) el.dataset.latestYtdEnd = opt.latestYtdEnd;
-                if (Array.isArray(opt.dailyUploadedDates) && opt.dailyUploadedDates.length) {
-                    el.dataset.dailyUploadedDates = opt.dailyUploadedDates.join(',');
-                }
-                grp.appendChild(el);
-            });
+            pending.forEach(opt => appendOption(grp, opt));
+            selectEl.appendChild(grp);
+        }
+        if (missing.length) {
+            const grp = document.createElement('optgroup');
+            grp.label = 'Missing weeks (gaps in your trend line)';
+            missing.forEach(opt => appendOption(grp, opt, '⚠️ '));
             selectEl.appendChild(grp);
         }
         if (uploaded.length) {
@@ -274,7 +350,7 @@
         // Restore previous selection only if it's still in the pending
         // list. A just-uploaded option becomes disabled and we don't
         // want it to stay "selected" — reset to the placeholder.
-        const stillPending = prev && pending.some(o => o.id === prev);
+        const stillPending = prev && (pending.some(o => o.id === prev) || missing.some(o => o.id === prev));
         selectEl.value = stillPending ? prev : '';
     }
 
@@ -377,6 +453,32 @@
         summaryEl.textContent = `This week so far: ${parts.join(' · ')}`;
     }
 
+    // Show a summary of the weeks that never got uploaded. All strings
+    // here are locally formatted dates, so plain innerHTML is safe.
+    function renderGapBanner(bannerEl, gaps) {
+        if (!bannerEl) return;
+        if (!gaps || !gaps.totalMissing) {
+            bannerEl.style.display = 'none';
+            bannerEl.innerHTML = '';
+            return;
+        }
+        const { weeks, totalMissing, shownCount } = gaps;
+        const chips = weeks.map(w => {
+            const mon = parseLocalDate(w.startDate);
+            const sun = parseLocalDate(w.endDate);
+            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:#fff; border:1px solid #e0a800; border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
+        }).join('');
+        const more = totalMissing > shownCount
+            ? `<div style="margin-top:6px; font-size:0.8em; color:#6d4c41;">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
+            : '';
+        bannerEl.style.display = 'block';
+        bannerEl.innerHTML = `
+            <div style="font-weight:bold; margin-bottom:6px;">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
+            <div style="font-size:0.85em; margin-bottom:6px;">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
+            <div>${chips}</div>
+            ${more}`;
+    }
+
     // Refresh the dropdown using current weeklyData / ytdData. Called
     // on initial render and whenever an upload completes (so the
     // dropdown instantly reflects the new upload state).
@@ -392,8 +494,16 @@
         const daily = (typeof dailyData !== 'undefined' ? dailyData : null)
             || window.DevCoachModules?.storage?.loadDailyData?.()
             || {};
-        const options = annotateUploadState(computeUploadOptions(new Date()), weekly, ytd, daily);
-        renderDropdown(selectEl, options);
+        const today = new Date();
+        const options = annotateUploadState(computeUploadOptions(today), weekly, ytd, daily);
+
+        // Fold in missing weeks, skipping any the standard option list
+        // already covers (e.g. "Last week" when last week is a gap).
+        const gaps = computeMissingWeeks(weekly, today);
+        const knownIds = new Set(options.map(o => o.id));
+        const extraGaps = gaps.weeks.filter(w => !knownIds.has(w.id));
+        renderDropdown(selectEl, options.concat(extraGaps));
+        renderGapBanner(document.getElementById('uploadWizardGapBanner'), gaps);
 
         // If the just-uploaded option cleared the selection, also
         // reset the YTD/daily date pickers, summary line, and legacy date
@@ -510,6 +620,7 @@
     window.DevCoachModules.uploadWizard = {
         computeUploadOptions,
         annotateUploadState,
+        computeMissingWeeks,
         refresh,
         bind
     };
