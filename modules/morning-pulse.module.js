@@ -1141,6 +1141,15 @@
         return sign + displayDelta.toFixed(1) + '%';
     }
 
+    // Turn a list of wins into readable prose: "Adherence at 98.2%",
+    // "A at x and B at y", "A at x, B at y, and C at z".
+    function joinWinPhrases(list) {
+        const parts = (list || []).map(w => `${w.label} at ${fmtVal(w)}`);
+        if (parts.length <= 1) return parts[0] || '';
+        if (parts.length === 2) return parts.join(' and ');
+        return parts.slice(0, -1).join(', ') + ', and ' + parts[parts.length - 1];
+    }
+
     // --- Card rendering ---
 
     function buildEmployeeCard(emp, analysis, weekDeltas, biggestJump, options = {}) {
@@ -1199,7 +1208,7 @@
                 ...rawWins.filter(m => !perfectKeySet.has(m.metricKey))
               ]
             : rawWins
-        ).slice(0, 2);
+        );
         const surveyCountForOpps = parseInt(emp?.surveyTotal, 10);
         const shouldCollapseSurveys = zeroSurveyOpps.length >= 2;
         const collapsedSurveyKey = shouldCollapseSurveys ? zeroSurveyOpps[0].metricKey : null;
@@ -1459,24 +1468,27 @@
 
         // Build the celebration — no coaching, no focus areas, pure praise
         let message = pick(HF_OPENERS)(firstName);
+        const namedWins = new Set();
 
         if (biggestJump && biggestJump.delta > 0) {
             message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'))} \uD83D\uDD25`;
+            namedWins.add(biggestJump.metricKey);
         } else if (wins.length >= 2) {
             message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]))} \uD83D\uDD25\uD83D\uDCAA`;
+            namedWins.add(wins[0].metricKey);
+            namedWins.add(wins[1].metricKey);
         } else if (wins.length === 1) {
             message += ` ${pick(HF_ONE_WIN)(wins[0].label, fmtVal(wins[0]))} \uD83D\uDD25`;
+            namedWins.add(wins[0].metricKey);
         } else {
             message += ` ${pick(HF_NO_WINS)} \uD83D\uDCAA`;
         }
 
-        // Add more wins if available
-        if (wins.length > 2 && biggestJump) {
-            const extraWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 2);
-            if (extraWins.length > 0) {
-                const extras = extraWins.map(w => `${w.label} at ${fmtVal(w)}`).join(' and ');
-                message += ` ${pick(HF_EXTRAS)(extras)}`;
-            }
+        // Name every remaining win, not just the next couple \u2014 a strong
+        // week should get credited in full.
+        const extraWins = wins.filter(w => !namedWins.has(w.metricKey));
+        if (extraWins.length > 0) {
+            message += ` ${pick(HF_EXTRAS)(joinWinPhrases(extraWins))}`;
         }
 
         // Count how many metrics are on track
@@ -1598,25 +1610,42 @@
 
         // CELEBRATION section — lead with wins
         let praiseText = '';
+        const namedWins = new Set();
         if (hasPerfectSurveys) {
+            // The perfect-surveys line speaks for every survey metric at 100.
+            allPerfectSurveyWins.forEach(w => namedWins.add(w.metricKey));
             const secondWin = nonPerfectSurveyWins[0];
             if (secondWin) {
                 praiseText = pick(PERFECT_SURVEYS_PLUS)(surveysText, secondWin.label, fmtVal(secondWin));
+                namedWins.add(secondWin.metricKey);
             } else {
                 praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
             }
         } else if (biggestJump && biggestJump.delta > 0) {
             praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'));
+            namedWins.add(biggestJump.metricKey);
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
                 praiseText += ` ${pick(PLUS_SOLID)(otherWins[0].label, fmtVal(otherWins[0]))}`;
+                namedWins.add(otherWins[0].metricKey);
             }
         } else if (wins.length >= 2) {
             praiseText = pick(TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
+            namedWins.add(wins[0].metricKey);
+            namedWins.add(wins[1].metricKey);
         } else if (wins.length === 1) {
             praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
+            namedWins.add(wins[0].metricKey);
         } else {
             praiseText = pick(NO_WINS);
+        }
+
+        // Credit the rest of the wins too. `wins` is only the top slice, so
+        // work off the full sorted list — a week with five metrics at target
+        // should say so instead of stopping at the lead sentence.
+        const remainingWins = allWinsSorted.filter(w => !namedWins.has(w.metricKey));
+        if (remainingWins.length > 0) {
+            praiseText += ` ${pick(HF_EXTRAS)(joinWinPhrases(remainingWins))}`;
         }
 
         // FOCUS section — set the weekly focal point

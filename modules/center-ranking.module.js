@@ -154,6 +154,33 @@
      * Score an employee using the 5-KPI system (3/2/1 per KPI).
      * Returns { scores, values, kpisMet, scoreSum, kpiScore, trackLabel, trackStatusValue, ... } or null.
      */
+    // Metrics outside the 5-KPI scorecard. These get individual ranks so
+    // wins on them can be recognized, but they are deliberately absent
+    // from METRIC_KEYS — they must never move a composite rank or score.
+    var EXTRA_RANK_METRICS = [
+        { key: 'fcr', field: 'fcr', reverse: false, survey: true },
+        { key: 'overallExperience', field: 'overallExperience', reverse: false, survey: true },
+        { key: 'transfers', field: 'transfers', reverse: true },        // lower is better
+        { key: 'positiveWord', field: 'positiveWord', reverse: false },
+        { key: 'negativeWord', field: 'negativeWord', reverse: true },  // lower is better
+        { key: 'managingEmotions', field: 'managingEmotions', reverse: false }
+    ];
+    var MIN_SURVEYS_FOR_RANK = 3;
+
+    // Pull the extra metric values off the raw employee row. Survey-backed
+    // metrics are withheld below the survey floor: 100% off one response
+    // isn't an achievement, and letting it rank would crowd out real wins.
+    function buildExtraRankValues(emp, surveyTotal) {
+        var out = {};
+        EXTRA_RANK_METRICS.forEach(function (m) {
+            var raw = parseFloat(emp[m.field]);
+            if (!isFinite(raw)) { out[m.key] = null; return; }
+            if (m.survey && !(surveyTotal >= MIN_SURVEYS_FOR_RANK)) { out[m.key] = null; return; }
+            out[m.key] = raw;
+        });
+        return out;
+    }
+
     function scoreEmployee(emp, year) {
         var onOff = window.DevCoachModules?.onOffTracker;
         if (!onOff?.calculateYearEndOnOffMirror) return null;
@@ -339,6 +366,7 @@
             if (!score) return;
 
             rankings.push({
+                extraValues: buildExtraRankValues(emp, score.surveyTotal),
                 name: emp.name,
                 kpisMet: score.kpisMet,
                 scoreSum: score.scoreSum,
@@ -362,7 +390,9 @@
             { key: 'sentiment', field: 'values.sentiment', reverse: false },
             { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
             { key: 'reliability', field: 'reliability', reverse: true }  // lower is better
-        ];
+        ].concat(EXTRA_RANK_METRICS.map(function (m) {
+            return { key: m.key, field: 'extraValues.' + m.key, reverse: m.reverse };
+        }));
 
         var _isNullVal = function (v) {
             return v === null || v === undefined || (typeof v === 'number' && isNaN(v));
@@ -370,7 +400,10 @@
 
         metricRankKeys.forEach(function (mk) {
             var getVal = function (e) {
-                return mk.field.includes('.') ? e.values[mk.field.split('.')[1]] : e[mk.field];
+                if (!mk.field.includes('.')) return e[mk.field];
+                var parts = mk.field.split('.');
+                var bucket = e[parts[0]];
+                return bucket ? bucket[parts[1]] : null;
             };
             var sorted = rankings.slice().sort(function (a, b) {
                 var aVal = getVal(a), bVal = getVal(b);

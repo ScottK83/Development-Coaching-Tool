@@ -498,6 +498,18 @@
         return { firstName, lastName };
     }
 
+    // True only when the column exists in this paste AND the row has a real
+    // value in it. A column that isn't in the upload is unknown, not zero —
+    // storing 0 makes a missing Transfers column read as a perfect 0%
+    // transfer rate and poisons every average and delta built on it. '' is
+    // the sentinel already used for the sentiment metrics; consumers treat
+    // it as "no data" via isFinite/parseFloat guards.
+    function hasMetricCell(cells, colIndex) {
+        if (colIndex === undefined || colIndex === null || colIndex < 0) return false;
+        const text = String(getCell(cells, colIndex) ?? '').replace(/ /g, ' ').trim();
+        return text !== '' && text !== '(Blank)' && text.toLowerCase() !== 'n/a';
+    }
+
     // Build the canonical employee row from parsed cells + the detected col map.
     function parseEmployeeRow(cells, colMap) {
         const nameField = getCell(cells, colMap.name);
@@ -516,22 +528,33 @@
 
         const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers)) || 0;
         const parsedTransfersCount = parseInt(getCell(cells, colMap.transfersCount), 10) || 0;
+        // Transfers is only known if the upload actually carried one of the two
+        // transfer columns for this row. Otherwise leave it blank rather than
+        // reporting a flawless 0% nobody earned.
+        const hasTransfersData = hasMetricCell(cells, colMap.transfers)
+            || hasMetricCell(cells, colMap.transfersCount);
 
         return {
             name: displayName,
             firstName: firstName,
-            scheduleAdherence: parsePercentage(getCell(cells, colMap.adherence)) || 0,
+            scheduleAdherence: hasMetricCell(cells, colMap.adherence)
+                ? (parsePercentage(getCell(cells, colMap.adherence)) || 0)
+                : '',
             cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
             fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
             overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
             overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
-            transfers: normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls),
+            transfers: hasTransfersData
+                ? normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls)
+                : '',
             transfersCount: parsedTransfersCount,
             aht: parseSeconds(getCell(cells, colMap.aht)) || '',
             talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
             acw: parseSeconds(getCell(cells, colMap.acw)),
             holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
-            reliability: parseHours(getCell(cells, colMap.reliability)) || 0,
+            reliability: hasMetricCell(cells, colMap.reliability)
+                ? (parseHours(getCell(cells, colMap.reliability)) || 0)
+                : '',
             overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
             positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
             negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',

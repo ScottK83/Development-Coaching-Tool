@@ -14,6 +14,13 @@
     // Survey-backed metrics — skip if team has no survey data
     var SURVEY_METRICS = { cxRepOverall: true, fcr: true, overallExperience: true };
 
+    // Shout-out limits. Each person is named once, under their single
+    // strongest metric, so the section stays readable in a Teams post.
+    var MAX_SHOUTOUT_NAMES = 10;
+    var MAX_SHOUTOUTS_PER_METRIC = 3;
+    // A survey metric off 1–2 responses isn't an achievement worth naming.
+    var MIN_SURVEYS_FOR_SHOUTOUT = 3;
+
     // ============================================
     // PHRASE POOLS
     // ============================================
@@ -207,10 +214,102 @@
     }
 
     // ============================================
+    // SHOUT-OUTS
+    // ============================================
+
+    // Find the people worth naming and what they excelled at.
+    //
+    // A metric qualifies for someone only if they beat target AND beat
+    // where the team landed — otherwise "everyone hit adherence" turns
+    // into ten identical callouts. Each person is credited with their
+    // single strongest metric so nobody appears twice.
+    //
+    // Returns [{ key, label, people: [{ name, formatted }] }], grouped
+    // by metric. No rank or tier language: the post says what someone
+    // did, never where they placed.
+    function computeShoutOuts(periodKey, averages) {
+        var all = getAllData();
+        var period = all[periodKey];
+        if (!period) return [];
+
+        var ctx = getTeamFilterContext();
+        var employees = (period.employees || []).filter(function (e) {
+            return isIncluded(e.name, ctx);
+        });
+        if (!employees.length) return [];
+
+        var registry = getRegistry();
+        var candidates = [];
+
+        employees.forEach(function (emp) {
+            var name = String(emp.name || '').trim();
+            if (!name) return;
+
+            var top = null;
+            Object.keys(registry).forEach(function (key) {
+                if (POST_SKIP_METRICS[key]) return;
+                var def = registry[key];
+                var target = def && def.target ? parseFloat(def.target.value) : NaN;
+                if (!Number.isFinite(target)) return;
+
+                var val = parseFloat(emp[key]);
+                if (!Number.isFinite(val)) return;
+
+                if (SURVEY_METRICS[key]) {
+                    var st = parseInt(emp.surveyTotal, 10);
+                    if (!Number.isFinite(st) || st < MIN_SURVEYS_FOR_SHOUTOUT) return;
+                }
+
+                var reverse = isReverseMetric(key);
+                if (reverse ? (val > target) : (val < target)) return;
+
+                var teamAvg = averages ? averages[key] : undefined;
+                if (Number.isFinite(teamAvg)) {
+                    if (reverse ? (val >= teamAvg) : (val <= teamAvg)) return;
+                }
+
+                var margin = (reverse ? (target - val) : (val - target)) / (Math.abs(target) || 1);
+                if (!top || margin > top.margin) {
+                    top = {
+                        key: key,
+                        label: def.label || key,
+                        margin: margin,
+                        formatted: formatMetricDisplay(key, val)
+                    };
+                }
+            });
+
+            if (top) candidates.push({ name: name, top: top });
+        });
+
+        // Strongest performances first, then trim to the per-metric and
+        // overall caps so the section can't run away on a big team.
+        candidates.sort(function (a, b) { return b.top.margin - a.top.margin; });
+
+        var groups = [];
+        var byKey = {};
+        var named = 0;
+        candidates.forEach(function (c) {
+            if (named >= MAX_SHOUTOUT_NAMES) return;
+            var group = byKey[c.top.key];
+            if (group && group.people.length >= MAX_SHOUTOUTS_PER_METRIC) return;
+            if (!group) {
+                group = { key: c.top.key, label: c.top.label, people: [] };
+                byKey[c.top.key] = group;
+                groups.push(group);
+            }
+            group.people.push({ name: c.name, formatted: c.top.formatted });
+            named += 1;
+        });
+
+        return groups;
+    }
+
+    // ============================================
     // POST BUILDER
     // ============================================
 
-    function buildPost(averages, periodLabel) {
+    function buildPost(averages, periodLabel, shoutOuts) {
         if (!averages) return null;
 
         var registry = getRegistry();
@@ -266,6 +365,17 @@
 
         lines.push('');
 
+        if (shoutOuts && shoutOuts.length) {
+            lines.push('🌟 SHOUT-OUTS');
+            shoutOuts.forEach(function (g) {
+                var names = g.people.map(function (p) {
+                    return '@' + p.name + ' (' + p.formatted + ')';
+                }).join(', ');
+                lines.push('  • ' + g.label + ': ' + names);
+            });
+            lines.push('');
+        }
+
         if (opps.length) {
             lines.push('🎯 FOCUS AREAS');
             opps.forEach(function (o) {
@@ -299,11 +409,14 @@
     // POST ASSEMBLY
     // ============================================
 
-    async function generateFullPost(periodKey, periodLabel) {
+    async function generateFullPost(periodKey, periodLabel, options) {
         var averages = computeTeamAverages(periodKey);
         if (!averages || !Object.keys(averages).length) return null;
 
-        var { lines, topOpp } = buildPost(averages, periodLabel);
+        var includeShoutOuts = !options || options.includeShoutOuts !== false;
+        var shoutOuts = includeShoutOuts ? computeShoutOuts(periodKey, averages) : [];
+
+        var { lines, topOpp } = buildPost(averages, periodLabel, shoutOuts);
 
         // Tip section
         var tipResult = topOpp ? await fetchTipForMetric(topOpp.key) : null;
@@ -411,7 +524,10 @@
         if (copyBtn) copyBtn.style.display = 'none';
 
         try {
-            var post = await generateFullPost(selected.key, selected.label);
+            var shoutOutToggle = document.getElementById('mondayPostIncludeShoutOuts');
+            var post = await generateFullPost(selected.key, selected.label, {
+                includeShoutOuts: shoutOutToggle ? shoutOutToggle.checked : true
+            });
             if (!post) {
                 if (outputArea) outputArea.value = 'No team data found for this period. Make sure data is uploaded for this period.';
             } else {

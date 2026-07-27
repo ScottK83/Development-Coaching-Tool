@@ -70,15 +70,47 @@
         };
     }
 
+    // Metrics that older uploads stored as 0 when the column was simply
+    // absent from the paste. A whole period reading exactly 0 for one of
+    // these means "column missing", not "everyone was flawless" — nobody
+    // posts a 0% transfer rate team-wide. Blank them so averages, deltas,
+    // and cheers stop reporting an achievement that never happened.
+    // Requires 3+ employees so a genuinely tiny period isn't wiped.
+    const PHANTOM_ZERO_METRICS = ['transfers', 'scheduleAdherence', 'reliability'];
+    const PHANTOM_ZERO_MIN_ROWS = 3;
+
+    function findPhantomZeroMetrics(employees) {
+        if (!Array.isArray(employees) || employees.length < PHANTOM_ZERO_MIN_ROWS) return [];
+        return PHANTOM_ZERO_METRICS.filter(metricKey => employees.every(emp => {
+            const raw = emp ? emp[metricKey] : undefined;
+            if (raw === '' || raw === null || raw === undefined) return true;
+            const num = parseFloat(raw);
+            return Number.isFinite(num) && num === 0;
+        }) && employees.some(emp => {
+            const raw = emp ? emp[metricKey] : undefined;
+            return raw !== '' && raw !== null && raw !== undefined;
+        }));
+    }
+
     function normalizePeriodEmployees(period) {
         if (!period || !Array.isArray(period.employees)) return period;
 
         let changed = false;
-        const employees = period.employees.map(employee => {
+        let employees = period.employees.map(employee => {
             const normalized = normalizeEmployeeMetricRow(employee);
             if (normalized !== employee) changed = true;
             return normalized;
         });
+
+        const phantom = findPhantomZeroMetrics(employees);
+        if (phantom.length) {
+            changed = true;
+            employees = employees.map(emp => {
+                const patched = { ...emp };
+                phantom.forEach(metricKey => { patched[metricKey] = ''; });
+                return patched;
+            });
+        }
 
         return changed ? { ...period, employees } : period;
     }

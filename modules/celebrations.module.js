@@ -20,13 +20,30 @@
     var SELECTION_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsSelection';
     var DEFAULT_TIERS = [1, 5, 10];
 
-    // Metric rank keys from center-ranking module -> friendly labels
+    // Metric rank keys from center-ranking module -> friendly labels.
+    // The first four are the scorecard KPIs; the rest are ranked purely so
+    // wins on them get recognized (they carry no weight in center ranking).
     var METRIC_RANK_LABELS = {
         aht: { label: 'Average Handle Time', icon: '\u23F1\uFE0F', registry: 'aht' },
         adherence: { label: 'Schedule Adherence', icon: '\uD83D\uDCC5', registry: 'scheduleAdherence' },
         sentiment: { label: 'Overall Sentiment', icon: '\uD83D\uDCAD', registry: 'overallSentiment' },
-        associateOverall: { label: 'Rep Satisfaction', icon: '\uD83D\uDE0A', registry: 'cxRepOverall' }
+        associateOverall: { label: 'Rep Satisfaction', icon: '\uD83D\uDE0A', registry: 'cxRepOverall' },
+        fcr: { label: 'First Call Resolution', icon: '\u2705', registry: 'fcr' },
+        overallExperience: { label: 'Overall Experience', icon: '\uD83C\uDF08', registry: 'overallExperience' },
+        transfers: { label: 'Transfers', icon: '\uD83D\uDD00', registry: 'transfers' },
+        positiveWord: { label: 'Positive Word Usage', icon: '\uD83D\uDCAC', registry: 'positiveWord' },
+        negativeWord: { label: 'Negative Word Usage', icon: '\uD83D\uDEAB', registry: 'negativeWord' },
+        managingEmotions: { label: 'Managing Emotions', icon: '\uD83E\uDDD8', registry: 'managingEmotions' },
+        reliability: { label: 'Reliability', icon: '\uD83D\uDEE1\uFE0F', registry: 'reliability' }
     };
+
+    // Where each rank key's display value lives on a ranking row.
+    function getRankedValue(row, metricKey) {
+        if (metricKey === 'reliability') return row?.reliability ?? null;
+        var scorecard = row?.values?.[metricKey];
+        if (scorecard !== undefined && scorecard !== null) return scorecard;
+        return row?.extraValues?.[metricKey] ?? null;
+    }
 
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
@@ -200,7 +217,7 @@
 
                 var meta = METRIC_RANK_LABELS[metricKey];
                 var tier = getTierForRank(metricRank, tiers);
-                var metricValue = r.values?.[metricKey] ?? null;
+                var metricValue = getRankedValue(r, metricKey);
                 if (metricValue === null || metricValue === undefined) return;
 
                 achievements.push({
@@ -379,18 +396,29 @@
         function(name) { return '\u2B50\uD83C\uDF89 The spotlight is on ' + name + ' today! Look at this! \uD83C\uDF89\u2B50'; }
     ];
 
+    // The uniqueness here is the NUMBER, not the metric \u2014 other associates
+    // can (and do) get recognized for the same metric at other values. Copy
+    // that says "the only one for AHT" reads as a contradiction the moment a
+    // second AHT card shows up, so every line points at the value itself.
     var ONLY_ONE_LINES = [
-        function(label) { return '\uD83E\uDD47 The ONLY associate to hit this for ' + label + '!'; },
-        function(label) { return '\uD83D\uDC51 Nobody else matched this ' + label + ' performance!'; },
-        function(label) { return '\uD83C\uDFC6 Stood alone at the top for ' + label + '!'; },
-        function(label) { return '\uD83D\uDCA5 One person hit this ' + label + ' number. ONE. And it was them!'; },
-        function(label) { return '\uD83D\uDD25 Untouchable in ' + label + ' \u2014 no one else even came close!'; },
-        function(label) { return '\uD83C\uDF1F In a league of their own for ' + label + '!'; },
-        function(label) { return '\uD83E\uDD47 Solo mission in ' + label + ' \u2014 the only one to pull this off!'; },
-        function(label) { return '\uD83D\uDC51 Owned ' + label + ' outright \u2014 nobody else could match it!'; },
-        function(label) { return '\uD83D\uDCA5 Completely dominated ' + label + ' \u2014 the only one!'; },
-        function(label) { return '\uD83C\uDFC6 Set the standard in ' + label + ' and stood there alone!'; },
-        function(label) { return '\uD83D\uDD25 One name on the board for ' + label + '. That\'s it. That\'s the list!'; }
+        function(label, val) { return '\uD83E\uDD47 ' + label + ' at ' + val + ' \u2014 nobody else matched that number!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + ', and no one else got there!'; },
+        function(label, val) { return '\uD83C\uDFC6 ' + label + ' at ' + val + '. Nobody else put up that number!'; },
+        function(label, val) { return '\uD83D\uDCA5 One person hit ' + val + ' on ' + label + '. ONE. And it was them!'; },
+        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + ' \u2014 untouched by anyone else!'; },
+        function(label, val) { return '\uD83C\uDF1F ' + label + ' at ' + val + ', and that number belongs to them alone!'; },
+        function(label, val) { return '\uD83E\uDD47 Solo mission \u2014 ' + val + ' on ' + label + ', matched by nobody!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + ' \u2014 nobody else could match it!'; },
+        function(label, val) { return '\uD83D\uDCA5 ' + val + ' on ' + label + '. Nobody came close!'; },
+        function(label, val) { return '\uD83C\uDFC6 Set the bar at ' + val + ' on ' + label + ' and stood there alone!'; },
+        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. One name on that number, and it\'s theirs!'; }
+    ];
+    // Fallback when a value is somehow missing \u2014 never claim uniqueness of
+    // the metric itself, only of the performance.
+    var ONLY_ONE_NO_VALUE_LINES = [
+        function(label) { return '\uD83E\uDD47 Nobody else matched this ' + label + ' performance!'; },
+        function(label) { return '\uD83D\uDC51 No one else put up a ' + label + ' number like this!'; },
+        function(label) { return '\uD83C\uDFC6 This ' + label + ' performance went unmatched!'; }
     ];
 
     var STANDOUT_LINES = [
@@ -470,7 +498,9 @@
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
             if (a.soloRank1) {
-                lines.push(pick(ONLY_ONE_LINES)(a.label) + (valStr ? ' (' + valStr.trim() + ')' : ''));
+                lines.push(valStr
+                    ? pick(ONLY_ONE_LINES)(a.label, valStr.trim())
+                    : pick(ONLY_ONE_NO_VALUE_LINES)(a.label));
             } else {
                 // Lead with the fact/value
                 if (valStr) {
@@ -496,7 +526,7 @@
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
                 if (a.soloRank1) {
-                    msg += '   \uD83E\uDD47 Only one to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '') + '\n';
+                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '') + ' \u2014 nobody else matched it!\n';
                 } else {
                     if (valStr) {
                         msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!\n';
@@ -727,7 +757,10 @@
                 var border = a.soloRank1 ? '#fbbf24' : '#93c5fd';
                 html += '<div style="padding:8px 12px; background:' + bg + '; border-left:3px solid ' + border + '; border-radius:4px; font-size:0.9em;">';
                 if (a.soloRank1) {
-                    html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong> — only one to hit this!' + (valStr ? ' <span style="color:#64748b;">(' + valStr + ')</span>' : '');
+                    // "Only one" is about the number, not the metric — other
+                    // cards can show the same metric at a different value.
+                    html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
+                        ' <span style="color:#64748b;">— nobody else matched it</span>';
                 } else {
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
