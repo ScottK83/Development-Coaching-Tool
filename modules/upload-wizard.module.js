@@ -463,18 +463,21 @@
             return;
         }
         const { weeks, totalMissing, shownCount } = gaps;
+        // Colors come from the theme variables so the banner stays legible in
+        // both light and dark mode — hardcoded hex reads as invisible text
+        // once the dark theme swaps the surface underneath it.
         const chips = weeks.map(w => {
             const mon = parseLocalDate(w.startDate);
             const sun = parseLocalDate(w.endDate);
-            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:#fff; border:1px solid #e0a800; border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
+            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, #fff); color:var(--text-primary, #1a1a2e); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
         }).join('');
         const more = totalMissing > shownCount
-            ? `<div style="margin-top:6px; font-size:0.8em; color:#6d4c41;">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
+            ? `<div style="margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
             : '';
         bannerEl.style.display = 'block';
         bannerEl.innerHTML = `
-            <div style="font-weight:bold; margin-bottom:6px;">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
-            <div style="font-size:0.85em; margin-bottom:6px;">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
+            <div style="font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
+            <div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, #1a1a2e);">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
             <div>${chips}</div>
             ${more}`;
     }
