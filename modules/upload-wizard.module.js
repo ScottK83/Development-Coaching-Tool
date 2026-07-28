@@ -20,6 +20,19 @@
 
     const MS_PER_DAY = 86_400_000;
 
+    // Period kinds that span multiple weeks — uploading one of these leaves
+    // the individual weeks inside it blank for week-over-week trends. YTD is
+    // deliberately absent: it's a whole-year roll-up uploaded on purpose, so
+    // listing every unfilled week of the year would just be noise.
+    const MULTI_WEEK_PERIOD_TYPES = new Set(['month', 'quarter', 'custom']);
+    const MAX_RANGE_GAPS_SHOWN = 16;
+
+    function getWeeklyStore() {
+        return (typeof weeklyData !== 'undefined' ? weeklyData : null)
+            || window.DevCoachModules?.storage?.loadWeeklyData?.()
+            || {};
+    }
+
     function startOfDay(d) {
         return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     }
@@ -182,11 +195,13 @@
     //
     // Returns { weeks, totalMissing, shownCount } with weeks ordered
     // most-recent-first and capped at maxOptions.
-    function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
+    // Mondays that already have a real weekly upload, plus the earliest one.
+    // Only 'week' periods count — a month/quarter/YTD row covering the same
+    // dates carries no weekly granularity, and a week-in-progress row isn't
+    // a finished week.
+    function scanUploadedWeeks(weeklyStore) {
         const weekly = weeklyStore || {};
-        const lastWeekMon = addDays(mondayOf(today), -7);
-
-        const uploadedMondays = new Set();
+        const mondays = new Set();
         let earliestMon = null;
         Object.keys(weekly).forEach(k => {
             const meta = weekly[k]?.metadata || {};
@@ -195,9 +210,39 @@
             const start = parseLocalDate(startText);
             if (isNaN(start)) return;
             const mon = mondayOf(start);
-            uploadedMondays.add(isoDate(mon));
+            mondays.add(isoDate(mon));
             if (!earliestMon || mon < earliestMon) earliestMon = mon;
         });
+        return { mondays, earliestMon };
+    }
+
+    // Completed weeks overlapping [startISO, endISO] that have no weekly
+    // upload. This is what a month/quarter/YTD upload can't give you: the
+    // range lands as one row, so the weeks inside it are still blank for
+    // week-over-week trends. Boundary weeks that straddle the range are
+    // included — you need them for the trend line to be continuous.
+    function missingWeeksInRange(weeklyStore, startISO, endISO, today = new Date()) {
+        const start = parseLocalDate(startISO);
+        const end = parseLocalDate(endISO);
+        if (isNaN(start) || isNaN(end) || start > end) return [];
+
+        const lastCompleteSun = addDays(mondayOf(today), -1);
+        const uploaded = scanUploadedWeeks(weeklyStore).mondays;
+        const out = [];
+        for (let mon = mondayOf(start); mon <= end; mon = addDays(mon, 7)) {
+            const sun = addDays(mon, 6);
+            if (sun > lastCompleteSun) break;  // week hasn't finished yet
+            if (sun < start) continue;         // no overlap with the range
+            const iso = isoDate(mon);
+            if (uploaded.has(iso)) continue;
+            out.push({ startDate: iso, endDate: isoDate(sun) });
+        }
+        return out;
+    }
+
+    function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
+        const lastWeekMon = addDays(mondayOf(today), -7);
+        const { mondays: uploadedMondays, earliestMon } = scanUploadedWeeks(weeklyStore);
 
         if (!earliestMon) return { weeks: [], totalMissing: 0, shownCount: 0 };
 
@@ -423,6 +468,27 @@
         const endD = parseLocalDate(endDate);
         summaryEl.style.display = 'block';
         summaryEl.textContent = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
+
+        // A range upload lands as a single row. Spell out which weeks inside
+        // it are still missing, so it's obvious what else to paste if you
+        // want week-over-week movement across the range.
+        if (MULTI_WEEK_PERIOD_TYPES.has(option.periodType)) {
+            const gaps = missingWeeksInRange(getWeeklyStore(), start, endDate);
+            if (gaps.length) {
+                const shown = gaps.slice(0, MAX_RANGE_GAPS_SHOWN);
+                const chips = shown.map(g =>
+                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, #fff); color:var(--text-primary, #1a1a2e); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))} – ${fmtShort(parseLocalDate(g.endDate))}</span>`
+                ).join('');
+                const more = gaps.length > shown.length
+                    ? `<div style="margin-top:4px;">+ ${gaps.length - shown.length} more.</div>`
+                    : '';
+                summaryEl.innerHTML = `<div>${summaryEl.textContent}</div>` +
+                    `<div style="margin-top:8px; font-weight:bold;">⚠️ ${gaps.length} week${gaps.length === 1 ? '' : 's'} inside this range ${gaps.length === 1 ? 'has' : 'have'} no weekly upload:</div>` +
+                    `<div style="margin-top:4px;">${chips}</div>` +
+                    more +
+                    `<div style="margin-top:6px; font-size:0.95em;">This upload covers the whole range as one row. Upload these weeks separately for week-over-week trends.</div>`;
+            }
+        }
     }
 
     // Renders a per-weekday checklist for the current week into a summary
@@ -488,9 +554,7 @@
     function refresh() {
         const selectEl = document.getElementById('uploadWizardSelect');
         if (!selectEl) return;
-        const weekly = (typeof weeklyData !== 'undefined' ? weeklyData : null)
-            || window.DevCoachModules?.storage?.loadWeeklyData?.()
-            || {};
+        const weekly = getWeeklyStore();
         const ytd = (typeof ytdData !== 'undefined' ? ytdData : null)
             || window.DevCoachModules?.storage?.loadYtdData?.()
             || {};
@@ -624,6 +688,7 @@
         computeUploadOptions,
         annotateUploadState,
         computeMissingWeeks,
+        missingWeeksInRange,
         refresh,
         bind
     };
