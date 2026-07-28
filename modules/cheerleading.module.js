@@ -25,6 +25,8 @@
     var MIN_DELTA_REL = 0.01;
     // Uploaded weeks a month needs before it can stand in for "the month".
     var MIN_WEEKS_FOR_MONTH = 2;
+    // Survey responses needed on both sides before a survey metric can cheer.
+    var MIN_SURVEYS_FOR_CHEER = 3;
 
     // Metrics eligible for week-over-week / monthly improvement cheers.
     // Reliability is cumulative (attendance) — excluded by design.
@@ -228,6 +230,49 @@
         return wTotal > 0 ? wSum / wTotal : null;
     }
 
+    // Total survey responses an employee had across a set of periods.
+    function _empSurveyTotal(empName, weekKeys) {
+        var wData = _weeklyData();
+        var total = 0;
+        (weekKeys || []).forEach(function (key) {
+            var period = wData[key];
+            if (!period || !period.employees) return;
+            for (var i = 0; i < period.employees.length; i++) {
+                var e = period.employees[i];
+                if (e && e.name === empName) {
+                    var st = parseInt(e.surveyTotal, 10);
+                    if (isFinite(st)) total += st;
+                    break;
+                }
+            }
+        });
+        return total;
+    }
+
+    // Survey-backed metrics off a tiny sample produce meaningless swings: two
+    // responses read as 50%, one reads as 0% or 100%, so a different customer
+    // answering looks like a 50-point jump. Both sides of the comparison need
+    // a real sample before the move means anything.
+    function _sampleIsBigEnough(metricKey, empName, prevKeys, curKeys) {
+        if (!SURVEY_WEIGHTED[metricKey]) return true;
+        return _empSurveyTotal(empName, prevKeys) >= MIN_SURVEYS_FOR_CHEER
+            && _empSurveyTotal(empName, curKeys) >= MIN_SURVEYS_FOR_CHEER;
+    }
+
+    // Collapse survey metrics down to the single strongest move, since they
+    // all describe the same responses.
+    function _keepOneSurveyMetric(byMetric) {
+        var surveyKeys = Object.keys(byMetric).filter(function (k) { return SURVEY_WEIGHTED[k]; });
+        if (surveyKeys.length < 2) return;
+        var best = null, bestRel = -1;
+        surveyKeys.forEach(function (k) {
+            var d = byMetric[k];
+            var rel = d.prev !== 0 ? Math.abs(d.cur - d.prev) / Math.abs(d.prev) : 0;
+            if (rel > bestRel) { bestRel = rel; best = k; }
+        });
+        surveyKeys.forEach(function (k) { if (k !== best) delete byMetric[k]; });
+    }
+
     /* ── Cheer detection ── */
 
     // Sentence pools. Every bullet in a message used to have the identical
@@ -296,20 +341,31 @@
             if (periods.wowCur && periods.wowPrev) {
                 var c = _empValue(emp.name, [periods.wowCur], mk);
                 var p = _empValue(emp.name, [periods.wowPrev], mk);
-                if (c !== null && p !== null && _isImprovement(mk, p, c)) {
+                if (c !== null && p !== null && _isImprovement(mk, p, c)
+                    && _sampleIsBigEnough(mk, emp.name, [periods.wowPrev], [periods.wowCur])) {
                     var rel = p !== 0 ? Math.abs(c - p) / Math.abs(p) : 0;
                     if (rel >= MIN_DELTA_REL) wowByMetric[mk] = { prev: p, cur: c };
                 }
             }
             if (periods.monCur && periods.monPrev) {
-                var cm = _empValue(emp.name, periods.monthsMap[periods.monCur], mk);
-                var pm = _empValue(emp.name, periods.monthsMap[periods.monPrev], mk);
-                if (cm !== null && pm !== null && _isImprovement(mk, pm, cm)) {
+                var curKeys = periods.monthsMap[periods.monCur];
+                var prevKeys = periods.monthsMap[periods.monPrev];
+                var cm = _empValue(emp.name, curKeys, mk);
+                var pm = _empValue(emp.name, prevKeys, mk);
+                if (cm !== null && pm !== null && _isImprovement(mk, pm, cm)
+                    && _sampleIsBigEnough(mk, emp.name, prevKeys, curKeys)) {
                     var relm = pm !== 0 ? Math.abs(cm - pm) / Math.abs(pm) : 0;
                     if (relm >= MIN_DELTA_REL) monByMetric[mk] = { prev: pm, cur: cm };
                 }
             }
         });
+
+        // Survey metrics all come off the same handful of responses, so
+        // reporting Rep Satisfaction, FCR and Overall Experience separately
+        // sells one customer's answers as three wins. Keep the strongest and
+        // drop the rest.
+        _keepOneSurveyMetric(wowByMetric);
+        _keepOneSurveyMetric(monByMetric);
 
         // 2. One best cheer per metric.
         var metricSet = {};
@@ -434,6 +490,12 @@
         var adjacent = curMon && prevMon && Math.round((curMon - prevMon) / (7 * 86400000)) === 1;
         if (adjacent && (curPhrase === 'this week' || curPhrase === 'this week so far' || curPhrase === 'last week')) {
             prevPhrase = curPhrase === 'last week' ? 'the week before' : 'last week';
+        }
+        // Never let both sides carry the same name. "from 0.0% last week to
+        // 100.0% last week" is nonsense on its face; fall back to dates.
+        if (prevPhrase && prevPhrase === curPhrase) {
+            prevPhrase = 'the week of ' + _weekStartLabel(wowPrev);
+            curPhrase = 'the week of ' + _weekStartLabel(wowCur);
         }
 
         var periods = {
