@@ -406,8 +406,21 @@
         function (n) { return 'Hi ' + n + '! 💪'; },
         function (n) { return n + ', take a look at this 👀'; },
         function (n) { return 'Hey ' + n + ', this one\'s worth a look 👀'; },
-        function (n) { return n + '! Good stuff in your numbers this week 🙌'; },
+        function (n) { return n + '! Good stuff in your numbers 🙌'; },
         function (n) { return 'Hey ' + n + ', got something good to share 😊'; }
+    ];
+    // Says why this message is arriving. Without it the note opens on a
+    // number and reads like it came out of nowhere. Deliberately cadence
+    // neutral — no "weekly" — since these don't go out on a fixed schedule.
+    var CONTEXT_LINES = [
+        'I was going back through everyone\'s numbers and yours stood out, so I wanted to send this your way.',
+        'I like to look through where everyone is at and pass along the good stuff when I see it. Here\'s yours.',
+        'Been reviewing how everyone\'s tracking, and there\'s some good news in yours worth sharing.',
+        'I go through these numbers pretty regularly, and a few things in yours are worth pointing out.',
+        'Wanted to send this along after looking through where everyone stands. Some good movement on your side.',
+        'I try to catch the wins when I\'m looking through everyone\'s numbers, and you had a few.',
+        'Was reviewing where everyone\'s at and figured you\'d want to see this.',
+        'Spent some time in everyone\'s numbers today and yours had a few things worth calling out.'
     ];
     var BRIDGES = [
         'A couple more things worth calling out:',
@@ -434,6 +447,8 @@
         if (!cheers.length) return '';
         var lines = [];
         lines.push(pick(GREETINGS)(person.firstName));
+        lines.push('');
+        lines.push(pick(CONTEXT_LINES)); // why they're hearing from you
         lines.push('');
         lines.push(cheers[0].text); // headline
         var rest = cheers.slice(1, 4); // up to 3 supporting bullets
