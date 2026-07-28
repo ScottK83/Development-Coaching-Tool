@@ -23,6 +23,8 @@
     var CLOSE_REL = 0.01;
     // Minimum relative move before a week/month change is worth a cheer.
     var MIN_DELTA_REL = 0.01;
+    // Uploaded weeks a month needs before it can stand in for "the month".
+    var MIN_WEEKS_FOR_MONTH = 2;
 
     // Metrics eligible for week-over-week / monthly improvement cheers.
     // Reliability is cumulative (attendance) — excluded by design.
@@ -107,6 +109,13 @@
     function _monthName(yyyymm) {
         var m = parseInt(String(yyyymm).slice(5, 7), 10);
         return MONTH_NAMES[m - 1] || yyyymm;
+    }
+
+    // The in-sentence phrase for a month. The month still in progress reads
+    // "so far in July", so a part-month is never presented as a finished one.
+    function _monthPhrase(yyyymm, nowMonth) {
+        if (!yyyymm) return '';
+        return (yyyymm === nowMonth ? 'so far in ' : 'in ') + _monthName(yyyymm);
     }
 
     /* ── Period helpers ── */
@@ -308,7 +317,7 @@
                 cheers.push({
                     weight: 55, metricKey: mk, icon: _metricIcon(mk), kind: 'month',
                     text: nextDelta()(label, _fmt(mk, monByMetric[mk].prev), _fmt(mk, monByMetric[mk].cur),
-                        'in ' + _monthName(periods.monPrev), 'in ' + _monthName(periods.monCur))
+                        periods.monPrevLabel, periods.monCurLabel)
                 });
                 return;
             }
@@ -354,7 +363,11 @@
         var wowPrev = wowKeys.length >= 2 ? wowKeys[wowKeys.length - 2] : null;
         var wowCurInProgress = wowCur ? (_periodType(wowCur) === 'week-in-progress') : false;
 
-        // Monthly: the two most recent fully-elapsed calendar months.
+        // Monthly comparison. Waiting for a month to fully elapse means that
+        // on Jul 27 every monthly cheer still talks about June, which is stale
+        // by then. The current month is allowed in once it has enough weeks
+        // behind it, and gets labelled "so far in July" so nobody reads a
+        // part-month as a finished one.
         var now = new Date();
         var nowMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
         var monthsMap = {};
@@ -362,11 +375,22 @@
             var mo = _endMonth(k);
             if (mo) { (monthsMap[mo] = monthsMap[mo] || []).push(k); }
         });
-        var elapsed = Object.keys(monthsMap).filter(function (mo) { return mo < nowMonth; }).sort();
-        var monCur = elapsed.length >= 2 ? elapsed[elapsed.length - 1] : null;
-        var monPrev = elapsed.length >= 2 ? elapsed[elapsed.length - 2] : null;
 
-        var periods = { wowCur: wowCur, wowPrev: wowPrev, wowCurInProgress: wowCurInProgress, monCur: monCur, monPrev: monPrev, monthsMap: monthsMap };
+        // A month standing on a single uploaded week isn't a month. Comparing
+        // one week of June against one week of May and calling it monthly
+        // movement is how a gap in the uploads turns into a false claim.
+        var usable = Object.keys(monthsMap).filter(function (mo) {
+            return mo <= nowMonth && monthsMap[mo].length >= MIN_WEEKS_FOR_MONTH;
+        }).sort();
+        var monCur = usable.length >= 2 ? usable[usable.length - 1] : null;
+        var monPrev = usable.length >= 2 ? usable[usable.length - 2] : null;
+
+        var periods = {
+            wowCur: wowCur, wowPrev: wowPrev, wowCurInProgress: wowCurInProgress,
+            monCur: monCur, monPrev: monPrev, monthsMap: monthsMap,
+            monCurLabel: _monthPhrase(monCur, nowMonth),
+            monPrevLabel: _monthPhrase(monPrev, nowMonth)
+        };
 
         var people = [];
         fData.employees.forEach(function (emp) {
