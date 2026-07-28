@@ -403,7 +403,7 @@
                 cheers.push({
                     weight: 70, metricKey: mk, icon: _metricIcon(mk), kind: 'wow',
                     text: nextDelta()(label, _fmt(mk, wowByMetric[mk].prev), _fmt(mk, wowByMetric[mk].cur),
-                        'last week', thisWeek)
+                        lastWeek, thisWeek)
                 });
                 return;
             }
