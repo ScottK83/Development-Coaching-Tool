@@ -149,6 +149,44 @@
     function _endMonth(key) {
         return String(_endDate(key)).slice(0, 7); // YYYY-MM
     }
+    function _startDate(key) {
+        var p = _weeklyData()[key];
+        return (p && p.metadata && p.metadata.startDate) || (key.indexOf('|') !== -1 ? key.split('|')[0] : '');
+    }
+    function _mondayOf(iso) {
+        var parts = String(iso).split('-').map(Number);
+        if (!parts[0] || !parts[1] || !parts[2]) return null;
+        var d = new Date(parts[0], parts[1] - 1, parts[2]);
+        var dow = d.getDay();
+        d.setDate(d.getDate() + (dow === 0 ? -6 : -(dow - 1)));
+        return d;
+    }
+    // How a weekly period should be named in a sentence. With gaps in the
+    // uploads the two most recent weeks are often not adjacent, so calling
+    // the newest one "this week" and the one before it "last week" states
+    // something false to the employee. Anything that isn't genuinely the
+    // current or prior week gets named by its date instead.
+    function _weekPhrase(key, today) {
+        if (!key) return '';
+        if (_periodType(key) === 'week-in-progress') return 'this week so far';
+        var mon = _mondayOf(_startDate(key));
+        var curMon = _mondayOf(_isoToday(today));
+        if (!mon || !curMon) return 'the week of ' + _weekStartLabel(key);
+        var diffWeeks = Math.round((curMon - mon) / (7 * 86400000));
+        if (diffWeeks === 0) return 'this week';
+        if (diffWeeks === 1) return 'last week';
+        return 'the week of ' + _weekStartLabel(key);
+    }
+    function _isoToday(today) {
+        var d = today || new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function _weekStartLabel(key) {
+        try {
+            var d = new Date(_startDate(key) + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch (e) { return _startDate(key); }
+    }
     function _weekLabel(key) {
         try {
             var d = new Date(_endDate(key) + 'T00:00:00');
@@ -249,7 +287,8 @@
     // Returns a weight-sorted list of cheers for one employee.
     function buildCheersForEmployee(emp, weekInfo, periods) {
         var metrics = emp.metrics || {};
-        var thisWeek = periods.wowCurInProgress ? 'this week so far' : 'this week';
+        var thisWeek = periods.wowCurLabel || (periods.wowCurInProgress ? 'this week so far' : 'this week');
+        var lastWeek = periods.wowPrevLabel || 'last week';
 
         // 1. Week-over-week and monthly improvements.
         var wowByMetric = {}, monByMetric = {};
@@ -297,7 +336,7 @@
                     var text = _closeText(mk, m, weekInfo);
                     if (wowByMetric[mk]) {
                         text += ' And it\'s already moving, ' + _fmt(mk, wowByMetric[mk].prev) +
-                            ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.';
+                            ' ' + lastWeek + ' to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.';
                     }
                     cheers.push({ weight: 100, metricKey: mk, icon: _metricIcon(mk), kind: 'close', text: text });
                     return;
@@ -385,8 +424,21 @@
         var monCur = usable.length >= 2 ? usable[usable.length - 1] : null;
         var monPrev = usable.length >= 2 ? usable[usable.length - 2] : null;
 
+        // Name each week honestly. When the two points are adjacent and the
+        // newest really is last week, "the week before" reads better than a
+        // second date; otherwise both get named outright.
+        var curPhrase = _weekPhrase(wowCur, now);
+        var prevPhrase = _weekPhrase(wowPrev, now);
+        var curMon = wowCur ? _mondayOf(_startDate(wowCur)) : null;
+        var prevMon = wowPrev ? _mondayOf(_startDate(wowPrev)) : null;
+        var adjacent = curMon && prevMon && Math.round((curMon - prevMon) / (7 * 86400000)) === 1;
+        if (adjacent && (curPhrase === 'this week' || curPhrase === 'this week so far' || curPhrase === 'last week')) {
+            prevPhrase = curPhrase === 'last week' ? 'the week before' : 'last week';
+        }
+
         var periods = {
             wowCur: wowCur, wowPrev: wowPrev, wowCurInProgress: wowCurInProgress,
+            wowCurLabel: curPhrase, wowPrevLabel: prevPhrase,
             monCur: monCur, monPrev: monPrev, monthsMap: monthsMap,
             monCurLabel: _monthPhrase(monCur, nowMonth),
             monPrevLabel: _monthPhrase(monPrev, nowMonth)

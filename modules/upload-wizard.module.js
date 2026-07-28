@@ -240,9 +240,35 @@
         return out;
     }
 
+    // Earliest date any period upload covers, whatever its kind. This anchors
+    // the gap scan. Anchoring it to weekly uploads alone made the feature
+    // vanish exactly when it was most needed: with only last week uploaded,
+    // the window collapsed to that one week and reported no gaps at all. A
+    // month or quarter upload says you care about that span, so the weeks
+    // inside it are fair game even though the range row doesn't cover them.
+    // YTD is excluded — it starts Jan 1 and would open the window to the
+    // entire year on every upload.
+    const RANGE_TYPES_FOR_SCAN = new Set(['week', 'week-in-progress', 'month', 'quarter', 'custom']);
+
+    function earliestCoveredMonday(weeklyStore) {
+        const weekly = weeklyStore || {};
+        let earliest = null;
+        Object.keys(weekly).forEach(k => {
+            const meta = weekly[k]?.metadata || {};
+            if (!RANGE_TYPES_FOR_SCAN.has(meta.periodType || 'week')) return;
+            const startText = meta.startDate || (k.includes('|') ? k.split('|')[0] : '');
+            const start = parseLocalDate(startText);
+            if (isNaN(start)) return;
+            const mon = mondayOf(start);
+            if (!earliest || mon < earliest) earliest = mon;
+        });
+        return earliest;
+    }
+
     function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
         const lastWeekMon = addDays(mondayOf(today), -7);
-        const { mondays: uploadedMondays, earliestMon } = scanUploadedWeeks(weeklyStore);
+        const { mondays: uploadedMondays } = scanUploadedWeeks(weeklyStore);
+        const earliestMon = earliestCoveredMonday(weeklyStore);
 
         if (!earliestMon) return { weeks: [], totalMissing: 0, shownCount: 0 };
 
