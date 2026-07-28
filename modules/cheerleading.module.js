@@ -46,9 +46,35 @@
     function _fmt(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
+    // A few registry labels are written for table headers and read badly in a
+    // sentence ("Your Avoid Negative Words improved..."). These are the
+    // conversational forms, used only in cheer copy.
+    var CONVERSATIONAL_LABELS = {
+        positiveWord: 'Positive Word Usage',
+        negativeWord: 'Avoiding Negative Words',
+        transfers: 'Transfer Rate',
+        aht: 'Handle Time',
+        acw: 'After Call Work',
+        cxRepOverall: 'Rep Satisfaction'
+    };
+
     function _metricLabel(key) {
+        if (CONVERSATIONAL_LABELS[key]) return CONVERSATIONAL_LABELS[key];
         var reg = window.METRICS_REGISTRY && window.METRICS_REGISTRY[key];
         return (reg && reg.label) || key;
+    }
+
+    // Picks from a pool without repeating until the pool is exhausted, so one
+    // message doesn't use the same sentence shape for every bullet.
+    function _rotator(pool) {
+        var used = [];
+        return function () {
+            var avail = pool.filter(function (t) { return used.indexOf(t) === -1; });
+            if (!avail.length) { used = []; avail = pool; }
+            var chosen = avail[Math.floor(Math.random() * avail.length)];
+            used.push(chosen);
+            return chosen;
+        };
     }
     function _metricIcon(key) {
         var reg = window.METRICS_REGISTRY && window.METRICS_REGISTRY[key];
@@ -157,25 +183,58 @@
 
     /* ── Cheer detection ── */
 
+    // Sentence pools. Every bullet in a message used to have the identical
+    // shape ("Your X improved from A last week to B this week."), which reads
+    // like a mail merge. Each cheer kind now draws from a pool that rotates.
+    // `pw`/`cw` are the period words ("last week"/"this week", "in May"/"in
+    // June") so the same templates serve both weekly and monthly cheers.
+    var DELTA_TEMPLATES = [
+        function (l, p, c, pw, cw) { return 'Your ' + l + ' went from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return l + ' moved the right way, ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return 'Nice move on ' + l + ': ' + p + ' ' + pw + ', ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return 'Your ' + l + ' improved from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return l + ' is looking better, ' + p + ' ' + pw + ' and ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return 'Good jump on ' + l + ', ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; }
+    ];
+    var EXCEED_TEMPLATES = [
+        function (l, v) { return 'Your ' + l + ' is already past goal at ' + v + '. Keep doing what you\'re doing.'; },
+        function (l, v) { return l + ' is sitting above goal at ' + v + '. No notes there.'; },
+        function (l, v) { return 'You\'ve got ' + l + ' handled, ' + v + ' and past goal.'; },
+        function (l, v) { return l + ' at ' + v + ' is past goal. That one\'s locked in.'; },
+        function (l, v) { return 'Nothing to fix on ' + l + '. You\'re at ' + v + ', past goal.'; }
+    ];
+    var MEET_TEMPLATES = [
+        function (l, v, t) { return 'Your ' + l + ' is right at goal, ' + v + ' against the ' + t + ' target.'; },
+        function (l, v, t) { return l + ' is sitting on goal at ' + v + '.'; },
+        function (l, v, t) { return 'You\'re holding ' + l + ' at goal, ' + v + ' against ' + t + '.'; }
+    ];
+
     function _closeText(mk, m, weekInfo) {
         var label = _metricLabel(mk);
         var gap = m.isReverse ? (m.currentAvg - m.meetTarget) : (m.meetTarget - m.currentAvg);
         var weeksLeft = weekInfo.weeksRemaining;
-        var s = 'Your YTD ' + label + ' is ' + _fmt(mk, m.currentAvg) + ', just ' + _fmt(mk, Math.abs(gap)) + ' ' +
-            (m.isReverse ? 'above' : 'short of') + ' the ' + _fmt(mk, m.meetTarget) + ' goal. ';
+        var cur = _fmt(mk, m.currentAvg);
+        var goal = _fmt(mk, m.meetTarget);
+        var gapStr = _fmt(mk, Math.abs(gap));
+
+        // When the gap rounds away to nothing, "just 0.0% short of the 93.0%
+        // goal" reads as a typo. They're on the line — say that instead.
+        if (parseFloat(gapStr) === 0) {
+            return 'Your ' + label + ' for the year is right on the line at ' + cur +
+                ' against a ' + goal + ' goal. Hold it and it\'s yours.';
+        }
+
+        var opener = 'You\'re at ' + cur + ' on ' + label + ' for the year, ' + gapStr +
+            ' off the ' + goal + ' goal. ';
         var req = m.requiredToMeet;
         if (weeksLeft <= 0 || req === null || req === undefined) {
-            return s + 'You are right on the doorstep. Hold your pace and finish strong.';
+            return opener + 'You\'re right on the doorstep.';
         }
         var move = m.isReverse ? (m.currentAvg - req) : (req - m.currentAvg);
         if (move > 0) {
-            s += 'Average about ' + _fmt(mk, req) + ' a week over the last ' + weeksLeft +
-                ' weeks of the year, roughly ' + _fmt(mk, move) + ' ' +
-                (m.isReverse ? 'better' : 'above') + ' your YTD pace, and you reach it.';
-        } else {
-            s += 'Just hold your current pace through the rest of the year and you will get there.';
+            return opener + 'Average about ' + _fmt(mk, req) + ' a week the rest of the year and you get there.';
         }
-        return s;
+        return opener + 'Just hold your current pace and you\'ll get there.';
     }
 
     // Returns a weight-sorted list of cheers for one employee.
@@ -210,6 +269,12 @@
         Object.keys(wowByMetric).forEach(function (k) { metricSet[k] = true; });
         Object.keys(monByMetric).forEach(function (k) { metricSet[k] = true; });
 
+        // One rotator set per person, so a single message never repeats a
+        // sentence shape even though the pools are shared across the team.
+        var nextDelta = _rotator(DELTA_TEMPLATES);
+        var nextExceed = _rotator(EXCEED_TEMPLATES);
+        var nextMeet = _rotator(MEET_TEMPLATES);
+
         var cheers = [];
         Object.keys(metricSet).forEach(function (mk) {
             if (mk === 'reliability') return; // attendance — excluded by design
@@ -222,7 +287,7 @@
                 if (gap > 0 && m.meetTarget && (gap / Math.abs(m.meetTarget)) <= CLOSE_REL) {
                     var text = _closeText(mk, m, weekInfo);
                     if (wowByMetric[mk]) {
-                        text += ' And it is already moving the right way, ' + _fmt(mk, wowByMetric[mk].prev) +
+                        text += ' And it\'s already moving, ' + _fmt(mk, wowByMetric[mk].prev) +
                             ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.';
                     }
                     cheers.push({ weight: 100, metricKey: mk, icon: _metricIcon(mk), kind: 'close', text: text });
@@ -233,8 +298,8 @@
             if (wowByMetric[mk]) {
                 cheers.push({
                     weight: 70, metricKey: mk, icon: _metricIcon(mk), kind: 'wow',
-                    text: 'Your ' + label + ' improved from ' + _fmt(mk, wowByMetric[mk].prev) +
-                        ' last week to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.'
+                    text: nextDelta()(label, _fmt(mk, wowByMetric[mk].prev), _fmt(mk, wowByMetric[mk].cur),
+                        'last week', thisWeek)
                 });
                 return;
             }
@@ -242,9 +307,8 @@
             if (monByMetric[mk]) {
                 cheers.push({
                     weight: 55, metricKey: mk, icon: _metricIcon(mk), kind: 'month',
-                    text: 'Your ' + label + ' improved from ' + _fmt(mk, monByMetric[mk].prev) +
-                        ' in ' + _monthName(periods.monPrev) + ' to ' + _fmt(mk, monByMetric[mk].cur) +
-                        ' in ' + _monthName(periods.monCur) + '.'
+                    text: nextDelta()(label, _fmt(mk, monByMetric[mk].prev), _fmt(mk, monByMetric[mk].cur),
+                        'in ' + _monthName(periods.monPrev), 'in ' + _monthName(periods.monCur))
                 });
                 return;
             }
@@ -253,16 +317,14 @@
                 if (m.currentlyExceeding) {
                     cheers.push({
                         weight: 45, metricKey: mk, icon: _metricIcon(mk), kind: 'exceed',
-                        text: 'You are already past the ' + label + ' goal at ' + _fmt(mk, m.currentAvg) +
-                            '. Keep doing exactly what you are doing.'
+                        text: nextExceed()(label, _fmt(mk, m.currentAvg))
                     });
                     return;
                 }
                 if (m.currentlyMeeting) {
                     cheers.push({
                         weight: 35, metricKey: mk, icon: _metricIcon(mk), kind: 'meet',
-                        text: 'Your ' + label + ' is sitting at goal, ' + _fmt(mk, m.currentAvg) +
-                            ' against the ' + _fmt(mk, m.meetTarget) + ' target.'
+                        text: nextMeet()(label, _fmt(mk, m.currentAvg), _fmt(mk, m.meetTarget))
                     });
                     return;
                 }
@@ -342,22 +404,29 @@
         function (n) { return 'Hey ' + n + ' 👋'; },
         function (n) { return n + '! Wanted to share some good news 😊'; },
         function (n) { return 'Hi ' + n + '! 💪'; },
-        function (n) { return n + ', take a look at this 👀'; }
+        function (n) { return n + ', take a look at this 👀'; },
+        function (n) { return 'Hey ' + n + ', this one\'s worth a look 👀'; },
+        function (n) { return n + '! Good stuff in your numbers this week 🙌'; },
+        function (n) { return 'Hey ' + n + ', got something good to share 😊'; }
     ];
     var BRIDGES = [
         'A couple more things worth calling out:',
-        'And it does not stop there:',
+        'And it doesn\'t stop there:',
         'Some other bright spots:',
         'Plus these:',
-        'A few more good signs:'
+        'A few more good signs:',
+        'There\'s more:',
+        'Also worth a mention:'
     ];
     var CLOSERS = [
-        'Keep it rolling. You are closer than you think. 💪',
-        'Proud of the direction you are heading. Keep going! 🚀',
-        'This is real progress. Stay with it! 🌟',
+        'Keep it rolling. You\'re closer than you think. 💪',
+        'Proud of the direction you\'re heading. Keep going! 🚀',
+        'That\'s real progress. Stay with it! 🌟',
         'Love seeing this. Keep stacking good days! 🙌',
-        'You are doing the work and it shows. Keep pushing! 🔥',
-        'Small steps add up. Keep at it! 👏'
+        'You\'re doing the work and it shows. Keep pushing! 🔥',
+        'Small steps add up. Keep at it! 👏',
+        'Nice work. Let\'s keep it going. 🙌',
+        'Keep it up. You\'ve got a good thing going here. 💪'
     ];
 
     function buildCheerMessage(person) {
