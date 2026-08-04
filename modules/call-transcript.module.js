@@ -2,25 +2,40 @@
     'use strict';
 
     /**
-     * Turns a raw call transcript into draft coaching bullets.
+     * Turns a raw call transcript into draft coaching feedback.
      *
      * This is deliberately a rules engine, not a model: the app has no backend
      * and no API key, so the analysis has to run in the browser. It reads the
      * transcript for behaviours a supervisor would listen for, quotes the line
      * that triggered each call, and hands back editable drafts. The supervisor
      * is still the author; this just removes the blank-page problem.
+     *
+     * The input it is built for is a pasted Verint Interaction Review email:
+     * a metadata header (date, advisor, length, speech categories), a body of
+     * timestamped lines with no speaker labels, then a blank QA form and a
+     * legal footer. All of that gets stripped before analysis.
      */
 
     const MAX_STORED_TRANSCRIPT_CHARS = 8000;
     const MAX_PROMPT_TRANSCRIPT_CHARS = 12000;
     const MAX_QUOTE_CHARS = 110;
-    const MAX_BULLETS = 5;
+    const MAX_STRENGTH_BULLETS = 6;
+    const MAX_ISSUE_BULLETS = 5;
+
+    // Speech runs at roughly 2.5 words a second, which is enough to tell a
+    // pause apart from someone still talking.
+    const WORDS_PER_SECOND = 2.5;
+    const DEAD_AIR_SECONDS = 45;
+    const LONG_HOLD_SECONDS = 90;
 
     const AGENT_LABEL = /\b(agent|advisor|associate|rep|representative|csr|tsr|employee|specialist|operator)\b/i;
     const CUSTOMER_LABEL = /\b(customer|caller|client|member|cust|subscriber|guest|patient)\b/i;
 
     // "Agent: text", "[00:14] Jane Doe: text", "CUSTOMER - text" all land here.
     const SPEAKER_LINE = /^\s*(?:[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s*[APap]\.?[Mm]\.?)?[\])]?\s*)?([A-Za-z][A-Za-z0-9 .'\-]{0,34}?)\s*[:\-]\s+(.+)$/;
+
+    // A Verint body line is just "04:30" on its own, with the speech beneath.
+    const TIMESTAMP_ONLY_LINE = /^\s*(\d{1,3}):([0-5]\d)\s*$/;
 
     const GREETING_HINT = /thank(?:s| you) for calling|my name is|this is \w+ speaking|how (?:can|may) i help/i;
 
@@ -49,6 +64,148 @@
         return trimmed ? trimmed.split(' ').length : 0;
     }
 
+    function formatDuration(totalSeconds) {
+        const seconds = Math.max(0, Math.round(totalSeconds));
+        const minutes = Math.floor(seconds / 60);
+        const remainder = seconds % 60;
+        if (!minutes) return `${remainder}s`;
+        return `${minutes}m ${String(remainder).padStart(2, '0')}s`;
+    }
+
+    function formatClock(totalSeconds) {
+        const seconds = Math.max(0, Math.round(totalSeconds));
+        return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    }
+
+    /* ── Verint export metadata ── */
+
+    const DATE_TIME = /Date\s*\/\s*Time:\s*[\r\n\s]*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?)/;
+    const DURATION = /(\d{1,3}:[0-5]\d)\s*[\r\n\s]*\/\s*[\r\n\s]*(\d{1,3}:[0-5]\d)/;
+    const CATEGORY_BLOCK = /Categories:\s*([\s\S]*?)(?:No visual indicators|^\s*\d{1,3}:[0-5]\d\s*$)/m;
+    const BODY_START_MARKERS = [/No visual indicators[^\r\n]*/];
+    const BODY_END_MARKERS = [
+        /^Did advisor /m,
+        /^Additional Comments\s*$/m,
+        /^Notes on Soft Skills\s*$/m,
+        /^Kudos\/Compliments\s*$/m,
+        /^Call Opportunities\s*$/m,
+        /This message is for the designated recipient/,
+        // The evaluator's own name is signed under the transcript.
+        /^[A-Z][a-z'-]+,\s*[A-Z][a-z'-]+\s*$/m
+    ];
+
+    function toIsoDate(month, day, year) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    // "Dimes, Alyssa" is how the export writes it; the associate dropdown uses
+    // "Alyssa Dimes", so keep both.
+    function normalizeAdvisorName(rawName) {
+        const clean = collapse(rawName);
+        const match = clean.match(/^([A-Za-z][A-Za-z'\-]+),\s*([A-Za-z][A-Za-z'\-.]+(?: [A-Za-z][A-Za-z'\-.]+)?)$/);
+        if (!match) return { raw: clean, display: clean };
+        return { raw: clean, display: `${match[2]} ${match[1]}` };
+    }
+
+    function parseCategories(block) {
+        const lines = String(block || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        const categories = [];
+        lines.forEach(line => {
+            if (/^\d+$/.test(line)) {
+                if (categories.length) categories[categories.length - 1].count = Number(line);
+                return;
+            }
+            if (/^(Searched Term|Category|Legend:?|X [\d.]+|\d+\/\d+)$/i.test(line)) return;
+            categories.push({ name: line.replace(/\.\.\.$/, '').trim(), count: 0 });
+        });
+        return categories.filter(item => item.name);
+    }
+
+    function clockToSeconds(clock) {
+        const parts = String(clock || '').split(':').map(Number);
+        if (parts.length !== 2 || parts.some(Number.isNaN)) return null;
+        return (parts[0] * 60) + parts[1];
+    }
+
+    /**
+     * Pulls the header facts out of a Verint export. Returns empty fields for
+     * a plain transcript, which is the normal case for a hand-typed paste.
+     */
+    function extractMetadata(rawText) {
+        const text = String(rawText || '');
+        const meta = {
+            callDate: '',
+            callTime: '',
+            advisorName: '',
+            advisorDisplayName: '',
+            durationLabel: '',
+            durationSeconds: null,
+            categories: [],
+            isVerintExport: false
+        };
+
+        const dateMatch = text.match(DATE_TIME);
+        if (dateMatch) {
+            meta.callDate = toIsoDate(dateMatch[1], dateMatch[2], dateMatch[3]);
+            meta.callTime = collapse(dateMatch[4]).toUpperCase();
+            meta.isVerintExport = true;
+
+            // The advisor is the line directly under the date/time value.
+            const after = text.slice(dateMatch.index + dateMatch[0].length);
+            const nextLine = after.split(/\r?\n/).map(line => line.trim()).find(Boolean);
+            if (nextLine && /^[A-Za-z][A-Za-z'\-]+,\s*[A-Za-z]/.test(nextLine)) {
+                const named = normalizeAdvisorName(nextLine);
+                meta.advisorName = named.raw;
+                meta.advisorDisplayName = named.display;
+            }
+        }
+
+        const durationMatch = text.match(DURATION);
+        if (durationMatch) {
+            meta.durationLabel = durationMatch[2];
+            meta.durationSeconds = clockToSeconds(durationMatch[2]);
+        }
+
+        const categoryMatch = text.match(CATEGORY_BLOCK);
+        if (categoryMatch) {
+            meta.categories = parseCategories(categoryMatch[1]);
+            meta.isVerintExport = true;
+        }
+
+        return meta;
+    }
+
+    /**
+     * Drops the export header, the blank QA form, and the legal footer so the
+     * rules only ever read what was actually said on the call.
+     */
+    function stripBoilerplate(rawText) {
+        let text = String(rawText || '');
+
+        let startIndex = 0;
+        BODY_START_MARKERS.forEach(marker => {
+            const match = text.match(marker);
+            if (match) startIndex = Math.max(startIndex, match.index + match[0].length);
+        });
+
+        if (!startIndex) {
+            // No header marker: fall back to the first timestamped line, but
+            // skip the "00:00 / 18:24" position counter if it is there.
+            const duration = text.match(DURATION);
+            if (duration) startIndex = duration.index + duration[0].length;
+        }
+
+        text = text.slice(startIndex);
+
+        let endIndex = text.length;
+        BODY_END_MARKERS.forEach(marker => {
+            const match = text.match(marker);
+            if (match) endIndex = Math.min(endIndex, match.index);
+        });
+
+        return text.slice(0, endIndex).trim();
+    }
+
     /* ── Parsing ── */
 
     function isPlausibleSpeaker(label) {
@@ -71,15 +228,79 @@
         return 'unknown';
     }
 
+    // Timestamped exports carry no speaker labels, so turns are attributed by
+    // what could only have been said by one side. Anything ambiguous stays
+    // unattributed rather than being guessed at: a wrong attribution produces
+    // wrong coaching, which is worse than a missed signal.
+    const AGENT_TURN_CUE = /thank you for (?:being|calling|choosing)|can i have your|may i (?:place|put) you|i'?m just gonna place you|one moment please|allow me a moment|thank you (?:so much )?for holding|let me pull up|i'?d like to recap|the (?:first|second|third) plan|plans available|our email address|for the identity check|verify your name|is that right|what'?s the address|deposit of|we (?:do )?need (?:to )?(?:either|your)|do you have any questions|is there anything else/i;
+    const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|very helpful thank you|i just have the address|we'?ll get that back|i have both/i;
+
+    function parseTimestampedTurns(text) {
+        const lines = String(text || '').split(/\r?\n/);
+        const turns = [];
+        let current = null;
+
+        lines.forEach(line => {
+            const stamp = line.match(TIMESTAMP_ONLY_LINE);
+            if (stamp) {
+                current = { label: '', text: '', at: (Number(stamp[1]) * 60) + Number(stamp[2]) };
+                turns.push(current);
+                return;
+            }
+            const content = line.trim();
+            if (!content) return;
+            if (!current) {
+                current = { label: '', text: '', at: null };
+                turns.push(current);
+            }
+            current.text = collapse(`${current.text} ${content}`);
+        });
+
+        return turns.filter(turn => turn.text);
+    }
+
+    function attributeByCue(turns) {
+        return turns.map(turn => {
+            if (CUSTOMER_TURN_CUE.test(turn.text)) return { ...turn, role: 'customer' };
+            if (AGENT_TURN_CUE.test(turn.text)) return { ...turn, role: 'agent' };
+            return { ...turn, role: 'unknown' };
+        });
+    }
+
+    function buildParseResult(turns, labeled) {
+        // With real labels the two sides are known. Without them, everything
+        // not clearly the customer is treated as the associate's speech: the
+        // strength patterns are process language a customer would not use.
+        const agentTurns = labeled
+            ? turns.filter(turn => turn.role === 'agent')
+            : turns.filter(turn => turn.role !== 'customer');
+        const customerTurns = turns.filter(turn => turn.role === 'customer');
+
+        return {
+            labeled,
+            turns,
+            agentText: agentTurns.map(turn => turn.text).join('\n'),
+            customerText: customerTurns.map(turn => turn.text).join('\n'),
+            agentWords: wordCount(agentTurns.map(turn => turn.text).join(' ')),
+            customerWords: wordCount(customerTurns.map(turn => turn.text).join(' ')),
+            timed: turns.some(turn => typeof turn.at === 'number')
+        };
+    }
+
     /**
      * Splits a transcript into speaker turns and works out which side is the
-     * associate. Falls back to "everything is the associate" for pasted notes
-     * with no speaker labels, so the behaviour rules still have something to
-     * read.
+     * associate. Handles labelled transcripts, Verint timestamped exports, and
+     * plain pasted notes.
      */
     function parseTranscript(rawText, options = {}) {
-        const text = String(rawText || '');
+        const text = stripBoilerplate(rawText) || String(rawText || '');
         const rawLines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+        const timestampCount = rawLines.filter(line => TIMESTAMP_ONLY_LINE.test(line)).length;
+        if (timestampCount >= 3) {
+            return buildParseResult(attributeByCue(parseTimestampedTurns(text)), false);
+        }
+
         const turns = [];
         const labelOrder = [];
         const labelText = {};
@@ -93,26 +314,19 @@
                     labelOrder.push(label);
                 }
                 labelText[label] += ` ${match[2]}`;
-                turns.push({ label, text: collapse(match[2]) });
+                turns.push({ label, text: collapse(match[2]), at: null });
             } else if (turns.length) {
                 // Wrapped continuation of the previous speaker's turn.
                 const previous = turns[turns.length - 1];
                 previous.text = collapse(`${previous.text} ${line}`);
                 labelText[previous.label] += ` ${line}`;
             } else {
-                turns.push({ label: '', text: collapse(line) });
+                turns.push({ label: '', text: collapse(line), at: null });
             }
         });
 
         if (!labelOrder.length) {
-            return {
-                labeled: false,
-                turns: turns.map(turn => ({ ...turn, role: 'agent' })),
-                agentText: turns.map(turn => turn.text).join('\n'),
-                customerText: '',
-                agentWords: wordCount(turns.map(turn => turn.text).join(' ')),
-                customerWords: 0
-            };
+            return buildParseResult(attributeByCue(turns), false);
         }
 
         const roles = {};
@@ -146,84 +360,97 @@
             }
         }
 
-        const resolved = turns.map(turn => ({ ...turn, role: roles[turn.label] || 'agent' }));
-        const agentTurns = resolved.filter(turn => turn.role === 'agent');
-        const customerTurns = resolved.filter(turn => turn.role === 'customer');
-
-        return {
-            labeled: true,
-            turns: resolved,
-            agentText: agentTurns.map(turn => turn.text).join('\n'),
-            customerText: customerTurns.map(turn => turn.text).join('\n'),
-            agentWords: wordCount(agentTurns.map(turn => turn.text).join(' ')),
-            customerWords: wordCount(customerTurns.map(turn => turn.text).join(' '))
-        };
+        return buildParseResult(turns.map(turn => ({ ...turn, role: roles[turn.label] || 'agent' })), true);
     }
 
     /* ── Behaviour rules ── */
 
-    // Present in the associate's speech = a strength worth naming. `missing`
-    // (when set) is the coaching line to use when the behaviour never shows up.
+    // Present in the associate's speech = a strength worth naming out loud.
+    // `missing` (when set) is the coaching line to use when it never shows up.
     const STRENGTH_RULES = [
         {
             key: 'greeting',
-            pattern: /thank(?:s| you) for calling|my name is|this is \w+ (?:speaking|how)|how (?:can|may) i help you/i,
-            made: 'Opened the call properly with a branded greeting and your name.',
+            praise: 3,
+            pattern: /thank(?:s| you) for (?:calling|being a valued customer)|my name is|this is \w+ (?:speaking|how)|how (?:can|may) i help you/i,
+            made: 'Clean open. You branded the call and gave your name straight away, which sets the tone for everything after it.',
             missing: 'Opening: lead with the branded greeting and your name so the customer knows exactly who they are working with.',
             missingWeight: 4
         },
         {
             key: 'empathy',
-            pattern: /i (?:completely |totally |really |absolutely )?understand|i (?:can )?(?:hear|see) (?:why|how|that)|i(?:'?m| am) (?:so |really |very )?sorry|i apologi[sz]e|that (?:sounds|must be) (?:frustrating|stressful|difficult|annoying)|i can imagine/i,
-            made: 'Acknowledged how the customer felt before moving into the fix.',
+            praise: 8,
+            // "I'm sorry" only counts with an object attached. Bare "I'm sorry"
+            // is usually a self-correction mid-sentence, not empathy.
+            pattern: /i (?:completely |totally |really |absolutely )?understand|i (?:can )?(?:hear|see) (?:why|how|that)|i(?:'?m| am) (?:so|really|very|terribly) sorry|i(?:'?m| am) sorry (?:about|for|to hear|that|you)|i apologi[sz]e|that (?:sounds|must be) (?:frustrating|stressful|difficult|annoying)|i can imagine/i,
+            made: 'Real empathy. You acknowledged where the customer was before moving into the fix.',
             missing: 'Empathy: acknowledge the customer\'s situation in your own words before jumping into troubleshooting.',
             missingWeight: 9
         },
         {
             key: 'ownership',
+            praise: 8,
             pattern: /i(?:'?ll| will) take care of|let me take care of|i(?:'?ll| will) make sure|let me handle|i(?:'?ll| will) get (?:this|that) (?:sorted|fixed|taken care of)|leave (?:it|that) with me|i(?:'?ll| will) (?:own|personally)/i,
-            made: 'Took personal ownership of the outcome instead of handing the problem back.'
+            made: 'Strong ownership. You took the outcome on yourself instead of handing the problem back.'
         },
         {
             key: 'verification',
-            pattern: /verif(?:y|ication|ying)|confirm(?:ing)? your (?:name|address|account|identity)|date of birth|last four|security question|account number/i,
-            made: 'Verified the account before discussing details.',
+            praise: 7,
+            pattern: /verif(?:y|ication|ying)|identity check|confirm(?:ing)? your (?:name|address|account|identity)|date of birth|last four|security question|account number or the address/i,
+            made: 'Verification done properly before anything on the account was discussed. That is the one that protects everybody.',
             missing: 'Verification: confirm identity up front before you discuss anything on the account.',
             missingWeight: 8
         },
         {
             key: 'holdEtiquette',
-            pattern: /(?:may|can|could|would it be ok(?:ay)? if) i (?:please )?(?:place|put) you on(?: a (?:brief|short|quick))? hold|do you mind (?:if i|holding)|thank(?:s| you) for holding|appreciate (?:you|your) (?:holding|patience)/i,
-            made: 'Handled the hold the right way: asked first and thanked the customer on the way back.'
+            praise: 6,
+            pattern: /(?:may|can|could|would it be ok(?:ay)? if) i (?:please )?(?:place|put) you on(?: a (?:brief|short|quick))? hold|i'?m just gonna place you on a (?:brief|short|quick) hold|do you mind (?:if i|holding)|thank(?:s| you) for holding|appreciate (?:you|your) (?:holding|patience)/i,
+            made: 'Textbook hold. You flagged it before it happened and thanked them on the way back.'
+        },
+        {
+            key: 'optionsOffered',
+            praise: 7,
+            pattern: /(?:we have|there are) (?:two|three|four|\d+) [a-z ]*plans|plans available|the (?:first|second|third) plan (?:is|that we offer)|compar(?:e|ison) (?:of |the )?(?:plans|options)|options available to you/i,
+            made: 'You laid out the full set of options rather than defaulting to one, which is exactly the offering the QA form looks for.'
+        },
+        {
+            key: 'recommendation',
+            praise: 9,
+            pattern: /i(?:'?d| would) recommend|my recommendation|you might want to go with|i agree with you there|based on (?:what you|your usage)|(?:sounds|seems) like the .{0,30}plan (?:is|it'?s) right for you/i,
+            made: 'You went past reciting the options and gave a recommendation tied to how they actually live. That is the difference between informing and advising.'
         },
         {
             key: 'education',
-            pattern: /you can also|for future reference|next time you can|on the (?:app|website|portal)|online you can|self.?serv/i,
-            made: 'Pointed the customer to a faster self service option for next time.'
+            praise: 5,
+            pattern: /you can also|for future reference|next time you can|on the (?:app|website|portal)|online you can|once you are registered|self.?serv|take advantage of/i,
+            made: 'Nice add. You showed them a faster way to handle this themselves next time.'
         },
         {
             key: 'checkUnderstanding',
-            pattern: /does that make sense|did (?:that|i) answer|any questions (?:about|on) that|how does that sound|are you (?:following|with me)/i,
-            made: 'Checked for understanding instead of assuming the explanation landed.'
+            praise: 5,
+            pattern: /does that make sense|did (?:that|i) answer|any questions (?:about|on) that|how does that sound|are you (?:following|with me)|is this the plan that you want/i,
+            made: 'You checked that it actually landed instead of assuming it had.'
         },
         {
             key: 'recap',
-            pattern: /to recap|just to recap|to summari[sz]e|to sum (?:up|it up)|so to confirm|let me confirm what|(?:here'?s|what) we (?:did|covered) today/i,
-            made: 'Recapped the resolution so the customer left with a clear picture.',
+            praise: 8,
+            pattern: /to recap|just to recap|i'?d like to recap|to summari[sz]e|to sum (?:up|it up)|so to confirm|let me confirm what|(?:here'?s|what) we (?:did|covered) today/i,
+            made: 'Excellent recap. They came off the call knowing exactly what was decided and why.',
             missing: 'Recap: close by restating what you did and what it means for the customer.',
             missingWeight: 5
         },
         {
             key: 'nextSteps',
-            pattern: /next step|you (?:will|'ll) (?:receive|see|get|be)|within (?:\d+|twenty.four|forty.eight) (?:hours|business days|days)|i'?ll follow up|follow up with you|in \d+ (?:to \d+ )?(?:business )?days|by (?:monday|tuesday|wednesday|thursday|friday|the end of)/i,
-            made: 'Set a clear expectation for what happens after the call and when.',
+            praise: 6,
+            pattern: /next step|you (?:will|'ll) (?:receive|see|get|be)|within (?:\d+|twenty.four|forty.eight) (?:hours|business days|days)|i'?ll follow up|follow up with you|in \d+ (?:to \d+ )?(?:business )?days|by (?:monday|tuesday|wednesday|thursday|friday|the end of)|what happens is/i,
+            made: 'Clear next steps with a time frame attached. That is what stops the second call.',
             missing: 'Next steps: tell the customer exactly what happens next and by when, even when the answer is not what they wanted.',
             missingWeight: 7
         },
         {
             key: 'courtesyClose',
-            pattern: /anything else (?:i can (?:help|do|assist)|you need)|is there anything else|before (?:i let you go|we (?:hang up|wrap up|finish))/i,
-            made: 'Offered further help before closing the call.',
+            praise: 4,
+            pattern: /anything else (?:i can (?:help|do|assist)|you need)|is there anything else|any questions anything i can answer|before (?:i let you go|we (?:hang up|wrap up|finish))/i,
+            made: 'Solid close. You offered more help before wrapping up rather than rushing off the line.',
             missing: 'Close: ask if there is anything else before you wrap up.',
             missingWeight: 3
         }
@@ -259,9 +486,9 @@
         },
         {
             key: 'stalling',
-            weight: 6,
+            weight: 5,
             threshold: 3,
-            pattern: /one moment|just a (?:moment|second|sec)|bear with me|give me (?:one|a) (?:second|moment)|still (?:there|checking|loading)/i,
+            pattern: /one moment|just a (?:moment|second|sec)|bear with me|give me (?:one|a) (?:second|moment)|still (?:there|checking|loading)|it'?s just loading/i,
             text: 'Silence fillers came up repeatedly. Tell the customer what you are checking rather than asking them to keep waiting.'
         },
         {
@@ -288,7 +515,11 @@
     ];
 
     const FRUSTRATION = /frustrat|ridiculous|unacceptable|this is the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time|fed up|angry|upset|furious|waste of my time|sick of/i;
-    const APPRECIATION = /thank you so much|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful|amazing)|i (?:really )?appreciate (?:you|your|it|that)|you'?re the best|that'?s (?:great|perfect)/i;
+    // Something went wrong for the customer, even if they stayed polite about it.
+    const TROUBLE = /charged twice|double.?(?:bill|charg)|overcharg|shut off|shut.?off|disconnect|no power|outage|not working|broken|too high|can'?t afford|late fee|complain|my bill (?:is|went|doubled)|still (?:haven'?t|not) (?:received|got|fixed)/i;
+    // Tightened so the associate thanking the customer for holding cannot read
+    // as the customer praising the associate.
+    const APPRECIATION = /(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful|amazing)|i (?:really )?appreciate (?:you|your|it|that)|you'?re the best|thank you so much(?! for (?:holding|waiting|calling|your patience))/i;
     const HOLD_MENTION = /\bhold\b|hold on|one moment|bear with me/i;
     const TRANSFER = /transfer(?:ring)? you|i(?:'?m| am) going to transfer|let me transfer|get you (?:over )?to (?:the|another)/i;
     const WARM_TRANSFER = /stay on the line|i(?:'?ll| will) (?:stay|introduce|walk them through)|let me (?:explain|brief|fill) (?:them|the)|warm transfer|i(?:'?ll| will) give them the (?:details|background)/i;
@@ -299,8 +530,39 @@
     }
 
     function findQuote(turns, pattern, side) {
-        const match = turns.find(turn => turn.role === (side || 'agent') && pattern.test(turn.text));
+        const pool = side === 'customer'
+            ? turns.filter(turn => turn.role === 'customer')
+            : turns.filter(turn => turn.role !== 'customer');
+        const match = pool.find(turn => pattern.test(turn.text));
         return match ? clipQuote(match.text) : '';
+    }
+
+    /**
+     * Verint timestamps make silence measurable: compare when a turn starts to
+     * how long it could plausibly have taken to say, and what is left is the
+     * gap. An announced hold is expected; an unannounced one is dead air.
+     */
+    function findSilenceGaps(turns) {
+        const timed = turns.filter(turn => typeof turn.at === 'number');
+        const gaps = [];
+
+        for (let index = 0; index < timed.length - 1; index++) {
+            const current = timed[index];
+            const gap = timed[index + 1].at - current.at;
+            if (gap <= DEAD_AIR_SECONDS) continue;
+
+            const spokenFor = wordCount(current.text) / WORDS_PER_SECOND;
+            const silence = gap - spokenFor;
+            if (silence < DEAD_AIR_SECONDS) continue;
+
+            gaps.push({
+                at: current.at,
+                silence,
+                announced: strengthPattern('holdEtiquette').test(current.text) || HOLD_MENTION.test(current.text)
+            });
+        }
+
+        return gaps.sort((a, b) => b.silence - a.silence);
     }
 
     function bullet(text, quote) {
@@ -308,15 +570,16 @@
     }
 
     /**
-     * Reads a transcript and returns draft strengths and coaching points,
-     * each one anchored to the line that triggered it.
+     * Reads a transcript and returns draft strengths and coaching points, each
+     * one anchored to the line or the timestamp that triggered it.
      */
     function analyzeTranscript(rawText, options = {}) {
         const transcript = String(rawText || '').trim();
         if (!transcript) {
-            return { ok: false, reason: 'empty', strengths: [], improvements: [], stats: null };
+            return { ok: false, reason: 'empty', strengths: [], improvements: [], stats: null, meta: null };
         }
 
+        const meta = extractMetadata(transcript);
         const parsed = parseTranscript(transcript, options);
         const { agentText, customerText, turns } = parsed;
         const strengths = [];
@@ -324,7 +587,7 @@
 
         STRENGTH_RULES.forEach(rule => {
             if (rule.pattern.test(agentText)) {
-                strengths.push({ key: rule.key, text: rule.made, quote: findQuote(turns, rule.pattern) });
+                strengths.push({ key: rule.key, praise: rule.praise || 5, text: rule.made, quote: findQuote(turns, rule.pattern) });
             } else if (rule.missing) {
                 improvements.push({ key: rule.key, weight: rule.missingWeight || 5, text: rule.missing, quote: '' });
             }
@@ -344,20 +607,37 @@
         });
 
         const frustrated = FRUSTRATION.test(customerText);
-        if (frustrated) {
-            const empathyGap = improvements.find(item => item.key === 'empathy');
-            if (empathyGap) {
-                empathyGap.weight = 12;
-                empathyGap.text = 'Empathy: the customer signalled real frustration and it went unacknowledged. Name what they are dealing with before you move to the fix.';
-                empathyGap.quote = findQuote(turns, FRUSTRATION, 'customer');
-            }
+        const emotionalCall = frustrated || TROUBLE.test(customerText);
+        const empathyGapIndex = improvements.findIndex(item => item.key === 'empathy');
+
+        // Empathy is only worth coaching when there was something to empathise
+        // with. Flagging it on a routine setup call is noise the associate will
+        // rightly ignore, and it drags the whole review down with it.
+        if (empathyGapIndex >= 0 && !emotionalCall) {
+            improvements.splice(empathyGapIndex, 1);
+        } else if (empathyGapIndex >= 0 && frustrated) {
+            const empathyGap = improvements[empathyGapIndex];
+            empathyGap.weight = 12;
+            empathyGap.text = 'Empathy: the customer signalled real frustration and it went unacknowledged. Name what they are dealing with before you move to the fix.';
+            empathyGap.quote = findQuote(turns, FRUSTRATION, 'customer');
         }
 
         if (APPRECIATION.test(customerText)) {
             strengths.push({
                 key: 'customerReaction',
-                text: 'The customer voiced appreciation on the call, which is the clearest signal it landed.',
+                praise: 10,
+                text: 'The customer said it themselves before hanging up, which is the only review that really counts.',
                 quote: findQuote(turns, APPRECIATION, 'customer')
+            });
+        }
+
+        const positiveCategory = meta.categories.find(item => /advisor positive/i.test(item.name) && item.count > 0);
+        if (positiveCategory) {
+            strengths.push({
+                key: 'positiveExperience',
+                praise: 4,
+                text: `Verint's advisor positive experience category fired ${positiveCategory.count} time${positiveCategory.count === 1 ? '' : 's'} on this call. The system heard it too.`,
+                quote: ''
             });
         }
 
@@ -379,16 +659,37 @@
             });
         }
 
+        const gaps = findSilenceGaps(turns);
+        const longestHold = gaps.find(gap => gap.announced && gap.silence >= LONG_HOLD_SECONDS);
+        if (longestHold) {
+            improvements.push({
+                key: 'longHold',
+                weight: 7,
+                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. The hold was announced, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
+                quote: ''
+            });
+        }
+
+        const longestDeadAir = gaps.find(gap => !gap.announced);
+        if (longestDeadAir) {
+            improvements.push({
+                key: 'deadAirGap',
+                weight: 6,
+                text: `Dead air: about ${formatDuration(longestDeadAir.silence)} with nothing said at ${formatClock(longestDeadAir.at)}. Narrate what you are doing while the system loads so the quiet does not stack up.`,
+                quote: ''
+            });
+        }
+
         const totalWords = parsed.agentWords + parsed.customerWords;
-        const agentShare = totalWords >= 120 ? parsed.agentWords / totalWords : null;
-        if (parsed.labeled && agentShare !== null && agentShare >= 0.8) {
+        const agentShare = (parsed.labeled && totalWords >= 120) ? parsed.agentWords / totalWords : null;
+        if (agentShare !== null && agentShare >= 0.8) {
             improvements.push({
                 key: 'airtime',
                 weight: 4,
                 text: `Airtime: you carried about ${Math.round(agentShare * 100)}% of the talk time. Ask an open question and let the customer fill in the gaps.`,
                 quote: ''
             });
-        } else if (parsed.labeled && agentShare !== null && agentShare <= 0.3) {
+        } else if (agentShare !== null && agentShare <= 0.3) {
             improvements.push({
                 key: 'callControl',
                 weight: 4,
@@ -397,27 +698,53 @@
             });
         }
 
+        strengths.sort((a, b) => b.praise - a.praise);
         improvements.sort((a, b) => b.weight - a.weight);
+
+        const heavyIssues = improvements.filter(item => item.weight >= 8).length;
 
         return {
             ok: true,
+            meta,
+            headline: buildHeadline(strengths.length, heavyIssues, meta),
             // The drafts are capped so the email stays focused; the full lists
             // stay on the result so nothing is dropped without a trace.
-            strengths: strengths.slice(0, MAX_BULLETS),
-            improvements: improvements.slice(0, MAX_BULLETS),
+            strengths: strengths.slice(0, MAX_STRENGTH_BULLETS),
+            improvements: improvements.slice(0, MAX_ISSUE_BULLETS),
             allStrengths: strengths,
             allImprovements: improvements,
             stats: {
                 labeled: parsed.labeled,
+                timed: parsed.timed,
                 turns: parsed.turns.length,
                 agentWords: parsed.agentWords,
                 customerWords: parsed.customerWords,
                 agentTalkShare: agentShare,
                 customerFrustrated: frustrated,
                 strengthsFound: strengths.length,
-                improvementsFound: improvements.length
+                improvementsFound: improvements.length,
+                heavyIssues
             }
         };
+    }
+
+    /**
+     * A strong call should read as a strong call. The headline is the line the
+     * associate will actually remember, so it only fires when it is earned.
+     */
+    function buildHeadline(strengthCount, heavyIssues, meta) {
+        const lengthNote = meta && meta.durationLabel ? ` across ${meta.durationLabel} on the phone` : '';
+
+        if (strengthCount >= 7 && !heavyIssues) {
+            return `Outstanding call. You hit nearly every behaviour we coach to${lengthNote}, and the notes below are polish rather than problems. This is the call I would use to show someone else what good looks like.`;
+        }
+        if (strengthCount >= 5 && !heavyIssues) {
+            return `Really strong call${lengthNote}. The fundamentals were all there and nothing needed rescuing. Well done.`;
+        }
+        if (strengthCount >= 3 && heavyIssues <= 1) {
+            return 'Solid call with real strengths to build on.';
+        }
+        return '';
     }
 
     function toBulletText(items, emptyFallback) {
@@ -428,10 +755,11 @@
     }
 
     function buildStrengthsDraft(analysis) {
-        return toBulletText(
+        const bullets = toBulletText(
             analysis?.strengths,
             '- Nothing stood out clearly in the transcript. Add the one thing you would want repeated on the next call.'
         );
+        return analysis?.headline ? `${analysis.headline}\n\n${bullets}` : bullets;
     }
 
     function buildImprovementsDraft(analysis) {
@@ -444,22 +772,60 @@
     function buildAnalysisSummary(analysis) {
         if (!analysis?.ok) return 'Paste a transcript first.';
         const stats = analysis.stats || {};
+        const meta = analysis.meta || {};
         const trimmed = Math.max(0, (stats.strengthsFound || 0) - analysis.strengths.length)
             + Math.max(0, (stats.improvementsFound || 0) - analysis.improvements.length);
-        const parts = [
-            `${stats.turns || 0} turn${stats.turns === 1 ? '' : 's'} read`,
-            `${analysis.strengths.length} strength${analysis.strengths.length === 1 ? '' : 's'}`,
-            `${analysis.improvements.length} coaching point${analysis.improvements.length === 1 ? '' : 's'}`
-        ];
+
+        const parts = [];
+        if (meta.callDate) {
+            parts.push(`Call ${meta.callDate}${meta.callTime ? ` ${meta.callTime}` : ''}`);
+        }
+        if (meta.advisorDisplayName) parts.push(meta.advisorDisplayName);
+        if (meta.durationLabel) parts.push(`length ${meta.durationLabel}`);
+        parts.push(`${stats.turns || 0} turn${stats.turns === 1 ? '' : 's'} read`);
+        parts.push(`${analysis.strengths.length} strength${analysis.strengths.length === 1 ? '' : 's'}`);
+        parts.push(`${analysis.improvements.length} coaching point${analysis.improvements.length === 1 ? '' : 's'}`);
         if (trimmed > 0) {
             parts.push(`${trimmed} lower priority item${trimmed === 1 ? '' : 's'} held back to keep the email focused`);
         }
-        if (!stats.labeled) {
+        if (!stats.labeled && !stats.timed) {
             parts.push('no speaker labels found, so everything was read as the associate');
-        } else if (typeof stats.agentTalkShare === 'number') {
-            parts.push(`associate talk share ${Math.round(stats.agentTalkShare * 100)}%`);
         }
+
         return `${parts.join(' • ')}. Drafts are editable, review before you send.`;
+    }
+
+    function buildCallContextLines(rawText) {
+        const meta = extractMetadata(rawText);
+        const lines = [];
+        if (meta.callTime) lines.push(`- Call time: ${meta.callTime}`);
+        if (meta.durationLabel) lines.push(`- Call length: ${meta.durationLabel}`);
+        if (meta.categories.length) {
+            const named = meta.categories
+                .filter(item => item.count > 0)
+                .map(item => `${item.name} (${item.count})`)
+                .join(', ');
+            if (named) lines.push(`- Verint speech categories detected: ${named}`);
+        }
+        return lines;
+    }
+
+    /**
+     * Matches "Dimes, Alyssa" from an export against an "Alyssa Dimes" style
+     * dropdown option.
+     */
+    function matchAssociateOption(options, name) {
+        const key = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z\s]/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .sort()
+            .join(' ');
+
+        const target = key(name);
+        if (!target) return '';
+        return (options || []).find(option => key(option) === target) || '';
     }
 
     function clampForStorage(rawText) {
@@ -474,15 +840,40 @@
         return `${text.slice(0, MAX_PROMPT_TRANSCRIPT_CHARS)}\n[transcript truncated]`;
     }
 
+    // Stored and prompted transcripts drop the export chrome. A one line header
+    // keeps the facts that the chrome was carrying.
+    function prepareForStorage(rawText) {
+        const meta = extractMetadata(rawText);
+        const body = stripBoilerplate(rawText) || String(rawText || '').trim();
+        const header = [
+            meta.callDate ? `Call ${meta.callDate}` : '',
+            meta.callTime,
+            meta.advisorDisplayName,
+            meta.durationLabel ? `length ${meta.durationLabel}` : ''
+        ].filter(Boolean).join(' • ');
+
+        return clampForStorage(header ? `[${header}]\n\n${body}` : body);
+    }
+
+    function prepareForPrompt(rawText) {
+        return clampForPrompt(stripBoilerplate(rawText) || String(rawText || '').trim());
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callTranscript = {
+        extractMetadata,
+        stripBoilerplate,
         parseTranscript,
         analyzeTranscript,
         buildStrengthsDraft,
         buildImprovementsDraft,
         buildAnalysisSummary,
+        buildCallContextLines,
+        matchAssociateOption,
         clampForStorage,
         clampForPrompt,
+        prepareForStorage,
+        prepareForPrompt,
         MAX_STORED_TRANSCRIPT_CHARS,
         MAX_PROMPT_TRANSCRIPT_CHARS
     };

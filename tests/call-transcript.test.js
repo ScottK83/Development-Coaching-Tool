@@ -1,6 +1,10 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { suite } = require('./harness');
+
+const VERINT_EXPORT = fs.readFileSync(path.join(__dirname, 'fixtures', 'verint-export.txt'), 'utf8');
 
 function load(t) {
     t.installFakeBrowser();
@@ -74,7 +78,7 @@ suite('call transcript: speaker parsing', (t) => {
 suite('call transcript: strengths', (t) => {
     const { callTranscript } = load(t);
     const analysis = callTranscript.analyzeTranscript(GOOD_CALL, { associateName: 'Jamie Rivera' });
-    const found = keys(analysis.strengths);
+    const found = keys(analysis.allStrengths);
 
     t.check('analysis succeeds', analysis.ok === true);
     t.check('credits the branded greeting', found.includes('greeting'));
@@ -82,10 +86,14 @@ suite('call transcript: strengths', (t) => {
     t.check('credits ownership', found.includes('ownership'));
     t.check('credits verification', found.includes('verification'));
     t.check('credits hold etiquette', found.includes('holdEtiquette'));
-    t.check('caps the list so the email stays short', analysis.strengths.length <= 5);
+    t.check('caps the list so the email stays short', analysis.strengths.length <= 6);
+
+    // The customer's own words are the best praise there is, so they lead.
+    t.equal('customer reaction ranks first', analysis.strengths[0].key, 'customerReaction');
+    t.check('the greeting is not what crowds out the recap', keys(analysis.strengths).includes('recap'));
 
     const draft = callTranscript.buildStrengthsDraft(analysis);
-    t.check('draft is bulleted', draft.startsWith('- '));
+    t.check('draft is bulleted', draft.includes('\n- '));
     t.check('draft quotes the line that earned it', draft.includes('"'));
     t.check('draft avoids em dashes', !draft.includes('—'));
 
@@ -206,6 +214,141 @@ suite('call transcript: guards and summary', (t) => {
     t.equal('short transcripts are stored whole', callTranscript.clampForStorage('short one'), 'short one');
 });
 
+// The real input: a pasted Verint Interaction Review email.
+suite('call transcript: Verint export metadata', (t) => {
+    const { callTranscript } = load(t);
+    const meta = callTranscript.extractMetadata(VERINT_EXPORT);
+
+    t.equal('reads the call date', meta.callDate, '2026-08-04');
+    t.equal('reads the call time', meta.callTime, '12:38:26 PM');
+    t.equal('reads the advisor as the dropdown spells it', meta.advisorDisplayName, 'Alyssa Dimes');
+    t.equal('keeps the export spelling too', meta.advisorName, 'Dimes, Alyssa');
+    t.equal('reads the call length', meta.durationLabel, '18:24');
+    t.check('flags it as an export', meta.isVerintExport === true);
+    t.check('reads the speech categories', meta.categories.length >= 10);
+    t.check('strips the truncation ellipsis from a category name',
+        meta.categories.some((c) => c.name === 'Advisor Positive Exp' && c.count === 2));
+
+    t.equal('matches the advisor to a dropdown option',
+        callTranscript.matchAssociateOption(['Bob Smith', 'Alyssa Dimes'], meta.advisorDisplayName), 'Alyssa Dimes');
+    t.equal('does not invent a match',
+        callTranscript.matchAssociateOption(['Bob Smith'], meta.advisorDisplayName), '');
+
+    // A plain transcript has no header to read, and must not pretend otherwise.
+    const plain = callTranscript.extractMetadata('Agent: Hello.\nCustomer: Hi.');
+    t.equal('plain transcript reports no date', plain.callDate, '');
+    t.check('plain transcript is not flagged as an export', plain.isVerintExport === false);
+});
+
+suite('call transcript: Verint export is stripped to the call', (t) => {
+    const { callTranscript } = load(t);
+    const body = callTranscript.stripBoilerplate(VERINT_EXPORT);
+
+    t.check('drops the email header', !/Interaction Review/.test(body));
+    t.check('drops the category legend', !/Categories:/.test(body));
+    t.check('drops the blank QA form', !/Did advisor verify caller/.test(body));
+    t.check('drops the kudos checklist', !/Kudos from Evaluator/.test(body));
+    t.check('drops the legal footer', !/designated recipient/.test(body));
+    t.check('drops the evaluator signature', !/Knight, Scott/.test(body));
+    t.check('keeps the first thing said', /thank you for being a valued customer/.test(body));
+    t.check('keeps the last thing said', /you too bye now/.test(body));
+
+    // Stripping an already-clean transcript must not eat it.
+    const clean = 'Agent: Hello there.\nCustomer: Hi.';
+    t.equal('a plain transcript survives untouched', callTranscript.stripBoilerplate(clean), clean);
+});
+
+suite('call transcript: timestamped turns with no speaker labels', (t) => {
+    const { callTranscript } = load(t);
+    const parsed = callTranscript.parseTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+
+    t.check('reads every turn', parsed.turns.length > 100);
+    t.check('records timestamps', parsed.timed === true);
+    t.check('knows it had no speaker labels', parsed.labeled === false);
+    t.check('cue-attributes the customer', /very helpful thank you/.test(parsed.customerText));
+    t.check('does not credit the customer line to the advisor', !/very helpful thank you/.test(parsed.agentText));
+    t.check('advisor process language stays on the advisor side', /thank you for being a valued customer/.test(parsed.agentText));
+
+    // Talk share is meaningless without real labels, so it is not reported.
+    const analysis = callTranscript.analyzeTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+    t.equal('no talk share is claimed', analysis.stats.agentTalkShare, null);
+    t.check('and no airtime coaching is invented', !keys(analysis.allImprovements).includes('airtime'));
+});
+
+suite('call transcript: silence measured from timestamps', (t) => {
+    const { callTranscript } = load(t);
+    const analysis = callTranscript.analyzeTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+    const found = keys(analysis.allImprovements);
+
+    const hold = analysis.allImprovements.find((item) => item.key === 'longHold');
+    t.check('flags the long hold', Boolean(hold));
+    t.check('says how long it ran', /2m 21s/.test(hold.text));
+    t.check('says when it started', /at 4:30/.test(hold.text));
+    t.check('credits that the hold was announced', /announced/.test(hold.text));
+
+    const deadAir = analysis.allImprovements.find((item) => item.key === 'deadAirGap');
+    t.check('flags the unannounced gap', Boolean(deadAir));
+    t.check('says when it happened', /at 7:56/.test(deadAir.text));
+
+    t.check('short pauses are not flagged', found.filter((k) => k === 'deadAirGap').length === 1);
+});
+
+suite('call transcript: a good call reads as a good call', (t) => {
+    const { callTranscript } = load(t);
+    const analysis = callTranscript.analyzeTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+    const strengths = keys(analysis.allStrengths);
+
+    t.check('credits the recap', strengths.includes('recap'));
+    t.check('credits laying out every plan', strengths.includes('optionsOffered'));
+    t.check('credits the recommendation, not just the recital', strengths.includes('recommendation'));
+    t.check('credits the hold being announced', strengths.includes('holdEtiquette'));
+    t.check('credits the customer thanking them', strengths.includes('customerReaction'));
+    t.check('credits the Verint positive experience category', strengths.includes('positiveExperience'));
+
+    t.check('no heavy coaching points on a call this clean', analysis.stats.heavyIssues === 0);
+    t.check('leads with praise', /Outstanding call/.test(analysis.headline));
+    t.check('praise names the call length', /18:24/.test(analysis.headline));
+
+    const draft = callTranscript.buildStrengthsDraft(analysis);
+    t.check('the headline opens the draft', draft.startsWith('Outstanding call'));
+    t.check('bullets follow the headline', draft.includes('\n- '));
+    t.check('praise avoids em dashes', !draft.includes('—'));
+
+    // A weak call must not get the same headline.
+    const weak = callTranscript.analyzeTranscript('Agent: Yeah what.\nCustomer: My bill is wrong again.');
+    t.equal('no headline when it is not earned', weak.headline, '');
+});
+
+suite('call transcript: empathy is only coached when it was needed', (t) => {
+    const { callTranscript } = load(t);
+
+    // Routine setup call, nothing went wrong: silence on empathy is correct.
+    const routine = callTranscript.analyzeTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+    t.check('no empathy gap on a routine call', !keys(routine.allImprovements).includes('empathy'));
+
+    // Something went wrong, even politely: now it counts.
+    const trouble = callTranscript.analyzeTranscript([
+        'Agent: What is the account number?',
+        'Customer: I was charged twice this month and my bill doubled.',
+        'Agent: The charge posted on the 4th.'
+    ].join('\n'));
+    t.check('empathy gap on a problem call', keys(trouble.allImprovements).includes('empathy'));
+
+    // A self-correction is not empathy.
+    const selfCorrection = callTranscript.analyzeTranscript([
+        'Agent: The number is six zero one, i\'m sorry, six zero two.',
+        'Customer: Got it.'
+    ].join('\n'));
+    t.check('bare "I\'m sorry" mid-sentence is not credited as empathy',
+        !keys(selfCorrection.allStrengths).includes('empathy'));
+
+    const genuine = callTranscript.analyzeTranscript([
+        'Agent: I am so sorry about the wait you have had.',
+        'Customer: Thanks.'
+    ].join('\n'));
+    t.check('a real apology is credited', keys(genuine.allStrengths).includes('empathy'));
+});
+
 suite('call transcript: feeds the Copilot prompt', (t) => {
     const { callListening } = load(t);
 
@@ -233,4 +376,34 @@ suite('call transcript: feeds the Copilot prompt', (t) => {
     t.check('no transcript means no transcript block', !/source of truth/.test(withoutTranscript));
     t.check('no transcript means no quoting rule', !/quote a short phrase/.test(withoutTranscript));
     t.check('core requirements survive either way', /Return ONLY the final email body text/.test(withoutTranscript));
+
+    // A Verint paste carries facts the prompt should state outright.
+    const fromExport = callListening.buildPrompt({
+        employeeName: 'Alyssa Dimes',
+        listenedOn: '2026-08-04',
+        transcript: VERINT_EXPORT,
+        whatWentWell: '- Strong recap',
+        improvementAreas: '- Long hold'
+    }, 'Alyssa');
+
+    t.check('prompt states the call length', /Call length: 18:24/.test(fromExport));
+    t.check('prompt states the call time', /Call time: 12:38:26 PM/.test(fromExport));
+    t.check('prompt passes the speech categories as context', /Verint speech categories detected: .*Verification/.test(fromExport));
+    t.check('prompt carries the spoken transcript', /thank you for being a valued customer/.test(fromExport));
+    t.check('prompt drops the QA form', !/Did advisor verify caller/.test(fromExport));
+    t.check('prompt drops the legal footer', !/designated recipient/.test(fromExport));
+    t.check('prompt asks for genuine praise, not just a nod', /genuine, specific recognition/.test(fromExport));
+    t.check('prompt tells Copilot to match the tone to the call', /well earned pat on the back/.test(fromExport));
+});
+
+suite('call transcript: what gets stored', (t) => {
+    const { callTranscript } = load(t);
+    const stored = callTranscript.prepareForStorage(VERINT_EXPORT);
+
+    t.check('keeps a one line header of the facts', stored.startsWith('[Call 2026-08-04 • 12:38:26 PM • Alyssa Dimes • length 18:24]'));
+    t.check('stores what was said', /thank you for being a valued customer/.test(stored));
+    t.check('does not store the QA form', !/Did advisor verify caller/.test(stored));
+    t.check('does not store the legal footer', !/designated recipient/.test(stored));
+    t.check('comes in under the storage cap', stored.length <= callTranscript.MAX_STORED_TRANSCRIPT_CHARS + 40);
+    t.check('is smaller than the raw paste', stored.length < VERINT_EXPORT.length);
 });

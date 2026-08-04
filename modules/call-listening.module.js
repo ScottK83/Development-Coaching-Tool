@@ -2,9 +2,9 @@
     'use strict';
 
     function buildTranscriptSection(entry) {
-        const clamp = window.DevCoachModules?.callTranscript?.clampForPrompt
+        const prepare = window.DevCoachModules?.callTranscript?.prepareForPrompt
             || ((value) => String(value || '').trim());
-        const transcript = clamp(entry.transcript);
+        const transcript = prepare(entry.transcript);
         if (!transcript) return '';
 
         return `Call transcript (verbatim, use this as the source of truth):
@@ -13,6 +13,16 @@ ${transcript}
 """
 
 `;
+    }
+
+    function buildCallDetailLines(entry) {
+        const context = window.DevCoachModules?.callTranscript?.buildCallContextLines;
+        const extra = typeof context === 'function' ? context(entry.transcript) : [];
+        return [
+            `- Call date: ${entry.listenedOn}`,
+            `- Call reference: ${entry.callReference || 'Not provided'}`,
+            ...extra
+        ].join('\n');
     }
 
     function buildPrompt(entry, preferredName) {
@@ -24,8 +34,7 @@ ${transcript}
         return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
 
 Call details:
-- Call date: ${entry.listenedOn}
-- Call reference: ${entry.callReference || 'Not provided'}
+${buildCallDetailLines(entry)}
 
 ${transcriptSection}Feedback notes:
 What went well:
@@ -47,7 +56,8 @@ Write an email-ready coaching message to the associate.
 
 Requirements:
 - Professional, supportive, and specific
-- Start with recognition of strengths
+- Open with genuine, specific recognition. Where the notes show the call went well, say so plainly and warmly rather than rushing past it to the coaching. Praise the behaviour and why it mattered to the customer, not just "good job"
+- Match the tone to the call: if the strengths clearly outweigh the coaching points, this should read as a well earned pat on the back with a couple of refinements, not a correction
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line

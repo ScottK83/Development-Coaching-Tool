@@ -7266,8 +7266,8 @@ function getCallListeningEmployeeOptions() {
 
 function getCallListeningTranscriptForStorage() {
     const raw = (document.getElementById('callListeningTranscript')?.value || '').trim();
-    const clamp = window.DevCoachModules?.callTranscript?.clampForStorage;
-    return typeof clamp === 'function' ? clamp(raw) : raw;
+    const prepare = window.DevCoachModules?.callTranscript?.prepareForStorage;
+    return typeof prepare === 'function' ? prepare(raw) : raw;
 }
 
 function getCallListeningDraftFromForm() {
@@ -7461,6 +7461,35 @@ function mergeCallListeningDraftText(textareaId, draftText) {
     field.value = existing ? `${existing}\n${draftText}` : draftText;
 }
 
+// A Verint export already carries the call date and who took it, so the
+// supervisor should not have to retype either.
+function applyCallListeningTranscriptMetadata(meta) {
+    const applied = [];
+    if (!meta) return applied;
+
+    if (meta.callDate) {
+        const dateInput = document.getElementById('callListeningDate');
+        if (dateInput && dateInput.value !== meta.callDate) {
+            dateInput.value = meta.callDate;
+            applied.push(`call date ${meta.callDate}`);
+        }
+    }
+
+    const employeeSelect = document.getElementById('callListeningEmployeeSelect');
+    const matchOption = window.DevCoachModules?.callTranscript?.matchAssociateOption;
+    if (meta.advisorDisplayName && employeeSelect && !employeeSelect.value && typeof matchOption === 'function') {
+        const options = Array.from(employeeSelect.options).map(option => option.value).filter(Boolean);
+        const match = matchOption(options, meta.advisorDisplayName);
+        if (match) {
+            employeeSelect.value = match;
+            renderCallListeningHistoryForSelectedEmployee();
+            applied.push(match);
+        }
+    }
+
+    return applied;
+}
+
 function analyzeCallListeningTranscript() {
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -7484,6 +7513,8 @@ function analyzeCallListeningTranscript() {
         return;
     }
 
+    const applied = applyCallListeningTranscriptMetadata(analysis.meta);
+
     mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
     mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
 
@@ -7492,7 +7523,12 @@ function analyzeCallListeningTranscript() {
         summary.style.display = 'block';
     }
 
-    showToast('✅ Draft feedback written from the transcript. Edit it before you send.', 3500);
+    showToast(
+        applied.length
+            ? `✅ Draft feedback written. Filled in ${applied.join(' and ')} from the transcript.`
+            : '✅ Draft feedback written from the transcript. Edit it before you send.',
+        3500
+    );
 }
 
 function clearCallListeningTranscript() {
