@@ -189,9 +189,10 @@
         // "What did I say" is only half the story; the other half is whether
         // it landed. Rendered alongside the log rather than in a new tab —
         // it's the same question, and the app has enough destinations.
-        const outcomes = window.DevCoachModules?.coachingOutcomes;
-        outcomes?.renderForEmployee(document.getElementById('coachingOutcomesPanel'), employeeName);
-        outcomes?.renderTeamSummary(document.getElementById('coachingOutcomesTeamPanel'));
+        // The team rollup is handled at tab init, not here: it isn't about
+        // any one person, so it must not wait for someone to be selected.
+        window.DevCoachModules?.coachingOutcomes
+            ?.renderForEmployee(document.getElementById('coachingOutcomesPanel'), employeeName);
 
         if (!panel || !summary || !list) return;
 
@@ -666,6 +667,12 @@ Generate the coaching email for ${preferredName} now.`;
         if (!select || !status || !panel || !promptArea || !generateBtn) return;
 
         resetCoachingEmailUiState(select, status, panel, promptArea, outlookSection, outlookBody, outlookBtn);
+
+        // "Which coaching lands" is a team-wide question — render it as soon
+        // as the tab opens, before anyone is picked, and even when there is
+        // no metric data to build an email from.
+        window.DevCoachModules?.coachingOutcomes
+            ?.renderTeamSummary(document.getElementById('coachingOutcomesTeamPanel'));
 
         const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
         if ((!weeklyData || Object.keys(weeklyData).length === 0) && Object.keys(ytd).length === 0) {

@@ -165,6 +165,46 @@ suite('coachingOutcomes — the rollup that answers "what lands"', (t) => {
     t.check('pending events are excluded from the rollup', rows.every((r) => r.total > 0));
 });
 
+suite('coachingOutcomes — wiring', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const email = fs.readFileSync(path.join(ROOT, 'modules/coaching-email.module.js'), 'utf8');
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+    t.check('both panels exist in the page',
+        html.includes('id="coachingOutcomesPanel"') && html.includes('id="coachingOutcomesTeamPanel"'));
+    t.check('the module is in the loader', html.includes('modules/coaching-outcomes.module.js'));
+    t.check('it loads after metric-movement, whose polarity it depends on',
+        html.indexOf('modules/coaching-outcomes.module.js') > html.indexOf('modules/metric-movement.module.js'));
+
+    // Pulls one function's source out by brace-matching from its opening {.
+    function bodyOf(src, signature) {
+        const start = src.indexOf(signature);
+        if (start === -1) return '';
+        let i = src.indexOf('{', start);
+        let depth = 0;
+        for (let j = i; j < src.length; j++) {
+            if (src[j] === '{') depth++;
+            else if (src[j] === '}' && --depth === 0) return src.slice(start, j + 1);
+        }
+        return '';
+    }
+
+    const historyFn = bodyOf(email, 'function renderCoachingHistory');
+    const initFn = bodyOf(email, 'function initializeCoachingEmail');
+    t.check('both functions were located', historyFn.length > 0 && initFn.length > 0);
+
+    // The team rollup is not about any one person. Rendering it from
+    // renderCoachingHistory meant it stayed blank until someone was picked —
+    // hiding the view most worth acting on.
+    t.check('per-associate view renders on employee selection',
+        historyFn.includes('renderForEmployee'));
+    t.check('team rollup does NOT wait for an employee to be selected',
+        !historyFn.includes('renderTeamSummary'));
+    t.check('team rollup renders when the tab opens', initFn.includes('renderTeamSummary'));
+});
+
 suite('coachingOutcomes — degrades safely', (t) => {
     const api = setup(t, { weekly: {}, history: {} });
     t.equal('no data yields no outcomes, not a throw', api.buildOutcomes().length, 0);
