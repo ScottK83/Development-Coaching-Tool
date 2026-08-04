@@ -126,15 +126,16 @@ Requirements:
     function buildHistoryItemHtml(entry, escapeHtml) {
         const safeEscapeHtml = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
         const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
-        return `<li style="margin-bottom: 14px; line-height: 1.35;">
-            <div style="font-weight: bold; color: #37474f;">${safeEscapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</div>
+        const transcriptTag = entry.transcript ? ' • transcript saved' : '';
+        return `<li class="call-history-item">
+            <div class="call-history-title">${safeEscapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</div>
             <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${safeEscapeHtml(entry.whatWentWell || 'N/A')}</div>
             <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${safeEscapeHtml(entry.improvementAreas || 'N/A')}</div>
-            <div style="font-size: 0.82em; color: var(--text-secondary); margin-top: 4px;">Saved: ${safeEscapeHtml(createdAt)}</div>
-            <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-                <button type="button" data-call-action="load" data-entry-id="${safeEscapeHtml(entry.id)}" style="background: #607d8b; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Load</button>
-                <button type="button" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Copy Verint</button>
-                <button type="button" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.82em;">Delete</button>
+            <div class="call-history-meta">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</div>
+            <div class="flex-row" style="margin-top: 8px;">
+                <button type="button" data-call-action="load" data-entry-id="${safeEscapeHtml(entry.id)}">Load</button>
+                <button type="button" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}">Copy Verint</button>
+                <button type="button" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}">Delete</button>
             </div>
         </li>`;
     }

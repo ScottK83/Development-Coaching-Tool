@@ -896,6 +896,138 @@ textarea:focus-visible {
     letter-spacing: 0.03em;
 }
 
+/* --- Call Listening ---
+   This section is styled from tokens rather than inline hex so it follows the
+   theme in both manual dark mode and system dark mode. */
+#subSectionCallListening .call-panel {
+    margin-bottom: var(--space-5);
+    padding: var(--space-5);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+#subSectionCallListening .call-panel h3 {
+    margin: 0 0 var(--space-3) 0;
+    color: var(--text-primary);
+    font-size: 1em;
+    font-weight: 650;
+}
+
+#subSectionCallListening .call-panel > p {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    margin-bottom: var(--space-4);
+}
+
+#subSectionCallListening code {
+    background: var(--bg-surface-sunken);
+    color: var(--brand-text);
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+#subSectionCallListening input,
+#subSectionCallListening select,
+#subSectionCallListening textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+#subSectionCallListening textarea {
+    resize: vertical;
+    line-height: var(--leading-normal);
+}
+
+#subSectionCallListening textarea.call-mono {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+}
+
+#subSectionCallListening textarea[readonly] {
+    background: var(--bg-surface-sunken);
+}
+
+#subSectionCallListening input:focus,
+#subSectionCallListening select:focus,
+#subSectionCallListening textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: var(--shadow-focus);
+}
+
+#subSectionCallListening .call-note {
+    padding: var(--space-3) var(--space-4);
+    border-left: 3px solid var(--brand);
+    background: var(--brand-soft);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    font-size: 0.88em;
+    line-height: var(--leading-normal);
+}
+
+#subSectionCallListening .call-note-success {
+    border-left-color: var(--green);
+    background: var(--green-soft);
+}
+
+#subSectionCallListening .call-panel-action {
+    border: 1px solid var(--yellow);
+    background: var(--yellow-soft);
+}
+
+#subSectionCallListening .call-grid-setup {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--space-3);
+}
+
+#subSectionCallListening .call-field + .call-field {
+    margin-top: var(--space-3);
+}
+
+#subSectionCallListening .call-history {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#subSectionCallListening .call-history-item {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+    line-height: var(--leading-normal);
+}
+
+#subSectionCallListening .call-history-item:last-child {
+    border-bottom: none;
+}
+
+#subSectionCallListening .call-history-title {
+    font-weight: 650;
+    color: var(--text-primary);
+}
+
+#subSectionCallListening .call-history-meta {
+    font-size: 0.82em;
+    color: var(--text-tertiary);
+    margin-top: var(--space-1);
+}
+
+@media (max-width: 700px) {
+    #subSectionCallListening .call-grid-setup,
+    #subSectionCallListening .grid-2col {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- Results --- */
 #resultsSection {
     padding: var(--space-6);

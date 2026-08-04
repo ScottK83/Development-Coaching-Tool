@@ -609,93 +609,93 @@ Box 2 - Future Improvement Areas:
 
                     <!-- Call Listening Sub-section -->
                     <div id="subSectionCallListening" style="display: none;">
-                        <p style="color: #4a148c; margin-bottom: 20px;">Log call listening feedback, generate a Copilot prompt with Oscar context, and open an Outlook email draft.</p>
+                        <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Log call listening feedback, generate a Copilot prompt with Oscar context, and open an Outlook email draft.</p>
 
-                        <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #455a64;">
-                            <h3 style="color: #37474f; margin-top: 0;">🎧 Call Listening Setup</h3>
-                            <div id="callListeningStatus" style="display: none; margin-bottom: 12px; padding: 10px; background: #eceff1; border-left: 4px solid #455a64; border-radius: 4px; color: #37474f;"></div>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                        <div class="call-panel">
+                            <h3>🎧 Call Listening Setup</h3>
+                            <div id="callListeningStatus" class="call-note" style="display: none; margin-bottom: var(--space-4);"></div>
+                            <div class="call-grid-setup">
                                 <div>
-                                    <label for="callListeningEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--text-primary);">Select Associate:</label>
-                                    <select id="callListeningEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; cursor: pointer;">
+                                    <label class="label-bold" for="callListeningEmployeeSelect">Select Associate</label>
+                                    <select id="callListeningEmployeeSelect">
                                         <option value="">-- Choose an associate --</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="callListeningDate" style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--text-primary);">Call Date:</label>
-                                    <input type="date" id="callListeningDate" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em;">
+                                    <label class="label-bold" for="callListeningDate">Call Date</label>
+                                    <input type="date" id="callListeningDate">
                                 </div>
                                 <div>
-                                    <label for="callListeningReference" style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--text-primary);">Call Ref (optional):</label>
-                                    <input type="text" id="callListeningReference" placeholder="Interaction ID / case #" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em;">
+                                    <label class="label-bold" for="callListeningReference">Call Ref (optional)</label>
+                                    <input type="text" id="callListeningReference" placeholder="Interaction ID / case #">
                                 </div>
                             </div>
                         </div>
 
-                        <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #455a64;">
-                            <h3 style="color: #37474f; margin-top: 0;">🗒️ Call Transcript</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.9em;">Paste the transcript, then let it draft your feedback. Speaker labels like <code>Agent:</code> / <code>Customer:</code> give the best read. Everything it writes is editable.</p>
-                            <textarea id="callListeningTranscript" placeholder="Agent: Thank you for calling, my name is Jamie. How can I help?&#10;Customer: I've been charged twice and this is the third time I've called..." style="width: 100%; min-height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical;"></textarea>
-                            <div class="flex-row" style="margin-top: 12px;">
-                                <button type="button" id="analyzeCallTranscriptBtn" style="background: #00695c; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 260px;">🔍 Analyze Transcript &amp; Draft Feedback</button>
-                                <button type="button" id="clearCallTranscriptBtn" style="background: #78909c; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold;">Clear</button>
+                        <div class="call-panel">
+                            <h3>🗒️ Call Transcript</h3>
+                            <p>Paste the transcript, then let it draft your feedback. Speaker labels like <code>Agent:</code> / <code>Customer:</code> give the best read. Everything it writes is editable.</p>
+                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 180px;" placeholder="Agent: Thank you for calling, my name is Jamie. How can I help?&#10;Customer: I've been charged twice and this is the third time I've called..."></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-3);">
+                                <button type="button" id="analyzeCallTranscriptBtn" class="btn-primary">🔍 Analyze Transcript &amp; Draft Feedback</button>
+                                <button type="button" id="clearCallTranscriptBtn">Clear</button>
                             </div>
-                            <div id="callTranscriptAnalysisSummary" style="display: none; margin-top: 12px; padding: 10px; background: #e0f2f1; border-left: 4px solid #00695c; border-radius: 4px; color: #004d40; font-size: 0.88em;"></div>
+                            <div id="callTranscriptAnalysisSummary" class="call-note call-note-success" style="display: none; margin-top: var(--space-3);"></div>
                         </div>
 
-                        <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #455a64;">
-                            <h3 style="color: #37474f; margin-top: 0;">📝 Call Feedback Input</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="call-panel">
+                            <h3>📝 Call Feedback Input</h3>
+                            <div class="grid-2col">
                                 <div>
-                                    <label for="callListeningStrengths" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">What went well:</label>
-                                    <textarea id="callListeningStrengths" placeholder="Example: Great empathy, ownership, and clear next steps..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                    <label class="label-bold" for="callListeningStrengths">What went well</label>
+                                    <textarea id="callListeningStrengths" style="min-height: 140px;" placeholder="Example: Great empathy, ownership, and clear next steps..."></textarea>
                                 </div>
                                 <div>
-                                    <label for="callListeningImprovements" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Improvement opportunities:</label>
-                                    <textarea id="callListeningImprovements" placeholder="Example: Slow down discovery, confirm root cause before transferring..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                    <label class="label-bold" for="callListeningImprovements">Improvement opportunities</label>
+                                    <textarea id="callListeningImprovements" style="min-height: 140px;" placeholder="Example: Slow down discovery, confirm root cause before transferring..."></textarea>
                                 </div>
                             </div>
-                            <div style="margin-top: 12px;">
-                                <label for="callListeningOscarUrl" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Oscar / Knowledge Base URL (optional):</label>
-                                <input type="url" id="callListeningOscarUrl" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95em;">
+                            <div class="call-field" style="margin-top: var(--space-4);">
+                                <label class="label-bold" for="callListeningOscarUrl">Oscar / Knowledge Base URL (optional)</label>
+                                <input type="url" id="callListeningOscarUrl" placeholder="https://...">
                             </div>
-                            <div style="margin-top: 12px;">
-                                <label for="callListeningRelevantInfo" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Relevant information to include (optional):</label>
-                                <textarea id="callListeningRelevantInfo" placeholder="Add policy notes, process reminders, or examples you want included in the message..." style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            <div class="call-field">
+                                <label class="label-bold" for="callListeningRelevantInfo">Relevant information to include (optional)</label>
+                                <textarea id="callListeningRelevantInfo" style="min-height: 100px;" placeholder="Add policy notes, process reminders, or examples you want included in the message..."></textarea>
                             </div>
-                            <div style="margin-top: 12px;">
-                                <label for="callListeningManagerNotes" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Additional manager notes (optional):</label>
-                                <textarea id="callListeningManagerNotes" placeholder="Any tone/context notes for how you want this communicated..." style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                            <div class="call-field">
+                                <label class="label-bold" for="callListeningManagerNotes">Additional manager notes (optional)</label>
+                                <textarea id="callListeningManagerNotes" style="min-height: 90px;" placeholder="Any tone/context notes for how you want this communicated..."></textarea>
                             </div>
-                            <div class="flex-row" style="margin-top: 15px;">
-                                <button type="button" id="saveCallListeningBtn" style="background: #455a64; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 180px;">💾 Save Call Log</button>
-                                <button type="button" id="copyCallListeningVerintBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 180px;">📝 Copy Verint Note</button>
-                                <button type="button" id="exportCallListeningCsvBtn" style="background: #00838f; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px;">📥 Export Call Logs (CSV)</button>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #455a64;">
-                            <h3 style="color: #37474f; margin-top: 0;">🤖 Call Listening Copilot Prompt</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em;">Generate and copy a Copilot prompt using your feedback, Oscar URL, and relevant context.</p>
-                            <textarea id="callListeningPromptArea" readonly style="width: 100%; height: 190px; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; color: var(--text-primary); background: var(--bg-surface-raised); resize: vertical;"></textarea>
-                            <div class="flex-row" style="margin-top: 15px;">
-                                <button type="button" id="generateCallListeningPromptBtn" style="background: #455a64; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 260px;">🤖 Generate Call Listening Prompt</button>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="saveCallListeningBtn" class="btn-primary">💾 Save Call Log</button>
+                                <button type="button" id="copyCallListeningVerintBtn">📝 Copy Verint Note</button>
+                                <button type="button" id="exportCallListeningCsvBtn">📥 Export Call Logs (CSV)</button>
                             </div>
                         </div>
 
-                        <div id="callListeningOutlookSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff8e1; border-radius: 8px; border: 2px solid #ffb300;">
-                            <h3 style="color: #8d6e00; margin-top: 0;">📧 Generate Outlook Email</h3>
-                            <p style="color: #7a6a00; margin-bottom: 15px; font-size: 0.9em;">Paste Copilot's drafted message below, then generate an Outlook email.</p>
-                            <textarea id="callListeningOutlookBody" placeholder="Paste the Copilot-generated call feedback email here..." style="width: 100%; height: 200px; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; color: var(--text-primary); background: #fffdf7; resize: vertical;"></textarea>
-                            <div class="flex-row" style="margin-top: 15px;">
-                                <button type="button" id="generateCallListeningOutlookBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; min-width: 220px; opacity: 0.6;">📧 Generate Outlook Email</button>
+                        <div class="call-panel">
+                            <h3>🤖 Call Listening Copilot Prompt</h3>
+                            <p>Generate and copy a Copilot prompt using your feedback, Oscar URL, and relevant context.</p>
+                            <textarea id="callListeningPromptArea" class="call-mono" readonly style="height: 190px;"></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="generateCallListeningPromptBtn" class="btn-primary">🤖 Generate Call Listening Prompt</button>
                             </div>
                         </div>
 
-                        <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #455a64;">
-                            <h3 style="color: #37474f; margin-top: 0;">🗂️ Call Listening History</h3>
-                            <div id="callListeningHistorySummary" style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.9em;"></div>
-                            <ul id="callListeningHistoryList" style="margin: 0; padding-left: 18px; color: var(--text-primary);"></ul>
+                        <div id="callListeningOutlookSection" class="call-panel call-panel-action" style="display: none;">
+                            <h3>📧 Generate Outlook Email</h3>
+                            <p>Paste Copilot's drafted message below, then generate an Outlook email.</p>
+                            <textarea id="callListeningOutlookBody" class="call-mono" style="height: 200px;" placeholder="Paste the Copilot-generated call feedback email here..."></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;">📧 Generate Outlook Email</button>
+                            </div>
+                        </div>
+
+                        <div class="call-panel">
+                            <h3>🗂️ Call Listening History</h3>
+                            <div id="callListeningHistorySummary" class="text-muted-sm" style="margin-bottom: var(--space-3);"></div>
+                            <ul id="callListeningHistoryList" class="call-history"></ul>
                         </div>
                     </div>
 

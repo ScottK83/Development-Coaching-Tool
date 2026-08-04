@@ -6987,12 +6987,9 @@ async function initApp() {
     // Dark mode toggle
     (function initDarkMode() {
         var STORAGE_KEY = 'devCoachingTool_theme';
-        var saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            document.documentElement.setAttribute('data-theme', saved);
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
+        // bootstrap.js already resolved data-theme before first paint, so this
+        // only wires the toggle. Setting the attribute again here would risk
+        // drifting from what the stylesheet was rendered against.
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         var btn = document.getElementById('darkModeToggle');
         if (btn) {
