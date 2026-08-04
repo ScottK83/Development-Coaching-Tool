@@ -1183,6 +1183,94 @@ textarea:focus-visible {
     z-index: 10000;
     align-items: center;
     justify-content: center;
+    padding: var(--space-5);
+}
+
+/* Overlays built in JS toggle visibility with this modifier rather than an
+   inline display, so the panel keeps its token styling in both themes. */
+.modal-overlay.is-open {
+    display: flex;
+}
+
+.modal-card {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-6);
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.modal-card-sm {
+    max-width: 420px;
+}
+
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.modal-head h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 1.1em;
+    line-height: 1;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Keyboard shortcut help */
+.shortcut-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) 0;
+}
+
+.shortcut-row span {
+    color: var(--text-secondary);
+    font-size: 0.92em;
+}
+
+.shortcut-row kbd {
+    flex: 0 0 auto;
+    min-width: 74px;
+    text-align: center;
+    background: var(--bg-surface-sunken);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    font-family: inherit;
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .modal-content {

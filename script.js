@@ -4321,49 +4321,88 @@ function updateTeamSelection() {
 // KEYBOARD SHORTCUTS
 // ============================================
 
+// The shortcuts the app actually honours. Kept in one list so the help
+// overlay below can't drift out of sync with the handler — an undocumented
+// shortcut may as well not exist.
+const KEYBOARD_SHORTCUTS = [
+    { keys: 'Ctrl + S', label: 'Back up / export data' },
+    { keys: 'Ctrl + H', label: 'Jump to My Team' },
+    { keys: 'Ctrl + T', label: 'Jump to Coaching Tips' },
+    { keys: 'Esc',      label: 'Close the open dialog' },
+    { keys: '?',        label: 'Show this list' }
+];
+
+// Modals are appended to <body> under an id ending in Modal/Overlay. Escape
+// closes the most recently opened one.
+function closeTopmostModal() {
+    const open = document.querySelectorAll('body > [id$="Modal"], body > [id$="Overlay"]');
+    const top = open[open.length - 1];
+    if (!top) return false;
+    top.remove();
+    return true;
+}
+
+function toggleShortcutHelp() {
+    const existing = document.getElementById('shortcutHelpOverlay');
+    if (existing) { existing.remove(); return; }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'shortcutHelpOverlay';
+    overlay.className = 'modal-overlay is-open';
+    const rows = KEYBOARD_SHORTCUTS.map(s =>
+        `<div class="shortcut-row"><kbd>${escapeHtml(s.keys)}</kbd><span>${escapeHtml(s.label)}</span></div>`
+    ).join('');
+    overlay.innerHTML =
+        `<div class="modal-card modal-card-sm">` +
+        `<div class="modal-head"><h3>Keyboard shortcuts</h3>` +
+        `<button type="button" class="modal-close" aria-label="Close">&#10005;</button></div>` +
+        `<div class="shortcut-list">${rows}</div></div>`;
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('.modal-close')) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+}
+
 function initializeKeyboardShortcuts() {
+    document.getElementById('shortcutHelpBtn')?.addEventListener('click', toggleShortcutHelp);
+
     document.addEventListener('keydown', (e) => {
-        // Don't trigger when typing in inputs
+        // Escape closes dialogs even from inside a field — that's the one
+        // shortcut you reach for while typing.
+        if (e.key === 'Escape' && closeTopmostModal()) {
+            e.preventDefault();
+            return;
+        }
+
+        // Don't trigger the rest while typing in inputs
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
             return;
         }
-        
-        // Ctrl+G - Generate email
-        if (e.ctrlKey && e.key === 'g') {
+
+        // ? - Shortcut help
+        if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            const generateBtn = document.getElementById('generateEmailBtn');
-            if (generateBtn && generateBtn.style.display !== 'none') {
-                generateBtn.click();
-            }
+            toggleShortcutHelp();
+            return;
         }
-        
+
         // Ctrl+S - Save/backup
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             document.getElementById('exportDataBtn')?.click();
         }
-        
-        // Ctrl+H - Employee History
+
+        // Ctrl+H - My Team
         if (e.ctrlKey && e.key === 'h') {
             e.preventDefault();
             document.getElementById('coachingEmailBtn')?.click();
         }
-        
+
         // Ctrl+T - Tips Management
         if (e.ctrlKey && e.key === 't') {
             e.preventDefault();
             showOnlySection('manageDataSection');
             document.getElementById('subNavCoachingTips')?.click();
-        }
-        
-        // Escape - Clear form
-        if (e.key === 'Escape') {
-            const employeeSelect = document.getElementById('employeeSelect');
-            if (employeeSelect && employeeSelect.value) {
-                employeeSelect.value = '';
-                employeeSelect.dispatchEvent(new Event('change'));
-                showToast('✅ Form cleared');
-            }
         }
     });
 }
