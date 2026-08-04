@@ -1933,6 +1933,21 @@
         `Excited to see where you take it next.`
     ];
 
+    // Used when nothing improved. "Keep climbing!" under a wall of red reads
+    // like nobody actually looked at the numbers.
+    const GROWTH_REGROUP_CLOSERS = [
+        `One stretch doesn't define you — let's pick one thing and go after it together.`,
+        `Everybody has a period like this. Let's talk through what got in the way.`,
+        `I'm not worried — let's focus on one metric and build from there.`,
+        `Let's regroup on this one. Pick the focus area above and we'll work it together.`
+    ];
+
+    const GROWTH_HOLDING_INTRO = [
+        `Still solid ✅`,
+        `Holding strong ✅`,
+        `Didn't slip ✅`
+    ];
+
     function getGrowthComparisonContext(comparisonType) {
         if (comparisonType === 'wow') {
             const keys = getPeriodKeys('week');
@@ -2049,6 +2064,32 @@
         return out;
     }
 
+    // Metrics that barely moved but are still sitting at or above target. When
+    // nothing improved these are the only honest positive we have, and they are
+    // a real one: holding target through a rough stretch is worth naming.
+    function computeSteadyAtTarget(latestEmp, baselineEmp) {
+        const registry = typeof METRICS_REGISTRY !== 'undefined' ? METRICS_REGISTRY : {};
+        const meetsTarget = typeof metricMeetsTarget === 'function' ? metricMeetsTarget : null;
+        if (!meetsTarget) return [];
+        const out = [];
+        Object.keys(registry).filter(k => !PULSE_EXCLUDED_METRICS.includes(k)).forEach(metricKey => {
+            const baseVal = parseFloat(baselineEmp[metricKey]);
+            const latestVal = parseFloat(latestEmp[metricKey]);
+            if (!Number.isFinite(baseVal) || !Number.isFinite(latestVal)) return;
+            const delta = typeof metricDelta === 'function'
+                ? metricDelta(metricKey, latestVal, baseVal)
+                : latestVal - baseVal;
+            if (Math.abs(delta) >= getGrowthNoiseThreshold(metricKey)) return;
+            if (!meetsTarget(metricKey, latestVal)) return;
+            out.push({
+                metricKey,
+                label: registry[metricKey]?.label || metricKey,
+                latestValue: latestVal
+            });
+        });
+        return out;
+    }
+
     function pickGrowthFocalPoint(latestEmp, analysisPeriodType, latestKey) {
         const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
             || window.analyzeTrendMetrics;
@@ -2102,6 +2143,18 @@
             }
         }
 
+        // Nothing improved. Don't send an all-red message with no positive in
+        // it — surface what they held at target so the note is honest but fair.
+        if (improvements.length === 0) {
+            const steady = computeSteadyAtTarget(latestEmp, baselineEmp).slice(0, 3);
+            if (steady.length) {
+                message += `\n\n${pick(GROWTH_HOLDING_INTRO)}`;
+                steady.forEach(s => {
+                    message += `\n• ${s.label}: still at ${fmtVal(s.metricKey, s.latestValue)}`;
+                });
+            }
+        }
+
         const focalPoint = pickGrowthFocalPoint(latestEmp, ctx.analysisPeriodType, ctx.latestKey);
         if (focalPoint) {
             let tipText = '';
@@ -2123,7 +2176,10 @@
             }
         }
 
-        message += `\n\n${pick(GROWTH_CLOSERS)}`;
+        // Only swap to the regroup tone when things actually went backwards —
+        // a flat period is not a "let's regroup" conversation.
+        const wentBackwards = improvements.length === 0 && declines.length > 0;
+        message += `\n\n${pick(wentBackwards ? GROWTH_REGROUP_CLOSERS : GROWTH_CLOSERS)}`;
         return message;
     }
 

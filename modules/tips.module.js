@@ -9,7 +9,7 @@ scheduleAdherence,Keep a visible timer on your desk for break times
 scheduleAdherence,Put break end times in Outlook calendar with pop-up alerts
 scheduleAdherence,If you're consistently late from breaks - set a timer for 2 minutes before break ends
 scheduleAdherence,Review your Verint schedule every Sunday night so you know your week
-scheduleAdherence,Keep your workstation logged in during breaks to avoid login delays
+scheduleAdherence,Lock your screen at breaks instead of logging all the way out - you come back ready instead of waiting on a full login
 scheduleAdherence,Have your supervisor's number saved - call immediately if you'll be late
 scheduleAdherence,If system issues make you late - report it right away so we can give you next steps and keep you in adherence
 scheduleAdherence,Set a recurring daily alarm 10 minutes before shift starts for routine consistency
@@ -67,7 +67,7 @@ transfers,Build relationships with other departments so warm transfers are smoot
 transfers,Know what your department can and can't do - over-transferring costs you ownership
 transfers,Reach out to a peer with low transfers to see how they're handling them
 transfers,Resist the urge to transfer just because a call is getting hard - that's where learning happens
-transfers,Check if a tool or permission upgrade would let you handle more - ask your supe
+transfers,If you keep transferring because you don't have access to something - ask your supe whether you can get that access
 transfers,Apologize in advance for any wait: 'They may have a short wait - thanks for hanging in'
 transfers,Track your personal transfer rate daily - awareness alone reduces it
 transfers,Before transferring ask yourself 'What would a senior rep do here?'
@@ -79,27 +79,27 @@ aht,Memorize top 5 most common customer questions to avoid looking up every time
 aht,Practice your greeting and closing so they flow without stalling - smooth pace beats fumbling through them
 aht,Type account notes WHILE talking - not in silence after
 aht,Have frequently-used links bookmarked and organized in toolbar
-aht,Use dual monitors if available - one for customer info - one for tools
+aht,Work both monitors on every call - account and notes on one - knowledge base and tools on the other - alt-tabbing costs you seconds every single call
 aht,Learn keyboard shortcuts for your main programs - mouse clicking adds 5-10 seconds per call
 aht,Don't over-explain simple things - 'Your payment is due the 15th' not a 3-minute explanation of billing cycles
 aht,Review your longest calls weekly - find your time-wasters and eliminate them
 aht,Don't type a full sentence when a phrase will do - notes are for you not a novel
-aht,Identify your 2 slowest tasks and find a faster way - that's 80% of the gain
+aht,Identify your 2 slowest tasks and find a faster way - almost all of your time savings will come from those two
 aht,Pre-fill customer verification info during greeting not in silence afterward
 aht,Don't re-verify information if it's already in account notes from prior call
 aht,Keep a cheat sheet of your top 20 knowledge base articles one click away
 aht,If customer is rambling - gently redirect: 'So what I'm hearing is X - let me solve that'
 aht,Avoid over-apologizing - one genuine 'I'm sorry for the wait' is enough
-aht,Practice saying 'Great question - here's the answer' in 3 seconds - don't stall
+aht,Have a ready opener for the answers you know cold - 'Great question - here's how that works' - so you're not stalling while you get your thoughts together
 aht,If you realize mid-call you took the wrong path - pivot fast - don't compound
-aht,Batch similar knowledge searches: if you need 3 things pull them all at once
-aht,Know which fields are required vs optional in your wrap - skip optional when time-pressed
+aht,If you need to look up 3 things - look them all up in one trip instead of bouncing back and forth between screens
+aht,Know which wrap fields actually matter - fill those in well and don't gold-plate the rest
 aht,Stop multi-tasking on simple calls - focus equals speed
-aht,Write macros or snippets for common email follow-ups - saves minutes per call
+aht,Save your common follow-up emails as reusable text you can paste - beats retyping the same thing every call
 aht,Listen fully the first time so customer doesn't have to repeat themselves
 aht,Role-play your top 3 call types with a peer weekly - muscle memory wins
 acw,Start documentation DURING the call not after - fill in account notes while talking
-acw,Use text expander shortcuts for common phrases like 'Customer called regarding billing question'
+acw,Keep your common note phrases saved somewhere you can paste from - 'Customer called regarding billing question' shouldn't be retyped 20 times a day
 acw,Have your wrap-up template ready to go - fill in blanks rather than typing from scratch
 acw,Use consistent abbreviations so you type faster - create your own shorthand system
 acw,Don't write a novel - brief accurate notes are better than essays
@@ -112,7 +112,7 @@ acw,Use a 3-line note template: what issue / what action / what to watch for
 acw,If account has action pending - set followup flag immediately - don't wait till end
 acw,Tab between fields using keyboard not mouse - saves seconds per field
 acw,Close unneeded windows between calls - don't hunt through 10 tabs during wrap
-acw,Standardize your disposition codes - decide same code for same situation
+acw,Be consistent with your wrap codes - the same situation should get the same code every time
 acw,If ACW crept up over past week - review what changed in your process
 acw,Use the prior call's note as a starting point when customer is a repeat caller
 acw,Don't rewrite customer name or account number if it auto-populates
@@ -120,8 +120,8 @@ acw,If wrap requires a follow-up - do the follow-up action FIRST then note secon
 acw,Save your top 10 wrap templates in a text file - copy-paste not retype
 acw,Don't overthink the perfect note - good enough beats perfect and late
 acw,Pre-decide your category tags during the call not after
-acw,Clean up your text snippets monthly - remove outdated ones
-acw,Log any system issues that slow you down - pattern builds case for fix
+acw,Review your saved note phrases monthly - delete anything that's out of date
+acw,Log any system issues that slow you down - once we can show a pattern we can push to get it fixed
 holdTime,Default to narrating instead of holding for lookups - 'I'm pulling up your account now' keeps them with you - reserve hold for when you genuinely can't talk through it
 holdTime,Keep frequently used screens already open in browser tabs
 holdTime,Learn keyboard shortcuts for your main tools - mouse clicking adds 5-10 seconds per call
@@ -142,7 +142,7 @@ holdTime,Don't hold to 'think' - just explain you're considering options out lou
 holdTime,If the system is slow - acknowledge it: 'My system is loading - thanks for your patience'
 holdTime,Hold music is not connection - always check in - silence means they hang up
 holdTime,Practice navigating your systems during downtime so it's muscle memory
-holdTime,If training tells you to hold while doing X - see if you can do X unmuted
+holdTime,If you were trained to hold for a certain task - check whether you can actually do that task while still talking to the customer
 holdTime,Prep for common call types at start of shift - know where things live
 overallSentiment,Smile while talking - customers hear it in your voice even on the phone
 overallSentiment,Use customer's name at least twice during call - beginning and end
@@ -235,7 +235,7 @@ managingEmotions,Don't check email or texts between calls on tough shifts - stay
 managingEmotions,Write down what went well each day - combats the negativity bias
 managingEmotions,Pair up with a peer for venting sessions during breaks not during calls
 managingEmotions,If you feel your voice tightening - take one slow breath before speaking
-managingEmotions,Remind yourself: you chose this seat today - empowers over victimization
+managingEmotions,Remind yourself you chose to be here today - it puts you back in the driver's seat instead of feeling like the shift is happening to you
 managingEmotions,If a customer is abusive - use your exit script - you don't have to take abuse
 managingEmotions,After swearing or yelling calls - talk to your supe for a reset - don't absorb it
 managingEmotions,Practice 'name it to tame it' - notice 'I'm feeling frustrated' and intensity drops
@@ -277,7 +277,7 @@ cxRepOverall,If you promise a callback - put it in your calendar with a specific
 cxRepOverall,Use the customer's preferred name - ask 'Is it Mike or Michael?' early
 cxRepOverall,Show expertise: 'Here's what usually works in situations like yours'
 cxRepOverall,When giving bad news - lead with what you CAN do first
-cxRepOverall,Always give a ticket or reference number - customers feel more secure with one
+cxRepOverall,Give the reference or confirmation number whenever there is one - customers feel more secure with something to hold on to
 cxRepOverall,Verify contact info at end of call - updates prevent future miscalls
 cxRepOverall,Mention related services only when genuinely relevant - not scripted upsell
 cxRepOverall,If call reveals an unrelated issue - address it don't leave them to call back
