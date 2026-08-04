@@ -186,6 +186,13 @@
     function renderCoachingHistory(employeeName) {
         const { panel, summary, list } = getCoachingHistoryElements();
 
+        // "What did I say" is only half the story; the other half is whether
+        // it landed. Rendered alongside the log rather than in a new tab —
+        // it's the same question, and the app has enough destinations.
+        const outcomes = window.DevCoachModules?.coachingOutcomes;
+        outcomes?.renderForEmployee(document.getElementById('coachingOutcomesPanel'), employeeName);
+        outcomes?.renderTeamSummary(document.getElementById('coachingOutcomesTeamPanel'));
+
         if (!panel || !summary || !list) return;
 
         const delegated = window.DevCoachModules?.coaching?.renderHistoryView;
