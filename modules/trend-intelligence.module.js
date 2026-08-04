@@ -346,7 +346,7 @@ Write the complete email.`;
 
     function buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins) {
         if (warnings.length > 0 || wins.length > 0) return '';
-        return `<div style="color: #666; padding: 15px; background: #f5f5f5; border-radius: 6px; text-align: center;"><p style="margin: 0;">📊 No significant trends detected this period. ${_esc(employeeName)} is performing steadily.</p></div>`;
+        return `<div style="color: var(--text-secondary); padding: 15px; background: var(--bg-surface-raised); border-radius: 6px; text-align: center;"><p style="margin: 0;">📊 No significant trends detected this period. ${_esc(employeeName)} is performing steadily.</p></div>`;
     }
 
     function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow', context = {}) {
@@ -361,12 +361,12 @@ Write the complete email.`;
         const thirdEmp = buildEmployeeAggregateForPeriod(employeeName, buckets.thirdKeys);
 
         if (!currentEmp) {
-            container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Selected employee has no data in the selected comparison window.</div>';
+            container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Selected employee has no data in the selected comparison window.</div>';
             return;
         }
 
         if (!prevEmp) {
-            container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} analysis. Add more historical data.</div>`;
+            container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} analysis. Add more historical data.</div>`;
             return;
         }
 
@@ -378,7 +378,7 @@ Write the complete email.`;
 
         const coachingImpact = calculateCoachingImpact(employeeName, currentEmp);
 
-        let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
+        let html = `<div style="background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">`;
         html += buildIndividualTrendHeaderHtml(employeeName, buckets.descriptor, currentEmp, prevEmp, thirdEmp);
         html += buildIndividualTrendBriefSummaryHtml(currentEmp, prevEmp, buckets.descriptor, context);
         html += buildIndividualTrendItemsSectionHtml('🚨 Attention Needed:', '#e53935', '#e53935', '#ffebee', warnings);
@@ -499,7 +499,7 @@ Write the complete email.`;
         const downfallExamples = downfalls.slice(0, 3);
         const chipsHtml = (names, borderColor) => {
             if (!names.length) return '';
-            return `<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle;">${names.map(name => `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" style="border: 1px solid ${borderColor}; background: #fff; color: #1f2f46; border-radius: 999px; padding: 2px 8px; font-size: 0.8em; font-weight: 700; cursor: pointer;">${_esc(name)}</button>`).join('')}</span>`;
+            return `<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle;">${names.map(name => `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" style="border: 1px solid ${borderColor}; background: var(--bg-surface); color: #1f2f46; border-radius: 999px; padding: 2px 8px; font-size: 0.8em; font-weight: 700; cursor: pointer;">${_esc(name)}</button>`).join('')}</span>`;
         };
 
         return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #d4e3fb; border-radius: 8px; background: #f8fbff;">
@@ -517,7 +517,7 @@ Write the complete email.`;
         html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
         html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor}; display: flex; gap: 8px; flex-wrap: wrap;">`;
         names.forEach(name => {
-            html += `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" title="Open ${_esc(name)} trend detail" style="border: 1px solid ${borderColor}; background: #fff; color: #1f2f46; border-radius: 999px; padding: 6px 10px; font-size: 0.86em; font-weight: 600; cursor: pointer;">${_esc(name)}</button>`;
+            html += `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" title="Open ${_esc(name)} trend detail" style="border: 1px solid ${borderColor}; background: var(--bg-surface); color: #1f2f46; border-radius: 999px; padding: 6px 10px; font-size: 0.86em; font-weight: 600; cursor: pointer;">${_esc(name)}</button>`;
         });
         html += `</div></div>`;
         return html;
@@ -531,7 +531,7 @@ Write the complete email.`;
         const buckets = getTrendComparisonBuckets(keys, periodType);
 
         if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
-            container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} group analysis.</div>`;
+            container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for ${buckets.descriptor.label} group analysis.</div>`;
             return;
         }
 
@@ -556,7 +556,7 @@ Write the complete email.`;
             classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp, context);
         });
 
-        let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">`;
+        let html = `<div style="background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">`;
         html += buildGroupTrendHeaderHtml(buckets);
         html += buildGroupTrendSummaryCardsHtml(teamInsights);
         html += buildGroupTrendBriefSummaryHtml(teamInsights, buckets.descriptor);

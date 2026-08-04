@@ -113,7 +113,7 @@
         
         const content = document.createElement('div');
         content.style.cssText = `
-            background: white;
+            background: var(--bg-surface);
             padding: 30px;
             border-radius: 8px;
             text-align: center;
@@ -184,7 +184,7 @@
         
         const dialog = document.createElement('div');
         dialog.style.cssText = `
-            background: white;
+            background: var(--bg-surface);
             border-radius: 8px;
             padding: 30px;
             max-width: 500px;
@@ -194,7 +194,7 @@
         
         const titleEl = document.createElement('h2');
         titleEl.textContent = title;
-        titleEl.style.cssText = 'margin-top: 0; margin-bottom: 15px; color: #333;';
+        titleEl.style.cssText = 'margin-top: 0; margin-bottom: 15px; color: var(--text-primary);';
         dialog.appendChild(titleEl);
         
         const contentEl = document.createElement('div');
@@ -203,7 +203,7 @@
         } else {
             contentEl.appendChild(content);
         }
-        contentEl.style.cssText = 'margin-bottom: 20px; color: #666; line-height: 1.6;';
+        contentEl.style.cssText = 'margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6;';
         dialog.appendChild(contentEl);
         
         const buttonsContainer = document.createElement('div');

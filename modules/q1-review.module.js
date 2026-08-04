@@ -465,7 +465,7 @@
         var data = buildQ1ReviewData();
 
         if (data.employees.length === 0) {
-            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No data available. Upload weekly or YTD data to see review prep.</p>';
+            container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No data available. Upload weekly or YTD data to see review prep.</p>';
             return;
         }
 
@@ -481,9 +481,9 @@
         html += '</div>';
 
         // Employee selector
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">';
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">';
         html += '<label for="q1ReviewEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Associate:</label>';
-        html += '<select id="q1ReviewEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">';
+        html += '<select id="q1ReviewEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; cursor: pointer;">';
         html += '<option value="">-- Choose an associate --</option>';
         data.employees.forEach(function (emp) {
             html += '<option value="' + _escapeHtml(emp.name) + '">' + _escapeHtml(emp.name) + '</option>';
@@ -516,7 +516,7 @@
 
         var emp = q1Data.employees.find(function (e) { return e.name === employeeName; });
         if (!emp) {
-            detailContainer.innerHTML = '<p style="color: #999; text-align: center;">No data for this employee.</p>';
+            detailContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center;">No data for this employee.</p>';
             return;
         }
 
@@ -538,8 +538,8 @@
         if (emp.onOffResult) {
             var onOffMod = window.DevCoachModules?.onOffTracker;
             if (onOffMod?.buildOnOffScoreTableHtml) {
-                html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-                html += '<h3 style="margin-top: 0; color: #1a1a2e;">On/Off Track Score</h3>';
+                html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+                html += '<h3 style="margin-top: 0; color: var(--text-primary);">On/Off Track Score</h3>';
                 if (emp.onOffResult.isComplete) {
                     var avg = emp.onOffResult.ratingAverage;
                     var trackColor = avg >= 2.5 ? '#2e7d32' : (avg >= 1.5 ? '#f57f17' : '#c62828');
@@ -552,38 +552,38 @@
             }
         }
 
-        html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h3 style="margin-top: 0; color: #1a1a2e;">' + _escapeHtml(emp.name) + ' &mdash; ' + (q1Data.dataSource === 'ytd' ? 'YTD' : 'Q1') + ' Overview</h3>';
+        html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h3 style="margin-top: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + ' &mdash; ' + (q1Data.dataSource === 'ytd' ? 'YTD' : 'Q1') + ' Overview</h3>';
 
         // Summary badges
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">';
-        html += '<span style="padding: 8px 16px; border-radius: 16px; background: #e8f5e9; color: #2e7d32; font-weight: bold;">' + meetingCount + '/' + totalMetrics + ' Meeting Target</span>';
+        html += '<span style="padding: 8px 16px; border-radius: 16px; background: var(--green-soft); color: var(--green-text); font-weight: bold;">' + meetingCount + '/' + totalMetrics + ' Meeting Target</span>';
         html += '<span style="padding: 8px 16px; border-radius: 16px; background: #e3f2fd; color: #1565c0; font-weight: bold;">' + improvingCount + ' Trending Up</span>';
         if (decliningCount > 0) {
-            html += '<span style="padding: 8px 16px; border-radius: 16px; background: #fbe9e7; color: #c62828; font-weight: bold;">' + decliningCount + ' Trending Down</span>';
+            html += '<span style="padding: 8px 16px; border-radius: 16px; background: #fbe9e7; color: var(--red-text); font-weight: bold;">' + decliningCount + ' Trending Down</span>';
         }
         html += '<span style="padding: 8px 16px; border-radius: 16px; background: #f3e5f5; color: #6a1b9a; font-weight: bold;">' + emp.q1CoachingCount + ' Coaching Sessions</span>';
         html += '</div>';
 
         // Strengths section
         html += '<div style="margin-bottom: 16px;">';
-        html += '<h4 style="color: #2e7d32; margin-bottom: 8px;">Strengths</h4>';
+        html += '<h4 style="color: var(--green-text); margin-bottom: 8px;">Strengths</h4>';
         if (emp.strengths.length === 0) {
-            html += '<p style="color: #999; font-style: italic;">No metrics currently meeting target</p>';
+            html += '<p style="color: var(--text-tertiary); font-style: italic;">No metrics currently meeting target</p>';
         } else {
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">';
             emp.strengths.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var icon = m ? m.icon : '';
                 var label = m ? m.label : s.metricKey;
-                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: #2e7d32;">&#9650;</span>' :
+                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: var(--green-text);">&#9650;</span>' :
                     s.data.trend.direction === 'declining' ? ' <span style="color: #e65100;">&#9660;</span>' : '';
                 var exceedBadge = s.data.isExceeding ? ' <span style="background: #1565c0; color: white; padding: 1px 6px; border-radius: 8px; font-size: 0.75em;">Exceeding</span>' : '';
 
                 html += '<div style="padding: 10px 14px; background: #f1f8e9; border-radius: 6px; border-left: 3px solid #4caf50;">';
                 html += '<strong>' + icon + ' ' + _escapeHtml(label) + '</strong>' + exceedBadge + trendIcon + '<br>';
                 html += '<span style="font-size: 1.1em; font-weight: bold;">' + _formatMetricDisplay(s.metricKey, s.data.average) + '</span>';
-                html += ' <span style="color: #666; font-size: 0.85em;">(target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ')</span>';
+                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">(target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ')</span>';
                 html += '</div>';
             });
             html += '</div>';
@@ -592,23 +592,23 @@
 
         // Improvement areas
         html += '<div style="margin-bottom: 16px;">';
-        html += '<h4 style="color: #c62828; margin-bottom: 8px;">Improvement Areas</h4>';
+        html += '<h4 style="color: var(--red-text); margin-bottom: 8px;">Improvement Areas</h4>';
         if (emp.improvements.length === 0) {
-            html += '<p style="color: #2e7d32; font-style: italic;">All metrics meeting target!</p>';
+            html += '<p style="color: var(--green-text); font-style: italic;">All metrics meeting target!</p>';
         } else {
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">';
             emp.improvements.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var icon = m ? m.icon : '';
                 var label = m ? m.label : s.metricKey;
-                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: #2e7d32;">&#9650;</span>' :
-                    s.data.trend.direction === 'declining' ? ' <span style="color: #c62828;">&#9660;</span>' : '';
+                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: var(--green-text);">&#9650;</span>' :
+                    s.data.trend.direction === 'declining' ? ' <span style="color: var(--red-text);">&#9660;</span>' : '';
                 var gapText = Math.abs(s.data.gap).toFixed(1);
 
                 html += '<div style="padding: 10px 14px; background: #fff3e0; border-radius: 6px; border-left: 3px solid #ff9800;">';
                 html += '<strong>' + icon + ' ' + _escapeHtml(label) + '</strong>' + trendIcon + '<br>';
                 html += '<span style="font-size: 1.1em; font-weight: bold; color: #e65100;">' + _formatMetricDisplay(s.metricKey, s.data.average) + '</span>';
-                html += ' <span style="color: #666; font-size: 0.85em;">(target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ', gap: ' + gapText + ')</span>';
+                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">(target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ', gap: ' + gapText + ')</span>';
                 html += '</div>';
             });
             html += '</div>';
@@ -618,17 +618,17 @@
         html += '</div>';
 
         // Full metrics table with trends
-        html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: #1a1a2e;">Full Q1 Metrics Breakdown</h4>';
+        html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Q1 Metrics Breakdown</h4>';
         html += '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
-        html += '<thead><tr style="background: #f5f5f5;">';
-        html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid #ddd;">Metric</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Q1 Avg</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Target</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Gap</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Trend</th>';
-        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
+        html += '<thead><tr style="background: var(--bg-surface-raised);">';
+        html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--border);">Metric</th>';
+        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Q1 Avg</th>';
+        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Target</th>';
+        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Gap</th>';
+        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Trend</th>';
+        html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Status</th>';
         html += '</tr></thead><tbody>';
 
         Q1_METRICS.forEach(function (metricKey) {
@@ -639,10 +639,10 @@
 
             var rowBg = md.meetsTarget ? (md.isExceeding ? '#e8f5e9' : '#f1f8e9') : '#fff3e0';
 
-            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee;">';
+            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border);">';
             html += '<td style="padding: 8px;">' + (m.icon || '') + ' ' + _escapeHtml(m.label) + '</td>';
             html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + _formatMetricDisplay(metricKey, md.average) + '</td>';
-            html += '<td style="padding: 8px; text-align: center; color: #666;">' + _formatMetricDisplay(metricKey, md.target) + '</td>';
+            html += '<td style="padding: 8px; text-align: center; color: var(--text-secondary);">' + _formatMetricDisplay(metricKey, md.target) + '</td>';
 
             // Gap
             var gapColor = md.meetsTarget ? '#2e7d32' : '#c62828';
@@ -687,29 +687,29 @@
         html += '</div></div>';
 
         // CoPilot prompt generation
-        html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #7c4dff; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #7c4dff; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: #4a148c;">Q1 Conversation Prep</h4>';
-        html += '<p style="color: #666; font-size: 0.9em; margin-bottom: 12px;">Generate a conversation guide for your Q1 review with ' + _escapeHtml(emp.name) + '. Copy the prompt below and paste it into CoPilot.</p>';
+        html += '<p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 12px;">Generate a conversation guide for your Q1 review with ' + _escapeHtml(emp.name) + '. Copy the prompt below and paste it into CoPilot.</p>';
         html += '<div style="display: flex; gap: 10px; margin-bottom: 12px;">';
         html += '<button type="button" id="q1CopyPromptBtn" class="btn-secondary" style="background: #7c4dff; color: white; padding: 8px 20px; font-weight: bold;">Copy Q1 Prompt</button>';
         html += '<button type="button" id="q1OpenCopilotBtn" class="btn-secondary" style="background: #1565c0; color: white; padding: 8px 20px; font-weight: bold;">Open CoPilot</button>';
         html += '</div>';
-        html += '<textarea id="q1PromptTextarea" readonly style="width: 100%; min-height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical; background: #fafafa;">';
+        html += '<textarea id="q1PromptTextarea" readonly style="width: 100%; min-height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical; background: var(--bg-surface-raised);">';
         html += _escapeHtml(generateQ1CopilotPrompt(emp, q1Data));
         html += '</textarea>';
         html += '</div>';
 
         // Quick talking points
-        html += '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: #1a1a2e;">Quick Talking Points</h4>';
+        html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Quick Talking Points</h4>';
         html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
 
         // Celebrate column
-        html += '<div style="padding: 15px; background: #e8f5e9; border-radius: 8px;">';
-        html += '<h5 style="margin-top: 0; color: #2e7d32;">Celebrate</h5>';
-        html += '<ul style="margin: 0; padding-left: 18px; color: #333;">';
+        html += '<div style="padding: 15px; background: var(--green-soft); border-radius: 8px;">';
+        html += '<h5 style="margin-top: 0; color: var(--green-text);">Celebrate</h5>';
+        html += '<ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">';
         if (emp.strengths.length === 0) {
-            html += '<li style="color: #999;">Acknowledge effort and progress</li>';
+            html += '<li style="color: var(--text-tertiary);">Acknowledge effort and progress</li>';
         } else {
             emp.strengths.slice(0, 3).forEach(function (s) {
                 var m = metric[s.metricKey];
@@ -730,14 +730,14 @@
         // Coach column
         html += '<div style="padding: 15px; background: #fff3e0; border-radius: 8px;">';
         html += '<h5 style="margin-top: 0; color: #e65100;">Coach & Develop</h5>';
-        html += '<ul style="margin: 0; padding-left: 18px; color: #333;">';
+        html += '<ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">';
         if (emp.improvements.length === 0) {
-            html += '<li style="color: #2e7d32;">Focus on maintaining excellent performance</li>';
+            html += '<li style="color: var(--green-text);">Focus on maintaining excellent performance</li>';
         } else {
             emp.improvements.slice(0, 3).forEach(function (s) {
                 var m = metric[s.metricKey];
                 html += '<li>' + (m ? m.label : s.metricKey) + ': needs <strong>' + Math.abs(s.data.gap).toFixed(1) + '</strong> improvement to reach target';
-                if (s.data.trend.direction === 'declining') html += ' <span style="color: #c62828;">(declining)</span>';
+                if (s.data.trend.direction === 'declining') html += ' <span style="color: var(--red-text);">(declining)</span>';
                 html += '</li>';
             });
         }

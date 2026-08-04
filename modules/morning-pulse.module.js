@@ -1241,13 +1241,13 @@
             const dir = metric?.trendDirection;
             const metricKey = metric?.metricKey;
             const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
-            if (dir === 'improving') return `<span style="color:#2e7d32;" title="Improving">${reverse ? '\u25BC' : '\u25B2'}</span>`;
+            if (dir === 'improving') return `<span style="color:var(--green-text);" title="Improving">${reverse ? '\u25BC' : '\u25B2'}</span>`;
             if (dir === 'declining') {
                 const declineColor = metric?.meetsTarget ? '#f9a825' : '#e53935';
                 const declineTitle = metric?.meetsTarget ? 'Declining (still above target)' : 'Declining';
                 return `<span style="color:${declineColor};" title="${declineTitle}">${reverse ? '\u25B2' : '\u25BC'}</span>`;
             }
-            return '<span style="color:#9e9e9e;" title="Stable">\u2015</span>';
+            return '<span style="color:var(--text-tertiary);" title="Stable">\u2015</span>';
         };
 
         // Wins section
@@ -1255,8 +1255,8 @@
         if (wins.length) {
             winsHtml = wins.map(m => {
                 if (m.displayOverride) {
-                    return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
-                        `<span style="color:#9e9e9e;">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                    return `<div style="font-size:0.85em; color:var(--green-text); padding:2px 0;">` +
+                        `<span style="color:var(--text-tertiary);">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
                 }
                 // Find this metric's week delta if available. Show "+X" for
                 // genuine improvements, "maintained" when the delta rounds to
@@ -1267,16 +1267,16 @@
                     const unit = window.METRICS_REGISTRY?.[m.metricKey]?.unit || '%';
                     const zeroBand = (unit === 'sec' || unit === '#') ? 0.5 : 0.05;
                     if (wd.delta > zeroBand) {
-                        deltaTag = ` <span style="color:#1b5e20; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} ${deltaContextLabel})</span>`;
+                        deltaTag = ` <span style="color:var(--green-text); font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)} ${deltaContextLabel})</span>`;
                     } else if (Math.abs(wd.delta) <= zeroBand) {
-                        deltaTag = ` <span style="color:#1b5e20; font-size:0.85em;">(maintained ${deltaContextLabel})</span>`;
+                        deltaTag = ` <span style="color:var(--green-text); font-size:0.85em;">(maintained ${deltaContextLabel})</span>`;
                     }
                 }
-                return `<div style="font-size:0.85em; color:#2e7d32; padding:2px 0;">` +
+                return `<div style="font-size:0.85em; color:var(--green-text); padding:2px 0;">` +
                     `${trendArrow(m)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong>${deltaTag}</div>`;
             }).join('');
         } else {
-            winsHtml = '<div style="font-size:0.85em; color:#999;">No metrics at target yet</div>';
+            winsHtml = '<div style="font-size:0.85em; color:var(--text-tertiary);">No metrics at target yet</div>';
         }
 
         // Opportunities section
@@ -1284,25 +1284,25 @@
         if (opportunities.length) {
             oppsHtml = opportunities.map(m => {
                 if (m.displayOverride) {
-                    return `<div style="font-size:0.85em; color:#c62828; padding:2px 0;">` +
-                        `<span style="color:#9e9e9e;">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                    return `<div style="font-size:0.85em; color:var(--red-text); padding:2px 0;">` +
+                        `<span style="color:var(--text-tertiary);">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
                 }
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
                 const deltaTag = wd && wd.delta !== 0
-                    ? ` <span style="color:${wd.delta > 0 ? '#1b5e20' : (m.meetsTarget ? '#f9a825' : '#b71c1c')}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
+                    ? ` <span style="color:${wd.delta > 0 ? 'var(--green-text)' : (m.meetsTarget ? '#f9a825' : 'var(--red-text)')}; font-size:0.85em;">(${fmtDelta(m.metricKey, wd.delta)})</span>`
                     : '';
-                return `<div style="font-size:0.85em; color:#c62828; padding:2px 0;">` +
+                return `<div style="font-size:0.85em; color:var(--red-text); padding:2px 0;">` +
                     `${trendArrow(m)} ${escapeHtml(m.label)}: <strong>${fmtVal(m)}</strong> ` +
-                    `<span style="color:#999;">(target: ${fmtTarget(m)})</span>${deltaTag}</div>`;
+                    `<span style="color:var(--text-tertiary);">(target: ${fmtTarget(m)})</span>${deltaTag}</div>`;
             }).join('');
         } else {
-            oppsHtml = '<div style="font-size:0.85em; color:#999;">All metrics on track!</div>';
+            oppsHtml = '<div style="font-size:0.85em; color:var(--text-tertiary);">All metrics on track!</div>';
         }
 
         // Biggest improvement callout (only if we have multi-day data)
         let jumpHtml = '';
         if (biggestJump && biggestJump.delta > 0) {
-            jumpHtml = `<div style="padding:6px 10px; background:#e8f5e9; border-radius:4px; font-size:0.83em; color:#1b5e20; border-left:3px solid #4caf50;">` +
+            jumpHtml = `<div style="padding:6px 10px; background:var(--green-soft); border-radius:4px; font-size:0.83em; color:var(--green-text); border-left:3px solid #4caf50;">` +
                 `\uD83D\uDE80 <strong>Biggest improvement:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} ${deltaContextLabel} ` +
                 `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, periodType)})</div>`;
         }
@@ -1314,19 +1314,19 @@
             focalHtml = `<div style="padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800; font-size:0.85em;">` +
                 `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)} \u2014 last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
         } else {
-            focalHtml = `<div style="padding:8px; background:#e8f5e9; border-radius:4px; border-left:3px solid #4caf50; font-size:0.85em;">` +
+            focalHtml = `<div style="padding:8px; background:var(--green-soft); border-radius:4px; border-left:3px solid #4caf50; font-size:0.85em;">` +
                 `<strong>\u2705 On track!</strong> Keep up the consistency.</div>`;
         }
 
-        return `<div class="pulse-card" data-employee="${escapeHtml(emp.name)}" style="background:#fff; border-radius:8px; border:1px solid #e0e0e0; padding:16px; display:flex; flex-direction:column; gap:10px; transition: box-shadow 0.2s;">` +
+        return `<div class="pulse-card" data-employee="${escapeHtml(emp.name)}" style="background:var(--bg-surface); border-radius:8px; border:1px solid var(--border); padding:16px; display:flex; flex-direction:column; gap:10px; transition: box-shadow 0.2s;">` +
             `<div style="display:flex; justify-content:space-between; align-items:center;">` +
-                `<div style="font-weight:700; font-size:1.05em; color:#333;">${escapeHtml(firstName)}</div>` +
+                `<div style="font-weight:700; font-size:1.05em; color:var(--text-primary);">${escapeHtml(firstName)}</div>` +
                 `<div style="font-size:0.8em; font-weight:600; padding:3px 10px; border-radius:12px; color:${badge.color}; background:${badge.bg};">${badge.icon} ${badge.label}</div>` +
             `</div>` +
             jumpHtml +
             `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">` +
-                `<div><div style="font-weight:600; font-size:0.8em; color:#666; margin-bottom:4px;">Wins</div>${winsHtml}</div>` +
-                `<div><div style="font-weight:600; font-size:0.8em; color:#666; margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
+                `<div><div style="font-weight:600; font-size:0.8em; color:var(--text-secondary); margin-bottom:4px;">Wins</div>${winsHtml}</div>` +
+                `<div><div style="font-weight:600; font-size:0.8em; color:var(--text-secondary); margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
             `</div>` +
             focalHtml +
             `<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:auto;">` +
@@ -2156,17 +2156,17 @@
             return `<button type="button" class="growth-period-btn" data-comparison="${type}" style="${style}"${disabledAttr}>${GROWTH_LABELS[type].short}</button>`;
         }).join('');
 
-        overlay.innerHTML = `<div style="background:white; border-radius:12px; max-width:600px; width:100%; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
+        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:12px; max-width:600px; width:100%; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
             `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">` +
                 `<h3 style="margin:0; color:#1a237e;">📈 Growth check for ${escapeHtml(firstName)}</h3>` +
-                `<button id="pulseGrowthClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:#999; padding:4px 8px;">✕</button>` +
+                `<button id="pulseGrowthClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:var(--text-tertiary); padding:4px 8px;">✕</button>` +
             `</div>` +
-            `<div style="font-size:0.85em; color:#475569; margin-bottom:8px;">Pick a comparison period:</div>` +
+            `<div style="font-size:0.85em; color:var(--text-secondary); margin-bottom:8px;">Pick a comparison period:</div>` +
             `<div id="pulseGrowthPeriods" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">${periodBtns}</div>` +
-            `<textarea id="pulseGrowthText" style="width:100%; height:240px; padding:14px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; color:#333; background:#f9f9f9; resize:vertical; font-family:inherit;">⏳ Generating…</textarea>` +
+            `<textarea id="pulseGrowthText" style="width:100%; height:240px; padding:14px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">⏳ Generating…</textarea>` +
             `<div style="display:flex; gap:10px; margin-top:14px;">` +
                 `<button id="pulseGrowthCopy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">📋 Copy to Clipboard</button>` +
-                `<button id="pulseGrowthRegenerate" style="flex:1; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🔄 Regenerate</button>` +
+                `<button id="pulseGrowthRegenerate" style="flex:1; background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🔄 Regenerate</button>` +
             `</div>` +
         `</div>`;
 
@@ -2324,17 +2324,17 @@
         const header = `<div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;">` +
             `<div>` +
                 `<h4 style="margin:0; color:#1a237e; font-size:1.05em;">📅 Daily Check-in</h4>` +
-                `<div style="font-size:0.85em; color:#666; margin-top:2px;">Yesterday (${yesterdayLabel}) + week-to-date weighted rollup · ${uploadedCount} day${uploadedCount === 1 ? '' : 's'} uploaded this week · ${reps.length} rep${reps.length === 1 ? '' : 's'}</div>` +
+                `<div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Yesterday (${yesterdayLabel}) + week-to-date weighted rollup · ${uploadedCount} day${uploadedCount === 1 ? '' : 's'} uploaded this week · ${reps.length} rep${reps.length === 1 ? '' : 's'}</div>` +
             `</div>` +
         `</div>`;
 
         // Build the metric-column header row.
         const metricHeaders = DAILY_CHECKIN_METRICS.map(m =>
-            `<th colspan="2" style="padding:6px 8px; font-size:0.78em; color:#475569; text-align:center; border-bottom:1px solid #e0e7ff;">${m.label}</th>`
+            `<th colspan="2" style="padding:6px 8px; font-size:0.78em; color:var(--text-secondary); text-align:center; border-bottom:1px solid #e0e7ff;">${m.label}</th>`
         ).join('');
         const subHeaders = DAILY_CHECKIN_METRICS.map(() =>
-            `<th style="padding:4px 8px; font-size:0.72em; color:#94a3b8; font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">yest</th>` +
-            `<th style="padding:4px 8px; font-size:0.72em; color:#94a3b8; font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">WTD</th>`
+            `<th style="padding:4px 8px; font-size:0.72em; color:var(--text-tertiary); font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">yest</th>` +
+            `<th style="padding:4px 8px; font-size:0.72em; color:var(--text-tertiary); font-weight:500; text-align:right; border-bottom:1px solid #f1f5f9;">WTD</th>`
         ).join('');
 
         // Build per-rep rows.
@@ -2348,13 +2348,13 @@
                 const yCell = formatDailyCell(m.key, Number.isFinite(yVal) ? yVal : null);
                 const wCell = formatDailyCell(m.key, wVal);
                 return `<td style="padding:6px 8px; text-align:right; font-size:0.88em; color:#334155;">${yCell}</td>` +
-                       `<td style="padding:6px 8px; text-align:right; font-size:0.88em; font-weight:600; color:#1e293b;">${wCell}</td>`;
+                       `<td style="padding:6px 8px; text-align:right; font-size:0.88em; font-weight:600; color:var(--text-primary);">${wCell}</td>`;
             }).join('');
             const safeName = typeof escapeHtml === 'function' ? escapeHtml(name) : name;
             return `<tr><td style="padding:6px 10px; font-weight:600; color:#1a237e; border-bottom:1px solid #f1f5f9; white-space:nowrap;">${safeName}</td>${cells}</tr>`;
         }).join('');
 
-        return `<div style="margin-bottom:20px; padding:14px 16px; background:#fff; border:1px solid #e0e7ff; border-radius:10px;">` +
+        return `<div style="margin-bottom:20px; padding:14px 16px; background:var(--bg-surface); border:1px solid #e0e7ff; border-radius:10px;">` +
             header +
             `<div style="overflow-x:auto;">` +
                 `<table style="width:100%; border-collapse:collapse; min-width:640px;">` +
@@ -2382,21 +2382,21 @@
         const uploadsNote = periodType === 'week'
             ? (numUploads > 1
                 ? `<span style="color:#1a237e; font-weight:600;">${numUploads} uploads in selected week</span>`
-                : '<span style="color:#999;">1 upload (no trajectory yet)</span>')
+                : '<span style="color:var(--text-tertiary);">1 upload (no trajectory yet)</span>')
             : (hasComparison
                 ? `<span style="color:#1a237e; font-weight:600;">Compared to previous ${periodType}</span>`
-                : `<span style="color:#999;">No previous ${periodType} to compare</span>`);
+                : `<span style="color:var(--text-tertiary);">No previous ${periodType} to compare</span>`);
 
         return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:14px 18px; background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius:8px; margin-bottom:16px; align-items:center;">` +
-            `<div style="font-weight:700; font-size:1em; color:#333;">Team Pulse</div>` +
+            `<div style="font-weight:700; font-size:1em; color:var(--text-primary);">Team Pulse</div>` +
             `<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.9em;">` +
                 (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">\uD83D\uDD34 ${counts.red} Needs Support</span>` : '') +
                 (counts.yellow > 0 ? `<span style="color:#fb8c00; font-weight:600;">\uD83D\uDFE1 ${counts.yellow} Watch</span>` : '') +
                 (counts.blue > 0 ? `<span style="color:#1e88e5; font-weight:600;">\uD83D\uDD35 ${counts.blue} Solid</span>` : '') +
-                (counts.green > 0 ? `<span style="color:#2e7d32; font-weight:600;">\uD83D\uDFE2 ${counts.green} Crushing It</span>` : '') +
+                (counts.green > 0 ? `<span style="color:var(--green-text); font-weight:600;">\uD83D\uDFE2 ${counts.green} Crushing It</span>` : '') +
                 (counts.gray > 0 ? `<span style="color:#78909c; font-weight:600;">\u26AA ${counts.gray} Steady</span>` : '') +
             `</div>` +
-            `<div style="margin-left:auto; font-size:0.85em; color:#666;">${cardData.length} associates \u2022 ${uploadsNote}</div>` +
+            `<div style="margin-left:auto; font-size:0.85em; color:var(--text-secondary);">${cardData.length} associates \u2022 ${uploadsNote}</div>` +
         `</div>`;
     }
 
@@ -2441,15 +2441,15 @@
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-        overlay.innerHTML = `<div style="background:white; border-radius:12px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
+        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:12px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
             `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">` +
                 `<h3 style="margin:0; color:#1a237e;">${titleIcon} ${titleText}</h3>` +
-                `<button id="pulseCheckinClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:#999; padding:4px 8px;">\u2715</button>` +
+                `<button id="pulseCheckinClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:var(--text-tertiary); padding:4px 8px;">\u2715</button>` +
             `</div>` +
-            `<textarea id="pulseCheckinText" style="width:100%; height:180px; padding:14px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; color:#333; background:#f9f9f9; resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
+            `<textarea id="pulseCheckinText" style="width:100%; height:180px; padding:14px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
             `<div style="display:flex; gap:10px; margin-top:14px;">` +
                 `<button id="pulseCheckinCopy" style="flex:1; background:${copyGradient}; color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDCCB Copy to Clipboard</button>` +
-                `<button id="pulseCheckinRegenerate" style="flex:1; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDD04 Regenerate</button>` +
+                `<button id="pulseCheckinRegenerate" style="flex:1; background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDD04 Regenerate</button>` +
             `</div>` +
         `</div>`;
 
@@ -2542,24 +2542,24 @@
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-        overlay.innerHTML = `<div style="background:#fff; border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
+        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
                     `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Monday — ${escapeHtml(endDate)}</h2>` +
                     `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
                         `${summary.total} team members \u2022 ` +
-                        `<span style="color:#c62828; font-weight:600;">${summary.needsSupport} needs support</span> \u2022 ` +
+                        `<span style="color:var(--red-text); font-weight:600;">${summary.needsSupport} needs support</span> \u2022 ` +
                         `<span style="color:#ef6c00; font-weight:600;">${summary.watch} watch</span> \u2022 ` +
-                        `<span style="color:#2e7d32; font-weight:600;">${summary.solid} on track</span>` +
+                        `<span style="color:var(--green-text); font-weight:600;">${summary.solid} on track</span>` +
                     `</div>` +
                 `</div>` +
-                `<button id="runMyMondayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:#999;">\u2715</button>` +
+                `<button id="runMyMondayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>` +
             `</div>` +
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
                 `Sorted by priority. Copy each message and send it, then click <strong>Done</strong> to mark the rep finished.` +
             `</div>` +
             `<div id="runMyMondayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
-                `<div style="text-align:center; color:#999; padding:30px;">\u23F3 Generating kickoffs\u2026</div>` +
+                `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">\u23F3 Generating kickoffs\u2026</div>` +
             `</div>` +
             `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div id="runMyMondayProgress" style="font-size:0.9em; color:#546e7a;">0 / ${summary.total} done</div>` +
@@ -2592,15 +2592,15 @@
             const badgeColor = r.badge.color;
             const badgeLabel = escapeHtml(r.badge.label);
             const badgeIcon = r.badge.icon;
-            return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid #e0e0e0; border-radius:10px; padding:14px; margin-bottom:12px; background:#fff;">` +
+            return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:var(--bg-surface);">` +
                 `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">` +
                     `<div style="font-weight:700; color:#1a237e;">${safeName}</div>` +
                     `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${badgeColor}; background:${badgeBg};">${badgeIcon} ${badgeLabel}</div>` +
                 `</div>` +
-                `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:0.9em; color:#333; background:#fafafa; resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
+                `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
                 `<div style="display:flex; gap:8px; margin-top:10px;">` +
                     `<button class="rmm-copy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
-                    `<button class="rmm-regen" style="background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; padding:9px 14px; cursor:pointer;">🔄 Regenerate</button>` +
+                    `<button class="rmm-regen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:9px 14px; cursor:pointer;">🔄 Regenerate</button>` +
                     `<button class="rmm-done" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">✓ Done</button>` +
                 `</div>` +
             `</div>`;
@@ -2670,23 +2670,23 @@
             }).join('')
             : '<option value="">No periods available</option>';
 
-        const controlsHtml = `<div style="margin-bottom:16px; padding:16px; background:#fff; border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:180px 1fr; gap:12px; align-items:end;">` +
+        const controlsHtml = `<div style="margin-bottom:16px; padding:16px; background:var(--bg-surface); border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:180px 1fr; gap:12px; align-items:end;">` +
             `<div>` +
-                `<label for="pulsePeriodTypeSelect" style="display:block; font-size:0.85em; font-weight:600; color:#475569; margin-bottom:6px;">Period Type</label>` +
-                `<select id="pulsePeriodTypeSelect" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95em;">` +
+                `<label for="pulsePeriodTypeSelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Period Type</label>` +
+                `<select id="pulsePeriodTypeSelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;">` +
                     `<option value="week"${periodType === 'week' ? ' selected' : ''}>Week</option>` +
                     `<option value="month"${periodType === 'month' ? ' selected' : ''}>Month</option>` +
                     `<option value="quarter"${periodType === 'quarter' ? ' selected' : ''}>Quarter</option>` +
                 `</select>` +
             `</div>` +
             `<div>` +
-                `<label for="pulsePeriodKeySelect" style="display:block; font-size:0.85em; font-weight:600; color:#475569; margin-bottom:6px;">Selected ${periodType}</label>` +
-                `<select id="pulsePeriodKeySelect" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95em;"${availableKeys.length ? '' : ' disabled'}>${optionsHtml}</select>` +
+                `<label for="pulsePeriodKeySelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Selected ${periodType}</label>` +
+                `<select id="pulsePeriodKeySelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;"${availableKeys.length ? '' : ' disabled'}>${optionsHtml}</select>` +
             `</div>` +
         `</div>`;
 
         if (!window_) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:#666; text-align:center;">No data available for that period type yet.</div>';
+            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">No data available for that period type yet.</div>';
             bindPulseControls(container);
             return;
         }
@@ -2694,7 +2694,7 @@
         const { latestKey, baselineKey, allRecentKeys } = window_;
         const period = getPeriodData(latestKey);
         if (!period) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:#666; text-align:center;">Could not load period data.</div>';
+            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">Could not load period data.</div>';
             bindPulseControls(container);
             return;
         }
@@ -2703,7 +2703,7 @@
         const employees = getFilteredEmployees(period);
 
         if (!employees.length) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:#666; text-align:center;">No team members found for the selected period.</div>';
+            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">No team members found for the selected period.</div>';
             bindPulseControls(container);
             return;
         }
@@ -2748,12 +2748,12 @@
             ? `<button type="button" id="runMyMondayBtn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Monday</button>`
             : '';
         const patternMemoryBtnHtml = periodType === 'week'
-            ? `<button type="button" id="patternMemoryBtn" style="background:#fff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`
+            ? `<button type="button" id="patternMemoryBtn" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`
             : '';
         html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
             `<div>` +
                 `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Weekly Pulse \u2014 ${rangeText}</h3>` +
-                `<p style="color:#666; margin:0; font-size:0.9em;">${pulseDescription}</p>` +
+                `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">${pulseDescription}</p>` +
             `</div>` +
             `<div style="display:flex; gap:10px; flex-shrink:0;">` +
                 patternMemoryBtnHtml +

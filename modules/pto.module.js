@@ -538,7 +538,7 @@ function processPtoBalanceRows(rows) {
     showToast('PTO balances updated for ' + updated + ' employees.', 5000);
     if (resultsEl) {
         var extra = derived > 0 ? ' Derived annual allotment for ' + derived + ' employee(s) using Remaining + Used - Carryover.' : '';
-        resultsEl.innerHTML = '<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;"><strong>Updated PTO balances for ' + updated + ' employee(s).</strong>' + extra + '</div>';
+        resultsEl.innerHTML = '<div style="padding:10px;border-radius:6px;background:var(--green-soft);color:var(--green-text);margin-top:8px;"><strong>Updated PTO balances for ' + updated + ' employee(s).</strong>' + extra + '</div>';
     }
 }
 
@@ -727,7 +727,7 @@ function processPayrollExcelRows(rows) {
 
     showToast(`Imported ${totalAdded} entries for ${employeeNames.length} employees`, 5000);
     if (resultsEl) {
-        resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:#e8f5e9;color:#1b5e20;margin-top:8px;">
+        resultsEl.innerHTML = `<div style="padding:10px;border-radius:6px;background:var(--green-soft);color:var(--green-text);margin-top:8px;">
             <strong>Imported ${totalAdded} entries</strong> for ${employeeNames.length} employees<br>
             <span style="font-size:0.9em;">${summaryLines}</span>
         </div>`;
@@ -805,23 +805,23 @@ function renderBalancePanel(employeeName) {
     });
 
     panel.innerHTML = `
-        <div style="margin-bottom:20px;padding:16px;background:#fff;border-radius:10px;border:1px solid #d0dce5;">
+        <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border-radius:10px;border:1px solid #d0dce5;">
             <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:12px;">
                 <div style="flex:0 0 auto;">
-                    <label style="font-size:0.8em;color:#666;display:block;margin-bottom:2px;">Carryover Hours</label>
+                    <label style="font-size:0.8em;color:var(--text-secondary);display:block;margin-bottom:2px;">Carryover Hours</label>
                     <input type="number" id="ptoCarryover" value="${data.carryoverHours || 0}" min="0" step="1"
                         style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
                 </div>
                 <div style="flex:0 0 auto;">
-                    <label style="font-size:0.8em;color:#666;display:block;margin-bottom:2px;">Annual Allotment</label>
+                    <label style="font-size:0.8em;color:var(--text-secondary);display:block;margin-bottom:2px;">Annual Allotment</label>
                     <input type="number" id="ptoAllotment" value="${data.annualAllotment != null ? data.annualAllotment : DEFAULT_ANNUAL_ALLOTMENT}" min="0" step="1"
                         style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
                 </div>
                 <div style="flex:0 0 auto;padding:6px 16px;border-radius:8px;background:${remainBg};text-align:center;">
-                    <div style="font-size:0.75em;color:#666;">PTO Remaining</div>
+                    <div style="font-size:0.75em;color:var(--text-secondary);">PTO Remaining</div>
                     <div style="font-size:1.3em;font-weight:700;color:${remainColor};">${bal.remaining}h</div>
                 </div>
-                <div style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;color:#666;">
+                <div style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;color:var(--text-secondary);">
                     Used: <strong>${bal.used}h</strong> of ${bal.carryover + bal.allotment}h
                 </div>
             </div>
@@ -871,7 +871,7 @@ function renderEmployeeEntries(employeeName) {
         .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!entries.length) {
-        container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
+        container.innerHTML = '<p style="color:var(--text-tertiary);text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
         return;
     }
 
@@ -894,7 +894,7 @@ function renderEntriesTable(container, entries, storeKey) {
         const color = TRC_COLORS[trc] || { bg: '#f5f5f5', text: '#333' };
         html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:${color.bg};color:${color.text};">${escapeHtml(trc)}: ${hrs.toFixed(1)}h</span>`;
     });
-    html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:#f5f5f5;color:#333;">Total: ${totalHours.toFixed(1)}h</span>`;
+    html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:var(--bg-surface-raised);color:var(--text-primary);">Total: ${totalHours.toFixed(1)}h</span>`;
     if (unschedHours > 0) {
         html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:#fff3e0;color:#e65100;">Unsched: ${unschedHours.toFixed(1)}h</span>`;
     }
@@ -908,7 +908,7 @@ function renderEntriesTable(container, entries, storeKey) {
     // Table
     html += `<table style="width:100%;border-collapse:collapse;font-size:0.9em;">
         <thead>
-            <tr style="background:#f8f9fa;text-align:left;">
+            <tr style="background:var(--bg-surface-raised);text-align:left;">
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Date</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Code</th>
                 <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Hours</th>
@@ -932,12 +932,12 @@ function renderEntriesTable(container, entries, storeKey) {
                 ${unschedLabel}
             </td>
             <td style="padding:7px 10px;" class="pto-edit-hours" data-id="${escapeHtml(e.id)}" title="Click to edit">
-                <span style="cursor:pointer;border-bottom:1px dashed #ccc;">${e.hours}</span>
+                <span style="cursor:pointer;border-bottom:1px dashed var(--border);">${e.hours}</span>
             </td>
             <td style="padding:7px 10px;color:${statusColor};font-size:0.88em;">${escapeHtml(e.status || '')}</td>
             <td style="padding:7px 10px;text-align:center;">
                 <button type="button" class="pto-delete-entry" data-id="${escapeHtml(e.id)}" title="Delete entry"
-                    style="background:none;border:none;color:#b71c1c;cursor:pointer;font-size:1.1em;padding:2px 6px;">&#x2715;</button>
+                    style="background:none;border:none;color:var(--red-text);cursor:pointer;font-size:1.1em;padding:2px 6px;">&#x2715;</button>
             </td>
         </tr>`;
     });
@@ -1091,24 +1091,24 @@ function showAddEntryForm() {
 
     form.innerHTML = `
         <div>
-            <label style="font-size:0.78em;color:#666;display:block;">Date</label>
+            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Date</label>
             <input type="date" id="ptoNewDate" value="${today}" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">
         </div>
         <div>
-            <label style="font-size:0.78em;color:#666;display:block;">Code</label>
+            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Code</label>
             <select id="ptoNewTrc" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">${trcOptions}</select>
         </div>
         <div>
-            <label style="font-size:0.78em;color:#666;display:block;">Hours</label>
+            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Hours</label>
             <input type="number" id="ptoNewHours" value="8" min="0" step="0.25" style="width:70px;padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;text-align:center;">
         </div>
         <div>
-            <label style="font-size:0.78em;color:#666;display:block;">Unsched?</label>
+            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Unsched?</label>
             <input type="checkbox" id="ptoNewUnsched" style="margin-top:6px;">
         </div>
         <div style="display:flex;gap:6px;">
             <button type="button" id="ptoSaveNewEntry" style="padding:6px 14px;background:#5a2c8a;color:#fff;border:none;border-radius:5px;font-size:0.85em;cursor:pointer;">Save</button>
-            <button type="button" id="ptoCancelNewEntry" style="padding:6px 14px;background:#eee;color:#333;border:1px solid #ccc;border-radius:5px;font-size:0.85em;cursor:pointer;">Cancel</button>
+            <button type="button" id="ptoCancelNewEntry" style="padding:6px 14px;background:var(--bg-surface-sunken);color:var(--text-primary);border:1px solid var(--border);border-radius:5px;font-size:0.85em;cursor:pointer;">Cancel</button>
         </div>`;
 
     var addBtn = document.getElementById('ptoAddEntryBtn');

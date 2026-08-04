@@ -208,7 +208,7 @@
             var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? '0.0' : '0.0';
             return '<td style="padding: 4px;"><input type="text" id="snapCenterAvg_' + key + '" ' +
                 'placeholder="' + placeholder + '" ' +
-                'style="width: 60px; padding: 4px; text-align: center; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85em;" /></td>';
+                'style="width: 60px; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 3px; font-size: 0.85em;" /></td>';
         }).join('');
 
         return '<tr style="background: #e3f2fd;">' +
@@ -473,7 +473,7 @@
         // Build header row
         var headerCells = visibleMetrics.map(function(key) {
             var def = registry[key];
-            return '<th style="padding: 6px 4px; font-size: 0.7em; font-weight: 700; color: #475569; text-align: center; ' +
+            return '<th style="padding: 6px 4px; font-size: 0.7em; font-weight: 700; color: var(--text-secondary); text-align: center; ' +
                 'border-bottom: 2px solid #cbd5e1; white-space: nowrap;">' +
                 (def?.icon || '') + '<br>' + SHORT_LABELS[key] + '</th>';
         }).join('');
@@ -520,13 +520,13 @@
                 }
 
                 return '<td style="padding: 5px 4px; text-align: center; font-size: 0.8em; font-weight: 600; ' +
-                    'background: ' + bg + '; color: ' + color + '; border-bottom: 1px solid #e2e8f0;">' +
-                    (cell.hasValue ? escapeHtml(cell.displayValue) + indicator : '<span style="color: #94a3b8;">--</span>') +
+                    'background: ' + bg + '; color: ' + color + '; border-bottom: 1px solid var(--border);">' +
+                    (cell.hasValue ? escapeHtml(cell.displayValue) + indicator : '<span style="color: var(--text-tertiary);">--</span>') +
                     '</td>';
             }).join('');
 
             return '<tr style="background: ' + bgColor + ';">' +
-                '<td style="padding: 6px 10px; font-weight: 600; font-size: 0.85em; color: #1e293b; ' +
+                '<td style="padding: 6px 10px; font-weight: 600; font-size: 0.85em; color: var(--text-primary); ' +
                 'border-bottom: 1px solid #e2e8f0; white-space: nowrap;">' + escapeHtml(row.name) + '</td>' +
                 cells + '</tr>';
         }).join('');
@@ -598,15 +598,15 @@
         var targetCells = visibleMetrics.map(function(key) {
             var def = registry[key];
             var target = def?.target;
-            if (!target) return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: #64748b; background: #f1f5f9;">--</td>';
+            if (!target) return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: var(--text-secondary); background: var(--bg-surface-sunken);">--</td>';
             var prefix = target.type === 'min' ? '\u2265' : '\u2264';
             var unit = def?.unit || '';
             var valStr = unit === 'sec' ? target.value + 's' : unit === 'hrs' ? target.value + 'h' : target.value + '%';
-            return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: #64748b; ' +
-                'background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">' + prefix + valStr + '</td>';
+            return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: var(--text-secondary); ' +
+                'background: #f1f5f9; border-bottom: 1px solid var(--border);">' + prefix + valStr + '</td>';
         }).join('');
-        var targetRow = '<tr><td style="padding: 4px 10px; font-size: 0.7em; color: #64748b; font-weight: 600; ' +
-            'background: #f1f5f9; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Target</td>' + targetCells + '</tr>';
+        var targetRow = '<tr><td style="padding: 4px 10px; font-size: 0.7em; color: var(--text-secondary); font-weight: 600; ' +
+            'background: #f1f5f9; border-bottom: 1px solid var(--border); white-space: nowrap;">Target</td>' + targetCells + '</tr>';
 
         // Focus of the Day
         var focusHtml = '';
@@ -623,35 +623,35 @@
 
         // Legend
         var legendHtml = '<div style="display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; align-items: center; ' +
-            'padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">' +
+            'padding: 8px 12px; background: var(--bg-surface-raised); border-radius: 6px; border: 1px solid var(--border);">' +
             '<span style="font-size: 0.72em; font-weight: 600; color: #334155; margin-right: 2px;">Legend:</span>' +
-            '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="display: inline-block; width: 12px; height: 12px; background: #dcfce7; border: 1px solid #86efac; ' +
+            '<span style="font-size: 0.72em; color: var(--text-secondary);">' +
+            '<span style="display: inline-block; width: 12px; height: 12px; background: var(--green-soft); border: 1px solid #86efac; ' +
             'border-radius: 2px; vertical-align: middle; margin-right: 3px;"></span> Meeting Target</span>' +
-            '<span style="font-size: 0.72em; color: #475569;">' +
-            '<span style="display: inline-block; width: 12px; height: 12px; background: #fee2e2; border: 1px solid #fca5a5; ' +
+            '<span style="font-size: 0.72em; color: var(--text-secondary);">' +
+            '<span style="display: inline-block; width: 12px; height: 12px; background: var(--red-soft); border: 1px solid #fca5a5; ' +
             'border-radius: 2px; vertical-align: middle; margin-right: 3px;"></span> Below Target</span>' +
-            '<span style="font-size: 0.72em; color: #475569;">' +
+            '<span style="font-size: 0.72em; color: var(--text-secondary);">' +
             '<span style="color: #16a34a; font-weight: 700;">+2.1</span> = 2.1 above center avg</span>' +
-            '<span style="font-size: 0.72em; color: #475569;">' +
+            '<span style="font-size: 0.72em; color: var(--text-secondary);">' +
             '<span style="color: #dc2626; font-weight: 700;">-3.5</span> = 3.5 below center avg</span>' +
             '</div>';
 
         // Assemble the full graphic
-        var html = '<div id="snapshotExportArea" style="background: #ffffff; border-radius: 12px; padding: 20px; ' +
+        var html = '<div id="snapshotExportArea" style="background: var(--bg-surface); border-radius: 12px; padding: 20px; ' +
             'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; max-width: 900px; ' +
-            'box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">' +
+            'box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08); border: 1px solid var(--border);">' +
             // Title bar
             '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; ' +
             'padding-bottom: 10px; border-bottom: 2px solid #3b82f6;">' +
-            '<div><div style="font-size: 1.15em; font-weight: 800; color: #1e293b;">Team Performance Snapshot</div>' +
-            '<div style="font-size: 0.8em; color: #64748b;">' + escapeHtml(periodLabel) + '</div></div>' +
-            '<div style="font-size: 0.75em; color: #94a3b8;">Generated ' + escapeHtml(dateStr) + '</div></div>' +
+            '<div><div style="font-size: 1.15em; font-weight: 800; color: var(--text-primary);">Team Performance Snapshot</div>' +
+            '<div style="font-size: 0.8em; color: var(--text-secondary);">' + escapeHtml(periodLabel) + '</div></div>' +
+            '<div style="font-size: 0.75em; color: var(--text-tertiary);">Generated ' + escapeHtml(dateStr) + '</div></div>' +
             // Table
             '<div style="overflow-x: auto;">' +
             '<table style="width: 100%; border-collapse: collapse; border-spacing: 0;">' +
             '<thead><tr><th style="padding: 6px 10px; text-align: left; font-size: 0.75em; font-weight: 700; ' +
-            'color: #475569; border-bottom: 2px solid #cbd5e1;">Associate</th>' + headerCells + '</tr></thead>' +
+            'color: #475569; border-bottom: 2px solid var(--border-strong);">Associate</th>' + headerCells + '</tr></thead>' +
             '<tbody>' + targetRow + dataRows + teamAvgRow + centerRow + '</tbody>' +
             '</table></div>' +
             // Legend
@@ -724,7 +724,7 @@
         // Header cells
         var headerCells = visibleMetrics.map(function(key) {
             var def = registry[key];
-            return '<th style="padding: 8px 6px; font-size: 0.75em; font-weight: 700; color: #1e293b; text-align: center; ' +
+            return '<th style="padding: 8px 6px; font-size: 0.75em; font-weight: 700; color: var(--text-primary); text-align: center; ' +
                 'border-bottom: 3px solid #3b82f6; background: #f0f9ff;">' +
                 SHORT_LABELS[key] + '</th>';
         }).join('');
@@ -735,7 +735,7 @@
             var cells = visibleMetrics.map(function(key) {
                 var cell = row.cells.find(function(c) { return c.metricKey === key; });
                 if (!cell || !cell.hasValue) {
-                    return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; color: #94a3b8; ' +
+                    return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; color: var(--text-tertiary); ' +
                         'border-bottom: 1px solid #e2e8f0;">--</td>';
                 }
 
@@ -768,14 +768,14 @@
                     }
                 }
 
-                return '<td style="padding: 6px 4px; text-align: center; border-bottom: 1px solid #e2e8f0; background: ' + bg + ';">' +
+                return '<td style="padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border); background: ' + bg + ';">' +
                     '<div style="font-size: 0.85em; font-weight: 600; color: ' + fontColor + ';">' + escapeHtml(cell.displayValue) + '</div>' +
                     (arrow ? '<div style="font-size: 0.75em; line-height: 1.2;">' + arrow + ' <span style="color: ' + fontColor + '; font-weight: 700;">' + deltaStr + '</span></div>' : '') +
                     '</td>';
             }).join('');
 
             return '<tr style="background: ' + bgColor + ';">' +
-                '<td style="padding: 8px 12px; font-weight: 700; font-size: 0.9em; color: #1e293b; ' +
+                '<td style="padding: 8px 12px; font-weight: 700; font-size: 0.9em; color: var(--text-primary); ' +
                 'border-bottom: 1px solid #e2e8f0; white-space: nowrap;">' + escapeHtml(row.name) + '</td>' +
                 cells + '</tr>';
         }).join('');
@@ -839,15 +839,15 @@
         var summaryColor = belowCount === 0 ? '#16a34a' : belowCount <= 2 ? '#d97706' : '#dc2626';
 
         // Assemble
-        var html = '<div id="snapshotExportArea" style="background: #ffffff; border-radius: 12px; padding: 20px; ' +
+        var html = '<div id="snapshotExportArea" style="background: var(--bg-surface); border-radius: 12px; padding: 20px; ' +
             'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; max-width: 900px; ' +
-            'box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">' +
+            'box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08); border: 1px solid var(--border);">' +
             // Title
             '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; ' +
             'padding-bottom: 10px; border-bottom: 3px solid #f59e0b;">' +
-            '<div><div style="font-size: 1.2em; font-weight: 800; color: #1e293b;">\u26A1 Team vs Center Average</div>' +
-            '<div style="font-size: 0.85em; color: #64748b; margin-top: 2px;">' + escapeHtml(periodLabel) + '</div></div>' +
-            '<div style="text-align: right;"><div style="font-size: 0.75em; color: #94a3b8;">' + escapeHtml(dateStr) + '</div>' +
+            '<div><div style="font-size: 1.2em; font-weight: 800; color: var(--text-primary);">\u26A1 Team vs Center Average</div>' +
+            '<div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 2px;">' + escapeHtml(periodLabel) + '</div></div>' +
+            '<div style="text-align: right;"><div style="font-size: 0.75em; color: var(--text-tertiary);">' + escapeHtml(dateStr) + '</div>' +
             '<div style="font-size: 0.82em; font-weight: 700; color: ' + summaryColor + '; margin-top: 2px;">' + summaryText + '</div></div></div>' +
             // Table
             '<div style="overflow-x: auto;">' +
@@ -861,12 +861,12 @@
             'background: #e3f2fd; border-top: 2px solid #90caf9; white-space: nowrap;">Center Avg</td>' + centerCells + '</tr>' +
             '</tbody></table></div>' +
             // Legend
-            '<div style="display: flex; gap: 16px; margin-top: 10px; padding: 8px 12px; background: #f8fafc; ' +
-            'border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">' +
+            '<div style="display: flex; gap: 16px; margin-top: 10px; padding: 8px 12px; background: var(--bg-surface-raised); ' +
+            'border-radius: 6px; border: 1px solid var(--border); align-items: center;">' +
             '<span style="font-size: 0.75em; font-weight: 600; color: #334155;">Legend:</span>' +
             '<span style="font-size: 0.75em; color: #16a34a; font-weight: 700;">\u25B2 Above center avg</span>' +
             '<span style="font-size: 0.75em; color: #dc2626; font-weight: 700;">\u25BC Below center avg</span>' +
-            '<span style="font-size: 0.75em; color: #64748b;">Delta shows distance from center average</span>' +
+            '<span style="font-size: 0.75em; color: var(--text-secondary);">Delta shows distance from center average</span>' +
             '</div></div>';
 
         container.innerHTML = html;
@@ -1039,7 +1039,7 @@
         });
 
         if (employees.length === 0) {
-            gridContainer.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">No employees found for this period.</p>';
+            gridContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 20px;">No employees found for this period.</p>';
             return;
         }
 
@@ -1047,7 +1047,7 @@
 
         // Header
         var headerCells = SNAPSHOT_METRICS.map(function(key) {
-            return '<th style="padding: 6px 4px; font-size: 0.75em; font-weight: 600; color: #475569; text-align: center; ' +
+            return '<th style="padding: 6px 4px; font-size: 0.75em; font-weight: 600; color: var(--text-secondary); text-align: center; ' +
                 'border-bottom: 2px solid #cbd5e1;">' + SHORT_LABELS[key] + '</th>';
         }).join('');
 
@@ -1065,7 +1065,7 @@
                     'border-bottom: 1px solid #e2e8f0;">' + escapeHtml(display) + '</td>';
             }).join('');
             return '<tr style="background: ' + bg + ';"><td style="padding: 5px 8px; font-weight: 600; font-size: 0.82em; ' +
-                'color: #1e293b; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">' + escapeHtml(firstName) + '</td>' + cells + '</tr>';
+                'color: #1e293b; border-bottom: 1px solid var(--border); white-space: nowrap;">' + escapeHtml(firstName) + '</td>' + cells + '</tr>';
         }).join('');
 
         // Center avg input row
@@ -1073,7 +1073,7 @@
 
         gridContainer.innerHTML = '<div style="overflow-x: auto;">' +
             '<table style="width: 100%; border-collapse: collapse;">' +
-            '<thead><tr><th style="padding: 6px 8px; text-align: left; font-size: 0.75em; font-weight: 600; color: #475569; ' +
+            '<thead><tr><th style="padding: 6px 8px; text-align: left; font-size: 0.75em; font-weight: 600; color: var(--text-secondary); ' +
             'border-bottom: 2px solid #cbd5e1;">Name</th>' + headerCells + '</tr></thead>' +
             '<tbody>' + rows + centerRow + '</tbody></table></div>';
 

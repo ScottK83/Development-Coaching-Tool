@@ -298,13 +298,13 @@
             bodyHtml = `<div style="padding:40px; text-align:center; color:#546e7a;">` +
                 `<div style="font-size:3em; margin-bottom:12px;">\uD83D\uDCC5</div>` +
                 `<div style="font-size:1.1em; font-weight:600;">Not enough history yet.</div>` +
-                `<div style="color:#999; font-size:0.9em; margin-top:8px;">Pattern detection needs at least ${MIN_WEEKS_FOR_PATTERN} weekly uploads. You currently have ${summary.weeksAvailable}.</div>` +
+                `<div style="color:var(--text-tertiary); font-size:0.9em; margin-top:8px;">Pattern detection needs at least ${MIN_WEEKS_FOR_PATTERN} weekly uploads. You currently have ${summary.weeksAvailable}.</div>` +
             `</div>`;
         } else if (!reps.length) {
-            bodyHtml = `<div style="padding:40px; text-align:center; color:#2e7d32;">` +
+            bodyHtml = `<div style="padding:40px; text-align:center; color:var(--green-text);">` +
                 `<div style="font-size:3em; margin-bottom:12px;">\u2705</div>` +
                 `<div style="font-size:1.15em; font-weight:600;">No notable patterns right now.</div>` +
-                `<div style="color:#666; font-size:0.9em; margin-top:8px;">Nobody is in a sustained slide, cliff drop, or volatile stretch over the last ${summary.weeksAnalyzed} weeks.</div>` +
+                `<div style="color:var(--text-secondary); font-size:0.9em; margin-top:8px;">Nobody is in a sustained slide, cliff drop, or volatile stretch over the last ${summary.weeksAnalyzed} weeks.</div>` +
             `</div>`;
         } else {
             bodyHtml = reps.map(rep => {
@@ -314,7 +314,7 @@
                         describePattern(p) +
                     `</div>`;
                 }).join('');
-                return `<div style="margin-bottom:18px; padding:14px; border:1px solid #e0e0e0; border-radius:10px; background:#fff;">` +
+                return `<div style="margin-bottom:18px; padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface);">` +
                     `<div style="font-weight:700; color:#1a237e; font-size:1.05em;">${escapeHtml(rep.name)}</div>` +
                     patternsHtml +
                 `</div>`;
@@ -326,7 +326,7 @@
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-        overlay.innerHTML = `<div style="background:#fff; border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
+        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
                     `<h2 style="margin:0; color:#1a237e; font-size:1.25em;">\uD83E\uDDE0 Pattern Memory</h2>` +
@@ -334,15 +334,15 @@
                         (summary.insufficientHistory
                             ? `Need more weekly history`
                             : `${summary.totalReps || 0} rep${summary.totalReps === 1 ? '' : 's'} with patterns \u2022 ` +
-                              `<span style="color:#c62828; font-weight:600;">${summary.declining || 0} declining</span> \u2022 ` +
+                              `<span style="color:var(--red-text); font-weight:600;">${summary.declining || 0} declining</span> \u2022 ` +
                               `<span style="color:#ef6c00; font-weight:600;">${summary.cliff || 0} cliff drops</span> \u2022 ` +
                               `<span style="color:#1565c0; font-weight:600;">${summary.volatile || 0} volatile</span> \u2022 ` +
-                              `<span style="color:#2e7d32; font-weight:600;">${summary.improving || 0} improving</span>`) +
+                              `<span style="color:var(--green-text); font-weight:600;">${summary.improving || 0} improving</span>`) +
                     `</div>` +
                 `</div>` +
-                `<button id="patternMemoryClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:#999;">\u2715</button>` +
+                `<button id="patternMemoryClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>` +
             `</div>` +
-            `<div style="padding:16px 24px; overflow-y:auto; flex:1; background:#fafbfc;">${bodyHtml}</div>` +
+            `<div style="padding:16px 24px; overflow-y:auto; flex:1; background:var(--bg-surface-raised);">${bodyHtml}</div>` +
             `<div style="padding:14px 24px; border-top:1px solid #eceff1; text-align:right;">` +
                 `<button id="patternMemoryCloseBtn" style="background:#1a237e; color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Close</button>` +
             `</div>` +

@@ -670,9 +670,9 @@
         var data = buildCheerData();
 
         if (!data) {
-            container.innerHTML = '<div style="text-align:center; padding:60px 20px; color:#94a3b8;">' +
+            container.innerHTML = '<div style="text-align:center; padding:60px 20px; color:var(--text-tertiary);">' +
                 '<div style="font-size:3em; margin-bottom:16px;">📣</div>' +
-                '<h3 style="color:#64748b; margin:0 0 8px 0;">No Data Yet</h3>' +
+                '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Data Yet</h3>' +
                 '<p style="margin:0;">Upload weekly or YTD data to see cheer suggestions for your team.</p></div>';
             return;
         }
@@ -704,9 +704,9 @@
         html += '</div></div>';
 
         if (!data.people.length) {
-            html += '<div style="text-align:center; padding:50px 20px; color:#94a3b8;">' +
+            html += '<div style="text-align:center; padding:50px 20px; color:var(--text-tertiary);">' +
                 '<div style="font-size:2.5em; margin-bottom:12px;">🔍</div>' +
-                '<h3 style="color:#64748b; margin:0 0 8px 0;">No Cheers to Surface Right Now</h3>' +
+                '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Cheers to Surface Right Now</h3>' +
                 '<p style="margin:0;">Once team members get close to a goal or improve week over week, they will show up here.</p></div>';
             container.innerHTML = html;
             return;
@@ -714,7 +714,7 @@
 
         html += '<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">';
         html += '<button type="button" id="cheerCopyAll" style="padding:12px 24px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:1em; cursor:pointer; box-shadow:0 2px 8px rgba(5,150,105,0.3);">📋 Copy All Cheers</button>';
-        html += '<span style="color:#64748b; font-size:0.9em;">📣 ' +
+        html += '<span style="color:var(--text-secondary); font-size:0.9em;">📣 ' +
             data.people.length + ' of ' + data.totalTeam + ' team member' + (data.totalTeam !== 1 ? 's' : '') +
             ' have something to cheer.</span>';
         html += '</div>';
@@ -733,11 +733,11 @@
             var bullets = person.cheers.slice(1, 4);
             var badge = KIND_BADGE[headline.kind] || KIND_BADGE.meet;
 
-            html += '<div class="cheer-card" style="background:#fff; border-radius:10px; border:2px solid #10b981; padding:16px; display:flex; flex-direction:column; gap:10px;">';
+            html += '<div class="cheer-card" style="background:var(--bg-surface); border-radius:10px; border:2px solid #10b981; padding:16px; display:flex; flex-direction:column; gap:10px;">';
 
             // Header.
             html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">';
-            html += '<div style="font-weight:700; font-size:1.1em; color:#1a1a2e;">' + _escapeHtml(person.firstName) + '</div>';
+            html += '<div style="font-weight:700; font-size:1.1em; color:var(--text-primary);">' + _escapeHtml(person.firstName) + '</div>';
             html += '<span style="padding:3px 10px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:12px; font-size:0.78em; font-weight:700; white-space:nowrap;">' + badge.text + '</span>';
             html += '</div>';
 
@@ -749,7 +749,7 @@
             if (bullets.length) {
                 html += '<div style="display:flex; flex-direction:column; gap:6px;">';
                 bullets.forEach(function (c) {
-                    html += '<div style="padding:7px 11px; background:#f0fdf4; border-left:3px solid #86efac; border-radius:4px; font-size:0.85em; color:#166534;">' +
+                    html += '<div style="padding:7px 11px; background:#f0fdf4; border-left:3px solid #86efac; border-radius:4px; font-size:0.85em; color:var(--green-text);">' +
                         (c.icon ? c.icon + ' ' : '') + _escapeHtml(c.text) + '</div>';
                 });
                 html += '</div>';
@@ -797,16 +797,16 @@
         overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;';
 
         overlay.innerHTML =
-            '<div style="background:#fff; border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
-                '<div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
-                    '<h3 style="margin:0; color:#1a1a2e;">📣 ' + _escapeHtml(title) + '</h3>' +
-                    '<button type="button" id="cheerModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:#999;">✕</button>' +
+            '<div style="background:var(--bg-surface); border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+                '<div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">' +
+                    '<h3 style="margin:0; color:var(--text-primary);">📣 ' + _escapeHtml(title) + '</h3>' +
+                    '<button type="button" id="cheerModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:var(--text-tertiary);">✕</button>' +
                 '</div>' +
                 '<div style="padding:20px; overflow-y:auto; flex:1;">' +
-                    '<textarea id="cheerModalText" style="width:100%; min-height:250px; border:1px solid #e5e7eb; border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
+                    '<textarea id="cheerModalText" style="width:100%; min-height:250px; border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
                 '</div>' +
-                '<div style="padding:12px 20px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end;">' +
-                    '<button type="button" id="cheerModalRegenerate" style="padding:10px 16px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600;">🔄 Regenerate</button>' +
+                '<div style="padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;">' +
+                    '<button type="button" id="cheerModalRegenerate" style="padding:10px 16px; background:var(--bg-surface-sunken); border:1px solid var(--border-strong); border-radius:8px; cursor:pointer; font-weight:600;">🔄 Regenerate</button>' +
                     '<button type="button" id="cheerModalCopy" style="padding:10px 16px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">📋 Copy</button>' +
                 '</div>' +
             '</div>';

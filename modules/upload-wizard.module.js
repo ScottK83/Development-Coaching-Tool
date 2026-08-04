@@ -503,7 +503,7 @@
             if (gaps.length) {
                 const shown = gaps.slice(0, MAX_RANGE_GAPS_SHOWN);
                 const chips = shown.map(g =>
-                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, #fff); color:var(--text-primary, #1a1a2e); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))} – ${fmtShort(parseLocalDate(g.endDate))}</span>`
+                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))} – ${fmtShort(parseLocalDate(g.endDate))}</span>`
                 ).join('');
                 const more = gaps.length > shown.length
                     ? `<div style="margin-top:4px;">+ ${gaps.length - shown.length} more.</div>`
@@ -561,7 +561,7 @@
         const chips = weeks.map(w => {
             const mon = parseLocalDate(w.startDate);
             const sun = parseLocalDate(w.endDate);
-            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, #fff); color:var(--text-primary, #1a1a2e); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
+            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
         }).join('');
         const more = totalMissing > shownCount
             ? `<div style="margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
@@ -569,7 +569,7 @@
         bannerEl.style.display = 'block';
         bannerEl.innerHTML = `
             <div style="font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
-            <div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, #1a1a2e);">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
+            <div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
             <div>${chips}</div>
             ${more}`;
     }

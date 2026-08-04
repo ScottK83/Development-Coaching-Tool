@@ -1365,10 +1365,10 @@
         var html = '';
         html += '<div id="relAllEmployeesLedger" style="margin-top:16px;">';
         html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Day-by-Day Breakdown (All Employees)</h4>';
-        html += '<div style="font-size:0.8em; color:#666; margin-bottom:8px;">Use this to match exact dates across associates.</div>';
+        html += '<div style="font-size:0.8em; color:var(--text-secondary); margin-bottom:8px;">Use this to match exact dates across associates.</div>';
 
         if (!rows.length) {
-            html += '<div style="padding:12px; border:1px solid #e0e0e0; border-radius:6px; color:#777;">No day-level events yet.</div>';
+            html += '<div style="padding:12px; border:1px solid var(--border); border-radius:6px; color:#777;">No day-level events yet.</div>';
             html += '</div>';
             return html;
         }
@@ -1377,11 +1377,11 @@
         var maxKey = rows[0].dateKey;
 
         html += '<div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap; margin-bottom:8px;">';
-        html += '<div><label style="display:block; font-size:0.76em; color:#555; margin-bottom:2px;">From</label><input type="date" id="relLedgerFrom" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
-        html += '<div><label style="display:block; font-size:0.76em; color:#555; margin-bottom:2px;">To</label><input type="date" id="relLedgerTo" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
+        html += '<div><label style="display:block; font-size:0.76em; color:var(--text-secondary); margin-bottom:2px;">From</label><input type="date" id="relLedgerFrom" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
+        html += '<div><label style="display:block; font-size:0.76em; color:var(--text-secondary); margin-bottom:2px;">To</label><input type="date" id="relLedgerTo" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
         html += '<button type="button" id="relLedgerApply" style="padding:6px 10px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer;">Apply</button>';
-        html += '<button type="button" id="relLedgerClear" style="padding:6px 10px; border:1px solid #ccc; background:#fff; color:#333; border-radius:4px; cursor:pointer;">Clear</button>';
-        html += '<div id="relLedgerCount" style="font-size:0.8em; color:#555; margin-left:auto;">Rows: ' + rows.length + '</div>';
+        html += '<button type="button" id="relLedgerClear" style="padding:6px 10px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-primary); border-radius:4px; cursor:pointer;">Clear</button>';
+        html += '<div id="relLedgerCount" style="font-size:0.8em; color:var(--text-secondary); margin-left:auto;">Rows: ' + rows.length + '</div>';
         html += '</div>';
 
         html += '<div style="max-height:360px; overflow:auto; border:1px solid #dfe6e6; border-radius:6px;">';
@@ -1410,7 +1410,7 @@
             html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.verint) + '</td>';
             html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.payroll) + '</td>';
             html += '<td style="padding:6px 8px; text-align:center;">' + row.hours + '</td>';
-            html += '<td style="padding:6px 8px; min-width:180px; color:#666;">' + escapeHtml(row.flags || '—') + '</td>';
+            html += '<td style="padding:6px 8px; min-width:180px; color:var(--text-secondary);">' + escapeHtml(row.flags || '—') + '</td>';
             html += '</tr>';
         });
 
@@ -1506,11 +1506,11 @@
         var html = '';
         html += '<div style="margin-bottom:16px;">';
         html += '<h3 style="margin:0 0 12px 0; color:#00695c;">📋 Reliability Tracker</h3>';
-        html += '<p style="font-size:0.88em; color:#666; margin-bottom:16px;">Upload files in the Upload section.</p>';
+        html += '<p style="font-size:0.88em; color:var(--text-secondary); margin-bottom:16px;">Upload files in the Upload section.</p>';
 
         html += '<div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:10px;">';
         html += '<div>';
-        html += '<label style="display:block; font-size:0.78em; color:#555; margin-bottom:2px;">Employee breakdown</label>';
+        html += '<label style="display:block; font-size:0.78em; color:var(--text-secondary); margin-bottom:2px;">Employee breakdown</label>';
         html += '<select id="relEmployeeSelect" style="padding:6px 10px; border:1px solid #cdd; border-radius:4px; min-width:260px;">';
         html += '<option value="">Select employee...</option>';
         prioritized.forEach(function(item) {
@@ -1518,21 +1518,21 @@
         });
         html += '</select>';
         html += '</div>';
-        html += '<div style="font-size:0.78em; color:#666;">Tip: choose one checked team member to view detail.</div>';
+        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Tip: choose one checked team member to view detail.</div>';
         if (reviewCount > 0) {
             html += '<div style="font-size:0.78em; color:#b26a00; font-weight:600;">Review queue: ' + reviewCount + ' associate' + (reviewCount === 1 ? '' : 's') + '.</div>';
         }
         html += '</div>';
 
         if (names.length === 0) {
-            html += '<div style="padding:20px; background:#f5f5f5; border-radius:8px; text-align:center; color:#666;">';
+            html += '<div style="padding:20px; background:var(--bg-surface-raised); border-radius:8px; text-align:center; color:var(--text-secondary);">';
             html += 'No checked team members found in Settings for the current period.';
             html += '</div>';
             html += '</div>';
             container.innerHTML = html;
             return;
         }
-        html += '<div id="relSelectionHint" style="padding:14px; border:1px dashed #b0bec5; border-radius:8px; color:#607d8b; background:#fafcfd; margin-top:8px;">Select an employee from the dropdown to view reliability details.</div>';
+        html += '<div id="relSelectionHint" style="padding:14px; border:1px dashed var(--border-strong); border-radius:8px; color:#607d8b; background:#fafcfd; margin-top:8px;">Select an employee from the dropdown to view reliability details.</div>';
 
         // Detail panel (shown when clicking a row)
         html += '<div id="relDetailPanel" style="display:none; margin-top:16px;"></div>';
@@ -1662,35 +1662,35 @@
 
         // Verdict tiles
         html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;">';
-        html += '<div style="padding:12px; background:#fff; border:1px solid #ffcdd2; border-radius:8px; text-align:center;">';
-        html += '<div style="font-size:1.8em; font-weight:800; color:#b71c1c;">' + sameDayAgainst + 'h</div>';
-        html += '<div style="font-size:0.78em; color:#666;">Against reliability</div></div>';
-        html += '<div style="padding:12px; background:#fff; border:1px solid #b2dfdb; border-radius:8px;">';
+        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #ffcdd2; border-radius:8px; text-align:center;">';
+        html += '<div style="font-size:1.8em; font-weight:800; color:var(--red-text);">' + sameDayAgainst + 'h</div>';
+        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Against reliability</div></div>';
+        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #b2dfdb; border-radius:8px;">';
         html += '<div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="font-size:1.6em; font-weight:800; color:' + ptostColor + ';">' + ptostUsed + '<span style="font-size:0.55em; color:#90a4ae;"> / 40h</span></div><div style="font-size:0.75em; color:#607d8b;">' + ptostRemaining + 'h left</div></div>';
         html += '<div style="margin-top:6px; height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + ptostPct + '%; background:' + ptostColor + ';"></div></div>';
         html += '<div style="font-size:0.75em; color:#607d8b; text-align:center; margin-top:4px;">PTOST buffer</div></div>';
-        html += '<div style="padding:12px; background:#fff; border:1px solid #ffe0b2; border-radius:8px; text-align:center;">';
+        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #ffe0b2; border-radius:8px; text-align:center;">';
         html += '<div style="font-size:1.8em; font-weight:800; color:#e65100;">' + (discCount + reviewCount) + '</div>';
-        html += '<div style="font-size:0.78em; color:#666;">Payroll discrepancies</div></div>';
-        html += '<div style="padding:12px; background:#fff; border:1px solid #bbdefb; border-radius:8px; text-align:center;">';
+        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Payroll discrepancies</div></div>';
+        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #bbdefb; border-radius:8px; text-align:center;">';
         html += '<div style="font-size:1.8em; font-weight:800; color:#1565c0;">' + pcCount + '</div>';
-        html += '<div style="font-size:0.78em; color:#666;">PC issue candidates</div></div>';
+        html += '<div style="font-size:0.78em; color:var(--text-secondary);">PC issue candidates</div></div>';
         html += '</div>';
 
         // Discrepancy table — only rows that disagree or count
-        html += '<div style="margin-bottom:14px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">';
-        html += '<div style="padding:10px 14px; background:#fafafa; border-bottom:1px solid #e0e0e0; font-weight:700; color:#37474f;">What needs attention (' + rows.length + ')</div>';
+        html += '<div style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; overflow:hidden;">';
+        html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">What needs attention (' + rows.length + ')</div>';
         if (rows.length === 0) {
-            html += '<div style="padding:20px; text-align:center; color:#2e7d32; font-weight:600;">✓ Verint and Payroll agree. Nothing to review.</div>';
+            html += '<div style="padding:20px; text-align:center; color:var(--green-text); font-weight:600;">✓ Verint and Payroll agree. Nothing to review.</div>';
         } else {
             html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
             html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0; white-space:nowrap;">Date</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Verint says</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Payroll says</th>';
-            html += '<th style="padding:8px 10px; text-align:center; border-bottom:1px solid #e0e0e0; white-space:nowrap;">Hours</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Problem</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Action</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;">Date</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Verint says</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Payroll says</th>';
+            html += '<th style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;">Hours</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Problem</th>';
+            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Action</th>';
             html += '</tr></thead><tbody>';
             rows.forEach(function(row) {
                 html += '<tr style="border-bottom:1px solid #f0f0f0;">';
@@ -1708,14 +1708,14 @@
 
         // PTOST ledger
         if (ptostLedger.length > 0) {
-            html += '<div style="margin-bottom:14px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">';
-            html += '<div style="padding:10px 14px; background:#fafafa; border-bottom:1px solid #e0e0e0; font-weight:700; color:#37474f;">PTOST ledger — running total vs 40h cap</div>';
+            html += '<div style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; overflow:hidden;">';
+            html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">PTOST ledger — running total vs 40h cap</div>';
             html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
             html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
-            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Date</th>';
-            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid #e0e0e0;">PTOST this day</th>';
-            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid #e0e0e0;">Running total</th>';
-            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid #e0e0e0;">Status</th>';
+            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--border);">Date</th>';
+            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid var(--border);">PTOST this day</th>';
+            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid var(--border);">Running total</th>';
+            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--border);">Status</th>';
             html += '</tr></thead><tbody>';
             ptostLedger.forEach(function(row) {
                 var statusText, statusColor, rowBg = '';
@@ -1791,12 +1791,12 @@
         var actionRows = buildActionRows(employeeName, r);
 
         var html = '';
-        html += '<div style="padding:16px; background:#fff; border-radius:8px; border:1px solid #e0e0e0;">';
+        html += '<div style="padding:16px; background:var(--bg-surface); border-radius:8px; border:1px solid var(--border);">';
 
         // Header
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
         html += '<h4 style="margin:0; color:#00695c;">' + escapeHtml(employeeName) + '</h4>';
-        html += '<button type="button" id="relCloseDetail" style="padding:4px 12px; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer;">✕ Close</button>';
+        html += '<button type="button" id="relCloseDetail" style="padding:4px 12px; border:1px solid var(--border); background:var(--bg-surface); border-radius:4px; cursor:pointer;">✕ Close</button>';
         html += '</div>';
 
         var sourceLabel = emp.hasVerint && emp.hasPayroll ? 'Matched' : (emp.hasVerint ? 'Verint only' : (emp.hasPayroll ? 'Payroll only' : 'None'));
@@ -1807,12 +1807,12 @@
             : (sourceLabel === 'Verint only'
                 ? 'No Payroll row matched this employee in the current data.'
                 : 'Verint and Payroll are both matched for this employee.');
-        html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:' + sourceBg + '; color:' + sourceColor + '; font-size:0.83em; border:1px solid #e0e0e0;">';
+        html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:' + sourceBg + '; color:' + sourceColor + '; font-size:0.83em; border:1px solid var(--border);">';
         html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
 
         // Tab bar — Discrepancies (default) / Classic
-        html += '<div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid #e0e0e0;">';
+        html += '<div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid var(--border);">';
         html += '<button type="button" id="relTabDisc" data-tab="disc" style="padding:8px 16px; border:none; background:#00695c; color:#fff; cursor:pointer; font-weight:700; border-radius:6px 6px 0 0; font-size:0.9em;">Discrepancies</button>';
         html += '<button type="button" id="relTabClassic" data-tab="classic" style="padding:8px 16px; border:none; background:#eceff1; color:#455a64; cursor:pointer; font-weight:600; border-radius:6px 6px 0 0; font-size:0.9em;">Classic view</button>';
         html += '</div>';
@@ -1847,10 +1847,10 @@
             : '—';
 
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
-        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Carryover</div></div>';
-        html += '<div style="padding:10px; background:#e8f5e9; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#2e7d32;">' + (ptoBalance ? ptoBalance.earned : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Earned</div></div>';
-        html += '<div style="padding:10px; background:#ffebee; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#c62828;">' + (ptoBalance ? ptoBalance.used : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:#666;">PTO Used</div></div>';
-        html += '<div style="padding:10px; background:' + (ptoIsNegative ? '#ffebee' : '#e3f2fd') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (ptoIsNegative ? '#b71c1c' : '#1565c0') + ';">' + ptoRemainingText + '</div><div style="font-size:0.75em; color:#666;">PTO Remaining</div></div>';
+        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Carryover</div></div>';
+        html += '<div style="padding:10px; background:var(--green-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--green-text);">' + (ptoBalance ? ptoBalance.earned : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Earned</div></div>';
+        html += '<div style="padding:10px; background:var(--red-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--red-text);">' + (ptoBalance ? ptoBalance.used : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Used</div></div>';
+        html += '<div style="padding:10px; background:' + (ptoIsNegative ? 'var(--red-soft)' : '#e3f2fd') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (ptoIsNegative ? 'var(--red-text)' : '#1565c0') + ';">' + ptoRemainingText + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Remaining</div></div>';
         html += '</div>';
         if (ptoIsNegative) {
             html += '<div style="margin:-8px 0 12px 0; font-size:0.8em; color:#8d1f1f;">PTO used is currently higher than carryover + earned in the imported PTO tracker data.</div>';
@@ -1864,10 +1864,10 @@
 
         // Status cards
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
-        html += '<div style="padding:10px; background:#e0f2f1; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#00695c;">' + ptostUsed + 'h / ' + PTOST_BUFFER_LIMIT + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Logged</div></div>';
-        html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptostRemaining + 'h</div><div style="font-size:0.75em; color:#666;">PTOST Left Before 40h</div></div>';
-        html += '<div style="padding:10px; background:#fff3e0; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#ef6c00;">' + unscheduledHours + 'h</div><div style="font-size:0.75em; color:#666;">Unscheduled or Unplanned</div></div>';
-        html += '<div style="padding:10px; background:' + (payrollFollowUpNeeded ? '#fff8e1' : '#e8f5e9') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (payrollFollowUpNeeded ? '#8a5300' : '#2e7d32') + ';">' + (payrollFollowUpNeeded ? 'Yes (' + payrollFollowUpCount + ')' : 'No') + '</div><div style="font-size:0.75em; color:#666;">Needs Payroll Follow-up</div></div>';
+        html += '<div style="padding:10px; background:#e0f2f1; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#00695c;">' + ptostUsed + 'h / ' + PTOST_BUFFER_LIMIT + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">PTOST Logged</div></div>';
+        html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptostRemaining + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">PTOST Left Before 40h</div></div>';
+        html += '<div style="padding:10px; background:#fff3e0; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#ef6c00;">' + unscheduledHours + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">Unscheduled or Unplanned</div></div>';
+        html += '<div style="padding:10px; background:' + (payrollFollowUpNeeded ? '#fff8e1' : 'var(--green-soft)') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (payrollFollowUpNeeded ? '#8a5300' : 'var(--green-text)') + ';">' + (payrollFollowUpNeeded ? 'Yes (' + payrollFollowUpCount + ')' : 'No') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">Needs Payroll Follow-up</div></div>';
         html += '</div>';
 
         var mismatchDates = [];
@@ -1892,7 +1892,7 @@
         html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">';
 
         // PTOST chip with inline mini-bar
-        html += '<div style="background:#fff; border:1px solid #b2dfdb; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="background:var(--bg-surface); border:1px solid #b2dfdb; border-radius:6px; padding:8px 10px;">';
         html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">PTOST</div>';
         html += '<div style="font-size:1.25em; font-weight:700; color:' + ptostBarColor + ';">' + ptostUsed + '<span style="font-size:0.65em; color:#90a4ae;"> / 40h</span></div>';
         html += '<div style="margin-top:5px; height:5px; background:#e0e0e0; border-radius:3px; overflow:hidden;">';
@@ -1908,7 +1908,7 @@
 
         // Unscheduled chip
         var unschedChipColor = unscheduledHours > 0 ? '#e65100' : '#2e7d32';
-        html += '<div style="background:#fff; border:1px solid #ffe0b2; border-radius:6px; padding:8px 10px;">';
+        html += '<div style="background:var(--bg-surface); border:1px solid #ffe0b2; border-radius:6px; padding:8px 10px;">';
         html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Unscheduled</div>';
         html += '<div style="font-size:1.25em; font-weight:700; color:' + unschedChipColor + ';">' + unscheduledHours + 'h</div>';
         html += '<div style="font-size:0.75em; color:#90a4ae;">mismatch rows</div>';
@@ -1930,11 +1930,11 @@
             html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">';
 
             // Correct Now
-            html += '<div style="background:#e8f5e9; border:1px solid #a5d6a7; border-radius:6px; padding:8px 10px;">';
-            html += '<div style="font-size:0.72em; font-weight:700; color:#2e7d32; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">✓ Correct Now (stays ≤ 40h)</div>';
+            html += '<div style="background:var(--green-soft); border:1px solid #a5d6a7; border-radius:6px; padding:8px 10px;">';
+            html += '<div style="font-size:0.72em; font-weight:700; color:var(--green-text); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">✓ Correct Now (stays ≤ 40h)</div>';
             if (safeCorrectionRows.length > 0) {
                 safeCorrectionRows.forEach(function(row) {
-                    html += '<div style="font-size:0.82em; color:#1b5e20; padding:1px 0;">' + escapeHtml(row) + '</div>';
+                    html += '<div style="font-size:0.82em; color:var(--green-text); padding:1px 0;">' + escapeHtml(row) + '</div>';
                 });
             } else {
                 html += '<div style="font-size:0.82em; color:#90a4ae;">—</div>';
@@ -1956,8 +1956,8 @@
             html += '</div>'; // end two-col grid
 
             if (mismatchDates.length > 0) {
-                html += '<div style="margin-top:6px; font-size:0.8em; color:#616161;">';
-                html += '<span style="font-weight:600; color:#b71c1c;">⚠ Mismatched days (Verint/Payroll coding differs):</span> ';
+                html += '<div style="margin-top:6px; font-size:0.8em; color:var(--text-secondary);">';
+                html += '<span style="font-weight:600; color:var(--red-text);">⚠ Mismatched days (Verint/Payroll coding differs):</span> ';
                 html += escapeHtml(mismatchDates.join(', '));
                 html += '</div>';
             }
@@ -1977,9 +1977,9 @@
         }
         html += '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:12px; font-size:0.8em; color:#607d8b; border-top:1px solid #e0f2f1; padding-top:7px;">';
         html += '<span>Can still convert: <strong style="color:#00695c;">' + (r.correctableSameDayHours || 0) + 'h</strong> across ' + correctionCandidates.length + ' day(s)</span>';
-        html += '<span>Still exposed: <strong style="color:' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? '#b71c1c' : '#2e7d32') + ';">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
+        html += '<span>Still exposed: <strong style="color:' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? 'var(--red-text)' : 'var(--green-text)') + ';">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
         html += '<span>YTD delta: <strong style="color:' + deltaColor + ';">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
-        html += '<span>PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span style="color:#b71c1c;">Reached</span>' : 'Not reached') + '</strong></span>';
+        html += '<span>PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span style="color:var(--red-text);">Reached</span>' : 'Not reached') + '</strong></span>';
         html += '</div>';
 
         html += '</div>'; // end At a Glance
@@ -2090,7 +2090,7 @@
         html += '</div>';
 
         // Payroll visibility controls
-        html += '<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.82em;">';
+        html += '<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding:8px 10px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:6px; font-size:0.82em;">';
         html += '<strong style="color:#334155;">Show Payroll:</strong>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowBrv" checked> BRV</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowFmla" checked> FMLA</label>';
@@ -2103,17 +2103,17 @@
         html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
         var catCounts = { ptost: 0, 'same-day': 0, planned: 0 };
         timeline.forEach(function(t) { if (catCounts[t.category] !== undefined) catCounts[t.category]++; });
-        html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:#fff; color:#b71c1c; border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
-        html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:#fff; color:#2e7d32; border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
-        html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:#fff; color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:var(--bg-surface); color:var(--red-text); border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:var(--bg-surface); color:var(--green-text); border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:var(--bg-surface); color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
         if (needsReviewCount > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="needs-review" style="padding:4px 12px; border:1px solid #f57f17; background:#fff; color:#f57f17; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">Needs Review (' + needsReviewCount + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="needs-review" style="padding:4px 12px; border:1px solid #f57f17; background:var(--bg-surface); color:#f57f17; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">Needs Review (' + needsReviewCount + ')</button>';
         }
         if ((r.pcIssueCandidates || []).length > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue" style="padding:4px 12px; border:1px solid #1565c0; background:#fff; color:#1565c0; border-radius:4px; cursor:pointer; font-size:0.82em;">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue" style="padding:4px 12px; border:1px solid #1565c0; background:var(--bg-surface); color:#1565c0; border-radius:4px; cursor:pointer; font-size:0.82em;">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
         }
         if ((r.discrepancies || []).length > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy" style="padding:4px 12px; border:1px solid #e65100; background:#fff; color:#e65100; border-radius:4px; cursor:pointer; font-size:0.82em;">Discrepancies (' + r.discrepancies.length + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy" style="padding:4px 12px; border:1px solid #e65100; background:var(--bg-surface); color:#e65100; border-radius:4px; cursor:pointer; font-size:0.82em;">Discrepancies (' + r.discrepancies.length + ')</button>';
         }
         html += '</div>';
 
@@ -2122,10 +2122,10 @@
         html += buildTimelineTable(timeline, r.discrepancies || [], 'all', { showBrv: true, showFmla: true, showHoliday: true });
         html += '</div>';
 
-        html += '<div style="margin-top:12px; padding:10px; background:#fafafa; border:1px solid #e6e6e6; border-radius:6px;">';
+        html += '<div style="margin-top:12px; padding:10px; background:var(--bg-surface-raised); border:1px solid #e6e6e6; border-radius:6px;">';
         html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">';
         html += '<strong style="color:#455a64; font-size:0.88em;">Payroll Action List (' + actionRows.length + ')</strong>';
-        html += '<button type="button" id="relExportActionsCsv" style="padding:5px 10px; border:1px solid #607d8b; background:#fff; color:#455a64; border-radius:4px; cursor:pointer; font-size:0.8em;">Export CSV</button>';
+        html += '<button type="button" id="relExportActionsCsv" style="padding:5px 10px; border:1px solid #607d8b; background:var(--bg-surface); color:#455a64; border-radius:4px; cursor:pointer; font-size:0.8em;">Export CSV</button>';
         html += '</div>';
         if (actionRows.length === 0) {
             html += '<div style="font-size:0.82em; color:#78909c;">No actions currently needed.</div>';
@@ -2359,18 +2359,18 @@
         filtered = filtered.filter(rowHasVisibleData);
 
         if (filtered.length === 0) {
-            return '<div style="padding:16px; text-align:center; color:#999; font-size:0.9em;">No events for this filter.</div>';
+            return '<div style="padding:16px; text-align:center; color:var(--text-tertiary); font-size:0.9em;">No events for this filter.</div>';
         }
 
         var html = '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
-        html += '<thead><tr style="background:#f5f5f5;">';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Date</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Type</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Verint</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Payroll</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">Hours</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid #ccc;">Running</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid #ccc;">Flags</th>';
+        html += '<thead><tr style="background:var(--bg-surface-raised);">';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Date</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Type</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Verint</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Payroll</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid var(--border);">Hours</th>';
+        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid var(--border);">Running</th>';
+        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Flags</th>';
         html += '</tr></thead><tbody>';
 
         filtered.forEach(function(t) {
@@ -2391,7 +2391,7 @@
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
-            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:#999;">—</span>';
+            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:var(--text-tertiary);">—</span>';
 
             // Payroll column
             var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
@@ -2407,7 +2407,7 @@
                 var regLabel = regEntries.map(function(p) { return 'REG ' + p.quantity + 'h (in: ' + p.clockIn + ')'; }).join('<br>');
                 payrollText = payrollText ? payrollText + '<br>' + regLabel : regLabel;
             }
-            if (!payrollText) payrollText = '<span style="color:#999;">—</span>';
+            if (!payrollText) payrollText = '<span style="color:var(--text-tertiary);">—</span>';
 
             // Total hours for the day (non-REG)
             var totalHours = 0;
@@ -2417,7 +2417,7 @@
                 totalHours = payrollNonReg.reduce(function(s, p) { return s + p.quantity; }, 0);
             }
 
-            html += '<tr style="border-bottom:1px solid #eee;' + (rowBg ? ' background:' + rowBg + ';' : '') + ' border-left:' + rowBorder + ';">';
+            html += '<tr style="border-bottom:1px solid var(--border);' + (rowBg ? ' background:' + rowBg + ';' : '') + ' border-left:' + rowBorder + ';">';
             html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(t.dateStr) + '</td>';
             html += '<td style="padding:6px 8px;"><span style="display:inline-block; padding:1px 6px; border-radius:3px; background:' + cat.bg + '; color:' + cat.color + '; font-weight:600; font-size:0.9em;">' + cat.icon + ' ' + cat.label + '</span></td>';
             html += '<td style="padding:6px 8px;">' + verintText + '</td>';
@@ -2449,7 +2449,7 @@
                     return '<div style="color:' + fColor + ';">' + escapeHtml(f) + '</div>';
                 }).join('');
             } else if (isDiscrepancy) {
-                html += '<div style="color:#b71c1c; font-weight:700;">⚠ Discrepancy</div>';
+                html += '<div style="color:var(--red-text); font-weight:700;">⚠ Discrepancy</div>';
             } else {
                 html += '<span style="color:#ccc;">—</span>';
             }

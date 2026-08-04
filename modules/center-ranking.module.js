@@ -124,8 +124,8 @@
         });
 
         var html = '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
-        html += '<label style="font-weight: 600; color: #555; font-size: 0.9em;">Period:</label>';
-        html += '<select id="rankingPeriodSelect" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
+        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Period:</label>';
+        html += '<select id="rankingPeriodSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
         html += '<option value="">Auto (Best Available)</option>';
 
         typeOrder.forEach(function(t) {
@@ -583,7 +583,7 @@
 
         if (!data || data.rankings.length === 0) {
             container.innerHTML = _renderRankingPeriodSelector(currentSelectValue) +
-                '<p style="color: #94a3b8; text-align: center; padding: 40px;">No ranking data available. Upload a full center data set (30+ employees) to see rankings.</p>';
+                '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No ranking data available. Upload a full center data set (30+ employees) to see rankings.</p>';
             var sel = document.getElementById('rankingPeriodSelect');
             if (sel) sel.addEventListener('change', _onRankingPeriodChange);
             return;
@@ -597,14 +597,14 @@
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #1565c0;">';
         html += '<strong>Center Rankings</strong> &mdash; ' + data.totalEmployees + ' employees scored';
-        html += '<br><span style="color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
+        html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
         html += '</div>';
 
         // Team summary
         var teamRanks = data.rankings.filter(function (r) { return data.teamMembers.has(r.name); });
         if (teamRanks.length > 0) {
-            html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-            html += '<h4 style="margin-top: 0; color: #1a1a2e;">Your Team</h4>';
+            html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+            html += '<h4 style="margin-top: 0; color: var(--text-primary);">Your Team</h4>';
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">';
 
             teamRanks.forEach(function (r) {
@@ -618,10 +618,10 @@
                 html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
-                html += ' <span style="color: #666; font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
+                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
                 var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
-                html += '<div style="margin-top: 4px; font-size: 0.85em; color: #555;">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
+                html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
                 html += '</div>';
@@ -635,9 +635,9 @@
         _currentSort = { key: 'rank', dir: 'asc' };
 
         // Full ranking table
-        html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: #1a1a2e;">Full Center Rankings</h4>';
-        html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).</p>';
+        html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
+        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).</p>';
         html += '</div>';
 
         container.innerHTML = html;
@@ -702,7 +702,7 @@
 
         var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
-        html += '<thead><tr style="background: #f5f5f5;">';
+        html += '<thead><tr style="background: var(--bg-surface-raised);">';
         html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
         html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
@@ -746,7 +746,7 @@
             else if (r.rank >= 105) { rankBg = '#c62828'; rankColor = '#FFFFFF'; }
 
             var teamBorder = isTeam ? 'outline: 2px solid #2e7d32; outline-offset: -2px; ' : '';
-            html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
+            html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight + ';">';
 
             // Rank
             var rankStyle = 'padding: 4px 3px; text-align: center; font-weight: bold;';

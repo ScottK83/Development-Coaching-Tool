@@ -186,14 +186,14 @@
         var prefix = m.targetType === 'min' ? '\u2265' : '\u2264';
 
         return '<span style="display: inline-block; padding: 3px 8px; margin: 2px 3px; border-radius: 12px; ' +
-            'font-size: 0.8em; font-weight: 600; background: #fee2e2; color: #991b1b;">' +
+            'font-size: 0.8em; font-weight: 600; background: var(--red-soft); color: var(--red-text);">' +
             escapeHtml(m.icon + ' ' + m.label) + ': ' + escapeHtml(display) +
             ' <span style="font-weight: 400; opacity: 0.7;">(target ' + prefix + escapeHtml(targetDisplay) + ')</span></span>';
     }
 
     function formatGreenPill(text) {
         return '<span style="display: inline-block; padding: 3px 8px; margin: 2px 3px; border-radius: 12px; ' +
-            'font-size: 0.8em; font-weight: 600; background: #dcfce7; color: #166534;">' + escapeHtml(text) + '</span>';
+            'font-size: 0.8em; font-weight: 600; background: var(--green-soft); color: var(--green-text);">' + escapeHtml(text) + '</span>';
     }
 
     function renderKpiDot(score, label) {
@@ -221,12 +221,12 @@
             });
         }
 
-        var html = '<h3 style="margin: 8px 0 6px 0; font-size: 1.1em; color: #475569;">Year-End KPI Scorecard</h3>';
-        html += '<p style="margin: 0 0 12px 0; color: #94a3b8; font-size: 0.78em;">' +
+        var html = '<h3 style="margin: 8px 0 6px 0; font-size: 1.1em; color: var(--text-secondary);">Year-End KPI Scorecard</h3>';
+        html += '<p style="margin: 0 0 12px 0; color: var(--text-tertiary); font-size: 0.78em;">' +
             'Adh · AHT · Sent · RepSat · Rel &mdash; ' +
-            '<span style="color:#166534;font-weight:600;">green</span>=Exceptional, ' +
+            '<span style="color:var(--green-text);font-weight:600;">green</span>=Exceptional, ' +
             '<span style="color:#92400e;font-weight:600;">yellow</span>=Successful, ' +
-            '<span style="color:#991b1b;font-weight:600;">red</span>=Off-track' +
+            '<span style="color:var(--red-text);font-weight:600;">red</span>=Off-track' +
             '</p>';
 
         for (var bucket = 5; bucket >= 0; bucket--) {
@@ -235,13 +235,13 @@
             var bucketColor = bucket === 5 ? '#166534' : bucket >= 3 ? '#ca8a04' : '#991b1b';
             var bucketBg = bucket === 5 ? '#dcfce7' : bucket >= 3 ? '#fef3c7' : '#fee2e2';
 
-            html += '<div style="margin-bottom: 10px; padding: 10px 14px; background: white; border-radius: 10px; ' +
+            html += '<div style="margin-bottom: 10px; padding: 10px 14px; background: var(--bg-surface); border-radius: 10px; ' +
                 'border: 1px solid #e2e8f0; border-left: 4px solid ' + bucketColor + ';">';
             html += '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">';
             html += '<span style="display: inline-block; padding: 3px 10px; background: ' + bucketBg +
                 '; color: ' + bucketColor + '; border-radius: 12px; font-size: 0.85em; font-weight: 700;">' +
                 bucket + ' of 5 on-track</span>';
-            html += '<span style="color: #64748b; font-size: 0.82em;">' + list.length + ' ' +
+            html += '<span style="color: var(--text-secondary); font-size: 0.82em;">' + list.length + ' ' +
                 (list.length === 1 ? 'rep' : 'reps') + '</span>';
             html += '</div>';
 
@@ -249,7 +249,7 @@
             for (var k = 0; k < list.length; k++) {
                 var e = list[k];
                 html += '<div style="display: flex; align-items: center; gap: 8px;">';
-                html += '<span style="min-width: 120px; font-weight: 600; color: #1e293b; font-size: 0.9em;">' +
+                html += '<span style="min-width: 120px; font-weight: 600; color: var(--text-primary); font-size: 0.9em;">' +
                     escapeHtml(e.firstName) + '</span>';
                 html += '<span>';
                 for (var s = 0; s < e.scores.length; s++) {
@@ -269,20 +269,20 @@
 
         // Header
         html += '<div style="margin-bottom: 20px;">' +
-            '<h2 style="margin: 0 0 6px 0; font-size: 1.4em; color: #1e293b;">Dashboard</h2>' +
-            '<p style="margin: 0; color: #64748b; font-size: 0.9em;">' + escapeHtml(weekLabel) + '</p></div>';
+            '<h2 style="margin: 0 0 6px 0; font-size: 1.4em; color: var(--text-primary);">Dashboard</h2>' +
+            '<p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">' + escapeHtml(weekLabel) + '</p></div>';
 
         // Team summary bar
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">';
-        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">' +
+        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: var(--bg-surface-raised); border-radius: 10px; border: 1px solid var(--border); text-align: center;">' +
             '<div style="font-size: 2em; font-weight: 700; color: #334155;">' + teamStats.total + '</div>' +
-            '<div style="font-size: 0.82em; color: #64748b;">Team Members</div></div>';
-        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: #dcfce7; border-radius: 10px; border: 1px solid #bbf7d0; text-align: center;">' +
-            '<div style="font-size: 2em; font-weight: 700; color: #166534;">' + teamStats.meetingAll + '</div>' +
-            '<div style="font-size: 0.82em; color: #166534;">Meeting All Targets</div></div>';
-        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: #fee2e2; border-radius: 10px; border: 1px solid #fecaca; text-align: center;">' +
-            '<div style="font-size: 2em; font-weight: 700; color: #991b1b;">' + teamStats.needCoaching + '</div>' +
-            '<div style="font-size: 0.82em; color: #991b1b;">Need Coaching</div></div>';
+            '<div style="font-size: 0.82em; color: var(--text-secondary);">Team Members</div></div>';
+        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: var(--green-soft); border-radius: 10px; border: 1px solid #bbf7d0; text-align: center;">' +
+            '<div style="font-size: 2em; font-weight: 700; color: var(--green-text);">' + teamStats.meetingAll + '</div>' +
+            '<div style="font-size: 0.82em; color: var(--green-text);">Meeting All Targets</div></div>';
+        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: var(--red-soft); border-radius: 10px; border: 1px solid #fecaca; text-align: center;">' +
+            '<div style="font-size: 2em; font-weight: 700; color: var(--red-text);">' + teamStats.needCoaching + '</div>' +
+            '<div style="font-size: 0.82em; color: var(--red-text);">Need Coaching</div></div>';
         html += '</div>';
 
         // Year-End KPI Scorecard (bucketed 5→0 on-track)
@@ -290,21 +290,21 @@
 
         // Coaching priorities
         if (priorities.length > 0) {
-            html += '<h3 style="margin: 0 0 12px 0; font-size: 1.1em; color: #475569;">Top Coaching Priorities</h3>';
+            html += '<h3 style="margin: 0 0 12px 0; font-size: 1.1em; color: var(--text-secondary);">Top Coaching Priorities</h3>';
 
             for (var i = 0; i < priorities.length; i++) {
                 var p = priorities[i];
                 var rank = i + 1;
                 var borderColor = rank <= 3 ? '#ef4444' : '#f59e0b';
 
-                html += '<div style="padding: 14px 18px; margin-bottom: 10px; background: white; ' +
-                    'border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid ' + borderColor + '; ' +
+                html += '<div style="padding: 14px 18px; margin-bottom: 10px; background: var(--bg-surface); ' +
+                    'border-radius: 10px; border: 1px solid var(--border); border-left: 4px solid ' + borderColor + '; ' +
                     'box-shadow: 0 1px 3px rgba(0,0,0,0.06);">';
 
                 // Name row with coach button
                 html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
-                html += '<div><span style="font-weight: 700; font-size: 1.05em; color: #1e293b;">' + escapeHtml(p.firstName) + '</span>' +
-                    ' <span style="font-size: 0.8em; color: #94a3b8;">' + p.metCount + '/' + p.totalMetrics + ' targets met</span></div>';
+                html += '<div><span style="font-weight: 700; font-size: 1.05em; color: var(--text-primary);">' + escapeHtml(p.firstName) + '</span>' +
+                    ' <span style="font-size: 0.8em; color: var(--text-tertiary);">' + p.metCount + '/' + p.totalMetrics + ' targets met</span></div>';
                 html += '<button type="button" onclick="window.DevCoachModules?.dashboard?.coachNow(\'' +
                     escapeHtml(p.name.replace(/'/g, "\\'")) + '\')" ' +
                     'style="padding: 6px 14px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; ' +
@@ -361,7 +361,7 @@
 
     function renderStarPerformers(names) {
         if (!names || !names.length) return '';
-        var html = '<h3 style="margin: 20px 0 12px 0; font-size: 1.1em; color: #166534;">Meeting All Targets</h3>';
+        var html = '<h3 style="margin: 20px 0 12px 0; font-size: 1.1em; color: var(--green-text);">Meeting All Targets</h3>';
         html += '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
         for (var i = 0; i < names.length; i++) {
             html += formatGreenPill('\u2713 ' + names[i]);
@@ -390,8 +390,8 @@
         if (!weekKey) {
             container.innerHTML = '<div style="text-align: center; padding: 60px 20px;">' +
                 '<div style="font-size: 3em; margin-bottom: 16px;">📊</div>' +
-                '<h2 style="color: #475569; margin: 0 0 8px 0;">Welcome to the Coaching Tool</h2>' +
-                '<p style="color: #94a3b8; margin: 0 0 20px 0;">Upload a YTD report to see coaching priorities.</p>' +
+                '<h2 style="color: var(--text-secondary); margin: 0 0 8px 0;">Welcome to the Coaching Tool</h2>' +
+                '<p style="color: var(--text-tertiary); margin: 0 0 20px 0;">Upload a YTD report to see coaching priorities.</p>' +
                 '<button type="button" onclick="showOnlySection(\'uploadSection\')" ' +
                 'style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 8px; ' +
                 'font-size: 1em; cursor: pointer; font-weight: 600;">Upload Data</button></div>';

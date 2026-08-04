@@ -270,8 +270,8 @@
         });
 
         var html = '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
-        html += '<label style="font-weight: 600; color: #555; font-size: 0.9em;">Period:</label>';
-        html += '<select id="matchupPeriodSelect" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
+        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Period:</label>';
+        html += '<select id="matchupPeriodSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
         html += '<option value="">Auto (Best Available)</option>';
 
         typeOrder.forEach(function(t) {
@@ -324,7 +324,7 @@
         var data = buildMatchupData(_selectedPeriodKey);
         if (!data) {
             container.innerHTML = _renderPeriodSelector(currentSelectValue) +
-                '<p style="color: #94a3b8; text-align: center; padding: 40px;">No matchup data available. Upload a full center data set and assign supervisors in Settings > Team Members.</p>';
+                '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No matchup data available. Upload a full center data set and assign supervisors in Settings > Team Members.</p>';
             var sel = document.getElementById('matchupPeriodSelect');
             if (sel) sel.addEventListener('change', _onPeriodChange);
             return;
@@ -336,7 +336,7 @@
             container.innerHTML = _renderPeriodSelector(currentSelectValue) +
                 '<div style="padding: 30px; text-align: center;">' +
                 '<h3 style="color: #e65100;">🥊 Team Matchup</h3>' +
-                '<p style="color: #666; max-width: 500px; margin: 0 auto;">No rival teams found. Go to <strong>Settings > Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.</p>' +
+                '<p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto;">No rival teams found. Go to <strong>Settings > Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.</p>' +
                 '</div>';
             var sel = document.getElementById('matchupPeriodSelect');
             if (sel) sel.addEventListener('change', _onPeriodChange);
@@ -351,7 +351,7 @@
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #e65100;">';
         html += '<strong>🥊 Team Matchup</strong> &mdash; ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
-        html += '<br><span style="color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
+        html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
         html += '</div>';
 
         // Scoreboard: My Team vs each rival
@@ -380,18 +380,18 @@
     }
 
     function _renderHeadToHead(myStats, rivalStats, data) {
-        var html = '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 12px; border: 2px solid #e65100; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
+        var html = '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 12px; border: 2px solid #e65100; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
 
         // Team names header
         html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">';
         html += '<div style="text-align: center; flex: 1;">';
         html += '<div style="font-size: 1.3em; font-weight: bold; color: #1565c0;">My Team</div>';
-        html += '<div style="font-size: 0.85em; color: #666;">' + myStats.count + ' agents</div>';
+        html += '<div style="font-size: 0.85em; color: var(--text-secondary);">' + myStats.count + ' agents</div>';
         html += '</div>';
         html += '<div style="font-size: 1.5em; font-weight: bold; color: #e65100; padding: 0 20px;">VS</div>';
         html += '<div style="text-align: center; flex: 1;">';
-        html += '<div style="font-size: 1.3em; font-weight: bold; color: #c62828;">' + _escapeHtml(rivalStats.name) + '</div>';
-        html += '<div style="font-size: 0.85em; color: #666;">' + rivalStats.count + ' agents</div>';
+        html += '<div style="font-size: 1.3em; font-weight: bold; color: var(--red-text);">' + _escapeHtml(rivalStats.name) + '</div>';
+        html += '<div style="font-size: 0.85em; color: var(--text-secondary);">' + rivalStats.count + ' agents</div>';
         html += '</div>';
         html += '</div>';
 
@@ -422,7 +422,7 @@
             html += '<span style="font-weight: bold; color: ' + myColor + ';">' + _formatMetricDisplay(m.formatKey, myVal) + '</span>';
             html += '</div>';
             // Metric label
-            html += '<div style="width: 110px; text-align: center; font-size: 0.85em; font-weight: 600; color: #555;">' + icon + ' ' + m.label + '</div>';
+            html += '<div style="width: 110px; text-align: center; font-size: 0.85em; font-weight: 600; color: var(--text-secondary);">' + icon + ' ' + m.label + '</div>';
             // Rival value
             html += '<div style="flex: 1; text-align: left; padding: 8px 12px; background: ' + rivalBg + '; border-radius: 6px;">';
             html += '<span style="font-weight: bold; color: ' + rivalColor + ';">' + _formatMetricDisplay(m.formatKey, rivalVal) + '</span>';
@@ -443,7 +443,7 @@
         });
 
         var recordColor = myWinsTotal > rivalWinsTotal ? '#2e7d32' : (myWinsTotal < rivalWinsTotal ? '#c62828' : '#666');
-        html += '<div style="text-align: center; margin-top: 12px; padding: 10px; background: #f5f5f5; border-radius: 8px;">';
+        html += '<div style="text-align: center; margin-top: 12px; padding: 10px; background: var(--bg-surface-raised); border-radius: 8px;">';
         html += '<span style="font-size: 1.2em; font-weight: bold; color: ' + recordColor + ';">';
         html += myWinsTotal + 'W - ' + rivalWinsTotal + 'L';
         if (tiesTotal > 0) html += ' - ' + tiesTotal + 'T';
@@ -461,11 +461,11 @@
             .map(function (n) { return data.teamStats[n]; })
             .sort(function (a, b) { return (b.avgRating || 0) - (a.avgRating || 0); });
 
-        var html = '<div style="margin-bottom: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: #1a1a2e;">Team Power Rankings</h4>';
+        var html = '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Power Rankings</h4>';
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
-        html += '<thead><tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">';
+        html += '<thead><tr style="background: var(--bg-surface-raised); border-bottom: 2px solid var(--border);">';
         html += '<th style="padding: 8px; text-align: center; width: 40px;">#</th>';
         html += '<th style="padding: 8px; text-align: left;">Team</th>';
         html += '<th style="padding: 8px; text-align: center;">Agents</th>';
@@ -484,7 +484,7 @@
             var rowBg = isMyTeam ? '#e8eaf6' : (idx % 2 === 0 ? '#fff' : '#fafafa');
             var fontWeight = isMyTeam ? 'bold' : 'normal';
 
-            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee; font-weight: ' + fontWeight + ';">';
+            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight + ';">';
             html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
             html += '<td style="padding: 8px;">' + (isMyTeam ? '<span style="color: #1565c0;">★ </span>' : '') + _escapeHtml(team.name) + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + team.count + '</td>';
@@ -515,13 +515,13 @@
         var borderColor = isMyTeam ? '#1565c0' : '#e65100';
         var headerBg = isMyTeam ? '#e3f2fd' : '#fff3e0';
 
-        var html = '<div style="margin-bottom: 16px; border-radius: 8px; border: 1px solid #ddd; overflow: hidden;">';
+        var html = '<div style="margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">';
         html += '<div style="padding: 12px 16px; background: ' + headerBg + '; border-left: 4px solid ' + borderColor + ';">';
-        html += '<strong>' + _escapeHtml(teamName) + '</strong> <span style="color: #666; font-size: 0.85em;">(' + members.length + ' agents)</span>';
+        html += '<strong>' + _escapeHtml(teamName) + '</strong> <span style="color: var(--text-secondary); font-size: 0.85em;">(' + members.length + ' agents)</span>';
         html += '</div>';
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em;">';
-        html += '<thead><tr style="background: #f5f5f5;">';
+        html += '<thead><tr style="background: var(--bg-surface-raised);">';
         html += '<th style="padding: 6px 8px; text-align: center; width: 35px;">#</th>';
         html += '<th style="padding: 6px 8px; text-align: left;">Name</th>';
         html += '<th style="padding: 6px 8px; text-align: center;">Score</th>';
@@ -540,7 +540,7 @@
             var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
                 r.trackStatusValue === 'on-track-successful' ? '#f57f17' : '#c62828';
 
-            html += '<tr style="border-bottom: 1px solid #eee; background: ' + (idx % 2 === 0 ? '#fff' : '#fafafa') + ';">';
+            html += '<tr style="border-bottom: 1px solid var(--border); background: ' + (idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-raised)') + ';">';
             html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
             html += '<td style="padding: 5px 8px;">' + _escapeHtml(r.name) + '</td>';
             html += '<td style="padding: 5px 8px; text-align: center; color: ' + statusColor + '; font-weight: bold;">' + r.ratingAverage.toFixed(2) + '</td>';

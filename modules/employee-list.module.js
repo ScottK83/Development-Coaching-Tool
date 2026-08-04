@@ -41,23 +41,23 @@
         const supervisorValue = supervisorAssignments[name] || '';
 
         return `
-        <div style="padding: 15px; border-bottom: 1px solid #eee; background: #fafafa;">
+        <div style="padding: 15px; border-bottom: 1px solid var(--border); background: var(--bg-surface-raised);">
             <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                 <div style="flex: 1;">
                     <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" class="team-member-checkbox employee-row-team-checkbox" data-week="${escapeHtml(teamSelectionWeek)}" data-name="${escapeHtml(name)}" ${isTeamSelected ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
                         <strong style="color: #6a1b9a;">${escapeHtml(name)}</strong>
                     </label>
-                    <div style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">Source: Uploaded Data</div>
+                    <div style="font-size: 0.8em; color: var(--text-secondary); margin: 5px 0 0 0;">Source: Uploaded Data</div>
                 </div>
                 <div style="flex: 1; min-width: 150px;">
-                    <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
-                    <input type="text" id="prefName_${escapeHtml(name)}" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(getEmployeeNickname(name))}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
-                    <div style="font-size: 0.75em; color: #999; margin-top: 3px;">Current: <strong>${escapeHtml(currentPreferred)}</strong></div>
+                    <label style="font-size: 0.85em; color: var(--text-secondary); display: block; margin-bottom: 5px; font-weight: 500;">How to Address:</label>
+                    <input type="text" id="prefName_${escapeHtml(name)}" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(getEmployeeNickname(name))}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                    <div style="font-size: 0.75em; color: var(--text-tertiary); margin-top: 3px;">Current: <strong>${escapeHtml(currentPreferred)}</strong></div>
                 </div>
                 <div style="flex: 0 0 140px;">
-                    <label style="font-size: 0.85em; color: #666; display: block; margin-bottom: 5px; font-weight: 500;">Supervisor:</label>
-                    <input type="text" class="employee-supervisor-input" data-name="${escapeHtml(name)}" value="${escapeHtml(supervisorValue)}" placeholder="My team" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                    <label style="font-size: 0.85em; color: var(--text-secondary); display: block; margin-bottom: 5px; font-weight: 500;">Supervisor:</label>
+                    <input type="text" class="employee-supervisor-input" data-name="${escapeHtml(name)}" value="${escapeHtml(supervisorValue)}" placeholder="My team" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button class="saveEmployeeNameBtn" data-name="${escapeHtml(name)}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">💾 Save</button>
@@ -82,7 +82,7 @@
 
         const employees = getEmployeesFromWeeklyData(weeklyData);
         if (employees.length === 0) {
-            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees yet. Upload weekly data to see your team members here!</div>';
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">No employees yet. Upload weekly data to see your team members here!</div>';
             return;
         }
 
@@ -109,11 +109,11 @@
             `<div style="padding: 15px; background: #f0f8ff; border-bottom: 2px solid #6a1b9a; font-weight: bold; color: #6a1b9a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">` +
             `<span>Total Employees: ${employees.length}</span>` +
             `<div style="display: flex; gap: 6px;">` +
-            `<button type="button" id="checkAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #4caf50; background: #e8f5e9; color: #2e7d32; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Check All</button>` +
-            `<button type="button" id="uncheckAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #c62828; background: #fbe9e7; color: #c62828; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Uncheck All</button>` +
+            `<button type="button" id="checkAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #4caf50; background: var(--green-soft); color: var(--green-text); border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Check All</button>` +
+            `<button type="button" id="uncheckAllEmployeesBtn" style="padding: 5px 12px; border: 1px solid #c62828; background: #fbe9e7; color: var(--red-text); border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600;">Uncheck All</button>` +
             `</div></div>` +
-            `<div style="padding: 12px 15px; background: #fff; border-bottom: 1px solid #ddd;">` +
-            `<input type="text" id="employeeSearchInput" placeholder="Search by name..." style="width: 100%; padding: 10px 14px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box;">` +
+            `<div style="padding: 12px 15px; background: var(--bg-surface); border-bottom: 1px solid var(--border);">` +
+            `<input type="text" id="employeeSearchInput" placeholder="Search by name..." style="width: 100%; padding: 10px 14px; border: 2px solid var(--border); border-radius: 8px; font-size: 1em; box-sizing: border-box;">` +
             `</div>` +
             `<div id="employeeListRows">` +
             employees.map(name => buildEmployeeRowHtml(name, preferredNames, options)).join('') +

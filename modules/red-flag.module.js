@@ -163,22 +163,22 @@ function renderFollowUpFields(todoTypeKey) {
     container.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
             <div>
-                <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Account:</label>
+                <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Customer Account:</label>
                 <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
             </div>
             <div>
-                <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Customer Name:</label>
+                <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Customer Name:</label>
                 <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
             </div>
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Reason To-Do Was Declined:</label>
+            <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Reason To-Do Was Declined:</label>
             <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: #333;">Correct Process:</label>
+            <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Correct Process:</label>
             <select id="followUpProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
                 <option value="">-- Select Correct Process --</option>
                 ${processOptionsHtml}
@@ -515,7 +515,7 @@ function renderFollowUpHistory() {
     panel.style.display = 'block';
 
     if (filtered.length === 0) {
-        listEl.innerHTML = '<p style="color: #999; text-align: center; padding: 12px;">No follow-ups match this filter.</p>';
+        listEl.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 12px;">No follow-ups match this filter.</p>';
         return;
     }
 
@@ -528,10 +528,10 @@ function renderFollowUpHistory() {
         const rowOpacity = isPending ? '1' : '0.75';
         const reasonPreview = String(entry.declineReason || '').slice(0, 80) + (String(entry.declineReason || '').length > 80 ? '...' : '');
 
-        return `<div style="padding: 10px 12px; border-bottom: 1px solid #eee; opacity: ${rowOpacity}; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
+        return `<div style="padding: 10px 12px; border-bottom: 1px solid var(--border); opacity: ${rowOpacity}; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
             <div>
-                <div style="font-weight: 600; color: #333; font-size: 0.95em;">${escapeHtml(entry.associateName)} — ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
-                <div style="font-size: 0.82em; color: #666; margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}) — ${date}</div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95em;">${escapeHtml(entry.associateName)} — ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
+                <div style="font-size: 0.82em; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}) — ${date}</div>
                 <div style="font-size: 0.8em; color: #888; margin-top: 2px; font-style: italic;">${escapeHtml(reasonPreview)}</div>
             </div>
             <button onclick="toggleFollowUpStatus('${entry.id}')" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 999px; padding: 4px 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; white-space: nowrap;">${statusLabel}</button>

@@ -408,21 +408,21 @@
         var weekInfo = data.weekInfo;
 
         if (data.employees.length === 0) {
-            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 40px;">No data available. Upload data to see projections.</p>';
+            container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No data available. Upload data to see projections.</p>';
             return;
         }
 
         var html = '';
 
         // Summary header
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50;">';
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--green-soft); border-radius: 8px; border-left: 4px solid #4caf50;">';
         html += '<strong>Year Progress:</strong> ' + weekInfo.weeksCompleted + ' weeks completed, ' + weekInfo.weeksRemaining + ' weeks remaining in ' + weekInfo.currentYear;
         html += '</div>';
 
         // Employee selector
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">';
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">';
         html += '<label for="futuresEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Associate:</label>';
-        html += '<select id="futuresEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; cursor: pointer;">';
+        html += '<select id="futuresEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; cursor: pointer;">';
         html += '<option value="__all__">All Team Members</option>';
         data.employees.forEach(function (emp) {
             html += '<option value="' + _escapeHtml(emp.name) + '">' + _escapeHtml(emp.name) + '</option>';
@@ -431,13 +431,13 @@
         html += '</div>';
 
         // Timeframe toggle
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">';
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">';
         html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Show targets as:</label>';
         html += '<div style="display: flex; gap: 8px;">';
         ['Daily', 'Weekly', 'Monthly'].forEach(function (label) {
             var val = label.toLowerCase();
             var isDefault = val === 'weekly';
-            html += '<button type="button" class="futures-timeframe-btn" data-timeframe="' + val + '" style="padding: 8px 18px; border: 2px solid ' + (isDefault ? '#4caf50' : '#ddd') + '; background: ' + (isDefault ? '#4caf50' : 'white') + '; color: ' + (isDefault ? 'white' : '#666') + '; border-radius: 4px; cursor: pointer; font-weight: bold;">' + label + '</button>';
+            html += '<button type="button" class="futures-timeframe-btn" data-timeframe="' + val + '" style="padding: 8px 18px; border: 2px solid ' + (isDefault ? '#4caf50' : 'var(--border)') + '; background: ' + (isDefault ? '#4caf50' : 'white') + '; color: ' + (isDefault ? 'white' : 'var(--text-secondary)') + '; border-radius: 4px; cursor: pointer; font-weight: bold;">' + label + '</button>';
         });
         html += '</div></div>';
 
@@ -481,39 +481,39 @@
             : data.employees.filter(function (e) { return e.name === selectedEmployee; });
 
         if (employees.length === 0) {
-            tableContainer.innerHTML = '<p style="color: #94a3b8; text-align: center;">No data for selected employee.</p>';
+            tableContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center;">No data for selected employee.</p>';
             return;
         }
 
         var html = '';
 
         employees.forEach(function (emp) {
-            html += '<div style="margin-bottom: 24px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+            html += '<div style="margin-bottom: 24px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4caf50; padding-bottom: 8px; margin-bottom: 0;">';
-            html += '<h3 style="margin: 0; color: #1a1a2e;">' + _escapeHtml(emp.name) + '</h3>';
+            html += '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + '</h3>';
             html += '<button type="button" class="futures-checkin-btn" data-employee="' + _escapeHtml(emp.name) + '" style="padding: 6px 16px; background: #1565c0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85em; white-space: nowrap;">Check-In Summary</button>';
             html += '</div>';
 
             if (emp.dataSource) {
-                html += '<p style="margin: 0 0 12px 0; color: #666; font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
+                html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
             }
 
             // Table
             html += '<div style="overflow-x: auto;">';
             html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
-            html += '<thead><tr style="background: #f5f5f5;">';
-            html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid #ddd;">Metric</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">YTD</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Target</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>';
+            html += '<thead><tr style="background: var(--bg-surface-raised);">';
+            html += '<th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--border);">Metric</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">YTD</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Target</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Status</th>';
             var tfLabel = timeframe === 'daily' ? 'Avg/Day' : timeframe === 'monthly' ? 'Avg/Month' : 'Avg/Week';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e8f5e9;">Meet (' + tfLabel + ')</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; background: #e3f2fd;">Exceed (' + tfLabel + ')</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border); background: var(--green-soft);">Meet (' + tfLabel + ')</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border); background: #e3f2fd;">Exceed (' + tfLabel + ')</th>';
             html += '</tr></thead><tbody>';
 
             var metricKeys = Object.keys(emp.metrics);
             if (metricKeys.length === 0) {
-                html += '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #999;">No metric data available</td></tr>';
+                html += '<tr><td colspan="6" style="padding: 15px; text-align: center; color: var(--text-tertiary);">No metric data available</td></tr>';
             }
 
             metricKeys.forEach(function (metricKey) {
@@ -528,7 +528,7 @@
                 var rowBg = m.currentlyMeeting ? '#f1f8e9' : '#fff3e0';
                 if (m.currentlyExceeding) rowBg = '#e8f5e9';
 
-                html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #eee;">';
+                html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border);">';
 
                 // Metric name
                 html += '<td style="padding: 8px; font-weight: 500;">' + icon + ' ' + _escapeHtml(label) + '</td>';
@@ -537,7 +537,7 @@
                 html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.currentAvg) + '</td>';
 
                 // Target
-                html += '<td style="padding: 8px; text-align: center; color: #666;">' + _formatMetricDisplay(metricKey, m.meetTarget) + '</td>';
+                html += '<td style="padding: 8px; text-align: center; color: var(--text-secondary);">' + _formatMetricDisplay(metricKey, m.meetTarget) + '</td>';
 
                 // Status badge
                 var statusText, statusColor;
@@ -563,40 +563,40 @@
                 if (m.isCumulative) {
                     if (m.currentlyMeeting) {
                         var meetBudgetPer = tfDivisor > 0 ? m.budgetRemaining / tfDivisor : 0;
-                        html += '<span style="color: #2e7d32; font-weight: bold;">' + _formatMetricDisplay(metricKey, meetBudgetPer) + tfSuffix + ' left</span>';
+                        html += '<span style="color: var(--green-text); font-weight: bold;">' + _formatMetricDisplay(metricKey, meetBudgetPer) + tfSuffix + ' left</span>';
                     } else {
-                        html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
+                        html += '<span style="color: var(--red-text); font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyMeeting) {
-                    html += '<span style="color: #2e7d32; font-weight: bold;">On track</span>';
+                    html += '<span style="color: var(--green-text); font-weight: bold;">On track</span>';
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
                     html += '<span style="color: #e65100; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
                 } else if (m.requiredToMeet !== null && !m.meetAchievable) {
-                    html += '<span style="color: #c62828; font-size: 0.85em;">Not achievable</span>';
+                    html += '<span style="color: var(--red-text); font-size: 0.85em;">Not achievable</span>';
                 } else {
-                    html += '<span style="color: #999;">N/A</span>';
+                    html += '<span style="color: var(--text-tertiary);">N/A</span>';
                 }
                 html += '</td>';
 
                 // Required to exceed
                 html += '<td style="padding: 8px; text-align: center; background: rgba(227,242,253,0.3);">';
                 if (!m.hasExceedBand) {
-                    html += '<span style="color: #999; font-size: 0.85em;">No band</span>';
+                    html += '<span style="color: var(--text-tertiary); font-size: 0.85em;">No band</span>';
                 } else if (m.isCumulative) {
                     if (m.currentlyExceeding) {
                         var excBudgetPer = tfDivisor > 0 ? m.exceedBudgetRemaining / tfDivisor : 0;
                         html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, excBudgetPer) + tfSuffix + ' left</span>';
                     } else {
-                        html += '<span style="color: #c62828; font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
+                        html += '<span style="color: var(--red-text); font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyExceeding) {
                     html += '<span style="color: #1565c0; font-weight: bold;">On track</span>';
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
                     html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
                 } else if (m.requiredToExceed !== null && !m.exceedAchievable) {
-                    html += '<span style="color: #c62828; font-size: 0.85em;">Not achievable</span>';
+                    html += '<span style="color: var(--red-text); font-size: 0.85em;">Not achievable</span>';
                 } else {
-                    html += '<span style="color: #999;">N/A</span>';
+                    html += '<span style="color: var(--text-tertiary);">N/A</span>';
                 }
                 html += '</td>';
 
@@ -623,13 +623,13 @@
 
             html += '<div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">';
             if (exceedingCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #e8f5e9; color: #2e7d32; font-weight: bold; font-size: 0.9em;">' + exceedingCount + ' Exceeding</span>';
+                html += '<span style="padding: 6px 14px; border-radius: 16px; background: var(--green-soft); color: var(--green-text); font-weight: bold; font-size: 0.9em;">' + exceedingCount + ' Exceeding</span>';
             }
             if (meetingCount > 0) {
                 html += '<span style="padding: 6px 14px; border-radius: 16px; background: #fff8e1; color: #f57f17; font-weight: bold; font-size: 0.9em;">' + meetingCount + ' Meeting</span>';
             }
             if (belowCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #fbe9e7; color: #c62828; font-weight: bold; font-size: 0.9em;">' + belowCount + ' Below</span>';
+                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #fbe9e7; color: var(--red-text); font-weight: bold; font-size: 0.9em;">' + belowCount + ' Below</span>';
             }
             if (notAchievableCount > 0) {
                 html += '<span style="padding: 6px 14px; border-radius: 16px; background: #f8d7da; color: #721c24; font-weight: bold; font-size: 0.9em;">' + notAchievableCount + ' Not Achievable</span>';
@@ -851,10 +851,10 @@
         content.className = 'modal-content';
         content.innerHTML =
             '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">' +
-                '<h3 style="margin: 0; color: #1a1a2e;">Check-In Summary</h3>' +
-                '<button id="futuresCheckInClose" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 0 4px;">&times;</button>' +
+                '<h3 style="margin: 0; color: var(--text-primary);">Check-In Summary</h3>' +
+                '<button id="futuresCheckInClose" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-secondary); padding: 0 4px;">&times;</button>' +
             '</div>' +
-            '<pre id="futuresCheckInText" style="white-space: pre-wrap; font-family: Segoe UI, sans-serif; font-size: 0.92em; line-height: 1.6; background: #f8f9fa; padding: 16px; border-radius: 6px; border: 1px solid #e0e0e0; max-height: 60vh; overflow-y: auto;">' + _escapeHtml(summary) + '</pre>' +
+            '<pre id="futuresCheckInText" style="white-space: pre-wrap; font-family: Segoe UI, sans-serif; font-size: 0.92em; line-height: 1.6; background: var(--bg-surface-raised); padding: 16px; border-radius: 6px; border: 1px solid var(--border); max-height: 60vh; overflow-y: auto;">' + _escapeHtml(summary) + '</pre>' +
             '<div style="margin-top: 16px; display: flex; gap: 10px;">' +
                 '<button id="futuresCheckInCopy" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Copy to Clipboard</button>' +
             '</div>';

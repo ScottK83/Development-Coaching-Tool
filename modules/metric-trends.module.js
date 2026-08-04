@@ -797,7 +797,7 @@ function displayMetricsPreview(employeeName, weekKey) {
         html += `
             <div>
                 <label style="font-weight: bold; display: block; margin-bottom: 3px; font-size: 0.85em;">${metric.label} (${metric.unit})${targetHint}:</label>
-                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="${isWholeNumberMetric ? '1' : '0.1'}" value="${value}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="metric-preview-input" data-metric="${metric.key}" step="${isWholeNumberMetric ? '1' : '0.1'}" value="${value}" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
             </div>
         `;
     });
@@ -1471,7 +1471,7 @@ function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot
         ? `
         <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
             <h4 style="color: #8d6e00; margin-top: 0;">💬 Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
-            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
+            <p style="margin: 0; color: var(--text-primary); white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
         </div>
         `
         : '';
@@ -1482,7 +1482,7 @@ function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot
 function renderTrendFocusAreasHtml(focusAreas) {
     return focusAreas.map((focusArea, areaIndex) => {
         const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
-            <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
+            <div style="background: var(--bg-surface-sunken); padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
                 <strong>💡 Tip ${tipIndex + 1}:</strong> ${tip}
             </div>
         `).join('');
@@ -1494,7 +1494,7 @@ function renderTrendFocusAreasHtml(focusAreas) {
         return `
             <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
                 <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
-                <p style="margin: 5px 0 15px 0; color: #333;">
+                <p style="margin: 5px 0 15px 0; color: var(--text-primary);">
                     Currently at <strong>${focusArea.metric.employeeValue.toFixed(1)}</strong>,
                     target is <strong>${focusArea.metric.targetType === 'min' ? '≥' : '≤'} ${focusArea.metric.target.toFixed(1)}</strong>
                 </p>
@@ -1550,10 +1550,10 @@ function renderTrendIntelligenceSnapshotHtml(allMetrics) {
 
         return `
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; color: #333;">${metric.label}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${classColor}; font-weight: 600;">${metric.classification || 'On Track'}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${directionColor};">${directionText}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${volatilityColor};">${volatilityText}</td>
+                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: var(--text-primary);">${metric.label}</td>
+                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${classColor}; font-weight: 600;">${metric.classification || 'On Track'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${directionColor};">${directionText}</td>
+                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${volatilityColor};">${volatilityText}</td>
             </tr>
         `;
     }).join('');
@@ -1576,7 +1576,7 @@ function renderTrendIntelligenceSnapshotHtml(allMetrics) {
             <p style="margin: 0 0 10px 0; color: #455a64; font-size: 0.9em;">
                 Exceeding: <strong>${counts.exceeding}</strong> · On Track: <strong>${counts.onTrack}</strong> · Watch: <strong>${counts.watch}</strong> · Needs Focus: <strong>${counts.needsFocus}</strong>
             </p>
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; background: white; border: 1px solid #e3eef9;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; background: var(--bg-surface); border: 1px solid #e3eef9;">
                 <thead>
                     <tr style="background: #e3f2fd; color: #0d47a1; text-align: left;">
                         <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Metric</th>
@@ -1727,7 +1727,7 @@ function attachTrendTipsModalHandlers(options) {
 function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, intelligenceSnapshotHtml, copilotPrompt) {
     return `
         <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
-        <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
+        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
 
         ${summaryBoxesHtml}
 
@@ -1739,15 +1739,15 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
 
         <div style="margin: 20px 0;">
             <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
-            <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
+            <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
         </div>
 
-        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
-            <h4 style="color: #333; margin-top: 0;">🤖 CoPilot Prompt</h4>
-            <p style="color: #666; font-size: 0.9em; margin: 0 0 10px 0;">
+        <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
+            <h4 style="color: var(--text-primary); margin-top: 0;">🤖 CoPilot Prompt</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9em; margin: 0 0 10px 0;">
                 Copy this prompt and paste it into <strong><a href="https://copilot.microsoft.com" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
             </p>
-            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${copilotPrompt}</textarea>
+            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${copilotPrompt}</textarea>
             <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
                 📋 Copy Prompt
             </button>
@@ -1782,7 +1782,7 @@ function createTrendTipsModalElements() {
 
     const panel = document.createElement('div');
     panel.style.cssText = `
-        background: white;
+        background: var(--bg-surface);
         border-radius: 8px;
         padding: 24px;
         max-width: 650px;
@@ -3564,20 +3564,20 @@ function renderTrendSummaryBoxesHtml(positiveHighlights, improvementAreas, posit
 
     const positiveHtml = positiveHighlights.length > 0
         ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(positiveHighlights)}</ul>`
-        : `<p style="margin: 0; color: #2e7d32;">${escapeHtml(positiveEmptyText || 'No above-target metrics in this period.')}</p>`;
+        : `<p style="margin: 0; color: var(--green-text);">${escapeHtml(positiveEmptyText || 'No above-target metrics in this period.')}</p>`;
 
     const improvementHtml = improvementAreas.length > 0
         ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(improvementAreas)}</ul>`
-        : `<p style="margin: 0; color: #b71c1c;">${escapeHtml(improvementEmptyText || 'No below-target metrics in this period.')}</p>`;
+        : `<p style="margin: 0; color: var(--red-text);">${escapeHtml(improvementEmptyText || 'No below-target metrics in this period.')}</p>`;
 
     return `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px 0;">
-            <div style="padding: 14px; border: 1px solid #81c784; border-radius: 8px; background: #e8f5e9; color: #1b5e20;">
-                <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Positive Highlights</h4>
+            <div style="padding: 14px; border: 1px solid #81c784; border-radius: 8px; background: var(--green-soft); color: var(--green-text);">
+                <h4 style="margin: 0 0 10px 0; color: var(--green-text);">✅ Positive Highlights</h4>
                 ${positiveHtml}
             </div>
-            <div style="padding: 14px; border: 1px solid #ef9a9a; border-radius: 8px; background: #ffebee; color: #b71c1c;">
-                <h4 style="margin: 0 0 10px 0; color: #b71c1c;">⚠️ Improvement Areas</h4>
+            <div style="padding: 14px; border: 1px solid #ef9a9a; border-radius: 8px; background: var(--red-soft); color: var(--red-text);">
+                <h4 style="margin: 0 0 10px 0; color: var(--red-text);">⚠️ Improvement Areas</h4>
                 ${improvementHtml}
             </div>
         </div>
@@ -3773,7 +3773,7 @@ function createTeamTrendSummaryModal() {
 function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, teamPrompt) {
     const panel = document.createElement('div');
     panel.style.cssText = `
-        background: white;
+        background: var(--bg-surface);
         border-radius: 8px;
         padding: 24px;
         max-width: 900px;
@@ -3784,15 +3784,15 @@ function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, te
     `;
 
     panel.innerHTML = `
-        <h3 style="color: #2e7d32; margin-top: 0;">👥 Team Metric Trend Summary</h3>
-        <p style="color: #666; margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
-        <p style="color: #666; margin: 0 0 14px 0; font-size: 0.9em;">Based on ${teamSize} associates</p>
+        <h3 style="color: var(--green-text); margin-top: 0;">👥 Team Metric Trend Summary</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
+        <p style="color: var(--text-secondary); margin: 0 0 14px 0; font-size: 0.9em;">Based on ${teamSize} associates</p>
 
         ${summaryBoxesHtml}
 
-        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
-            <h4 style="color: #333; margin-top: 0;">🤖 Team CoPilot Prompt</h4>
-            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: white; color: #333;">${teamPrompt}</textarea>
+        <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
+            <h4 style="color: var(--text-primary); margin-top: 0;">🤖 Team CoPilot Prompt</h4>
+            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${teamPrompt}</textarea>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">

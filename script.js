@@ -525,9 +525,9 @@ function showLoadingSpinner(message = 'Processing...') {
     spinner.setAttribute('aria-busy', 'true');
     spinner.innerHTML = `
         <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
-            <div style="background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center;">
+            <div style="background: var(--bg-surface); padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center;">
                 <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #2196F3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
-                <div style="font-size: 16px; color: #333; font-weight: 600;">${escapeHtml(message)}</div>
+                <div style="font-size: 16px; color: var(--text-primary); font-weight: 600;">${escapeHtml(message)}</div>
             </div>
         </div>
     `;
@@ -2864,7 +2864,7 @@ function handleTestPastedDataClick() {
                 👥 Employees parsed: ${employees.length}<br>
                 👤 Sample: ${sampleNames}${employees.length > 5 ? '...' : ''}<br>
                 <div style="margin-top: 8px;"><strong>Metric coverage:</strong><br>${metricCoverage}</div>
-                <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; color: #333;"><strong>Spot check (parsed values):</strong><br>${spotCheckHtml}</div>
+                <div style="margin-top: 8px; padding: 8px; background: var(--bg-surface-raised); border-radius: 4px; color: var(--text-primary);"><strong>Spot check (parsed values):</strong><br>${spotCheckHtml}</div>
                 ${qualityHtml}
             `;
         }
@@ -3953,13 +3953,13 @@ function renderYearEndAnnualGoalsInputs(employeeName, reviewYear) {
             <div style="display: grid; grid-template-columns: minmax(260px, 2fr) 140px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e6dcfa; border-radius: 6px; background: #faf7ff;">
                 <div>
                     <div style="font-weight: bold; color: #4a148c;">${escapeHtml(goal.label)}</div>
-                    <div style="font-size: 0.85em; color: #666;">Goal: ${escapeHtml(goal.expectation)}</div>
+                    <div style="font-size: 0.85em; color: var(--text-secondary);">Goal: ${escapeHtml(goal.expectation)}</div>
                 </div>
-                <select data-goal-status="${goal.key}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                <select data-goal-status="${goal.key}" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
                     <option value="met"${current.status === 'met' ? ' selected' : ''}>✅ Meeting</option>
                     <option value="not-met"${current.status === 'not-met' ? ' selected' : ''}>⚠️ Not Met</option>
                 </select>
-                <input type="text" data-goal-note="${goal.key}" value="${safeNote}" placeholder="Optional note/details" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="text" data-goal-note="${goal.key}" value="${safeNote}" placeholder="Optional note/details" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px;">
             </div>
         `;
     }).join('');
@@ -4273,7 +4273,7 @@ function populateTeamMemberSelector() {
     }
 
     if (!selectedWeek || !(weeklyData[selectedWeek] || (ytdData && ytdData[selectedWeek]))) {
-        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No data available</div>';
+        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">No data available</div>';
         return;
     }
 
@@ -4281,7 +4281,7 @@ function populateTeamMemberSelector() {
     const selectedMembers = getTeamMembersForWeek(selectedWeek);
     
     if (employees.length === 0) {
-        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No employees in this week</div>';
+        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">No employees in this week</div>';
         return;
     }
     
@@ -5018,7 +5018,7 @@ function renderCoachingPriorityQueue() {
 
     const keys = getWeeklyKeysSorted();
     if (keys.length < 2) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Upload at least 2 periods of data to generate a priority queue.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Upload at least 2 periods of data to generate a priority queue.</div>';
         return;
     }
 
@@ -5026,13 +5026,13 @@ function renderCoachingPriorityQueue() {
     const buckets = getTrendComparisonBuckets(keys, periodType);
 
     if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
-        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Not enough data for ${escapeHtml(buckets.descriptor.label)} queue generation.</div>`;
+        container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for ${escapeHtml(buckets.descriptor.label)} queue generation.</div>`;
         return;
     }
 
     const employeeNames = Array.from(getEmployeeNamesForPeriod(buckets.currentKeys)).sort();
     if (!employeeNames.length) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No employees found in the current window.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">No employees found in the current window.</div>';
         return;
     }
 
@@ -5240,7 +5240,7 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, why
     let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
     html += `<strong>${title}</strong>`;
     if (!entries.length) {
-        html += `<div style="margin-top: 6px; color: #666; font-size: 0.9em;">${emptyText}</div>`;
+        html += `<div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.9em;">${emptyText}</div>`;
     } else {
         html += '<div style="margin-top: 6px; display: grid; gap: 6px;">';
         entries.slice(0, 5).forEach(entry => {
@@ -5524,12 +5524,12 @@ function renderTrendSimpleView() {
             <div style="color: #546e7a; font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div style="padding: 10px; border-radius: 6px; background: #fff0f0; border: 1px solid #f3c9c9;">
-                    <div style="font-weight: 700; color: #b71c1c; margin-bottom: 6px;">Coach First (Top 3)</div>
-                    <ul style="margin: 0; padding-left: 18px; color: #333;">${coachHtml}</ul>
+                    <div style="font-weight: 700; color: var(--red-text); margin-bottom: 6px;">Coach First (Top 3)</div>
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">${coachHtml}</ul>
                 </div>
                 <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
-                    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">Recognize Now (Top 2)</div>
-                    <ul style="margin: 0; padding-left: 18px; color: #333;">${recognizeHtml}</ul>
+                    <div style="font-weight: 700; color: var(--green-text); margin-bottom: 6px;">Recognize Now (Top 2)</div>
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">${recognizeHtml}</ul>
                 </div>
             </div>
         </div>
@@ -5742,16 +5742,16 @@ function renderTrendCadenceTracker() {
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
                 <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
-                    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 4px;">Improving</div>
-                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(improvingText)}</div>
+                    <div style="font-weight: 700; color: var(--green-text); margin-bottom: 4px;">Improving</div>
+                    <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(improvingText)}</div>
                 </div>
                 <div style="padding: 10px; border-radius: 6px; background: #fff4e5; border: 1px solid #ffe0b2;">
                     <div style="font-weight: 700; color: #e65100; margin-bottom: 4px;">Watch</div>
-                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(riskText)}</div>
+                    <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(riskText)}</div>
                 </div>
                 <div style="padding: 10px; border-radius: 6px; background: #eef3fb; border: 1px solid #c6d8f5;">
                     <div style="font-weight: 700; color: #2f4f87; margin-bottom: 4px;">Current Focus</div>
-                    <div style="color: #333; font-size: 0.9em;">${escapeHtml(focusText)}</div>
+                    <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(focusText)}</div>
                 </div>
             </div>
         </div>`;
@@ -6038,7 +6038,7 @@ function renderCoachingImpactTracker() {
         .sort((a, b) => ((b.momentumScore + b.consistencyScore + b.goalProgressScore) - (a.momentumScore + a.consistencyScore + a.goalProgressScore)));
 
     if (!scored.length) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No coaching impact data yet. Log coaching sessions to track momentum and outcomes.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">No coaching impact data yet. Log coaching sessions to track momentum and outcomes.</div>';
         return;
     }
 
@@ -6161,7 +6161,7 @@ function renderComplianceAlerts() {
     const teamFilterContext = getTeamSelectionContext();
     const filteredLog = log.filter(entry => isAssociateIncludedByTeamFilter(entry?.employeeId, teamFilterContext));
     if (!filteredLog.length) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">No compliance flags logged.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">No compliance flags logged.</div>';
         return;
     }
     const items = filteredLog.slice(-5).reverse().map(entry => {
@@ -6294,14 +6294,14 @@ function renderRecognitionIntelligence() {
     const latestKey = getLatestWeeklyKey();
     const prevKey = getPreviousWeeklyKey(latestKey);
     if (!latestKey || !prevKey) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data for recognition signals.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for recognition signals.</div>';
         return;
     }
 
     const latestWeek = weeklyData[latestKey];
     const prevWeek = weeklyData[prevKey];
     if (!latestWeek?.employees || !prevWeek?.employees) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Not enough data for recognition signals.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for recognition signals.</div>';
         return;
     }
 
@@ -6373,7 +6373,7 @@ function renderTrendIntelligence() {
     const keys = getTrendKeysForPeriodType(periodType);
     
     if (keys.length < 2) {
-        container.innerHTML = `<div style="color: #666; font-size: 0.95em;">Upload at least 2 ${periodDescriptor.compareLabel} periods to see ${periodDescriptor.shortLabel} trends.</div>`;
+        container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.95em;">Upload at least 2 ${periodDescriptor.compareLabel} periods to see ${periodDescriptor.shortLabel} trends.</div>`;
         const simpleContainer = document.getElementById('trendSimpleViewOutput');
         if (simpleContainer) {
             simpleContainer.innerHTML = `<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Upload at least 2 ${periodDescriptor.compareLabel} periods to unlock Simple View priorities.</div>`;
@@ -6448,7 +6448,7 @@ function renderTrendVisualizations() {
         if (!data || data.length < 2) return;
 
         const chartContainer = document.createElement('div');
-        chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;';
+        chartContainer.style.cssText = 'background: var(--bg-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border);';
 
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'max-height: 250px;';
@@ -6831,7 +6831,7 @@ function buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins) {
 function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow') {
     const moduleApi = window.DevCoachModules?.trendIntelligence;
     if (!moduleApi?.renderIndividualTrendAnalysis) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Trend Intelligence module not available. Refresh and try again.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Trend Intelligence module not available. Refresh and try again.</div>';
         return;
     }
 
@@ -6900,7 +6900,7 @@ function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor
 function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
     const moduleApi = window.DevCoachModules?.trendIntelligence;
     if (!moduleApi?.renderGroupTrendAnalysis) {
-        container.innerHTML = '<div style="color: #666; font-size: 0.95em;">Trend Intelligence module not available. Refresh and try again.</div>';
+        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Trend Intelligence module not available. Refresh and try again.</div>';
         return;
     }
 
@@ -6922,7 +6922,7 @@ function renderEmployeesList() {
     if (!moduleApi?.renderEmployeesList) {
         const container = document.getElementById('employeesList');
         if (container) {
-            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Employee List module not available. Refresh and try again.</div>';
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">Employee List module not available. Refresh and try again.</div>';
         }
         return;
     }

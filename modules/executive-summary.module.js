@@ -475,7 +475,7 @@
         var allWeeks = Object.keys(weeklyData).concat(Object.keys(ytdDataLocal));
 
         if (allWeeks.length === 0) {
-            container.innerHTML = '<p style="color: #666; font-style: italic;">No data uploaded yet. Upload some weekly data to see the executive summary!</p>';
+            container.innerHTML = '<p style="color: var(--text-secondary); font-style: italic;">No data uploaded yet. Upload some weekly data to see the executive summary!</p>';
             return;
         }
 
@@ -650,8 +650,8 @@
         // If window is null or blocked, provide manual fallback
         if (!windowRef) {
             var tempDiv = document.createElement('div');
-            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
-            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
+            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-surface); padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
+            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
             document.body.appendChild(tempDiv);
         }
     }
@@ -882,7 +882,7 @@
         var avgTransfers = ytdAvgs.avgTransfers;
 
         var row = document.createElement('tr');
-        row.innerHTML = '\n        <td style="padding: 12px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Year-to-Date Summary</td>\n        <td style="padding: 12px; border: 1px solid #ddd;">' + avgAdherence + '%</td>\n        <td style="padding: 12px; border: 1px solid #ddd;">' + avgExperience + '</td>\n        <td style="padding: 12px; border: 1px solid #ddd;">' + avgFCR + '%</td>\n        <td style="padding: 12px; border: 1px solid #ddd;">' + avgTransfers + '</td>\n        <td style="padding: 12px; border: 1px solid #ddd;">\n            <input type="text" class="redflags-input" data-week="ytd-summary" placeholder="Add red flags..." \n                style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">\n        </td>\n        <td style="padding: 12px; border: 1px solid #ddd;">\n            <input type="text" class="phishing-input" data-week="ytd-summary" placeholder="Phishing attempts..." \n                style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 3px;">\n        </td>\n    ';
+        row.innerHTML = '\n        <td style="padding: 12px; border: 1px solid var(--border); background: var(--bg-surface-raised); font-weight: bold;">Year-to-Date Summary</td>\n        <td style="padding: 12px; border: 1px solid var(--border);">' + avgAdherence + '%</td>\n        <td style="padding: 12px; border: 1px solid var(--border);">' + avgExperience + '</td>\n        <td style="padding: 12px; border: 1px solid var(--border);">' + avgFCR + '%</td>\n        <td style="padding: 12px; border: 1px solid var(--border);">' + avgTransfers + '</td>\n        <td style="padding: 12px; border: 1px solid var(--border);">\n            <input type="text" class="redflags-input" data-week="ytd-summary" placeholder="Add red flags..." \n                style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 3px;">\n        </td>\n        <td style="padding: 12px; border: 1px solid var(--border);">\n            <input type="text" class="phishing-input" data-week="ytd-summary" placeholder="Phishing attempts..." \n                style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 3px;">\n        </td>\n    ';
         tbody.appendChild(row);
 
         // Load saved red flags and phishing data
@@ -983,7 +983,7 @@
 
     function buildYearlySummaryChartCard(chartsGrid) {
         var chartContainer = document.createElement('div');
-        chartContainer.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        chartContainer.style.cssText = 'background: var(--bg-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
 
         var canvas = document.createElement('canvas');
         canvas.style.cssText = 'max-height: 250px;';
@@ -1049,7 +1049,7 @@
 
         var keys = getWeeklyKeysSorted();
         if (keys.length < 2) {
-            chartsContainer.innerHTML = '<p style="color: #999; padding: 20px;">Not enough weekly data to show trends (need at least 2 weeks).</p>';
+            chartsContainer.innerHTML = '<p style="color: var(--text-tertiary); padding: 20px;">Not enough weekly data to show trends (need at least 2 weeks).</p>';
             return;
         }
 

@@ -660,10 +660,10 @@
         html += renderViewToggle('current');
 
         // Period selector
-        html += '<div style="margin-bottom:12px; padding:12px 16px; background:#fff; border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end;">';
+        html += '<div style="margin-bottom:12px; padding:12px 16px; background:var(--bg-surface); border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end;">';
         html += '<div>';
-        html += '<label for="celebrationPeriodSelect" style="display:block; font-size:0.85em; font-weight:600; color:#475569; margin-bottom:6px;">Data Period</label>';
-        html += '<select id="celebrationPeriodSelect" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95em;"' + (allKeys.length ? '' : ' disabled') + '>';
+        html += '<label for="celebrationPeriodSelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Data Period</label>';
+        html += '<select id="celebrationPeriodSelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;"' + (allKeys.length ? '' : ' disabled') + '>';
         if (!allKeys.length) {
             html += '<option value="">No periods with 30+ employees</option>';
         } else {
@@ -676,8 +676,8 @@
         // Threshold controls
         html += '<div style="display:flex; align-items:end; gap:8px;">';
         html += '<div>';
-        html += '<label for="celebrationCustomThreshold" style="display:block; font-size:0.85em; font-weight:600; color:#475569; margin-bottom:6px;">Custom Top N</label>';
-        html += '<input type="number" id="celebrationCustomThreshold" min="1" max="999" placeholder="e.g. 15" value="' + (customThreshold || '') + '" style="width:80px; padding:10px 8px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95em;">';
+        html += '<label for="celebrationCustomThreshold" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Custom Top N</label>';
+        html += '<input type="number" id="celebrationCustomThreshold" min="1" max="999" placeholder="e.g. 15" value="' + (customThreshold || '') + '" style="width:80px; padding:10px 8px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;">';
         html += '</div>';
         html += '<button type="button" id="celebrationSaveThreshold" style="padding:10px 14px; background:#4338ca; color:#fff; border:none; border-radius:8px; font-size:0.9em; cursor:pointer; font-weight:600;">Set</button>';
         html += '</div>';
@@ -685,20 +685,20 @@
 
         // Tiers indicator
         html += '<div style="margin-bottom:16px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">';
-        html += '<span style="font-size:0.85em; color:#64748b; font-weight:600;">Active tiers:</span>';
+        html += '<span style="font-size:0.85em; color:var(--text-secondary); font-weight:600;">Active tiers:</span>';
         tiers.forEach(function(t) {
             var badge = getTierBadge(t);
             html += '<span style="padding:3px 10px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:12px; font-size:0.8em; font-weight:700;">' + (t === 1 ? '#1' : 'Top ' + t) + '</span>';
         });
         if (dateRange) {
-            html += '<span style="margin-left:auto; font-size:0.85em; color:#64748b;">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</span>';
+            html += '<span style="margin-left:auto; font-size:0.85em; color:var(--text-secondary);">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</span>';
         }
         html += '</div>';
 
         if (!celebrations.length) {
-            html += '<div style="text-align:center; padding:60px 20px; color:#94a3b8;">';
+            html += '<div style="text-align:center; padding:60px 20px; color:var(--text-tertiary);">';
             html += '<div style="font-size:3em; margin-bottom:16px;">\uD83C\uDFC6</div>';
-            html += '<h3 style="color:#64748b; margin:0 0 8px 0;">No Celebrations for This Period</h3>';
+            html += '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Celebrations for This Period</h3>';
             html += '<p style="margin:0;">No standout performances from team members for the selected period.<br>Try a different period or adjust the threshold.</p>';
             html += '</div>';
             container.innerHTML = html;
@@ -710,7 +710,7 @@
         html += '<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">';
         html += '<button type="button" id="celebrationGenerateAll" style="padding:12px 24px; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:1em; cursor:pointer; box-shadow:0 2px 8px rgba(234,88,12,0.3);">';
         html += '\uD83C\uDF89 Generate All Shout-Outs</button>';
-        html += '<div style="display:flex; align-items:center; gap:8px; color:#64748b; font-size:0.9em;">';
+        html += '<div style="display:flex; align-items:center; gap:8px; color:var(--text-secondary); font-size:0.9em;">';
         html += '\uD83C\uDFC5 ' + celebrations.length + ' team member' + (celebrations.length !== 1 ? 's' : '') + ' with achievements';
         html += '</div></div>';
 
@@ -730,11 +730,11 @@
             var cardBorder = hasOnlyOne ? '#ffd700' : '#667eea';
             var cardGlow = hasOnlyOne ? '0 0 8px rgba(255,215,0,0.6)' : 'none';
 
-            html += '<div class="celebration-card" style="background:#fff; border-radius:10px; border:2px solid ' + cardBorder + '; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:' + cardGlow + ';">';
+            html += '<div class="celebration-card" style="background:var(--bg-surface); border-radius:10px; border:2px solid ' + cardBorder + '; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:' + cardGlow + ';">';
 
             // Header
             html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
-            html += '<div style="font-weight:700; font-size:1.1em; color:#1a1a2e;">' + _escapeHtml(person.firstName) + '</div>';
+            html += '<div style="font-weight:700; font-size:1.1em; color:var(--text-primary);">' + _escapeHtml(person.firstName) + '</div>';
             html += '<div style="display:flex; gap:4px;">';
             if (hasOnlyOne) {
                 html += '<span style="padding:3px 10px; background:#ffd700; color:#7c5c00; border-radius:12px; font-size:0.8em; font-weight:700;">\uD83C\uDFC6 Only One!</span>';
@@ -745,7 +745,7 @@
 
             // Date range
             if (dateRange) {
-                html += '<div style="font-size:0.8em; color:#64748b;">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</div>';
+                html += '<div style="font-size:0.8em; color:var(--text-secondary);">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</div>';
             }
 
             // Achievement list — fact-based, no ranking numbers
@@ -760,7 +760,7 @@
                     // "Only one" is about the number, not the metric — other
                     // cards can show the same metric at a different value.
                     html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
-                        ' <span style="color:#64748b;">— nobody else matched it</span>';
+                        ' <span style="color:var(--text-secondary);">— nobody else matched it</span>';
                 } else {
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
@@ -805,16 +805,16 @@
         // Year-at-a-glance stats
         if (yearStats.length) {
             html += '<div style="margin-bottom:20px;">';
-            html += '<h3 style="color:#1a1a2e; margin:0 0 12px 0;">\uD83C\uDFC6 ' + new Date().getFullYear() + ' Year-to-Date Stats</h3>';
+            html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">\uD83C\uDFC6 ' + new Date().getFullYear() + ' Year-to-Date Stats</h3>';
             html += '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">';
 
             yearStats.forEach(function(s) {
-                html += '<div style="background:#fff; border-radius:10px; border:1px solid #e0e7ff; padding:14px; display:flex; flex-direction:column; gap:8px;">';
-                html += '<div style="font-weight:700; font-size:1.05em; color:#1a1a2e;">' + _escapeHtml(s.firstName) + '</div>';
+                html += '<div style="background:var(--bg-surface); border-radius:10px; border:1px solid #e0e7ff; padding:14px; display:flex; flex-direction:column; gap:8px;">';
+                html += '<div style="font-weight:700; font-size:1.05em; color:var(--text-primary);">' + _escapeHtml(s.firstName) + '</div>';
 
                 // Summary stats
                 html += '<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.85em;">';
-                html += '<span style="color:#64748b;"><strong>' + s.totalAppearances + '</strong> period' + (s.totalAppearances !== 1 ? 's' : '') + ' recognized</span>';
+                html += '<span style="color:var(--text-secondary);"><strong>' + s.totalAppearances + '</strong> period' + (s.totalAppearances !== 1 ? 's' : '') + ' recognized</span>';
                 if (s.numberOneCount) html += '<span style="color:#b8860b;">\uD83E\uDD47 Only one x' + s.numberOneCount + '</span>';
                 html += '</div>';
 
@@ -839,25 +839,25 @@
         }
 
         // Period-by-period history
-        html += '<h3 style="color:#1a1a2e; margin:0 0 12px 0;">\uD83D\uDCC5 Celebration History</h3>';
+        html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">\uD83D\uDCC5 Celebration History</h3>';
 
         if (!history.length) {
-            html += '<div style="text-align:center; padding:40px 20px; color:#94a3b8;">';
+            html += '<div style="text-align:center; padding:40px 20px; color:var(--text-tertiary);">';
             html += '<p style="margin:0;">No celebration history yet. View the Current tab with uploaded data to start logging.</p>';
             html += '</div>';
         } else {
             history.forEach(function(entry) {
-                html += '<div style="margin-bottom:16px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">';
+                html += '<div style="margin-bottom:16px; background:var(--bg-surface); border:1px solid var(--border); border-radius:10px; overflow:hidden;">';
                 // Period header
-                html += '<div style="padding:12px 16px; background:#f8fafc; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">';
-                html += '<div style="font-weight:700; color:#1a1a2e;">\uD83D\uDCC5 ' + _escapeHtml(entry.dateRange || entry.periodKey) + '</div>';
-                html += '<div style="font-size:0.8em; color:#94a3b8;">' + entry.entries.length + ' celebrated</div>';
+                html += '<div style="padding:12px 16px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">';
+                html += '<div style="font-weight:700; color:var(--text-primary);">\uD83D\uDCC5 ' + _escapeHtml(entry.dateRange || entry.periodKey) + '</div>';
+                html += '<div style="font-size:0.8em; color:var(--text-tertiary);">' + entry.entries.length + ' celebrated</div>';
                 html += '</div>';
                 // People in this period
                 html += '<div style="padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px;">';
                 entry.entries.forEach(function(person) {
                     var hasOnlyOne = person.achievements.some(function(a) { return a.soloRank1; });
-                    html += '<div style="padding:8px 12px; background:#f8fafc; border:1px solid #e0e7ff; border-radius:8px; display:flex; align-items:center; gap:6px;">';
+                    html += '<div style="padding:8px 12px; background:var(--bg-surface-raised); border:1px solid #e0e7ff; border-radius:8px; display:flex; align-items:center; gap:6px;">';
                     html += '<span style="font-weight:600; font-size:0.9em;">' + _escapeHtml(person.firstName || _getFirstName(person.name)) + '</span>';
                     person.achievements.forEach(function(a) {
                         if (a.key === 'composite' || a.key === 'reliability') return;
@@ -886,9 +886,9 @@
         var historyActive = activeView === 'history';
         var html = '<div style="display:flex; gap:0; margin-bottom:16px; border:2px solid #e0e7ff; border-radius:10px; overflow:hidden;">';
         html += '<button type="button" id="celebViewCurrent" style="flex:1; padding:10px 20px; border:none; font-weight:700; font-size:0.95em; cursor:pointer; ' +
-            (currentActive ? 'background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff;' : 'background:#fff; color:#64748b;') + '">\uD83C\uDFC6 Current</button>';
+            (currentActive ? 'background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff;' : 'background:#fff; color:var(--text-secondary);') + '">\uD83C\uDFC6 Current</button>';
         html += '<button type="button" id="celebViewHistory" style="flex:1; padding:10px 20px; border:none; font-weight:700; font-size:0.95em; cursor:pointer; ' +
-            (historyActive ? 'background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#fff;' : 'background:#fff; color:#64748b;') + '">\uD83D\uDCCA History</button>';
+            (historyActive ? 'background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#fff;' : 'background:#fff; color:var(--text-secondary);') + '">\uD83D\uDCCA History</button>';
         html += '</div>';
         return html;
     }
@@ -1002,16 +1002,16 @@
         overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;';
 
         overlay.innerHTML =
-            '<div style="background:#fff; border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
-                '<div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
-                    '<h3 style="margin:0; color:#1a1a2e;">\uD83C\uDF89 ' + _escapeHtml(title) + '</h3>' +
-                    '<button type="button" id="shoutOutModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:#999;">\u2715</button>' +
+            '<div style="background:var(--bg-surface); border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+                '<div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">' +
+                    '<h3 style="margin:0; color:var(--text-primary);">\uD83C\uDF89 ' + _escapeHtml(title) + '</h3>' +
+                    '<button type="button" id="shoutOutModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>' +
                 '</div>' +
                 '<div style="padding:20px; overflow-y:auto; flex:1;">' +
-                    '<textarea id="shoutOutModalText" style="width:100%; min-height:250px; border:1px solid #e5e7eb; border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
+                    '<textarea id="shoutOutModalText" style="width:100%; min-height:250px; border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
                 '</div>' +
-                '<div style="padding:12px 20px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end;">' +
-                    '<button type="button" id="shoutOutModalRegenerate" style="padding:10px 16px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; font-weight:600;">\uD83D\uDD04 Regenerate</button>' +
+                '<div style="padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;">' +
+                    '<button type="button" id="shoutOutModalRegenerate" style="padding:10px 16px; background:var(--bg-surface-sunken); border:1px solid var(--border-strong); border-radius:8px; cursor:pointer; font-weight:600;">\uD83D\uDD04 Regenerate</button>' +
                     '<button type="button" id="shoutOutModalCopy" style="padding:10px 16px; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">\uD83D\uDCCB Copy</button>' +
                 '</div>' +
             '</div>';

@@ -208,15 +208,15 @@
         // Header
         html += '<div style="margin-bottom: 16px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #5e35b1;">';
         html += '<strong>📊 Year-over-Year</strong> &mdash; compare 2025 vs ' + new Date().getFullYear() + ' per rep.';
-        html += '<br><span style="color: #666; font-size: 0.85em;">Plug in your 2025 full-year numbers below, then pick a metric to see who climbed and who slipped.</span>';
+        html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Plug in your 2025 full-year numbers below, then pick a metric to see who climbed and who slipped.</span>';
         html += '</div>';
 
         // ── 2025 baseline input panel ──
-        html += '<div style="margin-bottom: 18px; padding: 14px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<div style="margin-bottom: 18px; padding: 14px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         if (baseline) {
             html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
-            html += '<span style="font-weight:600; color:#2e7d32;">✓ 2025 baseline loaded</span>';
-            html += '<span style="color:#666; font-size:0.9em;">' + baseline.employees.length + ' employees</span>';
+            html += '<span style="font-weight:600; color:var(--green-text);">✓ 2025 baseline loaded</span>';
+            html += '<span style="color:var(--text-secondary); font-size:0.9em;">' + baseline.employees.length + ' employees</span>';
             html += '<button type="button" id="yoyToggleInput" class="btn-secondary" style="font-size:0.85em; padding:5px 12px;">Replace data</button>';
             html += '<button type="button" id="yoyClearBaseline" class="btn-secondary" style="background:#c62828; color:#fff; font-size:0.85em; padding:5px 12px;">Clear</button>';
             html += '</div>';
@@ -225,11 +225,11 @@
             html += '<div style="font-weight:600; margin-bottom:8px;">Plug in 2025 stats</div>';
             html += '<div id="yoyInputArea">';
         }
-        html += '<p style="margin:0 0 8px 0; color:#666; font-size:0.85em;">Paste your 2025 full-year data (include the header row with <strong>Name</strong>) — same format as a YTD upload.</p>';
-        html += '<textarea id="yoyPasteBox" rows="6" style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.82em; padding:8px; border:1px solid #ccc; border-radius:6px;" placeholder="Name&#9;Total Calls&#9;..."></textarea>';
+        html += '<p style="margin:0 0 8px 0; color:var(--text-secondary); font-size:0.85em;">Paste your 2025 full-year data (include the header row with <strong>Name</strong>) — same format as a YTD upload.</p>';
+        html += '<textarea id="yoyPasteBox" rows="6" style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.82em; padding:8px; border:1px solid var(--border); border-radius:6px;" placeholder="Name&#9;Total Calls&#9;..."></textarea>';
         html += '<div style="margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">';
         html += '<button type="button" id="yoySaveBaseline" class="btn-primary" style="padding:6px 16px;">Save 2025 Baseline</button>';
-        html += '<span id="yoyParseStatus" style="font-size:0.85em; color:#c62828;"></span>';
+        html += '<span id="yoyParseStatus" style="font-size:0.85em; color:var(--red-text);"></span>';
         html += '</div>';
         html += '</div>'; // input area
         html += '</div>'; // panel
@@ -309,25 +309,25 @@
         if (available.indexOf(_selectedMetric) < 0) _selectedMetric = available[0] || 'scheduleAdherence';
 
         var html = '<div style="margin-bottom:14px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">';
-        html += '<label style="font-weight:600; color:#555; font-size:0.9em;">View:</label>';
-        html += '<select id="yoyViewSelect" style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;">';
+        html += '<label style="font-weight:600; color:var(--text-secondary); font-size:0.9em;">View:</label>';
+        html += '<select id="yoyViewSelect" style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em;">';
         html += '<option value="single"' + (_viewMode === 'single' ? ' selected' : '') + '>Single metric</option>';
         html += '<option value="allKpis"' + (_viewMode === 'allKpis' ? ' selected' : '') + '>All KPIs side-by-side</option>';
         html += '</select>';
         var metricDisp = (_viewMode === 'single') ? '' : ' style="display:none;"';
         html += '<span id="yoyMetricControl"' + metricDisp + '>';
-        html += '<label style="font-weight:600; color:#555; font-size:0.9em; margin-right:8px;">Metric:</label>';
-        html += '<select id="yoyMetricSelect" style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em; min-width:220px;">';
+        html += '<label style="font-weight:600; color:var(--text-secondary); font-size:0.9em; margin-right:8px;">Metric:</label>';
+        html += '<select id="yoyMetricSelect" style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; min-width:220px;">';
         available.forEach(function (k) {
             var m = _metricMeta(k);
             var sel = (k === _selectedMetric) ? ' selected' : '';
             html += '<option value="' + _escapeHtml(k) + '"' + sel + '>' + _escapeHtml((m.icon ? m.icon + ' ' : '') + m.label) + '</option>';
         });
         html += '</select></span>';
-        html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
+        html += '<label style="font-size:0.9em; color:var(--text-secondary); cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyMyTeam"' + (_myTeamOnly ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">My team only';
         html += '</label>';
-        html += '<label style="font-size:0.9em; color:#555; cursor:pointer; user-select:none;">';
+        html += '<label style="font-size:0.9em; color:var(--text-secondary); cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyShow2025"' + (_show2025 ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">Show 2025 numbers';
         html += '</label>';
         html += '<button type="button" id="yoySummaryBtn" class="btn-primary" style="margin-left:auto; padding:6px 14px;">📋 Summarize for my leader</button>';
@@ -371,11 +371,11 @@
 
         var data = _buildRows(_selectedMetric);
         if (!data) {
-            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">Upload current-year data to compare against your 2025 baseline.</p>';
+            wrap.innerHTML = '<p style="color:var(--text-tertiary); text-align:center; padding:30px;">Upload current-year data to compare against your 2025 baseline.</p>';
             return;
         }
         if (!data.rows.length) {
-            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">No matching employees between 2025 and ' + new Date().getFullYear() + '. Names must match across both data sets.</p>';
+            wrap.innerHTML = '<p style="color:var(--text-tertiary); text-align:center; padding:30px;">No matching employees between 2025 and ' + new Date().getFullYear() + '. Names must match across both data sets.</p>';
             return;
         }
 
@@ -392,19 +392,19 @@
         });
 
         var html = '';
-        html += '<div style="margin-bottom:12px; padding:10px 14px; background:#f5f5f5; border-radius:8px; font-size:0.9em;">';
+        html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.9em;">';
         html += '<strong>' + _escapeHtml(metric.label) + '</strong> &mdash; ';
-        html += '<span style="color:#2e7d32; font-weight:600;">▲ ' + improved + ' improved</span> · ';
-        html += '<span style="color:#c62828; font-weight:600;">▼ ' + declined + ' declined</span> · ';
+        html += '<span style="color:var(--green-text); font-weight:600;">▲ ' + improved + ' improved</span> · ';
+        html += '<span style="color:var(--red-text); font-weight:600;">▼ ' + declined + ' declined</span> · ';
         html += '<span style="color:#777;">' + flat + ' flat</span>';
-        html += '<span style="color:#999; font-size:0.85em;"> &nbsp;|&nbsp; ' + data.matched + ' reps matched · ' + _escapeHtml(data.currentLabel) + '</span>';
+        html += '<span style="color:var(--text-tertiary); font-size:0.85em;"> &nbsp;|&nbsp; ' + data.matched + ' reps matched · ' + _escapeHtml(data.currentLabel) + '</span>';
         if (_myTeamOnly) {
             var ctx = _teamFilterContext();
             if (!ctx || !ctx.isFiltering) {
                 html += '<br><span style="color:#e65100; font-size:0.8em;">⚠ "My team only" is on, but no team is selected — showing everyone. Pick your team via the team filter to narrow this.</span>';
             }
         }
-        html += reverse ? '<br><span style="color:#999; font-size:0.8em;">Lower is better for this metric — a drop counts as an improvement.</span>' : '';
+        html += reverse ? '<br><span style="color:var(--text-tertiary); font-size:0.8em;">Lower is better for this metric — a drop counts as an improvement.</span>' : '';
         html += '</div>';
 
         // Sort
@@ -417,7 +417,7 @@
         }
 
         html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
-        html += '<thead><tr style="background:#f5f5f5;">';
+        html += '<thead><tr style="background:var(--bg-surface-raised);">';
         html += '<th class="yoy-sort" data-sort="name" style="' + thBase + ' text-align:left;">Name' + arrow('name') + '</th>';
         if (_show2025) html += '<th class="yoy-sort" data-sort="prior" style="' + thBase + ' text-align:right;">2025' + arrow('prior') + '</th>';
         html += '<th class="yoy-sort" data-sort="current" style="' + thBase + ' text-align:right;">' + new Date().getFullYear() + arrow('current') + '</th>';
@@ -428,7 +428,7 @@
         sorted.forEach(function (r, idx) {
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             var bg = idx % 2 === 0 ? (isDark ? '#1a1f2e' : '#fafafa') : 'transparent';
-            html += '<tr style="background:' + bg + '; border-bottom:1px solid #eee;">';
+            html += '<tr style="background:' + bg + '; border-bottom:1px solid var(--border);">';
             html += '<td style="padding:6px; white-space:nowrap;">' + _escapeHtml(r.name) + '</td>';
             if (_show2025) html += '<td style="padding:6px; text-align:right; color:#777;">' + _formatMetricDisplay(_selectedMetric, r.prior) + '</td>';
             html += '<td style="padding:6px; text-align:right; font-weight:600;">' + _formatMetricDisplay(_selectedMetric, r.current) + '</td>';
@@ -511,11 +511,11 @@
 
         var data = _buildAllKpiRows();
         if (!data) {
-            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">Upload current-year data to compare against your 2025 baseline.</p>';
+            wrap.innerHTML = '<p style="color:var(--text-tertiary); text-align:center; padding:30px;">Upload current-year data to compare against your 2025 baseline.</p>';
             return;
         }
         if (!data.rows.length) {
-            wrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">No matching employees between 2025 and ' + new Date().getFullYear() + '. Names must match across both data sets.</p>';
+            wrap.innerHTML = '<p style="color:var(--text-tertiary); text-align:center; padding:30px;">No matching employees between 2025 and ' + new Date().getFullYear() + '. Names must match across both data sets.</p>';
             return;
         }
 
@@ -542,13 +542,13 @@
         }
 
         var html = '';
-        html += '<div style="margin-bottom:12px; padding:10px 14px; background:#f5f5f5; border-radius:8px; font-size:0.85em; color:#555;">';
+        html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.85em; color:var(--text-secondary);">';
         html += '<strong>2025 → ' + curYear + ' side-by-side</strong> &mdash; ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
         html += '</div>';
 
         html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-        html += '<thead><tr style="background:#f5f5f5;">';
-        html += '<th class="yoyk-sort" data-sort="name" style="' + thBase + ' text-align:left; position:sticky; left:0; background:#f5f5f5;">Name' + arrow('name') + '</th>';
+        html += '<thead><tr style="background:var(--bg-surface-raised);">';
+        html += '<th class="yoyk-sort" data-sort="name" style="' + thBase + ' text-align:left; position:sticky; left:0; background:var(--bg-surface-raised);">Name' + arrow('name') + '</th>';
         data.metrics.forEach(function (k) {
             var m = _metricMeta(k);
             html += '<th class="yoyk-sort" data-sort="' + _escapeHtml(k) + '" style="' + thBase + ' text-align:center;" title="' + _escapeHtml(m.label) + '">' + _escapeHtml((m.icon || '') + ' ' + m.label) + arrow(k) + '</th>';
@@ -558,7 +558,7 @@
         sorted.forEach(function (r, idx) {
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             var bg = idx % 2 === 0 ? (isDark ? '#1a1f2e' : '#fafafa') : (isDark ? 'transparent' : '#fff');
-            html += '<tr style="background:' + bg + '; border-bottom:1px solid #eee;">';
+            html += '<tr style="background:' + bg + '; border-bottom:1px solid var(--border);">';
             html += '<td style="padding:6px; white-space:nowrap; font-weight:600; position:sticky; left:0; background:' + bg + ';">' + _escapeHtml(r.name) + '</td>';
             data.metrics.forEach(function (k) {
                 var c = r.metrics[k] || {};
@@ -570,10 +570,10 @@
                     var icon = good ? '▲' : bad ? '▼' : '–';
                     var sign = c.delta > 0 ? '+' : '';
                     var deltaDisp = _formatDelta(k, c.delta);
-                    var priorPart = _show2025 ? ('<span style="color:#999;">' + _formatMetricDisplay(k, c.prior) + '</span> ') : '';
+                    var priorPart = _show2025 ? ('<span style="color:var(--text-tertiary);">' + _formatMetricDisplay(k, c.prior) + '</span> ') : '';
                     sub = '<div style="font-size:0.76em; margin-top:1px;">' + priorPart + '<span style="color:' + color + ';">' + icon + sign + deltaDisp + '</span></div>';
                 } else if (_show2025 && c.prior !== null && c.prior !== undefined) {
-                    sub = '<div style="font-size:0.76em; margin-top:1px; color:#999;">' + _formatMetricDisplay(k, c.prior) + ' →</div>';
+                    sub = '<div style="font-size:0.76em; margin-top:1px; color:var(--text-tertiary);">' + _formatMetricDisplay(k, c.prior) + ' →</div>';
                 }
                 html += '<td style="padding:6px 8px; text-align:center; white-space:nowrap;"><div style="font-weight:600;">' + curDisp + '</div>' + sub + '</td>';
             });
@@ -698,10 +698,10 @@
         overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px;';
 
         var box = document.createElement('div');
-        box.style.cssText = 'background:#fff; color:#222; border-radius:10px; max-width:780px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.35);';
+        box.style.cssText = 'background:var(--bg-surface); color:var(--text-primary); border-radius:10px; max-width:780px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.35);';
 
         var head = document.createElement('div');
-        head.style.cssText = 'padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;';
+        head.style.cssText = 'padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;';
         head.innerHTML = '<strong style="font-size:1.05em;">📋 Leader Summary</strong>' +
             '<span style="font-size:0.82em; color:#777;">Review, then copy &amp; paste into your notes or an AI tool.</span>';
 
@@ -709,14 +709,14 @@
         body.style.cssText = 'padding:14px 18px; overflow:auto;';
         var ta = document.createElement('textarea');
         ta.id = 'yoySummaryText';
-        ta.style.cssText = 'width:100%; box-sizing:border-box; height:50vh; font-family:monospace; font-size:0.82em; line-height:1.4; padding:10px; border:1px solid #ccc; border-radius:6px; white-space:pre; resize:vertical;';
+        ta.style.cssText = 'width:100%; box-sizing:border-box; height:50vh; font-family:monospace; font-size:0.82em; line-height:1.4; padding:10px; border:1px solid var(--border); border-radius:6px; white-space:pre; resize:vertical;';
         ta.value = text;
         body.appendChild(ta);
 
         var foot = document.createElement('div');
-        foot.style.cssText = 'padding:12px 18px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end; align-items:center;';
+        foot.style.cssText = 'padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; align-items:center;';
         foot.innerHTML =
-            '<span id="yoyCopyStatus" style="font-size:0.85em; color:#2e7d32; margin-right:auto;"></span>' +
+            '<span id="yoyCopyStatus" style="font-size:0.85em; color:var(--green-text); margin-right:auto;"></span>' +
             '<button type="button" id="yoyCopyBtn" class="btn-primary" style="padding:7px 16px;">Copy to clipboard</button>' +
             '<button type="button" id="yoyCloseSummary" class="btn-secondary" style="padding:7px 16px;">Close</button>';
 
