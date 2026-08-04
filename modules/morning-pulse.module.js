@@ -2181,10 +2181,7 @@
                 if (msg) {
                     textarea.value = msg;
                     if (autoCopy) {
-                        try {
-                            await navigator.clipboard.writeText(msg);
-                            if (typeof showToast === 'function') showToast('Growth message copied!', 2000);
-                        } catch (e) { /* ok */ }
+                        await copyToClipboard(msg, { message: 'Growth message copied!' });
                     }
                 } else {
                     textarea.value = 'Not enough data for that comparison yet.';
@@ -2224,10 +2221,7 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
         overlay.querySelector('#pulseGrowthCopy').addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(textarea.value);
-                if (typeof showToast === 'function') showToast('Copied!', 2000);
-            } catch (e) { textarea.select(); }
+            await copyToClipboard(textarea.value, { message: 'Copied!' });
         });
 
         overlay.querySelector('#pulseGrowthRegenerate').addEventListener('click', () => regenerate(true));
@@ -2465,10 +2459,7 @@
 
         document.getElementById('pulseCheckinCopy').addEventListener('click', async () => {
             const textarea = document.getElementById('pulseCheckinText');
-            try {
-                await navigator.clipboard.writeText(textarea.value);
-                if (typeof showToast === 'function') showToast('Copied!', 2000);
-            } catch (e) { textarea.select(); }
+            await copyToClipboard(textarea.value, { message: 'Copied!' });
         });
 
         const generateFn = isKickoff ? generateMondayKickoffMessage : isMidweek ? generateMidweekCheckinMessage : isQuarterly ? generateQuarterlyCheckinMessage : isMonthly ? generateMonthlyCheckinMessage : isHighFive ? generateHighFiveMessage : generateCheckinMessage;
@@ -2480,10 +2471,7 @@
                 const newMessage = await generateFn(employeeName, latestKey, baselineKey);
                 if (newMessage) {
                     document.getElementById('pulseCheckinText').value = newMessage;
-                    try {
-                        await navigator.clipboard.writeText(newMessage);
-                        if (typeof showToast === 'function') showToast('New check-in copied!', 2000);
-                    } catch (e) { /* ok */ }
+                    await copyToClipboard(newMessage, { message: 'New check-in copied!' });
                 }
             } finally {
                 regenBtn.textContent = '\uD83D\uDD04 Regenerate';
@@ -2627,10 +2615,7 @@
             const textarea = card.querySelector('.rmm-rep-text');
 
             card.querySelector('.rmm-copy').addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(textarea.value);
-                    if (typeof showToast === 'function') showToast(`Copied ${repName}`, 1500);
-                } catch (e) { textarea.select(); }
+                await copyToClipboard(textarea.value, { message: `Copied ${repName}` });
             });
 
             card.querySelector('.rmm-regen').addEventListener('click', async (e) => {
@@ -2840,10 +2825,7 @@
                     }
                     showCheckinModal(empName, message, latestKey, baselineKey, 'checkin');
 
-                    try {
-                        await navigator.clipboard.writeText(message);
-                        if (typeof showToast === 'function') showToast('Check-in copied to clipboard!', 3000);
-                    } catch (e) { /* clipboard not available */ }
+                    await copyToClipboard(message, { message: 'Check-in copied to clipboard!' });
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -2867,10 +2849,7 @@
                     }
                     showCheckinModal(empName, message, latestKey, baselineKey, 'kickoff');
 
-                    try {
-                        await navigator.clipboard.writeText(message);
-                        if (typeof showToast === 'function') showToast('Monday Kickoff copied to clipboard!', 3000);
-                    } catch (e) { /* clipboard not available */ }
+                    await copyToClipboard(message, { message: 'Monday Kickoff copied to clipboard!' });
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -2894,10 +2873,7 @@
                     }
                     showCheckinModal(empName, message, latestKey, baselineKey, 'midweek');
 
-                    try {
-                        await navigator.clipboard.writeText(message);
-                        if (typeof showToast === 'function') showToast('Midweek check-in copied to clipboard!', 3000);
-                    } catch (e) { /* clipboard not available */ }
+                    await copyToClipboard(message, { message: 'Midweek check-in copied to clipboard!' });
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -2921,10 +2897,7 @@
                     }
                     showCheckinModal(empName, message, latestKey, baselineKey, 'highfive');
 
-                    try {
-                        await navigator.clipboard.writeText(message);
-                        if (typeof showToast === 'function') showToast('High-five copied to clipboard!', 3000);
-                    } catch (e) { /* clipboard not available */ }
+                    await copyToClipboard(message, { message: 'High-five copied to clipboard!' });
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -2973,10 +2946,7 @@
                         }
                         showCheckinModal(empName, message, latestKey, baselineKey, messageType);
 
-                        try {
-                            await navigator.clipboard.writeText(message);
-                            if (typeof showToast === 'function') showToast((periodType === 'quarter' ? 'Quarterly' : 'Monthly') + ' review copied to clipboard!', 3000);
-                        } catch (e) { /* clipboard not available */ }
+                        await copyToClipboard(message, { message: (periodType === 'quarter' ? 'Quarterly' : 'Monthly') + ' review copied to clipboard!' });
                     } finally {
                         this.textContent = originalText;
                         this.disabled = false;

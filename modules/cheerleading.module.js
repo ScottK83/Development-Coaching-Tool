@@ -795,10 +795,7 @@
     /* ── Modal ── */
 
     function showCheerModal(title, message, regenerateFn) {
-        try {
-            navigator.clipboard.writeText(message);
-            if (typeof showToast === 'function') showToast('Copied to clipboard!', 2000);
-        } catch (e) { /* clipboard may be unavailable — modal still copyable */ }
+        copyToClipboard(message, { message: 'Copied to clipboard!' });
 
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
@@ -826,10 +823,7 @@
 
         overlay.querySelector('#cheerModalCopy').addEventListener('click', function () {
             var textarea = overlay.querySelector('#cheerModalText');
-            try {
-                navigator.clipboard.writeText(textarea.value);
-                if (typeof showToast === 'function') showToast('Copied!', 2000);
-            } catch (e) { textarea.select(); }
+            copyToClipboard(textarea.value, { message: 'Copied!' });
         });
 
         var regenBtn = overlay.querySelector('#cheerModalRegenerate');
@@ -839,10 +833,7 @@
                 var textarea = overlay.querySelector('#cheerModalText');
                 if (textarea && newMessage) {
                     textarea.value = newMessage;
-                    try {
-                        navigator.clipboard.writeText(newMessage);
-                        if (typeof showToast === 'function') showToast('Regenerated & copied!', 2000);
-                    } catch (e) { /* ok */ }
+                    copyToClipboard(newMessage, { message: 'Regenerated & copied!' });
                 }
             });
         } else {

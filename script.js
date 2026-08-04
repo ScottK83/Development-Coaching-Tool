@@ -5706,14 +5706,7 @@ function copyTrendCadenceTracker() {
         return;
     }
 
-    if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text)
-            .then(() => showToast('✅ Tracker summary copied', 2800))
-            .catch(() => showToast('Unable to copy tracker summary', 3000));
-        return;
-    }
-
-    showToast('Clipboard is not available in this browser.', 3000);
+    copyToClipboard(text, { message: '📋 Tracker summary copied' });
 }
 
 function renderTrendCadenceTracker() {
@@ -5846,22 +5839,7 @@ function copyTrendThisWeekPlan() {
         return;
     }
 
-    const fallbackCopy = () => {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('✅ This Week Plan copied', 2800);
-        }).catch(() => {
-            showToast('Unable to copy This Week Plan', 3000);
-        });
-    };
-
-    if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text)
-            .then(() => showToast('✅ This Week Plan copied', 2800))
-            .catch(() => fallbackCopy());
-        return;
-    }
-
-    fallbackCopy();
+    copyToClipboard(text, { message: '📋 This Week Plan copied' });
 }
 
 function getTrendSelectedEmployee() {
@@ -6306,11 +6284,7 @@ async function generateOneOnOnePrep() {
 function copyOneOnOnePrep() {
     const output = document.getElementById('oneOnOnePrepOutput');
     if (!output) return;
-    navigator.clipboard.writeText(output.value || '').then(() => {
-        showToast('✅ 1:1 prep copied', 3000);
-    }).catch(() => {
-        showToast('Unable to copy 1:1 prep', 3000);
-    });
+    copyToClipboard(output.value || '', { message: '📋 1:1 prep copied' });
 }
 
 function renderRecognitionIntelligence() {
@@ -6775,22 +6749,15 @@ function generateTodaysFocusCopilotEmail() {
         return;
     }
 
-    navigator.clipboard.writeText(prompt).then(() => {
-        showToast('✅ CoPilot prompt copied. Paste into CoPilot.', 3000);
-        window.open('https://copilot.microsoft.com', '_blank');
-    }).catch(() => {
-        showToast('Unable to copy CoPilot prompt', 3000);
+    copyToClipboard(prompt, { message: '📋 CoPilot prompt copied — opening CoPilot' }).then((ok) => {
+        if (ok) window.open('https://copilot.microsoft.com', '_blank');
     });
 }
 
 function copyTodaysFocus() {
     const output = document.getElementById('todaysFocusOutput');
     if (!output) return;
-    navigator.clipboard.writeText(output.value || '').then(() => {
-        showToast('✅ Today’s Focus copied', 3000);
-    }).catch(() => {
-        showToast('Unable to copy Today’s Focus', 3000);
-    });
+    copyToClipboard(output.value || '', { message: '📋 Today’s Focus copied' });
 }
 
 
@@ -7443,10 +7410,7 @@ async function generateQuickCheckin() {
     if (copyBtn) copyBtn.style.display = 'inline-block';
 
     // Auto-copy
-    try {
-        await navigator.clipboard.writeText(message);
-        showToast('Quick check-in copied to clipboard!', 3000);
-    } catch (e) { /* user can click copy */ }
+    await copyToClipboard(message, { message: '📋 Quick check-in copied to clipboard' });
 }
 
 function bindQuickCheckinHandlers() {
@@ -7457,11 +7421,7 @@ function bindQuickCheckinHandlers() {
     if (genBtn) bindElementOnce(genBtn, 'click', generateQuickCheckin);
     if (copyBtn && output) {
         bindElementOnce(copyBtn, 'click', () => {
-            navigator.clipboard.writeText(output.value || '').then(() => {
-                showToast('Copied!', 2000);
-            }).catch(() => {
-                showToast('Unable to copy', 3000);
-            });
+            copyToClipboard(output.value || '', { button: copyBtn });
         });
     }
 }
@@ -7602,13 +7562,7 @@ function copyCallListeningVerintSummary(entryId = null) {
     if (!entry) return;
 
     const summaryText = buildCallListeningVerintSummary(entry);
-    if (!navigator.clipboard?.writeText) {
-        showToast('⚠️ Clipboard API not available (requires HTTPS).', 3000);
-        return;
-    }
-    navigator.clipboard.writeText(summaryText)
-        .then(() => showToast('✅ Verint call summary copied to clipboard!', 3000))
-        .catch(() => showToast('⚠️ Unable to copy Verint summary.', 3000));
+    copyToClipboard(summaryText, { message: '📋 Verint call summary copied to clipboard' });
 }
 
 function loadCallListeningEntryIntoForm(entryId) {
@@ -7683,8 +7637,7 @@ function generateCallListeningPromptAndCopy() {
         button,
         showToast,
         alertFn: alert,
-        openWindow: window.open,
-        clipboardWriteText: navigator.clipboard?.writeText?.bind(navigator.clipboard)
+        openWindow: window.open
     });
     if (delegatedResult?.ok) {
         if (outlookSection) {

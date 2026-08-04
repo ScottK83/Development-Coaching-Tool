@@ -731,19 +731,10 @@
         document.getElementById('yoyCloseSummary').addEventListener('click', close);
 
         document.getElementById('yoyCopyBtn').addEventListener('click', function () {
-            var status = document.getElementById('yoyCopyStatus');
-            var val = ta.value;
-            function ok() { if (status) status.textContent = '✓ Copied'; }
-            function fail() {
-                ta.focus(); ta.select();
-                try { document.execCommand('copy'); ok(); }
-                catch (_e) { if (status) { status.style.color = '#c62828'; status.textContent = 'Press Ctrl+C to copy'; } }
-            }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(val).then(ok).catch(fail);
-            } else {
-                fail();
-            }
+            copyToClipboard(ta.value, {
+                button: document.getElementById('yoyCopyBtn'),
+                message: '📋 Year-over-year summary copied'
+            }).then(function (ok) { if (!ok) { ta.focus(); ta.select(); } });
         });
     }
 

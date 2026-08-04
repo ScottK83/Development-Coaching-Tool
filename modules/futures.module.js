@@ -868,12 +868,7 @@
 
         // Copy handler
         document.getElementById('futuresCheckInCopy').addEventListener('click', function () {
-            navigator.clipboard.writeText(summary).then(function () {
-                var btn = document.getElementById('futuresCheckInCopy');
-                btn.textContent = 'Copied!';
-                btn.style.background = '#2e7d32';
-                setTimeout(function () { btn.textContent = 'Copy to Clipboard'; btn.style.background = '#4caf50'; }, 2000);
-            });
+            copyToClipboard(summary, { button: document.getElementById('futuresCheckInCopy') });
         });
     }
 

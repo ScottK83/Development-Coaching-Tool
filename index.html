@@ -1675,6 +1675,9 @@ Box 2 - Future Improvement Areas:
                 'modules/metric-profiles.module.js',
                 'modules/error-monitor.module.js',
                 'modules/shared-utils.module.js',
+                // ui-utils provides copyToClipboard/showToast, which nearly
+                // every feature module calls — it belongs in the foundation.
+                'modules/ui-utils.module.js',
                 'modules/data-integrity.module.js',
                 'modules/pattern-memory.module.js',
                 // Feature Modules
@@ -1695,7 +1698,6 @@ Box 2 - Future Improvement Areas:
                 'modules/metrics.module.js',
                 'modules/sentiment.module.js',
                 'modules/year-end.module.js',
-                'modules/ui-utils.module.js',
                 'modules/email.module.js',
                 'modules/coaching-analysis.module.js',
                 'modules/coaching.module.js',

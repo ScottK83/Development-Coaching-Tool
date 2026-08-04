@@ -643,11 +643,7 @@
         var copilotUrl = (window.DevCoachConstants && window.DevCoachConstants.COPILOT_URL) || 'https://copilot.microsoft.com';
 
         // Always copy prompt to clipboard first, then open Copilot
-        navigator.clipboard.writeText(prompt).then(function() {
-            showToast('\u2705 Prompt copied to clipboard! Paste it in CoPilot with Ctrl+V.', 5000);
-        }).catch(function() {
-            // silent - we still try to open the URL
-        });
+        copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied \u2014 paste it in CoPilot with Ctrl+V' });
 
         var windowRef = window.open(copilotUrl, '_blank');
 

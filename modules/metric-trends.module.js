@@ -1667,12 +1667,9 @@ function attachTrendTipsModalHandlers(options) {
     document.getElementById('copyPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('copilotPromptDisplay');
         if (!textarea) return;
-        navigator.clipboard.writeText(textarea.value).then(() => {
-            showToast('✅ Prompt copied! Opening Copilot...', 2000);
-            window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
-        }).catch(() => {
-            textarea.select();
-            showToast('⚠️ Unable to copy prompt', 2000);
+        copyToClipboard(textarea.value, { message: '📋 Prompt copied — opening Copilot' }).then((ok) => {
+            if (ok) window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+            else textarea.select();
         });
     });
 
@@ -1680,11 +1677,7 @@ function attachTrendTipsModalHandlers(options) {
     if (copySnapshotBtn) {
         copySnapshotBtn.addEventListener('click', () => {
             const summaryText = buildTrendIntelligenceSnapshotText(allMetrics || []);
-            navigator.clipboard.writeText(summaryText).then(() => {
-                showToast('✅ Intelligence snapshot copied', 2000);
-            }).catch(() => {
-                showToast('⚠️ Unable to copy snapshot', 2000);
-            });
+            copyToClipboard(summaryText, { message: '📋 Intelligence snapshot copied' });
         });
     }
 
@@ -3821,12 +3814,9 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
 
     document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('teamTrendPromptDisplay');
-        navigator.clipboard.writeText(textarea.value).then(() => {
-            showToast('✅ Team prompt copied', 2000);
-            window.open('https://copilot.microsoft.com', '_blank');
-        }).catch(() => {
-            textarea.select();
-            showToast('⚠️ Unable to copy team prompt', 2000);
+        copyToClipboard(textarea.value, { message: '📋 Team prompt copied — opening Copilot' }).then((ok) => {
+            if (ok) window.open('https://copilot.microsoft.com', '_blank');
+            else textarea.select();
         });
     });
 

@@ -286,29 +286,7 @@
 
     function copyDebugInfo() {
         const payload = JSON.stringify(buildDebugPayload(), null, 2);
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(payload)
-                .then(() => showToast('\u2705 Debug info copied to clipboard', 3000))
-                .catch(() => fallbackCopyDebug(payload));
-        } else {
-            fallbackCopyDebug(payload);
-        }
-    }
-
-    function fallbackCopyDebug(text) {
-        try {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('\u2705 Debug info copied to clipboard', 3000);
-        } catch (err) {
-            console.error('Failed to copy debug info:', err);
-            showToast('\u26a0\ufe0f Unable to copy debug info', 3000);
-        }
+        copyToClipboard(payload, { message: '\ud83d\udccb Debug info copied to clipboard' });
     }
 
     // Helper: resolve showToast from global scope
@@ -339,7 +317,6 @@
         buildDebugPayload,
         renderDebugPanel,
         copyDebugInfo,
-        fallbackCopyDebug,
         debugState,
         // Constants
         STORAGE_PREFIX,

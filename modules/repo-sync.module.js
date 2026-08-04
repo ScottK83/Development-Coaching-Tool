@@ -310,12 +310,7 @@
 
         button.addEventListener('click', async () => {
             const diagnostics = buildDiagnosticsSummary();
-            try {
-                await navigator.clipboard.writeText(diagnostics);
-                showToast('Diagnostics copied.', 2500);
-            } catch (_error) {
-                alert(`Copy failed. Diagnostics:\n\n${diagnostics}`);
-            }
+            await copyToClipboard(diagnostics, { button, message: '📋 Diagnostics copied' });
         });
 
         button.dataset.bound = 'true';

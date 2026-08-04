@@ -515,8 +515,8 @@ Generate the coaching email for ${preferredName} now.`;
         window.latestCoachingSummaryData = summaryData;
 
         recordAndRenderCoachingEvent(employeeName, weekEnding || summaryData.periodLabel, coachedMetricKeys);
-        navigator.clipboard.writeText(promptArea.value).catch(() => {
-            promptArea.select();
+        copyToClipboard(promptArea.value, { silent: true }).then((ok) => {
+            if (!ok) promptArea.select();
         });
 
         showCoachingPromptCopiedState(button);

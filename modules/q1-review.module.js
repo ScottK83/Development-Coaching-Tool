@@ -754,10 +754,7 @@
 
         if (copyBtn && textarea) {
             copyBtn.addEventListener('click', function () {
-                navigator.clipboard.writeText(textarea.value).then(function () {
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(function () { copyBtn.textContent = 'Copy Q1 Prompt'; }, 2000);
-                });
+                copyToClipboard(textarea.value, { button: copyBtn, message: '📋 Q1 prompt copied' });
             });
         }
 

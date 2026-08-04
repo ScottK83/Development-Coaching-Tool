@@ -56,23 +56,11 @@ Requirements:
         const openWindow = typeof options.openWindow === 'function'
             ? options.openWindow
             : (url, target) => window.open(url, target);
-        const showToast = typeof options.showToast === 'function' ? options.showToast : () => {};
-        const alertFn = typeof options.alertFn === 'function' ? options.alertFn : () => {};
-        const clipboardWriteText = options.clipboardWriteText;
         const copilotWindow = openWindow(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
 
-        if (typeof clipboardWriteText === 'function') {
-            clipboardWriteText(prompt)
-                .then(() => {
-                    showToast('✅ Call listening prompt copied. Paste into Copilot with Ctrl+V.', 4000);
-                    if (!copilotWindow) {
-                        alertFn('✅ Prompt copied to clipboard. Open https://copilot.microsoft.com and paste with Ctrl+V.');
-                    }
-                })
-                .catch(() => {
-                    showToast('⚠️ Could not copy automatically. Prompt is in the box below.', 4500);
-                });
-        }
+        copyToClipboard(prompt, {
+            message: '📋 Call listening prompt copied — paste into Copilot with Ctrl+V'
+        });
 
         return { ok: true, copilotWindow };
     }

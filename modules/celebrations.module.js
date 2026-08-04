@@ -995,10 +995,7 @@
     // =====================
 
     function showShoutOutModal(title, message, regenerateFn) {
-        try {
-            navigator.clipboard.writeText(message);
-            if (typeof showToast === 'function') showToast('Copied to clipboard!', 2000);
-        } catch (e) { /* ok */ }
+        copyToClipboard(message, { message: 'Copied to clipboard!' });
 
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
@@ -1026,10 +1023,7 @@
 
         overlay.querySelector('#shoutOutModalCopy').addEventListener('click', function() {
             var textarea = overlay.querySelector('#shoutOutModalText');
-            try {
-                navigator.clipboard.writeText(textarea.value);
-                if (typeof showToast === 'function') showToast('Copied!', 2000);
-            } catch (e) { textarea.select(); }
+            copyToClipboard(textarea.value, { message: 'Copied!' });
         });
 
         overlay.querySelector('#shoutOutModalRegenerate').addEventListener('click', function() {
@@ -1038,10 +1032,7 @@
             var textarea = overlay.querySelector('#shoutOutModalText');
             if (textarea && newMessage) {
                 textarea.value = newMessage;
-                try {
-                    navigator.clipboard.writeText(newMessage);
-                    if (typeof showToast === 'function') showToast('Regenerated & copied!', 2000);
-                } catch (e) { /* ok */ }
+                copyToClipboard(newMessage, { message: 'Regenerated & copied!' });
             }
         });
     }

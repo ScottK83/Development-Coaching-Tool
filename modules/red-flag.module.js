@@ -567,16 +567,7 @@ function copyFollowUpEmail() {
     }
 
     const button = document.getElementById('copyFollowUpEmailBtn');
-    navigator.clipboard.writeText(emailText).then(() => {
-        if (!button) return;
-        const originalText = button.textContent;
-        button.textContent = '✓ Copied!';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1200);
-    }).catch(() => {
-        alert('⚠️ Unable to copy email.');
-    });
+    copyToClipboard(emailText, { button, message: '📋 Follow-up email copied' });
 }
 
 function clearFollowUpEmail() {
@@ -696,19 +687,10 @@ function copyRedFlagEmail() {
     }
 
     const button = document.getElementById('copyRedFlagEmailBtn');
-    navigator.clipboard.writeText(emailText).then(() => {
-        if (!button) return;
-        const originalText = button.textContent;
-        button.textContent = '✓ Copied! Opening Outlook...';
-
-        setTimeout(() => {
-            window.open('mailto:', '_blank');
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 500);
-        }, 500);
-    }).catch(() => {
-        alert('⚠️ Unable to copy email.');
+    copyToClipboard(emailText, { button, message: '📋 Copied — opening Outlook' }).then((ok) => {
+        // Only hand off to the mail client once the text is actually on the
+        // clipboard; otherwise the draft opens with nothing to paste.
+        if (ok) setTimeout(() => window.open('mailto:', '_blank'), 500);
     });
 }
 
@@ -925,14 +907,9 @@ function copySurveyPromptAndOpenCopilot() {
     const promptDisplay = document.getElementById('surveyPromptDisplay');
     if (!promptDisplay?.value) return;
 
-    navigator.clipboard.writeText(promptDisplay.value).then(() => {
-        if (typeof showToast === 'function') {
-            showToast('✅ Prompt copied! Opening Copilot...', 2000);
-        }
-        window.open('https://copilot.microsoft.com', '_blank');
-    }).catch(() => {
-        promptDisplay.select();
-        alert('⚠️ Unable to copy. Please select and copy manually.');
+    copyToClipboard(promptDisplay.value, { message: '📋 Prompt copied — opening Copilot' }).then((ok) => {
+        if (ok) window.open('https://copilot.microsoft.com', '_blank');
+        else promptDisplay.select();
     });
 }
 

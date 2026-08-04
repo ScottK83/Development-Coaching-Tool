@@ -2462,11 +2462,7 @@
     }
 
     function copyAndNotify(text, toastMsg) {
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(text).then(function() {
-                if (typeof showToast === 'function') showToast(toastMsg, 3000);
-            });
-        }
+        copyToClipboard(text, { message: toastMsg });
     }
 
     // ============================================

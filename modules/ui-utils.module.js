@@ -13,6 +13,82 @@
     }
 
     /**
+     * Copy text to the clipboard.
+     *
+     * Every generator in the app ends the same way — put text on the
+     * clipboard, tell the user it worked. That was hand-rolled at ~50 call
+     * sites, each with its own idea of feedback: some toasted, some swapped
+     * the button label, some did both, and a few had no error path at all so
+     * a failed copy looked exactly like a successful one.
+     *
+     * options.message  — toast copy on success (defaults to a generic one)
+     * options.button   — button element to flash "Copied" on
+     * options.silent   — suppress the success toast (button flash only)
+     *
+     * Resolves true when the text landed on the clipboard, false otherwise.
+     * Never rejects: callers should not have to guard a copy.
+     */
+    async function copyToClipboard(text, options) {
+        const opts = options || {};
+        const value = String(text == null ? '' : text);
+        if (!value) {
+            showToast('Nothing to copy yet.', 2500);
+            return false;
+        }
+
+        let ok = false;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(value);
+                ok = true;
+            }
+        } catch (e) {
+            ok = false;
+        }
+
+        // The async API needs a secure context and an unblocked permission.
+        // Fall back to the old selection trick rather than failing outright.
+        if (!ok) {
+            try {
+                const scratch = document.createElement('textarea');
+                scratch.value = value;
+                scratch.setAttribute('readonly', '');
+                scratch.style.cssText = 'position:fixed; top:-1000px; left:-1000px; opacity:0;';
+                document.body.appendChild(scratch);
+                scratch.select();
+                ok = document.execCommand('copy');
+                document.body.removeChild(scratch);
+            } catch (e) {
+                ok = false;
+            }
+        }
+
+        if (ok) {
+            flashButton(opts.button, '✓ Copied');
+            if (!opts.silent) showToast(opts.message || '📋 Copied to clipboard', 2500);
+        } else {
+            flashButton(opts.button, 'Copy failed');
+            showToast('⚠️ Could not reach the clipboard. Select the text and press Ctrl+C.', 5000);
+        }
+        return ok;
+    }
+
+    // Temporarily swap a button's label, then restore it. Guards against
+    // double-clicks stashing the already-swapped label as the original.
+    function flashButton(button, label, duration) {
+        if (!button || !button.textContent) return;
+        if (button.dataset.flashRestore === undefined) {
+            button.dataset.flashRestore = button.textContent;
+        }
+        button.textContent = label;
+        clearTimeout(button._flashTimer);
+        button._flashTimer = setTimeout(function () {
+            button.textContent = button.dataset.flashRestore;
+            delete button.dataset.flashRestore;
+        }, duration || 1800);
+    }
+
+    /**
      * Show loading spinner
      */
     function showSpinner(message = 'Loading...') {
@@ -203,6 +279,8 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.uiUtils = {
         showToast,
+        copyToClipboard,
+        flashButton,
         showSpinner,
         hideSpinner,
         switchSection,
@@ -212,6 +290,8 @@
     };
 
     // Also expose to window for backward compatibility
+    window.copyToClipboard = copyToClipboard;
+    window.flashButton = flashButton;
     window.showToast = window.showToast || showToast;
     window.showSpinner = window.showSpinner || showSpinner;
     window.hideSpinner = window.hideSpinner || hideSpinner;

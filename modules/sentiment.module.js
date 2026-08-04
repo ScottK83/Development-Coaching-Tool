@@ -1381,17 +1381,9 @@
             return;
         }
 
-        // Copy to clipboard
-        navigator.clipboard.writeText(summaryText).then(() => {
-            const button = document.getElementById('copySentimentSummaryBtn');
-            const originalText = button.textContent;
-            button.textContent = '✅ Copied!';
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
-            showToast('✅ Summary copied to clipboard', 2000);
-        }).catch(() => {
-            showToast('⚠️ Unable to copy summary', 2000);
+        copyToClipboard(summaryText, {
+            button: document.getElementById('copySentimentSummaryBtn'),
+            message: '📋 Summary copied to clipboard'
         });
     }
 
@@ -1423,14 +1415,8 @@
             return;
         }
 
-        // Copy to clipboard and show feedback
-        navigator.clipboard.writeText(prompt).then(() => {
-            showToast('✅ CoPilot prompt copied! Opening CoPilot...', 2000);
-            setTimeout(() => {
-                window.open('https://copilot.microsoft.com', '_blank');
-            }, 500);
-        }).catch(() => {
-            alert('Could not copy. Here\'s the prompt to manually copy:\n\n' + prompt);
+        copyToClipboard(prompt, { message: '📋 CoPilot prompt copied — opening CoPilot' }).then((ok) => {
+            if (ok) setTimeout(() => window.open('https://copilot.microsoft.com', '_blank'), 500);
         });
     }
 

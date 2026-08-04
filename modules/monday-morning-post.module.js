@@ -544,14 +544,7 @@
     function onCopy() {
         var outputArea = document.getElementById('mondayPostOutput');
         if (!outputArea || !outputArea.value) return;
-        navigator.clipboard.writeText(outputArea.value).then(function () {
-            showToast('✅ Post copied to clipboard!');
-        }).catch(function () {
-            // Fallback
-            outputArea.select();
-            document.execCommand('copy');
-            showToast('✅ Post copied!');
-        });
+        copyToClipboard(outputArea.value, { message: '✅ Post copied to clipboard!' });
     }
 
     // ============================================

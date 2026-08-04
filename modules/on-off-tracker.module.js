@@ -579,10 +579,7 @@
         if (checkinCopyBtn) {
             _bindElementOnce(checkinCopyBtn, 'click', function() {
                 var text = document.getElementById('onOffCheckinText')?.textContent || '';
-                navigator.clipboard.writeText(text).then(function() {
-                    var toast = window.DevCoachModules?.uiUtils?.showToast;
-                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
-                });
+                copyToClipboard(text, { message: 'Copied to clipboard! Paste into Copilot.' });
             });
         }
 
@@ -818,10 +815,7 @@
         if (output) output.style.display = 'block';
 
         // Auto-copy to clipboard
-        navigator.clipboard.writeText(prompt).then(function() {
-            var toast = window.DevCoachModules?.uiUtils?.showToast;
-            if (toast) toast('Prompt copied to clipboard! Paste into Copilot.', 3000);
-        }).catch(function() {});
+        copyToClipboard(prompt, { message: 'Prompt copied to clipboard! Paste into Copilot.' });
 
         // Auto-open Copilot
         if (typeof window.openCopilotWithPrompt === 'function') {
@@ -954,10 +948,7 @@
         if (output) output.style.display = 'block';
 
         // Auto-copy to clipboard
-        navigator.clipboard.writeText(prompt).then(function() {
-            var toast = window.DevCoachModules?.uiUtils?.showToast;
-            if (toast) toast('Mid-year prompt copied! Paste into Copilot, then paste the result into Success Factors.', 3500);
-        }).catch(function() {});
+        copyToClipboard(prompt, { message: 'Mid-year prompt copied! Paste into Copilot, then paste the result into Success Factors.' });
 
         // Auto-open Copilot
         if (typeof window.openCopilotWithPrompt === 'function') {
@@ -1321,10 +1312,7 @@
         if (copyBtn) {
             _bindElementOnce(copyBtn, 'click', function() {
                 var text = document.getElementById('midYearText')?.textContent || '';
-                navigator.clipboard.writeText(text).then(function() {
-                    var toast = window.DevCoachModules?.uiUtils?.showToast;
-                    if (toast) toast('Copied to clipboard! Paste into Copilot.', 3000);
-                });
+                copyToClipboard(text, { message: 'Copied to clipboard! Paste into Copilot.' });
             });
         }
     }

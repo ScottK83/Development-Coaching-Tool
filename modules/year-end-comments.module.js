@@ -501,28 +501,19 @@
     }
 
     function copyYearEndPromptWithFallbacks(prompt, copilotWindow) {
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(prompt)
-                .then(() => {
-                    _showToast('Year-end prompt copied. Paste into Copilot with Ctrl+V.', 4000);
-                    if (!copilotWindow) {
-                        const url = window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com';
-                        alert(`Year-end prompt copied to clipboard.\n\nOpen ${url} and paste with Ctrl+V.`);
-                    }
-                })
-                .catch(() => {
-                    _showToast('Could not copy automatically. Prompt is in the box below for manual copy.', 4500);
-                    if (!copilotWindow) {
-                        _openCopilotWithPrompt(prompt, 'Year-End Comments');
-                    }
-                });
-            return;
-        }
-
-        _showToast('Clipboard not available. Copy the prompt from the box below.', 4500);
-        if (!copilotWindow) {
-            _openCopilotWithPrompt(prompt, 'Year-End Comments');
-        }
+        copyToClipboard(prompt, {
+            message: '📋 Year-end prompt copied — paste into Copilot with Ctrl+V'
+        }).then((ok) => {
+            // The copy already reported itself. All that's left is getting the
+            // user to Copilot when the caller didn't already open a window.
+            if (copilotWindow) return;
+            if (ok) {
+                const url = window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com';
+                window.open(url, '_blank');
+            } else {
+                _openCopilotWithPrompt(prompt, 'Year-End Comments');
+            }
+        });
     }
 
     function generateYearEndPromptAndCopy() {
@@ -558,9 +549,7 @@
             return;
         }
 
-        navigator.clipboard.writeText(responseText)
-            .then(() => _showToast('Year-end notes copied to clipboard!', 3000))
-            .catch(() => _showToast('Unable to copy year-end notes.', 3000));
+        copyToClipboard(responseText, { message: 'Year-end notes copied to clipboard!' });
     }
 
     function focusYearEndResponseInput(responseInput) {
@@ -660,9 +649,7 @@
             return;
         }
 
-        navigator.clipboard.writeText(boxText)
-            .then(() => _showToast(`Box ${boxNumber} copied to clipboard!`, 3000))
-            .catch(() => _showToast(`Unable to copy Box ${boxNumber}.`, 3000));
+        copyToClipboard(boxText, { message: `Box ${boxNumber} copied to clipboard!` });
     }
 
     /* ──────────────────────────────────────────────
@@ -712,9 +699,7 @@
             return;
         }
 
-        navigator.clipboard.writeText(outputText)
-            .then(() => _showToast('Verbal summary copied to clipboard!', 3000))
-            .catch(() => _showToast('Unable to copy verbal summary.', 3000));
+        copyToClipboard(outputText, { message: 'Verbal summary copied to clipboard!' });
     }
 
     /* ──────────────────────────────────────────────

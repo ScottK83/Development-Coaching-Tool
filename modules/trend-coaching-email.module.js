@@ -331,13 +331,10 @@ Please generate the coaching email now with HIGH ENERGY celebrating our top perf
             return;
         }
 
-        navigator.clipboard.writeText(copilotPrompt).then(() => {
-            alert('✅ Group email prompt copied!\n\nCtrl+V and Enter to paste into Copilot.');
-            window.open('https://copilot.microsoft.com', '_blank');
-            context.showToast?.('Prompt copied! Paste into CoPilot to generate the email.', 3000);
-        }).catch((err) => {
-            console.error('Failed to copy:', err);
-            alert('⚠️ Failed to copy prompt to clipboard. Please try again.');
+        copyToClipboard(copilotPrompt, {
+            message: '📋 Group email prompt copied — paste into CoPilot with Ctrl+V'
+        }).then((ok) => {
+            if (ok) window.open('https://copilot.microsoft.com', '_blank');
         });
     }
 
