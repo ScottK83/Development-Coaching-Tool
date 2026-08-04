@@ -1,14 +1,33 @@
 (function() {
     'use strict';
 
+    function buildTranscriptSection(entry) {
+        const clamp = window.DevCoachModules?.callTranscript?.clampForPrompt
+            || ((value) => String(value || '').trim());
+        const transcript = clamp(entry.transcript);
+        if (!transcript) return '';
+
+        return `Call transcript (verbatim, use this as the source of truth):
+"""
+${transcript}
+"""
+
+`;
+    }
+
     function buildPrompt(entry, preferredName) {
+        const transcriptSection = buildTranscriptSection(entry);
+        const transcriptRules = transcriptSection
+            ? `\n- Ground every point in the transcript. Where it helps, quote a short phrase the associate actually said\n- Do not invent details that are not in the transcript or my notes`
+            : '';
+
         return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
 
 Call details:
 - Call date: ${entry.listenedOn}
 - Call reference: ${entry.callReference || 'Not provided'}
 
-Feedback notes:
+${transcriptSection}Feedback notes:
 What went well:
 ${entry.whatWentWell || '- None provided'}
 
@@ -32,7 +51,7 @@ Requirements:
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
-- Do NOT use em dashes (—)
+- Do NOT use em dashes (—)${transcriptRules}
 - Return ONLY the final email body text.`;
     }
 

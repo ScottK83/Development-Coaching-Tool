@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.08.04.12'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.08.04.13'; // Version: YYYY.MM.DD.NN
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
 // Sourced from modules/constants.module.js (loaded first).
 const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
@@ -7267,11 +7267,18 @@ function getCallListeningEmployeeOptions() {
     return filterAssociateNamesByTeamSelection(Array.from(new Set([...dataEmployees, ...logEmployees]))).sort();
 }
 
+function getCallListeningTranscriptForStorage() {
+    const raw = (document.getElementById('callListeningTranscript')?.value || '').trim();
+    const clamp = window.DevCoachModules?.callTranscript?.clampForStorage;
+    return typeof clamp === 'function' ? clamp(raw) : raw;
+}
+
 function getCallListeningDraftFromForm() {
     return {
         employeeName: (document.getElementById('callListeningEmployeeSelect')?.value || '').trim(),
         listenedOn: (document.getElementById('callListeningDate')?.value || '').trim(),
         callReference: (document.getElementById('callListeningReference')?.value || '').trim(),
+        transcript: getCallListeningTranscriptForStorage(),
         whatWentWell: (document.getElementById('callListeningStrengths')?.value || '').trim(),
         improvementAreas: (document.getElementById('callListeningImprovements')?.value || '').trim(),
         oscarUrl: (document.getElementById('callListeningOscarUrl')?.value || '').trim(),
@@ -7305,6 +7312,7 @@ function isSameCallListeningDraftAsEntry(draft, existingEntry) {
     if (!existingEntry) return false;
     return existingEntry.listenedOn === draft.listenedOn
         && (existingEntry.callReference || '') === draft.callReference
+        && (existingEntry.transcript || '') === draft.transcript
         && (existingEntry.whatWentWell || '') === draft.whatWentWell
         && (existingEntry.improvementAreas || '') === draft.improvementAreas
         && (existingEntry.oscarUrl || '') === draft.oscarUrl
@@ -7415,6 +7423,7 @@ function loadCallListeningEntryIntoForm(entryId) {
 
     setValue('callListeningDate', entry.listenedOn);
     setValue('callListeningReference', entry.callReference);
+    setValue('callListeningTranscript', entry.transcript);
     setValue('callListeningStrengths', entry.whatWentWell);
     setValue('callListeningImprovements', entry.improvementAreas);
     setValue('callListeningOscarUrl', entry.oscarUrl);
@@ -7443,6 +7452,60 @@ function deleteCallListeningEntryById(entryId) {
     saveCallListeningLogs(true, 'entry deleted');
     renderCallListeningHistoryForSelectedEmployee();
     showToast('✅ Call listening entry deleted.', 2500);
+}
+
+// Drops drafted bullets into a feedback box without clobbering what the
+// supervisor already typed.
+function mergeCallListeningDraftText(textareaId, draftText) {
+    const field = document.getElementById(textareaId);
+    if (!field || !draftText) return;
+
+    const existing = field.value.trim();
+    field.value = existing ? `${existing}\n${draftText}` : draftText;
+}
+
+function analyzeCallListeningTranscript() {
+    const transcriptField = document.getElementById('callListeningTranscript');
+    const summary = document.getElementById('callTranscriptAnalysisSummary');
+    const transcript = (transcriptField?.value || '').trim();
+
+    if (!transcript) {
+        showToast('⚠️ Paste a call transcript first.', 3000);
+        return;
+    }
+
+    const analyzer = window.DevCoachModules?.callTranscript;
+    if (!analyzer?.analyzeTranscript) {
+        showToast('⚠️ Call Transcript module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
+
+    const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const analysis = analyzer.analyzeTranscript(transcript, { associateName });
+    if (!analysis.ok) {
+        showToast('⚠️ Nothing readable in that transcript.', 3000);
+        return;
+    }
+
+    mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
+    mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
+
+    if (summary) {
+        summary.textContent = analyzer.buildAnalysisSummary(analysis);
+        summary.style.display = 'block';
+    }
+
+    showToast('✅ Draft feedback written from the transcript. Edit it before you send.', 3500);
+}
+
+function clearCallListeningTranscript() {
+    const transcriptField = document.getElementById('callListeningTranscript');
+    if (!transcriptField || !transcriptField.value.trim()) return;
+    if (!confirm('Clear the pasted transcript? Your feedback notes stay as they are.')) return;
+
+    transcriptField.value = '';
+    const summary = document.getElementById('callTranscriptAnalysisSummary');
+    if (summary) summary.style.display = 'none';
 }
 
 function buildCallListeningPrompt(entry) {
@@ -7583,6 +7646,8 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
 
 function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
+    bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
+    bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
     bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
     bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);
