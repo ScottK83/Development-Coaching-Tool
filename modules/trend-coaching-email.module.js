@@ -66,6 +66,10 @@
                 value: context.formatMetricValue?.(metricKey, parseFloat(current)),
                 target: context.formatMetricValue?.(metricKey, metric.target?.value),
                 trend,
+                // metricDelta is normalized to performance, so on AHT and
+                // Transfers a positive trend means the number came down.
+                // Carry the polarity so the prompt can say which way it moved.
+                isReverse: !!metric.isReverse,
                 tip: randomTip
             });
         });
@@ -84,9 +88,12 @@
         if (opportunities.length > 0) {
             opportunitiesText = 'OPPORTUNITIES:\n';
             opportunitiesText += opportunities.map(opp => {
-                let text = `- ${opp.metric}: Currently ${opp.value}, Target ${opp.target}`;
+                const polarity = opp.isReverse ? 'lower is better' : 'higher is better';
+                let text = `- ${opp.metric} (${polarity}): Currently ${opp.value}, Target ${opp.target}`;
                 if (opp.trend !== 0) {
-                    text += ` (${opp.trend > 0 ? 'improving' : 'declining'})`;
+                    const better = opp.trend > 0;
+                    const numberRose = opp.isReverse ? !better : better;
+                    text += ` — ${numberRose ? 'rose' : 'fell'} vs last period, which is ${better ? 'better' : 'worse'}`;
                 }
                 return text;
             }).join('\n');
@@ -107,6 +114,8 @@
 ${winsText}
 ${opportunitiesText}
 ${improvementTipsText}
+Each metric states its own direction. On a "lower is better" metric such as Average Handle Time or Transfers, a number that fell is an improvement and a number that rose is a setback — never describe a rise on one of those as progress.
+
 Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`;
 
         context.openCopilotWithPrompt?.(copilotPrompt, 'Individual Coaching Email');

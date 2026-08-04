@@ -1876,12 +1876,30 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
     const metrics = Array.isArray(allTrendMetrics) ? allTrendMetrics : [];
+    // trendDirection describes the performance, not the number. Handing a
+    // model "Average Handle Time ... previous 562s ... momentum declining"
+    // asks it to reconcile a word that says down with figures that went up,
+    // and it will sometimes resolve that by writing the rise up as a win.
+    // State the movement, the amount, and the verdict separately so there is
+    // nothing left to infer.
     const getTrendLabel = (metric) => {
-        if (!metric || metric.trendDelta === null || metric.trendDelta === undefined) return 'stable (no prior period)';
-        if (metric.trendDirection === 'improving') return `improving (${formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta))})`;
-        if (metric.trendDirection === 'declining') return `declining (${formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta))})`;
-        return 'stable';
+        if (!metric || metric.trendDelta === null || metric.trendDelta === undefined) {
+            return 'no prior period to compare';
+        }
+        if (metric.trendDirection === 'stable') return 'held steady';
+        const amount = formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta));
+        const reverse = isReverseMetric(metric.metricKey);
+        const numberRose = reverse
+            ? metric.trendDirection === 'declining'
+            : metric.trendDirection === 'improving';
+        const verdict = metric.trendDirection === 'improving' ? 'which is better' : 'which is worse';
+        return `${numberRose ? 'rose' : 'fell'} by ${amount} vs previous, ${verdict}`;
     };
+
+    // Spelling out the polarity per row means the model never has to work out
+    // from context whether a bigger number is good news.
+    const getPolarityNote = (metricKey) =>
+        isReverseMetric(metricKey) ? 'lower is better' : 'higher is better';
 
     const classificationOrder = {
         'Needs Focus': 0,
@@ -1941,7 +1959,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
     const resolveThirtyDayGoal = () => {
         if (!topPriority) return 'Maintain all key metrics in On Track or Exceeding status for four consecutive weekly reviews.';
         if (topPriority.meetsTarget) {
-            return `${topPriority.label}: hold at or better than ${formatMetricDisplay(topPriority.metricKey, topPriority.target)} while avoiding further decline across the next 30 days.`;
+            return `${topPriority.label}: hold at or better than ${formatMetricDisplay(topPriority.metricKey, topPriority.target)} while avoiding any backslide across the next 30 days.`;
         }
         const gap = topPriority.gapFromTarget || 0;
         const closeBy = Math.max(getMetricBandByUnit(topPriority.metricKey, { percent: 1.5, sec: 12, hrs: 0.8, fallback: 1.5 }), gap * 0.4);
@@ -1964,7 +1982,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
                 : 'N/A';
             const teamAvg = metric.centerValue > 0 ? formatMetricDisplay(metric.metricKey, metric.centerValue) : 'N/A';
             const volatility = metric.isVolatile ? 'swinging' : 'stable';
-            return `- ${metric.label}: current ${current} | goal ${target} | previous ${previous} | team avg ${teamAvg} | momentum ${getTrendLabel(metric)} | volatility ${volatility} | class ${metric.classification}`;
+            return `- ${metric.label} (${getPolarityNote(metric.metricKey)}): current ${current} | goal ${target} | previous ${previous} | team avg ${teamAvg} | movement ${getTrendLabel(metric)} | volatility ${volatility} | class ${metric.classification}`;
         })
         .join('\n');
 
@@ -1973,7 +1991,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         : '- No clear strengths are separated enough from baseline this period; reinforce foundational consistency first.';
 
     const priorityLines = priorities.length > 0
-        ? priorities.map(m => `- ${m.label}: ${m.trendDirection === 'declining' ? 'declining trajectory' : 'below-target performance'} requires focused coaching to prevent broader impact.`).join('\n')
+        ? priorities.map(m => `- ${m.label}: ${m.trendDirection === 'declining' ? 'moving away from goal' : 'below-target performance'} requires focused coaching to prevent broader impact.`).join('\n')
         : '- No immediate risk areas detected; maintain consistent coaching cadence and monitor for drift.';
 
     const leadershipLinks = [];
@@ -2026,6 +2044,14 @@ ASSOCIATE: ${displayName}
 METRIC INTELLIGENCE INPUT:
 ${metricTableLines || '- No metric data available.'}
 ${sentimentSection}${notesSection}
+READING THE DATA:
+- Each metric states its own direction. On a "lower is better" metric such as
+  Average Handle Time, Hold Time, After Call Work or Transfers, a number that
+  fell is an improvement and a number that rose is a setback.
+- The "movement" field already tells you whether the change was better or
+  worse. Trust that verdict over your own reading of the raw figures, and
+  never describe a rise on a "lower is better" metric as progress.
+
 OUTPUT REQUIREMENTS:
 - Compare each metric to goal and previous period.
 - Identify patterns across efficiency, sentiment, call control, and emotional regulation.
