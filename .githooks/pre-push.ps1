@@ -9,6 +9,27 @@ if (-not $repoRoot) {
 }
 
 Set-Location $repoRoot
+
+# Gate the push on the test suite. Zero dependencies -- plain node, no npm --
+# so this works on any machine that can already run the repo's tooling.
+# Set SKIP_TESTS_ON_PUSH=1 to bypass when you need to push a work in progress.
+$testRunner = Join-Path $repoRoot "tests\run.js"
+if ((Test-Path $testRunner) -and ($env:SKIP_TESTS_ON_PUSH -ne "1")) {
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if ($node) {
+        Write-Host "Running tests..."
+        & node $testRunner | Out-String -Stream | Select-Object -Last 3 | Write-Host
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ""
+            Write-Host "Tests failed. Push aborted."
+            Write-Host "Run 'node tests/run.js' for the full output, or set SKIP_TESTS_ON_PUSH=1 to bypass."
+            exit 1
+        }
+    } else {
+        Write-Host "node not found on PATH; skipping tests."
+    }
+}
+
 $scriptJsPath = Join-Path $repoRoot "script.js"
 
 if (!(Test-Path $scriptJsPath)) {

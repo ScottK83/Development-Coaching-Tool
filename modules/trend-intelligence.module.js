@@ -299,11 +299,20 @@ Write the complete email.`;
 
         const strongest = deltas.slice().sort((a, b) => b.delta - a.delta)[0] || null;
         const weakest = deltas.slice().sort((a, b) => a.delta - b.delta)[0] || null;
+        // metricDelta is normalized to performance, so a positive delta on
+        // Handle Time means the number came DOWN. Saying "trending up" here
+        // would report that win as its opposite — same trap as Q1 Review's
+        // arrows. Word it by verdict and let metric-movement say which way
+        // the figure actually moved.
+        const movement = window.DevCoachModules?.metricMovement;
+        const moved = (m, direction) => movement
+            ? ` (${movement.describe(m.metricKey, direction, null).movementWord})`
+            : '';
         const improvementText = strongest && strongest.delta > 0
-            ? `${strongest.label} is trending up by ${strongest.delta.toFixed(1)}.`
+            ? `${strongest.label} is improving by ${strongest.delta.toFixed(1)}${moved(strongest, 'improving')}.`
             : 'No clear positive movement this cycle.';
         const downfallText = weakest && weakest.delta < 0
-            ? `${weakest.label} is trending down by ${Math.abs(weakest.delta).toFixed(1)}.`
+            ? `${weakest.label} is getting worse by ${Math.abs(weakest.delta).toFixed(1)}${moved(weakest, 'declining')}.`
             : 'No meaningful declines detected this cycle.';
 
         return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #f2d5dd; border-radius: 8px; background: #fff9fb;">
@@ -505,7 +514,7 @@ Write the complete email.`;
         return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #d4e3fb; border-radius: 8px; background: #f8fbff;">
             <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">Team Summary (${descriptor.shortLabel})</div>
             <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
-                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} trending up${improvementExamples.length ? ` (${chipsHtml(improvementExamples, '#43a047')})` : ''}.</div>
+                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} improving${improvementExamples.length ? ` (${chipsHtml(improvementExamples, '#43a047')})` : ''}.</div>
                 <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples.length ? ` (${chipsHtml(downfallExamples, '#fb8c00')})` : ''}.</div>
             </div>
         </div>`;

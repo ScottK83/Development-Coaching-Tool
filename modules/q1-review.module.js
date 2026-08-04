@@ -174,29 +174,29 @@
         return values;
     }
 
-    // trend.direction describes the PERFORMANCE, not the number: on a reverse
-    // metric like Handle Time, "declining" means the number went up. Phrasing
-    // it as "trending up/down" therefore stated the exact opposite of the
-    // truth for every reverse metric, in text that goes into review copy.
-    // Naming the performance instead is correct whichever way the metric runs.
-    function trendPhrase(direction) {
+    // Wording and arrows come from metric-movement. This module keeps its own
+    // calculateTrend below — comparing half-averages against a relative
+    // threshold is a different question from the week-over-week band — but
+    // how the result is PHRASED is shared, because that is what drifted:
+    // "(trending up)" printed for a falling handle time, stating the opposite
+    // of the truth in text that goes into review copy.
+    function _movement() {
+        return window.DevCoachModules && window.DevCoachModules.metricMovement;
+    }
+
+    function trendPhrase(direction, metricKey) {
+        var mm = _movement();
+        if (mm) return mm.phrase(metricKey, direction);
         if (direction === 'improving') return ' (improving)';
         if (direction === 'declining') return ' (getting worse)';
         return '';
     }
 
-    // The arrow points the way the NUMBER moved; the colour says whether that
-    // was good. On Handle Time an improvement is a falling number, so a green
-    // ▼ is right and a green ▲ would contradict the figure printed beside it.
     function trendIconHtml(direction, metricKey) {
         if (direction !== 'improving' && direction !== 'declining') return '';
-        var reg = (window.METRICS_REGISTRY || {})[metricKey];
-        var reverse = !!(reg && reg.isReverse);
-        var numberRose = reverse ? (direction === 'declining') : (direction === 'improving');
-        var glyph = numberRose ? '&#9650;' : '&#9660;';
-        var color = direction === 'improving' ? 'var(--green-text)' : '#e65100';
-        var title = direction === 'improving' ? 'Improving' : 'Getting worse';
-        return ' <span style="color: ' + color + ';" title="' + title + '">' + glyph + '</span>';
+        var mm = _movement();
+        if (!mm) return '';
+        return ' ' + mm.arrowHtml(metricKey, direction, { badColor: '#e65100' });
     }
 
     /**
@@ -442,7 +442,7 @@
             empData.strengths.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var label = m ? m.label : s.metricKey;
-                var trendArrow = trendPhrase(s.data.trend.direction);
+                var trendArrow = trendPhrase(s.data.trend.direction, s.metricKey);
                 lines.push('- ' + label + ': ' + _formatMetricDisplay(s.metricKey, s.data.average) +
                     ' (target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ')' + trendArrow);
             });
@@ -456,7 +456,7 @@
             empData.improvements.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var label = m ? m.label : s.metricKey;
-                var trendArrow = trendPhrase(s.data.trend.direction);
+                var trendArrow = trendPhrase(s.data.trend.direction, s.metricKey);
                 lines.push('- ' + label + ': ' + _formatMetricDisplay(s.metricKey, s.data.average) +
                     ' (target: ' + _formatMetricDisplay(s.metricKey, s.data.target) +
                     ', gap: ' + Math.abs(s.data.gap).toFixed(1) + ')' + trendArrow);
@@ -581,9 +581,11 @@
         // Summary badges
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">';
         html += '<span style="padding: 8px 16px; border-radius: 16px; background: var(--green-soft); color: var(--green-text); font-weight: bold;">' + meetingCount + '/' + totalMetrics + ' Meeting Target</span>';
-        html += '<span style="padding: 8px 16px; border-radius: 16px; background: #e3f2fd; color: #1565c0; font-weight: bold;">' + improvingCount + ' Trending Up</span>';
+        // These badges count metrics of both polarities together, so no single
+        // direction word can be true for all of them. Count the verdict.
+        html += '<span style="padding: 8px 16px; border-radius: 16px; background: #e3f2fd; color: #1565c0; font-weight: bold;">' + improvingCount + ' Improving</span>';
         if (decliningCount > 0) {
-            html += '<span style="padding: 8px 16px; border-radius: 16px; background: #fbe9e7; color: var(--red-text); font-weight: bold;">' + decliningCount + ' Trending Down</span>';
+            html += '<span style="padding: 8px 16px; border-radius: 16px; background: #fbe9e7; color: var(--red-text); font-weight: bold;">' + decliningCount + ' Getting Worse</span>';
         }
         html += '<span style="padding: 8px 16px; border-radius: 16px; background: #f3e5f5; color: #6a1b9a; font-weight: bold;">' + emp.q1CoachingCount + ' Coaching Sessions</span>';
         html += '</div>';

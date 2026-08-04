@@ -878,27 +878,20 @@ function getMetricBandByUnit(metricKey, bands = { percent: 2, sec: 15, hrs: 1, f
 }
 
 function resolveMetricTrendDirection(metricKey, currentValue, previousValue) {
-    const prev = parseFloat(previousValue);
-    if (!Number.isFinite(prev)) {
-        return {
-            delta: null,
-            direction: 'stable'
-        };
+    // Owned by metric-movement so the polarity rule lives in one place. Same
+    // bands as before; only the home moved.
+    const movement = window.DevCoachModules?.metricMovement;
+    if (movement) {
+        const r = movement.resolveDirection(metricKey, currentValue, previousValue);
+        return { delta: r.hasPrior ? r.delta : null, direction: r.direction };
     }
 
+    const prev = parseFloat(previousValue);
+    if (!Number.isFinite(prev)) return { delta: null, direction: 'stable' };
     const delta = metricDelta(metricKey, currentValue, prev);
     const stableBand = getMetricBandByUnit(metricKey, { percent: 1, sec: 8, hrs: 0.5, fallback: 1 });
-    if (Math.abs(delta) < stableBand) {
-        return {
-            delta,
-            direction: 'stable'
-        };
-    }
-
-    return {
-        delta,
-        direction: delta > 0 ? 'improving' : 'declining'
-    };
+    if (Math.abs(delta) < stableBand) return { delta, direction: 'stable' };
+    return { delta, direction: delta > 0 ? 'improving' : 'declining' };
 }
 
 function getMetricVolatilityDetails(employeeName, metricKey, weekKey, periodType = 'week') {
@@ -1876,30 +1869,26 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
     const metrics = Array.isArray(allTrendMetrics) ? allTrendMetrics : [];
-    // trendDirection describes the performance, not the number. Handing a
-    // model "Average Handle Time ... previous 562s ... momentum declining"
-    // asks it to reconcile a word that says down with figures that went up,
-    // and it will sometimes resolve that by writing the rise up as a win.
-    // State the movement, the amount, and the verdict separately so there is
-    // nothing left to infer.
+    // Wording comes from metric-movement: "rose by 45s vs previous, which is
+    // worse" rather than a bare "declining" the model has to reconcile
+    // against figures that went the other way.
+    const movement = window.DevCoachModules?.metricMovement;
     const getTrendLabel = (metric) => {
-        if (!metric || metric.trendDelta === null || metric.trendDelta === undefined) {
-            return 'no prior period to compare';
-        }
-        if (metric.trendDirection === 'stable') return 'held steady';
-        const amount = formatMetricDisplay(metric.metricKey, Math.abs(metric.trendDelta));
-        const reverse = isReverseMetric(metric.metricKey);
-        const numberRose = reverse
-            ? metric.trendDirection === 'declining'
-            : metric.trendDirection === 'improving';
-        const verdict = metric.trendDirection === 'improving' ? 'which is better' : 'which is worse';
-        return `${numberRose ? 'rose' : 'fell'} by ${amount} vs previous, ${verdict}`;
+        if (!metric) return 'no prior period to compare';
+        const hasPrior = metric.trendDelta !== null && metric.trendDelta !== undefined;
+        if (!movement) return hasPrior ? String(metric.trendDirection) : 'no prior period to compare';
+        return movement.sentence(
+            metric.metricKey,
+            hasPrior ? metric.trendDirection : 'stable',
+            hasPrior ? metric.trendDelta : null
+        );
     };
 
     // Spelling out the polarity per row means the model never has to work out
     // from context whether a bigger number is good news.
-    const getPolarityNote = (metricKey) =>
-        isReverseMetric(metricKey) ? 'lower is better' : 'higher is better';
+    const getPolarityNote = (metricKey) => movement
+        ? movement.describe(metricKey, 'stable', null).polarity
+        : (isReverseMetric(metricKey) ? 'lower is better' : 'higher is better');
 
     const classificationOrder = {
         'Needs Focus': 0,
