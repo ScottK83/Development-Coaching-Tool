@@ -585,16 +585,11 @@
 
     /* ── Message generation ── */
 
-    var GREETINGS = [
-        function (n) { return 'Hey ' + n + '! 🎉'; },
-        function (n) { return n + ', quick one for you 🌟'; },
-        function (n) { return 'Hey ' + n + ' 👋'; },
-        function (n) { return n + '! Wanted to share some good news 😊'; },
-        function (n) { return 'Hi ' + n + '! 💪'; },
-        function (n) { return n + ', take a look at this 👀'; },
-        function (n) { return 'Hey ' + n + ', this one\'s worth a look 👀'; },
-        function (n) { return n + '! Good stuff in your numbers 🙌'; },
-        function (n) { return 'Hey ' + n + ', got something good to share 😊'; }
+    // Openers live in message-voice.module.js so every tab that greets an
+    // associate sounds like the same person wrote it.
+    var GREETINGS = (window.DevCoachModules && window.DevCoachModules.messageVoice
+        && window.DevCoachModules.messageVoice.greetingPool('celebratory')) || [
+        function (n) { return 'Hey ' + n + '! 🎉'; }
     ];
     // Says why this message is arriving. Without it the note opens on a
     // number and reads like it came out of nowhere. Deliberately cadence

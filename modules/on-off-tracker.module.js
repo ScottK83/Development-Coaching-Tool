@@ -748,7 +748,12 @@
         };
     }
 
-    /* ── Quick Check-in Prompt (casual Teams message) ── */
+    /* ── Goal-Pace Check-in Prompt (casual Teams message, via Copilot) ──
+     * Distinct from the Coaching tab's "Generate Quick Check-in", which
+     * writes the message directly off a week-over-week comparison. This one
+     * builds a Copilot prompt off YTD goal pace. Same-sounding buttons in two
+     * tabs doing different things is confusing, so the labels now say which
+     * is which. */
 
     function generateQuickCheckinPrompt() {
         var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
@@ -819,7 +824,7 @@
 
         // Auto-open Copilot
         if (typeof window.openCopilotWithPrompt === 'function') {
-            window.openCopilotWithPrompt(prompt, 'Quick Check-in for ' + firstName);
+            window.openCopilotWithPrompt(prompt, 'Goal-Pace Check-in for ' + firstName);
         }
     }
 

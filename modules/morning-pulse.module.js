@@ -22,21 +22,10 @@
         return new Date().toLocaleDateString('en-US', { weekday: 'long' });
     }
 
-    const GREETINGS = [
-        name => `Hey ${name}!`,
-        name => `Hi ${name}!`,
-        name => `What's up ${name}!`,
-        name => `Hey there ${name}!`,
-        name => `${name}!`,
-        name => `Morning ${name}!`,
-        name => `Good to catch up with you, ${name}.`,
-        name => `${name}, got a sec?`,
-        name => `Wanted to touch base, ${name}.`,
-        name => `${name}, quick update for you.`,
-        name => `Hey hey ${name}!`,
-        name => `Alright ${name}, let's get into it.`,
-        name => `${name}! Perfect timing.`,
-        name => `Happy to share this with you, ${name}.`,
+    // Openers live in message-voice.module.js so every tab that greets an
+    // associate sounds like the same person wrote it.
+    const GREETINGS = (window.DevCoachModules?.messageVoice?.greetingPool('neutral')) || [
+        name => `Hey ${name}!`
     ];
     const DATA_IN = [
         date => `Your numbers for the week of ${date} just came in.`,
@@ -720,6 +709,18 @@
         return Object.keys(weekly)
             .filter(k => weekly[k]?.metadata?.periodType === periodType)
             .sort();
+    }
+
+    // The two week keys a check-in compares. Exported so callers outside this
+    // tab — the Coaching tab's check-in button — reuse the same selection
+    // instead of rebuilding it and drifting from what Pulse shows.
+    function resolveCheckinPeriods() {
+        const keys = getPeriodKeys('week');
+        if (!keys.length) return null;
+        return {
+            latestKey: keys[keys.length - 1],
+            baselineKey: keys.length > 1 ? keys[keys.length - 2] : null
+        };
     }
 
     // Returns { mondayIso, todayIso, yesterdayIso, dailyKeysThisWeek[] }.
@@ -3003,6 +3004,7 @@
     window.DevCoachModules.morningPulse = {
         initializeMorningPulse,
         renderMorningPulse,
+        resolveCheckinPeriods,
         generateCheckinMessage,
         generateHighFiveMessage,
         generateMondayKickoffMessage,

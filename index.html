@@ -474,7 +474,7 @@ Box 2 - Future Improvement Areas:
                                 <div id="onOffTrackerDetails" style="margin: 0; color: #4a148c;"></div>
                             </div>
                             <div style="text-align: center; margin-top: 12px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                                <button type="button" id="onOffCheckinBtn" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-weight: 700; font-size: 0.95em;">💬 Generate Quick Check-in (Teams Message via Copilot)</button>
+                                <button type="button" id="onOffCheckinBtn" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-weight: 700; font-size: 0.95em;">💬 Goal-Pace Check-in Prompt (for Copilot)</button>
                             </div>
                             <div id="onOffCheckinOutput" style="display: none; margin-top: 12px; padding: 14px; background: #f0f9ff; border: 1px solid #93c5fd; border-radius: 8px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1678,6 +1678,7 @@ Box 2 - Future Improvement Areas:
                 // ui-utils provides copyToClipboard/showToast, which nearly
                 // every feature module calls — it belongs in the foundation.
                 'modules/ui-utils.module.js',
+                'modules/message-voice.module.js',
                 'modules/data-integrity.module.js',
                 'modules/pattern-memory.module.js',
                 // Feature Modules
