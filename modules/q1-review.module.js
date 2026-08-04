@@ -174,6 +174,31 @@
         return values;
     }
 
+    // trend.direction describes the PERFORMANCE, not the number: on a reverse
+    // metric like Handle Time, "declining" means the number went up. Phrasing
+    // it as "trending up/down" therefore stated the exact opposite of the
+    // truth for every reverse metric, in text that goes into review copy.
+    // Naming the performance instead is correct whichever way the metric runs.
+    function trendPhrase(direction) {
+        if (direction === 'improving') return ' (improving)';
+        if (direction === 'declining') return ' (getting worse)';
+        return '';
+    }
+
+    // The arrow points the way the NUMBER moved; the colour says whether that
+    // was good. On Handle Time an improvement is a falling number, so a green
+    // ▼ is right and a green ▲ would contradict the figure printed beside it.
+    function trendIconHtml(direction, metricKey) {
+        if (direction !== 'improving' && direction !== 'declining') return '';
+        var reg = (window.METRICS_REGISTRY || {})[metricKey];
+        var reverse = !!(reg && reg.isReverse);
+        var numberRose = reverse ? (direction === 'declining') : (direction === 'improving');
+        var glyph = numberRose ? '&#9650;' : '&#9660;';
+        var color = direction === 'improving' ? 'var(--green-text)' : '#e65100';
+        var title = direction === 'improving' ? 'Improving' : 'Getting worse';
+        return ' <span style="color: ' + color + ';" title="' + title + '">' + glyph + '</span>';
+    }
+
     /**
      * Calculate trend direction: improving, declining, or stable
      */
@@ -417,8 +442,7 @@
             empData.strengths.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var label = m ? m.label : s.metricKey;
-                var trendArrow = s.data.trend.direction === 'improving' ? ' (trending up)' :
-                    s.data.trend.direction === 'declining' ? ' (trending down)' : '';
+                var trendArrow = trendPhrase(s.data.trend.direction);
                 lines.push('- ' + label + ': ' + _formatMetricDisplay(s.metricKey, s.data.average) +
                     ' (target: ' + _formatMetricDisplay(s.metricKey, s.data.target) + ')' + trendArrow);
             });
@@ -432,8 +456,7 @@
             empData.improvements.forEach(function (s) {
                 var m = metric[s.metricKey];
                 var label = m ? m.label : s.metricKey;
-                var trendArrow = s.data.trend.direction === 'improving' ? ' (trending up)' :
-                    s.data.trend.direction === 'declining' ? ' (trending down)' : '';
+                var trendArrow = trendPhrase(s.data.trend.direction);
                 lines.push('- ' + label + ': ' + _formatMetricDisplay(s.metricKey, s.data.average) +
                     ' (target: ' + _formatMetricDisplay(s.metricKey, s.data.target) +
                     ', gap: ' + Math.abs(s.data.gap).toFixed(1) + ')' + trendArrow);
@@ -576,8 +599,7 @@
                 var m = metric[s.metricKey];
                 var icon = m ? m.icon : '';
                 var label = m ? m.label : s.metricKey;
-                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: var(--green-text);">&#9650;</span>' :
-                    s.data.trend.direction === 'declining' ? ' <span style="color: #e65100;">&#9660;</span>' : '';
+                var trendIcon = trendIconHtml(s.data.trend.direction, s.metricKey);
                 var exceedBadge = s.data.isExceeding ? ' <span style="background: #1565c0; color: white; padding: 1px 6px; border-radius: 8px; font-size: 0.75em;">Exceeding</span>' : '';
 
                 html += '<div style="padding: 10px 14px; background: #f1f8e9; border-radius: 6px; border-left: 3px solid #4caf50;">';
@@ -601,8 +623,7 @@
                 var m = metric[s.metricKey];
                 var icon = m ? m.icon : '';
                 var label = m ? m.label : s.metricKey;
-                var trendIcon = s.data.trend.direction === 'improving' ? ' <span style="color: var(--green-text);">&#9650;</span>' :
-                    s.data.trend.direction === 'declining' ? ' <span style="color: var(--red-text);">&#9660;</span>' : '';
+                var trendIcon = trendIconHtml(s.data.trend.direction, s.metricKey);
                 var gapText = Math.abs(s.data.gap).toFixed(1);
 
                 html += '<div style="padding: 10px 14px; background: #fff3e0; border-radius: 6px; border-left: 3px solid #ff9800;">';
@@ -722,7 +743,7 @@
         emp.improvements.forEach(function (s) {
             if (s.data.trend.direction === 'improving') {
                 var m = metric[s.metricKey];
-                html += '<li>' + (m ? m.label : s.metricKey) + ' is trending up (acknowledge the effort)</li>';
+                html += '<li>' + (m ? m.label : s.metricKey) + ' is improving (acknowledge the effort)</li>';
             }
         });
         html += '</ul></div>';
@@ -737,7 +758,7 @@
             emp.improvements.slice(0, 3).forEach(function (s) {
                 var m = metric[s.metricKey];
                 html += '<li>' + (m ? m.label : s.metricKey) + ': needs <strong>' + Math.abs(s.data.gap).toFixed(1) + '</strong> improvement to reach target';
-                if (s.data.trend.direction === 'declining') html += ' <span style="color: var(--red-text);">(declining)</span>';
+                if (s.data.trend.direction === 'declining') html += ' <span style="color: var(--red-text);">(getting worse)</span>';
                 html += '</li>';
             });
         }

@@ -1244,7 +1244,13 @@
             if (dir === 'improving') return `<span style="color:var(--green-text);" title="Improving">${reverse ? '\u25BC' : '\u25B2'}</span>`;
             if (dir === 'declining') {
                 const declineColor = metric?.meetsTarget ? '#f9a825' : '#e53935';
-                const declineTitle = metric?.meetsTarget ? 'Declining (still above target)' : 'Declining';
+                // "Declining" describes the performance, not the number. On a
+                // reverse metric the number is going the other way, so say
+                // which way it moved instead of leaving it to be guessed.
+                const moved = reverse ? 'rising' : 'falling';
+                const declineTitle = metric?.meetsTarget
+                    ? `Getting worse \u2014 ${moved} (still on target)`
+                    : `Getting worse \u2014 ${moved}`;
                 return `<span style="color:${declineColor};" title="${declineTitle}">${reverse ? '\u25B2' : '\u25BC'}</span>`;
             }
             return '<span style="color:var(--text-tertiary);" title="Stable">\u2015</span>';
@@ -1310,7 +1316,16 @@
         // Focal point
         let focalHtml = '';
         if (focalPoint) {
-            const dirLabel = focalPoint.trendDirection === 'declining' ? ' and declining' : '';
+            // "and declining" is ambiguous on a reverse metric: for Handle
+            // Time the number declining is the outcome you want, but the
+            // trend is normalized to performance, so "declining" meant the
+            // number was going UP. Name the direction the number actually
+            // moved and the reading is the same either way.
+            const focalReverse = typeof isReverseMetric === 'function'
+                && isReverseMetric(focalPoint.metricKey);
+            const dirLabel = focalPoint.trendDirection === 'declining'
+                ? (focalReverse ? ' and still climbing' : ' and still slipping')
+                : '';
             focalHtml = `<div style="padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800; font-size:0.85em;">` +
                 `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)} \u2014 last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
         } else {
