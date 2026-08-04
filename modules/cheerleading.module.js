@@ -144,6 +144,36 @@
         var p = _weeklyData()[key];
         return (p && p.metadata && p.metadata.periodType) || 'week';
     }
+
+    // Real monthly uploads for the current year, keyed by the month they
+    // cover. A month someone actually uploaded is the authority for that
+    // month; rebuilding it out of weekly buckets is only the fallback.
+    function _currentYearMonthUploads() {
+        var wData = _weeklyData();
+        var year = _year();
+        var byMonth = {};
+        Object.keys(wData).forEach(function (k) {
+            if (_periodType(k) !== 'month') return;
+            var end = String(_endDate(k));
+            if (parseInt(end.split('-')[0], 10) !== year) return;
+            var mo = end.slice(0, 7);
+            // Two uploads covering the same month: the later one wins.
+            if (!byMonth[mo] || String(_endDate(byMonth[mo])).localeCompare(end) < 0) {
+                byMonth[mo] = k;
+            }
+        });
+        return byMonth;
+    }
+
+    // Days a period covers, inclusive. Keeps a three-day month-to-date upload
+    // from standing in for "so far in August".
+    function _spanDays(key) {
+        var s = _startDate(key), e = _endDate(key);
+        if (!s || !e) return 0;
+        var sd = new Date(s + 'T00:00:00'), ed = new Date(e + 'T00:00:00');
+        if (isNaN(sd.getTime()) || isNaN(ed.getTime())) return 0;
+        return Math.round((ed - sd) / 86400000) + 1;
+    }
     function _endDate(key) {
         var p = _weeklyData()[key];
         return (p && p.metadata && p.metadata.endDate) || (key.indexOf('|') !== -1 ? key.split('|')[1] : key);
@@ -471,11 +501,29 @@
             if (mo) { (monthsMap[mo] = monthsMap[mo] || []).push(k); }
         });
 
+        // A real monthly upload outranks the weekly reconstruction for its
+        // month. Bucketing weeks by end date makes "July" mean the weeks
+        // *ending* in July — roughly Jun 29 through Jul 26 — so a rebuilt
+        // figure can sit well off the July number on the uploaded report, and
+        // the report is what the employee will be shown. Quote the upload
+        // wherever the month was uploaded outright.
+        var monthUploads = _currentYearMonthUploads();
+        var fromUpload = {};
+        Object.keys(monthUploads).forEach(function (mo) {
+            var key = monthUploads[mo];
+            if (_spanDays(key) < MIN_WEEKS_FOR_MONTH * 7) return;
+            monthsMap[mo] = [key];
+            fromUpload[mo] = true;
+        });
+
         // A month standing on a single uploaded week isn't a month. Comparing
         // one week of June against one week of May and calling it monthly
-        // movement is how a gap in the uploads turns into a false claim.
+        // movement is how a gap in the uploads turns into a false claim. A
+        // month carried by its own upload is already whole, so the week count
+        // doesn't apply to it.
         var usable = Object.keys(monthsMap).filter(function (mo) {
-            return mo <= nowMonth && monthsMap[mo].length >= MIN_WEEKS_FOR_MONTH;
+            if (mo > nowMonth) return false;
+            return fromUpload[mo] || monthsMap[mo].length >= MIN_WEEKS_FOR_MONTH;
         }).sort();
         var monCur = usable.length >= 2 ? usable[usable.length - 1] : null;
         var monPrev = usable.length >= 2 ? usable[usable.length - 2] : null;
@@ -502,6 +550,7 @@
             wowCur: wowCur, wowPrev: wowPrev, wowCurInProgress: wowCurInProgress,
             wowCurLabel: curPhrase, wowPrevLabel: prevPhrase,
             monCur: monCur, monPrev: monPrev, monthsMap: monthsMap,
+            monFromUpload: fromUpload,
             monCurLabel: _monthPhrase(monCur, nowMonth),
             monPrevLabel: _monthPhrase(monPrev, nowMonth)
         };
@@ -646,8 +695,15 @@
                 (p.wowCurInProgress ? ' (in progress)' : '')
             : 'Week over week: needs two weekly uploads';
         html += ' &nbsp;•&nbsp; ';
+        // Name the source per month. A month rebuilt from weekly buckets spans
+        // the weeks *ending* in it, not the calendar month, so it can disagree
+        // with the monthly report — say which one is being quoted.
+        var _monTag = function (mo) {
+            return _escapeHtml(_monthName(mo)) +
+                ((p.monFromUpload && p.monFromUpload[mo]) ? ' (upload)' : ' (from weeks)');
+        };
         html += (p.monCur && p.monPrev)
-            ? 'Monthly: ' + _escapeHtml(_monthName(p.monPrev)) + ' vs ' + _escapeHtml(_monthName(p.monCur))
+            ? 'Monthly: ' + _monTag(p.monPrev) + ' vs ' + _monTag(p.monCur)
             : 'Monthly: needs two completed months';
         html += ' &nbsp;•&nbsp; ' + data.weekInfo.weeksRemaining + ' weeks left in ' + data.weekInfo.currentYear;
         html += '</div></div>';
