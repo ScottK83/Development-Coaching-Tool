@@ -296,8 +296,14 @@
         const existing = document.getElementById('dataIntegrityModal');
         if (existing) existing.remove();
 
-        const weeklyData = typeof window.weeklyData !== 'undefined' ? window.weeklyData : {};
-        const ytdData = typeof window.ytdData !== 'undefined' ? window.ytdData : {};
+        // script.js declares these with `let`, so they never land on `window`.
+        // Fall back to the storage module, same as team-snapshot/dashboard.
+        const weeklyData = (typeof window.weeklyData === 'object' && window.weeklyData)
+            ? window.weeklyData
+            : (window.DevCoachModules?.storage?.loadWeeklyData?.() || {});
+        const ytdData = (typeof window.ytdData === 'object' && window.ytdData)
+            ? window.ytdData
+            : (window.DevCoachModules?.storage?.loadYtdData?.() || {});
         const { issues, summary } = runDataIntegrityScan(weeklyData, ytdData);
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
