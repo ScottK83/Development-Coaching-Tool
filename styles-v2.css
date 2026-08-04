@@ -1239,6 +1239,48 @@ textarea:focus-visible {
     color: var(--text-primary);
 }
 
+/* Selected-associate chip — shows who is carried across tabs */
+.associate-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+    background: var(--brand-soft);
+    border: 1px solid var(--brand-muted);
+    border-radius: 999px;
+    font-size: 0.82em;
+    color: var(--brand-text);
+}
+
+.associate-chip .chip-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.9em;
+    opacity: 0.75;
+}
+
+.associate-chip .chip-name {
+    font-weight: 600;
+}
+
+.associate-chip .chip-clear {
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 50%;
+    line-height: 1;
+    font-size: 0.9em;
+}
+
+.associate-chip .chip-clear:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.08);
+}
+
 /* Keyboard shortcut help */
 .shortcut-list {
     display: flex;

@@ -7065,6 +7065,7 @@ async function initApp() {
     // Initialize event handlers
     initializeEventHandlers();
     initializeKeyboardShortcuts();
+    window.DevCoachModules?.selectedAssociate?.initialize();
     enforceRepoAutoSyncEnabled();
     initializeRepoSyncControls();
     bindDiagnosticsCopyAction();

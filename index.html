@@ -33,6 +33,7 @@
                 <button type="button" id="darkModeToggle" class="btn-secondary top-nav-btn" aria-label="Toggle dark mode" style="min-width:auto; padding:8px 12px;">🌙</button>
                 <button type="button" id="shortcutHelpBtn" class="btn-secondary top-nav-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" style="min-width:auto; padding:8px 12px;">⌨️</button>
             </div>
+            <div id="selectedAssociateChip" class="associate-chip" style="display:none;"></div>
         </header>
 
         <main>
@@ -1679,6 +1680,7 @@ Box 2 - Future Improvement Areas:
                 // every feature module calls — it belongs in the foundation.
                 'modules/ui-utils.module.js',
                 'modules/message-voice.module.js',
+                'modules/selected-associate.module.js',
                 'modules/data-integrity.module.js',
                 'modules/pattern-memory.module.js',
                 // Feature Modules

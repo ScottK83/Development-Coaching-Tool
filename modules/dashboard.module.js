@@ -436,17 +436,14 @@
     }
 
     function coachNow(employeeName) {
+        // Set the person first: every registered picker adopts it as it
+        // populates, so this no longer has to race the Coaching tab's render
+        // on a 100ms timer and hope the options exist by then.
+        window.DevCoachModules?.selectedAssociate?.set(employeeName);
+
         if (typeof showOnlySection === 'function') showOnlySection('coachingEmailSection');
         if (typeof showSubSection === 'function') showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
         if (typeof initializeCoachingEmail === 'function') initializeCoachingEmail();
-
-        setTimeout(function() {
-            var select = document.getElementById('coachingEmployeeSelect');
-            if (select) {
-                select.value = employeeName;
-                select.dispatchEvent(new Event('change'));
-            }
-        }, 100);
     }
 
     // Export
