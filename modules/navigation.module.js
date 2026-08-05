@@ -87,9 +87,10 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
-    var MY_TEAM_NAV_BUTTONS = ['subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionHighlights', 'subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavHighlights', 'subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
     var MY_TEAM_SUB_TO_BTN = {
+        subSectionHighlights: 'subNavHighlights',
         subSectionMorningPulse: 'subNavMorningPulse',
         subSectionMondayPost: 'subNavMondayPost',
         subSectionCoachingEmail: 'subNavCoachingEmail',
@@ -103,6 +104,10 @@
         showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS,
             'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'myTeamSubSectionId');
         saveUiNavState({ sectionId: 'coachingEmailSection' });
+        // The team bar sits above the sub-nav and belongs to My Team as a
+        // whole, so it's drawn here rather than by each tab's own handler —
+        // including on the refresh path that restores a tab directly.
+        window.DevCoachModules?.teamHub?.initializeTeamHub?.();
     }
 
     // --- Trends & Analysis sub-sections ---

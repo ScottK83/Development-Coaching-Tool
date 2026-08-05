@@ -1695,6 +1695,10 @@ function bindNavigationHandlers() {
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
         if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
     });
+    document.getElementById('subNavHighlights')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionHighlights', 'subNavHighlights');
+        window.DevCoachModules?.teamHub?.initializeHighlights?.();
+    });
     document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
         // initializeCelebrations also binds the inner-tab click handlers, so

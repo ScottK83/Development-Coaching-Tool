@@ -131,7 +131,27 @@
     // FILTER CONTEXT & FILTERING
     // ============================================
 
-    function getTeamSelectionContext() {
+    // Narrows a member list to the team picked in the My Team dropdown.
+    // Exported for testing because the two empty cases mean opposite things:
+    // no team scope leaves the list alone, while a team scope that overlaps
+    // nothing must return empty rather than falling back to everyone.
+    function applyTeamScope(memberNames, teamMembers) {
+        var names = (memberNames || []).map(function(n) { return String(n || '').trim(); }).filter(Boolean);
+        if (!Array.isArray(teamMembers)) return names;
+
+        var scope = new Set(teamMembers.map(function(n) { return String(n || '').trim(); }).filter(Boolean));
+        if (!names.length) return Array.from(scope);
+        return names.filter(function(name) { return scope.has(name); });
+    }
+
+    function getActiveTeamMembers() {
+        var scope = window.DevCoachModules?.teamScope;
+        return scope?.getActiveTeamMembers ? scope.getActiveTeamMembers() : null;
+    }
+
+    // `options.ignoreTeamScope` is for the center-wide views that are supposed
+    // to show everyone regardless of which team you're working out of.
+    function getTeamSelectionContext(options) {
         var weekKey = getTeamSelectionWeekKey();
         var weeklyData = getWeeklyData();
         var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
@@ -139,16 +159,22 @@
         var employeesForWeek = Array.isArray(periodData?.employees)
             ? periodData.employees.map(function(emp) { return String(emp?.name || '').trim(); }).filter(Boolean)
             : [];
-        var selectedMembers = weekKey
+        var checkedMembers = weekKey
             ? getTeamMembersForWeek(weekKey).map(function(name) { return String(name || '').trim(); }).filter(Boolean)
             : [];
+
+        var teamMembers = options && options.ignoreTeamScope ? null : getActiveTeamMembers();
+        var activeTeam = window.DevCoachModules?.teamScope?.getActiveTeam?.() || null;
+        var selectedMembers = applyTeamScope(checkedMembers, teamMembers);
 
         return {
             weekKey: weekKey,
             selectedMembers: selectedMembers,
             selectedSet: selectedMembers.length ? new Set(selectedMembers) : null,
             totalEmployeesInWeek: employeesForWeek.length,
-            isFiltering: selectedMembers.length > 0
+            isFiltering: selectedMembers.length > 0,
+            teamId: activeTeam ? activeTeam.id : null,
+            teamLabel: activeTeam ? activeTeam.label : null
         };
     }
 
@@ -250,6 +276,7 @@
         getLatestTeamSelectionWeekKey: getLatestTeamSelectionWeekKey,
         getTeamSelectionWeekKey: getTeamSelectionWeekKey,
         getTeamSelectionContext: getTeamSelectionContext,
+        applyTeamScope: applyTeamScope,
         isAssociateIncludedByTeamFilter: isAssociateIncludedByTeamFilter,
         filterAssociateNamesByTeamSelection: filterAssociateNamesByTeamSelection,
         updateTeamFilterStatusChip: updateTeamFilterStatusChip,
