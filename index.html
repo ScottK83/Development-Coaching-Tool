@@ -235,21 +235,21 @@
                     </div>
 
                     <!-- Coaching Email Sub-section -->
-                    <div id="subSectionCoachingEmail" style="display: block;">
-                    <p style="color: #4a148c; margin-bottom: 20px;">Generate weekly coaching check-ins based on the latest uploaded data.</p>
+                    <div id="subSectionCoachingEmail" class="panel-section" style="display: block;">
+                    <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Generate weekly coaching check-ins based on the latest uploaded data.</p>
 
-                    <div id="coachingEmailStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"></div>
+                    <div id="coachingEmailStatus" class="call-note" style="display: none; margin-bottom: var(--space-5);"></div>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #E91E63;">
-                        <label for="coachingEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-primary);">Select Associate:</label>
-                        <select id="coachingEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; cursor: pointer;">
+                    <div class="call-panel">
+                        <label class="label-bold" for="coachingEmployeeSelect">Select Associate</label>
+                        <select id="coachingEmployeeSelect">
                             <option value="">-- Choose an associate --</option>
                         </select>
                     </div>
 
-                    <div id="coachingMetricsPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #E91E63;">
-                        <h3 style="color: #4a148c; margin-top: 0;">📊 Latest Performance Snapshot</h3>
-                        <div id="coachingMetricsSummary" style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95em;"></div>
+                    <div id="coachingMetricsPanel" class="call-panel" style="display: none;">
+                        <h3>📊 Latest Performance Snapshot</h3>
+                        <div id="coachingMetricsSummary" class="text-muted-sm" style="margin-bottom: var(--space-4);"></div>
 
                         <div class="grid-2col">
                             <div class="wins-panel">
@@ -263,12 +263,12 @@
                         </div>
                     </div>
 
-                    <div id="coachingHistoryPanel" style="display: none; margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #E91E63;">
-                        <h3 style="color: #4a148c; margin-top: 0;">🗂️ Coaching History</h3>
-                        <div id="coachingHistorySummary" style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.9em;"></div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                            <button type="button" id="deleteLatestCoachingBtn" class="btn-secondary" style="background: #dc3545; color: white;">🗑️ Delete Latest</button>
-                            <button type="button" id="clearCoachingHistoryBtn" class="btn-secondary" style="background: #6c757d; color: white;">🧹 Clear All</button>
+                    <div id="coachingHistoryPanel" class="call-panel" style="display: none;">
+                        <h3>🗂️ Coaching History</h3>
+                        <div id="coachingHistorySummary" class="text-muted-sm" style="margin-bottom: var(--space-3);"></div>
+                        <div class="flex-row" style="margin-bottom: var(--space-3);">
+                            <button type="button" id="deleteLatestCoachingBtn" class="btn-danger">🗑️ Delete Latest</button>
+                            <button type="button" id="clearCoachingHistoryBtn">🧹 Clear All</button>
                         </div>
                         <ul id="coachingHistoryList" style="margin: 0; padding-left: 18px; color: var(--text-primary);"></ul>
                         <div id="coachingOutcomesPanel"></div>
@@ -276,38 +276,38 @@
 
                     <div id="coachingOutcomesTeamPanel" style="margin-bottom: 20px;"></div>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #0ea5e9;">
-                        <h3 style="color: #0369a1; margin-top: 0;">Quick Check-in</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.9em;">Generate a quick Teams message with praise and a focus point.</p>
-                        <textarea id="quickCheckinOutput" readonly style="width: 100%; height: 140px; padding: 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.92em; color: var(--text-primary); background: var(--bg-surface-raised); resize: vertical; display: none;"></textarea>
-                        <div class="flex-row" style="margin-top: 10px; gap: 10px;">
-                            <button type="button" id="generateQuickCheckinBtn" style="background: #0ea5e9; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px;">Generate Quick Check-in</button>
-                            <button type="button" id="copyQuickCheckinBtn" style="background: #16a34a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; display: none;">Copy</button>
+                    <div class="call-panel">
+                        <h3>Quick Check-in</h3>
+                        <p>Generate a quick Teams message with praise and a focus point.</p>
+                        <textarea id="quickCheckinOutput" readonly style="height: 140px; display: none;"></textarea>
+                        <div class="flex-row" style="margin-top: var(--space-3);">
+                            <button type="button" id="generateQuickCheckinBtn" class="btn-primary">Generate Quick Check-in</button>
+                            <button type="button" id="copyQuickCheckinBtn" style="display: none;">Copy</button>
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #E91E63;">
-                        <h3 style="color: #4a148c; margin-top: 0;">🤖 CoPilot Prompt</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em;">Click below to generate and copy the prompt. Paste into CoPilot to draft the email.</p>
-                        <textarea id="coachingPromptArea" readonly style="width: 100%; height: 220px; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; color: var(--text-primary); background: var(--bg-surface-raised); resize: vertical;"></textarea>
-                        <div class="flex-row" style="margin-top: 15px;">
-                            <button type="button" id="generateCoachingPromptBtn" style="background: #E91E63; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px;">🤖 Generate CoPilot Prompt</button>
-                            <button type="button" id="generateVerintSummaryBtn" style="background: #6a1b9a; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px;">📝 Copy Verint Summary</button>
+                    <div class="call-panel">
+                        <h3>🤖 CoPilot Prompt</h3>
+                        <p>Click below to generate and copy the prompt. Paste into CoPilot to draft the email.</p>
+                        <textarea id="coachingPromptArea" class="call-mono" readonly style="height: 220px;"></textarea>
+                        <div class="flex-row" style="margin-top: var(--space-4);">
+                            <button type="button" id="generateCoachingPromptBtn" class="btn-primary">🤖 Generate CoPilot Prompt</button>
+                            <button type="button" id="generateVerintSummaryBtn">📝 Copy Verint Summary</button>
                         </div>
                     </div>
 
-                    <div id="verintSummarySection" style="display: none; margin-bottom: 20px; padding: 20px; background: #f3e5f5; border-radius: 8px; border: 2px solid #6a1b9a;">
-                        <h3 style="color: #6a1b9a; margin-top: 0;">📝 Verint Coaching Summary</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em;">Quick summary format ready to paste into Verint coaching notes.</p>
-                        <textarea id="verintSummaryOutput" readonly style="width: 100%; height: 150px; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; color: var(--text-primary); background: var(--bg-surface-raised); resize: vertical;"></textarea>
+                    <div id="verintSummarySection" class="call-panel" style="display: none;">
+                        <h3>📝 Verint Coaching Summary</h3>
+                        <p>Quick summary format ready to paste into Verint coaching notes.</p>
+                        <textarea id="verintSummaryOutput" readonly style="height: 150px;"></textarea>
                     </div>
 
-                    <div id="coachingOutlookSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #fff8e1; border-radius: 8px; border: 2px solid #ffb300;">
-                        <h3 style="color: #8d6e00; margin-top: 0;">📧 Generate Outlook Email</h3>
-                        <p style="color: #7a6a00; margin-bottom: 15px; font-size: 0.9em;">Paste the CoPilot response below, then generate the Outlook email.</p>
-                        <textarea id="coachingOutlookBody" placeholder="Paste the CoPilot-generated email here..." style="width: 100%; height: 220px; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em; color: var(--text-primary); background: #fffdf7; resize: vertical;"></textarea>
-                        <div class="flex-row" style="margin-top: 15px;">
-                            <button type="button" id="generateOutlookEmailBtn" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold; flex: 1; min-width: 180px; opacity: 0.6;">📧 Generate Outlook Email</button>
+                    <div id="coachingOutlookSection" class="call-panel call-panel-action" style="display: none;">
+                        <h3>📧 Generate Outlook Email</h3>
+                        <p>Paste the CoPilot response below, then generate the Outlook email.</p>
+                        <textarea id="coachingOutlookBody" class="call-mono" placeholder="Paste the CoPilot-generated email here..." style="height: 220px;"></textarea>
+                        <div class="flex-row" style="margin-top: var(--space-4);">
+                            <button type="button" id="generateOutlookEmailBtn" class="btn-primary" style="opacity: 0.6;">📧 Generate Outlook Email</button>
                         </div>
                     </div>
                     </div>
@@ -617,7 +617,7 @@ Box 2 - Future Improvement Areas:
                     </div>
 
                     <!-- Call Listening Sub-section -->
-                    <div id="subSectionCallListening" style="display: none;">
+                    <div id="subSectionCallListening" class="panel-section" style="display: none;">
                         <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Log call listening feedback, generate a Copilot prompt with Oscar context, and open an Outlook email draft.</p>
 
                         <div class="call-panel">
