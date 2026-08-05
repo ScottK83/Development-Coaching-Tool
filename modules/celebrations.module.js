@@ -178,7 +178,7 @@
      */
     function detectCelebrations(periodKey) {
         var centerRanking = window.DevCoachModules?.centerRanking;
-        if (!centerRanking) return { celebrations: [], dateRange: '', periodKey: '' };
+        if (!centerRanking) return { celebrations: [], missed: [], dateRange: '', periodKey: '' };
 
         var data;
         if (periodKey) {
@@ -187,7 +187,7 @@
         if (!data) {
             data = centerRanking.buildCenterRankings?.() || null;
         }
-        if (!data || !data.rankings.length) return { celebrations: [], dateRange: getDateRangeForKey(periodKey), periodKey: data?.periodKey || periodKey || '' };
+        if (!data || !data.rankings.length) return { celebrations: [], missed: [], dateRange: getDateRangeForKey(periodKey), periodKey: data?.periodKey || periodKey || '' };
 
         var tiers = getActiveTiers();
         var maxTier = tiers[tiers.length - 1];
@@ -258,11 +258,85 @@
             return bestA - bestB;
         });
 
+        // Everyone in scope who didn't make it, and why. Worked out here rather
+        // than in the renderer so the reason travels with the result.
+        var celebrated = {};
+        results.forEach(function(r) { celebrated[r.name] = true; });
+
+        var missed = [];
+        Array.from(data.teamMembers).forEach(function(name) {
+            if (celebrated[name]) return;
+            if (scope?.isInScope && !scope.isInScope(name)) return;
+            missed.push(explainNoCelebration(data, name, tiers));
+        });
+        missed.sort(function(a, b) {
+            var ra = a.best ? a.best.rank : Infinity;
+            var rb = b.best ? b.best.rank : Infinity;
+            return ra - rb || String(a.name).localeCompare(String(b.name));
+        });
+
         return {
             celebrations: results,
+            missed: missed,
             dateRange: getDateRangeForKey(data.periodKey || periodKey),
             periodKey: data.periodKey || periodKey || ''
         };
+    }
+
+    /**
+     * Why someone got no celebration.
+     *
+     * "No celebrations" had three completely different causes and one blank
+     * screen, which reads as "they did nothing" when the truth is usually
+     * "they were #14 and the bar is top 10". Each of these is worth saying
+     * out loud, because they call for different responses.
+     */
+    function explainNoCelebration(data, name, tiers) {
+        var maxTier = tiers[tiers.length - 1];
+        var rankings = (data && data.rankings) || [];
+
+        var row = null;
+        for (var i = 0; i < rankings.length; i++) {
+            if (rankings[i] && rankings[i].name === name) { row = rankings[i]; break; }
+        }
+        if (!row) return { name: name, reason: 'notRanked', maxTier: maxTier };
+
+        var best = null;
+        var withheld = null;
+
+        Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+            var rank = row.metricRanks?.[metricKey];
+            if (!rank) return;
+
+            var value = getRankedValue(row, metricKey);
+            var hasValue = value !== null && value !== undefined;
+            var entry = { metricKey: metricKey, label: METRIC_RANK_LABELS[metricKey].label, rank: rank, hasValue: hasValue };
+
+            if (!best || rank < best.rank) best = entry;
+            // A qualifying rank whose value never made it through is the most
+            // misleading case of the three, so it wins the explanation.
+            if (rank <= maxTier && !hasValue && (!withheld || rank < withheld.rank)) withheld = entry;
+        });
+
+        if (withheld) return { name: name, reason: 'valueWithheld', best: withheld, maxTier: maxTier };
+        if (!best) return { name: name, reason: 'noMetricRanks', maxTier: maxTier };
+        return { name: name, reason: 'belowBar', best: best, maxTier: maxTier, shortBy: Math.max(0, best.rank - maxTier) };
+    }
+
+    function describeNoCelebration(info) {
+        var who = _getFirstName(info.name);
+        if (info.reason === 'notRanked') {
+            return who + " isn't in this period's rankings at all — nothing scoreable on that upload.";
+        }
+        if (info.reason === 'noMetricRanks') {
+            return who + ' is ranked this period but holds no metric rank yet.';
+        }
+        if (info.reason === 'valueWithheld') {
+            return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
+                + ", but the number is withheld — too few surveys behind it to count.";
+        }
+        return who + "'s best is #" + info.best.rank + ' in ' + info.best.label
+            + ', ' + info.shortBy + ' off the top ' + info.maxTier + ' bar.';
     }
 
     function getTierForRank(rank, tiers) {
@@ -702,11 +776,12 @@
         html += '</div>';
 
         if (!celebrations.length) {
-            html += '<div style="text-align:center; padding:60px 20px; color:var(--text-tertiary);">';
+            html += '<div style="text-align:center; padding:40px 20px 20px; color:var(--text-tertiary);">';
             html += '<div style="font-size:3em; margin-bottom:16px;">\uD83C\uDFC6</div>';
-            html += '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Celebrations for This Period</h3>';
-            html += '<p style="margin:0;">No standout performances from team members for the selected period.<br>Try a different period or adjust the threshold.</p>';
+            html += '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">Nobody cleared the bar this period</h3>';
+            html += '<p style="margin:0;">Celebrations fire on a <strong>top ' + tiers[tiers.length - 1] + '</strong> rank across the whole center, so a strong week can still come up empty here.</p>';
             html += '</div>';
+            html += renderMissedList(result.missed);
             container.innerHTML = html;
             bindCurrentViewControls(container);
             return;
@@ -722,10 +797,29 @@
 
         // Cards
         html += renderCelebrationCards(celebrations, dateRange);
+        html += renderMissedList(result.missed);
 
         container.innerHTML = html;
         bindCurrentViewControls(container);
         bindCelebrationButtons(container, celebrations, dateRange);
+    }
+
+    // A blank screen reads as "they did nothing". This says how close they
+    // actually were, so a near miss looks like a near miss.
+    function renderMissedList(missed) {
+        var list = missed || [];
+        if (!list.length) return '';
+
+        var open = list.length <= 3 ? ' open' : '';
+        var html = '<details' + open + ' style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);">';
+        html += '<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Not this time (' + list.length + ') — how close they were</summary>';
+        html += '<div style="margin-top:10px;">';
+        list.forEach(function(info) {
+            html += '<div style="padding:6px 0; border-bottom:1px solid var(--border); font-size:0.9em; color:var(--text-primary);">'
+                + _escapeHtml(describeNoCelebration(info)) + '</div>';
+        });
+        html += '</div></details>';
+        return html;
     }
 
     function renderCelebrationCards(celebrations, dateRange) {
@@ -1134,6 +1228,8 @@
         renderCelebrations: renderCelebrations,
         renderHistoryView: renderHistoryView,
         detectCelebrations: detectCelebrations,
+        explainNoCelebration: explainNoCelebration,
+        describeNoCelebration: describeNoCelebration,
         generateShoutOut: generateShoutOut,
         generateAllShoutOuts: generateAllShoutOuts,
         generateDirectMessage: generateDirectMessage,
