@@ -1058,6 +1058,40 @@ textarea:focus-visible {
     }
 }
 
+#subSectionCallListening .call-trend-group {
+    padding: var(--space-3) var(--space-4);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-sunken);
+    margin-bottom: var(--space-3);
+}
+
+#subSectionCallListening .call-trend-good {
+    border-left-color: var(--green);
+    background: var(--green-soft);
+}
+
+#subSectionCallListening .call-trend-warn {
+    border-left-color: var(--yellow);
+    background: var(--yellow-soft);
+}
+
+#subSectionCallListening .call-trend-title {
+    font-weight: 650;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+#subSectionCallListening .call-trend-group ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.9em;
+    color: var(--text-primary);
+}
+
 #subSectionCallListening .call-history {
     list-style: none;
     margin: 0;

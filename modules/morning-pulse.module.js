@@ -2545,9 +2545,69 @@
         });
     }
 
-    // --- Run My Monday — one-pass kickoff flow ---
 
-    async function showRunMyMondayModal(container) {
+    // --- Run My Day (the whole-team sweep, any weekday) ---
+
+    // Plain-text twin of formatDailyCell — the sweep puts these numbers in a
+    // message, not a table cell, so the em-dash placeholder and markup are out.
+    function formatDailyPlain(metricKey, value) {
+        if (!Number.isFinite(value)) return '';
+        if (metricKey === 'totalCalls') return Math.round(value).toString();
+        return fmtVal(metricKey, value);
+    }
+
+    // Per-associate daily rows for the current Monday..today window, keyed by
+    // name. Built once per sweep rather than once per rep.
+    function collectDailyRowsThisWeek() {
+        const daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        const { mondayIso, dailyKeysThisWeek } = getThisWeekDailyWindow();
+        const byName = new Map();
+
+        dailyKeysThisWeek.forEach(key => {
+            const end = daily[key]?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : '');
+            (daily[key]?.employees || []).forEach(emp => {
+                if (!emp?.name) return;
+                if (!byName.has(emp.name)) byName.set(emp.name, { rows: [], mondayRow: null, dates: new Set() });
+                const entry = byName.get(emp.name);
+                entry.rows.push(emp);
+                if (end) entry.dates.add(end);
+                if (end && end === mondayIso) entry.mondayRow = emp;
+            });
+        });
+
+        return { byName, mondayIso, dayCount: dailyKeysThisWeek.length };
+    }
+
+    // The base message for the day, plus — when the plan calls for it — the
+    // daily numbers slotted in after the opening.
+    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
+        const base = plan.base === 'midweek'
+            ? await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey)
+            : await generateMondayKickoffMessage(employeeName, latestKey, baselineKey);
+
+        if (plan.dailyMode === 'none' || !dailyEntry) return base || '';
+
+        const rows = plan.dailyMode === 'monday'
+            ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
+            : dailyEntry.rows;
+        if (!rows.length) return base || '';
+
+        const recap = outreach.buildDailyRecap(plan, computeRepWtdFromDailies(rows), {
+            metrics: DAILY_CHECKIN_METRICS,
+            formatValue: formatDailyPlain,
+            dayCount: dailyEntry.dates.size
+        });
+
+        return outreach.insertRecap(base || '', recap);
+    }
+
+    async function showRunMyDayModal(container) {
+        const outreach = window.DevCoachModules?.dailyOutreach;
+        if (!outreach) {
+            if (typeof showToast === 'function') showToast('Daily outreach module failed to load.', 3000);
+            return;
+        }
+
         const selection = loadPulseSelection();
         const periodType = 'week';
         const window_ = getPeriodWindow(periodType, selection.periodKey);
@@ -2568,116 +2628,228 @@
             return;
         }
 
+        const now = new Date();
+        const todayIso = outreach.isoDate(now);
+        const plan = outreach.planForDate(now);
+        const stamp = outreach.stampFor(plan, { weeklyKey: latestKey, todayIso });
+
+        // Trim the log on the way in so it never grows without bound.
+        outreach.saveSentLog(outreach.pruneSentLog(outreach.loadSentLog(), todayIso));
+        const sentLog = outreach.loadSentLog();
+
+        const dailyThisWeek = collectDailyRowsThisWeek();
+
         const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
             ? getCallCenterAverageForPeriod(latestKey) || {}
             : {};
 
-        // Build card data + priority scoring so we can sort worst-first
+        // Build card data + priority scoring so we can sort worst-first, and
+        // set aside anyone the day's data can't actually back a message for.
         const cardData = [];
+        const blocked = [];
         employees.forEach(emp => {
+            const dailyEntry = dailyThisWeek.byName.get(emp.name) || null;
+            const coverage = outreach.checkCoverage(plan, {
+                inWeekly: true,
+                dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
+                hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow)
+            });
+
             const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
-            if (!analysis || !analysis.allMetrics?.length) return;
+            if (!analysis || !analysis.allMetrics?.length) {
+                blocked.push({ name: emp.name, reason: 'No scoreable metrics in this upload.' });
+                return;
+            }
+            if (!coverage.ok) {
+                blocked.push({ name: emp.name, reason: coverage.reason });
+                return;
+            }
+
             const metrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
             const badge = getStatusBadge(metrics);
             const needsFocus = metrics.filter(m => m.classification === 'Needs Focus').length;
             const watch = metrics.filter(m => m.classification === 'Watch Area').length;
             const priority = needsFocus * 10 + watch * 3;
-            cardData.push({ emp, analysis, badge, priority, needsFocus, watch });
+            const sentEntry = outreach.getSentEntry(sentLog, plan.id, stamp, emp.name);
+            cardData.push({ emp, analysis, badge, priority, needsFocus, watch, dailyEntry, coverage, sentEntry });
+        });
+
+        // Anyone with daily rows but no weekly row would otherwise vanish from
+        // the sweep entirely. Name them, so "everyone got a message" is a
+        // claim you can check rather than one you have to trust.
+        const weeklyNames = new Set(employees.map(e => e.name));
+        const teamCtx = typeof getTeamSelectionContext === 'function' ? getTeamSelectionContext() : null;
+        dailyThisWeek.byName.forEach((_entry, name) => {
+            if (weeklyNames.has(name)) return;
+            const included = typeof isAssociateIncludedByTeamFilter === 'function'
+                ? isAssociateIncludedByTeamFilter(name, teamCtx)
+                : true;
+            if (!included) return;
+            blocked.push({ name, reason: 'Daily uploads only — no weekly numbers to coach against.' });
         });
 
         cardData.sort((a, b) => b.priority - a.priority || a.emp.name.localeCompare(b.emp.name));
+        blocked.sort((a, b) => a.name.localeCompare(b.name));
 
-        const summary = {
-            total: cardData.length,
-            needsSupport: cardData.filter(c => c.badge.label === 'Needs Support').length,
-            watch: cardData.filter(c => c.badge.label === 'Watch').length,
-            solid: cardData.filter(c => c.badge.label === 'Solid' || c.badge.label === 'Crushing It' || c.badge.label === 'Steady').length
-        };
+        const pending = cardData.filter(c => !c.sentEntry);
+        const alreadySent = cardData.filter(c => c.sentEntry);
 
         const endDate = getPeriodDisplayLabel(periodType, latestKey);
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+        const weekdayName = getCurrentWeekdayName();
 
         // Remove any existing modal
-        const existing = document.getElementById('runMyMondayModal');
+        const existing = document.getElementById('runMyDayModal');
         if (existing) existing.remove();
 
         const overlay = document.createElement('div');
-        overlay.id = 'runMyMondayModal';
+        overlay.id = 'runMyDayModal';
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+        const coversText = plan.covers === 'thisWeek'
+            ? `${dailyThisWeek.dayCount} daily upload${dailyThisWeek.dayCount === 1 ? '' : 's'} so far`
+            : `week ending ${escapeHtml(endDate)}`;
 
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
-                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Monday — ${escapeHtml(endDate)}</h2>` +
+                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Day — ${escapeHtml(plan.label)}</h2>` +
                     `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
-                        `${summary.total} team members \u2022 ` +
-                        `<span style="color:var(--red-text); font-weight:600;">${summary.needsSupport} needs support</span> \u2022 ` +
-                        `<span style="color:#ef6c00; font-weight:600;">${summary.watch} watch</span> \u2022 ` +
-                        `<span style="color:var(--green-text); font-weight:600;">${summary.solid} on track</span>` +
+                        `${escapeHtml(weekdayName)} • covers ${escapeHtml(plan.coverageLabel)} • ${coversText}` +
+                    `</div>` +
+                    `<div style="margin-top:4px; font-size:0.88em; color:#546e7a;">` +
+                        `<span style="font-weight:600;">${pending.length} to send</span> • ` +
+                        `<span style="color:var(--green-text); font-weight:600;">${alreadySent.length} already sent</span> • ` +
+                        `<span style="color:var(--text-tertiary); font-weight:600;">${blocked.length} without data</span>` +
                     `</div>` +
                 `</div>` +
-                `<button id="runMyMondayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>` +
+                `<button id="runMyDayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">✕</button>` +
             `</div>` +
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
-                `Sorted by priority. Copy each message and send it, then click <strong>Done</strong> to mark the rep finished.` +
+                `Sorted by priority. Copy each message and send it, then click <strong>Sent</strong> — that flag sticks, so re-running skips them.` +
             `</div>` +
-            `<div id="runMyMondayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
-                `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">\u23F3 Generating kickoffs\u2026</div>` +
+            `<div id="runMyDayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
+                `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">⏳ Generating messages…</div>` +
             `</div>` +
-            `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
-                `<div id="runMyMondayProgress" style="font-size:0.9em; color:#546e7a;">0 / ${summary.total} done</div>` +
-                `<button id="runMyMondayDoneAll" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:10px 18px; cursor:pointer; font-weight:bold;">Close</button>` +
+            `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center; gap:12px;">` +
+                `<div id="runMyDayProgress" style="font-size:0.9em; color:#546e7a;">0 / ${pending.length} sent</div>` +
+                `<div style="display:flex; gap:8px;">` +
+                    (alreadySent.length
+                        ? `<button id="runMyDayReset" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 14px; cursor:pointer;">Clear sent flags</button>`
+                        : '') +
+                    `<button id="runMyDayDoneAll" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:10px 18px; cursor:pointer; font-weight:bold;">Close</button>` +
+                `</div>` +
             `</div>` +
         `</div>`;
 
         document.body.appendChild(overlay);
-        document.getElementById('runMyMondayClose').addEventListener('click', () => overlay.remove());
-        document.getElementById('runMyMondayDoneAll').addEventListener('click', () => overlay.remove());
+        document.getElementById('runMyDayClose').addEventListener('click', () => overlay.remove());
+        document.getElementById('runMyDayDoneAll').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-        // Generate kickoffs sequentially to avoid tip-loader thrash, then render
-        const listEl = document.getElementById('runMyMondayList');
-        const progressEl = document.getElementById('runMyMondayProgress');
-        const doneSet = new Set();
+        const resetBtn = document.getElementById('runMyDayReset');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                outreach.clearAllSentForStamp(plan.id, stamp);
+                overlay.remove();
+                await showRunMyDayModal(container);
+            });
+        }
+
+        // Generate sequentially to avoid tip-loader thrash, then render
+        const listEl = document.getElementById('runMyDayList');
+        const progressEl = document.getElementById('runMyDayProgress');
+        const sentSet = new Set();
 
         const rendered = [];
-        for (const entry of cardData) {
+        for (const entry of pending) {
             let message = '';
             try {
-                message = await generateMondayKickoffMessage(entry.emp.name, latestKey, baselineKey) || '';
+                message = await buildOutreachMessage(outreach, plan, entry.emp.name, latestKey, baselineKey, entry.dailyEntry) || '';
             } catch (e) { message = ''; }
             rendered.push({ ...entry, message });
         }
 
-        listEl.innerHTML = rendered.map((r, idx) => {
+        const cardsHtml = rendered.map((r, idx) => {
             const safeName = escapeHtml(r.emp.name);
-            const badgeBg = r.badge.bg;
-            const badgeColor = r.badge.color;
-            const badgeLabel = escapeHtml(r.badge.label);
-            const badgeIcon = r.badge.icon;
+            const warning = r.coverage.warning
+                ? `<div style="margin-bottom:8px; font-size:0.8em; color:#ef6c00;">⚠️ ${escapeHtml(r.coverage.warning)}</div>`
+                : '';
             return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:var(--bg-surface);">` +
                 `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">` +
                     `<div style="font-weight:700; color:#1a237e;">${safeName}</div>` +
-                    `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${badgeColor}; background:${badgeBg};">${badgeIcon} ${badgeLabel}</div>` +
+                    `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${r.badge.color}; background:${r.badge.bg};">${r.badge.icon} ${escapeHtml(r.badge.label)}</div>` +
                 `</div>` +
+                warning +
                 `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
                 `<div style="display:flex; gap:8px; margin-top:10px;">` +
                     `<button class="rmm-copy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
                     `<button class="rmm-regen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:9px 14px; cursor:pointer;">🔄 Regenerate</button>` +
-                    `<button class="rmm-done" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">✓ Done</button>` +
+                    `<button class="rmm-sent" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; border-radius:6px; padding:9px 14px; cursor:pointer; font-weight:bold;">✓ Sent</button>` +
                 `</div>` +
             `</div>`;
         }).join('');
 
+        const emptyHtml = rendered.length
+            ? ''
+            : `<div style="text-align:center; padding:30px; color:var(--text-secondary);">` +
+                `<div style="font-size:2.4em; margin-bottom:8px;">✅</div>` +
+                `<div style="font-weight:600;">Nothing left to send for ${escapeHtml(plan.label)}.</div>` +
+                (alreadySent.length ? `<div style="font-size:0.9em; margin-top:6px;">${alreadySent.length} already went out.</div>` : '') +
+            `</div>`;
+
+        // Already-sent reps come out of the working list rather than being
+        // deleted — the flag is what stops a double-send, so it has to be
+        // visible and undoable.
+        const sentHtml = alreadySent.length
+            ? `<details style="margin-top:8px; border:1px solid var(--border); border-radius:10px; padding:10px 14px; background:var(--bg-surface-raised);">` +
+                `<summary style="cursor:pointer; font-weight:600; color:var(--green-text);">✅ Already sent (${alreadySent.length})</summary>` +
+                `<div style="margin-top:10px;">` +
+                    alreadySent.map(c => {
+                        const when = c.sentEntry.at ? new Date(c.sentEntry.at).toLocaleString() : '';
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; font-size:0.9em; border-bottom:1px solid var(--border);">` +
+                            `<span style="color:var(--text-primary);">${escapeHtml(c.emp.name)}</span>` +
+                            `<span style="color:var(--text-tertiary); font-size:0.85em; margin-left:auto;">${escapeHtml(when)}</span>` +
+                            `<button class="rmm-unsend" data-rep-name="${escapeHtml(c.emp.name)}" style="background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--text-secondary);">Undo</button>` +
+                        `</div>`;
+                    }).join('') +
+                `</div>` +
+            `</details>`
+            : '';
+
+        const blockedHtml = blocked.length
+            ? `<details style="margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:10px 14px; background:var(--bg-surface-raised);">` +
+                `<summary style="cursor:pointer; font-weight:600; color:var(--text-secondary);">🚫 No data to back a message (${blocked.length})</summary>` +
+                `<div style="margin-top:10px;">` +
+                    blocked.map(b => `<div style="display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:0.88em; border-bottom:1px solid var(--border);">` +
+                        `<span style="color:var(--text-primary);">${escapeHtml(b.name)}</span>` +
+                        `<span style="color:var(--text-tertiary);">${escapeHtml(b.reason)}</span>` +
+                    `</div>`).join('') +
+                `</div>` +
+            `</details>`
+            : '';
+
+        listEl.innerHTML = cardsHtml + emptyHtml + sentHtml + blockedHtml;
+
         const updateProgress = () => {
-            progressEl.textContent = `${doneSet.size} / ${rendered.length} done`;
+            progressEl.textContent = `${sentSet.size} / ${rendered.length} sent`;
         };
+        updateProgress();
+
+        listEl.querySelectorAll('.rmm-unsend').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                outreach.clearSent(plan.id, stamp, btn.dataset.repName);
+                overlay.remove();
+                await showRunMyDayModal(container);
+            });
+        });
 
         listEl.querySelectorAll('.rmm-rep-card').forEach(card => {
             const idx = parseInt(card.dataset.repIndex, 10);
             const repName = card.dataset.repName;
             const textarea = card.querySelector('.rmm-rep-text');
+            const entry = rendered[idx];
 
             card.querySelector('.rmm-copy').addEventListener('click', async () => {
                 await copyToClipboard(textarea.value, { message: `Copied ${repName}` });
@@ -2687,9 +2859,9 @@
                 const btn = e.currentTarget;
                 btn.disabled = true;
                 const originalText = btn.textContent;
-                btn.textContent = '\u23F3';
+                btn.textContent = '⏳';
                 try {
-                    const msg = await generateMondayKickoffMessage(repName, latestKey, baselineKey);
+                    const msg = await buildOutreachMessage(outreach, plan, repName, latestKey, baselineKey, entry?.dailyEntry);
                     if (msg) textarea.value = msg;
                 } finally {
                     btn.disabled = false;
@@ -2697,15 +2869,20 @@
                 }
             });
 
-            card.querySelector('.rmm-done').addEventListener('click', () => {
-                if (doneSet.has(idx)) {
-                    doneSet.delete(idx);
+            card.querySelector('.rmm-sent').addEventListener('click', (e) => {
+                const btn = e.currentTarget;
+                if (sentSet.has(idx)) {
+                    sentSet.delete(idx);
+                    outreach.clearSent(plan.id, stamp, repName);
                     card.style.opacity = '1';
-                    card.style.background = '#fff';
+                    card.style.background = 'var(--bg-surface)';
+                    btn.textContent = '✓ Sent';
                 } else {
-                    doneSet.add(idx);
+                    sentSet.add(idx);
+                    outreach.markSent(plan.id, stamp, repName, new Date().toISOString());
                     card.style.opacity = '0.55';
                     card.style.background = '#f1f8e9';
+                    btn.textContent = '↩ Undo';
                 }
                 updateProgress();
             });
@@ -2808,8 +2985,9 @@
             : periodType === 'month'
             ? 'Your team\'s monthly snapshot. Use each card to generate an individual monthly review.'
             : 'Your team\'s quarterly snapshot. Use each card to generate an individual quarterly review.';
-        const runMyMondayBtnHtml = periodType === 'week'
-            ? `<button type="button" id="runMyMondayBtn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Monday</button>`
+        const dayPlan = window.DevCoachModules?.dailyOutreach?.planForDate?.(new Date());
+        const runMyDayBtnHtml = periodType === 'week'
+            ? `<button type="button" id="runMyDayBtn" title="${dayPlan ? 'Covers ' + dayPlan.coverageLabel : ''}" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Day${dayPlan ? ' — ' + dayPlan.label : ''}</button>`
             : '';
         const patternMemoryBtnHtml = periodType === 'week'
             ? `<button type="button" id="patternMemoryBtn" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`
@@ -2821,7 +2999,7 @@
             `</div>` +
             `<div style="display:flex; gap:10px; flex-shrink:0;">` +
                 patternMemoryBtnHtml +
-                runMyMondayBtnHtml +
+                runMyDayBtnHtml +
             `</div>` +
         `</div>`;
 
@@ -2849,18 +3027,18 @@
         container.innerHTML = html;
         bindPulseControls(container);
 
-        // Bind Run My Monday button
-        const runMyMondayBtn = container.querySelector('#runMyMondayBtn');
-        if (runMyMondayBtn) {
-            runMyMondayBtn.addEventListener('click', async () => {
-                runMyMondayBtn.disabled = true;
-                const originalText = runMyMondayBtn.textContent;
-                runMyMondayBtn.textContent = '\u23F3 Building\u2026';
+        // Bind Run My Day button
+        const runMyDayBtn = container.querySelector('#runMyDayBtn');
+        if (runMyDayBtn) {
+            runMyDayBtn.addEventListener('click', async () => {
+                runMyDayBtn.disabled = true;
+                const originalText = runMyDayBtn.textContent;
+                runMyDayBtn.textContent = '\u23F3 Building\u2026';
                 try {
-                    await showRunMyMondayModal(container);
+                    await showRunMyDayModal(container);
                 } finally {
-                    runMyMondayBtn.textContent = originalText;
-                    runMyMondayBtn.disabled = false;
+                    runMyDayBtn.textContent = originalText;
+                    runMyDayBtn.disabled = false;
                 }
             });
         }
@@ -3073,6 +3251,7 @@
         generateHighFiveMessage,
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
+        showRunMyDayModal,
         generateMonthlyCheckinMessage,
         generateQuarterlyCheckinMessage,
         generateGrowthMessage,

@@ -3771,7 +3771,45 @@ function getCallListeningCsvHeaders() {
         'Oscar URL',
         'Relevant Info',
         'Manager Notes',
-        'Created At'
+        'Created At',
+        'QA Verified First',
+        'QA Disclosures',
+        'QA Process Explained',
+        'QA Resolved',
+        'QA Notated',
+        'Kudos',
+        'Call Opportunities',
+        'Tech Opportunities'
+    ];
+}
+
+const CALL_QA_CSV_WORD = { met: 'Yes', opportunity: 'Opportunity', unknown: 'Not in transcript' };
+
+// One column per form question so a season of calls can be pivoted in Excel.
+// Entries saved before transcripts existed leave the columns blank rather than
+// reading as a pass.
+function buildCallListeningQaCells(entry) {
+    const blank = ['', '', '', '', '', '', '', ''];
+    if (!entry?.transcript) return blank;
+
+    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
+        associateName: entry.employeeName
+    });
+    const qa = scoreCallListeningQa(entry.transcript, entry.employeeName, analysis);
+    if (!qa?.ok) return blank;
+
+    const verdict = (id) => CALL_QA_CSV_WORD[qa.checks.find(item => item.id === id)?.verdict] || '';
+    const labels = (items) => (items || []).map(item => item.label).join('; ');
+
+    return [
+        verdict('verification'),
+        verdict('disclosures'),
+        verdict('process'),
+        verdict('resolved'),
+        verdict('notation'),
+        labels(qa.kudos),
+        labels(qa.callOpportunities),
+        labels(qa.techOpportunities)
     ];
 }
 
@@ -3785,7 +3823,8 @@ function buildCallListeningCsvRow(employeeName, entry) {
         toCsvCell(entry.oscarUrl || ''),
         toCsvCell(entry.relevantInfo || ''),
         toCsvCell(entry.managerNotes || ''),
-        toCsvCell(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')
+        toCsvCell(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ''),
+        ...buildCallListeningQaCells(entry).map(toCsvCell)
     ].join(',');
 }
 
@@ -7692,9 +7731,33 @@ function dispatchCallListeningHistoryAction(action, entryId) {
     }
 }
 
+// Rescoring every stored transcript is not free, so it only runs when the
+// history for one associate is on screen.
+function renderCallListeningTrends(employeeName) {
+    const container = document.getElementById('callListeningTrends');
+    if (!container) return;
+
+    const trends = window.DevCoachModules?.callTrends;
+    const entries = employeeName ? getCallListeningEntriesForEmployee(employeeName) : [];
+    const withTranscript = entries.filter(entry => entry?.transcript);
+
+    if (!trends?.summarizeHistory || withTranscript.length < 2) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    const summary = trends.summarizeHistory(entries);
+    const html = trends.buildTrendHtml(summary, escapeHtml);
+    container.innerHTML = html;
+    container.style.display = html ? 'block' : 'none';
+}
+
 function renderCallListeningHistoryForSelectedEmployee() {
     const { employeeName, summary, list } = resolveCallListeningHistoryContext();
     if (!summary || !list) return;
+
+    renderCallListeningTrends(employeeName);
 
     if (!employeeName) {
         summary.textContent = 'Select an associate to view call listening history.';

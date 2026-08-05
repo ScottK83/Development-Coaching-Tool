@@ -233,7 +233,9 @@
     // unattributed rather than being guessed at: a wrong attribution produces
     // wrong coaching, which is worse than a missed signal.
     const AGENT_TURN_CUE = /thank you for (?:being|calling|choosing)|can i have your|may i (?:place|put) you|i'?m just gonna place you|one moment please|allow me a moment|thank you (?:so much )?for holding|let me pull up|i'?d like to recap|the (?:first|second|third) plan|plans available|our email address|for the identity check|verify your name|is that right|what'?s the address|deposit of|we (?:do )?need (?:to )?(?:either|your)|do you have any questions|is there anything else/i;
-    const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|very helpful thank you|i just have the address|we'?ll get that back|i have both/i;
+    // Phrases only a customer says. These are the ones the coaching rules care
+    // about most, so they are matched outright rather than left to flow order.
+    const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|i just have the address|we'?ll get that back|i have both|this is (?:ridiculous|unacceptable|the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time)|i (?:want|need) to (?:speak|talk) (?:to|with) (?:a|your) (?:supervisor|manager)|get me a (?:supervisor|manager)|like i (?:said|told you|mentioned)|as i (?:said|mentioned|explained)|i already (?:said|told|explained)|i(?:'?m| am) (?:so |really )?(?:frustrated|fed up|angry|upset)|my bill (?:is|went|doubled)|(?:i was|you) charged (?:me )?twice|(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful)|i (?:really )?appreciate (?:you|your|it)|(?:can'?t|cannot) afford|i(?:'?m| am) past due|behind on (?:my|the) bill/i;
 
     function parseTimestampedTurns(text) {
         const lines = String(text || '').split(/\r?\n/);
@@ -261,19 +263,45 @@
 
     function attributeByCue(turns) {
         return turns.map(turn => {
-            if (CUSTOMER_TURN_CUE.test(turn.text)) return { ...turn, role: 'customer' };
-            if (AGENT_TURN_CUE.test(turn.text)) return { ...turn, role: 'agent' };
-            return { ...turn, role: 'unknown' };
+            if (CUSTOMER_TURN_CUE.test(turn.text)) return { ...turn, role: 'customer', cued: true };
+            if (AGENT_TURN_CUE.test(turn.text)) return { ...turn, role: 'agent', cued: true };
+            return { ...turn, role: 'unknown', cued: false };
+        });
+    }
+
+    // A short reply landing straight after the advisor is the customer answering
+    // them. Recovering those matters: "this is ridiculous" is four words, and
+    // left unattributed it would be read as something the advisor said.
+    const BACKCHANNEL_WORDS = 8;
+
+    function inferRolesByFlow(turns) {
+        // Calls open with the advisor, so that is where the alternation starts.
+        let previousRole = 'agent';
+
+        return turns.map(turn => {
+            if (turn.cued) {
+                previousRole = turn.role;
+                return turn;
+            }
+
+            const short = wordCount(turn.text) <= BACKCHANNEL_WORDS;
+            const role = (short && previousRole === 'agent') ? 'customer' : 'agent';
+            previousRole = role;
+            return { ...turn, role, inferred: true };
         });
     }
 
     function buildParseResult(turns, labeled) {
-        // With real labels the two sides are known. Without them, everything
-        // not clearly the customer is treated as the associate's speech: the
-        // strength patterns are process language a customer would not use.
+        // With real labels the two sides are known.
+        //
+        // Without them, confidence differs by how the turn was attributed. A
+        // cued turn used an unmistakable phrase. An inferred one is a guess
+        // from conversational flow, so it counts towards the customer without
+        // being taken away from the advisor: that way a wrong guess costs a
+        // little precision rather than losing the line from both sides.
         const agentTurns = labeled
             ? turns.filter(turn => turn.role === 'agent')
-            : turns.filter(turn => turn.role !== 'customer');
+            : turns.filter(turn => !(turn.role === 'customer' && turn.cued));
         const customerTurns = turns.filter(turn => turn.role === 'customer');
 
         return {
@@ -298,7 +326,7 @@
 
         const timestampCount = rawLines.filter(line => TIMESTAMP_ONLY_LINE.test(line)).length;
         if (timestampCount >= 3) {
-            return buildParseResult(attributeByCue(parseTimestampedTurns(text)), false);
+            return buildParseResult(inferRolesByFlow(attributeByCue(parseTimestampedTurns(text))), false);
         }
 
         const turns = [];
@@ -699,6 +727,15 @@
         }
 
         strengths.sort((a, b) => b.praise - a.praise);
+        // The measured silence and the "one moment" filler count are the same
+        // event described twice. When the timestamps have already put a number
+        // and a time on it, the vaguer bullet adds nothing.
+        const measuredSilence = improvements.some(item => item.key === 'longHold' || item.key === 'deadAirGap');
+        if (measuredSilence) {
+            const stallingIndex = improvements.findIndex(item => item.key === 'stalling');
+            if (stallingIndex >= 0) improvements.splice(stallingIndex, 1);
+        }
+
         improvements.sort((a, b) => b.weight - a.weight);
 
         const heavyIssues = improvements.filter(item => item.weight >= 8).length;

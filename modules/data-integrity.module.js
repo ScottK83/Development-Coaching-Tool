@@ -27,6 +27,44 @@
     };
     const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
 
+    // Scanning is deterministic, so the same anomalies resurface every time you
+    // open the modal. Once you've looked at a batch and decided it's fine, it
+    // should stop shouting — but the underlying uploads are untouched, so this
+    // is a "seen it" list, not a delete.
+    const REVIEWED_KEY = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX || 'devCoachingTool_') + 'dataHealthReviewed';
+
+    function issueFingerprint(issue) {
+        return `${issue.weekKey || ''}|${issue.category || ''}|${issue.message || ''}`;
+    }
+
+    function loadReviewed() {
+        try {
+            const raw = localStorage.getItem(REVIEWED_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+            return new Set(Array.isArray(parsed) ? parsed : []);
+        } catch (e) {
+            return new Set();
+        }
+    }
+
+    function saveReviewed(set) {
+        try {
+            localStorage.setItem(REVIEWED_KEY, JSON.stringify(Array.from(set)));
+        } catch (e) { /* storage blocked — the scan still runs */ }
+    }
+
+    // Only keeps fingerprints that a current scan can still produce, so the
+    // list doesn't accumulate entries for uploads that were long since deleted.
+    function markReviewed(issues) {
+        saveReviewed(new Set((issues || []).map(issueFingerprint)));
+    }
+
+    function clearReviewed() {
+        try {
+            localStorage.removeItem(REVIEWED_KEY);
+        } catch (e) { /* nothing to do */ }
+    }
+
     function getMetricLabel(key) {
         const registry = window.METRICS_REGISTRY || {};
         return registry[key]?.label || key;
@@ -304,32 +342,34 @@
         const ytdData = (typeof window.ytdData === 'object' && window.ytdData)
             ? window.ytdData
             : (window.DevCoachModules?.storage?.loadYtdData?.() || {});
-        const { issues, summary } = runDataIntegrityScan(weeklyData, ytdData);
+        const { issues } = runDataIntegrityScan(weeklyData, ytdData);
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
-        const groupedByWeek = new Map();
-        issues.forEach(issue => {
-            const key = issue.weekKey || '—';
-            if (!groupedByWeek.has(key)) groupedByWeek.set(key, []);
-            groupedByWeek.get(key).push(issue);
-        });
-        const sortedWeekKeys = Array.from(groupedByWeek.keys()).sort((a, b) => b.localeCompare(a));
+        const overlay = document.createElement('div');
+        overlay.id = 'dataIntegrityModal';
+        overlay.className = 'modal-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-        let bodyHtml;
-        if (issues.length === 0) {
-            bodyHtml = `<div style="padding:40px; text-align:center; color:var(--green-text);">` +
-                `<div style="font-size:3em; margin-bottom:12px;">\u2705</div>` +
-                `<div style="font-size:1.15em; font-weight:600;">No anomalies found.</div>` +
-                `<div style="color:var(--text-secondary); font-size:0.9em; margin-top:8px;">Your upload history looks clean.</div>` +
-            `</div>`;
-        } else {
-            bodyHtml = sortedWeekKeys.map(weekKey => {
-                const list = groupedByWeek.get(weekKey);
+        // View state only. It never changes what was scanned, just whether
+        // findings you already signed off on are on screen.
+        let showAll = false;
+
+        function issueListHtml(list) {
+            const groupedByWeek = new Map();
+            list.forEach(issue => {
+                const key = issue.weekKey || '—';
+                if (!groupedByWeek.has(key)) groupedByWeek.set(key, []);
+                groupedByWeek.get(key).push(issue);
+            });
+            const sortedWeekKeys = Array.from(groupedByWeek.keys()).sort((a, b) => b.localeCompare(a));
+
+            return sortedWeekKeys.map(weekKey => {
+                const group = groupedByWeek.get(weekKey);
                 const label = weekKey === '—' ? 'No period' : formatWeekLabel(weekKey, weeklyData);
                 return `<div style="margin-bottom:18px;">` +
-                    `<div style="font-weight:700; color:#1a237e; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);">${escapeHtml(label)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${list.length} issue${list.length === 1 ? '' : 's'})</span></div>` +
-                    list.map(issue => `<div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; font-size:0.9em;">` +
+                    `<div style="font-weight:700; color:#1a237e; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);">${escapeHtml(label)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${group.length} issue${group.length === 1 ? '' : 's'})</span></div>` +
+                    group.map(issue => `<div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; font-size:0.9em;">` +
                         `<div style="flex-shrink:0; width:52px;">${severityBadge(issue.severity)}</div>` +
                         `<div style="flex:1;">` +
                             `<div style="color:#424242;">${escapeHtml(issue.message)}</div>` +
@@ -340,39 +380,111 @@
             }).join('');
         }
 
-        const overlay = document.createElement('div');
-        overlay.id = 'dataIntegrityModal';
-        overlay.className = 'modal-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+        function emptyStateHtml(reviewedCount) {
+            const note = reviewedCount
+                ? `${reviewedCount} finding${reviewedCount === 1 ? '' : 's'} you already cleared ${reviewedCount === 1 ? 'is' : 'are'} hidden.`
+                : 'Your upload history looks clean.';
+            return `<div style="padding:40px; text-align:center; color:var(--green-text);">` +
+                `<div style="font-size:3em; margin-bottom:12px;">✅</div>` +
+                `<div style="font-size:1.15em; font-weight:600;">Nothing new to look at.</div>` +
+                `<div style="color:var(--text-secondary); font-size:0.9em; margin-top:8px;">${escapeHtml(note)}</div>` +
+            `</div>`;
+        }
 
-        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
-            `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
-                `<div>` +
-                    `<h2 style="margin:0; color:#1a237e; font-size:1.25em;">\uD83D\uDD0D Data Health Check</h2>` +
-                    `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
-                        `${summary.total} issue${summary.total === 1 ? '' : 's'} found \u2022 ` +
-                        `<span style="color:var(--red-text); font-weight:600;">${summary.high} high</span> \u2022 ` +
-                        `<span style="color:#ef6c00; font-weight:600;">${summary.medium} medium</span> \u2022 ` +
-                        `<span style="color:#1565c0; font-weight:600;">${summary.low} low</span>` +
+        function paint() {
+            const reviewed = loadReviewed();
+            const unreviewed = issues.filter(issue => !reviewed.has(issueFingerprint(issue)));
+            const hiddenCount = issues.length - unreviewed.length;
+            const visible = showAll ? issues : unreviewed;
+
+            const counts = {
+                high: visible.filter(i => i.severity === 'high').length,
+                medium: visible.filter(i => i.severity === 'medium').length,
+                low: visible.filter(i => i.severity === 'low').length
+            };
+
+            const bodyHtml = visible.length ? issueListHtml(visible) : emptyStateHtml(hiddenCount);
+
+            const hiddenNote = hiddenCount && !showAll
+                ? ` • <span style="color:var(--text-tertiary);">${hiddenCount} cleared and hidden</span>`
+                : '';
+
+            overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
+                `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
+                    `<div>` +
+                        `<h2 style="margin:0; color:#1a237e; font-size:1.25em;">🔍 Data Health Check</h2>` +
+                        `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
+                            `${visible.length} issue${visible.length === 1 ? '' : 's'} shown • ` +
+                            `<span style="color:var(--red-text); font-weight:600;">${counts.high} high</span> • ` +
+                            `<span style="color:#ef6c00; font-weight:600;">${counts.medium} medium</span> • ` +
+                            `<span style="color:#1565c0; font-weight:600;">${counts.low} low</span>` +
+                            hiddenNote +
+                        `</div>` +
                     `</div>` +
+                    `<button id="dataIntegrityClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">✕</button>` +
                 `</div>` +
-                `<button id="dataIntegrityClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>` +
-            `</div>` +
-            `<div style="padding:16px 24px; overflow-y:auto; flex:1;">${bodyHtml}</div>` +
-            `<div style="padding:14px 24px; border-top:1px solid #eceff1; text-align:right;">` +
-                `<button id="dataIntegrityCloseBtn" style="background:#1a237e; color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Close</button>` +
-            `</div>` +
-        `</div>`;
+                `<div style="padding:16px 24px; overflow-y:auto; flex:1;">${bodyHtml}</div>` +
+                `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">` +
+                    `<div style="display:flex; gap:8px; flex-wrap:wrap;">` +
+                        (issues.length
+                            ? `<button id="dataIntegrityWipe" style="background:#7b1fa2; color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🧹 Clear these — seen them</button>`
+                            : '') +
+                        (hiddenCount
+                            ? `<button id="dataIntegrityToggle" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">${showAll ? 'Hide cleared' : `Show cleared (${hiddenCount})`}</button>`
+                            : '') +
+                        (hiddenCount
+                            ? `<button id="dataIntegrityRestore" style="background:none; color:var(--text-secondary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">Bring them all back</button>`
+                            : '') +
+                    `</div>` +
+                    `<button id="dataIntegrityCloseBtn" style="background:#1a237e; color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Close</button>` +
+                `</div>` +
+            `</div>`;
+
+            overlay.querySelector('#dataIntegrityClose').addEventListener('click', () => overlay.remove());
+            overlay.querySelector('#dataIntegrityCloseBtn').addEventListener('click', () => overlay.remove());
+
+            const wipeBtn = overlay.querySelector('#dataIntegrityWipe');
+            if (wipeBtn) {
+                wipeBtn.addEventListener('click', () => {
+                    // Marks every finding this scan produced, so the list comes
+                    // back empty until something genuinely new turns up. The
+                    // uploads themselves are untouched.
+                    markReviewed(issues);
+                    showAll = false;
+                    paint();
+                });
+            }
+
+            const toggleBtn = overlay.querySelector('#dataIntegrityToggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    showAll = !showAll;
+                    paint();
+                });
+            }
+
+            const restoreBtn = overlay.querySelector('#dataIntegrityRestore');
+            if (restoreBtn) {
+                restoreBtn.addEventListener('click', () => {
+                    clearReviewed();
+                    showAll = false;
+                    paint();
+                });
+            }
+        }
 
         document.body.appendChild(overlay);
-        document.getElementById('dataIntegrityClose').addEventListener('click', () => overlay.remove());
-        document.getElementById('dataIntegrityCloseBtn').addEventListener('click', () => overlay.remove());
+        paint();
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.dataIntegrity = {
         runDataIntegrityScan,
-        showDataIntegrityModal
+        showDataIntegrityModal,
+        issueFingerprint,
+        loadReviewed,
+        markReviewed,
+        clearReviewed
     };
 })();

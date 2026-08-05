@@ -275,6 +275,47 @@ suite('call transcript: timestamped turns with no speaker labels', (t) => {
     t.check('and no airtime coaching is invented', !keys(analysis.allImprovements).includes('airtime'));
 });
 
+// Without speaker labels the customer's short replies used to be read as the
+// advisor's, which starved every customer-side rule on exactly the calls that
+// needed them.
+suite('call transcript: attributing an unlabelled export', (t) => {
+    const { callTranscript } = load(t);
+
+    const rough = [
+        'No visual indicators selected',
+        '00:03', 'thank you for calling my name is sam',
+        '00:08', 'this is ridiculous i have called three times',
+        '00:14', 'let me pull up the account for you',
+        '00:20', 'like i said before nobody fixed it',
+        '00:30', 'i want to speak to a supervisor',
+        '00:36', 'the charge posted on the fourth'
+    ].join('\n');
+
+    const parsed = callTranscript.parseTranscript(rough);
+    t.check('frustration lands on the customer', /this is ridiculous/.test(parsed.customerText));
+    t.check('repeating themselves lands on the customer', /like i said/.test(parsed.customerText));
+    t.check('the escalation request lands on the customer', /speak to a supervisor/.test(parsed.customerText));
+    t.check('advisor process language stays with the advisor', /let me pull up/.test(parsed.agentText));
+
+    // An inferred guess counts towards the customer without being taken away
+    // from the advisor, so a wrong guess cannot hide an advisor line.
+    t.check('inferred turns still count as advisor speech', /the charge posted on the fourth/.test(parsed.agentText));
+
+    const analysis = callTranscript.analyzeTranscript(rough);
+    const flags = keys(analysis.allImprovements);
+    t.check('so the repeat-yourself rule fires', flags.includes('repeatCustomer'));
+    t.check('and the escalation rule fires', flags.includes('supervisorRequest'));
+    t.equal('and empathy is escalated to the top',
+        analysis.allImprovements.find((item) => item.key === 'empathy').weight, 12);
+
+    // The good call must not be damaged by the same inference.
+    const good = callTranscript.parseTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
+    t.check('recovers far more of the customer side', good.customerWords > 200);
+    t.check('advisor greeting still attributed correctly', /valued customer/.test(good.agentText));
+    t.check('system lag still attributed to the advisor', /just loading/.test(good.agentText));
+    t.check('the compliment is still the customer', /very helpful/.test(good.customerText));
+});
+
 suite('call transcript: silence measured from timestamps', (t) => {
     const { callTranscript } = load(t);
     const analysis = callTranscript.analyzeTranscript(VERINT_EXPORT, { associateName: 'Alyssa Dimes' });
@@ -291,6 +332,22 @@ suite('call transcript: silence measured from timestamps', (t) => {
     t.check('says when it happened', /at 7:56/.test(deadAir.text));
 
     t.check('short pauses are not flagged', found.filter((k) => k === 'deadAirGap').length === 1);
+
+    // The measured silence and the "one moment" filler count describe the same
+    // event, so only the one carrying a number and a time survives.
+    t.check('does not also report the vaguer filler bullet', !found.includes('stalling'));
+
+    // With no timestamps there is nothing to measure, so the filler count is
+    // the only signal available and must still be reported.
+    const untimed = callTranscript.analyzeTranscript([
+        'Agent: One moment please.',
+        'Customer: Ok.',
+        'Agent: Just a second, bear with me.',
+        'Customer: Sure.',
+        'Agent: Still checking, give me a moment.'
+    ].join('\n'));
+    t.check('filler count survives when silence cannot be measured',
+        keys(untimed.allImprovements).includes('stalling'));
 });
 
 suite('call transcript: a good call reads as a good call', (t) => {
