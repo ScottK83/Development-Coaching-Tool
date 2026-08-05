@@ -1146,32 +1146,64 @@ window.saveEmployeePreferredName = function(fullName) {
     renderEmployeesList();
 };
 
-// One-time supervisor seeds
+// Hardcoded supervisor rosters (v4 — read off by Scott 2026-08-05).
 // REFACTOR: These hardcoded employee names should be moved to a config file
 // or loaded from KV/localStorage seed endpoint to avoid PII in source control
 // and to simplify team roster updates.
-(function seedSupervisorTeams() {
-    const seeds = [
-        { key: 'miranda_v3', supervisor: 'Miranda', agents: ['Scarlett', 'Shelby', 'Jose', 'Edgar', 'Taylor Colter', 'JoAnn', 'Erika Forte', 'Brianna', 'Derrick', 'Victoria', 'Milani', 'Dyna', 'Alicia', 'India', 'Tina', 'Kassandra'] },
-        { key: 'kathy_v3', supervisor: 'Kathy', agents: ['Michelle Castro', 'Diane', 'Trisha', 'Jennifer Frank', 'Erin', 'April', 'Suzette', 'Jammie', 'Elbia', 'Precious', 'Natasha', 'Emily', 'Sonya', 'Charles', 'Sandra', 'Paul', 'Sebastian', 'Dillon'] },
-        { key: 'angie_v3', supervisor: 'Angie', agents: ['Melinda', 'Ronda', 'Miah', 'Anahi', 'Retta', 'Jarusha', 'Sarah Jordan', 'Dawn', 'Rachel', 'Ariell', 'Brandi', 'Cindy Pipkins', 'Alexandra', 'Christi-Ann Thompson', 'Alejandra', 'Lonia', 'Crystal Villalpando'] },
-        { key: 'sarah_v3', supervisor: 'Sarah', agents: ['Magarsa', 'Solomon', 'Marietta', 'Brittney Carroll', 'Darryn', 'Armida', 'Erika Garrett', 'Kim Gugora', 'Keshay', 'Aldo', 'Sophie', 'Holly', 'John', 'Pamela', 'Eilene', 'Trevor', 'Needra', 'Briana Z', 'Ekiecha'] },
-        { key: 'schnelle_v3', supervisor: 'Schnelle', agents: ['Aleynia', 'Stephanie', 'Alexis', 'Caylie', 'Caitlyn', 'Jenifer Henson', 'Lily', 'Kimmy', 'Anissa', 'Monica Madden', 'Crystal Nez', 'Scoticia', 'Seth', 'Teena', 'Tracy', 'Dangela', 'Michelle Weibrecht', 'Rachael Wilson'] },
-        { key: 'nicole_v3', supervisor: 'Nicole', agents: ['Amy', 'Jessica', 'Richard', 'Imelda', 'Jacob', 'Bruce', 'Nikayla', 'Wisdom', 'Cecily', 'Tanya Davis', 'Geralene', 'Dawanda', 'Shawn', 'Ashley', 'Cindy Robledo', 'Ebany', 'Monica Stringer', 'Brayden', 'Jereca'] },
-        { key: 'scott_v3', supervisor: 'Scott', agents: ['Alyssa', 'Angelina', 'Betty', 'Christi Martinez-Sharp', 'Desiree', 'Destiny', 'Erica Kallestewa', 'Esperanza', 'Esther', 'Jadyn', 'James Garcia', 'Johnathan', 'Kamella', 'Kristin', 'Matrece', 'Oceane', 'Robert', 'Sabrina'] },
-        { key: 'angela_allison_v3', supervisor: 'Angela Allison', agents: ['Keyahveh'] }
-    ];
-    const needsRun = seeds.filter(function(s) { return !localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_' + s.key); });
-    if (needsRun.length === 0) return;
+//
+// The roster is authoritative: it re-applies on every load, so a rep whose data
+// is uploaded later still lands on the right team, and a rep who moves teams here
+// moves everywhere. Anyone NOT on the roster keeps whatever the Settings screen
+// assigned them. Names are matched on FULL name — there are duplicate first names
+// across teams (two Roberts, two Sabrinas, three Ericas), so first-name-only
+// matching would put people on the wrong team.
+const SUPERVISOR_ROSTER = [
+    { supervisor: 'Angela Allison', agents: ['Lashray Concho', 'Austin Hadlock', 'Jacob Head', 'Katie Hees', 'Jules Jefferson', 'Savannah Johansson', 'Tiffany Calupoli', 'Key McTier', 'Taylor Maine', 'Ayisha Oaks', 'Hailey Pennington', 'Janessa Ramirez', 'Robert Sullivan', 'Sabrina Trent', 'Alana Usuri', 'Jeffrey Young'] },
+    { supervisor: 'Miranda Chase', agents: ['Jose Otaid', 'Edgar Calvillo', 'Wendy Cervantes', 'Taylor Coulter', 'Joanne Courtney', 'Erica Forte', 'Briana Hill', 'Derrick Ingram', 'Victoria Johnson', 'Milani Ortega-Phung', 'Alicia Snyder', 'India Terrain', 'Tina Williams'] },
+    { supervisor: 'Kathy Cruz', agents: ['Michelle Castro', 'Diane Cordova', 'Patricia Herb', 'Jennifer Frank', 'Aaron Gray', 'Lynette Gomez', 'April Gonzalez', 'Jamie Harvey', 'Elbia Johnson', 'Precious Johnson', 'Natasha Jordan', 'Sonia Martin', 'Charles McCormack', 'Sandra Pazar Rodriguez', 'Paul Schoenthaler', 'Sebastian Vera', 'Dylan Jager'] },
+    { supervisor: 'Angie Delgado', agents: ['Melinda Kano', 'Ronda Colis', 'Mia Dixon', 'Anahi Griego', 'Rzada Hayes', 'Sherry Hanson', 'Jerusha Holmes', 'Sarah Jordan', 'Don Martinez', 'Rachel Malenderis', 'Ariel Millican', 'Brandy Olson', 'Cindy Pitkins', 'Alexandra Wrangle', 'Christy Ann Thompson', 'Alejandra Valdez', 'Lanier Varella', 'Crystal Villa Pondeau'] },
+    { supervisor: 'Christine Ellis', agents: ['Daniel Adams', 'Veronica Barrios', 'Javier De Leon', 'Margarita Gastello', 'Debbie Hernandez', 'Dolores Hernandez', 'Lily Hanahi', 'Carla Canuri', 'Maria Lopez', 'Nancy McCarthy', 'Stephanie McNair', 'Lisa Oust', 'Raquel Perez', 'John Ruiz', 'Sherry Rycraft', 'Christina Sanchez', 'Michael Vaughan', 'Alexia Zeniga'] },
+    { supervisor: 'Sarah Gregory', agents: ['MacArthur Ali', 'Solomon Arona', 'Akisha Brabham', 'Brittany Carol', 'Darien Cole', 'Julia Fierro', 'Armida Flores', 'Erica Garrett', 'Kim Gagora', 'Kasey Gadri', 'Maretta Henderson', 'Aldo Hernandez', 'Jessica Hilario', 'Sophie Holland', 'Holly LaMotzka', 'Rocio Mendes', 'John Montoya', 'Adrian Morales', 'Pamela Mohammed', 'Aileen Parish', 'Erica Trejo', 'Briana Zambrano'] },
+    { supervisor: 'Chenal Howard', agents: ['Sarah Komatto', 'Stephanie Carboha Sayes', 'Alex Carroll', 'Kaylee Turambolo', 'Katelyn Fiddler', 'Daniel Gradias', 'Jennifer Hanson', 'Jimmy Hung', 'Monica Madden', 'Crystal Nez', 'Scotticia Osborne', 'Seth Pingard', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachel Wilson'] },
+    { supervisor: 'Nicole Pazienza', agents: ['Amy Armenta', 'Jessica Barbosa', 'Richard Bill', 'Amanda Bustos', 'Jacob Turnoff', 'Bruce Cram', 'Michaela Cruz', 'Wisdom Curry', 'Cecily Daniels', 'Tanya Davis', 'Geraldine Dixon', 'Dawanda Kiezi-Daniel', 'Sean Lee', 'Cynthia Pacheco', 'Ashley Robinson', 'Cindy Robledo Avanizodo', 'Monica Stringer', 'Braden Theovar', 'Jerika Whiteman'] },
+    { supervisor: 'Scott', agents: ['Robert Barilosa', 'Destiny Cervantes', 'Desiree Clark', 'Pamela Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jaden Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erika Cholestewa', 'Brandywine Lockhart', 'Christy Martinez Sharp', 'Patrice Muldro', 'Jonathan Padilla', 'Esperanza Palomara', 'Esther Ramos', 'Kristen Valea', 'Betty Yanez'] }
+];
 
-    // v3 migration: clear old assignments for a clean re-seed
+// "Last, First" -> "first last", lowercased, punctuation stripped, spaces collapsed.
+function normalizeRosterName(name) {
+    let n = String(name || '').trim();
+    if (n.indexOf(',') > -1) {
+        const halves = n.split(',');
+        n = halves.slice(1).join(' ').trim() + ' ' + halves[0].trim();
+    }
+    return n.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// Surnames are every token after the first. Uploads and the roster disagree on
+// compound surnames (Robledo vs Robledo Avanizodo, Martinez Sharp vs
+// Martinez-Sharp), so tokens count as a hit when one contains the other.
+function rosterSurnamesOverlap(aTokens, bTokens) {
+    const a = aTokens.slice(1), b = bTokens.slice(1);
+    if (!a.length || !b.length) return false;
+    return a.some(function(x) {
+        return b.some(function(y) {
+            if (x === y) return true;
+            return x.length >= 4 && y.length >= 4 && (x.indexOf(y) > -1 || y.indexOf(x) > -1);
+        });
+    });
+}
+
+(function seedSupervisorTeams() {
     let existing = {};
-    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v3_migration')) {
+    // v4 migration: wipe the v3 assignments once so retired names and old
+    // supervisor labels (Kathy, Schnelle, ...) don't linger on the rankings.
+    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration')) {
         localStorage.removeItem(STORAGE_PREFIX + 'employeeSupervisors');
-        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v3_migration', '1');
+        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration', '1');
     } else {
         try { existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
     }
+
     const allEmps = {};
     try {
         const wd = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'weeklyData') || '{}');
@@ -1184,21 +1216,49 @@ window.saveEmployeePreferredName = function(fullName) {
             });
         });
     } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse employee data:', _e.message); }
-    var empNames = Object.keys(allEmps);
 
-    needsRun.forEach(function(seed) {
-        seed.agents.forEach(function(agent) {
-            var match = empNames.find(function(e) { return e === agent; });
-            if (!match) match = empNames.find(function(e) { return e.toLowerCase() === agent.toLowerCase(); });
-            if (!match) match = empNames.find(function(e) { return e.split(' ')[0].toLowerCase() === agent.split(' ')[0].toLowerCase(); });
-            if (!match) match = empNames.find(function(e) { var parts = e.split(' '); return parts.length > 1 && parts[parts.length - 1].toLowerCase() === agent.toLowerCase(); });
-            if (match && !existing[match]) {
-                existing[match] = seed.supervisor;
+    const candidates = Object.keys(allEmps).map(function(raw) {
+        const norm = normalizeRosterName(raw);
+        return { raw: raw, norm: norm, tokens: norm.split(' ').filter(Boolean) };
+    });
+    if (!candidates.length) return;
+
+    // Only accept a tier when exactly one employee qualifies — an ambiguous name
+    // is left unassigned rather than guessed onto the wrong team.
+    function uniqueMatch(pool, predicate) {
+        const hits = pool.filter(predicate);
+        return hits.length === 1 ? hits[0] : null;
+    }
+
+    const unmatched = [];
+    SUPERVISOR_ROSTER.forEach(function(team) {
+        team.agents.forEach(function(agent) {
+            const norm = normalizeRosterName(agent);
+            const tokens = norm.split(' ').filter(Boolean);
+            const first = tokens[0] || '';
+
+            let hit = uniqueMatch(candidates, function(c) { return c.norm === norm; });
+            if (!hit) hit = uniqueMatch(candidates, function(c) { return c.tokens[0] === first && rosterSurnamesOverlap(tokens, c.tokens); });
+            // Nicknames and spelling drift on the first name (Christi/Christy,
+            // Erica/Erika, Jadyn/Jaden) — surname still has to line up.
+            if (!hit) hit = uniqueMatch(candidates, function(c) {
+                const cf = c.tokens[0] || '';
+                const sharesPrefix = first.length >= 3 && cf.length >= 3 && (first.indexOf(cf.slice(0, 3)) === 0 || cf.indexOf(first.slice(0, 3)) === 0);
+                return sharesPrefix && rosterSurnamesOverlap(tokens, c.tokens);
+            });
+            // Uploads that carry a first name only.
+            if (!hit) hit = uniqueMatch(candidates, function(c) { return c.tokens.length === 1 && c.tokens[0] === first; });
+
+            if (hit) {
+                existing[hit.raw] = team.supervisor;
+            } else {
+                unmatched.push(team.supervisor + ': ' + agent);
             }
         });
-        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_' + seed.key, '1');
     });
+
     localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(existing));
+    if (unmatched.length) console.info('[seedSupervisorTeams] No employee data matched ' + unmatched.length + ' rostered name(s):', unmatched);
 })();
 
 function getEmployeeSupervisors() {

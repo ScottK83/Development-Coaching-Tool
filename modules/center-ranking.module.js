@@ -7,14 +7,15 @@
     // bg = light-mode row tint, dark = dark-mode row tint, dot = vivid accent for
     // the name-cell indicator (needs to read clearly on BOTH row backgrounds).
     var SUPERVISOR_COLORS = {
-        'Scott':           { bg: '#e3f2fd', dark: '#0d2137', dot: '#1e88e5' },
-        'Miranda':         { bg: '#fce4ec', dark: '#2a1015', dot: '#ec407a' },
-        'Kathy':           { bg: '#f3e5f5', dark: '#1f0f24', dot: '#ab47bc' },
-        'Angie':           { bg: '#fff3e0', dark: '#2a1d08', dot: '#fb8c00' },
-        'Sarah':           { bg: '#e8f5e9', dark: '#0d2010', dot: '#43a047' },
-        'Schnelle':        { bg: '#e0f7fa', dark: '#0a1f22', dot: '#00acc1' },
-        'Nicole':          { bg: '#fff9c4', dark: '#2a2508', dot: '#fdd835' },
-        'Angela Allison':  { bg: '#f1f8e9', dark: '#1a2410', dot: '#7cb342' }
+        'Scott':            { bg: '#e3f2fd', dark: '#0d2137', dot: '#1e88e5' },
+        'Miranda Chase':    { bg: '#fce4ec', dark: '#2a1015', dot: '#ec407a' },
+        'Kathy Cruz':       { bg: '#f3e5f5', dark: '#1f0f24', dot: '#ab47bc' },
+        'Angie Delgado':    { bg: '#fff3e0', dark: '#2a1d08', dot: '#fb8c00' },
+        'Christine Ellis':  { bg: '#e8eaf6', dark: '#141830', dot: '#5c6bc0' },
+        'Sarah Gregory':    { bg: '#e8f5e9', dark: '#0d2010', dot: '#43a047' },
+        'Chenal Howard':    { bg: '#e0f7fa', dark: '#0a1f22', dot: '#00acc1' },
+        'Nicole Pazienza':  { bg: '#fff9c4', dark: '#2a2508', dot: '#fdd835' },
+        'Angela Allison':   { bg: '#f1f8e9', dark: '#1a2410', dot: '#7cb342' }
     };
 
     function _getSupervisorColor(empName) {
