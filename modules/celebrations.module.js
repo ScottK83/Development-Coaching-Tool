@@ -205,8 +205,14 @@
             rank1CountsByMetric[metricKey] = count;
         });
 
+        // Ranks are still worked out across the whole center — that's what makes
+        // an achievement mean something — but who gets celebrated follows the
+        // My Team picker, so choosing one person shows only their wins.
+        var scope = window.DevCoachModules?.teamScope;
+
         data.rankings.forEach(function(r) {
             if (!data.teamMembers.has(r.name)) return;
+            if (scope?.isInScope && !scope.isInScope(r.name)) return;
 
             var achievements = [];
 

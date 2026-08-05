@@ -770,6 +770,17 @@ textarea:focus-visible {
     color: var(--text-primary) !important;
 }
 
+.btn-danger {
+    background: var(--red) !important;
+    color: var(--text-inverse) !important;
+    border: 1px solid var(--red) !important;
+}
+
+.btn-danger:hover {
+    background: var(--red-text) !important;
+    border-color: var(--red-text) !important;
+}
+
 .btn-ai {
     background: var(--brand);
     color: var(--text-inverse);
@@ -896,10 +907,11 @@ textarea:focus-visible {
     letter-spacing: 0.03em;
 }
 
-/* --- Call Listening ---
-   This section is styled from tokens rather than inline hex so it follows the
-   theme in both manual dark mode and system dark mode. */
-#subSectionCallListening .call-panel {
+/* --- Panel sections ---
+   Sections marked .panel-section are styled from tokens rather than inline hex,
+   so they follow the theme in both manual and system dark mode. Add the class
+   to a sub-section to opt it in. */
+.panel-section .call-panel {
     margin-bottom: var(--space-5);
     padding: var(--space-5);
     background: var(--bg-surface);
@@ -907,20 +919,20 @@ textarea:focus-visible {
     border-radius: var(--radius-lg);
 }
 
-#subSectionCallListening .call-panel h3 {
+.panel-section .call-panel h3 {
     margin: 0 0 var(--space-3) 0;
     color: var(--text-primary);
     font-size: 1em;
     font-weight: 650;
 }
 
-#subSectionCallListening .call-panel > p {
+.panel-section .call-panel > p {
     color: var(--text-secondary);
     font-size: 0.9em;
     margin-bottom: var(--space-4);
 }
 
-#subSectionCallListening code {
+.panel-section code {
     background: var(--bg-surface-sunken);
     color: var(--brand-text);
     padding: 1px 5px;
@@ -929,9 +941,9 @@ textarea:focus-visible {
     font-size: 0.9em;
 }
 
-#subSectionCallListening input,
-#subSectionCallListening select,
-#subSectionCallListening textarea {
+.panel-section input,
+.panel-section select,
+.panel-section textarea {
     width: 100%;
     padding: 9px 12px;
     border: 1px solid var(--border-strong);
@@ -942,29 +954,29 @@ textarea:focus-visible {
     font-size: 0.9em;
 }
 
-#subSectionCallListening textarea {
+.panel-section textarea {
     resize: vertical;
     line-height: var(--leading-normal);
 }
 
-#subSectionCallListening textarea.call-mono {
+.panel-section textarea.call-mono {
     font-family: var(--font-mono);
     font-size: 0.85em;
 }
 
-#subSectionCallListening textarea[readonly] {
+.panel-section textarea[readonly] {
     background: var(--bg-surface-sunken);
 }
 
-#subSectionCallListening input:focus,
-#subSectionCallListening select:focus,
-#subSectionCallListening textarea:focus {
+.panel-section input:focus,
+.panel-section select:focus,
+.panel-section textarea:focus {
     outline: none;
     border-color: var(--brand);
     box-shadow: var(--shadow-focus);
 }
 
-#subSectionCallListening .call-note {
+.panel-section .call-note {
     padding: var(--space-3) var(--space-4);
     border-left: 3px solid var(--brand);
     background: var(--brand-soft);
@@ -974,33 +986,33 @@ textarea:focus-visible {
     line-height: var(--leading-normal);
 }
 
-#subSectionCallListening .call-note-success {
+.panel-section .call-note-success {
     border-left-color: var(--green);
     background: var(--green-soft);
 }
 
-#subSectionCallListening .call-panel-action {
+.panel-section .call-panel-action {
     border: 1px solid var(--yellow);
     background: var(--yellow-soft);
 }
 
-#subSectionCallListening .call-grid-setup {
+.panel-section .call-grid-setup {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: var(--space-3);
 }
 
-#subSectionCallListening .call-field + .call-field {
+.panel-section .call-field + .call-field {
     margin-top: var(--space-3);
 }
 
-#subSectionCallListening .call-qa-list {
+.panel-section .call-qa-list {
     list-style: none;
     margin: 0 0 var(--space-4) 0;
     padding: 0;
 }
 
-#subSectionCallListening .call-qa-row {
+.panel-section .call-qa-row {
     display: flex;
     gap: var(--space-3);
     align-items: flex-start;
@@ -1008,11 +1020,11 @@ textarea:focus-visible {
     border-bottom: 1px solid var(--border);
 }
 
-#subSectionCallListening .call-qa-row:last-child {
+.panel-section .call-qa-row:last-child {
     border-bottom: none;
 }
 
-#subSectionCallListening .call-qa-chip {
+.panel-section .call-qa-chip {
     flex: 0 0 auto;
     min-width: 92px;
     text-align: center;
@@ -1026,25 +1038,25 @@ textarea:focus-visible {
     line-height: 1.6;
 }
 
-#subSectionCallListening .call-qa-question {
+.panel-section .call-qa-question {
     font-weight: 650;
     color: var(--text-primary);
 }
 
-#subSectionCallListening .call-qa-detail {
+.panel-section .call-qa-detail {
     color: var(--text-secondary);
     font-size: 0.88em;
     margin-top: 2px;
 }
 
-#subSectionCallListening .call-qa-evidence {
+.panel-section .call-qa-evidence {
     color: var(--text-tertiary);
     font-size: 0.85em;
     font-style: italic;
     margin-top: var(--space-1);
 }
 
-#subSectionCallListening .call-qa-checklist {
+.panel-section .call-qa-checklist {
     padding: var(--space-2) 0;
     font-size: 0.9em;
     color: var(--text-primary);
@@ -1052,13 +1064,13 @@ textarea:focus-visible {
 }
 
 @media (max-width: 700px) {
-    #subSectionCallListening .call-qa-row {
+    .panel-section .call-qa-row {
         flex-direction: column;
         gap: var(--space-2);
     }
 }
 
-#subSectionCallListening .call-trend-group {
+.panel-section .call-trend-group {
     padding: var(--space-3) var(--space-4);
     border-left: 3px solid var(--border-strong);
     border-radius: var(--radius-sm);
@@ -1066,17 +1078,17 @@ textarea:focus-visible {
     margin-bottom: var(--space-3);
 }
 
-#subSectionCallListening .call-trend-good {
+.panel-section .call-trend-good {
     border-left-color: var(--green);
     background: var(--green-soft);
 }
 
-#subSectionCallListening .call-trend-warn {
+.panel-section .call-trend-warn {
     border-left-color: var(--yellow);
     background: var(--yellow-soft);
 }
 
-#subSectionCallListening .call-trend-title {
+.panel-section .call-trend-title {
     font-weight: 650;
     font-size: 0.85em;
     text-transform: uppercase;
@@ -1085,43 +1097,43 @@ textarea:focus-visible {
     margin-bottom: var(--space-2);
 }
 
-#subSectionCallListening .call-trend-group ul {
+.panel-section .call-trend-group ul {
     margin: 0;
     padding-left: 18px;
     font-size: 0.9em;
     color: var(--text-primary);
 }
 
-#subSectionCallListening .call-history {
+.panel-section .call-history {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-#subSectionCallListening .call-history-item {
+.panel-section .call-history-item {
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border);
     line-height: var(--leading-normal);
 }
 
-#subSectionCallListening .call-history-item:last-child {
+.panel-section .call-history-item:last-child {
     border-bottom: none;
 }
 
-#subSectionCallListening .call-history-title {
+.panel-section .call-history-title {
     font-weight: 650;
     color: var(--text-primary);
 }
 
-#subSectionCallListening .call-history-meta {
+.panel-section .call-history-meta {
     font-size: 0.82em;
     color: var(--text-tertiary);
     margin-top: var(--space-1);
 }
 
 @media (max-width: 700px) {
-    #subSectionCallListening .call-grid-setup,
-    #subSectionCallListening .grid-2col {
+    .panel-section .call-grid-setup,
+    .panel-section .grid-2col {
         grid-template-columns: 1fr;
     }
 }

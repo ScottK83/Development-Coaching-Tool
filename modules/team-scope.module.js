@@ -4,102 +4,62 @@
     /**
      * TEAM SCOPE
      *
-     * The app already knew who reports to whom — `employeeSupervisors` maps an
-     * associate to a supervisor. What it never had was a way to say "show me
-     * Kathy's team" and have the rest of the tool follow along.
+     * Who on my team am I working with right now — everyone, or one person.
      *
-     * This turns that map into a list of teams, remembers which one you picked,
-     * and hands the members to team-filter so every My Team feature narrows to
-     * it without each of them growing its own team logic.
+     * The roster is the team list the tool has always kept (Settings › Team
+     * Members, falling back to the default 18). This does not reach for the
+     * supervisor map: My Team means my team, not a picker for the whole floor.
+     *
+     * Picking a person here narrows every My Team tab, because team-filter
+     * folds the scope into the context those tabs already consult.
      */
 
     const PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
-    const SUPERVISORS_KEY = PREFIX + 'employeeSupervisors';
-    const ACTIVE_TEAM_KEY = PREFIX + 'activeTeamId';
+    const ACTIVE_MEMBER_KEY = PREFIX + 'activeTeamMember';
 
-    const ALL_TEAMS_ID = '__all__';
-    const UNASSIGNED_ID = '__unassigned__';
-
-    function slugify(label) {
-        return String(label || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') || 'team';
-    }
+    const ALL_MEMBERS_ID = '__all__';
 
     /**
-     * Builds the team list from the supervisor map, restricted to associates
-     * who actually show up in the data. A supervisor whose whole team has left
-     * the uploads shouldn't still be offered in the dropdown.
+     * The people the dropdown offers: my team, narrowed to whoever actually
+     * shows up in the uploads.
      *
-     * Returns { teams, byEmployee, unassignedCount }. `teams` is sorted by
-     * label, with the unassigned bucket last so it never leads the list.
+     * Before anything is uploaded there is nothing to narrow against, so the
+     * team list stands on its own — an empty dropdown on a fresh install would
+     * look broken rather than empty.
      */
-    function buildTeamIndex(supervisorMap, employeeNames) {
-        const map = supervisorMap && typeof supervisorMap === 'object' ? supervisorMap : {};
-        const roster = Array.from(new Set((employeeNames || [])
+    function buildRoster(teamMemberNames, knownEmployeeNames) {
+        const team = Array.from(new Set((teamMemberNames || [])
             .map(name => String(name || '').trim())
             .filter(Boolean)));
+        const known = new Set((knownEmployeeNames || [])
+            .map(name => String(name || '').trim())
+            .filter(Boolean));
 
-        const byLabel = new Map();
-        const byEmployee = {};
-        const unassigned = [];
-
-        roster.forEach(name => {
-            const supervisor = String(map[name] || '').trim();
-            if (!supervisor) {
-                unassigned.push(name);
-                return;
-            }
-            if (!byLabel.has(supervisor)) byLabel.set(supervisor, []);
-            byLabel.get(supervisor).push(name);
-            byEmployee[name] = supervisor;
-        });
-
-        const teams = Array.from(byLabel.entries())
-            .map(([label, members]) => ({
-                id: slugify(label),
-                label,
-                members: members.slice().sort((a, b) => a.localeCompare(b))
-            }))
-            .sort((a, b) => a.label.localeCompare(b.label));
-
-        if (unassigned.length) {
-            teams.push({
-                id: UNASSIGNED_ID,
-                label: 'Unassigned',
-                members: unassigned.slice().sort((a, b) => a.localeCompare(b))
-            });
-        }
-
-        return { teams, byEmployee, unassignedCount: unassigned.length };
+        const roster = known.size ? team.filter(name => known.has(name)) : team;
+        return roster.sort((a, b) => a.localeCompare(b));
     }
 
     /**
-     * Which team the UI should act on. A stored id that no longer matches a
-     * real team falls back to "all" rather than silently scoping everything to
-     * an empty roster — an empty team reads as "no data" everywhere downstream,
-     * which is a confusing way to learn your saved selection went stale.
+     * A stored name that has left the team falls back to "everyone" rather than
+     * scoping the app to a person who isn't there — that reads as "no data"
+     * everywhere at once, which hides the real cause.
      */
-    function resolveActiveTeam(index, storedId) {
-        const teams = (index && index.teams) || [];
-        if (!storedId || storedId === ALL_TEAMS_ID) return null;
-        return teams.find(team => team.id === storedId) || null;
+    function resolveActiveMember(roster, storedId) {
+        if (!storedId || storedId === ALL_MEMBERS_ID) return null;
+        return (roster || []).indexOf(storedId) > -1 ? storedId : null;
     }
 
     // --- Data access ---
 
-    function getSupervisorMap() {
-        try {
-            return JSON.parse(localStorage.getItem(SUPERVISORS_KEY) || '{}') || {};
-        } catch (e) {
-            return {};
-        }
+    function getMyTeamNames() {
+        const filter = window.DevCoachModules?.teamFilter;
+        if (!filter?.getTeamMembersForWeek) return [];
+        const weekKey = filter.getTeamSelectionWeekKey ? filter.getTeamSelectionWeekKey() : '';
+        return filter.getTeamMembersForWeek(weekKey) || [];
     }
 
-    // Everyone the tool has ever seen, across every store. Highlights and the
-    // dropdown both need the full roster, not just the latest week.
+    // Everyone the tool has seen, across every store — a rep who only appears
+    // in daily uploads should still be selectable.
     function getKnownEmployeeNames() {
         const storage = window.DevCoachModules?.storage;
         const stores = [
@@ -120,69 +80,71 @@
         return Array.from(names);
     }
 
-    function getTeamIndex() {
-        return buildTeamIndex(getSupervisorMap(), getKnownEmployeeNames());
+    function getMyTeamRoster() {
+        return buildRoster(getMyTeamNames(), getKnownEmployeeNames());
     }
 
-    function getActiveTeamId() {
+    function getActiveMemberId() {
         try {
-            return localStorage.getItem(ACTIVE_TEAM_KEY) || ALL_TEAMS_ID;
+            return localStorage.getItem(ACTIVE_MEMBER_KEY) || ALL_MEMBERS_ID;
         } catch (e) {
-            return ALL_TEAMS_ID;
+            return ALL_MEMBERS_ID;
         }
     }
 
-    function setActiveTeamId(teamId) {
+    function setActiveMemberId(memberId) {
         try {
-            localStorage.setItem(ACTIVE_TEAM_KEY, teamId || ALL_TEAMS_ID);
-        } catch (e) { /* storage blocked — the selection just won't persist */ }
+            localStorage.setItem(ACTIVE_MEMBER_KEY, memberId || ALL_MEMBERS_ID);
+        } catch (e) { /* storage blocked — the pick just won't persist */ }
     }
 
-    function getActiveTeam() {
-        return resolveActiveTeam(getTeamIndex(), getActiveTeamId());
+    function getActiveMember() {
+        return resolveActiveMember(getMyTeamRoster(), getActiveMemberId());
     }
 
     /**
-     * The members the rest of the app should be scoped to, or null for "no team
-     * scope in effect". Null and "every name" are deliberately different: null
-     * means don't narrow anything, which is what team-filter needs to know.
+     * The names the rest of the app should narrow to, or null for "don't
+     * narrow". Null and "every name" are deliberately different — team-filter
+     * needs to tell "no scope" from "a scope that happens to be everyone".
      */
-    function getActiveTeamMembers() {
-        const team = getActiveTeam();
-        return team ? team.members.slice() : null;
+    function getScopeMembers() {
+        const member = getActiveMember();
+        return member ? [member] : null;
     }
 
-    function isInActiveTeam(employeeName) {
-        const members = getActiveTeamMembers();
-        if (!members) return true;
-        return members.indexOf(String(employeeName || '').trim()) > -1;
+    // What the scope is, for the context to report. Null means everyone.
+    function getActiveScope() {
+        const member = getActiveMember();
+        return member ? { id: member, label: member } : null;
     }
 
-    function describeActiveTeam() {
-        const team = getActiveTeam();
-        if (!team) {
-            const index = getTeamIndex();
-            const total = index.teams.reduce((sum, t) => sum + t.members.length, 0);
-            return { label: 'All teams', memberCount: total, isAll: true };
-        }
-        return { label: team.label, memberCount: team.members.length, isAll: false };
+    function isInScope(employeeName) {
+        const member = getActiveMember();
+        if (!member) return true;
+        return String(employeeName || '').trim() === member;
+    }
+
+    function describeScope() {
+        const member = getActiveMember();
+        if (member) return { label: member, memberCount: 1, isAll: false };
+        const roster = getMyTeamRoster();
+        return { label: 'All of my team', memberCount: roster.length, isAll: true };
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.teamScope = {
-        ALL_TEAMS_ID,
-        UNASSIGNED_ID,
-        slugify,
-        buildTeamIndex,
-        resolveActiveTeam,
-        getSupervisorMap,
+        ALL_MEMBERS_ID,
+        buildRoster,
+        resolveActiveMember,
+        getMyTeamNames,
         getKnownEmployeeNames,
-        getTeamIndex,
-        getActiveTeamId,
-        setActiveTeamId,
-        getActiveTeam,
-        getActiveTeamMembers,
-        isInActiveTeam,
-        describeActiveTeam
+        getMyTeamRoster,
+        getActiveMemberId,
+        setActiveMemberId,
+        getActiveMember,
+        getScopeMembers,
+        getActiveScope,
+        isInScope,
+        describeScope
     };
 })();

@@ -7,53 +7,53 @@ function load(t) {
     return t.loadModule('modules/team-filter.module.js').teamFilter;
 }
 
-suite('team filter: the team dropdown narrows the existing filter', (t) => {
+suite('team filter: picking one person narrows the existing filter', (t) => {
     const filter = load(t);
 
-    const checked = ['Alyssa Dimes', 'Betty Yanez', 'Michelle Castro'];
-    const kathysTeam = ['Michelle Castro', 'Diane Ruiz'];
+    const myTeam = ['Alyssa Dimes', 'Betty Yanez', 'Oceane Ingram'];
+    const justOceane = ['Oceane Ingram'];
 
-    // No team picked: whatever was already selected stands untouched.
-    t.equal('no team scope leaves the selection alone', filter.applyTeamScope(checked, null).join(','), checked.join(','));
-    t.equal('and an undefined scope behaves the same', filter.applyTeamScope(checked, undefined).join(','), checked.join(','));
+    // "All of my team" picked: whatever was already selected stands untouched.
+    t.equal('no scope leaves the selection alone', filter.applyTeamScope(myTeam, null).join(','), myTeam.join(','));
+    t.equal('and an undefined scope behaves the same', filter.applyTeamScope(myTeam, undefined).join(','), myTeam.join(','));
 
-    t.equal('a team narrows to the overlap', filter.applyTeamScope(checked, kathysTeam).join(','), 'Michelle Castro');
+    t.equal('one person narrows to just them', filter.applyTeamScope(myTeam, justOceane).join(','), 'Oceane Ingram');
 
     // The two empty cases mean opposite things. No checkboxes ticked has always
-    // meant "everyone", so a team scope with nothing to narrow becomes the team
+    // meant "everyone", so a scope with nothing to narrow becomes the scope
     // itself — not an empty list that would read as "no data".
-    t.equal('an empty selection adopts the whole team', filter.applyTeamScope([], kathysTeam).join(','), 'Michelle Castro,Diane Ruiz');
+    t.equal('an empty selection adopts the scope', filter.applyTeamScope([], justOceane).join(','), 'Oceane Ingram');
 
-    // A team that shares nobody with the ticked list must come back empty
-    // rather than quietly falling back to everyone.
-    t.equal('no overlap means no one', filter.applyTeamScope(['Alyssa Dimes'], kathysTeam).length, 0);
+    // Someone off the ticked list must come back empty rather than quietly
+    // falling back to the whole team.
+    t.equal('no overlap means no one', filter.applyTeamScope(['Alyssa Dimes'], justOceane).length, 0);
 
     t.equal('blank names are dropped from either side', filter.applyTeamScope(['  ', 'Alyssa Dimes'], ['Alyssa Dimes', '']).join(','), 'Alyssa Dimes');
-    t.equal('surrounding whitespace still matches', filter.applyTeamScope([' Alyssa Dimes '], ['Alyssa Dimes']).join(','), 'Alyssa Dimes');
+    t.equal('surrounding whitespace still matches', filter.applyTeamScope([' Oceane Ingram '], justOceane).join(','), 'Oceane Ingram');
 });
 
-suite('team filter: center-wide views can opt out of the team scope', (t) => {
+suite('team filter: center-wide views can opt out of the scope', (t) => {
     const filter = load(t);
 
-    // teamScope reports Kathy's team as active.
+    // teamScope reports one person as the active scope.
     global.window.DevCoachModules.teamScope = {
-        getActiveTeamMembers: () => ['Michelle Castro'],
-        getActiveTeam: () => ({ id: 'kathy', label: 'Kathy' })
+        getScopeMembers: () => ['Oceane Ingram'],
+        getActiveScope: () => ({ id: 'Oceane Ingram', label: 'Oceane Ingram' })
     };
 
     const scoped = filter.getTeamSelectionContext();
-    t.equal('the context reports which team is active', scoped.teamLabel, 'Kathy');
+    t.equal('the context reports who is in scope', scoped.scopeLabel, 'Oceane Ingram');
     t.check('and it is filtering', scoped.isFiltering === true);
-    t.equal('down to the team members', scoped.selectedMembers.join(','), 'Michelle Castro');
+    t.equal('down to that one person', scoped.selectedMembers.join(','), 'Oceane Ingram');
 
     const centerWide = filter.getTeamSelectionContext({ ignoreTeamScope: true });
-    t.check('opting out drops the team narrowing', centerWide.selectedMembers.indexOf('Michelle Castro') === -1
+    t.check('opting out drops the narrowing', centerWide.selectedMembers.indexOf('Oceane Ingram') === -1
         || centerWide.selectedMembers.length !== 1);
 
     global.window.DevCoachModules.teamScope = {
-        getActiveTeamMembers: () => null,
-        getActiveTeam: () => null
+        getScopeMembers: () => null,
+        getActiveScope: () => null
     };
     const unscoped = filter.getTeamSelectionContext();
-    t.check('with no team picked the context says so', unscoped.teamLabel === null && unscoped.teamId === null);
+    t.check('with everyone picked the context says so', unscoped.scopeLabel === null && unscoped.scopeId === null);
 });

@@ -76,37 +76,47 @@
             return;
         }
 
-        const index = scope.getTeamIndex();
-        const activeId = scope.getActiveTeamId();
-        const summary = scope.describeActiveTeam();
+        const roster = scope.getMyTeamRoster();
+        const activeId = scope.getActiveMemberId();
+        const summary = scope.describeScope();
 
-        if (!index.teams.length) {
-            container.innerHTML = `<div style="font-size:0.88em; color:var(--text-secondary);">No teams yet — assign supervisors under Settings › Team Members and they'll show up here.</div>`;
+        if (!roster.length) {
+            container.innerHTML = `<div style="font-size:0.88em; color:var(--text-secondary);">No team members yet — pick yours under Settings › Team Members and they'll show up here.</div>`;
             return;
         }
 
-        const totalPeople = index.teams.reduce((sum, team) => sum + team.members.length, 0);
-        const options = [`<option value="${scope.ALL_TEAMS_ID}"${activeId === scope.ALL_TEAMS_ID ? ' selected' : ''}>All teams (${totalPeople})</option>`]
-            .concat(index.teams.map(team =>
-                `<option value="${escapeHtml(team.id)}"${activeId === team.id ? ' selected' : ''}>${escapeHtml(team.label)} (${team.members.length})</option>`
+        const options = [`<option value="${scope.ALL_MEMBERS_ID}"${activeId === scope.ALL_MEMBERS_ID ? ' selected' : ''}>All of my team (${roster.length})</option>`]
+            .concat(roster.map(name =>
+                `<option value="${escapeHtml(name)}"${activeId === name ? ' selected' : ''}>${escapeHtml(name)}</option>`
             ))
             .join('');
 
         const chip = summary.isAll
-            ? `<span style="padding:4px 12px; border-radius:12px; background:#e8f5e9; color:#2e7d32; font-weight:600; font-size:0.82em;">Everyone • ${summary.memberCount} associates</span>`
-            : `<span style="padding:4px 12px; border-radius:12px; background:#ede7f6; color:#4527a0; font-weight:600; font-size:0.82em;">${escapeHtml(summary.label)} • ${summary.memberCount} associates</span>`;
+            ? `<span style="padding:4px 12px; border-radius:12px; background:#e8f5e9; color:#2e7d32; font-weight:600; font-size:0.82em;">My whole team • ${summary.memberCount}</span>`
+            : `<span style="padding:4px 12px; border-radius:12px; background:#ede7f6; color:#4527a0; font-weight:600; font-size:0.82em;">Just ${escapeHtml(summary.label)}</span>`;
+
+        const note = summary.isAll
+            ? 'Every tab below covers the whole team.'
+            : 'Every tab below is about this one person.';
 
         container.innerHTML = `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 16px; background:var(--bg-surface); border:1px solid #d1c4e9; border-radius:10px;">` +
-            `<label for="teamScopeSelect" style="font-weight:700; color:#4527a0; font-size:0.92em;">Team</label>` +
-            `<select id="teamScopeSelect" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; min-width:220px; background:var(--bg-surface-raised); color:var(--text-primary);">${options}</select>` +
+            `<label for="teamScopeSelect" style="font-weight:700; color:#4527a0; font-size:0.92em;">Who</label>` +
+            `<select id="teamScopeSelect" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; min-width:240px; background:var(--bg-surface-raised); color:var(--text-primary);">${options}</select>` +
             chip +
-            `<span style="margin-left:auto; font-size:0.82em; color:var(--text-tertiary);">Applies to every tab below.</span>` +
+            `<span style="margin-left:auto; font-size:0.82em; color:var(--text-tertiary);">${note}</span>` +
         `</div>`;
 
         const select = container.querySelector('#teamScopeSelect');
         if (select) {
             select.addEventListener('change', function () {
-                scope.setActiveTeamId(this.value);
+                scope.setActiveMemberId(this.value);
+
+                // Coaching and Call Listening drive off the shared associate
+                // picker rather than the team filter, so point it at the same
+                // person instead of leaving those two tabs on a stale name.
+                const picked = scope.getActiveMember();
+                if (picked) window.DevCoachModules?.selectedAssociate?.set?.(picked);
+
                 renderTeamSelector(container);
                 window.DevCoachModules?.teamFilter?.notifyTeamFilterChanged?.();
                 refreshVisibleMyTeamSection();
@@ -224,8 +234,12 @@
         const resolved = resolveWindow(windowId);
         if (!engine || !resolved) return { resolved, groups: [], scanned: 0 };
 
-        const teamMembers = scope?.getActiveTeamMembers?.() || null;
-        const inScope = (name) => !teamMembers || teamMembers.indexOf(name) > -1;
+        // Highlights are a My Team view, so they never reach past my roster —
+        // "all" here means my whole team, not the whole floor.
+        const roster = scope?.getMyTeamRoster?.() || [];
+        const scoped = scope?.getScopeMembers?.() || null;
+        const allowed = new Set(scoped || roster);
+        const inScope = (name) => (allowed.size ? allowed.has(name) : true);
 
         const employees = (resolved.period?.employees || []).filter(emp => inScope(String(emp?.name || '').trim()));
         const previousByName = {};
@@ -243,8 +257,9 @@
             maxPerPerson: 3
         });
 
-        const byEmployee = (scope?.getTeamIndex ? scope.getTeamIndex().byEmployee : null) || {};
-        return { resolved, groups: engine.groupByTeam(entries, byEmployee), scanned: employees.length };
+        // One roster means one group, so the team header would just be a label
+        // repeated over every name.
+        return { resolved, groups: entries.length ? [{ team: '', entries }] : [], scanned: employees.length };
     }
 
     function renderHighlights() {
@@ -254,7 +269,7 @@
         const engine = window.DevCoachModules?.highlights;
         const windowId = loadHighlightWindow();
         const scope = window.DevCoachModules?.teamScope;
-        const summary = scope?.describeActiveTeam?.() || { label: 'All teams', isAll: true };
+        const summary = scope?.describeScope?.() || { label: 'All of my team', isAll: true };
 
         const toggle = ['yesterday', 'week'].map(id => {
             const active = id === windowId;
@@ -297,17 +312,17 @@
                     `</div>`;
                 }).join('');
 
-                return `<div style="margin-bottom:20px;">` +
-                    `<div style="font-weight:700; color:#4527a0; margin-bottom:6px;">${escapeHtml(group.team)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${group.entries.length})</span></div>` +
-                    rows +
-                `</div>`;
+                const header = group.team
+                    ? `<div style="font-weight:700; color:#4527a0; margin-bottom:6px;">${escapeHtml(group.team)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${group.entries.length})</span></div>`
+                    : '';
+                return `<div style="margin-bottom:20px;">${header}${rows}</div>`;
             }).join('');
         }
 
         const people = engine ? engine.countPeople(groups) : 0;
         const scopeNote = summary.isAll
-            ? 'Every team'
-            : `${escapeHtml(summary.label)}’s team only`;
+            ? `My whole team (${summary.memberCount})`
+            : `${escapeHtml(summary.label)} only`;
 
         container.innerHTML = `<div style="margin-bottom:14px;">` +
                 `<h3 style="color:#4527a0; margin:0 0 6px 0;">✨ Highlights</h3>` +

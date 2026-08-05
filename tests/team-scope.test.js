@@ -7,72 +7,64 @@ function load(t) {
     return t.loadModule('modules/team-scope.module.js').teamScope;
 }
 
-const SUPERVISORS = {
-    'Alyssa Dimes': 'Scott',
-    'Betty Yanez': 'Scott',
-    'Michelle Castro': 'Kathy',
-    'Diane Ruiz': 'Kathy',
-    'Scarlett Reyes': 'Miranda'
-};
+const MY_TEAM = ['Oceane Ingram', 'Alyssa Dimes', 'Betty Yanez', 'James Garcia'];
 
-suite('team scope: turns the supervisor map into teams', (t) => {
+suite('team scope: the roster is my team, narrowed to who is in the data', (t) => {
     const scope = load(t);
 
-    const index = scope.buildTeamIndex(SUPERVISORS, [
-        'Alyssa Dimes', 'Betty Yanez', 'Michelle Castro', 'Diane Ruiz', 'Scarlett Reyes'
-    ]);
+    const roster = scope.buildRoster(MY_TEAM, ['Alyssa Dimes', 'Betty Yanez', 'Oceane Ingram', 'Someone Else']);
 
-    t.equal('one team per supervisor', index.teams.length, 3);
-    t.equal('teams read alphabetically', index.teams.map(team => team.label).join(','), 'Kathy,Miranda,Scott');
-    t.equal('members land on the right supervisor', index.teams.find(x => x.label === 'Scott').members.join(','), 'Alyssa Dimes,Betty Yanez');
-    t.equal('members are sorted within a team', index.teams.find(x => x.label === 'Kathy').members.join(','), 'Diane Ruiz,Michelle Castro');
-    t.equal('the reverse lookup knows who reports where', index.byEmployee['Scarlett Reyes'], 'Miranda');
-    t.equal('nobody is unassigned here', index.unassignedCount, 0);
+    t.equal('only my team, never the wider floor', roster.length, 3);
+    t.check('a rep from another team is not offered', roster.indexOf('Someone Else') === -1);
+    t.equal('and the list reads alphabetically', roster.join(','), 'Alyssa Dimes,Betty Yanez,Oceane Ingram');
+    t.check('a team member with no data yet is left out', roster.indexOf('James Garcia') === -1);
 
-    // The dropdown is built from who is actually in the data, so a supervisor
-    // whose whole team has left the uploads should not still be offered.
-    const shrunk = scope.buildTeamIndex(SUPERVISORS, ['Alyssa Dimes', 'Betty Yanez']);
-    t.equal('a team with nobody left in the data drops out', shrunk.teams.length, 1);
-    t.equal('and the surviving team is the right one', shrunk.teams[0].label, 'Scott');
+    // A fresh install has nothing to narrow against, and an empty dropdown
+    // would look broken rather than empty.
+    t.equal('with nothing uploaded the team list stands on its own', scope.buildRoster(MY_TEAM, []).length, 4);
+
+    t.equal('duplicates collapse', scope.buildRoster(['Oceane Ingram', 'Oceane Ingram'], []).length, 1);
+    t.equal('blank entries are dropped', scope.buildRoster(['', '  ', 'Oceane Ingram'], []).join(','), 'Oceane Ingram');
+    t.equal('no team means no roster', scope.buildRoster([], ['Alyssa Dimes']).length, 0);
 });
 
-suite('team scope: people with no supervisor are named, not dropped', (t) => {
+suite('team scope: picking one person, or everyone', (t) => {
     const scope = load(t);
+    const roster = scope.buildRoster(MY_TEAM, []);
 
-    const index = scope.buildTeamIndex(SUPERVISORS, ['Alyssa Dimes', 'Jordan New', 'Pat Fresh']);
+    t.check('nothing picked means the whole team', scope.resolveActiveMember(roster, null) === null);
+    t.check('"all" means the whole team', scope.resolveActiveMember(roster, scope.ALL_MEMBERS_ID) === null);
+    t.equal('a name on the roster resolves to that person', scope.resolveActiveMember(roster, 'Oceane Ingram'), 'Oceane Ingram');
 
-    t.equal('two people have nowhere to sit', index.unassignedCount, 2);
-    t.equal('they get their own bucket', index.teams[index.teams.length - 1].label, 'Unassigned');
-    t.check('and the bucket sorts last, after the real teams', index.teams[0].label === 'Scott');
-    t.equal('the bucket holds both of them', index.teams[index.teams.length - 1].members.join(','), 'Jordan New,Pat Fresh');
-    t.check('an unassigned person has no supervisor recorded', !('Jordan New' in index.byEmployee));
+    // Someone who has left the team must not scope the app to a person who
+    // isn't there — that reads as "no data" everywhere at once.
+    t.check('someone off the team falls back to everyone', scope.resolveActiveMember(roster, 'Departed Rep') === null);
 
-    const clean = scope.buildTeamIndex(SUPERVISORS, ['Alyssa Dimes']);
-    t.check('no bucket appears when everyone is assigned', clean.teams.every(team => team.label !== 'Unassigned'));
+    t.equal('the default is everyone', scope.getActiveMemberId(), scope.ALL_MEMBERS_ID);
+    scope.setActiveMemberId('Oceane Ingram');
+    t.equal('a pick is remembered', scope.getActiveMemberId(), 'Oceane Ingram');
+    scope.setActiveMemberId(scope.ALL_MEMBERS_ID);
+    t.equal('and can be handed back to everyone', scope.getActiveMemberId(), scope.ALL_MEMBERS_ID);
 });
 
-suite('team scope: the active team survives, and fails safe', (t) => {
+suite('team scope: what the rest of the app is told', (t) => {
     const scope = load(t);
-    const index = scope.buildTeamIndex(SUPERVISORS, Object.keys(SUPERVISORS));
 
-    t.check('nothing selected means no scope', scope.resolveActiveTeam(index, null) === null);
-    t.check('"all" means no scope', scope.resolveActiveTeam(index, scope.ALL_TEAMS_ID) === null);
-    t.equal('a real id resolves to its team', scope.resolveActiveTeam(index, 'kathy').label, 'Kathy');
-
-    // A saved id whose team is gone must not scope the app to an empty roster —
-    // that reads as "no data" everywhere downstream, which hides the real cause.
-    t.check('a stale id falls back to everyone', scope.resolveActiveTeam(index, 'someone-who-left') === null);
-
-    t.equal('the default selection is everyone', scope.getActiveTeamId(), scope.ALL_TEAMS_ID);
-    scope.setActiveTeamId('miranda');
-    t.equal('a pick is remembered', scope.getActiveTeamId(), 'miranda');
+    // With no team data wired up, the roster is empty and nothing resolves —
+    // which must read as "everyone", not as "one person who doesn't exist".
+    scope.setActiveMemberId('Oceane Ingram');
+    t.check('an unresolvable pick scopes to nobody in particular', scope.getScopeMembers() === null);
+    t.check('so everyone is in scope', scope.isInScope('Anyone At All') === true);
+    t.check('and the scope describes itself as all', scope.describeScope().isAll === true);
+    t.check('with no active scope object', scope.getActiveScope() === null);
 });
 
-suite('team scope: ids are stable and safe to put in markup', (t) => {
+suite('team scope: null scope and an empty scope mean different things', (t) => {
     const scope = load(t);
 
-    t.equal('spaces become dashes', scope.slugify('Angela Allison'), 'angela-allison');
-    t.equal('punctuation is stripped', scope.slugify("Kathy O'Brien"), 'kathy-o-brien');
-    t.equal('case does not matter', scope.slugify('MIRANDA'), 'miranda');
-    t.equal('an empty label still yields an id', scope.slugify('   '), 'team');
+    // team-filter leans on this distinction: null leaves the existing selection
+    // alone, while a list narrows it. Collapsing the two would silently widen
+    // a one-person view back to the whole team.
+    t.check('no pick yields null, not an empty array', scope.getScopeMembers() === null);
+    t.check('null is not an array', !Array.isArray(scope.getScopeMembers()));
 });

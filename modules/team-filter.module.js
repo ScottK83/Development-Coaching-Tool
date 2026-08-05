@@ -144,13 +144,13 @@
         return names.filter(function(name) { return scope.has(name); });
     }
 
-    function getActiveTeamMembers() {
+    function getScopeMembers() {
         var scope = window.DevCoachModules?.teamScope;
-        return scope?.getActiveTeamMembers ? scope.getActiveTeamMembers() : null;
+        return scope?.getScopeMembers ? scope.getScopeMembers() : null;
     }
 
     // `options.ignoreTeamScope` is for the center-wide views that are supposed
-    // to show everyone regardless of which team you're working out of.
+    // to show everyone regardless of who you're working with in My Team.
     function getTeamSelectionContext(options) {
         var weekKey = getTeamSelectionWeekKey();
         var weeklyData = getWeeklyData();
@@ -163,9 +163,9 @@
             ? getTeamMembersForWeek(weekKey).map(function(name) { return String(name || '').trim(); }).filter(Boolean)
             : [];
 
-        var teamMembers = options && options.ignoreTeamScope ? null : getActiveTeamMembers();
-        var activeTeam = window.DevCoachModules?.teamScope?.getActiveTeam?.() || null;
-        var selectedMembers = applyTeamScope(checkedMembers, teamMembers);
+        var scopeMembers = options && options.ignoreTeamScope ? null : getScopeMembers();
+        var activeScope = window.DevCoachModules?.teamScope?.getActiveScope?.() || null;
+        var selectedMembers = applyTeamScope(checkedMembers, scopeMembers);
 
         return {
             weekKey: weekKey,
@@ -173,8 +173,8 @@
             selectedSet: selectedMembers.length ? new Set(selectedMembers) : null,
             totalEmployeesInWeek: employeesForWeek.length,
             isFiltering: selectedMembers.length > 0,
-            teamId: activeTeam ? activeTeam.id : null,
-            teamLabel: activeTeam ? activeTeam.label : null
+            scopeId: activeScope ? activeScope.id : null,
+            scopeLabel: activeScope ? activeScope.label : null
         };
     }
 
