@@ -643,6 +643,15 @@ Box 2 - Future Improvement Areas:
                             <div id="callTranscriptAnalysisSummary" class="call-note call-note-success" style="display: none; margin-top: var(--space-3);"></div>
                         </div>
 
+                        <div id="callQaPanel" class="call-panel" style="display: none;">
+                            <h3>✅ QA Form, Answered from the Transcript</h3>
+                            <p>Every line below is read off the call. Anything the transcript cannot show says so instead of guessing. Check it before you submit the review.</p>
+                            <div id="callQaResults"></div>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="copyCallQaBtn">📋 Copy QA Answers</button>
+                            </div>
+                        </div>
+
                         <div class="call-panel">
                             <h3>📝 Call Feedback Input</h3>
                             <div class="grid-2col">
@@ -1721,6 +1730,7 @@ Box 2 - Future Improvement Areas:
                 'modules/coaching-analysis.module.js',
                 'modules/coaching.module.js',
                 'modules/call-transcript.module.js',
+                'modules/call-qa.module.js',
                 'modules/call-listening.module.js',
                 'modules/employee-list.module.js',
                 'modules/trend-intelligence.module.js',

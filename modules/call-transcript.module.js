@@ -706,6 +706,8 @@
         return {
             ok: true,
             meta,
+            // Handed to the QA scorer so silence is measured once, not twice.
+            silenceGaps: gaps,
             headline: buildHeadline(strengths.length, heavyIssues, meta),
             // The drafts are capped so the email stays focused; the full lists
             // stay on the result so nothing is dropped without a trace.

@@ -7368,8 +7368,18 @@ function upsertCallListeningEntryFromForm(showSavedToast = false) {
     return entry;
 }
 
+function buildCallListeningQaText(entry) {
+    if (!entry?.transcript) return '';
+    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
+        associateName: entry.employeeName
+    });
+    const qa = scoreCallListeningQa(entry.transcript, entry.employeeName, analysis);
+    return window.DevCoachModules?.callQa?.buildQaText?.(qa) || '';
+}
+
 function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
+    const qaText = buildCallListeningQaText(entry);
     return [
         `Call Listening Date: ${entry.listenedOn || ''}`,
         `Associate: ${entry.employeeName || ''}`,
@@ -7385,7 +7395,8 @@ function buildCallListeningVerintSummary(entry) {
         entry.relevantInfo || 'N/A',
         '',
         'Manager notes:',
-        entry.managerNotes || 'N/A'
+        entry.managerNotes || 'N/A',
+        ...(qaText ? ['', qaText] : [])
     ].join('\n');
 }
 
@@ -7490,6 +7501,57 @@ function applyCallListeningTranscriptMetadata(meta) {
     return applied;
 }
 
+// Scores the transcript against the Interaction Review form. Silence is
+// measured once by the analyzer and handed over rather than recomputed.
+function scoreCallListeningQa(transcript, associateName, analysis) {
+    const scorer = window.DevCoachModules?.callQa;
+    if (!scorer?.scoreCall || !transcript) return null;
+
+    return scorer.scoreCall(transcript, {
+        associateName,
+        context: { silenceGaps: analysis?.silenceGaps || [] }
+    });
+}
+
+function renderCallQaScorecard(transcript, associateName, analysis) {
+    const panel = document.getElementById('callQaPanel');
+    const results = document.getElementById('callQaResults');
+    if (!panel || !results) return null;
+
+    const qa = scoreCallListeningQa(transcript, associateName, analysis);
+    const html = qa ? window.DevCoachModules?.callQa?.buildQaHtml?.(qa, escapeHtml) : '';
+
+    if (!html) {
+        panel.style.display = 'none';
+        return null;
+    }
+
+    results.innerHTML = html;
+    panel.style.display = 'block';
+    return qa;
+}
+
+function copyCallListeningQaAnswers() {
+    const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
+    if (!transcript) {
+        showToast('⚠️ Paste a call transcript first.', 3000);
+        return;
+    }
+
+    const analyzer = window.DevCoachModules?.callTranscript;
+    const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const analysis = analyzer?.analyzeTranscript?.(transcript, { associateName });
+    const qa = scoreCallListeningQa(transcript, associateName, analysis);
+    const text = window.DevCoachModules?.callQa?.buildQaText?.(qa);
+
+    if (!text) {
+        showToast('⚠️ Could not score this transcript.', 3000);
+        return;
+    }
+
+    copyToClipboard(text, { message: '📋 QA answers copied to clipboard' });
+}
+
 function analyzeCallListeningTranscript() {
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -7517,6 +7579,8 @@ function analyzeCallListeningTranscript() {
 
     mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
     mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
+
+    renderCallQaScorecard(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
 
     if (summary) {
         summary.textContent = analyzer.buildAnalysisSummary(analysis);
@@ -7681,6 +7745,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
+    bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
     bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
     bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);

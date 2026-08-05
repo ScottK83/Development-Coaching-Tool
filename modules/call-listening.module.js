@@ -25,6 +25,23 @@ ${transcript}
         ].join('\n');
     }
 
+    // The QA read is context for tone and content, not something to paste into
+    // the associate's email, so the prompt is explicit about that.
+    function buildQaSection(entry) {
+        const scorer = window.DevCoachModules?.callQa;
+        if (!scorer?.scoreCall || !entry.transcript) return '';
+
+        const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
+            associateName: entry.employeeName
+        });
+        const text = scorer.buildQaText(scorer.scoreCall(entry.transcript, {
+            associateName: entry.employeeName,
+            context: { silenceGaps: analysis?.silenceGaps || [] }
+        }));
+
+        return text ? `${text}\n\n` : '';
+    }
+
     function buildPrompt(entry, preferredName) {
         const transcriptSection = buildTranscriptSection(entry);
         const transcriptRules = transcriptSection
@@ -36,7 +53,7 @@ ${transcript}
 Call details:
 ${buildCallDetailLines(entry)}
 
-${transcriptSection}Feedback notes:
+${transcriptSection}${buildQaSection(entry)}Feedback notes:
 What went well:
 ${entry.whatWentWell || '- None provided'}
 
@@ -62,6 +79,7 @@ Requirements:
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
 - Do NOT use em dashes (—)${transcriptRules}
+- The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
 - Return ONLY the final email body text.`;
     }
 
