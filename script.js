@@ -1861,6 +1861,7 @@ function bindNavigationHandlers() {
         initializeOnOffTracker();
     });
     document.getElementById('subNavRpMeetings')?.addEventListener('click', () => {
+        ensureReviewPrepMounted('subSectionMeetings');
         showReviewPrepSubSection('subSectionMeetings', 'subNavRpMeetings');
         window.DevCoachModules?.oneOnOneUi?.initializeOneOnOne?.();
     });
