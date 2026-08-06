@@ -76,14 +76,14 @@
         return Number.isFinite(n) ? n : null;
     }
 
+    // Week-shaped, including partials. The stricter "did this week finish"
+    // question lives in checkMissingWeeks and is a different one — they used to
+    // be two spellings sitting in this file disagreeing with each other.
     function getSortedWeeklyKeys(weeklyData) {
         if (!weeklyData) return [];
-        return Object.keys(weeklyData)
-            .filter(k => {
-                const pt = weeklyData[k]?.metadata?.periodType;
-                return !pt || pt === 'week' || pt === 'week-in-progress' || pt === 'custom';
-            })
-            .sort();
+        const index = window.DevCoachModules?.periodIndex;
+        if (!index) return [];
+        return index.weekLikeKeys(index.buildIndex({ weeklyData: weeklyData }));
     }
 
     function parseKeyEndDate(weekKey) {
@@ -207,10 +207,10 @@
 
     function checkMissingWeeks(weeklyData) {
         const issues = [];
-        const keys = getSortedWeeklyKeys(weeklyData).filter(k => {
-            const pt = weeklyData[k]?.metadata?.periodType;
-            return !pt || pt === 'week';
-        });
+        // Only finished weeks can leave a gap — a partial week is not a
+        // missing one.
+        const index = window.DevCoachModules?.periodIndex;
+        const keys = index ? index.completeWeekKeys(index.buildIndex({ weeklyData: weeklyData })) : [];
         for (let i = 1; i < keys.length; i++) {
             const prevEnd = parseKeyEndDate(keys[i - 1]);
             const currEnd = parseKeyEndDate(keys[i]);

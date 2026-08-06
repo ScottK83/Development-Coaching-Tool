@@ -92,10 +92,10 @@
         // "The last few weeks" is the newest completed week against the oldest
         // of the last four, so a steady climb reads as a climb rather than as
         // four small unremarkable steps.
-        const weekKeys = sortedKeysByEnd(weekly, p => {
-            const type = p?.metadata?.periodType;
-            return !type || type === 'week';
-        });
+        const periodIndex = mods().periodIndex;
+        const weekKeys = periodIndex
+            ? periodIndex.completeWeekKeys(periodIndex.buildIndex({ weeklyData: weekly }))
+            : [];
         const recentWeeks = weekKeys.length >= 2
             ? oneOnOne.compareSnapshots(
                 oneOnOne.snapshotFromRow(rowFor(weekly[weekKeys[Math.max(0, weekKeys.length - 4)]], employeeName)),

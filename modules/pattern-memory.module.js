@@ -42,12 +42,11 @@
 
     function getSortedWeeklyKeys(weeklyData) {
         if (!weeklyData) return [];
-        return Object.keys(weeklyData)
-            .filter(k => {
-                const pt = weeklyData[k]?.metadata?.periodType;
-                return !pt || pt === 'week';
-            })
-            .sort();
+        // Finished weeks only — a partial week would make a pattern look like
+        // it broke when the week simply had not ended yet.
+        const index = window.DevCoachModules?.periodIndex;
+        if (!index) return [];
+        return index.completeWeekKeys(index.buildIndex({ weeklyData: weeklyData }));
     }
 
     // Pull the last N weeks of values for one rep on one metric

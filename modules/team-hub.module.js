@@ -193,10 +193,10 @@
     function resolveWindow(windowId) {
         if (windowId === 'week') {
             const weekly = store('weeklyData');
-            const keys = sortedKeys(weekly).filter(key => {
-                const type = weekly[key]?.metadata?.periodType;
-                return !type || type === 'week';
-            });
+            const periodIndex = window.DevCoachModules?.periodIndex;
+            const keys = periodIndex
+                ? periodIndex.completeWeekKeys(periodIndex.buildIndex({ weeklyData: weekly }))
+                : [];
             if (!keys.length) return null;
             const latest = keys[keys.length - 1];
             return {

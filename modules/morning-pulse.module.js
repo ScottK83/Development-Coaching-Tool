@@ -689,13 +689,12 @@
 
     // --- Data helpers ---
 
+    // Which uploads are week-shaped is a question period-index owns. This used
+    // to be one of three spellings of it.
     function getAllSortedKeys() {
-        const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        return Object.keys(weekly).filter(k => {
-            const p = weekly[k];
-            const pt = p?.metadata?.periodType;
-            return !pt || pt === 'week' || pt === 'week-in-progress' || pt === 'custom';
-        }).sort();
+        const index = window.DevCoachModules?.periodIndex;
+        if (!index) return [];
+        return index.weekLikeKeys(index.currentIndex());
     }
 
     function getPeriodData(weekKey) {
@@ -704,11 +703,10 @@
     }
 
     function getPeriodKeys(periodType) {
-        const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
         if (periodType === 'week') return getAllSortedKeys();
-        return Object.keys(weekly)
-            .filter(k => weekly[k]?.metadata?.periodType === periodType)
-            .sort();
+        const index = window.DevCoachModules?.periodIndex;
+        if (!index) return [];
+        return index.keysOfType(index.currentIndex(), periodType);
     }
 
     // The two week keys a check-in compares. Exported so callers outside this

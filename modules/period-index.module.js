@@ -148,6 +148,30 @@
         return entries && entries.length ? entries[entries.length - 1] : null;
     }
 
+    /**
+     * Keys only, for callers that still hand period keys around.
+     *
+     * Ordered by end date rather than by key. The old filters sorted the keys
+     * themselves, which sorts by start date and happens to give the same answer
+     * for tidy weekly uploads. It stops being the same answer once ranges
+     * overlap — a custom range starting in early July but running to the 10th
+     * sorts before a week that starts on the 3rd and ends on the 9th, even
+     * though the week finished first. End order is what "latest period" has
+     * always meant, so this is the ordering being made correct rather than
+     * merely being made shared.
+     */
+    function weekLikeKeys(index) {
+        return (index && index.all || []).filter(e => isWeekLike(e.type)).map(e => e.key);
+    }
+
+    function completeWeekKeys(index) {
+        return (index && index.all || []).filter(e => isCompleteWeek(e.type)).map(e => e.key);
+    }
+
+    function keysOfType(index, type) {
+        return ofTypes(index, type).map(e => e.key);
+    }
+
     // --- The questions ---
 
     /**
@@ -263,6 +287,9 @@
         isWeekLike,
         isCompleteWeek,
         ofTypes,
+        weekLikeKeys,
+        completeWeekKeys,
+        keysOfType,
         thisWeekSoFar,
         lastCompletedWeek,
         isFreshFor,

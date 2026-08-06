@@ -178,3 +178,60 @@ suite('plumbing: one noise floor, not three', (t) => {
         t.check(`${name} asks the registry`, src.indexOf('getMetricNoiseThreshold') > -1);
     });
 });
+
+suite('migration: the index agrees with the filters it replaced', (t) => {
+    const pi = load(t);
+
+    // The exact predicate the three migrated call sites used, kept here as the
+    // thing being replaced so the swap is provable rather than asserted.
+    const legacyWeekLike = (weekly) => Object.keys(weekly).filter(k => {
+        const pt = weekly[k]?.metadata?.periodType;
+        return !pt || pt === 'week' || pt === 'week-in-progress' || pt === 'custom';
+    }).sort();
+
+    const legacyCompleteWeek = (weekly) => legacyWeekLike(weekly).filter(k => {
+        const pt = weekly[k]?.metadata?.periodType;
+        return !pt || pt === 'week';
+    });
+
+    const weekly = stores().weeklyData;
+    const index = pi.buildIndex({ weeklyData: weekly });
+
+    t.equal('week-shaped keys match, in the same order',
+        pi.weekLikeKeys(index).join(','), legacyWeekLike(weekly).join(','));
+    t.equal('finished-week keys match too',
+        pi.completeWeekKeys(index).join(','), legacyCompleteWeek(weekly).join(','));
+    t.equal('and typed lookups match', pi.keysOfType(index, 'month').join(','),
+        Object.keys(weekly).filter(k => weekly[k]?.metadata?.periodType === 'month').sort().join(','));
+
+    // An upload with no type at all is the oldest data in the store, and both
+    // the old rule and the new one count it as a week.
+    const untyped = { '2026-01-05|2026-01-11': { metadata: {} } };
+    t.equal('untyped uploads survive the swap',
+        pi.weekLikeKeys(pi.buildIndex({ weeklyData: untyped })).join(','), legacyWeekLike(untyped).join(','));
+});
+
+suite('migration: where the ordering deliberately changed', (t) => {
+    const pi = load(t);
+
+    // The old filters sorted keys, which sorts by start date. With overlapping
+    // ranges that disagrees with finishing order, and "latest period" has
+    // always meant the one that finished last.
+    const overlapping = {
+        '2026-07-01|2026-08-10': { metadata: { periodType: 'custom', endDate: '2026-08-10' } },
+        '2026-08-03|2026-08-09': { metadata: { periodType: 'week', endDate: '2026-08-09' } }
+    };
+
+    const legacy = Object.keys(overlapping).sort();
+    const now = pi.weekLikeKeys(pi.buildIndex({ weeklyData: overlapping }));
+
+    t.check('the two orders genuinely differ here', legacy.join(',') !== now.join(','));
+    t.check('the old order ends on the range that started first',
+        legacy[legacy.length - 1] === '2026-08-03|2026-08-09');
+    t.check('the new order ends on the one that finished last',
+        now[now.length - 1] === '2026-07-01|2026-08-10');
+
+    // Which matters because every caller treats the last key as "most recent".
+    t.equal('so "latest" is now the period that actually finished latest',
+        pi.ofTypes(pi.buildIndex({ weeklyData: overlapping }), ['custom', 'week']).pop().end, '2026-08-10');
+});
