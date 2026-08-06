@@ -134,12 +134,15 @@
                         : '';
                     rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.label)}${tail}`);
                 });
-                // A near miss is worth seeing too; it's the coaching conversation.
-                (result.missed || []).slice(0, person ? 2 : 1).forEach(info => {
-                    if (celebrations.describeNoCelebration) {
-                        rows.push(`◦ ${escapeHtml(celebrations.describeNoCelebration(info))}`);
-                    }
-                });
+                // Near misses are deliberately NOT listed here. This panel sits
+                // directly under the shout-outs, and only one or two misses are
+                // shown, so whoever came closest ends up the lone name under a list
+                // of winners — it reads as calling them out for not making it, which
+                // is the opposite of the intent. The rankings and coaching views are
+                // where "five off the top ten" belongs.
+                //
+                // describeNoCelebration still exists and is still used elsewhere;
+                // it is this placement that was wrong, not the sentence.
             } catch (e) { /* context is optional — never block the message on it */ }
         }
 
