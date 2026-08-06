@@ -264,3 +264,96 @@ suite('celebrations: reliability is never a shout-out', (t) => {
     t.check('and it does not explain a missing shout-out either',
         !missed || !missed.best || missed.best.key !== 'reliability');
 });
+
+// A field big enough to be worth naming: seven people tied at 100% on managing
+// emotions, then a long tail of ranks below them.
+function wideField() {
+    const rankings = [];
+    for (let i = 0; i < 7; i++) {
+        rankings.push({ name: 'Tied ' + i, rank: 1, metricRanks: { managingEmotions: 1 }, extraValues: { managingEmotions: 100 } });
+    }
+    for (let i = 0; i < 43; i++) {
+        rankings.push({ name: 'Below ' + i, rank: 8 + i, metricRanks: { managingEmotions: 8 + i }, extraValues: { managingEmotions: 90 } });
+    }
+    // Ranked in the center but holding no managing-emotions rank at all, so the
+    // pool for that metric must not count them.
+    rankings.push({ name: 'Unranked Here', rank: 60, metricRanks: { adherence: 4 }, values: { adherence: 99 } });
+    return {
+        periodKey: '2026-07-27|2026-08-02',
+        totalEmployees: rankings.length,
+        teamMembers: new Set(['Tied 0']),
+        rankings: rankings
+    };
+}
+
+suite('celebrations: how big the field was, and how much of it they beat', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: wideField, buildRankingsForPeriod: wideField };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const win = result.celebrations.find(c => c.name === 'Tied 0').achievements[0];
+
+    // 50 people hold a managing-emotions rank; the 51st holds none, so counting
+    // them would inflate every claim made off this number.
+    t.equal('the pool is who was ranked on that metric', win.rankedCount, 50);
+    t.equal('and the whole center still travels alongside it', win.totalEmployees, 51);
+
+    // Seven share rank 1, so each of them beat the 43 below and none of the six
+    // beside them.
+    t.equal('ties count as beaten by nobody', win.betterThan, 43);
+    t.equal('the wording puts both numbers in', celebrations.describeField(win),
+        'better than 43 of 50 associates');
+
+    // The period is what makes any of it mean something.
+    t.check('a result carries the size of the center', result.totalEmployees === 51);
+    t.check('and the period it was earned in', result.dateRange.indexOf('2026') > -1);
+});
+
+suite('celebrations: the field is only named where it cannot become a podium', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: wideField, buildRankingsForPeriod: wideField };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const person = result.celebrations.find(c => c.name === 'Tied 0');
+
+    // One-to-one, so there is nobody to be measured against in the room.
+    const dm = celebrations.generateDirectMessage(person, 'Jul 27 - Aug 2, 2026');
+    t.check('the private message says how many they beat', dm.indexOf('Better than 43 of 50 associates') > -1);
+    t.check('and leads with the period it covers', dm.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+
+    // The channel post names several people at once, so the same sentence would
+    // quietly rank the winners against each other.
+    const post = celebrations.generateAllShoutOuts(result.celebrations, 'Jul 27 - Aug 2, 2026');
+    t.check('the public post never counts who was beaten', post.indexOf('better than') === -1);
+    t.check('nor capitalised at the head of a sentence', post.indexOf('Better than') === -1);
+    t.check('but it does say what week it covers', post.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+    // Buried under nine names, the date may as well not be there.
+    t.check('up top, not at the foot of the post', post.indexOf('📅') < post.indexOf('Managing Emotions'));
+    t.equal('and said once, not once at each end', post.split('📅').length - 1, 1);
+
+    const single = celebrations.generateShoutOut(person, 'Jul 27 - Aug 2, 2026');
+    t.check('a single public shout-out stays value-only', single.indexOf('etter than') === -1);
+    t.check('and still dates itself', single.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+});
+
+suite('celebrations: a field too thin to describe says nothing', (t) => {
+    const celebrations = load(t, null);
+
+    t.equal('a nine-person pool is not a field worth naming',
+        celebrations.describeField({ rankedCount: 9, betterThan: 5 }), '');
+    t.equal('beating nobody is not praise',
+        celebrations.describeField({ rankedCount: 60, betterThan: 0 }), '');
+    t.equal('and missing counts stay silent rather than guessing',
+        celebrations.describeField({}), '');
+    t.equal('the sentence form disappears just as cleanly',
+        celebrations.fieldSentence({ rankedCount: 4, betterThan: 2 }), '');
+    t.equal('and reads as its own sentence when it does fire',
+        celebrations.fieldSentence({ rankedCount: 124, betterThan: 117 }),
+        ' Better than 117 of 124 associates.');
+});

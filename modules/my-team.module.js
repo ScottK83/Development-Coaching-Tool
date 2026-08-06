@@ -106,15 +106,30 @@
      */
     function buildContextHtml(person) {
         const rows = [];
+        let header = '';
 
         const celebrations = mods().celebrations;
         if (celebrations?.detectCelebrations) {
             try {
                 const result = celebrations.detectCelebrations(null);
+
+                // A rank means nothing without the period it was earned in and
+                // the size of the field. Both were being left to memory.
+                const headerBits = [];
+                if (result.dateRange) headerBits.push(escapeHtml(result.dateRange));
+                if (result.totalEmployees) headerBits.push(`${result.totalEmployees} associates scored in the center`);
+                if (headerBits.length) {
+                    header = `<div style="padding:0 0 8px; font-size:0.85em; color:var(--text-secondary); font-weight:600;">${headerBits.join(' · ')}</div>`;
+                }
+
                 (result.celebrations || []).slice(0, 4).forEach(entry => {
                     const best = entry.achievements?.[0];
                     if (!best) return;
-                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.tierLabel)} in ${escapeHtml(best.label)}`);
+                    const field = celebrations.describeField ? celebrations.describeField(best) : '';
+                    const tail = field
+                        ? ` <span style="color:var(--text-tertiary);">· ${escapeHtml(field)}</span>`
+                        : '';
+                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.tierLabel)} in ${escapeHtml(best.label)}${tail}`);
                 });
                 // A near miss is worth seeing too; it's the coaching conversation.
                 (result.missed || []).slice(0, person ? 2 : 1).forEach(info => {
@@ -129,7 +144,7 @@
             return `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing standing out in the rankings for this period yet.</div>`;
         }
 
-        return rows.map(r => `<div style="padding:5px 0; font-size:0.9em; color:var(--text-primary);">${r}</div>`).join('');
+        return header + rows.map(r => `<div style="padding:5px 0; font-size:0.9em; color:var(--text-primary);">${r}</div>`).join('');
     }
 
     // --- The day page ---

@@ -245,14 +245,22 @@
         // them they are "#1 in Center" overstates it; "one of fifteen at 100%"
         // is both true and a nicer thing to read.
         var rankCountsByMetric = {};
+        // The field an achievement was actually won against. Not every scored
+        // associate holds a rank on every metric — surveys get withheld, some
+        // numbers never land — so "out of 126" would overstate a metric only
+        // 84 people were ranked on.
+        var rankedCountByMetric = {};
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
             var counts = {};
+            var ranked = 0;
             data.rankings.forEach(function(r) {
                 var rank = r.metricRanks?.[metricKey];
                 if (!rank) return;
                 counts[rank] = (counts[rank] || 0) + 1;
+                ranked++;
             });
             rankCountsByMetric[metricKey] = counts;
+            rankedCountByMetric[metricKey] = ranked;
             rank1CountsByMetric[metricKey] = counts[1] || 0;
         });
 
@@ -280,17 +288,25 @@
                 // Ranking well on a number you are failing is not a win.
                 if (!meetsCelebrationTarget(metricKey, metricValue, celebrationYear(data.periodKey || periodKey))) return;
 
+                var tiedCount = rankCountsByMetric[metricKey]?.[metricRank] || 1;
+                var rankedCount = rankedCountByMetric[metricKey] || 0;
+
                 achievements.push({
                     type: 'metric',
                     key: metricKey,
                     label: meta.label,
                     icon: meta.icon,
                     rank: metricRank,
-                    tiedCount: rankCountsByMetric[metricKey]?.[metricRank] || 1,
+                    tiedCount: tiedCount,
                     soloRank1: metricRank === 1 && rank1CountsByMetric[metricKey] === 1,
                     tier: tier.value,
                     tierLabel: tier.label,
                     totalEmployees: data.totalEmployees,
+                    rankedCount: rankedCount,
+                    // Everyone the achievement genuinely beat. Ties are excluded
+                    // rather than counted as wins, so fifteen people at 100% are
+                    // each "better than" the 109 below them, not each other.
+                    betterThan: Math.max(0, rankedCount - (metricRank - 1) - tiedCount),
                     value: metricValue
                 });
             });
@@ -334,7 +350,8 @@
             celebrations: results,
             missed: missed,
             dateRange: getDateRangeForKey(data.periodKey || periodKey),
-            periodKey: data.periodKey || periodKey || ''
+            periodKey: data.periodKey || periodKey || '',
+            totalEmployees: data.totalEmployees || 0
         };
     }
 
@@ -455,7 +472,7 @@
                 name: person.name,
                 firstName: person.firstName,
                 achievements: person.achievements.map(function(a) {
-                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, tiedCount: a.tiedCount || 1, soloRank1: !!a.soloRank1, tier: a.tier, totalEmployees: a.totalEmployees, value: a.value };
+                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, tiedCount: a.tiedCount || 1, soloRank1: !!a.soloRank1, tier: a.tier, totalEmployees: a.totalEmployees, rankedCount: a.rankedCount, betterThan: a.betterThan, value: a.value };
                 })
             };
         });
@@ -663,9 +680,40 @@
         return note ? before + note + after : '';
     }
 
+    /**
+     * How big the field was and how much of it they beat.
+     *
+     * Returns null rather than zeroes when the numbers would be misleading: a
+     * three-person pool is not a field worth naming, and "better than 0" is a
+     * demotion dressed up as praise. This is relative positioning, so it belongs
+     * in the private message and the manager's own view — never the channel post.
+     */
+    function fieldCounts(achievement) {
+        var pool = achievement && achievement.rankedCount;
+        var beat = achievement && achievement.betterThan;
+        if (typeof pool !== 'number' || !isFinite(pool) || pool < 10) return null;
+        if (typeof beat !== 'number' || !isFinite(beat) || beat < 1) return null;
+        return { beat: beat, pool: pool };
+    }
+
+    // "better than 117 of 124 associates", or '' when the field is too thin to
+    // say anything honest about.
+    function describeField(achievement) {
+        var c = fieldCounts(achievement);
+        return c ? 'better than ' + c.beat + ' of ' + c.pool + ' associates' : '';
+    }
+
+    // The same fact as its own sentence, for lines that already close with
+    // their own punctuation.
+    function fieldSentence(achievement) {
+        var c = fieldCounts(achievement);
+        return c ? ' Better than ' + c.beat + ' of ' + c.pool + ' associates.' : '';
+    }
+
     function generateShoutOut(person, dateRange) {
         var lines = [];
         lines.push(pick(SHOUTOUT_OPENERS)(person.firstName));
+        if (dateRange) lines.push('📅 ' + dateRange);
         lines.push('');
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
@@ -682,7 +730,6 @@
                 }
             }
         });
-        if (dateRange) { lines.push(''); lines.push('\uD83D\uDCC5 ' + dateRange); }
         lines.push('');
         lines.push(pick(SHOUTOUT_CLOSERS));
         return lines.join('\n');
@@ -691,6 +738,9 @@
     function generateAllShoutOuts(celebrations, dateRange) {
         if (!celebrations.length) return 'No celebrations to report right now.';
         var msg = pick(BATCH_INTRO);
+        // At the foot of a nine-person post nobody ever reached it, so people
+        // were reading a week-old shout-out as if it were today's.
+        if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
         celebrations.forEach(function(person, idx) {
             if (idx > 0) msg += '\n\n---\n\n';
             var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
@@ -708,7 +758,6 @@
                 }
             });
         });
-        if (dateRange) { msg += '\n\uD83D\uDCC5 ' + dateRange; }
         msg += pick(BATCH_CLOSERS);
         return msg;
     }
@@ -763,25 +812,34 @@
         'You probably already know you had a great week, but I wanted to tell you just how great:'
     ];
 
+    /**
+     * The one-to-one version. This is the only celebration message that names
+     * how many people they beat: it goes to one person, so it cannot turn into
+     * a podium the way a channel post naming nine people would.
+     */
     function generateDirectMessage(person, dateRange) {
         var lines = [];
         lines.push(pick(DM_OPENERS)(person.firstName));
         lines.push('');
         lines.push(pick(DM_INTROS));
+        // What "this" covers, said before the numbers rather than after them.
+        if (dateRange) lines.push('\uD83D\uDCC5 ' + dateRange);
         lines.push('');
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
             if (a.soloRank1) {
-                lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : ''));
+                lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '')
+                    + fieldSentence(a));
             } else {
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!' + tieClause(describeTie(a, valStr), ' You are ', ', great company to be in.'));
+                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!'
+                        + tieClause(describeTie(a, valStr), ' You are ', ', great company to be in.')
+                        + fieldSentence(a));
                 } else {
-                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!');
+                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!' + fieldSentence(a));
                 }
             }
         });
-        if (dateRange) { lines.push(''); lines.push('\uD83D\uDCC5 ' + dateRange); }
         lines.push('');
         lines.push(pick(DM_CLOSERS));
         return lines.join('\n');
@@ -1323,6 +1381,8 @@
         SHOUTOUT_EXCLUDED_METRICS: SHOUTOUT_EXCLUDED_METRICS,
         describeTie: describeTie,
         tieClause: tieClause,
+        describeField: describeField,
+        fieldSentence: fieldSentence,
         explainNoCelebration: explainNoCelebration,
         meetsCelebrationTarget: meetsCelebrationTarget,
         celebrationYear: celebrationYear,
