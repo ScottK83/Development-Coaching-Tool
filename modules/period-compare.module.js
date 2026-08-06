@@ -1,0 +1,431 @@
+/* ============================================
+   PERIOD COMPARE
+   Builds month-sized and YTD-sized employee aggregates out of stored periods,
+   and turns two of them into rank movement ("100th last month, 75th this month").
+
+   Rank is never stored anywhere — center-ranking computes it on demand from
+   whatever employee array it is handed. So "last month's rank" is not history
+   being read back, it is last month's data being re-ranked now. That is what
+   makes this possible without a migration, and also why the aggregate has to be
+   built correctly: a sloppy aggregate silently produces a plausible wrong rank.
+
+   Three things this module exists to get right:
+
+   1. Weighted aggregation. Rate metrics are weighted by call volume, survey
+      metrics by survey count. Simple-averaging a rate across weeks overweights
+      the quiet weeks and is wrong every time.
+
+   2. Reliability. It is CUMULATIVE year-to-date hours, not a per-period figure,
+      and it feeds the rank composite. Carrying the raw cumulative number into a
+      monthly rank would mark everyone down in December purely for the year
+      having gone on longer. Monthly aggregates therefore carry hours ACCRUED IN
+      THAT MONTH — cumulative at month end minus cumulative at prior month end.
+
+   3. Population. A rank delta only means something when both sides ranked the
+      same people. If ten reps had no data last month, everyone's rank shifts for
+      reasons unrelated to performance. Movement is computed over the people
+      present in BOTH periods, and the shared count is reported so the caller can
+      say what the rank is out of.
+   ============================================ */
+(function () {
+    'use strict';
+
+    // A month rebuilt from weekly uploads needs at least this many weeks behind
+    // it. One week of June against one week of May is not monthly movement, it is
+    // a gap in the uploads wearing a month's name. Matches cheerleading.
+    var MIN_WEEKS_FOR_MONTH = 2;
+
+    // Marks a period key as a month assembled on demand rather than one stored
+    // under that key. Kept in step with center-ranking's copy.
+    var MONTH_KEY_PREFIX = 'month:';
+
+    var METRIC_KEYS_TO_AVERAGE = [
+        'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
+        'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
+        'negativeWord', 'positiveWord'
+    ];
+    var SURVEY_WEIGHTED = { cxRepOverall: true, fcr: true, overallExperience: true };
+
+    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    /* ── Store access ── */
+
+    function _weeklyData() {
+        return typeof weeklyData !== 'undefined' ? weeklyData : {};
+    }
+    function _year() {
+        return new Date().getFullYear();
+    }
+    function _entry(key) {
+        return _weeklyData()[key] || null;
+    }
+    function _meta(key) {
+        var p = _entry(key);
+        return (p && p.metadata) || {};
+    }
+    function _endDate(key) {
+        return _meta(key).endDate || (String(key).indexOf('|') !== -1 ? String(key).split('|')[1] : String(key));
+    }
+    function _startDate(key) {
+        return _meta(key).startDate || (String(key).indexOf('|') !== -1 ? String(key).split('|')[0] : '');
+    }
+    function _endMonth(key) {
+        return String(_endDate(key)).slice(0, 7); // YYYY-MM
+    }
+    function _periodType(key) {
+        return _meta(key).periodType || 'week';
+    }
+    function _yearOf(key) {
+        return parseInt(String(_endDate(key)).split('-')[0], 10);
+    }
+    function _spanDays(key) {
+        var s = _startDate(key), e = _endDate(key);
+        if (!s || !e) return 0;
+        var sd = new Date(s + 'T00:00:00'), ed = new Date(e + 'T00:00:00');
+        if (isNaN(sd.getTime()) || isNaN(ed.getTime())) return 0;
+        return Math.round((ed - sd) / 86400000) + 1;
+    }
+
+    function _monthLabel(monthKey) {
+        var parts = String(monthKey).split('-');
+        var mi = parseInt(parts[1], 10) - 1;
+        return (MONTH_NAMES[mi] || monthKey) + ' ' + parts[0];
+    }
+    function _prevMonthKey(monthKey) {
+        var parts = String(monthKey).split('-');
+        var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+        if (!y || !m) return null;
+        if (m === 1) return (y - 1) + '-12';
+        return y + '-' + String(m - 1).padStart(2, '0');
+    }
+
+    /* ── Month bucketing ──
+       Weeks bucket by the month they END in, so "July" means the weeks ending in
+       July (roughly Jun 29 - Jul 26). A real monthly upload replaces the
+       reconstruction for its month, because the uploaded report is the number
+       that will be quoted back to people. */
+
+    function getMonthBuckets(year) {
+        var yr = year || _year();
+        var wData = _weeklyData();
+        var monthsMap = {};
+        var fromUpload = {};
+
+        Object.keys(wData).forEach(function (k) {
+            if (_periodType(k) !== 'week') return;
+            if (_yearOf(k) !== yr) return;
+            var mo = _endMonth(k);
+            if (mo) (monthsMap[mo] = monthsMap[mo] || []).push(k);
+        });
+
+        Object.keys(wData).forEach(function (k) {
+            if (_periodType(k) !== 'month') return;
+            if (_yearOf(k) !== yr) return;
+            if (_spanDays(k) < MIN_WEEKS_FOR_MONTH * 7) return;
+            var mo = String(_endDate(k)).slice(0, 7);
+            // Two uploads covering one month: the later one wins.
+            if (fromUpload[mo] && String(_endDate(monthsMap[mo][0])).localeCompare(String(_endDate(k))) >= 0) return;
+            monthsMap[mo] = [k];
+            fromUpload[mo] = true;
+        });
+
+        Object.keys(monthsMap).forEach(function (mo) {
+            monthsMap[mo].sort(function (a, b) {
+                return String(_endDate(a)).localeCompare(String(_endDate(b)));
+            });
+        });
+
+        var now = new Date();
+        var nowMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        var usable = Object.keys(monthsMap).filter(function (mo) {
+            if (mo > nowMonth) return false;
+            return fromUpload[mo] || monthsMap[mo].length >= MIN_WEEKS_FOR_MONTH;
+        }).sort();
+
+        return { monthsMap: monthsMap, fromUpload: fromUpload, usable: usable };
+    }
+
+    /* ── Weighted aggregation ──
+       Mirrors buildYtdAggregateForYear's math. Reliability is carried through as
+       the running cumulative maximum here; callers wanting a per-month figure use
+       buildMonthAggregate, which converts it to an accrued delta. */
+
+    function aggregateEmployeesFrom(entries) {
+        var agg = {};
+
+        (entries || []).forEach(function (entry) {
+            ((entry && entry.employees) || []).forEach(function (emp) {
+                if (!emp || !emp.name) return;
+
+                if (!agg[emp.name]) {
+                    agg[emp.name] = {
+                        name: emp.name,
+                        firstName: emp.firstName,
+                        transfersCount: 0,
+                        surveyTotal: 0,
+                        reliability: 0,
+                        totalCalls: 0,
+                        _periodsSeen: 0,
+                        _sums: {},
+                        _weights: {}
+                    };
+                }
+
+                var a = agg[emp.name];
+                var surveyTotal = parseInt(emp.surveyTotal, 10);
+                var totalCalls = parseInt(emp.totalCalls, 10);
+
+                a._periodsSeen += 1;
+                a.transfersCount += Number.isFinite(parseFloat(emp.transfersCount)) ? parseFloat(emp.transfersCount) : 0;
+                a.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
+                a.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
+
+                // Cumulative, so the highest value seen is the most complete one.
+                var rel = parseFloat(emp.reliability);
+                if (Number.isFinite(rel) && rel > a.reliability) a.reliability = rel;
+
+                METRIC_KEYS_TO_AVERAGE.forEach(function (mk) {
+                    var val = parseFloat(emp[mk]);
+                    if (!Number.isFinite(val)) return;
+                    var weight;
+                    if (SURVEY_WEIGHTED[mk]) {
+                        weight = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                    } else {
+                        weight = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
+                    }
+                    if (weight <= 0) return;
+                    a._sums[mk] = (a._sums[mk] || 0) + val * weight;
+                    a._weights[mk] = (a._weights[mk] || 0) + weight;
+                });
+            });
+        });
+
+        return Object.keys(agg).map(function (name) {
+            var a = agg[name];
+            METRIC_KEYS_TO_AVERAGE.forEach(function (mk) {
+                var w = a._weights[mk] || 0;
+                if (w > 0) a[mk] = a._sums[mk] / w;
+            });
+            delete a._sums;
+            delete a._weights;
+            return a;
+        });
+    }
+
+    /* ── Reliability: cumulative -> accrued ── */
+
+    // Highest cumulative reliability seen per employee at any point up to and
+    // including monthKey. Reading the maximum rather than the latest period
+    // tolerates a week whose reliability column was missing.
+    function _cumulativeReliabilityThrough(monthKey, year) {
+        var out = {};
+        var wData = _weeklyData();
+        Object.keys(wData).forEach(function (k) {
+            if (_yearOf(k) !== year) return;
+            var mo = _endMonth(k);
+            if (!mo || mo > monthKey) return;
+            ((wData[k] && wData[k].employees) || []).forEach(function (emp) {
+                if (!emp || !emp.name) return;
+                var rel = parseFloat(emp.reliability);
+                if (!Number.isFinite(rel)) return;
+                if (!(emp.name in out) || rel > out[emp.name]) out[emp.name] = rel;
+            });
+        });
+        return out;
+    }
+
+    /* ── Month aggregate ── */
+
+    function buildMonthAggregate(monthKey, year) {
+        var yr = year || _year();
+        var buckets = getMonthBuckets(yr);
+        var keys = buckets.monthsMap[monthKey];
+        if (!keys || !keys.length) return null;
+        if (!buckets.fromUpload[monthKey] && keys.length < MIN_WEEKS_FOR_MONTH) return null;
+
+        var employees = aggregateEmployeesFrom(keys.map(_entry));
+        if (!employees.length) return null;
+
+        // Cumulative -> accrued in this month. Clamped at 0: a cumulative figure
+        // that appears to drop (a correction upstream, or a rep whose history was
+        // restated) would otherwise read as negative hours, which is meaningless.
+        var prevMonth = _prevMonthKey(monthKey);
+        var cumPrev = prevMonth ? _cumulativeReliabilityThrough(prevMonth, yr) : {};
+        employees.forEach(function (e) {
+            var before = Number.isFinite(cumPrev[e.name]) ? cumPrev[e.name] : 0;
+            var accrued = e.reliability - before;
+            e.reliabilityCumulative = e.reliability;
+            e.reliability = accrued > 0 ? Math.round(accrued * 100) / 100 : 0;
+        });
+
+        return {
+            key: monthKey,
+            label: _monthLabel(monthKey),
+            employees: employees,
+            weekKeys: keys.slice(),
+            fromUpload: !!buckets.fromUpload[monthKey],
+            weekCount: keys.length
+        };
+    }
+
+    /* ── Rank movement ── */
+
+    function _rank(employees, year) {
+        var cr = window.DevCoachModules && window.DevCoachModules.centerRanking;
+        if (!cr || !cr.scoreAndRankEmployees) return null;
+        return cr.scoreAndRankEmployees(employees, year);
+    }
+
+    /**
+     * Rank two employee sets over the people common to both, so the denominator
+     * is identical on each side and a delta reflects performance rather than a
+     * changing population.
+     *
+     * Returns null when the overlap is too thin to say anything.
+     */
+    function compareRankings(prevEmployees, curEmployees, year, opts) {
+        var options = opts || {};
+        var minShared = Number.isFinite(options.minShared) ? options.minShared : 5;
+        var yr = year || _year();
+
+        var prevByName = {}, curByName = {};
+        (prevEmployees || []).forEach(function (e) { if (e && e.name) prevByName[e.name] = e; });
+        (curEmployees || []).forEach(function (e) { if (e && e.name) curByName[e.name] = e; });
+
+        var shared = Object.keys(curByName).filter(function (n) { return n in prevByName; });
+        if (shared.length < minShared) return null;
+
+        var prevRanked = _rank(shared.map(function (n) { return prevByName[n]; }), yr);
+        var curRanked = _rank(shared.map(function (n) { return curByName[n]; }), yr);
+        if (!prevRanked || !curRanked) return null;
+
+        var prevRank = {};
+        prevRanked.forEach(function (r) { prevRank[r.name] = r.rank; });
+
+        var movements = curRanked.map(function (r) {
+            var was = prevRank[r.name];
+            var has = Number.isFinite(was) && Number.isFinite(r.rank);
+            return {
+                name: r.name,
+                curRank: r.rank,
+                prevRank: has ? was : null,
+                // Positive means improved — moved toward 1st.
+                delta: has ? (was - r.rank) : null,
+                compositeScore: r.compositeScore,
+                kpisMet: r.kpisMet,
+                ratingAverage: r.ratingAverage
+            };
+        });
+
+        // Anyone ranked in only one of the two periods. Reported rather than
+        // hidden, so a thin comparison is visible as thin.
+        var onlyCurrent = Object.keys(curByName).filter(function (n) { return !(n in prevByName); });
+        var onlyPrevious = Object.keys(prevByName).filter(function (n) { return !(n in curByName); });
+
+        return {
+            total: shared.length,
+            movements: movements,
+            onlyCurrent: onlyCurrent.sort(),
+            onlyPrevious: onlyPrevious.sort()
+        };
+    }
+
+    /**
+     * The headline case: the two most recent usable months, compared.
+     * Returns null when there aren't two months worth comparing.
+     */
+    function buildMonthOverMonthRanks(year) {
+        var yr = year || _year();
+        var buckets = getMonthBuckets(yr);
+        if (buckets.usable.length < 2) return null;
+
+        var curKey = buckets.usable[buckets.usable.length - 1];
+        var prevKey = buckets.usable[buckets.usable.length - 2];
+
+        var cur = buildMonthAggregate(curKey, yr);
+        var prev = buildMonthAggregate(prevKey, yr);
+        if (!cur || !prev) return null;
+
+        var compared = compareRankings(prev.employees, cur.employees, yr);
+        if (!compared) return null;
+
+        // A part-month must not read as a finished one.
+        var now = new Date();
+        var nowMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+        return {
+            current: { key: curKey, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: curKey === nowMonth },
+            previous: { key: prevKey, label: prev.label, weekCount: prev.weekCount, fromUpload: prev.fromUpload },
+            total: compared.total,
+            movements: compared.movements,
+            onlyCurrent: compared.onlyCurrent,
+            onlyPrevious: compared.onlyPrevious
+        };
+    }
+
+    /**
+     * Selector-ready entries for months that can be rebuilt from weekly uploads.
+     * Shared by the rankings and matchup period pickers so "which months exist"
+     * is decided in one place.
+     *
+     * Months carried by their own upload are skipped — they are already listed as
+     * stored periods, and offering the same month twice under two labels invites
+     * comparing a rebuild against an upload and calling the difference movement.
+     */
+    function getMonthPeriodOptions(year) {
+        var yr = year || _year();
+        var buckets = getMonthBuckets(yr);
+        var out = [];
+
+        buckets.usable.forEach(function (mo) {
+            if (buckets.fromUpload[mo]) return;
+            var keys = buckets.monthsMap[mo] || [];
+
+            var names = {};
+            keys.forEach(function (k) {
+                var e = _entry(k);
+                ((e && e.employees) || []).forEach(function (emp) {
+                    if (emp && emp.name) names[emp.name] = 1;
+                });
+            });
+
+            var parts = mo.split('-');
+            var lastDay = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10), 0).getDate();
+
+            out.push({
+                key: MONTH_KEY_PREFIX + mo,
+                label: _monthLabel(mo) + ' (rebuilt from ' + keys.length + ' weeks)',
+                type: 'month-agg',
+                source: 'computed',
+                count: Object.keys(names).length,
+                endDate: mo + '-' + String(lastDay).padStart(2, '0')
+            });
+        });
+
+        return out;
+    }
+
+    /** Movement for one person, or null. Convenience for coaching surfaces. */
+    function getMovementFor(name, momData) {
+        if (!name || !momData || !momData.movements) return null;
+        for (var i = 0; i < momData.movements.length; i++) {
+            if (momData.movements[i].name === name) return momData.movements[i];
+        }
+        return null;
+    }
+
+    window.DevCoachModules = window.DevCoachModules || {};
+    window.DevCoachModules.periodCompare = {
+        MIN_WEEKS_FOR_MONTH: MIN_WEEKS_FOR_MONTH,
+        MONTH_KEY_PREFIX: MONTH_KEY_PREFIX,
+        getMonthBuckets: getMonthBuckets,
+        getMonthPeriodOptions: getMonthPeriodOptions,
+        aggregateEmployeesFrom: aggregateEmployeesFrom,
+        buildMonthAggregate: buildMonthAggregate,
+        compareRankings: compareRankings,
+        buildMonthOverMonthRanks: buildMonthOverMonthRanks,
+        getMovementFor: getMovementFor,
+        monthLabel: _monthLabel
+    };
+})();

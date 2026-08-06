@@ -63,6 +63,54 @@
     var _selectedRankingPeriodKey = null;
     var _rankingPeriodInitialized = false;
 
+    /* ── Month-over-month movement ──
+       Deliberately independent of the period selector. The selector chooses which
+       period is being RANKED; movement always compares the last two usable months.
+       Tying movement to the selector would mean a single week's rankings showed a
+       single week's movement, which swings hard enough on noise to be misleading.
+       The caption names both months so the two are never read as the same thing. */
+
+    // Marks a period key as a month assembled on the fly rather than one stored
+    // under this key. Anything reading period keys must not assume a lookup.
+    var MONTH_KEY_PREFIX = 'month:';
+
+    var _momCache;
+
+    function _monthMovement() {
+        if (_momCache !== undefined) return _momCache;
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (!pc || !pc.buildMonthOverMonthRanks) { _momCache = null; return _momCache; }
+        try {
+            _momCache = pc.buildMonthOverMonthRanks() || null;
+        } catch (err) {
+            console.warn('[center-ranking] Month movement unavailable:', err && err.message);
+            _momCache = null;
+        }
+        return _momCache;
+    }
+
+    function _movementByName() {
+        var mom = _monthMovement();
+        if (!mom) return null;
+        var map = {};
+        mom.movements.forEach(function (m) { map[m.name] = m; });
+        return map;
+    }
+
+    // Positive delta means moved toward 1st.
+    function _movementBadge(mv, showDash) {
+        if (!mv || !Number.isFinite(mv.delta)) {
+            return showDash ? '<span style="color: var(--text-tertiary);">&middot;</span>' : '';
+        }
+        if (mv.delta === 0) {
+            return '<span style="color: var(--text-tertiary);" title="Same rank as last month">&#8213;</span>';
+        }
+        var up = mv.delta > 0;
+        return '<span style="color: ' + (up ? '#2e7d32' : '#c62828') + '; font-weight: bold; white-space: nowrap;"' +
+            ' title="#' + mv.prevRank + ' last month, #' + mv.curRank + ' this month">' +
+            (up ? '&#9650;' : '&#9660;') + Math.abs(mv.delta) + '</span>';
+    }
+
     function _getAvailableRankingPeriods() {
         var periods = [];
         var wData = _getWeeklyData();
@@ -91,6 +139,13 @@
             periods.push({ key: key, label: label, type: pType, source: 'ytd', count: count, endDate: endStr });
         });
 
+        // Months rebuilt from weekly uploads. Not stored under these keys —
+        // buildRankingsForPeriod recognises the prefix and assembles them.
+        var _pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (_pc && _pc.getMonthPeriodOptions) {
+            periods = periods.concat(_pc.getMonthPeriodOptions());
+        }
+
         periods.sort(function(a, b) {
             var aDate = a.endDate || a.key.split('|')[1] || '';
             var bDate = b.endDate || b.key.split('|')[1] || '';
@@ -114,8 +169,8 @@
 
     function _renderRankingPeriodSelector(selectedValue) {
         var periods = _getAvailableRankingPeriods();
-        var typeOrder = ['ytd', 'quarter', 'month', 'week', 'week-in-progress', 'daily'];
-        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
+        var typeOrder = ['ytd', 'quarter', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
+        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
         var grouped = {};
         periods.forEach(function(p) {
             var t = p.type || 'week';
@@ -512,8 +567,38 @@
      * Unlike buildCenterRankings which merges all periods,
      * this ranks only the employees present in the given period.
      */
+    /**
+     * A month rebuilt from weekly uploads has no stored entry to look up, so
+     * period-compare assembles one on demand — volume-weighted metrics, and
+     * reliability converted from a running year-to-date total into the hours
+     * actually accrued in that month.
+     */
+    function _buildRankingsForMonth(monthKey) {
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (!pc || !pc.buildMonthAggregate) return null;
+
+        var year = parseInt(String(monthKey).split('-')[0], 10) || new Date().getFullYear();
+        var agg = pc.buildMonthAggregate(monthKey, year);
+        if (!agg || !agg.employees.length) return null;
+
+        var rankings = _scoreAndRank(agg.employees, year);
+        if (!rankings.length) return null;
+
+        var lastWeekKey = agg.weekKeys[agg.weekKeys.length - 1];
+        return {
+            rankings: rankings,
+            totalEmployees: rankings.length,
+            source: agg.label + (agg.fromUpload ? ' (uploaded month)' : ' (rebuilt from ' + agg.weekCount + ' weeks)'),
+            periodKey: MONTH_KEY_PREFIX + monthKey,
+            teamMembers: new Set(_getTeamMembersForWeek(lastWeekKey))
+        };
+    }
+
     function buildRankingsForPeriod(periodKey) {
         if (!periodKey) return null;
+        if (String(periodKey).indexOf(MONTH_KEY_PREFIX) === 0) {
+            return _buildRankingsForMonth(String(periodKey).slice(MONTH_KEY_PREFIX.length));
+        }
         var wData = _getWeeklyData();
         var yData = _getYtdData();
         var period = wData[periodKey] || yData[periodKey];
@@ -545,6 +630,10 @@
     function renderCenterRanking() {
         var container = document.getElementById('centerRankingContent');
         if (!container) return;
+
+        // Recomputed per render, not per sort — an upload between renders must
+        // not leave stale movement on screen.
+        _momCache = undefined;
 
         // Drop the remembered key if it no longer resolves (period was deleted,
         // replaced by cleanup, or hydrated from a different source mid-session).
@@ -603,10 +692,27 @@
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #1565c0;">';
         html += '<strong>Center Rankings</strong> &mdash; ' + data.totalEmployees + ' employees scored';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
+
+        // Say exactly what the movement column compares, including the shared
+        // population. "75th of 127" against "100th of 121" would not be a
+        // like-for-like move, so movement is ranked over the people present in
+        // both months and that count is stated rather than implied.
+        var _mom = _monthMovement();
+        if (_mom) {
+            html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">' +
+                '&#9650;&#9660; Movement: <strong>' + _escapeHtml(_mom.previous.label) + '</strong> &rarr; <strong>' +
+                _escapeHtml(_mom.current.label) + (_mom.current.inProgress ? ' (so far)' : '') + '</strong>' +
+                ' &mdash; ranked across the ' + _mom.total + ' scored in both months';
+            if (_mom.onlyCurrent.length || _mom.onlyPrevious.length) {
+                html += ' (' + _mom.onlyCurrent.length + ' new, ' + _mom.onlyPrevious.length + ' not in this month)';
+            }
+            html += '</span>';
+        }
         html += '</div>';
 
         // Team summary
         var teamRanks = data.rankings.filter(function (r) { return data.teamMembers.has(r.name); });
+        var _teamMovement = _movementByName();
         if (teamRanks.length > 0) {
             html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<h4 style="margin-top: 0; color: var(--text-primary);">Your Team</h4>';
@@ -625,6 +731,20 @@
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
                 html += '</div>';
+
+                // Spelled out on the team cards rather than left as an arrow —
+                // this is the line you would actually read before a one-on-one.
+                var _cardMv = _teamMovement && _teamMovement[r.name];
+                if (_cardMv && Number.isFinite(_cardMv.delta)) {
+                    if (_cardMv.delta === 0) {
+                        html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">Held at #' + _cardMv.curRank + ' since last month</div>';
+                    } else {
+                        var _up = _cardMv.delta > 0;
+                        html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' + (_up ? '#2e7d32' : '#c62828') + ';">' +
+                            (_up ? '&#9650; Up ' : '&#9660; Down ') + Math.abs(_cardMv.delta) +
+                            ' &mdash; #' + _cardMv.prevRank + ' last month, #' + _cardMv.curRank + ' this month</div>';
+                    }
+                }
                 var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
@@ -705,10 +825,13 @@
             return sortDir === 'asc' ? ' <span style="color: #1565c0;">&#9650;</span>' : ' <span style="color: #1565c0;">&#9660;</span>';
         };
 
+        var _tableMovement = _movementByName();
+
         var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';
         html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
+        html += '<th style="' + thStyle + ' width: 34px; cursor: default;" title="Rank movement between the last two months, over the people scored in both">MoM</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
         html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
         html += '<th class="rank-sort-header" data-sort="scoreSum" style="' + thStyle + '">Score Sum' + arrow('scoreSum') + '</th>';
@@ -757,6 +880,10 @@
             var rankStyle = 'padding: 4px 3px; text-align: center; font-weight: bold;';
             if (rankBg) rankStyle += ' background: ' + rankBg + '; color: ' + rankColor + ';';
             html += '<td style="' + rankStyle + '">' + r.rank + '</td>';
+
+            // Month-over-month movement
+            html += '<td style="padding: 4px 3px; text-align: center; font-size: 0.9em;">' +
+                _movementBadge(_tableMovement && _tableMovement[r.name], true) + '</td>';
 
             // Name
             html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
@@ -857,6 +984,9 @@
         renderCenterRanking: renderCenterRanking,
         buildCenterRankings: buildCenterRankings,
         buildRankingsForPeriod: buildRankingsForPeriod,
+        // Ranks an arbitrary employee array. period-compare uses it to re-rank a
+        // past month, since rank is computed on demand and never stored.
+        scoreAndRankEmployees: _scoreAndRank,
         resetPeriodSelection: resetPeriodSelection
     };
 

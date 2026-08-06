@@ -91,6 +91,14 @@
             periods.push({ key: key, label: label, type: pType, source: 'ytd', count: count, endDate: endStr });
         });
 
+        // Months rebuilt from weekly uploads, so a supervisor matchup can be run
+        // over a whole month instead of a single week. Same source as the
+        // rankings picker, so both offer the same months.
+        var _pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (_pc && _pc.getMonthPeriodOptions) {
+            periods = periods.concat(_pc.getMonthPeriodOptions());
+        }
+
         periods.sort(function(a, b) {
             var aDate = a.endDate || a.key.split('|')[1] || '';
             var bDate = b.endDate || b.key.split('|')[1] || '';
@@ -105,7 +113,7 @@
         var endDate = parts[1] || parts[0] || '';
         var prefix;
         if (type === 'ytd') prefix = 'YTD';
-        else if (type === 'month') prefix = 'Monthly';
+        else if (type === 'month' || type === 'month-agg') prefix = 'Monthly';
         else if (type === 'quarter') prefix = 'Quarterly';
         else if (type === 'daily') prefix = 'Daily';
         else if (type === 'week-in-progress') prefix = 'Week in progress';
@@ -291,8 +299,8 @@
      */
     function _renderPeriodSelector(selectedValue) {
         var periods = _getAvailablePeriods();
-        var typeOrder = ['ytd', 'quarter', 'month', 'week', 'week-in-progress', 'daily'];
-        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
+        var typeOrder = ['ytd', 'quarter', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
+        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
         var grouped = {};
         periods.forEach(function(p) {
             var t = p.type || 'week';
