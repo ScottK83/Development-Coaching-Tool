@@ -17,16 +17,20 @@ const { suite } = require('./harness');
  *    performance, and every one of those moves looks like a real result.
  */
 
-function loadPure(t, weekly) {
+function loadPure(t, weekly, ytd) {
     t.installFakeBrowser();
     global.weeklyData = weekly;
+    // Reset explicitly. These globals outlive installFakeBrowser, so a suite that
+    // sets ytdData leaks it into every suite after it.
+    global.ytdData = ytd || {};
     t.loadModule('modules/period-compare.module.js');
     return global.window.DevCoachModules.periodCompare;
 }
 
-function loadWithRanking(t, weekly) {
+function loadWithRanking(t, weekly, ytd) {
     t.installFakeBrowser();
     global.weeklyData = weekly;
+    global.ytdData = ytd || {};
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
     t.loadModule('modules/metrics.module.js');
@@ -129,40 +133,66 @@ suite('period compare: survey metrics weight by survey count', (t) => {
 
 /* ── Reliability ── */
 
-suite('period compare: reliability is hours accrued, not the running total', (t) => {
+suite('period compare: weekly reliability hours add up, they are not a running total', (t) => {
+    // A real sequence looks like 0, 0, 8.5, 0 — one bad week among zeroes. Taking
+    // the highest value seen keeps the worst week and discards every other absence.
     const weekly = Object.assign({},
         week('2026-06-01', '2026-06-07', [emp('A', { reliability: 3 })]),
         week('2026-06-08', '2026-06-14', [emp('A', { reliability: 5 })]),
-        week('2026-07-06', '2026-07-12', [emp('A', { reliability: 8 })]),
-        week('2026-07-13', '2026-07-19', [emp('A', { reliability: 9 })])
+        week('2026-07-06', '2026-07-12', [emp('A', { reliability: 0 })]),
+        week('2026-07-13', '2026-07-19', [emp('A', { reliability: 8.5 })])
     );
     const pc = loadPure(t, weekly);
 
     const june = pc.buildMonthAggregate('2026-06', 2026).employees[0];
     const july = pc.buildMonthAggregate('2026-07', 2026).employees[0];
 
-    t.check('June accrues 5 hours', june.reliabilityAccrued === 5);
-    t.check('July accrues 4, not the cumulative 9', july.reliabilityAccrued === 4);
-    t.check('the cumulative figure is still available', july.reliabilityCumulative === 9);
-
-    // The target is an annual budget, so a month's raw hours scored against it
-    // passes everybody. Scoring sees the annualised rate instead.
-    t.check('the scored value is the annualised run rate', july.reliability === 48);
-    t.check('and June likewise', june.reliability === 60);
+    t.check('June sums its weeks to 8, not the worst week of 5', june.reliabilityAccrued === 8);
+    t.check('July sums to 8.5 across a zero week and a bad one', july.reliabilityAccrued === 8.5);
 });
 
-suite('period compare: a cumulative figure that drops never goes negative', (t) => {
+suite('period compare: reliability is scored on the year, never on the period', (t) => {
     const weekly = Object.assign({},
-        week('2026-06-01', '2026-06-07', [emp('A', { reliability: 10 })]),
-        week('2026-06-08', '2026-06-14', [emp('A', { reliability: 10 })]),
-        // Restated downward upstream.
-        week('2026-07-06', '2026-07-12', [emp('A', { reliability: 6 })]),
-        week('2026-07-13', '2026-07-19', [emp('A', { reliability: 6 })])
+        week('2026-07-06', '2026-07-12', [emp('A', { reliability: 2 }), emp('B', { reliability: 0 })]),
+        week('2026-07-13', '2026-07-19', [emp('A', { reliability: 1 }), emp('B', { reliability: 0 })])
+    );
+    // The authoritative running total: A has spent 30 hours this year, B has spent 1.
+    const ytd = {
+        '2026-01-01|2026-07-31': {
+            employees: [emp('A', { reliability: 30 }), emp('B', { reliability: 1 })],
+            metadata: { startDate: '2026-01-01', endDate: '2026-07-31', periodType: 'ytd' }
+        }
+    };
+
+    t.installFakeBrowser();
+    global.weeklyData = weekly;
+    global.ytdData = ytd;
+    t.loadModule('modules/period-compare.module.js');
+    const pc = global.window.DevCoachModules.periodCompare;
+
+    const july = pc.buildMonthAggregate('2026-07', 2026);
+    const a = july.employees.find((e) => e.name === 'A');
+    const b = july.employees.find((e) => e.name === 'B');
+
+    t.check('the scored value is the year to date, not the month', a.reliability === 30);
+    t.check('so a quiet month cannot hide a bad year', a.reliability > 24);
+    t.check('hours missed in the month stay available for coaching', a.reliabilityAccrued === 3);
+    t.check('someone with a clean year still scores clean', b.reliability === 1);
+});
+
+suite('period compare: with no year-to-date upload, reliability is unmeasured not zero', (t) => {
+    const weekly = Object.assign({},
+        week('2026-07-06', '2026-07-12', [emp('A', { reliability: 2 })]),
+        week('2026-07-13', '2026-07-19', [emp('A', { reliability: 1 })])
     );
     const pc = loadPure(t, weekly);
-    const july = pc.buildMonthAggregate('2026-07', 2026).employees[0];
+    const a = pc.buildMonthAggregate('2026-07', 2026).employees[0];
 
-    t.check('negative accrual clamps to 0 rather than reading as credit', july.reliability === 0);
+    // 0 is a perfect score here, so guessing would crown people who simply have
+    // no year-to-date file behind them.
+    t.check('no year-to-date figure means no reliability score', a.reliability === null);
+    t.check('and it is not quietly filled in as zero', a.reliability !== 0);
+    t.check('the month total is still there', a.reliabilityAccrued === 3);
 });
 
 /* ── Movement ── */

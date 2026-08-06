@@ -243,9 +243,13 @@
                 a.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
                 a.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
 
-                // Cumulative, so the highest value seen is the most complete one.
+                // ADDITIVE across weekly periods. A weekly upload carries the hours
+                // missed IN THAT WEEK, not a running total — a typical sequence is
+                // 0, 0, 0, 8.5, 0, one bad week among zeroes. Taking the highest
+                // value seen (which the older YTD aggregator does) keeps the single
+                // worst week and discards every other absence.
                 var rel = parseFloat(emp.reliability);
-                if (Number.isFinite(rel) && rel > a.reliability) a.reliability = rel;
+                if (Number.isFinite(rel)) a.reliability += rel;
 
                 METRIC_KEYS_TO_AVERAGE.forEach(function (mk) {
                     var val = parseFloat(emp[mk]);
@@ -277,22 +281,30 @@
 
     /* ── Reliability: cumulative -> accrued ── */
 
-    // Highest cumulative reliability seen per employee at any point up to and
-    // including monthKey. Reading the maximum rather than the latest period
-    // tolerates a week whose reliability column was missing.
-    function _cumulativeReliabilityThrough(monthKey, year) {
+    function _ytdData() {
+        return typeof ytdData !== 'undefined' ? ytdData : {};
+    }
+
+    // Year-to-date hours missed per person, from the newest YTD upload of the year.
+    // That upload is the only complete running total available: weekly uploads only
+    // go back as far as someone started uploading them, and the months before that
+    // cannot be reconstructed from anything on hand.
+    function _latestYtdReliability(year) {
+        var yData = _ytdData();
+        var best = null, bestEnd = '';
+        Object.keys(yData).forEach(function (k) {
+            var meta = (yData[k] && yData[k].metadata) || {};
+            var end = meta.endDate || (k.indexOf('|') !== -1 ? k.split('|')[1] : k);
+            if (parseInt(String(end).split('-')[0], 10) !== year) return;
+            if (!best || String(end).localeCompare(bestEnd) > 0) { best = yData[k]; bestEnd = String(end); }
+        });
+        if (!best) return {};
+
         var out = {};
-        var wData = _weeklyData();
-        Object.keys(wData).forEach(function (k) {
-            if (_yearOf(k) !== year) return;
-            var mo = _endMonth(k);
-            if (!mo || mo > monthKey) return;
-            ((wData[k] && wData[k].employees) || []).forEach(function (emp) {
-                if (!emp || !emp.name) return;
-                var rel = parseFloat(emp.reliability);
-                if (!Number.isFinite(rel)) return;
-                if (!(emp.name in out) || rel > out[emp.name]) out[emp.name] = rel;
-            });
+        (best.employees || []).forEach(function (emp) {
+            if (!emp || !emp.name) return;
+            var rel = parseFloat(emp.reliability);
+            if (Number.isFinite(rel)) out[emp.name] = rel;
         });
         return out;
     }
@@ -312,28 +324,42 @@
         // Cumulative -> accrued in this month. Clamped at 0: a cumulative figure
         // that appears to drop (a correction upstream, or a rep whose history was
         // restated) would otherwise read as negative hours, which is meaningless.
-        var prevMonth = _prevMonthKey(monthKey);
-        var cumPrev = prevMonth ? _cumulativeReliabilityThrough(prevMonth, yr) : {};
+        var ytdRel = _latestYtdReliability(yr);
         employees.forEach(function (e) {
-            var before = Number.isFinite(cumPrev[e.name]) ? cumPrev[e.name] : 0;
-            var accrued = e.reliability - before;
-            e.reliabilityCumulative = e.reliability;
-            e.reliabilityAccrued = accrued > 0 ? Math.round(accrued * 100) / 100 : 0;
+            // Aggregation summed the month's weeks, so this IS hours missed in the
+            // month. Kept for coaching — "you missed 6 hours in July" is the useful
+            // sentence — but never scored.
+            e.reliabilityAccrued = Math.round(e.reliability * 100) / 100;
+            e.reliabilityCumulative = Number.isFinite(ytdRel[e.name]) ? ytdRel[e.name] : null;
 
-            // Scored as an annualised run rate, not as raw accrued hours.
+            // SCORED ON THE CUMULATIVE YEAR-TO-DATE FIGURE, in every period.
             //
-            // The reliability target is an ANNUAL budget (max 18 hours). A month's
-            // accrued hours is about 1.4 per person, so scoring that against 18
-            // passed everybody: the whole centre averaged 2.97 of 3 on reliability
-            // in a monthly view against 2.37 on YTD, which quietly inflated every
-            // monthly rank and team average.
+            // Reliability is unlike every other metric here. AHT, sentiment and the
+            // survey scores are rates that stand on their own in any window — a bad
+            // week can be followed by a good one. Reliability is hours of work
+            // missed against a budget for the WHOLE YEAR (18 for a 3, 24 for a 2),
+            // and hours already missed cannot be un-missed. Most weeks it is
+            // untouched and adds nothing; then someone misses two days.
             //
-            // Multiplying by 12 asks the question the annual band can actually
-            // answer — "at this month's rate, where does the year land?" — and
-            // leaves the target untouched. Raw accrued hours stay on
-            // reliabilityAccrued for display, where hours-this-month is what a
-            // reader wants to see.
-            e.reliability = Math.round(e.reliabilityAccrued * 12 * 100) / 100;
+            // So a per-period slice is meaningless. Scoring a month's accrued hours
+            // (~1.4) against an annual 18 passed everybody — the centre averaged
+            // 2.97 of 3 monthly against 2.37 on YTD. Annualising that slice was no
+            // better: one bad month projects to a catastrophic year for someone
+            // whose actual year-to-date total is still well inside budget.
+            //
+            // The figure that answers "are they on track for the year" is the
+            // running total, so that is what gets scored, whatever period is being
+            // viewed. A consequence worth stating: reliability can only hold or
+            // worsen month over month, never improve. That is the metric being
+            // honest, not a bug — you cannot go back and not miss the shift.
+            //
+            // Sourced from the YTD upload rather than rebuilt from weeks, because
+            // weekly coverage starts partway through the year and everything before
+            // it is unrecoverable — a rebuild would understate the year and quietly
+            // hand people a pass they have not earned. With no YTD upload the value
+            // is left null, which scoreEmployee treats as unmeasured. Unmeasured is
+            // correct here: 0 is a perfect score, so guessing would crown people.
+            e.reliability = e.reliabilityCumulative;
         });
 
         return {
