@@ -346,11 +346,9 @@
      *
      * Returns null when the overlap is too thin to say anything.
      */
-    function compareRankings(prevEmployees, curEmployees, year, opts) {
-        var options = opts || {};
-        var minShared = Number.isFinite(options.minShared) ? options.minShared : 5;
-        var yr = year || _year();
-
+    // Ranks both sides over the people common to both. Shared by the individual
+    // and team comparisons so they can never disagree about who was included.
+    function _rankShared(prevEmployees, curEmployees, year, minShared) {
         var prevByName = {}, curByName = {};
         (prevEmployees || []).forEach(function (e) { if (e && e.name) prevByName[e.name] = e; });
         (curEmployees || []).forEach(function (e) { if (e && e.name) curByName[e.name] = e; });
@@ -358,9 +356,22 @@
         var shared = Object.keys(curByName).filter(function (n) { return n in prevByName; });
         if (shared.length < minShared) return null;
 
-        var prevRanked = _rank(shared.map(function (n) { return prevByName[n]; }), yr);
-        var curRanked = _rank(shared.map(function (n) { return curByName[n]; }), yr);
+        var prevRanked = _rank(shared.map(function (n) { return prevByName[n]; }), year);
+        var curRanked = _rank(shared.map(function (n) { return curByName[n]; }), year);
         if (!prevRanked || !curRanked) return null;
+
+        return { shared: shared, prevByName: prevByName, curByName: curByName, prevRanked: prevRanked, curRanked: curRanked };
+    }
+
+    function compareRankings(prevEmployees, curEmployees, year, opts) {
+        var options = opts || {};
+        var minShared = Number.isFinite(options.minShared) ? options.minShared : 5;
+        var yr = year || _year();
+
+        var ranked = _rankShared(prevEmployees, curEmployees, yr, minShared);
+        if (!ranked) return null;
+        var shared = ranked.shared, prevByName = ranked.prevByName, curByName = ranked.curByName;
+        var prevRanked = ranked.prevRanked, curRanked = ranked.curRanked;
 
         var prevByName2 = {};
         prevRanked.forEach(function (r) { prevByName2[r.name] = r; });
@@ -411,6 +422,102 @@
             onlyCurrent: onlyCurrent.sort(),
             onlyPrevious: onlyPrevious.sort()
         };
+    }
+
+    /**
+     * How each supervisor's team moved between two periods.
+     *
+     * Ranked on average KPI score, NOT on average rank position. Average rank is a
+     * function of who else was in the pool — a team can shed a weak performer and
+     * every remaining member's rank improves without anyone doing anything
+     * differently. Average KPI score is on a fixed 1-3 scale, so a team that scored
+     * 2.31 and now scores 2.58 genuinely improved, whatever anyone else did.
+     *
+     * Average rank is still reported alongside, because it is the number visible on
+     * the rankings table and leaving it out invites the two being reconciled by hand.
+     */
+    function compareTeams(prevEmployees, curEmployees, supervisors, year, opts) {
+        var options = opts || {};
+        var minShared = Number.isFinite(options.minShared) ? options.minShared : 5;
+        var minTeamSize = Number.isFinite(options.minTeamSize) ? options.minTeamSize : 3;
+        var yr = year || _year();
+        var sups = supervisors || {};
+
+        var ranked = _rankShared(prevEmployees, curEmployees, yr, minShared);
+        if (!ranked) return null;
+
+        function group(rankedList) {
+            var out = {};
+            rankedList.forEach(function (r) {
+                var sup = sups[r.name];
+                if (!sup) return; // unassigned people cannot be attributed to a team
+                if (!out[sup]) out[sup] = { ratings: [], ranks: [] };
+                if (Number.isFinite(r.ratingAverage)) out[sup].ratings.push(r.ratingAverage);
+                if (Number.isFinite(r.rank)) out[sup].ranks.push(r.rank);
+            });
+            return out;
+        }
+
+        function summarise(grouped) {
+            var out = {};
+            Object.keys(grouped).forEach(function (name) {
+                var g = grouped[name];
+                if (g.ratings.length < minTeamSize) return;
+                var mean = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+                out[name] = {
+                    count: g.ratings.length,
+                    avgRating: mean(g.ratings),
+                    avgRank: g.ranks.length ? mean(g.ranks) : null
+                };
+            });
+            return out;
+        }
+
+        var prev = summarise(group(ranked.prevRanked));
+        var cur = summarise(group(ranked.curRanked));
+
+        var names = Object.keys(cur).filter(function (n) { return n in prev; });
+        if (names.length < 2) return null;
+
+        // Standard competition placing (1-2-2-4) with an epsilon tie test. Two teams
+        // on the same average must share a place: assigning them separate places on
+        // sort order alone means a tie breaking the other way next month shows up as
+        // movement, and there is no performance behind it.
+        function placings(stats, keys) {
+            var order = keys.slice().sort(function (a, b) { return stats[b].avgRating - stats[a].avgRating; });
+            var out = {};
+            var lastPlace = 0, lastVal = null;
+            order.forEach(function (n, i) {
+                var val = stats[n].avgRating;
+                if (lastVal === null || Math.abs(val - lastVal) >= 1e-9) {
+                    lastPlace = i + 1;
+                }
+                out[n] = lastPlace;
+                lastVal = val;
+            });
+            return out;
+        }
+        var prevPlace = placings(prev, names);
+        var curPlace = placings(cur, names);
+
+        var teams = names.map(function (n) {
+            return {
+                name: n,
+                count: cur[n].count,
+                prevCount: prev[n].count,
+                prevAvgRating: prev[n].avgRating,
+                curAvgRating: cur[n].avgRating,
+                ratingDelta: cur[n].avgRating - prev[n].avgRating,
+                prevAvgRank: prev[n].avgRank,
+                curAvgRank: cur[n].avgRank,
+                prevPlace: prevPlace[n],
+                curPlace: curPlace[n],
+                // Positive means moved toward 1st.
+                placeDelta: prevPlace[n] - curPlace[n]
+            };
+        }).sort(function (a, b) { return a.curPlace - b.curPlace; });
+
+        return { total: ranked.shared.length, teamCount: names.length, teams: teams };
     }
 
     /**
@@ -499,6 +606,34 @@
         return out;
     }
 
+    /**
+     * Team movement across the same month pair the individual view uses, so the
+     * two surfaces always describe the same two months.
+     */
+    function buildMonthOverMonthTeams(supervisors, year) {
+        var yr = year || _year();
+        var buckets = getMonthBuckets(yr);
+        if (buckets.comparable.length < 2) return null;
+
+        var curKey = buckets.comparable[buckets.comparable.length - 1];
+        var prevKey = buckets.comparable[buckets.comparable.length - 2];
+
+        var cur = buildMonthAggregate(curKey, yr);
+        var prev = buildMonthAggregate(prevKey, yr);
+        if (!cur || !prev) return null;
+
+        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr);
+        if (!compared) return null;
+
+        return {
+            current: { key: curKey, label: cur.label },
+            previous: { key: prevKey, label: prev.label },
+            total: compared.total,
+            teamCount: compared.teamCount,
+            teams: compared.teams
+        };
+    }
+
     /** Movement for one person, or null. Convenience for coaching surfaces. */
     function getMovementFor(name, momData) {
         if (!name || !momData || !momData.movements) return null;
@@ -517,7 +652,9 @@
         aggregateEmployeesFrom: aggregateEmployeesFrom,
         buildMonthAggregate: buildMonthAggregate,
         compareRankings: compareRankings,
+        compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
+        buildMonthOverMonthTeams: buildMonthOverMonthTeams,
         getMovementFor: getMovementFor,
         monthLabel: _monthLabel
     };

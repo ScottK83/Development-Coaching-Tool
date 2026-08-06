@@ -320,6 +320,92 @@ suite('period compare: movement carries whether the score actually changed', (t)
         flats.every((m) => m.scoreSumDelta === 0 && m.kpisMetDelta === 0));
 });
 
+/* ── Team movement ── */
+
+suite('period compare: teams are placed on KPI score, not average rank', (t) => {
+    // Average rank is a function of who else is in the pool. Team B does nothing
+    // differently between the two months; only Team A improves. Team B's average
+    // RANK must therefore worsen while its KPI score holds — and placing must
+    // follow the score, not the rank.
+    const teamA = ['A1', 'A2', 'A3'];
+    const teamB = ['B1', 'B2', 'B3'];
+    const sups = {};
+    teamA.forEach((n) => { sups[n] = 'Alpha'; });
+    teamB.forEach((n) => { sups[n] = 'Beta'; });
+
+    const before = [
+        ...teamA.map((n) => emp(n, { scheduleAdherence: 80, cxRepOverall: 70 })),
+        ...teamB.map((n) => emp(n, { scheduleAdherence: 95, cxRepOverall: 90 }))
+    ];
+    const after = [
+        ...teamA.map((n) => emp(n, { scheduleAdherence: 99, cxRepOverall: 99 })),
+        ...teamB.map((n) => emp(n, { scheduleAdherence: 95, cxRepOverall: 90 }))
+    ];
+
+    const pc = loadWithRanking(t, {});
+    const res = pc.compareTeams(before, after, sups, 2026, { minShared: 3, minTeamSize: 3 });
+    t.check('a team comparison is produced', !!res);
+    if (!res) return;
+
+    const alpha = res.teams.find((x) => x.name === 'Alpha');
+    const beta = res.teams.find((x) => x.name === 'Beta');
+
+    t.check('both teams are included', !!alpha && !!beta);
+    t.check('the improving team gains KPI score', alpha && alpha.ratingDelta > 0);
+    t.check('the untouched team holds its KPI score', beta && Math.abs(beta.ratingDelta) < 1e-9);
+    t.check('and is not credited with a decline it did not have', beta && beta.curAvgRating === beta.prevAvgRating);
+    t.check('the improving team ends ahead', alpha && alpha.curPlace === 1);
+});
+
+suite('period compare: teams level on score share a place', (t) => {
+    const sups = { A1: 'Alpha', A2: 'Alpha', A3: 'Alpha', B1: 'Beta', B2: 'Beta', B3: 'Beta' };
+    const same = () => [
+        emp('A1'), emp('A2'), emp('A3'),
+        emp('B1'), emp('B2'), emp('B3')
+    ];
+
+    const pc = loadWithRanking(t, {});
+    const res = pc.compareTeams(same(), same(), sups, 2026, { minShared: 3, minTeamSize: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+
+    t.check('identical teams share first place', res.teams.every((x) => x.curPlace === 1));
+    t.check('so neither is shown as having moved', res.teams.every((x) => x.placeDelta === 0));
+    t.check('and neither gained or lost score', res.teams.every((x) => Math.abs(x.ratingDelta) < 1e-9));
+});
+
+suite('period compare: a team too small to judge is left out', (t) => {
+    const sups = {
+        A1: 'Alpha', A2: 'Alpha', A3: 'Alpha',
+        B1: 'Beta', B2: 'Beta', B3: 'Beta',
+        C1: 'Gamma', C2: 'Gamma',
+        D1: null
+    };
+    const roster = () => [
+        emp('A1'), emp('A2'), emp('A3'),
+        emp('B1'), emp('B2'), emp('B3'),
+        emp('C1'), emp('C2'), emp('D1')
+    ];
+
+    const pc = loadWithRanking(t, {});
+    const res = pc.compareTeams(roster(), roster(), sups, 2026, { minShared: 3, minTeamSize: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+    t.check('the two full-size teams are placed', res.teams.length === 2);
+    t.check('the two-person team is not', !res.teams.some((x) => x.name === 'Gamma'));
+    t.check('and an unassigned person pulls no team down',
+        res.teams.every((x) => x.count === 3));
+});
+
+suite('period compare: one team alone is not a comparison', (t) => {
+    const sups = { A1: 'Alpha', A2: 'Alpha', A3: 'Alpha', B1: 'Beta' };
+    const roster = () => [emp('A1'), emp('A2'), emp('A3'), emp('B1')];
+
+    const pc = loadWithRanking(t, {});
+    t.check('nothing is produced when only one team qualifies',
+        pc.compareTeams(roster(), roster(), sups, 2026, { minShared: 3, minTeamSize: 3 }) === null);
+});
+
 /* ── Selector wiring ── */
 
 suite('period compare: rebuilt months are offered as periods', (t) => {

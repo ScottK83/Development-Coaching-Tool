@@ -299,8 +299,83 @@
             teamStats: teamStats,
             rankings: data.rankings,
             totalEmployees: data.totalEmployees,
-            source: data.source
+            source: data.source,
+            // Which supervisor label is mine. The movement panel groups on raw
+            // supervisor labels, so it needs this to know which row is yours.
+            myLabel: myLabel
         };
+    }
+
+    /**
+     * How each supervisor's team moved between the last two comparable months.
+     *
+     * Placed on average KPI score rather than average rank. Average rank depends on
+     * who else is in the pool — a team can lose a weak performer and every remaining
+     * member's rank improves with nobody doing anything differently. KPI score is a
+     * fixed 1-3 scale, so a move in it is a real move.
+     *
+     * Independent of the period selector above, which chooses what the matchup
+     * itself is computed over. Both months are named so the two are not confused.
+     */
+    function _renderTeamMovement(data) {
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (!pc || !pc.buildMonthOverMonthTeams) return '';
+
+        var mv;
+        try {
+            mv = pc.buildMonthOverMonthTeams(_getSupervisors());
+        } catch (err) {
+            console.warn('[matchup] Team movement unavailable:', err && err.message);
+            return '';
+        }
+        if (!mv || !mv.teams.length) return '';
+
+        var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement &mdash; ' +
+            _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) + '</h4>';
+        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
+            'Placed on average KPI score across the ' + mv.total + ' associates scored in both months. ' +
+            'Teams on the same average share a place.</p>';
+
+        html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
+        html += '<thead><tr style="background: var(--bg-surface-raised);">';
+        ['Place', 'Team', 'Move', 'Avg KPI', 'Change', 'Scored'].forEach(function (h, i) {
+            html += '<th style="padding: 6px 8px; border-bottom: 2px solid #ddd; text-align: ' + (i === 1 ? 'left' : 'center') + '; font-size: 0.9em;">' + h + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        mv.teams.forEach(function (t, idx) {
+            var isMine = data && data.myLabel && t.name === data.myLabel;
+            var bg = isMine ? 'rgba(21,101,192,0.10)' : (idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'transparent');
+
+            var moveHtml;
+            if (t.placeDelta === 0) {
+                moveHtml = '<span style="color: var(--text-tertiary);">&#8213;</span>';
+            } else {
+                var up = t.placeDelta > 0;
+                moveHtml = '<span style="color: ' + (up ? '#2e7d32' : '#c62828') + '; font-weight: bold;">' +
+                    (up ? '&#9650;' : '&#9660;') + Math.abs(t.placeDelta) + '</span>';
+            }
+
+            // Rating change is the substance; place can move because another team
+            // moved, so it is shown but never on its own.
+            var rd = t.ratingDelta;
+            var rdColor = Math.abs(rd) < 0.005 ? 'var(--text-tertiary)' : (rd > 0 ? '#2e7d32' : '#c62828');
+            var rdText = Math.abs(rd) < 0.005 ? 'no change' : (rd > 0 ? '+' : '') + rd.toFixed(2);
+
+            html += '<tr style="background: ' + bg + '; border-bottom: 1px solid var(--border);">';
+            html += '<td style="padding: 6px 8px; text-align: center; font-weight: bold;">' + t.curPlace + '</td>';
+            html += '<td style="padding: 6px 8px; font-weight: ' + (isMine ? 'bold' : 'normal') + ';">' +
+                _escapeHtml(t.name) + (isMine ? ' <span style="color:#1565c0;">(you)</span>' : '') + '</td>';
+            html += '<td style="padding: 6px 8px; text-align: center;">' + moveHtml + '</td>';
+            html += '<td style="padding: 6px 8px; text-align: center;">' + t.curAvgRating.toFixed(2) + '</td>';
+            html += '<td style="padding: 6px 8px; text-align: center; color: ' + rdColor + ';">' + rdText + '</td>';
+            html += '<td style="padding: 6px 8px; text-align: center; color: var(--text-secondary);">' + t.count + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        return html;
     }
 
     /**
@@ -401,6 +476,9 @@
         html += '<strong>🥊 Team Matchup</strong> &mdash; ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
         html += '</div>';
+
+        // Month-over-month team movement
+        html += _renderTeamMovement(data);
 
         // Scoreboard: My Team vs each rival
         var myStats = data.teamStats['My Team'];

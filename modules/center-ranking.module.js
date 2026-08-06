@@ -834,7 +834,15 @@
         { key: 'adherence', label: 'Adherence', getValue: function(r) { return r.values.adherence; }, reverse: true },
         { key: 'sentiment', label: 'Sentiment', getValue: function(r) { return r.values.sentiment; }, reverse: true },
         { key: 'associateOverall', label: 'Assoc Overall', getValue: function(r) { return r.values.associateOverall; }, reverse: true },
-        { key: 'reliability', label: 'Reliability', getValue: function(r) { return r.reliability; }, reverse: false }
+        { key: 'reliability', label: 'Reliability', getValue: function(r) { return r.reliability; }, reverse: false },
+        // Sorts on movement that has a score change behind it. A move with no score
+        // change is a reshuffle among tied people, so it returns null and sinks to
+        // the bottom rather than topping a list of "biggest movers" it did not earn.
+        { key: 'mom', label: 'MoM', reverse: true, getValue: function(r) {
+            var map = _movementByName();
+            var mv = map && map[r.name];
+            return (mv && mv.scoreChanged && Number.isFinite(mv.delta)) ? mv.delta : null;
+        } }
     ];
 
     function renderRankingTable(sortKey, sortDir) {
@@ -864,7 +872,7 @@
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';
         html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
-        html += '<th style="' + thStyle + ' width: 34px; cursor: default;" title="Rank movement between the last two months, over the people scored in both">MoM</th>';
+        html += '<th class="rank-sort-header" data-sort="mom" style="' + thStyle + ' width: 34px;" title="Rank movement between the last two months, over the people scored in both. Sorts by moves with a real score change behind them.">MoM' + arrow('mom') + '</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
         html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
         html += '<th class="rank-sort-header" data-sort="scoreSum" style="' + thStyle + '">Score Sum' + arrow('scoreSum') + '</th>';
