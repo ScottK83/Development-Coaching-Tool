@@ -20,6 +20,14 @@
     var SELECTION_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsSelection';
     var DEFAULT_TIERS = [1, 5, 10];
 
+    // Largest share of a scored field that can share a placing and still have it
+    // count as a win. Above this the "achievement" is just where the metric tops
+    // out, not something the person did.
+    var MAX_TIED_SHARE_FOR_WIN = 0.2;
+
+    // Below this many scored, a share is too noisy to judge saturation by.
+    var MIN_FIELD_FOR_TIE_SHARE = 10;
+
     // Metric rank keys from center-ranking module -> friendly labels.
     // The first four are the scorecard KPIs; the rest are ranked purely so
     // wins on them get recognized (they carry no weight in center ranking).
@@ -321,6 +329,24 @@
 
                 var tiedCount = rankCountsByMetric[metricKey]?.[metricRank] || 1;
                 var rankedCount = rankedCountByMetric[metricKey] || 0;
+
+                // A placing shared with a large slice of the centre is not a placing.
+                // Over a two-day window Rep Satisfaction put 16 of the 19 associates
+                // scored on it at 100%, and every one of them was being told they
+                // were top of the centre. Eighty-four percent of a field cannot all
+                // be standing out, and saying so to sixteen people devalues it for
+                // the one week somebody genuinely does.
+                //
+                // Ceiling-bound percentage metrics saturate like this constantly —
+                // the shorter the window, the worse it gets. A win has to leave most
+                // of the field behind it to be worth saying out loud.
+                // Only ever applies to a SHARED placing. Someone alone at the top of
+                // a field of three holds a third of it by arithmetic, and that is
+                // still a win — they beat everyone they were measured against.
+                // Needs a real field before a share means anything: three people
+                // scored and two tied is 67%, but it is also just three people.
+                if (tiedCount > 1 && rankedCount >= MIN_FIELD_FOR_TIE_SHARE
+                    && (tiedCount / rankedCount) > MAX_TIED_SHARE_FOR_WIN) return;
 
                 achievements.push({
                     type: 'metric',
