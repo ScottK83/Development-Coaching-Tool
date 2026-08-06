@@ -1688,6 +1688,86 @@
         return message;
     }
 
+    // --- Week-progress message (Wed/Thu midweek, Fri closing) ---
+
+    /**
+     * Where this week stands against last week, in numbers.
+     *
+     * calcWeekDeltas already normalises direction — a positive delta is an
+     * improvement whether the metric wants to go up or down — so this is
+     * mostly a matter of deciding what cleared the noise and saying it.
+     */
+    async function generateWeekProgressMessage(employeeName, latestKey, baselineKey, options = {}) {
+        const outreach = window.DevCoachModules?.dailyOutreach;
+        if (!outreach?.buildWeekProgressText) return null;
+
+        const period = getPeriodData(latestKey);
+        const emp = period?.employees?.find(e => e.name === employeeName);
+        if (!emp) return null;
+
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(employeeName)
+            : employeeName.split(/[\s,]+/)[0];
+
+        const deltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
+        const hasBaseline = deltas.length > 0;
+
+        // Same noise floor the growth view uses, so "improved" means the same
+        // thing wherever it is claimed.
+        const clears = (d) => {
+            const floor = typeof getGrowthNoiseThreshold === 'function' ? getGrowthNoiseThreshold(d.metricKey) : 0;
+            return d.absDelta >= floor;
+        };
+
+        const improved = deltas.filter(d => d.delta > 0 && clears(d))
+            .sort((a, b) => b.absDelta - a.absDelta)
+            .slice(0, 3)
+            .map(d => ({ label: d.label, deltaText: fmtDelta(d.metricKey, d.delta) }));
+
+        const slipped = deltas.filter(d => d.delta < 0 && clears(d))
+            .sort((a, b) => b.absDelta - a.absDelta)
+            .slice(0, 2)
+            .map(d => ({ label: d.label, deltaText: fmtDelta(d.metricKey, d.delta) }));
+
+        // Lead the standings with whatever moved most; that is the part worth
+        // reading, and it keeps the line short enough to actually be read.
+        const standings = deltas
+            .slice()
+            .sort((a, b) => b.absDelta - a.absDelta)
+            .slice(0, 4)
+            .map(d => ({
+                label: d.label,
+                latestText: fmtVal(d.metricKey, d.latestValue),
+                baseText: fmtVal(d.metricKey, d.baseValue)
+            }));
+
+        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
+            ? getCallCenterAverageForPeriod(latestKey) || {}
+            : {};
+        const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+        const allMetrics = (analysis?.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const focal = pickFocalPointSmart(allMetrics, getYtdMetricsMapForEmployee(employeeName));
+
+        // If nothing was comparable, still report where they stand.
+        const fallbackStandings = standings.length ? standings : allMetrics.slice(0, 3).map(m => ({
+            label: m.label,
+            latestText: fmtVal(m),
+            baseText: ''
+        }));
+
+        return outreach.buildWeekProgressText({
+            firstName,
+            tone: options.tone === 'closing' ? 'closing' : 'midweek',
+            daysIn: Number.isFinite(options.daysIn) ? options.daysIn : 0,
+            hasBaseline,
+            thisWeek: options.latestIsThisWeek !== false,
+            standings: fallbackStandings,
+            improved,
+            slipped,
+            focus: focal ? { label: focal.label, valueText: fmtVal(focal), targetText: fmtTarget(focal) } : null
+        });
+    }
+
     // --- Midweek Check-In message generation ---
 
     async function generateMidweekCheckinMessage(employeeName, latestKey, baselineKey) {
@@ -2580,12 +2660,34 @@
 
     // The base message for the day, plus — when the plan calls for it — the
     // daily numbers slotted in after the opening.
-    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
-        const base = plan.base === 'midweek'
-            ? await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey)
-            : await generateMondayKickoffMessage(employeeName, latestKey, baselineKey);
+    function latestKeyCoversThisWeek(outreach, latestKey) {
+        if (!outreach || !latestKey) return false;
+        const period = getPeriodData(latestKey);
+        const end = period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey);
+        return Boolean(end) && String(end).slice(0, 10) >= outreach.mondayOf(new Date());
+    }
 
+    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
+        let base;
+        if (plan.base === 'weekProgress' || plan.base === 'weekClosing') {
+            base = await generateWeekProgressMessage(employeeName, latestKey, baselineKey, {
+                tone: plan.base === 'weekClosing' ? 'closing' : 'midweek',
+                daysIn: dailyEntry?.dates?.size || 0,
+                latestIsThisWeek: latestKeyCoversThisWeek(outreach, latestKey)
+            });
+            // If the week-vs-week read came back empty, the older nudge is
+            // still better than sending nothing at all.
+            if (!base) base = await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey);
+        } else if (plan.base === 'midweek') {
+            base = await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey);
+        } else {
+            base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey);
+        }
+
+        // When the weekly file already is this week, the recap would be the
+        // same numbers a second time.
         if (plan.dailyMode === 'none' || !dailyEntry) return base || '';
+        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return base || '';
 
         const rows = plan.dailyMode === 'monday'
             ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
@@ -3267,6 +3369,7 @@
         generateHighFiveMessage,
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
+        generateWeekProgressMessage,
         showRunMyDayModal,
         buildOutreachMessage,
         collectDailyRowsThisWeek,

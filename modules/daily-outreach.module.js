@@ -50,24 +50,24 @@
             id: 'wednesday',
             label: 'Wednesday Check-in',
             covers: 'thisWeek',
-            coverageLabel: 'this week so far',
-            base: 'midweek',
+            coverageLabel: 'this week so far vs last week',
+            base: 'weekProgress',
             dailyMode: 'wtd'
         },
         thursday: {
             id: 'thursday',
             label: 'Thursday Check-in',
             covers: 'thisWeek',
-            coverageLabel: 'this week so far',
-            base: 'midweek',
+            coverageLabel: 'this week so far vs last week',
+            base: 'weekProgress',
             dailyMode: 'wtd'
         },
         friday: {
             id: 'friday',
             label: 'Friday Finish',
             covers: 'thisWeek',
-            coverageLabel: 'this week so far',
-            base: 'midweek',
+            coverageLabel: 'the week you just worked',
+            base: 'weekClosing',
             dailyMode: 'wtd'
         },
         weekend: {
@@ -258,6 +258,90 @@
         return `📊 Week to date${dayText}: ${parts.join(', ')}.`;
     }
 
+    function joinList(items) {
+        if (items.length <= 1) return items[0] || '';
+        if (items.length === 2) return `${items[0]} and ${items[1]}`;
+        return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+    }
+
+    /**
+     * The midweek and end-of-week message: where this week stands against last
+     * week, and what actually moved.
+     *
+     * The old midweek note just recalled Monday's focus and said keep going,
+     * which reads as filler when the numbers to compare are sitting right
+     * there. This one leads with the comparison.
+     *
+     * data:
+     *   firstName    who it's addressed to
+     *   tone         'midweek' (Wed/Thu) or 'closing' (Fri)
+     *   sourceLabel  what "this week" is built from, for the standings line
+     *   daysIn       days of data behind it, 0 if unknown
+     *   standings    [{ label, latestText, baseText }] — current vs last week
+     *   improved     [{ label, deltaText }] — moved the right way past noise
+     *   slipped      [{ label, deltaText }] — moved the wrong way past noise
+     *   focus        { label, valueText, targetText } or null
+     *   hasBaseline  whether last week was available to compare against
+     */
+    function buildWeekProgressText(data) {
+        const d = data || {};
+        const name = d.firstName || 'there';
+        const closing = d.tone === 'closing';
+        const standings = d.standings || [];
+        const improved = d.improved || [];
+        const slipped = d.slipped || [];
+
+        // Only say "this week" when the numbers really are this week's. With
+        // no week-in-progress file the newest weekly upload is last week, and
+        // calling that "this week" would be a plain misstatement.
+        const thisWeek = d.thisWeek !== false;
+        const opener = closing
+            ? (thisWeek
+                ? `Hey ${name}! Closing out the week, so here is how it went next to last week.`
+                : `Hey ${name}! Closing out the week. Your newest full week is still the one before this, so here it is against the week before that.`)
+            : (thisWeek
+                ? `Hey ${name}! Quick look at where this week stands next to last week.`
+                : `Hey ${name}! This week has not landed in a file yet, so here is your most recent full week against the one before it.`);
+
+        const blocks = [opener];
+
+        if (standings.length) {
+            const dayText = d.daysIn > 0 ? ` (${d.daysIn} day${d.daysIn === 1 ? '' : 's'} in)` : '';
+            const heading = closing ? 'Where you landed' : (thisWeek ? 'Where you are' : 'Most recent full week');
+            const parts = standings.map(s => (d.hasBaseline && s.baseText
+                ? `${s.label} ${s.latestText}, was ${s.baseText}`
+                : `${s.label} ${s.latestText}`));
+            blocks.push(`📊 ${heading}${dayText}: ${parts.join('. ')}.`);
+        }
+
+        if (improved.length) {
+            blocks.push(`✅ Up from last week: ${joinList(improved.map(i => `${i.label} ${i.deltaText}`))}.`);
+        } else if (d.hasBaseline && standings.length && !slipped.length) {
+            blocks.push('✅ Holding steady against last week, no real slippage anywhere.');
+        }
+
+        if (slipped.length) {
+            blocks.push(`👀 Slid a little: ${joinList(slipped.map(s => `${s.label} ${s.deltaText}`))}.`);
+        }
+
+        if (d.focus) {
+            const push = closing ? 'Worth a push next week' : 'Worth a push';
+            blocks.push(`🎯 ${push}: ${d.focus.label} is ${d.focus.valueText} against a ${d.focus.targetText} target.`);
+        }
+
+        if (!standings.length) {
+            blocks.push(closing
+                ? 'Not enough in yet to put numbers on the week, but I wanted to close it out with you anyway.'
+                : "Not enough in yet to put numbers on this week, so treat this as a nudge rather than a scorecard.");
+        }
+
+        blocks.push(closing
+            ? 'Good work this week. Have a good weekend.'
+            : 'Keep it rolling, and I will check back before the week is out.');
+
+        return blocks.join('\n\n');
+    }
+
     /**
      * Slots the recap in after the opening paragraph. Appending it to the end
      * would land it under the sign-off, which reads like a postscript nobody
@@ -357,6 +441,8 @@
         checkPeriodData,
         shiftDays,
         buildDailyRecap,
+        buildWeekProgressText,
+        joinList,
         insertRecap,
         loadSentLog,
         saveSentLog,

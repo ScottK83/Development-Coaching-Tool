@@ -32,15 +32,17 @@ suite('day posts: each day says what it covers', (t) => {
     // Wednesday onward switch to how this week is going.
     t.equal('Monday looks back at last week', byId.monday.coverageLabel, 'last week');
     t.equal('Tuesday adds Monday to it', byId.tuesday.coverageLabel, 'last week plus Monday');
-    t.equal('Wednesday moves to this week', byId.wednesday.coverageLabel, 'this week so far');
-    t.equal('Thursday stays there', byId.thursday.coverageLabel, 'this week so far');
-    t.equal('and Friday closes it out', byId.friday.coverageLabel, 'this week so far');
+    t.equal('Wednesday compares this week to last', byId.wednesday.coverageLabel, 'this week so far vs last week');
+    t.equal('Thursday does the same', byId.thursday.coverageLabel, 'this week so far vs last week');
+    t.equal('and Friday closes the week out', byId.friday.coverageLabel, 'the week you just worked');
 
     // Monday and Tuesday build off the weekly recap; the rest off the midweek
     // check-in, so consecutive days don't read as the same message twice.
     t.equal('Monday and Tuesday share a base', byId.monday.base, byId.tuesday.base);
     t.check('but differ in what they append', byId.monday.dailyMode !== byId.tuesday.dailyMode);
-    t.check('and the back half uses the other base', byId.wednesday.base !== byId.monday.base);
+    t.check('and the back half uses a different base again', byId.wednesday.base !== byId.monday.base);
+    t.equal('Wednesday and Thursday share the week-progress base', byId.wednesday.base, byId.thursday.base);
+    t.check('Friday closes rather than checks in', byId.friday.base !== byId.wednesday.base);
 });
 
 suite('day posts: sent tracking is per person, per day, per week', (t) => {
