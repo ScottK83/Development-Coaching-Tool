@@ -1684,8 +1684,69 @@
             focusText = `\n\n${pick(MK_ALL_GOOD)}`;
         }
 
-        let message = `${pick(MK_OPENERS)(firstName)} ${praiseText}${focusText}\n\n${pick(MK_CLOSERS)}`;
+        const yearBlock = buildYearStandingBlock(employeeName, allMetrics);
+        let message = `${pick(MK_OPENERS)(firstName)} ${praiseText}${focusText}`;
+        if (yearBlock) message += `\n\n${yearBlock}`;
+        message += `\n\n${pick(MK_CLOSERS)}`;
         return message;
+    }
+
+    /**
+     * Whether they are gaining or losing ground on the floor this year.
+     *
+     * Ranks decide the direction and are then discarded — associates see which
+     * way they are moving, never where they sit. A number would have them
+     * comparing themselves to a colleague; a direction has them moving.
+     */
+    function buildYearStandingBlock(employeeName, allMetrics) {
+        const standing = window.DevCoachModules?.yearStanding;
+        if (!standing?.gatherYearMovement) return '';
+
+        const movement = standing.gatherYearMovement(employeeName);
+        if (!movement) return '';
+
+        // Rank keys differ from registry keys, so map back to the metric name
+        // the associate would actually recognise.
+        const RANK_TO_METRIC = {
+            aht: 'aht',
+            adherence: 'scheduleAdherence',
+            sentiment: 'overallSentiment',
+            associateOverall: 'cxRepOverall',
+            fcr: 'fcr',
+            overallExperience: 'overallExperience',
+            positiveWord: 'positiveWord',
+            negativeWord: 'negativeWord',
+            managingEmotions: 'managingEmotions'
+        };
+
+        const byKey = {};
+        (allMetrics || []).forEach(m => { byKey[m.metricKey] = m; });
+
+        const entries = [];
+        Object.keys(RANK_TO_METRIC).forEach(rankKey => {
+            const metricKey = RANK_TO_METRIC[rankKey];
+            const move = standing.classifyMovement(movement.earlier[rankKey], movement.current[rankKey], movement.fieldSize);
+            if (!move || move === 'holding') return;
+
+            const metric = byKey[metricKey];
+            entries.push({
+                label: window.METRICS_REGISTRY?.[metricKey]?.label || metricKey,
+                valueText: metric ? fmtVal(metric) : '',
+                targetText: metric ? fmtTarget(metric) : '',
+                movement: move
+            });
+        });
+
+        if (!entries.length) return '';
+
+        // Lead with what slipped — that is the part with months left to fix.
+        entries.sort((a, b) => (b.movement === 'slipping' ? 1 : 0) - (a.movement === 'slipping' ? 1 : 0));
+
+        return standing.buildYearStandingText(entries, {
+            limit: 3,
+            pick,
+            closer: standing.urgencyLine(new Date())
+        });
     }
 
     // --- Week-progress message (Wed/Thu midweek, Fri closing) ---
