@@ -45,6 +45,41 @@
         return row?.extraValues?.[metricKey] ?? null;
     }
 
+    function celebrationYear(periodKey) {
+        var endStr = String(periodKey || '');
+        if (endStr.indexOf('|') > -1) endStr = endStr.split('|')[1];
+        var year = parseInt(String(endStr).split('-')[0], 10);
+        return Number.isInteger(year) ? year : new Date().getFullYear();
+    }
+
+    /**
+     * Is this number actually any good, never mind how it ranks?
+     *
+     * Celebrations rank against the whole centre, which says how someone
+     * compares but nothing about whether the figure is good. On a metric the
+     * whole floor struggles with, that celebrated people for numbers they were
+     * failing — "Avoid Negative Words 73.1%" against an 83% target. Telling
+     * someone that is a win teaches them the wrong number.
+     *
+     * Unjudgeable values pass: a missing target is a reason to stay quiet, not
+     * to suppress a real achievement.
+     */
+    function meetsCelebrationTarget(metricKey, value, year) {
+        var meta = METRIC_RANK_LABELS[metricKey];
+        if (!meta) return true;
+
+        var profiles = window.DevCoachModules?.metricProfiles;
+        var target = profiles?.getYearTarget?.(meta.registry, year)
+            || window.METRICS_REGISTRY?.[meta.registry]?.target;
+        if (!target) return true;
+
+        var limit = parseFloat(target.value);
+        var actual = parseFloat(value);
+        if (!Number.isFinite(limit) || !Number.isFinite(actual)) return true;
+
+        return target.type === 'max' ? actual <= limit : actual >= limit;
+    }
+
     function _escapeHtml(str) {
         var mod = window.DevCoachModules?.sharedUtils;
         if (mod?.escapeHtml) return mod.escapeHtml(str);
@@ -225,6 +260,8 @@
                 var tier = getTierForRank(metricRank, tiers);
                 var metricValue = getRankedValue(r, metricKey);
                 if (metricValue === null || metricValue === undefined) return;
+                // Ranking well on a number you are failing is not a win.
+                if (!meetsCelebrationTarget(metricKey, metricValue, celebrationYear(data.periodKey || periodKey))) return;
 
                 achievements.push({
                     type: 'metric',
@@ -303,6 +340,8 @@
 
         var best = null;
         var withheld = null;
+        var belowTarget = null;
+        var year = celebrationYear(data && data.periodKey);
 
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
             var rank = row.metricRanks?.[metricKey];
@@ -310,15 +349,20 @@
 
             var value = getRankedValue(row, metricKey);
             var hasValue = value !== null && value !== undefined;
-            var entry = { metricKey: metricKey, label: METRIC_RANK_LABELS[metricKey].label, rank: rank, hasValue: hasValue };
+            var entry = { metricKey: metricKey, label: METRIC_RANK_LABELS[metricKey].label, rank: rank, hasValue: hasValue, value: value };
 
             if (!best || rank < best.rank) best = entry;
             // A qualifying rank whose value never made it through is the most
-            // misleading case of the three, so it wins the explanation.
+            // misleading case, so it wins the explanation.
             if (rank <= maxTier && !hasValue && (!withheld || rank < withheld.rank)) withheld = entry;
+            // Ranked well but failing the number: worth saying out loud, because
+            // it reads as an oversight otherwise.
+            if (rank <= maxTier && hasValue && !meetsCelebrationTarget(metricKey, value, year)
+                && (!belowTarget || rank < belowTarget.rank)) belowTarget = entry;
         });
 
         if (withheld) return { name: name, reason: 'valueWithheld', best: withheld, maxTier: maxTier };
+        if (belowTarget) return { name: name, reason: 'belowTarget', best: belowTarget, maxTier: maxTier };
         if (!best) return { name: name, reason: 'noMetricRanks', maxTier: maxTier };
         return { name: name, reason: 'belowBar', best: best, maxTier: maxTier, shortBy: Math.max(0, best.rank - maxTier) };
     }
@@ -330,6 +374,10 @@
         }
         if (info.reason === 'noMetricRanks') {
             return who + ' is ranked this period but holds no metric rank yet.';
+        }
+        if (info.reason === 'belowTarget') {
+            return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
+                + ', but ' + info.best.value + ' is still short of target, so it is not a shout-out.';
         }
         if (info.reason === 'valueWithheld') {
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
@@ -1229,6 +1277,8 @@
         renderHistoryView: renderHistoryView,
         detectCelebrations: detectCelebrations,
         explainNoCelebration: explainNoCelebration,
+        meetsCelebrationTarget: meetsCelebrationTarget,
+        celebrationYear: celebrationYear,
         describeNoCelebration: describeNoCelebration,
         generateShoutOut: generateShoutOut,
         generateAllShoutOuts: generateAllShoutOuts,

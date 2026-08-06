@@ -46,6 +46,68 @@ suite('celebrations: picking one person shows only their wins', (t) => {
     t.check('the teammate is left out', names.indexOf('Alyssa Dimes') === -1);
 });
 
+suite('celebrations: never celebrates a number someone is failing', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: fakeRankings, buildRankingsForPeriod: fakeRankings };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    // Avoid Negative Words is a "min 83" metric: higher is better, 83 is the
+    // bar. Ranking sixth on the floor at 73.1% is still a failing number, and
+    // calling it a win teaches the wrong number.
+    t.check('73.1% is not a win', celebrations.meetsCelebrationTarget('negativeWord', 73.1, 2026) === false);
+    t.check('80% is still short', celebrations.meetsCelebrationTarget('negativeWord', 80, 2026) === false);
+    t.check('83% clears the bar', celebrations.meetsCelebrationTarget('negativeWord', 83, 2026) === true);
+    t.check('and 91% clearly does', celebrations.meetsCelebrationTarget('negativeWord', 91, 2026) === true);
+
+    // AHT runs the other way: lower is better.
+    t.check('an AHT under target is a win', celebrations.meetsCelebrationTarget('aht', 380, 2026) === true);
+    t.check('an AHT over target is not', celebrations.meetsCelebrationTarget('aht', 520, 2026) === false);
+
+    // A metric with no configured target must not be silently suppressed.
+    t.check('an unjudgeable metric is left alone', celebrations.meetsCelebrationTarget('notAMetric', 5, 2026) === true);
+    t.check('and so is a missing value', celebrations.meetsCelebrationTarget('negativeWord', null, 2026) === true);
+
+    t.equal('the year comes off the period key', celebrations.celebrationYear('2026-07-27|2026-08-02'), 2026);
+    t.equal('a bare key still yields a year', celebrations.celebrationYear('2025-08-02'), 2025);
+});
+
+suite('celebrations: a failing number is dropped, and explained', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    const data = () => ({
+        periodKey: '2026-07-27|2026-08-02',
+        totalEmployees: 126,
+        teamMembers: new Set(['Kristin Villela', 'Betty Yanez']),
+        rankings: [
+            // Sixth on the floor, but ten points under the 83% bar.
+            { name: 'Kristin Villela', rank: 6, metricRanks: { negativeWord: 6 }, extraValues: { negativeWord: 73.1 } },
+            // Genuinely good, and ranked.
+            { name: 'Betty Yanez', rank: 3, metricRanks: { negativeWord: 3 }, extraValues: { negativeWord: 91.4 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const names = result.celebrations.map(c => c.name);
+
+    t.check('the failing number is not celebrated', names.indexOf('Kristin Villela') === -1);
+    t.check('the genuinely good one still is', names.indexOf('Betty Yanez') > -1);
+
+    // Dropping it silently would read as an oversight, so it has to say why.
+    const missed = result.missed.find(m => m.name === 'Kristin Villela');
+    t.check('the drop is explained', Boolean(missed));
+    t.equal('as being short of target, not a near miss on rank', missed.reason, 'belowTarget');
+    const text = celebrations.describeNoCelebration(missed);
+    t.check('the wording names the rank', text.indexOf('#6') > -1);
+    t.check('and says the number is short', text.indexOf('short of target') > -1);
+    t.check('and does not call it a bar miss', text.indexOf('off the top') === -1);
+});
+
 suite('celebrations: says why someone came up empty', (t) => {
     const celebrations = load(t, null);
     const tiers = [1, 5, 10];
