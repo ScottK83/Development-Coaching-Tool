@@ -594,6 +594,7 @@
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.matchup = {
+        MATCHUP_METRICS: MATCHUP_METRICS,
         resolveMyTeamLabel: resolveMyTeamLabel,
         renderMatchup: renderMatchup,
         buildMatchupData: buildMatchupData

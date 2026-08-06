@@ -181,9 +181,15 @@ Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`
                 if (centerValue !== undefined && centerValue !== null) {
                     const currentFloat = parseFloat(current);
                     const centerFloat = parseFloat(centerValue);
-                    const beatsCenterAvg = metric.higherIsBetter ? currentFloat > centerFloat : currentFloat < centerFloat;
+                    // The registry records direction as `isReverse`; there is no
+                    // `higherIsBetter` on it. Reading one that never existed meant
+                    // every metric took the lower-is-better branch, so on adherence,
+                    // sentiment, FCR and the rest this named people who were BELOW
+                    // the centre average as champions.
+                    const higherIsBetter = metric.isReverse !== true;
+                    const beatsCenterAvg = higherIsBetter ? currentFloat > centerFloat : currentFloat < centerFloat;
                     if (beatsCenterAvg) {
-                        const delta = metric.higherIsBetter ? currentFloat - centerFloat : centerFloat - currentFloat;
+                        const delta = higherIsBetter ? currentFloat - centerFloat : centerFloat - currentFloat;
                         if (delta > 0) {
                             if (!teamAnalysis.metricChampions[metricKey]) {
                                 teamAnalysis.metricChampions[metricKey] = [];

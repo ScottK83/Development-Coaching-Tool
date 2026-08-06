@@ -3370,6 +3370,7 @@
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
         generateWeekProgressMessage,
+        DAILY_CHECKIN_METRICS,
         showRunMyDayModal,
         buildOutreachMessage,
         collectDailyRowsThisWeek,

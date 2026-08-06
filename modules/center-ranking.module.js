@@ -163,8 +163,19 @@
         { key: 'overallExperience', field: 'overallExperience', reverse: false, survey: true },
         { key: 'transfers', field: 'transfers', reverse: true },        // lower is better
         { key: 'positiveWord', field: 'positiveWord', reverse: false },
-        { key: 'negativeWord', field: 'negativeWord', reverse: true },  // lower is better
+        { key: 'negativeWord', field: 'negativeWord', reverse: false }, // 'Avoid Negative Words' scores how well you avoided them, so higher is better
         { key: 'managingEmotions', field: 'managingEmotions', reverse: false }
+    ];
+    // The five scorecard KPIs. Hoisted alongside EXTRA_RANK_METRICS so both
+    // lists can be checked against the metrics registry — a direction flag that
+    // disagrees with the registry silently ranks the worst performer first.
+    // `registry` names the registry key each rank key reads from.
+    var KPI_RANK_METRICS = [
+        { key: 'aht', field: 'values.aht', reverse: true, registry: 'aht' },
+        { key: 'adherence', field: 'values.adherence', reverse: false, registry: 'scheduleAdherence' },
+        { key: 'sentiment', field: 'values.sentiment', reverse: false, registry: 'overallSentiment' },
+        { key: 'associateOverall', field: 'values.associateOverall', reverse: false, registry: 'cxRepOverall' },
+        { key: 'reliability', field: 'reliability', reverse: true, registry: 'reliability' }
     ];
     var MIN_SURVEYS_FOR_RANK = 3;
 
@@ -385,13 +396,7 @@
         });
 
         // ── Step 5: Individual KPI Ranks ──
-        var metricRankKeys = [
-            { key: 'aht', field: 'values.aht', reverse: true },       // lower is better
-            { key: 'adherence', field: 'values.adherence', reverse: false },  // higher is better
-            { key: 'sentiment', field: 'values.sentiment', reverse: false },
-            { key: 'associateOverall', field: 'values.associateOverall', reverse: false },
-            { key: 'reliability', field: 'reliability', reverse: true }  // lower is better
-        ].concat(EXTRA_RANK_METRICS.map(function (m) {
+        var metricRankKeys = KPI_RANK_METRICS.slice().concat(EXTRA_RANK_METRICS.map(function (m) {
             return { key: m.key, field: 'extraValues.' + m.key, reverse: m.reverse };
         }));
 
@@ -848,6 +853,8 @@
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.centerRanking = {
+        EXTRA_RANK_METRICS: EXTRA_RANK_METRICS,
+        KPI_RANK_METRICS: KPI_RANK_METRICS,
         renderCenterRanking: renderCenterRanking,
         buildCenterRankings: buildCenterRankings,
         buildRankingsForPeriod: buildRankingsForPeriod,
