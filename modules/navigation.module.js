@@ -136,9 +136,10 @@
 
     // --- Review Prep sub-sections ---
 
-    var REVIEW_SUB_SECTIONS = ['subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionYearEnd'];
-    var REVIEW_NAV_BUTTONS = ['subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpMidYear', 'subNavRpYearEnd'];
+    var REVIEW_SUB_SECTIONS = ['subSectionMeetings', 'subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionYearEnd'];
+    var REVIEW_NAV_BUTTONS = ['subNavRpMeetings', 'subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpMidYear', 'subNavRpYearEnd'];
     var REVIEW_SUB_TO_BTN = {
+        subSectionMeetings: 'subNavRpMeetings',
         subSectionOnOffTracker: 'subNavRpScoreCard',
         subSectionQ1Review: 'subNavRpQuarterly',
         subSectionMidYear: 'subNavRpMidYear',

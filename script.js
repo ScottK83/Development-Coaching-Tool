@@ -1860,6 +1860,10 @@ function bindNavigationHandlers() {
         showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
         initializeOnOffTracker();
     });
+    document.getElementById('subNavRpMeetings')?.addEventListener('click', () => {
+        showReviewPrepSubSection('subSectionMeetings', 'subNavRpMeetings');
+        window.DevCoachModules?.oneOnOneUi?.initializeOneOnOne?.();
+    });
     document.getElementById('subNavRpScoreCard')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionOnOffTracker');
         showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');

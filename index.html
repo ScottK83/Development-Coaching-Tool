@@ -450,6 +450,13 @@ Box 2 - Future Improvement Areas:
                     <!-- End Year-End Comments Sub-section -->
 
                     <!-- On/Off Tracker Sub-section -->
+                    <!-- One-to-one meeting prep -->
+                    <div id="subSectionMeetings" style="display: none;">
+                        <h3 style="color: #bf360c; margin-top: 0;">🤝 One-to-One Meeting Prep</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Pick who and when. The numbers come argued: the year so far, last month, the last few weeks, and what has moved since you last sat down. Add your own notes and save it, and the next meeting opens against this one.</p>
+                        <div id="oneOnOneContainer"></div>
+                    </div>
+
                     <div id="subSectionOnOffTracker" style="display: none;">
                         <p style="color: #4a148c; margin-bottom: 20px;">Calculate On/Off Track status using the Excel mirror KPI logic without opening Year-End comments.</p>
 
@@ -796,6 +803,7 @@ Box 2 - Future Improvement Areas:
                 <div class="form-section" style="background: #fbe9e7; border-left: 4px solid #d84315;">
                     <h2>📋 Review Prep</h2>
                     <div class="sub-nav" style="border-bottom: 2px solid #d84315; gap: 8px;">
+                        <button type="button" id="subNavRpMeetings" class="btn-secondary" style="background: #bf360c; color: white; font-size: 0.9em; padding: 8px 16px;">🤝 Meetings</button>
                         <button type="button" id="subNavRpScoreCard" class="btn-secondary" style="background: #1565c0; color: white; font-size: 0.9em; padding: 8px 16px;">📍 Score Card</button>
                         <button type="button" id="subNavRpQuarterly" class="btn-secondary" style="background: #d84315; color: white; font-size: 0.9em; padding: 8px 16px;">📋 Quarterly</button>
                         <button type="button" id="subNavRpMidYear" class="btn-secondary" style="background: #00838f; color: white; font-size: 0.9em; padding: 8px 16px;">📝 Mid-Year</button>
@@ -1757,6 +1765,8 @@ Box 2 - Future Improvement Areas:
                 'modules/employee-list.module.js',
                 'modules/trend-intelligence.module.js',
                 'modules/trend-coaching-email.module.js',
+                'modules/one-on-one.module.js',
+                'modules/one-on-one-ui.module.js',
                 'modules/team-scope.module.js',
                 'modules/highlights.module.js',
                 'modules/team-hub.module.js',

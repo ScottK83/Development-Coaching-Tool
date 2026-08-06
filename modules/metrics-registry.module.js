@@ -146,7 +146,8 @@
             key: 'aht',
             label: 'Average Handle Time',
             icon: '⏱️',
-            target: { type: 'max', value: 414 },
+            // The goal, not the stretch. See metric-profiles: 414 earns a 3.
+            target: { type: 'max', value: 426 },
             isReverse: true,
             unit: 'sec',
             columnIndex: 4,

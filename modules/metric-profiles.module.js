@@ -26,7 +26,10 @@
             positiveWord: { type: 'min', value: 86 },
             negativeWord: { type: 'min', value: 83 },
             managingEmotions: { type: 'min', value: 95 },
-            aht: { type: 'max', value: 414 },
+            // 426 is the goal. 414 is the stretch, and lives in the rating
+            // band below as the mark that earns a 3 — it is not the bar
+            // everyone is judged against day to day.
+            aht: { type: 'max', value: 426 },
             acw: { type: 'max', value: 60 },
             holdTime: { type: 'max', value: 30 },
             reliability: { type: 'max', value: 18 }
