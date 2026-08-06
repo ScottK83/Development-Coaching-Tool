@@ -21,6 +21,15 @@
      * alone rather than guessing one of them is mine.
      */
     function resolveMyTeamLabel(rankings, supervisors, myTeamSet) {
+        // team-scope owns "which supervisor label is me". Asking it keeps the
+        // head-to-head and the My Team picker on the same answer — they used to
+        // disagree, which is how my own team appeared twice in one table.
+        var scope = window.DevCoachModules?.teamScope;
+        if (scope?.resolveMyLabel) {
+            var shared = scope.resolveMyLabel(supervisors, Array.from(myTeamSet || []));
+            if (shared) return shared;
+        }
+
         var counts = {};
         (rankings || []).forEach(function (r) {
             var sup = supervisors && supervisors[r.name];

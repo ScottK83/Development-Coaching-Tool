@@ -6,9 +6,10 @@
      *
      * Who on my team am I working with right now — everyone, or one person.
      *
-     * The roster is the team list the tool has always kept (Settings › Team
-     * Members, falling back to the default 18). This does not reach for the
-     * supervisor map: My Team means my team, not a picker for the whole floor.
+     * The roster comes from the supervisor assignments — my team is whoever
+     * reports to me — with the old Settings tick-list kept only as a fallback
+     * for installs that have no roster yet. It used to be the other way round,
+     * and the two lists disagreed.
      *
      * Picking a person here narrows every My Team tab, because team-filter
      * folds the scope into the context those tabs already consult.
@@ -16,6 +17,8 @@
 
     const PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     const ACTIVE_MEMBER_KEY = PREFIX + 'activeTeamMember';
+    const MY_LABEL_KEY = PREFIX + 'mySupervisorLabel';
+    const SUPERVISORS_KEY = PREFIX + 'employeeSupervisors';
 
     const ALL_MEMBERS_ID = '__all__';
 
@@ -49,13 +52,95 @@
         return (roster || []).indexOf(storedId) > -1 ? storedId : null;
     }
 
-    // --- Data access ---
+    // --- Who am I, and therefore who is my team ---
 
-    function getMyTeamNames() {
+    /**
+     * "My team" had two definitions that disagreed: the tick-list in Settings,
+     * and the supervisor roster. They returned different people — which is how
+     * the head-to-head ended up showing "My Team (8)" against "Scott (10)" in
+     * the same table, both of them me.
+     *
+     * The supervisor roster wins. It is re-read from the source system, it
+     * re-applies on every load, and it is the thing that moves when somebody
+     * changes team. The tick-list survives only as a fallback for installs that
+     * have no roster yet.
+     */
+    function getSupervisorMap() {
+        try {
+            return JSON.parse(localStorage.getItem(SUPERVISORS_KEY) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    /**
+     * Which supervisor label is me: whichever one's people overlap my existing
+     * team list most. Returns null when nothing overlaps, rather than claiming
+     * a colleague's team.
+     */
+    function resolveMyLabel(supervisorMap, roster) {
+        const map = supervisorMap || {};
+        const mine = new Set((roster || []).map(n => String(n || '').trim()).filter(Boolean));
+        if (!mine.size) return null;
+
+        const counts = {};
+        Object.keys(map).forEach(name => {
+            if (!mine.has(name)) return;
+            const label = String(map[name] || '').trim();
+            if (!label) return;
+            counts[label] = (counts[label] || 0) + 1;
+        });
+
+        let best = null;
+        let bestCount = 0;
+        Object.keys(counts).forEach(label => {
+            // Ties break alphabetically so the answer is stable across reloads.
+            if (counts[label] > bestCount || (counts[label] === bestCount && best && label < best)) {
+                bestCount = counts[label];
+                best = label;
+            }
+        });
+        return bestCount > 0 ? best : null;
+    }
+
+    function getMyLabel() {
+        try {
+            const saved = localStorage.getItem(MY_LABEL_KEY);
+            if (saved) return saved;
+        } catch (e) { /* fall through to inference */ }
+
+        const inferred = resolveMyLabel(getSupervisorMap(), legacyTeamNames());
+        if (inferred) setMyLabel(inferred);
+        return inferred;
+    }
+
+    function setMyLabel(label) {
+        try {
+            if (label) localStorage.setItem(MY_LABEL_KEY, label);
+            else localStorage.removeItem(MY_LABEL_KEY);
+        } catch (e) { /* selection just will not persist */ }
+    }
+
+    function membersUnderMe() {
+        const label = getMyLabel();
+        if (!label) return [];
+        const map = getSupervisorMap();
+        return Object.keys(map).filter(name => String(map[name] || '').trim() === label);
+    }
+
+    // The old tick-list. Still read, but only when the roster cannot answer.
+    function legacyTeamNames() {
         const filter = window.DevCoachModules?.teamFilter;
         if (!filter?.getTeamMembersForWeek) return [];
         const weekKey = filter.getTeamSelectionWeekKey ? filter.getTeamSelectionWeekKey() : '';
         return filter.getTeamMembersForWeek(weekKey) || [];
+    }
+
+    // --- Data access ---
+
+    function getMyTeamNames() {
+        const fromRoster = membersUnderMe();
+        return fromRoster.length ? fromRoster : legacyTeamNames();
     }
 
     // Everyone the tool has seen, across every store — a rep who only appears
@@ -134,6 +219,13 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.teamScope = {
         ALL_MEMBERS_ID,
+        MY_LABEL_KEY,
+        getSupervisorMap,
+        resolveMyLabel,
+        getMyLabel,
+        setMyLabel,
+        membersUnderMe,
+        legacyTeamNames,
         buildRoster,
         resolveActiveMember,
         getMyTeamNames,

@@ -68,3 +68,53 @@ suite('team scope: null scope and an empty scope mean different things', (t) => 
     t.check('no pick yields null, not an empty array', scope.getScopeMembers() === null);
     t.check('null is not an array', !Array.isArray(scope.getScopeMembers()));
 });
+
+suite('team scope: one definition of my team, not two', (t) => {
+    const scope = load(t);
+
+    // The tick-list and the supervisor roster used to be separate answers to
+    // the same question, and they disagreed — which is how the head-to-head
+    // showed "My Team (8)" against "Scott (10)" in one table, both of them me.
+    const supervisors = {
+        'Alyssa Dimes': 'Scott',
+        'Betty Yanez': 'Scott',
+        'Oceane Ingram': 'Scott',
+        'Michelle Castro': 'Kathy Cruz',
+        'Diane Cordova': 'Kathy Cruz'
+    };
+
+    t.equal('the overlap says which label is me',
+        scope.resolveMyLabel(supervisors, ['Alyssa Dimes', 'Betty Yanez']), 'Scott');
+
+    // A partial tick-list still identifies me, which matters because the two
+    // lists disagreeing is the whole reason for this.
+    t.equal('one name is enough to identify me',
+        scope.resolveMyLabel(supervisors, ['Oceane Ingram']), 'Scott');
+
+    // Never claim a colleague's team on no evidence.
+    t.check('no overlap claims nobody', scope.resolveMyLabel(supervisors, []) === null);
+    t.check('strangers claim nobody', scope.resolveMyLabel(supervisors, ['Nobody Here']) === null);
+    t.check('no supervisors claims nobody', scope.resolveMyLabel({}, ['Alyssa Dimes']) === null);
+
+    // Stable across reloads rather than depending on key order.
+    const tied = ['Alyssa Dimes', 'Michelle Castro'];
+    t.equal('a tie resolves the same way every time',
+        scope.resolveMyLabel(supervisors, tied), scope.resolveMyLabel(supervisors, tied.slice().reverse()));
+});
+
+suite('team scope: my label is remembered, and the roster follows it', (t) => {
+    const scope = load(t);
+
+    t.check('nothing is stored to begin with', scope.getMyLabel() === null);
+
+    scope.setMyLabel('Scott');
+    t.equal('a chosen label sticks', scope.getMyLabel(), 'Scott');
+
+    // With no supervisor map the roster has to fall back rather than come back
+    // empty, or a fresh install would show an empty picker.
+    t.equal('an empty supervisor map yields nobody under me', scope.membersUnderMe().length, 0);
+    t.check('so the team names fall back to the old list', Array.isArray(scope.getMyTeamNames()));
+
+    scope.setMyLabel(null);
+    t.check('clearing it goes back to inference', scope.getMyLabel() === null);
+});

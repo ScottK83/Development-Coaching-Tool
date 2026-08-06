@@ -103,13 +103,10 @@
         return PLANS[id] || null;
     }
 
-    // Monday of the week that contains `date`, as an ISO string.
+    // Week boundaries belong to period-index; this was one of three copies.
     function mondayOf(date) {
-        const when = new Date(date instanceof Date ? date.getTime() : Date.now());
-        when.setHours(0, 0, 0, 0);
-        const dow = when.getDay();
-        when.setDate(when.getDate() - (dow === 0 ? 6 : dow - 1));
-        return isoDate(when);
+        const shared = window.DevCoachModules?.periodIndex;
+        return shared ? shared.mondayOf(date instanceof Date ? date : new Date()) : '';
     }
 
     function weekdayPlans() {

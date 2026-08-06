@@ -671,6 +671,16 @@
         return section;
     }
 
+    // The registry owns metric targets. A local copy of a number that lives
+    // somewhere else is a drift waiting to happen.
+    function sentimentGoal(metricKey, fallback) {
+        const profiles = window.DevCoachModules?.metricProfiles;
+        const target = profiles?.getYearTarget?.(metricKey, new Date().getFullYear())
+            || window.METRICS_REGISTRY?.[metricKey]?.target;
+        const value = target ? parseFloat(target.value) : NaN;
+        return Number.isFinite(value) ? value : fallback;
+    }
+
     function generateSentimentSummary() {
         const { positive, negative, emotions } = sentimentReports;
 
@@ -1400,9 +1410,11 @@
             { positive, negative, emotions },
             {
                 associateName,
-                POSITIVE_GOAL: 86,
-                NEGATIVE_GOAL: 83,
-                EMOTIONS_GOAL: 95,
+                // Read from the registry rather than retyped. These matched by
+                // luck, and nothing would have caught them drifting.
+                POSITIVE_GOAL: sentimentGoal('positiveWord', 86),
+                NEGATIVE_GOAL: sentimentGoal('negativeWord', 83),
+                EMOTIONS_GOAL: sentimentGoal('managingEmotions', 95),
                 MIN_PHRASE_VALUE,
                 TOP_PHRASES_COUNT,
                 escapeHtml

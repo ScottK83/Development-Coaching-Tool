@@ -4,6 +4,7 @@ const { suite } = require('./harness');
 
 function load(t) {
     t.installFakeBrowser();
+    t.loadModule('modules/period-index.module.js');
     t.loadModule('modules/daily-outreach.module.js');
     return t.loadModule('modules/day-posts.module.js');
 }

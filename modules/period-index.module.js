@@ -56,9 +56,14 @@
         return `${y}-${m}-${d}`;
     }
 
-    function mondayOf(iso) {
-        const when = new Date(String(iso) + 'T12:00:00');
+    // Takes an ISO string or a Date, because callers hold both. Noon avoids
+    // the date sliding either way across a timezone boundary.
+    function mondayOf(value) {
+        const when = value instanceof Date
+            ? new Date(value.getTime())
+            : new Date(String(value) + 'T12:00:00');
         if (Number.isNaN(when.getTime())) return '';
+        when.setHours(12, 0, 0, 0);
         const dow = when.getDay();
         when.setDate(when.getDate() - (dow === 0 ? 6 : dow - 1));
         return isoOf(when);
