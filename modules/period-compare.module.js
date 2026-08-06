@@ -566,22 +566,41 @@
      * Returns null when there aren't two months worth comparing.
      */
     function buildMonthOverMonthRanks(year) {
-        var yr = year || _year();
-        var buckets = getMonthBuckets(yr);
-        // Partial months are stepped over rather than compared, so a one-team
+        return buildMovementForScope('month', { year: year });
+    }
+
+    /**
+     * Individual rank movement between two periods of one granularity — the
+     * counterpart to buildTeamMovementForScope, so the rankings table and the
+     * matchup panel can be made to answer about the same window.
+     *
+     * opts.anchorKey names the period to measure TO. Without it the newest
+     * comparable period is used. With it, someone looking at the week ending the
+     * 12th sees how that week moved rather than how the newest week moved — a
+     * column describing a period the table is not showing reads as a bug however
+     * carefully it is captioned.
+     */
+    function buildMovementForScope(scope, opts) {
+        var options = opts || {};
+        var yr = options.year || _year();
+        var sc = scope || 'month';
+
+        var all = _periodsForScope(sc, yr);
+        // Partial periods are stepped over rather than compared, so a one-team
         // upload filed as a month cannot become the headline comparison.
-        if (buckets.comparable.length < 2) return null;
+        var usable = all.filter(function (p) { return !p.partial; });
+        if (usable.length < 2) return null;
 
-        var curKey = buckets.comparable[buckets.comparable.length - 1];
-        var prevKey = buckets.comparable[buckets.comparable.length - 2];
-
-        var skipped = buckets.usable.filter(function (mo) {
-            return buckets.partial[mo] && mo > prevKey;
-        });
-
-        var cur = buildMonthAggregate(curKey, yr);
-        var prev = buildMonthAggregate(prevKey, yr);
-        if (!cur || !prev) return null;
+        var curIdx = usable.length - 1;
+        if (options.anchorKey) {
+            // From 1, not 0: the oldest period has nothing behind it to compare
+            // against, so anchoring there falls back to the newest pair.
+            for (var i = 1; i < usable.length; i++) {
+                if (String(usable[i].key) === String(options.anchorKey)) { curIdx = i; break; }
+            }
+        }
+        var cur = usable[curIdx];
+        var prev = usable[curIdx - 1];
 
         var compared = compareRankings(prev.employees, cur.employees, yr);
         if (!compared) return null;
@@ -591,12 +610,16 @@
         var nowMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
 
         return {
-            current: { key: curKey, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: curKey === nowMonth },
-            previous: { key: prevKey, label: prev.label, weekCount: prev.weekCount, fromUpload: prev.fromUpload },
-            // Months newer than the pair that were passed over as partial. Surfaced
-            // so a stale-looking comparison explains itself instead of just looking wrong.
-            skippedPartial: skipped.map(function (mo) {
-                return { key: mo, label: _monthLabel(mo), count: buckets.counts[mo] || 0 };
+            scope: sc,
+            current: { key: cur.key, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: sc === 'month' && cur.key === nowMonth },
+            previous: { key: prev.key, label: prev.label, weekCount: prev.weekCount, fromUpload: prev.fromUpload },
+            // Periods newer than the pair that were passed over as partial.
+            // Surfaced so a stale-looking comparison explains itself instead of
+            // just looking wrong.
+            skippedPartial: all.filter(function (p) {
+                return p.partial && String(p.key) > String(prev.key);
+            }).map(function (p) {
+                return { key: p.key, label: p.label, count: p.count };
             }),
             total: compared.total,
             movements: compared.movements,
@@ -676,20 +699,29 @@
     }
 
     /**
-     * Comparable periods of one granularity, oldest first.
+     * Every period of one granularity, oldest first, each flagged `partial` when
+     * it covers far less of the centre than the fullest period of its kind.
      *
      * 'month' rebuilds each month; 'week' and 'ytd' read stored uploads directly.
-     * Anything covering far less of the centre than the fullest period of its kind
-     * is dropped, so a one-team upload cannot become one half of a comparison.
+     * Partial periods are returned rather than dropped so a caller can say which
+     * ones it stepped over — silently skipping a month is what makes a June-to-July
+     * comparison shown in September look stale rather than deliberate.
      */
-    function _scopePeriods(scope, year) {
+    function _periodsForScope(scope, year) {
         var yr = year || _year();
         var out = [];
 
         if (scope === 'month') {
-            getMonthBuckets(yr).comparable.forEach(function (mo) {
+            var buckets = getMonthBuckets(yr);
+            buckets.usable.forEach(function (mo) {
                 var agg = buildMonthAggregate(mo, yr);
-                if (agg) out.push({ key: mo, label: agg.label, employees: agg.employees, end: mo });
+                if (!agg) return;
+                out.push({
+                    key: mo, label: agg.label, employees: agg.employees, end: mo,
+                    weekCount: agg.weekCount, fromUpload: agg.fromUpload,
+                    count: buckets.counts[mo] || agg.employees.length,
+                    partial: !!buckets.partial[mo]
+                });
             });
             return out;
         }
@@ -709,10 +741,15 @@
             if (parseInt(end.split('-')[0], 10) !== yr) return;
             var emps = (entry && entry.employees) || [];
             if (!emps.length) return;
-            out.push({ key: k, label: meta.label || end, employees: emps, end: end });
+            out.push({ key: k, label: meta.label || end, employees: emps, end: end, count: emps.length });
         });
 
         out.sort(function (a, b) { return a.end.localeCompare(b.end); });
+
+        var fullest = out.reduce(function (m, p) { return Math.max(m, p.count); }, 0);
+        out.forEach(function (p) {
+            p.partial = fullest > 0 && p.count < fullest * PARTIAL_MONTH_FRACTION;
+        });
         return out;
     }
 
@@ -723,10 +760,7 @@
      */
     function buildTeamMovementForScope(scope, supervisors, year) {
         var yr = year || _year();
-        var periods = _scopePeriods(scope, yr);
-
-        var fullest = periods.reduce(function (m, p) { return Math.max(m, p.employees.length); }, 0);
-        var usable = periods.filter(function (p) { return p.employees.length >= fullest * PARTIAL_MONTH_FRACTION; });
+        var usable = _periodsForScope(scope, yr).filter(function (p) { return !p.partial; });
         if (usable.length < 2) return null;
 
         var cur = usable[usable.length - 1];
@@ -758,6 +792,7 @@
     window.DevCoachModules.periodCompare = {
         MIN_WEEKS_FOR_MONTH: MIN_WEEKS_FOR_MONTH,
         MONTH_KEY_PREFIX: MONTH_KEY_PREFIX,
+        PARTIAL_MONTH_FRACTION: PARTIAL_MONTH_FRACTION,
         getMonthBuckets: getMonthBuckets,
         getMonthPeriodOptions: getMonthPeriodOptions,
         aggregateEmployeesFrom: aggregateEmployeesFrom,
@@ -766,6 +801,7 @@
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,
+        buildMovementForScope: buildMovementForScope,
         buildTeamMovementForScope: buildTeamMovementForScope,
         getMovementFor: getMovementFor,
         monthLabel: _monthLabel

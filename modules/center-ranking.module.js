@@ -17,12 +17,16 @@
         'Angela Allison':   { bg: '#f1f8e9', dark: '#1a2410', dot: '#7cb342' }
     };
 
+    function _isDark() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
     function _getSupervisorColor(empName) {
         try {
             var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) {
-                var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                var isDark = _isDark();
                 return isDark ? SUPERVISOR_COLORS[sup].dark : SUPERVISOR_COLORS[sup].bg;
             }
         } catch (_e) { /* localStorage parse failure — fall through to default */ }
@@ -63,27 +67,75 @@
     var _selectedRankingPeriodKey = null;
     var _rankingPeriodInitialized = false;
 
-    /* ── Month-over-month movement ──
-       Deliberately independent of the period selector. The selector chooses which
-       period is being RANKED; movement always compares the last two usable months.
-       Tying movement to the selector would mean a single week's rankings showed a
-       single week's movement, which swings hard enough on noise to be misleading.
-       The caption names both months so the two are never read as the same thing. */
+    /* ── Rank movement ──
+       Follows the period selector, matching the matchup panel. Picking a week and
+       still being shown month-over-month reads as a stuck panel: the header and the
+       table change, the movement column does not.
+
+       Movement measures INTO the selected period, not into the newest one — a
+       column describing a period the table is not showing is a bug however
+       carefully it is captioned. The caption names both periods either way, so the
+       movement is never read as covering the same span as the ranking. */
 
     // Marks a period key as a month assembled on the fly rather than one stored
     // under this key. Anything reading period keys must not assume a lookup.
     var MONTH_KEY_PREFIX = 'month:';
 
+    // Column heading per scope. Short, because the column is one glyph wide.
+    var MOVEMENT_COLUMN_LABEL = { month: 'MoM', week: 'WoW', ytd: 'Move' };
+    var SCOPE_NOUN = { month: 'month', week: 'week', ytd: 'year-to-date file' };
+
     var _momCache;
+
+    // Which granularity the selected period belongs to, mirroring the matchup
+    // scope buttons so the two surfaces group periods the same way.
+    function _scopeForSelectedPeriod() {
+        if (!_selectedRankingPeriodKey) return 'month';
+        var match = _getAvailableRankingPeriods().filter(function (p) {
+            return p.key === _selectedRankingPeriodKey;
+        })[0];
+        var type = match && match.type;
+        if (type === 'ytd') return 'ytd';
+        if (type === 'week' || type === 'week-in-progress') return 'week';
+        // Quarters and days have no comparable series of their own; months are the
+        // nearest thing that does, and the caption says which months.
+        return 'month';
+    }
+
+    // The key period-compare knows the selected period by. Months are keyed
+    // 'YYYY-MM' there whether they were uploaded or rebuilt from weeks; everything
+    // else is keyed by its store key.
+    function _movementAnchorKey(scope) {
+        if (!_selectedRankingPeriodKey) return null;
+        if (scope !== 'month') return _selectedRankingPeriodKey;
+        if (String(_selectedRankingPeriodKey).indexOf(MONTH_KEY_PREFIX) === 0) {
+            return String(_selectedRankingPeriodKey).slice(MONTH_KEY_PREFIX.length);
+        }
+        var match = _getAvailableRankingPeriods().filter(function (p) {
+            return p.key === _selectedRankingPeriodKey;
+        })[0];
+        var end = (match && match.endDate) || '';
+        return end ? String(end).slice(0, 7) : null;
+    }
 
     function _monthMovement() {
         if (_momCache !== undefined) return _momCache;
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
-        if (!pc || !pc.buildMonthOverMonthRanks) { _momCache = null; return _momCache; }
+        if (!pc || !pc.buildMovementForScope) { _momCache = null; return _momCache; }
+        var scope = _scopeForSelectedPeriod();
         try {
-            _momCache = pc.buildMonthOverMonthRanks() || null;
+            var mv = pc.buildMovementForScope(scope, { anchorKey: _movementAnchorKey(scope) });
+            var fellBack = false;
+            // A single year-to-date file has nothing to compare against. Months are
+            // the useful answer there, said out loud rather than shown silently.
+            if (!mv && scope !== 'month') {
+                mv = pc.buildMovementForScope('month');
+                fellBack = !!mv;
+            }
+            if (mv) { mv.requestedScope = scope; mv.fellBack = fellBack; }
+            _momCache = mv || null;
         } catch (err) {
-            console.warn('[center-ranking] Month movement unavailable:', err && err.message);
+            console.warn('[center-ranking] Rank movement unavailable:', err && err.message);
             _momCache = null;
         }
         return _momCache;
@@ -103,16 +155,21 @@
     // red. The centre compresses into very few scoring buckets, so twenty-odd people
     // sit tied and reshuffle on tiebreakers alone — colouring that like an
     // improvement would invite congratulating someone whose metrics never moved.
-    function _movementBadge(mv, showDash) {
+    function _movementBadge(mv, showDash, labels) {
+        // Labels come off upload metadata, and these land inside a title attribute.
+        var was = _escapeHtml((labels && labels.previous) || 'the period before');
+        var now = _escapeHtml((labels && labels.current) || 'this period');
         if (!mv || !Number.isFinite(mv.delta)) {
-            return showDash ? '<span style="color: var(--text-tertiary);">&middot;</span>' : '';
+            return showDash
+                ? '<span style="color: var(--text-tertiary);" title="Not scored in ' + was + ', so there is nothing to measure against">&middot;</span>'
+                : '';
         }
         if (mv.delta === 0) {
-            return '<span style="color: var(--text-tertiary);" title="Same rank as last month">&#8213;</span>';
+            return '<span style="color: var(--text-tertiary);" title="Same rank in ' + was + ' and ' + now + '">&#8213;</span>';
         }
         var up = mv.delta > 0;
         var color = mv.scoreChanged ? (up ? '#2e7d32' : '#c62828') : 'var(--text-tertiary)';
-        var title = '#' + mv.prevRank + ' last month, #' + mv.curRank + ' this month. ' +
+        var title = '#' + mv.prevRank + ' in ' + was + ', #' + mv.curRank + ' in ' + now + '. ' +
             (mv.scoreChanged
                 ? 'KPIs met ' + mv.prevKpisMet + '→' + mv.curKpisMet + ', score ' + mv.prevScoreSum + '→' + mv.curScoreSum
                 : 'Same score (' + mv.curKpisMet + ' KPIs, ' + mv.curScoreSum + ') — position shifted among tied people, not performance');
@@ -126,6 +183,23 @@
         var wData = _getWeeklyData();
         var yData = _getYtdData();
 
+        // Head count of the fullest month of the year, so a monthly upload covering
+        // a fraction of the centre can be marked. Still offered — a one-team report
+        // is a legitimate thing to look at — but marked, because "July 2026 (18
+        // employees)" sitting above "June 2026 (123 employees)" in the same group is
+        // exactly how an 18-person centre ranking gets opened by mistake.
+        //
+        // Measured against the month counts rather than getMonthBuckets().partial:
+        // a thin upload that lost its month to the weekly rebuild is not flagged
+        // there, and that is precisely the upload still listed here on its own key.
+        var _pcMod = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        var _partialFraction = (_pcMod && _pcMod.PARTIAL_MONTH_FRACTION) || 0.6;
+        var _fullestMonth = 0;
+        try {
+            var _counts = (_pcMod && _pcMod.getMonthBuckets) ? (_pcMod.getMonthBuckets().counts || {}) : {};
+            Object.keys(_counts).forEach(function (mo) { _fullestMonth = Math.max(_fullestMonth, _counts[mo] || 0); });
+        } catch (_e) { /* no month data — nothing to mark against */ }
+
         Object.keys(wData).forEach(function(key) {
             var data = wData[key];
             var meta = data?.metadata || {};
@@ -134,7 +208,8 @@
             var pType = meta.periodType || 'week';
             var endStr = meta.endDate || (key.includes('|') ? key.split('|')[1] : '');
             var label = meta.label || _fmtPeriodLabel(key, pType);
-            periods.push({ key: key, label: label, type: pType, source: 'weekly', count: count, endDate: endStr });
+            var partial = pType === 'month' && _fullestMonth > 0 && count < _fullestMonth * _partialFraction;
+            periods.push({ key: key, label: label, type: pType, source: 'weekly', count: count, endDate: endStr, partial: partial });
         });
 
         Object.keys(yData).forEach(function(key) {
@@ -199,7 +274,8 @@
             grouped[t].forEach(function(p) {
                 var val = p.key;
                 var sel = (val === selectedValue) ? ' selected' : '';
-                html += '<option value="' + _escapeHtml(val) + '"' + sel + '>' + _escapeHtml(p.label) + ' (' + p.count + ' employees)</option>';
+                html += '<option value="' + _escapeHtml(val) + '"' + sel + '>' + _escapeHtml(p.label) +
+                    ' (' + p.count + ' employees' + (p.partial ? ' &mdash; partial upload' : '') + ')</option>';
             });
             html += '</optgroup>';
         });
@@ -647,7 +723,12 @@
 
         // Drop the remembered key if it no longer resolves (period was deleted,
         // replaced by cleanup, or hydrated from a different source mid-session).
-        if (_selectedRankingPeriodKey) {
+        //
+        // A 'month:' key is assembled on demand and is deliberately absent from
+        // both stores, so it must not be tested by lookup — doing so threw away
+        // every rebuilt-month selection the instant it was made, and the view
+        // silently snapped back to the auto-picked YTD.
+        if (_selectedRankingPeriodKey && String(_selectedRankingPeriodKey).indexOf(MONTH_KEY_PREFIX) !== 0) {
             var wData = _getWeeklyData();
             var yData = _getYtdData();
             if (!wData[_selectedRankingPeriodKey] && !yData[_selectedRankingPeriodKey]) {
@@ -699,22 +780,34 @@
         html += _renderRankingPeriodSelector(currentSelectValue);
 
         // Header
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #1565c0;">';
+        html += '<div style="margin-bottom: 20px; padding: 15px; background: ' + (_isDark() ? '#12243a' : '#e3f2fd') +
+            '; border-radius: 8px; border-left: 4px solid #1565c0;">';
         html += '<strong>Center Rankings</strong> &mdash; ' + data.totalEmployees + ' employees scored';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
 
         // Say exactly what the movement column compares, including the shared
         // population. "75th of 127" against "100th of 121" would not be a
         // like-for-like move, so movement is ranked over the people present in
-        // both months and that count is stated rather than implied.
+        // both periods and that count is stated rather than implied.
         var _mom = _monthMovement();
         if (_mom) {
             html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">' +
                 '&#9650;&#9660; Movement: <strong>' + _escapeHtml(_mom.previous.label) + '</strong> &rarr; <strong>' +
                 _escapeHtml(_mom.current.label) + (_mom.current.inProgress ? ' (so far)' : '') + '</strong>' +
-                ' &mdash; ranked across the ' + _mom.total + ' scored in both months';
+                ' &mdash; ranked across the ' + _mom.total + ' scored in both';
             if (_mom.onlyCurrent.length || _mom.onlyPrevious.length) {
-                html += ' (' + _mom.onlyCurrent.length + ' new, ' + _mom.onlyPrevious.length + ' not in this month)';
+                html += ' (' + _mom.onlyCurrent.length + ' new, ' + _mom.onlyPrevious.length + ' not in the later one)';
+            }
+            html += '.';
+            // Two rank scales sit on this page — the table's, over everyone in the
+            // selected period, and movement's, over the people in both. Left
+            // unsaid, the difference reads as the numbers disagreeing.
+            if (_mom.total !== data.totalEmployees) {
+                html += ' Rank in the table is out of ' + data.totalEmployees + ', so the two counts differ on purpose.';
+            }
+            if (_mom.fellBack) {
+                html += ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[_mom.requestedScope] || _mom.requestedScope) +
+                    ' is available, so there is nothing to compare it against &mdash; showing months instead.</span>';
             }
             html += '</span>';
 
@@ -725,7 +818,7 @@
                     _mom.skippedPartial.map(function (s) {
                         return _escapeHtml(s.label) + ' &mdash; only ' + s.count + ' associates uploaded';
                     }).join(', ') +
-                    '. Upload the full month to compare against it.</span>';
+                    '. Upload the full ' + (SCOPE_NOUN[_mom.scope] || 'period') + ' to compare against it.</span>';
             }
         }
         html += '</div>';
@@ -733,16 +826,30 @@
         // Team summary
         var teamRanks = data.rankings.filter(function (r) { return data.teamMembers.has(r.name); });
         var _teamMovement = _movementByName();
+        var _teamMovementLabels = _mom
+            ? { previous: _mom.previous.label, current: _mom.current.label + (_mom.current.inProgress ? ' (so far)' : ''), total: _mom.total }
+            : null;
         if (teamRanks.length > 0) {
             html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<h4 style="margin-top: 0; color: var(--text-primary);">Your Team</h4>';
+            // The headline rank and the movement ranks are counted over different
+            // populations, so a card can read "#9 of 126" above "#68 → #21" and look
+            // self-contradictory. Said once here rather than repeated on every card.
+            if (_teamMovementLabels) {
+                html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
+                    'Rank is out of the ' + data.totalEmployees + ' in this period. Movement below is ' +
+                    _escapeHtml(_teamMovementLabels.previous) + ' &rarr; ' + _escapeHtml(_teamMovementLabels.current) +
+                    ', ranked across the ' + _teamMovementLabels.total + ' scored in both.</p>';
+            }
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">';
 
             teamRanks.forEach(function (r) {
-                var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
-                    r.trackStatusValue === 'on-track-successful' ? '#8bc34a' : '#c62828';
-                var statusBg = r.trackStatusValue === 'on-track-exceptional' ? '#e8f5e9' :
-                    r.trackStatusValue === 'on-track-successful' ? '#f1f8e9' : '#fbe9e7';
+                var statusColor = r.trackStatusValue === 'on-track-exceptional' ? (_isDark() ? '#66bb6a' : '#2e7d32') :
+                    r.trackStatusValue === 'on-track-successful' ? (_isDark() ? '#9ccc65' : '#8bc34a') :
+                    (_isDark() ? '#ef5350' : '#c62828');
+                var statusBg = r.trackStatusValue === 'on-track-exceptional' ? (_isDark() ? '#0d2a1a' : '#e8f5e9') :
+                    r.trackStatusValue === 'on-track-successful' ? (_isDark() ? '#16240f' : '#f1f8e9') :
+                    (_isDark() ? '#2a1210' : '#fbe9e7');
                 var percentile = Math.round((1 - (r.rank - 1) / data.totalEmployees) * 100);
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
@@ -755,27 +862,32 @@
                 // Spelled out on the team cards rather than left as an arrow —
                 // this is the line you would actually read before a one-on-one.
                 var _cardMv = _teamMovement && _teamMovement[r.name];
-                if (_cardMv && Number.isFinite(_cardMv.delta)) {
+                if (_cardMv && Number.isFinite(_cardMv.delta) && _teamMovementLabels) {
+                    var _was = _escapeHtml(_teamMovementLabels.previous);
+                    var _now = _escapeHtml(_teamMovementLabels.current);
                     if (_cardMv.delta === 0) {
-                        html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">Held at #' + _cardMv.curRank + ' since last month</div>';
+                        html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">Held at #' +
+                            _cardMv.curRank + ' &mdash; same in ' + _was + ' and ' + _now + '</div>';
                     } else if (!_cardMv.scoreChanged) {
                         // Said plainly, because this is the line that would otherwise
                         // get read out as praise for a move nobody earned.
                         html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' +
                             'Moved ' + (_cardMv.delta > 0 ? 'up ' : 'down ') + Math.abs(_cardMv.delta) +
                             ' (#' + _cardMv.prevRank + ' &rarr; #' + _cardMv.curRank + ') on the same score &mdash; ' +
-                            _cardMv.curKpisMet + '/5 KPIs, ' + _cardMv.curScoreSum + ' both months</div>';
+                            _cardMv.curKpisMet + '/5 KPIs, ' + _cardMv.curScoreSum + ' in both</div>';
                     } else {
                         var _up = _cardMv.delta > 0;
-                        html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' + (_up ? '#2e7d32' : '#c62828') + ';">' +
+                        html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' +
+                            (_up ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828')) + ';">' +
                             (_up ? '&#9650; Up ' : '&#9660; Down ') + Math.abs(_cardMv.delta) +
-                            ' &mdash; #' + _cardMv.prevRank + ' last month, #' + _cardMv.curRank + ' this month' +
+                            ' &mdash; #' + _cardMv.prevRank + ' in ' + _was + ', #' + _cardMv.curRank + ' in ' + _now +
                             '<span style="font-weight: 400; color: var(--text-secondary);"> (KPIs met ' +
                             _cardMv.prevKpisMet + '&rarr;' + _cardMv.curKpisMet + ', score ' +
                             _cardMv.prevScoreSum + '&rarr;' + _cardMv.curScoreSum + ')</span></div>';
                     }
                 }
-                var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
+                var kpiColor = r.kpisMet >= 4 ? (_isDark() ? '#66bb6a' : '#2e7d32') :
+                    r.kpisMet >= 3 ? (_isDark() ? '#ffa726' : '#e65100') : (_isDark() ? '#ef5350' : '#c62828');
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
@@ -793,7 +905,8 @@
         html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).' +
-            (_mom ? ' <strong>MoM</strong> is rank movement since ' + _escapeHtml(_mom.previous.label) +
+            (_mom ? ' <strong>' + (MOVEMENT_COLUMN_LABEL[_mom.scope] || 'Move') + '</strong> is rank movement since ' +
+                _escapeHtml(_mom.previous.label) +
                 '. A greyed value marked * moved with no change in KPIs met or score &mdash; position shifted among tied people, not performance.' : '') +
             '</p>';
         html += '</div>';
@@ -813,7 +926,7 @@
                 if (row) {
                     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     row.style.transition = 'background 0.3s';
-                    row.style.background = '#bbdefb';
+                    row.style.background = _isDark() ? '#1e3a5f' : '#bbdefb';
                     setTimeout(function () { row.style.background = ''; }, 2000);
                 }
             });
@@ -867,12 +980,19 @@
         };
 
         var _tableMovement = _movementByName();
+        var _mv = _monthMovement();
+        var _mvLabels = _mv ? { previous: _mv.previous.label, current: _mv.current.label } : null;
+        var _momHeading = MOVEMENT_COLUMN_LABEL[_mv && _mv.scope] || 'Move';
+        var _momTitle = _mv
+            ? 'Rank movement from ' + _mv.previous.label + ' to ' + _mv.current.label +
+              ', over the ' + _mv.total + ' scored in both. Sorts by moves with a real score change behind them.'
+            : 'Rank movement between the last two comparable periods.';
 
         var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';
         html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="mom" style="' + thStyle + ' width: 34px;" title="Rank movement between the last two months, over the people scored in both. Sorts by moves with a real score change behind them.">MoM' + arrow('mom') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="mom" style="' + thStyle + ' width: 34px;" title="' + _escapeHtml(_momTitle) + '">' + _momHeading + arrow('mom') + '</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
         html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
         html += '<th class="rank-sort-header" data-sort="scoreSum" style="' + thStyle + '">Score Sum' + arrow('scoreSum') + '</th>';
@@ -922,9 +1042,9 @@
             if (rankBg) rankStyle += ' background: ' + rankBg + '; color: ' + rankColor + ';';
             html += '<td style="' + rankStyle + '">' + r.rank + '</td>';
 
-            // Month-over-month movement
+            // Rank movement into the selected period
             html += '<td style="padding: 4px 3px; text-align: center; font-size: 0.9em;">' +
-                _movementBadge(_tableMovement && _tableMovement[r.name], true) + '</td>';
+                _movementBadge(_tableMovement && _tableMovement[r.name], true, _mvLabels) + '</td>';
 
             // Name
             html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
