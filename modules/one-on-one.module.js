@@ -25,22 +25,13 @@
     const SKIP_METRICS = new Set(['totalCalls', 'transfersCount', 'surveyTotal']);
 
     // How far a metric has to move before it is worth raising in a meeting.
-    // Below this it is noise, and calling it out either way wastes the slot.
-    const NOISE = {
-        scheduleAdherence: 1,
-        cxRepOverall: 2,
-        fcr: 2,
-        overallExperience: 2,
-        overallSentiment: 1,
-        positiveWord: 1,
-        negativeWord: 1,
-        managingEmotions: 1,
-        aht: 15,
-        acw: 5,
-        holdTime: 3,
-        transfers: 0.5,
-        reliability: 2
-    };
+    // The registry owns the floor so "improved" means the same thing here as
+    // it does in a check-in message.
+    function noiseThreshold(metricKey) {
+        return typeof window.getMetricNoiseThreshold === 'function'
+            ? window.getMetricNoiseThreshold(metricKey)
+            : 1;
+    }
 
     function registry() {
         return window.METRICS_REGISTRY || {};
@@ -98,7 +89,7 @@
         const now = current || {};
         const noiseFor = (key) => {
             if (opts.noise && Number.isFinite(opts.noise[key])) return opts.noise[key];
-            return Number.isFinite(NOISE[key]) ? NOISE[key] : 0;
+            return noiseThreshold(key);
         };
 
         const improved = [];
@@ -281,7 +272,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.oneOnOne = {
         MEETINGS_KEY,
-        NOISE,
+        noiseThreshold,
         talkableMetricKeys,
         snapshotFromRow,
         compareSnapshots,

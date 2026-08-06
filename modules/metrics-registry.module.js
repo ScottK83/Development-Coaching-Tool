@@ -196,6 +196,44 @@
         }
     };
 
+    /**
+     * How far a metric has to move before the move means anything.
+     *
+     * This lived in three places with two different answers: a per-metric table
+     * used by Highlights and meeting prep, and a unit-based rule used by the
+     * check-in messages. They disagreed — five seconds of AHT counted as an
+     * improvement in one view and as noise in another, for the same person in
+     * the same week. Whether something improved is not a question that should
+     * have two answers, so it lives here with the rest of the metric facts.
+     */
+    const METRIC_NOISE = {
+        scheduleAdherence: 1,
+        cxRepOverall: 2,
+        fcr: 2,
+        overallExperience: 2,
+        overallSentiment: 1,
+        positiveWord: 1,
+        negativeWord: 1,
+        managingEmotions: 1,
+        aht: 15,
+        acw: 5,
+        holdTime: 3,
+        transfers: 0.5,
+        transfersCount: 1,
+        reliability: 2
+    };
+
+    // A metric with no entry still needs a floor, or every flicker reads as
+    // movement. Scaled by unit, since seconds and percentage points are not
+    // comparable quantities.
+    const NOISE_BY_UNIT = { sec: 5, hrs: 0.5, '#': 1, '%': 1 };
+
+    function getMetricNoiseThreshold(metricKey) {
+        if (Number.isFinite(METRIC_NOISE[metricKey])) return METRIC_NOISE[metricKey];
+        const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
+        return Number.isFinite(NOISE_BY_UNIT[unit]) ? NOISE_BY_UNIT[unit] : 1;
+    }
+
     function isReverseMetric(metricKey) {
         return METRICS_REGISTRY[metricKey]?.isReverse === true;
     }
@@ -224,11 +262,12 @@
     // Expose globally so script.js and all modules can use it directly
     window.METRICS_REGISTRY = METRICS_REGISTRY;
     window.isReverseMetric = isReverseMetric;
+    window.getMetricNoiseThreshold = getMetricNoiseThreshold;
     window.CORE_PERFORMANCE_METRICS = CORE_PERFORMANCE_METRICS;
     window.CORE_SURVEY_METRICS = CORE_SURVEY_METRICS;
 
     // Also register in module system
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricsRegistry = METRICS_REGISTRY;
-    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
+    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, getMetricNoiseThreshold, METRIC_NOISE, NOISE_BY_UNIT, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
 })();

@@ -2174,12 +2174,13 @@
         return period?.employees?.find(e => e.name === employeeName) || null;
     }
 
+    // The registry owns this now. It used to answer differently here than in
+    // Highlights and meeting prep, so the same five second AHT move was an
+    // improvement in one view and noise in another.
     function getGrowthNoiseThreshold(metricKey) {
-        const unit = window.METRICS_REGISTRY?.[metricKey]?.unit || '%';
-        if (unit === 'sec') return 3;
-        if (unit === 'hrs') return 0.3;
-        if (unit === '#') return 1;
-        return 0.5;
+        return typeof window.getMetricNoiseThreshold === 'function'
+            ? window.getMetricNoiseThreshold(metricKey)
+            : 1;
     }
 
     function computeGrowthDeltas(latestEmp, baselineEmp) {

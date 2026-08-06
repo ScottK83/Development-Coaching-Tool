@@ -29,23 +29,14 @@
     // metrics need days of surveys to settle and are left out on purpose.
     const DAILY_METRIC_KEYS = ['aht', 'scheduleAdherence', 'positiveWord', 'negativeWord', 'managingEmotions'];
 
-    // How much better than target counts as worth saying out loud, per metric.
-    // Without this a rep who cleared adherence by 0.1 reads the same as one who
-    // cleared it by six points.
-    const NOISE = {
-        scheduleAdherence: 1,
-        cxRepOverall: 2,
-        fcr: 2,
-        overallExperience: 2,
-        overallSentiment: 1,
-        positiveWord: 1,
-        negativeWord: 1,
-        managingEmotions: 1,
-        aht: 15,
-        acw: 5,
-        holdTime: 3,
-        transfers: 0.5
-    };
+    // How much better than target counts as worth saying out loud. The registry
+    // owns the floor, so clearing a bar by a hair reads the same way here as
+    // everywhere else that judges movement.
+    function noiseThreshold(metricKey) {
+        return typeof window.getMetricNoiseThreshold === 'function'
+            ? window.getMetricNoiseThreshold(metricKey)
+            : 1;
+    }
 
     function escapeHtml(value) {
         const shared = window.DevCoachModules?.sharedUtils?.escapeHtml;
@@ -191,7 +182,7 @@
                     label: entry.label || key,
                     target: parseFloat(target.value),
                     targetType: target.type === 'max' ? 'max' : 'min',
-                    noise: NOISE[key] ?? 0
+                    noise: noiseThreshold(key)
                 };
             })
             .filter(Boolean);
@@ -389,7 +380,7 @@
         refreshVisibleMyTeamSection,
         DAILY_METRIC_KEYS,
         SURVEY_METRIC_KEYS,
-        NOISE,
+        noiseThreshold,
         NOT_HIGHLIGHT_WORTHY
     };
 })();
