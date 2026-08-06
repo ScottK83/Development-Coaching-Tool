@@ -13,7 +13,7 @@
         'Angie Delgado':    { bg: '#fff3e0', dark: '#2a1d08', dot: '#fb8c00' },
         'Christine Ellis':  { bg: '#e8eaf6', dark: '#141830', dot: '#5c6bc0' },
         'Sarah Gregory':    { bg: '#e8f5e9', dark: '#0d2010', dot: '#43a047' },
-        'Chenal Howard':    { bg: '#e0f7fa', dark: '#0a1f22', dot: '#00acc1' },
+        'Schnelle Howard':  { bg: '#e0f7fa', dark: '#0a1f22', dot: '#00acc1' },
         'Nicole Pazienza':  { bg: '#fff9c4', dark: '#2a2508', dot: '#fdd835' },
         'Angela Allison':   { bg: '#f1f8e9', dark: '#1a2410', dot: '#7cb342' }
     };

@@ -1164,7 +1164,7 @@ const SUPERVISOR_ROSTER = [
     { supervisor: 'Angie Delgado', agents: ['Melinda Kano', 'Ronda Colis', 'Mia Dixon', 'Anahi Griego', 'Rzada Hayes', 'Sherry Hanson', 'Jerusha Holmes', 'Sarah Jordan', 'Don Martinez', 'Rachel Malenderis', 'Ariel Millican', 'Brandy Olson', 'Cindy Pitkins', 'Alexandra Wrangle', 'Christi-Ann Thompson', 'Alejandra Valdez', 'Lanier Varella', 'Crystal Villa Pondeau'] },
     { supervisor: 'Christine Ellis', agents: ['Daniel Adams', 'Veronica Barrios', 'Javier De Leon', 'Margarita Gastello', 'Debbie Hernandez', 'Dolores Hernandez', 'Lily Hanahi', 'Carla Canuri', 'Maria Lopez', 'Nancy McCarthy', 'Stephanie McNair', 'Lisa Oust', 'Raquel Perez', 'John Ruiz', 'Sherry Rycraft', 'Christina Sanchez', 'Michael Vaughan', 'Alexia Zeniga'] },
     { supervisor: 'Sarah Gregory', agents: ['MacArthur Ali', 'Solomon Arona', 'Akisha Brabham', 'Brittany Carol', 'Darien Cole', 'Julia Fierro', 'Armida Flores', 'Erica Garrett', 'Kim Gagora', 'Kasey Gadri', 'Maretta Henderson', 'Aldo Hernandez', 'Jessica Hilario', 'Sophie Holland', 'Holly LaMotzka', 'Rocio Mendes', 'John Montoya', 'Adrian Morales', 'Pamela Mohammed', 'Aileen Parish', 'Erica Trejo', 'Briana Zambrano'] },
-    { supervisor: 'Chenal Howard', agents: ['Sarah Komatto', 'Stephanie Carbajal', 'Alex Carroll', 'Kaylee Turambolo', 'Katelyn Fiddler', 'Daniel Gradias', 'Jennifer Hanson', 'Jimmy Hung', 'Monica Madden', 'Crystal Nez', 'Scotticia Osborne', 'Seth Pingard', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachel Wilson'] },
+    { supervisor: 'Schnelle Howard', agents: ['Sarah Komatto', 'Stephanie Carbajal', 'Alex Carroll', 'Kaylee Turambolo', 'Katelyn Fiddler', 'Daniel Gradias', 'Jennifer Hanson', 'Jimmy Hung', 'Monica Madden', 'Crystal Nez', 'Scotticia Osborne', 'Seth Pingard', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachel Wilson'] },
     { supervisor: 'Nicole Pazienza', agents: ['Amy Armenta', 'Jessica Barbosa', 'Richard Bill', 'Amanda Bustos', 'Jacob Turnoff', 'Bruce Cram', 'Michaela Cruz', 'Wisdom Curry', 'Cecily Daniels', 'Tanya Davis', 'Geraldine Dixon', 'Dawanda Kiezi-Daniel', 'Sean Lee', 'Cynthia Pacheco', 'Ashley Robinson', 'Cindy Robledo Avanizodo', 'Monica Stringer', 'Braden Theovar', 'Jerika Whiteman'] },
     { supervisor: 'Scott', agents: ['Robert Barilosa', 'Destiny Cervantes', 'Desiree Clark', 'Pamela Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jaden Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erika Cholestewa', 'Brandywine Lockhart', 'Christy Martinez Sharp', 'Patrice Muldro', 'Jonathan Padilla', 'Esperanza Palomara', 'Esther Ramos', 'Kristen Valea', 'Betty Yanez'] }
 ];
@@ -1195,6 +1195,21 @@ function rosterSurnamesOverlap(aTokens, bTokens) {
 
 (function seedSupervisorTeams() {
     let existing = {};
+
+    // Rename, not a re-seed: the roster below overwrites anyone it still
+    // matches, but a rep who has left it would otherwise keep the misspelling
+    // forever and lose their row colour.
+    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorRenamed_schnelle')) {
+        try {
+            const stored = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+            let touched = false;
+            Object.keys(stored).forEach(function(name) {
+                if (stored[name] === 'Chenal Howard') { stored[name] = 'Schnelle Howard'; touched = true; }
+            });
+            if (touched) localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(stored));
+        } catch (_e) { console.warn('[seedSupervisorTeams] rename skipped:', _e.message); }
+        localStorage.setItem(STORAGE_PREFIX + 'supervisorRenamed_schnelle', '1');
+    }
     // v4 migration: wipe the v3 assignments once so retired names and old
     // supervisor labels (Kathy, Schnelle, ...) don't linger on the rankings.
     if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration')) {
