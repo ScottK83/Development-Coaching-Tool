@@ -1331,6 +1331,58 @@ function purgeNonRosteredEmployees() {
 }
 window.purgeNonRosteredEmployees = purgeNonRosteredEmployees;
 
+// Periods stored before the blank-means-zero fix recorded '' for anyone the report
+// left empty, so reps with nothing against them were dropped from the metric instead
+// of counted as clean.
+//
+// Decided per period, never globally: stored data cannot tell "column was absent"
+// apart from "cell was blank" — both are ''. But if ANY rep in a period has a real
+// number, the column was there, so every blank beside it means zero. A period where
+// nobody has a number is left alone rather than handed a file-wide perfect score.
+function backfillBlankReliability() {
+    let filled = 0;
+
+    ['weeklyData', 'ytdData'].forEach(function(storeKey) {
+        let store;
+        try { store = JSON.parse(localStorage.getItem(STORAGE_PREFIX + storeKey) || '{}'); }
+        catch (_e) { console.warn('[backfillReliability] Could not read ' + storeKey + ':', _e.message); return; }
+
+        let touched = false;
+        Object.keys(store).forEach(function(periodKey) {
+            const period = store[periodKey];
+            if (!period || !Array.isArray(period.employees)) return;
+
+            const columnWasPresent = period.employees.some(function(emp) {
+                return emp && Number.isFinite(parseFloat(emp.reliability));
+            });
+            if (!columnWasPresent) return;
+
+            period.employees.forEach(function(emp) {
+                if (emp && (emp.reliability === '' || emp.reliability === null || emp.reliability === undefined)) {
+                    emp.reliability = 0;
+                    filled++;
+                    touched = true;
+                }
+            });
+        });
+
+        if (touched) {
+            try { localStorage.setItem(STORAGE_PREFIX + storeKey, JSON.stringify(store)); }
+            catch (_e) { console.warn('[backfillReliability] Could not save ' + storeKey + ':', _e.message); }
+        }
+    });
+
+    return filled;
+}
+window.backfillBlankReliability = backfillBlankReliability;
+
+(function migrateBlankReliability() {
+    if (localStorage.getItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v1')) return;
+    const filled = backfillBlankReliability();
+    if (filled) console.info('[backfillReliability] Set ' + filled + ' blank reliability value(s) to 0.');
+    localStorage.setItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v1', '1');
+})();
+
 (function seedSupervisorTeams() {
     let existing = {};
 

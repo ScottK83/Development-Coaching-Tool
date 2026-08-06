@@ -552,7 +552,16 @@
             talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
             acw: parseSeconds(getCell(cells, colMap.acw)),
             holdTime: parseSeconds(getCell(cells, colMap.holdTime)),
-            reliability: hasMetricCell(cells, colMap.reliability)
+            // Reliability is the one metric where a blank cell is meaningful: the
+            // report leaves it empty when someone accrued no hours against them, so
+            // blank means zero, not unknown. Treating it as unknown dropped clean
+            // attendance out of the metric entirely — the reps with nothing against
+            // them were the ones not being counted.
+            //
+            // Still keyed off the column, not hasMetricCell: a paste with no
+            // reliability column at all is genuinely unknown, and defaulting that to
+            // 0 would award perfect attendance to everyone in the file.
+            reliability: colMap.reliability >= 0
                 ? (parseHours(getCell(cells, colMap.reliability)) || 0)
                 : '',
             overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
