@@ -358,6 +358,40 @@ suite('celebrations: a field too thin to describe says nothing', (t) => {
         ' Better than 117 of 124 associates.');
 });
 
+suite('celebrations: a shared top spot says so instead of contradicting itself', (t) => {
+    const celebrations = load(t, null);
+
+    // The real case that made no sense on screen: sixteen associates at a
+    // perfect Rep Satisfaction, only nineteen surveyed at all. "#1 in Center"
+    // beside "better than 3 of 19" looked like a bug because the tie was the
+    // missing half of the sentence.
+    t.equal('a sixteen-way tie is named, not hidden behind the rank',
+        celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 16, rankedCount: 19, value: 100 }),
+        '100 — one of 16 tied at the top, out of 19 scored on it');
+
+    t.equal('holding the top alone still reads as winning it',
+        celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 1, rankedCount: 19, value: 100 }),
+        '100 — best of 19 scored on it');
+
+    t.equal('and a placing further down keeps its ordinal',
+        celebrations.describePlacement({ key: 'fcr', rank: 4, tiedCount: 1, rankedCount: 111, value: 92 }),
+        '92 — 4th of 111 scored on it');
+    t.equal('shared, further down, too',
+        celebrations.describePlacement({ key: 'fcr', rank: 3, tiedCount: 5, rankedCount: 111, value: 92 }),
+        '92 — tied for 3rd, out of 111 scored on it');
+    t.equal('the eleventh is not the eleven-st',
+        celebrations.describePlacement({ rank: 11, tiedCount: 1, rankedCount: 60 }),
+        '11th of 60 scored on it');
+
+    // The pool is per-metric, and saying so is the whole point: it is what
+    // explains a field of 19 sitting under a header that says 126.
+    t.check('the pool is described as who was scored on that metric',
+        celebrations.describePlacement({ rank: 1, tiedCount: 1, rankedCount: 19 }).indexOf('scored on it') > -1);
+    t.equal('a missing pool drops the field rather than inventing one',
+        celebrations.describePlacement({ key: 'fcr', rank: 1, tiedCount: 1, value: 92 }), '92 — best');
+    t.equal('and nothing at all stays silent', celebrations.describePlacement(null), '');
+});
+
 suite('celebrations: a week you did not work is not an achievement', (t) => {
     t.installFakeBrowser();
     t.loadModule('modules/metrics-registry.module.js');

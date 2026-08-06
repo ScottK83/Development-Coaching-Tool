@@ -125,11 +125,14 @@
                 (result.celebrations || []).slice(0, 4).forEach(entry => {
                     const best = entry.achievements?.[0];
                     if (!best) return;
-                    const field = celebrations.describeField ? celebrations.describeField(best) : '';
-                    const tail = field
-                        ? ` <span style="color:var(--text-tertiary);">· ${escapeHtml(field)}</span>`
+                    // The placing says the rank, the tie and the pool in one
+                    // breath. Pairing a bare "#1 in Center" with a beaten-count
+                    // that excluded ties read as a contradiction.
+                    const placing = celebrations.describePlacement ? celebrations.describePlacement(best) : '';
+                    const tail = placing
+                        ? ` <span style="color:var(--text-tertiary);">· ${escapeHtml(placing)}</span>`
                         : '';
-                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.tierLabel)} in ${escapeHtml(best.label)}${tail}`);
+                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.label)}${tail}`);
                 });
                 // A near miss is worth seeing too; it's the coaching conversation.
                 (result.missed || []).slice(0, person ? 2 : 1).forEach(info => {

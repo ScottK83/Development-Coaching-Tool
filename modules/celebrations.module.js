@@ -751,6 +751,46 @@
         return c ? 'better than ' + c.beat + ' of ' + c.pool + ' associates' : '';
     }
 
+    function ordinal(n) {
+        var tens = n % 100;
+        if (tens >= 11 && tens <= 13) return n + 'th';
+        return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    }
+
+    /**
+     * The whole placing in one plain sentence, for the manager's own view.
+     *
+     * "#1 in Center · better than 3 of 19 associates" was two true facts that
+     * read as a contradiction, because the thing standing between them — a
+     * sixteen-way tie at 100% — was never said out loud. So the tie goes in the
+     * sentence, and the pool is named as what it actually is: the people scored
+     * on that one metric, not the whole center.
+     */
+    function describePlacement(achievement) {
+        if (!achievement) return '';
+        var rank = achievement.rank;
+        var tied = achievement.tiedCount || 1;
+        var pool = achievement.rankedCount;
+        var value = achievement.value !== null && achievement.value !== undefined
+            ? formatMetricValue(achievement.key, achievement.value) : '';
+
+        var place;
+        if (!rank || !isFinite(rank)) place = '';
+        else if (rank === 1) place = tied > 1 ? 'one of ' + tied + ' tied at the top' : 'best';
+        else place = tied > 1 ? 'tied for ' + ordinal(rank) : ordinal(rank);
+
+        // A shared placing needs a comma, or "one of 16 tied at the top of 19"
+        // reads as sixteen people out of nineteen sitting on top of something.
+        var field = '';
+        if (typeof pool === 'number' && isFinite(pool) && pool > 1 && place) {
+            field = (tied > 1 ? ', out of ' : ' of ') + pool + ' scored on it';
+        }
+
+        var placing = place + field;
+        if (!placing) return value;
+        return value ? value + ' — ' + placing : placing;
+    }
+
     // The same fact as its own sentence, for lines that already close with
     // their own punctuation.
     function fieldSentence(achievement) {
@@ -1431,6 +1471,7 @@
         describeTie: describeTie,
         tieClause: tieClause,
         describeField: describeField,
+        describePlacement: describePlacement,
         fieldSentence: fieldSentence,
         explainNoCelebration: explainNoCelebration,
         meetsCelebrationTarget: meetsCelebrationTarget,
