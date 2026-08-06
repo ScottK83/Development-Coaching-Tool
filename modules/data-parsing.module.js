@@ -613,13 +613,24 @@
         autoCorrectHoldTimeColumn(colMap, headers, parsedRows);
 
         // Second pass: build canonical employee rows.
+        // The roster acts as an allowlist (isRosteredAssociate, script.js). Report
+        // exports carry departed reps, team leads, and other orgs alongside the real
+        // associates, and anything admitted here lives in weeklyData permanently and
+        // skews every ranking and center average from then on.
+        const onRoster = typeof window.isRosteredAssociate === 'function' ? window.isRosteredAssociate : null;
         const employees = [];
+        const skipped = [];
         for (let i = 0; i < parsedRows.length; i++) {
             const employeeData = parseEmployeeRow(parsedRows[i], colMap);
             if (!employeeData) continue;
             validateEmployeeData(employeeData);
+            if (onRoster && employeeData.name && !onRoster(employeeData.name)) {
+                skipped.push(employeeData.name);
+                continue;
+            }
             employees.push(employeeData);
         }
+        if (skipped.length) console.info(`[data-parsing] Skipped ${skipped.length} non-rostered name(s):`, skipped);
 
         return employees;
     }

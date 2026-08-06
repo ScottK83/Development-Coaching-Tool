@@ -1155,18 +1155,56 @@ window.saveEmployeePreferredName = function(fullName) {
 // is uploaded later still lands on the right team, and a rep who moves teams here
 // moves everywhere. Anyone NOT on the roster keeps whatever the Settings screen
 // assigned them. Names are matched on FULL name — there are duplicate first names
-// across teams (two Roberts, two Sabrinas, three Ericas), so first-name-only
-// matching would put people on the wrong team.
+// across teams (two Carrolls, two Fierros, two Erikas, two Johnsons on Cruz), so
+// first-name-only matching would put people on the wrong team.
+//
+// Spellings below are transcribed from APS Workforce Management (Supervisor/Advisor
+// report, 8/3-8/4/2026) — the same system the uploads come from. Earlier versions of
+// this roster were dictated by voice and had most names subtly wrong (Aaron Gray for
+// Erin Garay, Patricia Herb for Trisha Erb, Kasey Gadri for Keshay Guidry), which
+// silently dropped those reps to unassigned. Do not "correct" these from memory.
+//
+// Supervisor labels are deliberately informal (Kathy, Angie, Scott). The uploads carry
+// the formal names — Cruz, Kathryn / Delgado, Angela / Knight, Scott — so anything that
+// starts parsing a supervisor column out of a PowerBI paste will need to map them.
 const SUPERVISOR_ROSTER = [
-    { supervisor: 'Angela Allison', agents: ['Lashray Concho', 'Austin Hadlock', 'Jacob Head', 'Katie Hees', 'Jules Jefferson', 'Savannah Johansson', 'Tiffany Calupoli', 'Key McTier', 'Taylor Maine', 'Ayisha Oaks', 'Hailey Pennington', 'Janessa Ramirez', 'Robert Sullivan', 'Sabrina Trent', 'Alana Usuri', 'Jeffrey Young'] },
-    { supervisor: 'Miranda Chase', agents: ['Jose Otaid', 'Edgar Calvillo', 'Wendy Cervantes', 'Taylor Coulter', 'Joanne Courtney', 'Erica Forte', 'Briana Hill', 'Derrick Ingram', 'Victoria Johnson', 'Milani Ortega-Phung', 'Alicia Snyder', 'India Terrain', 'Tina Williams'] },
-    { supervisor: 'Kathy Cruz', agents: ['Michelle Castro', 'Diane Cordova', 'Patricia Herb', 'Jennifer Frank', 'Aaron Gray', 'Lynette Gomez', 'April Gonzalez', 'Jamie Harvey', 'Elbia Johnson', 'Precious Johnson', 'Natasha Jordan', 'Sonia Martin', 'Charles McCormack', 'Sandra Paz Rodriguez', 'Paul Schoenthaler', 'Sebastian Vera', 'Dylan Jager'] },
-    { supervisor: 'Angie Delgado', agents: ['Melinda Kano', 'Ronda Colis', 'Mia Dixon', 'Anahi Griego', 'Rzada Hayes', 'Sherry Hanson', 'Jerusha Holmes', 'Sarah Jordan', 'Don Martinez', 'Rachel Malenderis', 'Ariel Millican', 'Brandy Olson', 'Cindy Pitkins', 'Alexandra Wrangle', 'Christi-Ann Thompson', 'Alejandra Valdez', 'Lanier Varella', 'Crystal Villa Pondeau'] },
-    { supervisor: 'Christine Ellis', agents: ['Daniel Adams', 'Veronica Barrios', 'Javier De Leon', 'Margarita Gastello', 'Debbie Hernandez', 'Dolores Hernandez', 'Lily Hanahi', 'Carla Canuri', 'Maria Lopez', 'Nancy McCarthy', 'Stephanie McNair', 'Lisa Oust', 'Raquel Perez', 'John Ruiz', 'Sherry Rycraft', 'Christina Sanchez', 'Michael Vaughan', 'Alexia Zeniga'] },
-    { supervisor: 'Sarah Gregory', agents: ['MacArthur Ali', 'Solomon Arona', 'Akisha Brabham', 'Brittany Carol', 'Darien Cole', 'Julia Fierro', 'Armida Flores', 'Erica Garrett', 'Kim Gagora', 'Kasey Gadri', 'Maretta Henderson', 'Aldo Hernandez', 'Jessica Hilario', 'Sophie Holland', 'Holly LaMotzka', 'Rocio Mendes', 'John Montoya', 'Adrian Morales', 'Pamela Mohammed', 'Aileen Parish', 'Erica Trejo', 'Briana Zambrano'] },
-    { supervisor: 'Schnelle Howard', agents: ['Sarah Komatto', 'Stephanie Carbajal', 'Alex Carroll', 'Kaylee Turambolo', 'Katelyn Fiddler', 'Daniel Gradias', 'Jennifer Hanson', 'Jimmy Hung', 'Monica Madden', 'Crystal Nez', 'Scotticia Osborne', 'Seth Pingard', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachel Wilson'] },
-    { supervisor: 'Nicole Pazienza', agents: ['Amy Armenta', 'Jessica Barbosa', 'Richard Bill', 'Amanda Bustos', 'Jacob Turnoff', 'Bruce Cram', 'Michaela Cruz', 'Wisdom Curry', 'Cecily Daniels', 'Tanya Davis', 'Geraldine Dixon', 'Dawanda Kiezi-Daniel', 'Sean Lee', 'Cynthia Pacheco', 'Ashley Robinson', 'Cindy Robledo Avanizodo', 'Monica Stringer', 'Braden Theovar', 'Jerika Whiteman'] },
-    { supervisor: 'Scott', agents: ['Robert Barilosa', 'Destiny Cervantes', 'Desiree Clark', 'Pamela Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jaden Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erika Cholestewa', 'Brandywine Lockhart', 'Christy Martinez Sharp', 'Patrice Muldro', 'Jonathan Padilla', 'Esperanza Palomara', 'Esther Ramos', 'Kristen Valea', 'Betty Yanez'] }
+    { supervisor: 'Angela Allison', agents: ['Jacob Head', 'Kayte Heese', 'Jewels Jefferson', 'Savannah Johannesen', 'Tiffany Kailipalauli', 'Keyahveh McTier', 'Taylor Meyn', 'Aisha Oakes', 'Haley Pennington', 'Janessa Ramirez', 'Robert Sullivan', 'Sabrina Trent', 'Alanna Ussery', 'Jeffrey Young'] },
+    { supervisor: 'Miranda Chase', agents: ['Jose Atayde', 'Edgar Calvillo', 'Taylor Colter', 'JoAnn Courtney', 'Erika Forte', 'Brianna Hill', 'Derrick Ingram', 'Victoria Johnson', 'Milani Ortega-Phung', 'Alicia Snyder', 'India Torain', 'Tina Williams'] },
+    { supervisor: 'Kathy Cruz', agents: ['Michelle Castro', 'Diane Cordova', 'Trisha Erb', 'Jennifer Frank', 'Erin Garay', 'April Gonzalez', 'Jammie Harvey', 'Elbia Johnson', 'Precious Johnson', 'Natasha Jordan', 'Sonya Martin', 'Charles McCormick', 'Sandra Paz-Rodriguez', 'Paul Schoenthaler', 'Sebastian Vera', 'Dillon Yeager'] },
+    { supervisor: 'Angie Delgado', agents: ['Melinda Cano', 'Ronda Colis', 'Miah Dixon', 'Anahi Griego', 'Retta Hays', 'Jarusha Holmes', 'Sarah Jordan', 'Dawn Martinez', 'Rachel Melendrez', 'Ariell Millican', 'Brandi Olson', 'Cindy Pipkins', 'Alexandra Rangel', 'Christi-Ann Thompson', 'Alejandra Valdez', 'Lonia Varela', 'Crystal Villalpando'] },
+    { supervisor: 'Sarah Gregory', agents: ['Magarsa Ali', 'Solomon Arrona', 'Ekiecha Brabham', 'Brittney Carroll', 'Darryn Coley', 'Armida Flores', 'Erika Garrett', 'Kim Gugora', 'Keshay Guidry', 'Marietta Henderson', 'Aldo Hernandez', 'Sophie Holland', 'Holly Lomatska', 'John Montoya', 'Pamela Muhammad', 'Eilene Parrish', 'Briana Zambrano'] },
+    { supervisor: 'Schnelle Howard', agents: ['Sarah Camacho', 'Stephanie Carbajal-Saiz', 'Alexis Carroll', 'Caylie Chirumbolo', 'Caitlyn Fidler', 'Jenifer Henson', 'Kimmy Hong', 'Monica Madden', 'Crystal Nez', 'Scoticia Osborne', 'Seth Pinyerd', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachael Wilson'] },
+    { supervisor: 'Nicole Pazienza', agents: ['Amy Armenta', 'Jessica Barbosa', 'Richard Biehl', 'Imelda Bustos', 'Jacob Chernov', 'Bruce Cram', 'Nikayla Cruz', 'Wisdom Curry', 'Cecily Daniels', 'Tanya Davis', 'Geralene Dixon', 'Dawanda Kizee-Daniel', 'Shawn Leigh', 'Ashley Robinson', 'Cindy Robledo', 'Ebany Soto', 'Monica Stringer', 'Brayden Thielbar', 'Jereca Whiteman'] },
+    { supervisor: 'Scott', agents: ['Robert Berrelleza', 'Destiny Cervantez', 'Desiree Clark', 'Kamella Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jadyn Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erica Kallestewa', 'Christi Martinez-Sharp', 'Matrece Muldrow', 'Johnathan Padilla', 'Esperanza Palomera', 'Esther Ramos', 'Kristin Villela', 'Betty Yanez'] }
+];
+
+// Known non-associates, kept as a named record so nobody re-adds them to the roster
+// without knowing why they were pulled. The operative mechanism is the roster itself
+// (see isRosteredAssociate) — anyone not on it is dropped — so this list is a
+// second line of defence plus documentation, not the primary filter.
+//
+//   Team leads      — one per team (two on Allison). They are filtered out of the
+//                     source report by Job Title, so they normally never appear in a
+//                     paste at all. Spellings are the old dictated ones and were never
+//                     confirmed against the source system, so treat them as approximate.
+//   Spanish-ranked  — on Gregory's team but ranked against a separate Spanish pool,
+//                     so mixing them into center numbers compares unlike work.
+//                     Spellings ARE verified from the source report.
+//   Not residential — Christine Ellis's team was in the roster by mistake. It is a
+//                     different org and never belonged in these numbers.
+const EXCLUDED_ASSOCIATES = [
+    // Team leads
+    'Lashray Concho', 'Austin Hadlock', 'Wendy Cervantes', 'Lynette Gomez',
+    'Sherry Hanson', 'Adrian Morales', 'Daniel Gradias', 'Brandywine Lockhart',
+    'Cynthia Pacheco',
+    // Spanish-ranked (Gregory)
+    'Julia Fierro', 'Jessica Hilario', 'Rocio Mendez', 'Erika Trejo',
+    // Christine Ellis's team — not residential
+    'Christine Ellis', 'Daniel Adams', 'Veronica Barrios', 'Javier De Leon',
+    'Margarita Gastello', 'Debbie Hernandez', 'Dolores Hernandez', 'Lily Hanahi',
+    'Carla Canuri', 'Maria Lopez', 'Nancy McCarthy', 'Stephanie McNair', 'Lisa Oust',
+    'Raquel Perez', 'John Ruiz', 'Sherry Rycraft', 'Christina Sanchez',
+    'Michael Vaughan', 'Alexia Zeniga'
 ];
 
 // "Last, First" -> "first last", lowercased, punctuation stripped, spaces collapsed.
@@ -1193,6 +1231,106 @@ function rosterSurnamesOverlap(aTokens, bTokens) {
     });
 }
 
+// Flattened roster, normalized once, for membership tests.
+const ROSTER_NAME_INDEX = SUPERVISOR_ROSTER.reduce(function(acc, team) {
+    team.agents.forEach(function(agent) {
+        const norm = normalizeRosterName(agent);
+        acc.push({ norm: norm, tokens: norm.split(' ').filter(Boolean) });
+    });
+    return acc;
+}, []);
+
+const EXCLUDED_NAME_INDEX = EXCLUDED_ASSOCIATES.map(normalizeRosterName);
+
+// The roster is an ALLOWLIST, not a denylist. Uploads carry everyone the report was
+// run for — departed reps, other orgs, team leads, and the Spanish-ranked pool — and
+// historically all of them accumulated in weeklyData forever, which is how 127 real
+// associates became 257 rows feeding the rankings and center averages.
+//
+// Consequence worth knowing: a genuine new hire is invisible to every metric until
+// somebody adds them to SUPERVISOR_ROSTER above. That is the deliberate trade — a
+// missing new hire is noticed, a silently-inflated average is not.
+//
+// Matching mirrors the tiers in seedSupervisorTeams so upload spelling drift still
+// lands: exact, then first-name + overlapping surname, then nickname prefix + surname.
+function isRosteredAssociate(name) {
+    const norm = normalizeRosterName(name);
+    if (!norm) return false;
+    if (EXCLUDED_NAME_INDEX.indexOf(norm) > -1) return false;
+
+    const tokens = norm.split(' ').filter(Boolean);
+    const first = tokens[0] || '';
+
+    return ROSTER_NAME_INDEX.some(function(r) {
+        if (r.norm === norm) return true;
+        if (!rosterSurnamesOverlap(r.tokens, tokens)) return false;
+        const rf = r.tokens[0] || '';
+        if (rf === first) return true;
+        return first.length >= 3 && rf.length >= 3 &&
+            (first.indexOf(rf.slice(0, 3)) === 0 || rf.indexOf(first.slice(0, 3)) === 0);
+    });
+}
+window.isRosteredAssociate = isRosteredAssociate;
+
+// Strips everyone off the roster out of stored period data. Historical rows are
+// rewritten, so past center averages shift — that is the point, those numbers were
+// always counting people who should not have been in them.
+function purgeNonRosteredEmployees() {
+    const removed = {};
+
+    ['weeklyData', 'ytdData'].forEach(function(storeKey) {
+        let store;
+        try { store = JSON.parse(localStorage.getItem(STORAGE_PREFIX + storeKey) || '{}'); }
+        catch (_e) { console.warn('[purgeNonRostered] Could not read ' + storeKey + ':', _e.message); return; }
+
+        let touched = false;
+        Object.keys(store).forEach(function(periodKey) {
+            const period = store[periodKey];
+            if (!period || !Array.isArray(period.employees)) return;
+            const kept = period.employees.filter(function(emp) {
+                const empName = emp && emp.name;
+                if (!empName) return false;
+                if (isRosteredAssociate(empName)) return true;
+                removed[empName] = true;
+                return false;
+            });
+            if (kept.length !== period.employees.length) {
+                period.employees = kept;
+                touched = true;
+            }
+        });
+
+        if (touched) {
+            try { localStorage.setItem(STORAGE_PREFIX + storeKey, JSON.stringify(store)); }
+            catch (_e) { console.warn('[purgeNonRostered] Could not save ' + storeKey + ':', _e.message); }
+        }
+    });
+
+    // Same treatment for the side tables keyed by name, or deleted reps keep their
+    // supervisor colour and stay checked in the team filter.
+    ['employeeSupervisors', 'employeePreferredNames'].forEach(function(mapKey) {
+        try {
+            const map = JSON.parse(localStorage.getItem(STORAGE_PREFIX + mapKey) || '{}');
+            let touched = false;
+            Object.keys(map).forEach(function(empName) {
+                if (!isRosteredAssociate(empName)) { delete map[empName]; touched = true; }
+            });
+            if (touched) localStorage.setItem(STORAGE_PREFIX + mapKey, JSON.stringify(map));
+        } catch (_e) { console.warn('[purgeNonRostered] Could not clean ' + mapKey + ':', _e.message); }
+    });
+
+    try {
+        const members = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers') || '[]');
+        if (Array.isArray(members)) {
+            const kept = members.filter(isRosteredAssociate);
+            if (kept.length !== members.length) localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(kept));
+        }
+    } catch (_e) { console.warn('[purgeNonRostered] Could not clean myTeamMembers:', _e.message); }
+
+    return Object.keys(removed).sort();
+}
+window.purgeNonRosteredEmployees = purgeNonRosteredEmployees;
+
 (function seedSupervisorTeams() {
     let existing = {};
 
@@ -1210,10 +1348,15 @@ function rosterSurnamesOverlap(aTokens, bTokens) {
         } catch (_e) { console.warn('[seedSupervisorTeams] rename skipped:', _e.message); }
         localStorage.setItem(STORAGE_PREFIX + 'supervisorRenamed_schnelle', '1');
     }
-    // v4 migration: wipe the v3 assignments once so retired names and old
-    // supervisor labels (Kathy, Schnelle, ...) don't linger on the rankings.
-    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration')) {
+    // v5 migration: the v4 roster was voice-dictated and most names were subtly wrong,
+    // so reps matched loosely or not at all, and every departed rep, team lead, and
+    // out-of-org name ever uploaded was still sitting in weeklyData — 257 rows for 127
+    // people. Wipe the assignments and purge the stores down to the roster, once.
+    if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v5_migration')) {
         localStorage.removeItem(STORAGE_PREFIX + 'employeeSupervisors');
+        const purged = purgeNonRosteredEmployees();
+        if (purged.length) console.info('[seedSupervisorTeams] v5 purge removed ' + purged.length + ' non-rostered name(s):', purged);
+        localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v5_migration', '1');
         localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration', '1');
     } else {
         try { existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
