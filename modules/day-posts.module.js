@@ -74,16 +74,18 @@
         // at all, and does it hold this person inside it? Answering them
         // separately is what lets the missing-upload case name itself instead of
         // reading as "this associate has no data".
+        const weekEnd = latestWeekEnd(periods?.latestKey, period);
         const periodCheck = outreach.checkPeriodData(plan, {
             todayIso,
-            latestWeekEndIso: latestWeekEnd(periods?.latestKey, period),
+            latestWeekEndIso: weekEnd,
             dailyDayCount: daily.dayCount
         });
 
         const coverage = outreach.checkCoverage(plan, {
             inWeekly,
             dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
-            hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow)
+            hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
+            weeklyCoversThisWeek: Boolean(weekEnd) && weekEnd >= outreach.mondayOf(new Date(todayIso + 'T12:00:00'))
         });
 
         const sentEntry = outreach.getSentEntry(outreach.loadSentLog(), plan.id, stamp, employeeName);

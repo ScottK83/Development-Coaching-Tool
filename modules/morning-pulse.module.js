@@ -2641,9 +2641,11 @@
 
         // Asked once for the whole sweep: does the tool even hold the period
         // this day's message claims to describe?
+        const latestWeekEndIso = period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey);
+        const weeklyCoversThisWeek = Boolean(latestWeekEndIso) && latestWeekEndIso >= outreach.mondayOf(now);
         const periodCheck = outreach.checkPeriodData(plan, {
             todayIso,
-            latestWeekEndIso: period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey),
+            latestWeekEndIso,
             dailyDayCount: dailyThisWeek.dayCount
         });
 
@@ -2660,7 +2662,8 @@
             const coverage = outreach.checkCoverage(plan, {
                 inWeekly: true,
                 dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
-                hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow)
+                hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
+                weeklyCoversThisWeek
             });
 
             const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);

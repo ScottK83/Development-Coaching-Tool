@@ -141,20 +141,30 @@
         const todayIso = f.todayIso || isoDate(new Date());
         const thisWeekStart = mondayOf(new Date(todayIso + 'T12:00:00'));
 
+        const end = String(f.latestWeekEndIso || '').slice(0, 10);
+
         if (plan.covers === 'thisWeek') {
             const days = Number.isFinite(f.dailyDayCount) ? f.dailyDayCount : 0;
-            if (days < 1) {
+            // A "this week in progress" upload already covers the week so far.
+            // Requiring day-by-day files on top of it would be asking for the
+            // same numbers twice.
+            const weeklyIsInWeek = Boolean(end) && end >= thisWeekStart;
+
+            if (days < 1 && !weeklyIsInWeek) {
                 return {
                     ok: false,
                     reason: 'Missing data from this period.',
-                    detail: 'No daily uploads for this week yet, so there is nothing to say about how it is going.'
+                    detail: 'Nothing uploaded for this week yet — no week-in-progress file and no daily files.'
                 };
             }
-            return { ok: true, reason: '', detail: `${days} daily upload${days === 1 ? '' : 's'} this week.` };
+
+            const parts = [];
+            if (weeklyIsInWeek) parts.push(`week-in-progress file through ${end}`);
+            if (days > 0) parts.push(`${days} daily file${days === 1 ? '' : 's'}`);
+            return { ok: true, reason: '', detail: `Using the ${parts.join(' plus ')}.` };
         }
 
         const lastWeekStart = shiftDays(thisWeekStart, -7);
-        const end = String(f.latestWeekEndIso || '').slice(0, 10);
 
         if (!end) {
             return { ok: false, reason: 'Missing data from this period.', detail: 'No weekly file has been uploaded at all.' };
@@ -206,8 +216,10 @@
             return { ok: false, reason: 'Not in the selected weekly upload.' };
         }
 
-        if (plan.covers === 'thisWeek' && dailyRows < 1) {
-            return { ok: false, reason: 'No daily uploads for this week yet.' };
+        // A week-in-progress upload already carries this associate's week so
+        // far, so daily rows are one way to satisfy this, not the only way.
+        if (plan.covers === 'thisWeek' && dailyRows < 1 && !facts.weeklyCoversThisWeek) {
+            return { ok: false, reason: 'No uploads covering this week yet.' };
         }
 
         if (plan.covers === 'lastWeekPlusMonday' && !facts.hasMondayRow) {

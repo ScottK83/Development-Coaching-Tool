@@ -93,13 +93,33 @@ suite('day posts: it knows when the period was never uploaded', (t) => {
     const current = outreach.checkPeriodData(monday, { todayIso: today, latestWeekEndIso: '2026-08-05' });
     t.check('a current-week file is not treated as missing', current.ok === true);
 
+    // Last week's file plus nothing from this week: the midweek post has no
+    // period to describe.
     const noDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-02', dailyDayCount: 0 });
-    t.check('midweek with no daily uploads is missing its period', noDailies.ok === false);
+    t.check('midweek with nothing from this week is missing its period', noDailies.ok === false);
     t.equal('with the same wording', noDailies.reason, 'Missing data from this period.');
 
     const someDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-02', dailyDayCount: 2 });
     t.check('two days in is enough to talk about this week', someDailies.ok === true);
-    t.check('and it says how much it has', someDailies.detail.indexOf('2 daily uploads') > -1);
+    t.check('and it says how much it has', someDailies.detail.indexOf('2 daily files') > -1);
+
+    // A "this week in progress" upload already covers the week so far, so
+    // asking for day-by-day files on top of it is asking for the same numbers
+    // twice. This is the case that wrongly reported "no daily uploads".
+    const weekInProgress = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-04', dailyDayCount: 0 });
+    t.check('a week-in-progress upload satisfies the midweek post on its own', weekInProgress.ok === true);
+    t.check('and it says which file it is using', weekInProgress.detail.indexOf('week-in-progress') > -1);
+
+    const both = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-04', dailyDayCount: 2 });
+    t.check('having both is still fine', both.ok === true);
+    t.check('and it names both sources', both.detail.indexOf('plus') > -1);
+
+    // The same fact reaches the per-person check, or one associate at a time
+    // would still be told there was nothing for this week.
+    const perPerson = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 0, weeklyCoversThisWeek: true });
+    t.check('a person with no daily rows still passes on a week-in-progress file', perPerson.ok === true);
+    const perPersonNothing = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 0, weeklyCoversThisWeek: false });
+    t.check('but genuinely nothing for this week is still blocked', perPersonNothing.ok === false);
 
     // A stale weekly file must not block the days that run off dailies.
     const staleWeekButDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-07-12', dailyDayCount: 3 });

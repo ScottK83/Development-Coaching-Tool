@@ -56,7 +56,7 @@ suite('daily outreach: refuses to write what the data cannot back', (t) => {
 
     const noDailies = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 0 });
     t.check('a midweek message with no daily uploads is blocked', noDailies.ok === false);
-    t.equal('and names the missing uploads', noDailies.reason, 'No daily uploads for this week yet.');
+    t.equal('and names the missing uploads', noDailies.reason, 'No uploads covering this week yet.');
 
     const withDailies = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 2 });
     t.check('two daily rows are enough for midweek', withDailies.ok === true);
