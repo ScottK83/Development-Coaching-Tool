@@ -1752,8 +1752,8 @@ function bindNavigationHandlers() {
     // --- My Team ---
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
-        if (window.DevCoachModules?.celebrations?.initializeCelebrations) window.DevCoachModules.celebrations.initializeCelebrations();
+        showMyTeamSubSection('subSectionMyTeamDay', 'subNavHighlights');
+        window.DevCoachModules?.myTeam?.initializeMyTeam?.();
     });
     document.getElementById('subNavHighlights')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionHighlights', 'subNavHighlights');

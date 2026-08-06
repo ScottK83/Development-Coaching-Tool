@@ -87,7 +87,7 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionHighlights', 'subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionHighlights', 'subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
     var MY_TEAM_NAV_BUTTONS = ['subNavHighlights', 'subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionHighlights: 'subNavHighlights',
@@ -108,6 +108,8 @@
         // whole, so it's drawn here rather than by each tab's own handler —
         // including on the refresh path that restores a tab directly.
         window.DevCoachModules?.teamHub?.initializeTeamHub?.();
+        // Returning to the day hub re-renders it; leaving it is a no-op.
+        if (subSectionId === 'subSectionMyTeamDay') window.DevCoachModules?.myTeam?.renderDayPage?.();
     }
 
     // --- Trends & Analysis sub-sections ---
@@ -203,7 +205,7 @@
     function getDefaultUiNavState() {
         return {
             sectionId: 'dashboardSection',
-            myTeamSubSectionId: 'subSectionMorningPulse',
+            myTeamSubSectionId: 'subSectionMyTeamDay',
             trendsSubSectionId: 'subSectionTaTrendIntelligence',
             reviewPrepSubSectionId: 'subSectionOnOffTracker',
             settingsSubSectionId: 'subSectionTeamMembers'

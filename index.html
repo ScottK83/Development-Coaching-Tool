@@ -223,8 +223,15 @@
                     <!-- Team scope: picking a team here narrows every tab below -->
                     <div id="teamScopeBar"></div>
 
-                    <!-- Sub-navigation -->
-                    <div class="sub-nav" style="border-bottom: 2px solid #7c4dff; gap: 8px;">
+                    <!-- The day hub replaces the old seven-tab row -->
+                    <div id="subSectionMyTeamDay" style="display: block;">
+                        <div id="myTeamDayContainer"></div>
+                    </div>
+
+                    <!-- Legacy sub-nav: kept in the DOM so the older sections stay
+                         reachable and their modules keep their buttons, but hidden
+                         because the day hub is the way in now. -->
+                    <div class="sub-nav" style="display: none; border-bottom: 2px solid #7c4dff; gap: 8px;">
                         <button type="button" id="subNavHighlights" class="btn-secondary" style="background: linear-gradient(135deg, #7c4dff 0%, #4527a0 100%); color: white; font-size: 0.9em; padding: 8px 16px;">✨ Highlights</button>
                         <button type="button" id="subNavMorningPulse" class="btn-secondary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-size: 0.9em; padding: 8px 16px;">🎉 Celebrations</button>
                         <button type="button" id="subNavMondayPost" class="btn-secondary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-size: 0.9em; padding: 8px 16px;">📮 Posts</button>
@@ -1756,6 +1763,7 @@ Box 2 - Future Improvement Areas:
                 'modules/daily-outreach.module.js',
                 'modules/morning-pulse.module.js',
                 'modules/day-posts.module.js',
+                'modules/my-team.module.js',
                 'modules/celebrations.module.js',
                 'modules/monday-morning-post.module.js',
                 'lib-pdf.js',
