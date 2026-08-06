@@ -234,6 +234,16 @@
         return Number.isFinite(NOISE_BY_UNIT[unit]) ? NOISE_BY_UNIT[unit] : 1;
     }
 
+    /**
+     * How many calls an associate needs in a period before their numbers mean
+     * anything.
+     *
+     * Somebody who was out all week has 0% transfers — not because they avoided
+     * transferring, but because they took no calls. On a lower-is-better metric
+     * that reads as a perfect score and lands them in the shout-outs.
+     */
+    const MIN_CALLS_TO_JUDGE = 20;
+
     function isReverseMetric(metricKey) {
         return METRICS_REGISTRY[metricKey]?.isReverse === true;
     }
@@ -263,11 +273,12 @@
     window.METRICS_REGISTRY = METRICS_REGISTRY;
     window.isReverseMetric = isReverseMetric;
     window.getMetricNoiseThreshold = getMetricNoiseThreshold;
+    window.MIN_CALLS_TO_JUDGE = MIN_CALLS_TO_JUDGE;
     window.CORE_PERFORMANCE_METRICS = CORE_PERFORMANCE_METRICS;
     window.CORE_SURVEY_METRICS = CORE_SURVEY_METRICS;
 
     // Also register in module system
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricsRegistry = METRICS_REGISTRY;
-    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, getMetricNoiseThreshold, METRIC_NOISE, NOISE_BY_UNIT, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
+    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, getMetricNoiseThreshold, MIN_CALLS_TO_JUDGE, METRIC_NOISE, NOISE_BY_UNIT, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
 })();

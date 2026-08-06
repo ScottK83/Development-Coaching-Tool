@@ -357,3 +357,46 @@ suite('celebrations: a field too thin to describe says nothing', (t) => {
         celebrations.fieldSentence({ rankedCount: 124, betterThan: 117 }),
         ' Better than 117 of 124 associates.');
 });
+
+suite('celebrations: a week you did not work is not an achievement', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // Out all week means 0% transfers. Transfers is lower-is-better, so zero
+    // reads as flawless, ties with everyone else at zero, and tops the
+    // shout-out list for a week that was never worked.
+    const data = () => ({
+        periodKey: '2026-07-27|2026-08-02',
+        totalEmployees: 126,
+        teamMembers: new Set(['Angelina Fierro', 'Jadyn Flowers', 'Betty Yanez']),
+        rankings: [
+            { name: 'Angelina Fierro', rank: 1, totalCalls: 0, metricRanks: { transfers: 1 }, extraValues: { transfers: 0 } },
+            { name: 'Jadyn Flowers', rank: 1, totalCalls: 0, metricRanks: { transfers: 1 }, extraValues: { transfers: 0 } },
+            { name: 'Betty Yanez', rank: 2, totalCalls: 140, metricRanks: { transfers: 2 }, extraValues: { transfers: 1.2 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const names = result.celebrations.map(c => c.name);
+
+    t.check('someone who took no calls is not celebrated', names.indexOf('Angelina Fierro') === -1);
+    t.check('nor is the other one', names.indexOf('Jadyn Flowers') === -1);
+    t.check('but the person who actually worked still is', names.indexOf('Betty Yanez') > -1);
+
+    // Vanishing without a word reads as a bug. Say which it was.
+    const absent = result.missed.find(m => m.name === 'Angelina Fierro');
+    t.equal('the absence is named as an absence', absent.reason, 'notPresent');
+    t.check('and worded plainly', celebrations.describeNoCelebration(absent).indexOf('took no calls') > -1);
+
+    // A handful of calls is present but not judgeable, which is a different
+    // thing again and points at a different conversation.
+    t.equal('no calls at all is an absence', celebrations.volumeVerdict({ totalCalls: 0 }).reason, 'absent');
+    t.equal('a handful is thin, not absent', celebrations.volumeVerdict({ totalCalls: 6 }).reason, 'thin');
+    t.check('a full week passes', celebrations.volumeVerdict({ totalCalls: 140 }).ok === true);
+    // A file with no call-count column must not silently suppress everything.
+    t.check('an unknown count does not block a celebration', celebrations.volumeVerdict({}).ok === true);
+    t.check('and is marked as unknown rather than counted', celebrations.volumeVerdict({}).known === false);
+});

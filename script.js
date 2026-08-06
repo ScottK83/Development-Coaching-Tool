@@ -1101,6 +1101,27 @@ function cleanupStaleDuplicatePeriods() {
     }
 }
 
+// Names people actually go by, where the first name off the roster is not it.
+// Seeded rather than typed into Settings so it survives a wipe, and only ever
+// fills a blank — anything set by hand wins.
+const PREFERRED_NAME_SEED = {
+    'Angelina Fierro': 'Ang'
+};
+
+(function seedPreferredNames() {
+    try {
+        const key = STORAGE_PREFIX + 'employeePreferredNames';
+        const stored = JSON.parse(localStorage.getItem(key) || '{}');
+        let added = false;
+        Object.keys(PREFERRED_NAME_SEED).forEach(function(fullName) {
+            if (stored[fullName]) return;
+            stored[fullName] = PREFERRED_NAME_SEED[fullName];
+            added = true;
+        });
+        if (added) localStorage.setItem(key, JSON.stringify(stored));
+    } catch (_e) { console.warn('[preferredNames] seed skipped:', _e.message); }
+})();
+
 function getEmployeeNickname(fullName) {
     if (!fullName) return '';
 

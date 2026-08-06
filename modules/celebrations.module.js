@@ -44,6 +44,31 @@
     // else — rankings, Attendance, meeting prep.
     var SHOUTOUT_EXCLUDED_METRICS = { reliability: true };
 
+    /**
+     * Was this associate actually here, and enough to judge?
+     *
+     * Somebody out all week shows 0% transfers. On a lower-is-better metric
+     * that reads as a flawless score, ties them with everyone else at zero, and
+     * puts them top of the shout-outs for a week they did not work. The number
+     * is not a performance, it is an absence.
+     */
+    function volumeVerdict(row) {
+        var raw = row ? row.totalCalls : undefined;
+        var floor = Number.isFinite(window.MIN_CALLS_TO_JUDGE) ? window.MIN_CALLS_TO_JUDGE : 20;
+
+        // No call count at all is not the same as a count of zero. An upload
+        // without the column would otherwise suppress every celebration on the
+        // board, silently, which is far worse than the problem being fixed.
+        if (raw === undefined || raw === null || raw === '') return { ok: true, calls: null, known: false };
+
+        var calls = parseInt(raw, 10);
+        if (!Number.isFinite(calls)) return { ok: true, calls: null, known: false };
+
+        if (calls <= 0) return { ok: false, reason: 'absent', calls: 0 };
+        if (calls < floor) return { ok: false, reason: 'thin', calls: calls, floor: floor };
+        return { ok: true, calls: calls, known: true };
+    }
+
     // Where each rank key's display value lives on a ranking row.
     function getRankedValue(row, metricKey) {
         if (metricKey === 'reliability') return row?.reliability ?? null;
@@ -269,9 +294,15 @@
         // My Team picker, so choosing one person shows only their wins.
         var scope = window.DevCoachModules?.teamScope;
 
+        var thinVolume = {};
+
         data.rankings.forEach(function(r) {
             if (!data.teamMembers.has(r.name)) return;
             if (scope?.isInScope && !scope.isInScope(r.name)) return;
+
+            // A week they did not work produces numbers that look like wins.
+            var volume = volumeVerdict(r);
+            if (!volume.ok) { thinVolume[r.name] = volume; return; }
 
             var achievements = [];
 
@@ -338,6 +369,16 @@
         Array.from(data.teamMembers).forEach(function(name) {
             if (celebrated[name]) return;
             if (scope?.isInScope && !scope.isInScope(name)) return;
+            if (thinVolume[name]) {
+                missed.push({
+                    name: name,
+                    reason: thinVolume[name].reason === 'absent' ? 'notPresent' : 'thinVolume',
+                    calls: thinVolume[name].calls,
+                    floor: thinVolume[name].floor,
+                    maxTier: tiers[tiers.length - 1]
+                });
+                return;
+            }
             missed.push(explainNoCelebration(data, name, tiers));
         });
         missed.sort(function(a, b) {
@@ -406,6 +447,13 @@
 
     function describeNoCelebration(info) {
         var who = _getFirstName(info.name);
+        if (info.reason === 'notPresent') {
+            return who + ' took no calls this period, so there is nothing to celebrate or coach yet.';
+        }
+        if (info.reason === 'thinVolume') {
+            return who + ' only took ' + info.calls + ' call' + (info.calls === 1 ? '' : 's')
+                + ' this period, too few for the numbers to mean much.';
+        }
         if (info.reason === 'notRanked') {
             return who + " isn't in this period's rankings at all — nothing scoreable on that upload.";
         }
@@ -1379,6 +1427,7 @@
         renderHistoryView: renderHistoryView,
         detectCelebrations: detectCelebrations,
         SHOUTOUT_EXCLUDED_METRICS: SHOUTOUT_EXCLUDED_METRICS,
+        volumeVerdict: volumeVerdict,
         describeTie: describeTie,
         tieClause: tieClause,
         describeField: describeField,
