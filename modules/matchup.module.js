@@ -13,6 +13,34 @@
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
 
+    /**
+     * Which supervisor label is me.
+     *
+     * Picks the supervisor whose assigned reps overlap my own team list most.
+     * Returns null when nothing overlaps, which leaves every supervisor row
+     * alone rather than guessing one of them is mine.
+     */
+    function resolveMyTeamLabel(rankings, supervisors, myTeamSet) {
+        var counts = {};
+        (rankings || []).forEach(function (r) {
+            var sup = supervisors && supervisors[r.name];
+            if (!sup || !myTeamSet || !myTeamSet.has(r.name)) return;
+            counts[sup] = (counts[sup] || 0) + 1;
+        });
+
+        var best = null;
+        var bestCount = 0;
+        Object.keys(counts).forEach(function (sup) {
+            // Ties go to the alphabetically first label so the answer is stable
+            // across reloads rather than depending on key order.
+            if (counts[sup] > bestCount || (counts[sup] === bestCount && best && sup < best)) {
+                bestCount = counts[sup];
+                best = sup;
+            }
+        });
+        return bestCount > 0 ? best : null;
+    }
+
     function _getSupervisors() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
@@ -119,8 +147,9 @@
 
         var supervisors = _getSupervisors();
 
-        // Determine "my team" label — agents with no supervisor assignment
-        // who ARE in the user's team members list
+        // Which supervisor am I? Whichever one's roster overlaps my own team
+        // list the most. Data-driven rather than configured, so it keeps working
+        // when the roster is re-read.
         var latestKey = _getLatestWeeklyKey();
         var teamFilter = window.DevCoachModules?.teamFilter;
         if (!latestKey && teamFilter?.getTeamSelectionContext) {
@@ -131,16 +160,18 @@
         // Group employees by supervisor
         var teams = {};  // supervisor name -> [ranked employee objects]
         var MY_TEAM = 'My Team';
+        var myLabel = resolveMyTeamLabel(data.rankings, supervisors, myTeamSet);
 
         data.rankings.forEach(function (r) {
             var sup = supervisors[r.name] || '';
-            if (!sup) {
-                // If they're on my team, label as "My Team"; otherwise skip
-                if (myTeamSet.has(r.name)) {
-                    sup = MY_TEAM;
-                } else {
-                    sup = 'Unassigned';
-                }
+            // My own supervisor row and "My Team" are the same team. Left apart,
+            // half my reps sat under my name and half under "My Team", the two
+            // halves competed against each other in the rankings, and neither
+            // row was actually my team.
+            if (sup && myLabel && sup === myLabel) {
+                sup = MY_TEAM;
+            } else if (!sup) {
+                sup = myTeamSet.has(r.name) ? MY_TEAM : 'Unassigned';
             }
             if (!teams[sup]) teams[sup] = [];
             teams[sup].push(r);
@@ -563,6 +594,7 @@
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.matchup = {
+        resolveMyTeamLabel: resolveMyTeamLabel,
         renderMatchup: renderMatchup,
         buildMatchupData: buildMatchupData
     };
