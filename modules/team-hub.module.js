@@ -17,6 +17,11 @@
 
     // Volume has no target to beat, so it can't earn a callout on its own.
     const NO_TARGET_METRICS = new Set(['totalCalls', 'transfersCount', 'surveyTotal']);
+
+    // Same reasoning as the celebration exclusion: everyone who worked their
+    // week clears reliability, so it would fill the highlights with the same
+    // names every time and crowd out the callouts worth reading.
+    const NOT_HIGHLIGHT_WORTHY = new Set(['reliability']);
     const SURVEY_METRIC_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
 
     // Single-day numbers swing hard, so only the metrics that mean something at
@@ -175,7 +180,7 @@
         const year = new Date().getFullYear();
 
         return metricKeys
-            .filter(key => !NO_TARGET_METRICS.has(key))
+            .filter(key => !NO_TARGET_METRICS.has(key) && !NOT_HIGHLIGHT_WORTHY.has(key))
             .map(key => {
                 const entry = registry[key];
                 if (!entry) return null;
@@ -384,6 +389,7 @@
         refreshVisibleMyTeamSection,
         DAILY_METRIC_KEYS,
         SURVEY_METRIC_KEYS,
-        NOISE
+        NOISE,
+        NOT_HIGHLIGHT_WORTHY
     };
 })();

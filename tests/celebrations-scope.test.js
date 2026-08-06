@@ -229,3 +229,38 @@ suite('celebrations: still works when nothing has set a scope', (t) => {
 
     t.check('no scope module means no narrowing, not a crash', result.celebrations.length >= 2);
 });
+
+suite('celebrations: reliability is never a shout-out', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // Reliability is a "did you miss hours" measure, so everyone who worked
+    // their week clears it. Left in, the same names shout every single week
+    // and drown out the callouts worth reading.
+    const data = () => ({
+        periodKey: '2026-07-27|2026-08-02',
+        totalEmployees: 126,
+        teamMembers: new Set(['Perfect Attendance', 'Real Win']),
+        rankings: [
+            { name: 'Perfect Attendance', rank: 1, metricRanks: { reliability: 1 }, reliability: 0 },
+            { name: 'Real Win', rank: 2, metricRanks: { managingEmotions: 2 }, extraValues: { managingEmotions: 99 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const names = result.celebrations.map(c => c.name);
+
+    t.check('a clean attendance week is not a shout-out', names.indexOf('Perfect Attendance') === -1);
+    t.check('a real metric win still is', names.indexOf('Real Win') > -1);
+    t.check('no achievement anywhere is reliability',
+        result.celebrations.every(c => c.achievements.every(a => a.key !== 'reliability')));
+
+    // Excluded from shout-outs means excluded from explaining a missing one
+    // too — otherwise it just moves the noise into the miss list.
+    const missed = result.missed.find(m => m.name === 'Perfect Attendance');
+    t.check('and it does not explain a missing shout-out either',
+        !missed || !missed.best || missed.best.key !== 'reliability');
+});

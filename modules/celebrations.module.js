@@ -37,6 +37,13 @@
         reliability: { label: 'Reliability', icon: '\uD83D\uDEE1\uFE0F', registry: 'reliability' }
     };
 
+    // Ranked, but never shouted about. Reliability is a "did you miss hours"
+    // measure, so everyone who worked their week clears it and the same names
+    // turn up every single time. That makes the shout-out list read as noise
+    // and devalues the callouts sitting next to it. It still counts everywhere
+    // else — rankings, Attendance, meeting prep.
+    var SHOUTOUT_EXCLUDED_METRICS = { reliability: true };
+
     // Where each rank key's display value lives on a ranking row.
     function getRankedValue(row, metricKey) {
         if (metricKey === 'reliability') return row?.reliability ?? null;
@@ -262,6 +269,7 @@
 
             // Check each individual metric rank
             Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+                if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
                 var metricRank = r.metricRanks?.[metricKey];
                 if (!metricRank || metricRank > maxTier) return;
 
@@ -354,6 +362,8 @@
         var year = celebrationYear(data && data.periodKey);
 
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+            // Excluded from shout-outs, so it must not explain a missing one either.
+            if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
             var rank = row.metricRanks?.[metricKey];
             if (!rank) return;
 
@@ -1310,6 +1320,7 @@
         renderCelebrations: renderCelebrations,
         renderHistoryView: renderHistoryView,
         detectCelebrations: detectCelebrations,
+        SHOUTOUT_EXCLUDED_METRICS: SHOUTOUT_EXCLUDED_METRICS,
         describeTie: describeTie,
         tieClause: tieClause,
         explainNoCelebration: explainNoCelebration,
