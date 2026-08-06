@@ -141,9 +141,14 @@ suite('period compare: reliability is hours accrued, not the running total', (t)
     const june = pc.buildMonthAggregate('2026-06', 2026).employees[0];
     const july = pc.buildMonthAggregate('2026-07', 2026).employees[0];
 
-    t.check('June accrues 5 hours', june.reliability === 5);
-    t.check('July accrues 4, not the cumulative 9', july.reliability === 4);
+    t.check('June accrues 5 hours', june.reliabilityAccrued === 5);
+    t.check('July accrues 4, not the cumulative 9', july.reliabilityAccrued === 4);
     t.check('the cumulative figure is still available', july.reliabilityCumulative === 9);
+
+    // The target is an annual budget, so a month's raw hours scored against it
+    // passes everybody. Scoring sees the annualised rate instead.
+    t.check('the scored value is the annualised run rate', july.reliability === 48);
+    t.check('and June likewise', june.reliability === 60);
 });
 
 suite('period compare: a cumulative figure that drops never goes negative', (t) => {

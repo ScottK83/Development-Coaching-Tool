@@ -318,7 +318,22 @@
             var before = Number.isFinite(cumPrev[e.name]) ? cumPrev[e.name] : 0;
             var accrued = e.reliability - before;
             e.reliabilityCumulative = e.reliability;
-            e.reliability = accrued > 0 ? Math.round(accrued * 100) / 100 : 0;
+            e.reliabilityAccrued = accrued > 0 ? Math.round(accrued * 100) / 100 : 0;
+
+            // Scored as an annualised run rate, not as raw accrued hours.
+            //
+            // The reliability target is an ANNUAL budget (max 18 hours). A month's
+            // accrued hours is about 1.4 per person, so scoring that against 18
+            // passed everybody: the whole centre averaged 2.97 of 3 on reliability
+            // in a monthly view against 2.37 on YTD, which quietly inflated every
+            // monthly rank and team average.
+            //
+            // Multiplying by 12 asks the question the annual band can actually
+            // answer — "at this month's rate, where does the year land?" — and
+            // leaves the target untouched. Raw accrued hours stay on
+            // reliabilityAccrued for display, where hours-this-month is what a
+            // reader wants to see.
+            e.reliability = Math.round(e.reliabilityAccrued * 12 * 100) / 100;
         });
 
         return {

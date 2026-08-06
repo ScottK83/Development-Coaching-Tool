@@ -134,6 +134,70 @@
     var _selectedPeriodSource = null;
     var _matchupPeriodInitialized = false;
 
+    /* ── Scope ──
+       The period list runs to twenty-odd entries and mixes weeks, months and YTD,
+       so picking "this month" or "the year" meant hunting. Scope jumps to the
+       newest period of a kind that can actually carry a matchup.
+
+       The floor of 30 matters: a single supervisor's report filed as a month is a
+       valid period but every person in it is on one team, which produces a matchup
+       with no opponents. */
+    var MIN_MATCHUP_EMPLOYEES = 30;
+
+    var MATCHUP_SCOPES = [
+        { key: 'ytd', label: 'YTD', types: ['ytd'] },
+        { key: 'month', label: 'Monthly', types: ['month', 'month-agg'] },
+        { key: 'week', label: 'Weekly', types: ['week', 'week-in-progress'] }
+    ];
+
+    function _periodsForScope(scopeKey) {
+        var scope = MATCHUP_SCOPES.filter(function (s) { return s.key === scopeKey; })[0];
+        if (!scope) return [];
+        return _getAvailablePeriods().filter(function (p) {
+            return scope.types.indexOf(p.type) > -1 && p.count >= MIN_MATCHUP_EMPLOYEES;
+        });
+    }
+
+    function _scopeOfPeriod(periodKey) {
+        if (!periodKey) return null;
+        var all = _getAvailablePeriods();
+        var match = all.filter(function (p) { return p.key === periodKey; })[0];
+        if (!match) return null;
+        var hit = MATCHUP_SCOPES.filter(function (s) { return s.types.indexOf(match.type) > -1; })[0];
+        return hit ? hit.key : null;
+    }
+
+    function _renderScopeSelector() {
+        var active = _scopeOfPeriod(_selectedPeriodKey);
+        var html = '<div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">';
+        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Compare:</label>';
+
+        MATCHUP_SCOPES.forEach(function (s) {
+            var available = _periodsForScope(s.key);
+            var isActive = active === s.key;
+            var disabled = available.length === 0;
+            html += '<button type="button" class="matchup-scope-btn" data-scope="' + s.key + '"' +
+                (disabled ? ' disabled' : '') +
+                ' title="' + (disabled ? 'No ' + s.label.toLowerCase() + ' period covers enough of the centre' : 'Newest: ' + _escapeHtml(available[0].label)) + '"' +
+                ' style="padding: 6px 14px; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: ' + (disabled ? 'not-allowed' : 'pointer') + ';' +
+                ' border: 1px solid ' + (isActive ? '#e65100' : 'var(--border)') + ';' +
+                ' background: ' + (isActive ? '#e65100' : 'var(--bg-surface)') + ';' +
+                ' color: ' + (isActive ? '#fff' : (disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')) + ';' +
+                ' opacity: ' + (disabled ? '0.55' : '1') + ';">' + s.label + '</button>';
+        });
+
+        html += '</div>';
+        return html;
+    }
+
+    function _onScopeClick(scopeKey) {
+        var available = _periodsForScope(scopeKey);
+        if (!available.length) return;
+        _selectedPeriodKey = available[0].key;
+        _selectedPeriodSource = available[0].source;
+        renderMatchup();
+    }
+
     // Metric definitions for matchup comparison
     // Each has: key (values obj key), label, lowerIsBetter flag, formatKey (for formatMetricDisplay).
     // weightBy controls team aggregation — 'calls' weights by call volume, 'survey' by survey
@@ -456,19 +520,31 @@
         // Check if any supervisors are actually assigned (besides My Team and Unassigned)
         var rivalTeams = data.teamNames.filter(function (n) { return n !== 'My Team' && n !== 'Unassigned'; });
         if (rivalTeams.length === 0) {
-            container.innerHTML = _renderPeriodSelector(currentSelectValue) +
+            // Two very different causes, and the old copy only described one. A
+            // period holding a single supervisor's upload (one team's report filed
+            // as a month) has nobody to match against no matter how the roster is
+            // set up, and sending someone to Settings to fix that wastes their time.
+            var _onlyMine = data.totalEmployees > 0 && data.totalEmployees < 40;
+            var _why = _onlyMine
+                ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Pick a period covering the whole centre using the scope buttons above.'
+                : 'No supervisors are assigned. Go to <strong>Settings &gt; Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.';
+            container.innerHTML = _renderScopeSelector() + _renderPeriodSelector(currentSelectValue) +
                 '<div style="padding: 30px; text-align: center;">' +
                 '<h3 style="color: #e65100;">🥊 Team Matchup</h3>' +
-                '<p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto;">No rival teams found. Go to <strong>Settings > Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.</p>' +
+                '<p style="color: var(--text-secondary); max-width: 560px; margin: 0 auto;">' + _why + '</p>' +
+                '<p style="color: var(--text-tertiary); font-size: 0.85em; margin-top: 10px;">Source: ' + _escapeHtml(data.source) + '</p>' +
                 '</div>';
             var sel = document.getElementById('matchupPeriodSelect');
             if (sel) sel.addEventListener('change', _onPeriodChange);
+            // Bound here too, or the buttons the message points at do nothing.
+            _bindScopeButtons(container);
             return;
         }
 
         var html = '';
 
-        // Period selector
+        // Scope buttons, then the full period list
+        html += _renderScopeSelector();
         html += _renderPeriodSelector(currentSelectValue);
 
         // Header
@@ -503,6 +579,17 @@
         // Bind period selector
         var sel = document.getElementById('matchupPeriodSelect');
         if (sel) sel.addEventListener('change', _onPeriodChange);
+        _bindScopeButtons(container);
+    }
+
+    function _bindScopeButtons(container) {
+        if (!container || !container.querySelectorAll) return;
+        Array.prototype.forEach.call(container.querySelectorAll('.matchup-scope-btn'), function (btn) {
+            if (btn.disabled) return;
+            btn.addEventListener('click', function () {
+                _onScopeClick(btn.getAttribute('data-scope'));
+            });
+        });
     }
 
     function _renderHeadToHead(myStats, rivalStats, data) {
