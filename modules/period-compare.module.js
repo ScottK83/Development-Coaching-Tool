@@ -39,6 +39,14 @@
     // under that key. Kept in step with center-ranking's copy.
     var MONTH_KEY_PREFIX = 'month:';
 
+    // A month covering this little of the centre is a partial upload wearing a
+    // month's name — one team's report filed as "July", say. The shared-population
+    // guard already refuses to rank 18 people against 123, but honest is not the
+    // same as useful: an 18-person rank displayed beside a 127-person one reads as
+    // a centre rank and is not one. Partial months stay selectable as periods in
+    // their own right; they just cannot anchor a comparison.
+    var PARTIAL_MONTH_FRACTION = 0.6;
+
     var METRIC_KEYS_TO_AVERAGE = [
         'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
         'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
@@ -143,7 +151,35 @@
             return fromUpload[mo] || monthsMap[mo].length >= MIN_WEEKS_FOR_MONTH;
         }).sort();
 
-        return { monthsMap: monthsMap, fromUpload: fromUpload, usable: usable };
+        // Head count per month, measured against the fullest month of the year
+        // rather than the roster, so this keeps working while the roster changes.
+        var counts = {};
+        usable.forEach(function (mo) {
+            var names = {};
+            (monthsMap[mo] || []).forEach(function (k) {
+                var e = _entry(k);
+                ((e && e.employees) || []).forEach(function (emp) {
+                    if (emp && emp.name) names[emp.name] = 1;
+                });
+            });
+            counts[mo] = Object.keys(names).length;
+        });
+
+        var fullest = usable.reduce(function (max, mo) { return Math.max(max, counts[mo] || 0); }, 0);
+        var partial = {};
+        usable.forEach(function (mo) {
+            partial[mo] = fullest > 0 && (counts[mo] || 0) < fullest * PARTIAL_MONTH_FRACTION;
+        });
+        var comparable = usable.filter(function (mo) { return !partial[mo]; });
+
+        return {
+            monthsMap: monthsMap,
+            fromUpload: fromUpload,
+            usable: usable,
+            counts: counts,
+            partial: partial,
+            comparable: comparable
+        };
     }
 
     /* ── Weighted aggregation ──
@@ -300,18 +336,38 @@
         var curRanked = _rank(shared.map(function (n) { return curByName[n]; }), yr);
         if (!prevRanked || !curRanked) return null;
 
-        var prevRank = {};
-        prevRanked.forEach(function (r) { prevRank[r.name] = r.rank; });
+        var prevByName2 = {};
+        prevRanked.forEach(function (r) { prevByName2[r.name] = r; });
 
         var movements = curRanked.map(function (r) {
-            var was = prevRank[r.name];
-            var has = Number.isFinite(was) && Number.isFinite(r.rank);
+            var was = prevByName2[r.name];
+            var has = was && Number.isFinite(was.rank) && Number.isFinite(r.rank);
+
+            // Rank alone cannot carry this. The composite sorts on KPIs met, then
+            // score sum, then rank total — and a whole centre compresses into very
+            // few distinct (kpisMet, scoreSum) buckets, the biggest holding twenty
+            // or more people who are effectively tied. Order inside a bucket turns
+            // on tiebreakers, so someone can move twenty ranks without a single
+            // metric changing. Carrying the score change alongside lets a caller
+            // tell a real improvement from a reshuffle among equals.
+            var scoreSumDelta = has ? (r.scoreSum - was.scoreSum) : null;
+            var kpisMetDelta = has ? (r.kpisMet - was.kpisMet) : null;
+
             return {
                 name: r.name,
                 curRank: r.rank,
-                prevRank: has ? was : null,
+                prevRank: has ? was.rank : null,
                 // Positive means improved — moved toward 1st.
-                delta: has ? (was - r.rank) : null,
+                delta: has ? (was.rank - r.rank) : null,
+                scoreSumDelta: scoreSumDelta,
+                kpisMetDelta: kpisMetDelta,
+                prevScoreSum: has ? was.scoreSum : null,
+                curScoreSum: r.scoreSum,
+                prevKpisMet: has ? was.kpisMet : null,
+                curKpisMet: r.kpisMet,
+                // True when the underlying scoring actually moved. False means the
+                // rank changed while performance did not.
+                scoreChanged: has ? (scoreSumDelta !== 0 || kpisMetDelta !== 0) : false,
                 compositeScore: r.compositeScore,
                 kpisMet: r.kpisMet,
                 ratingAverage: r.ratingAverage
@@ -338,10 +394,16 @@
     function buildMonthOverMonthRanks(year) {
         var yr = year || _year();
         var buckets = getMonthBuckets(yr);
-        if (buckets.usable.length < 2) return null;
+        // Partial months are stepped over rather than compared, so a one-team
+        // upload filed as a month cannot become the headline comparison.
+        if (buckets.comparable.length < 2) return null;
 
-        var curKey = buckets.usable[buckets.usable.length - 1];
-        var prevKey = buckets.usable[buckets.usable.length - 2];
+        var curKey = buckets.comparable[buckets.comparable.length - 1];
+        var prevKey = buckets.comparable[buckets.comparable.length - 2];
+
+        var skipped = buckets.usable.filter(function (mo) {
+            return buckets.partial[mo] && mo > prevKey;
+        });
 
         var cur = buildMonthAggregate(curKey, yr);
         var prev = buildMonthAggregate(prevKey, yr);
@@ -357,6 +419,11 @@
         return {
             current: { key: curKey, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: curKey === nowMonth },
             previous: { key: prevKey, label: prev.label, weekCount: prev.weekCount, fromUpload: prev.fromUpload },
+            // Months newer than the pair that were passed over as partial. Surfaced
+            // so a stale-looking comparison explains itself instead of just looking wrong.
+            skippedPartial: skipped.map(function (mo) {
+                return { key: mo, label: _monthLabel(mo), count: buckets.counts[mo] || 0 };
+            }),
             total: compared.total,
             movements: compared.movements,
             onlyCurrent: compared.onlyCurrent,

@@ -202,6 +202,94 @@ suite('period compare: rank movement only counts people in both months', (t) => 
         result.movements.every((m) => Number.isFinite(m.curRank) && Number.isFinite(m.prevRank)));
 });
 
+/* ── Partial uploads ── */
+
+suite('period compare: a one-team upload filed as a month cannot anchor a comparison', (t) => {
+    // Real shape of the bug this guards: May and June carry the whole centre,
+    // July carries one supervisor's team. Comparing June to July ranks 18 people
+    // and prints ranks 1-18 beside a table ranking 122.
+    const many = (n, prefix) => Array.from({ length: n }, (_, i) => emp(`${prefix}${i}`));
+    const monthUpload = (start, end, employees) => ({
+        [`${start}|${end}`]: { employees, metadata: { startDate: start, endDate: end, periodType: 'month' } }
+    });
+
+    const weekly = Object.assign({},
+        monthUpload('2026-05-01', '2026-05-31', many(60, 'P')),
+        monthUpload('2026-06-01', '2026-06-30', many(60, 'P')),
+        monthUpload('2026-07-01', '2026-07-31', many(9, 'P'))
+    );
+
+    const pc = loadPure(t, weekly);
+    const b = pc.getMonthBuckets(2026);
+
+    t.check('the thin month is still a usable period in its own right', b.usable.includes('2026-07'));
+    t.check('but it is marked partial', b.partial['2026-07'] === true);
+    t.check('and the full months are not', !b.partial['2026-06'] && !b.partial['2026-05']);
+    t.check('so only the full months are comparable', b.comparable.join(',') === '2026-05,2026-06');
+});
+
+suite('period compare: the comparison steps back to the last full pair', (t) => {
+    const many = (n, prefix) => Array.from({ length: n }, (_, i) => emp(`${prefix}${i}`, { scheduleAdherence: 90 + (i % 9) }));
+    const monthUpload = (start, end, employees) => ({
+        [`${start}|${end}`]: { employees, metadata: { startDate: start, endDate: end, periodType: 'month' } }
+    });
+
+    const weekly = Object.assign({},
+        monthUpload('2026-05-01', '2026-05-31', many(40, 'P')),
+        monthUpload('2026-06-01', '2026-06-30', many(40, 'P')),
+        monthUpload('2026-07-01', '2026-07-31', many(6, 'P'))
+    );
+
+    const pc = loadWithRanking(t, weekly);
+    const mom = pc.buildMonthOverMonthRanks(2026);
+
+    t.check('a comparison is still produced', !!mom);
+    if (!mom) return;
+    t.check('it compares May to June, stepping over July', mom.previous.key === '2026-05' && mom.current.key === '2026-06');
+    t.check('and says which month it skipped, and how thin it was',
+        mom.skippedPartial.length === 1 && mom.skippedPartial[0].key === '2026-07' && mom.skippedPartial[0].count === 6);
+});
+
+/* ── Real movement vs tiebreaker shuffle ── */
+
+suite('period compare: movement carries whether the score actually changed', (t) => {
+    const before = [
+        emp('Improver', { scheduleAdherence: 80, cxRepOverall: 70 }),
+        emp('Flat1', { scheduleAdherence: 95 }),
+        emp('Flat2', { scheduleAdherence: 95 }),
+        emp('Flat3', { scheduleAdherence: 95 }),
+        emp('Decliner', { scheduleAdherence: 99, cxRepOverall: 99 })
+    ];
+    const after = [
+        emp('Improver', { scheduleAdherence: 99, cxRepOverall: 99 }),
+        emp('Flat1', { scheduleAdherence: 95 }),
+        emp('Flat2', { scheduleAdherence: 95 }),
+        emp('Flat3', { scheduleAdherence: 95 }),
+        emp('Decliner', { scheduleAdherence: 80, cxRepOverall: 70 })
+    ];
+
+    const pc = loadWithRanking(t, {});
+    const res = pc.compareRankings(before, after, 2026, { minShared: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+
+    const imp = res.movements.find((m) => m.name === 'Improver');
+    const dec = res.movements.find((m) => m.name === 'Decliner');
+
+    t.check('a real improvement is flagged as a score change', imp && imp.scoreChanged === true);
+    t.check('and carries the before and after score', imp && imp.prevScoreSum !== null && imp.curScoreSum !== null);
+    t.check('a real decline is flagged too', dec && dec.scoreChanged === true);
+    t.check('the improver gained score', imp && imp.scoreSumDelta > 0);
+    t.check('the decliner lost score', dec && dec.scoreSumDelta < 0);
+
+    // Identical inputs both months: whatever the rank does, the score did not move.
+    const flats = res.movements.filter((m) => m.name.startsWith('Flat'));
+    t.check('people whose inputs never changed are never flagged as a score change',
+        flats.length === 3 && flats.every((m) => m.scoreChanged === false));
+    t.check('and their score delta is exactly zero',
+        flats.every((m) => m.scoreSumDelta === 0 && m.kpisMetDelta === 0));
+});
+
 /* ── Selector wiring ── */
 
 suite('period compare: rebuilt months are offered as periods', (t) => {

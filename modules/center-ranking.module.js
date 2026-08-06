@@ -98,6 +98,11 @@
     }
 
     // Positive delta means moved toward 1st.
+    //
+    // Movement with no score change behind it is shown greyed rather than green or
+    // red. The centre compresses into very few scoring buckets, so twenty-odd people
+    // sit tied and reshuffle on tiebreakers alone — colouring that like an
+    // improvement would invite congratulating someone whose metrics never moved.
     function _movementBadge(mv, showDash) {
         if (!mv || !Number.isFinite(mv.delta)) {
             return showDash ? '<span style="color: var(--text-tertiary);">&middot;</span>' : '';
@@ -106,9 +111,14 @@
             return '<span style="color: var(--text-tertiary);" title="Same rank as last month">&#8213;</span>';
         }
         var up = mv.delta > 0;
-        return '<span style="color: ' + (up ? '#2e7d32' : '#c62828') + '; font-weight: bold; white-space: nowrap;"' +
-            ' title="#' + mv.prevRank + ' last month, #' + mv.curRank + ' this month">' +
-            (up ? '&#9650;' : '&#9660;') + Math.abs(mv.delta) + '</span>';
+        var color = mv.scoreChanged ? (up ? '#2e7d32' : '#c62828') : 'var(--text-tertiary)';
+        var title = '#' + mv.prevRank + ' last month, #' + mv.curRank + ' this month. ' +
+            (mv.scoreChanged
+                ? 'KPIs met ' + mv.prevKpisMet + '→' + mv.curKpisMet + ', score ' + mv.prevScoreSum + '→' + mv.curScoreSum
+                : 'Same score (' + mv.curKpisMet + ' KPIs, ' + mv.curScoreSum + ') — position shifted among tied people, not performance');
+        return '<span style="color: ' + color + '; font-weight: ' + (mv.scoreChanged ? 'bold' : 'normal') + '; white-space: nowrap;"' +
+            ' title="' + title + '">' + (up ? '&#9650;' : '&#9660;') + Math.abs(mv.delta) +
+            (mv.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>';
     }
 
     function _getAvailableRankingPeriods() {
@@ -707,6 +717,16 @@
                 html += ' (' + _mom.onlyCurrent.length + ' new, ' + _mom.onlyPrevious.length + ' not in this month)';
             }
             html += '</span>';
+
+            // Without this, a June-to-July comparison shown in September just looks
+            // stale, when in fact August was skipped for covering a fraction of the centre.
+            if (_mom.skippedPartial && _mom.skippedPartial.length) {
+                html += '<br><span style="color: #e65100; font-size: 0.85em;">Skipped ' +
+                    _mom.skippedPartial.map(function (s) {
+                        return _escapeHtml(s.label) + ' &mdash; only ' + s.count + ' associates uploaded';
+                    }).join(', ') +
+                    '. Upload the full month to compare against it.</span>';
+            }
         }
         html += '</div>';
 
@@ -738,11 +758,21 @@
                 if (_cardMv && Number.isFinite(_cardMv.delta)) {
                     if (_cardMv.delta === 0) {
                         html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">Held at #' + _cardMv.curRank + ' since last month</div>';
+                    } else if (!_cardMv.scoreChanged) {
+                        // Said plainly, because this is the line that would otherwise
+                        // get read out as praise for a move nobody earned.
+                        html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' +
+                            'Moved ' + (_cardMv.delta > 0 ? 'up ' : 'down ') + Math.abs(_cardMv.delta) +
+                            ' (#' + _cardMv.prevRank + ' &rarr; #' + _cardMv.curRank + ') on the same score &mdash; ' +
+                            _cardMv.curKpisMet + '/5 KPIs, ' + _cardMv.curScoreSum + ' both months</div>';
                     } else {
                         var _up = _cardMv.delta > 0;
                         html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' + (_up ? '#2e7d32' : '#c62828') + ';">' +
                             (_up ? '&#9650; Up ' : '&#9660; Down ') + Math.abs(_cardMv.delta) +
-                            ' &mdash; #' + _cardMv.prevRank + ' last month, #' + _cardMv.curRank + ' this month</div>';
+                            ' &mdash; #' + _cardMv.prevRank + ' last month, #' + _cardMv.curRank + ' this month' +
+                            '<span style="font-weight: 400; color: var(--text-secondary);"> (KPIs met ' +
+                            _cardMv.prevKpisMet + '&rarr;' + _cardMv.curKpisMet + ', score ' +
+                            _cardMv.prevScoreSum + '&rarr;' + _cardMv.curScoreSum + ')</span></div>';
                     }
                 }
                 var kpiColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
@@ -762,7 +792,10 @@
         // Full ranking table
         html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
-        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).</p>';
+        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).' +
+            (_mom ? ' <strong>MoM</strong> is rank movement since ' + _escapeHtml(_mom.previous.label) +
+                '. A greyed value marked * moved with no change in KPIs met or score &mdash; position shifted among tied people, not performance.' : '') +
+            '</p>';
         html += '</div>';
 
         container.innerHTML = html;
