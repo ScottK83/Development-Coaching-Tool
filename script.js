@@ -1770,7 +1770,9 @@ function bindNavigationHandlers() {
     });
     document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');
-        if (window.DevCoachModules?.mondayPost?.initializeMondayPost) window.DevCoachModules.mondayPost.initializeMondayPost();
+        // Which view this shows depends on the Who dropdown: the whole team
+        // gets a team post, one person gets their five day posts.
+        window.DevCoachModules?.dayPosts?.renderPostsTab?.();
     });
     document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');

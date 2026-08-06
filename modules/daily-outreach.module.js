@@ -36,8 +36,7 @@
             covers: 'lastWeek',
             coverageLabel: 'last week',
             base: 'kickoff',
-            dailyMode: 'none',
-            perWeek: true
+            dailyMode: 'none'
         },
         tuesday: {
             id: 'tuesday',
@@ -45,17 +44,15 @@
             covers: 'lastWeekPlusMonday',
             coverageLabel: 'last week plus Monday',
             base: 'kickoff',
-            dailyMode: 'monday',
-            perWeek: false
+            dailyMode: 'monday'
         },
-        midweek: {
-            id: 'midweek',
-            label: 'Midweek Check-in',
+        wednesday: {
+            id: 'wednesday',
+            label: 'Wednesday Check-in',
             covers: 'thisWeek',
             coverageLabel: 'this week so far',
             base: 'midweek',
-            dailyMode: 'wtd',
-            perWeek: false
+            dailyMode: 'wtd'
         },
         thursday: {
             id: 'thursday',
@@ -63,8 +60,7 @@
             covers: 'thisWeek',
             coverageLabel: 'this week so far',
             base: 'midweek',
-            dailyMode: 'wtd',
-            perWeek: false
+            dailyMode: 'wtd'
         },
         friday: {
             id: 'friday',
@@ -72,8 +68,7 @@
             covers: 'thisWeek',
             coverageLabel: 'this week so far',
             base: 'midweek',
-            dailyMode: 'wtd',
-            perWeek: false
+            dailyMode: 'wtd'
         },
         weekend: {
             id: 'weekend',
@@ -81,14 +76,16 @@
             covers: 'lastWeek',
             coverageLabel: 'last week',
             base: 'kickoff',
-            dailyMode: 'none',
-            perWeek: true
+            dailyMode: 'none'
         }
     };
 
     // Saturday and Sunday aren't part of the weekday rotation, so they fall
     // back to the completed week rather than blocking the sweep entirely.
-    const PLAN_BY_WEEKDAY = ['weekend', 'monday', 'tuesday', 'midweek', 'thursday', 'friday', 'weekend'];
+    const PLAN_BY_WEEKDAY = ['weekend', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'weekend'];
+
+    // The days you can actually pick, in the order they happen.
+    const WEEKDAY_IDS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
     function isoDate(date) {
         const y = date.getFullYear();
@@ -115,16 +112,20 @@
         return isoDate(when);
     }
 
+    function weekdayPlans() {
+        return WEEKDAY_IDS.map(id => PLANS[id]);
+    }
+
     /**
-     * The thing a send is recorded against. A Monday kickoff is a once-a-week
-     * message, so it's stamped with the week it covers — running the sweep
-     * twice on the same Monday should recognise the first pass. The midweek
-     * messages are once-a-day, so they're stamped with the day.
+     * What a send is recorded against: the calendar week it went out in.
+     *
+     * Every day's post is a once-a-week thing per person — "have I sent Alyssa
+     * her Tuesday post this week" is the question being asked, so all five days
+     * share a week stamp rather than each carrying its own date.
      */
     function stampFor(plan, context) {
         const ctx = context || {};
-        if (plan && plan.perWeek) return ctx.weeklyKey || ctx.todayIso || '';
-        return ctx.todayIso || '';
+        return mondayOf(ctx.todayIso ? new Date(ctx.todayIso + 'T12:00:00') : new Date());
     }
 
     function sendKey(planId, stamp, employeeName) {
@@ -282,6 +283,8 @@
         isoDate,
         planForDate,
         planById,
+        weekdayPlans,
+        WEEKDAY_IDS,
         mondayOf,
         stampFor,
         sendKey,

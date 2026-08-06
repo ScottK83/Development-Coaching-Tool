@@ -138,7 +138,7 @@
             if (visible('celebrationsContainer')) modules.celebrations?.initializeCelebrations?.();
             if (visible('morningPulseContainer')) modules.morningPulse?.initializeMorningPulse?.();
         }
-        if (visible('subSectionMondayPost')) modules.mondayPost?.initializeMondayPost?.();
+        if (visible('subSectionMondayPost')) modules.dayPosts?.renderPostsTab?.();
         if (visible('subSectionTeamSnapshot')) modules.teamSnapshot?.initializeTeamSnapshot?.();
         if (visible('subSectionHighlights')) renderHighlights();
     }

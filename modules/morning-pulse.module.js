@@ -3252,6 +3252,8 @@
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
         showRunMyDayModal,
+        buildOutreachMessage,
+        collectDailyRowsThisWeek,
         generateMonthlyCheckinMessage,
         generateQuarterlyCheckinMessage,
         generateGrowthMessage,

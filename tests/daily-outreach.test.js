@@ -29,6 +29,14 @@ suite('daily outreach: the weekday decides what the message covers', (t) => {
 
     t.equal('Tuesday pulls in the Monday daily row', outreach.planForDate(on('2026-08-04')).dailyMode, 'monday');
     t.equal('Wednesday rolls up the whole week to date', outreach.planForDate(on('2026-08-05')).dailyMode, 'wtd');
+
+    // The day picker offers Monday through Friday, in order. You choose the
+    // day, so writing a Monday post on a Thursday is allowed.
+    t.equal('five days are pickable', outreach.weekdayPlans().length, 5);
+    t.equal('and they read in order', outreach.weekdayPlans().map(p => p.id).join(','), 'monday,tuesday,wednesday,thursday,friday');
+    t.check('the weekend recap is not one of them', outreach.weekdayPlans().every(p => p.id !== 'weekend'));
+    t.equal('a day can be looked up by name', outreach.planById('thursday').label, 'Thursday Check-in');
+    t.check('an unknown day is not invented', outreach.planById('funday') === null);
     t.equal('Monday needs no daily rows', outreach.planForDate(on('2026-08-03')).dailyMode, 'none');
 
     t.equal('the week starts on Monday', outreach.mondayOf(on('2026-08-07')), '2026-08-03');
@@ -40,17 +48,17 @@ suite('daily outreach: refuses to write what the data cannot back', (t) => {
 
     const monday = outreach.PLANS.monday;
     const tuesday = outreach.PLANS.tuesday;
-    const midweek = outreach.PLANS.midweek;
+    const wednesday = outreach.PLANS.wednesday;
 
     const notInWeekly = outreach.checkCoverage(monday, { inWeekly: false, dailyRowCount: 4 });
     t.check('an associate missing from the weekly upload is blocked', notInWeekly.ok === false);
     t.equal('and the reason says why', notInWeekly.reason, 'Not in the selected weekly upload.');
 
-    const noDailies = outreach.checkCoverage(midweek, { inWeekly: true, dailyRowCount: 0 });
+    const noDailies = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 0 });
     t.check('a midweek message with no daily uploads is blocked', noDailies.ok === false);
     t.equal('and names the missing uploads', noDailies.reason, 'No daily uploads for this week yet.');
 
-    const withDailies = outreach.checkCoverage(midweek, { inWeekly: true, dailyRowCount: 2 });
+    const withDailies = outreach.checkCoverage(wednesday, { inWeekly: true, dailyRowCount: 2 });
     t.check('two daily rows are enough for midweek', withDailies.ok === true);
 
     // Tuesday can still recap last week without Monday's numbers, so this is a
@@ -84,7 +92,7 @@ suite('daily outreach: the daily recap reads like a sentence', (t) => {
     t.check('and lists the numbers', monday.indexOf('Volume 41, AHT 512.4, Adherence 96.3') > -1);
 
     const wtd = outreach.buildDailyRecap(
-        outreach.PLANS.midweek,
+        outreach.PLANS.wednesday,
         { totalCalls: 118, aht: 498.0, scheduleAdherence: null },
         { metrics, formatValue, dayCount: 3 }
     );
@@ -92,7 +100,7 @@ suite('daily outreach: the daily recap reads like a sentence', (t) => {
     t.check('and drops the metric with no value', wtd.indexOf('Adherence') === -1);
 
     t.equal('one day reads singular', outreach.buildDailyRecap(
-        outreach.PLANS.midweek, { totalCalls: 40 }, { metrics, formatValue, dayCount: 1 }
+        outreach.PLANS.wednesday, { totalCalls: 40 }, { metrics, formatValue, dayCount: 1 }
     ), '📊 Week to date (1 day in): Volume 40.');
 
     t.equal('a plan with no daily half returns nothing', outreach.buildDailyRecap(
@@ -100,7 +108,7 @@ suite('daily outreach: the daily recap reads like a sentence', (t) => {
     ), '');
 
     t.equal('a rollup with nothing in it returns nothing', outreach.buildDailyRecap(
-        outreach.PLANS.midweek, { totalCalls: null, aht: null }, { metrics, formatValue, dayCount: 2 }
+        outreach.PLANS.wednesday, { totalCalls: null, aht: null }, { metrics, formatValue, dayCount: 2 }
     ), '');
 });
 
@@ -124,13 +132,15 @@ suite('daily outreach: a sent message stays sent', (t) => {
     const outreach = load(t);
 
     const monday = outreach.PLANS.monday;
-    const midweek = outreach.PLANS.midweek;
-    const ctx = { weeklyKey: '2026-07-27|2026-08-02', todayIso: '2026-08-05' };
+    const wednesday = outreach.PLANS.wednesday;
+    const ctx = { todayIso: '2026-08-05' };
 
-    // A kickoff is a once-a-week message, so it's stamped with the week it
-    // covers; a midweek nudge is once a day.
-    t.equal('the kickoff is stamped with its week', outreach.stampFor(monday, ctx), '2026-07-27|2026-08-02');
-    t.equal('the midweek nudge is stamped with the day', outreach.stampFor(midweek, ctx), '2026-08-05');
+    // "Have I sent Alyssa her Tuesday post this week" is the question, so every
+    // day's post shares one stamp: the calendar week it went out in.
+    t.equal('the Monday post is stamped with the current week', outreach.stampFor(monday, ctx), '2026-08-03');
+    t.equal('and so is the Wednesday one', outreach.stampFor(wednesday, ctx), '2026-08-03');
+    t.equal('a send on Friday still lands in the same week', outreach.stampFor(monday, { todayIso: '2026-08-07' }), '2026-08-03');
+    t.equal('next week gets its own stamp', outreach.stampFor(monday, { todayIso: '2026-08-10' }), '2026-08-10');
 
     const stamp = outreach.stampFor(monday, ctx);
     t.check('nothing is sent to begin with', outreach.getSentEntry(outreach.loadSentLog(), 'monday', stamp, 'Alyssa Dimes') === null);
@@ -141,19 +151,20 @@ suite('daily outreach: a sent message stays sent', (t) => {
     t.equal('with the time it went out', entry.at, '2026-08-03T14:00:00.000Z');
 
     t.check('a different associate is untouched', outreach.getSentEntry(outreach.loadSentLog(), 'monday', stamp, 'Chris Vale') === null);
-    t.check('and so is the same associate next week', outreach.getSentEntry(outreach.loadSentLog(), 'monday', '2026-08-03|2026-08-09', 'Alyssa Dimes') === null);
+    t.check('and so is the same associate next week', outreach.getSentEntry(outreach.loadSentLog(), 'monday', '2026-08-10', 'Alyssa Dimes') === null);
+    t.check('a different day of the same week is tracked separately', outreach.getSentEntry(outreach.loadSentLog(), 'tuesday', stamp, 'Alyssa Dimes') === null);
 
     outreach.clearSent('monday', stamp, 'Alyssa Dimes');
     t.check('undo puts them back in the queue', outreach.getSentEntry(outreach.loadSentLog(), 'monday', stamp, 'Alyssa Dimes') === null);
 
     outreach.markSent('monday', stamp, 'Alyssa Dimes', '2026-08-03T14:00:00.000Z');
     outreach.markSent('monday', stamp, 'Chris Vale', '2026-08-03T14:05:00.000Z');
-    outreach.markSent('midweek', '2026-08-05', 'Chris Vale', '2026-08-05T14:05:00.000Z');
+    outreach.markSent('wednesday', stamp, 'Chris Vale', '2026-08-05T14:05:00.000Z');
     outreach.clearAllSentForStamp('monday', stamp);
     const afterReset = outreach.loadSentLog();
     t.check('clearing the batch clears both reps', !outreach.getSentEntry(afterReset, 'monday', stamp, 'Alyssa Dimes')
         && !outreach.getSentEntry(afterReset, 'monday', stamp, 'Chris Vale'));
-    t.check('and leaves another day alone', Boolean(outreach.getSentEntry(afterReset, 'midweek', '2026-08-05', 'Chris Vale')));
+    t.check('and leaves another day alone', Boolean(outreach.getSentEntry(afterReset, 'wednesday', stamp, 'Chris Vale')));
 });
 
 suite('daily outreach: the send log does not grow forever', (t) => {
