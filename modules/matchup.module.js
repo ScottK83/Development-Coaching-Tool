@@ -179,10 +179,12 @@
             html += '<button type="button" class="matchup-scope-btn" data-scope="' + s.key + '"' +
                 (disabled ? ' disabled' : '') +
                 ' title="' + (disabled ? 'No ' + s.label.toLowerCase() + ' period covers enough of the centre' : 'Newest: ' + _escapeHtml(available[0].label)) + '"' +
-                ' style="padding: 6px 14px; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: ' + (disabled ? 'not-allowed' : 'pointer') + ';' +
-                ' border: 1px solid ' + (isActive ? '#e65100' : 'var(--border)') + ';' +
+                ' style="padding: 6px 14px; border-radius: 6px; font-size: 0.9em; cursor: ' + (disabled ? 'not-allowed' : 'pointer') + ';' +
+                ' font-weight: ' + (isActive ? '700' : '500') + ';' +
+                ' border: 2px solid ' + (isActive ? '#e65100' : 'var(--border)') + ';' +
                 ' background: ' + (isActive ? '#e65100' : 'var(--bg-surface)') + ';' +
-                ' color: ' + (isActive ? '#fff' : (disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')) + ';' +
+                ' color: ' + (isActive ? '#ffffff' : (disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')) + ';' +
+                ' box-shadow: ' + (isActive ? '0 0 0 3px rgba(230,81,0,0.25)' : 'none') + ';' +
                 ' opacity: ' + (disabled ? '0.55' : '1') + ';">' + s.label + '</button>';
         });
 
@@ -385,21 +387,38 @@
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
         if (!pc || !pc.buildMonthOverMonthTeams) return '';
 
-        var mv;
+        // Follows the selected scope. Showing month-over-month while someone has
+        // Weekly selected reads as a broken panel — the header and period change,
+        // the movement does not, so it looks stuck rather than deliberate.
+        var scope = _scopeOfPeriod(_selectedPeriodKey) || 'month';
+        var mv, fellBack = false;
         try {
-            mv = pc.buildMonthOverMonthTeams(_getSupervisors());
+            mv = pc.buildTeamMovementForScope(scope, _getSupervisors());
+            // A single YTD upload has nothing to compare against. Months are the
+            // useful answer there, said out loud rather than shown silently.
+            if (!mv && scope !== 'month') {
+                mv = pc.buildTeamMovementForScope('month', _getSupervisors());
+                fellBack = !!mv;
+            }
         } catch (err) {
             console.warn('[matchup] Team movement unavailable:', err && err.message);
             return '';
         }
         if (!mv || !mv.teams.length) return '';
 
+        var SCOPE_NOUN = { ytd: 'year-to-date file', month: 'month', week: 'week' };
+
         var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement &mdash; ' +
             _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) + '</h4>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
-            'Placed on average KPI score across the ' + mv.total + ' associates scored in both months. ' +
-            'Teams on the same average share a place.</p>';
+            'Placed on average KPI score across the ' + mv.total + ' associates scored in both. ' +
+            'Teams on the same average share a place.' +
+            (fellBack
+                ? ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[scope] || scope) +
+                  ' is available, so there is nothing to compare it against — showing months instead.</span>'
+                : '') +
+            '</p>';
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';

@@ -675,6 +675,76 @@
         };
     }
 
+    /**
+     * Comparable periods of one granularity, oldest first.
+     *
+     * 'month' rebuilds each month; 'week' and 'ytd' read stored uploads directly.
+     * Anything covering far less of the centre than the fullest period of its kind
+     * is dropped, so a one-team upload cannot become one half of a comparison.
+     */
+    function _scopePeriods(scope, year) {
+        var yr = year || _year();
+        var out = [];
+
+        if (scope === 'month') {
+            getMonthBuckets(yr).comparable.forEach(function (mo) {
+                var agg = buildMonthAggregate(mo, yr);
+                if (agg) out.push({ key: mo, label: agg.label, employees: agg.employees, end: mo });
+            });
+            return out;
+        }
+
+        var src = scope === 'ytd' ? _ytdData() : _weeklyData();
+        // Completed weeks only. A three-day week-in-progress against a full one is
+        // not movement, it is four fewer days — and the head count barely drops, so
+        // the population guard never catches it.
+        var types = scope === 'ytd' ? ['ytd'] : ['week'];
+
+        Object.keys(src).forEach(function (k) {
+            var entry = src[k];
+            var meta = (entry && entry.metadata) || {};
+            var type = meta.periodType || (scope === 'ytd' ? 'ytd' : 'week');
+            if (types.indexOf(type) === -1) return;
+            var end = String(meta.endDate || (k.indexOf('|') > -1 ? k.split('|')[1] : k));
+            if (parseInt(end.split('-')[0], 10) !== yr) return;
+            var emps = (entry && entry.employees) || [];
+            if (!emps.length) return;
+            out.push({ key: k, label: meta.label || end, employees: emps, end: end });
+        });
+
+        out.sort(function (a, b) { return a.end.localeCompare(b.end); });
+        return out;
+    }
+
+    /**
+     * Team movement between the last two comparable periods of a given
+     * granularity, so the comparison follows whatever the viewer selected rather
+     * than always answering about months.
+     */
+    function buildTeamMovementForScope(scope, supervisors, year) {
+        var yr = year || _year();
+        var periods = _scopePeriods(scope, yr);
+
+        var fullest = periods.reduce(function (m, p) { return Math.max(m, p.employees.length); }, 0);
+        var usable = periods.filter(function (p) { return p.employees.length >= fullest * PARTIAL_MONTH_FRACTION; });
+        if (usable.length < 2) return null;
+
+        var cur = usable[usable.length - 1];
+        var prev = usable[usable.length - 2];
+
+        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr);
+        if (!compared) return null;
+
+        return {
+            scope: scope,
+            current: { key: cur.key, label: cur.label },
+            previous: { key: prev.key, label: prev.label },
+            total: compared.total,
+            teamCount: compared.teamCount,
+            teams: compared.teams
+        };
+    }
+
     /** Movement for one person, or null. Convenience for coaching surfaces. */
     function getMovementFor(name, momData) {
         if (!name || !momData || !momData.movements) return null;
@@ -696,6 +766,7 @@
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,
+        buildTeamMovementForScope: buildTeamMovementForScope,
         getMovementFor: getMovementFor,
         monthLabel: _monthLabel
     };
