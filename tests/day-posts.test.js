@@ -64,6 +64,62 @@ suite('day posts: sent tracking is per person, per day, per week', (t) => {
     t.check('next week starts clean', outreach.getSentEntry(log, 'monday', nextWeek, 'Alyssa Dimes') === null);
 });
 
+suite('day posts: it knows when the period was never uploaded', (t) => {
+    const modules = load(t);
+    const outreach = modules.dailyOutreach;
+
+    const monday = outreach.PLANS.monday;
+    const wednesday = outreach.PLANS.wednesday;
+    // Wednesday 2026-08-05; the current week starts Monday 2026-08-03, so last
+    // week runs 2026-07-27 to 2026-08-02.
+    const today = '2026-08-05';
+
+    const haveLastWeek = outreach.checkPeriodData(monday, { todayIso: today, latestWeekEndIso: '2026-08-02' });
+    t.check("last week's file is enough for a Monday post", haveLastWeek.ok === true);
+
+    // The gap that mattered: a stale file would have been described as "last
+    // week" without anyone noticing.
+    const stale = outreach.checkPeriodData(monday, { todayIso: today, latestWeekEndIso: '2026-07-12' });
+    t.check('a three-week-old file is not last week', stale.ok === false);
+    t.equal('and it says so in those words', stale.reason, 'Missing data from this period.');
+    t.check('naming the newest file it does have', stale.detail.indexOf('2026-07-12') > -1);
+
+    const nothing = outreach.checkPeriodData(monday, { todayIso: today, latestWeekEndIso: '' });
+    t.check('no weekly upload at all is caught', nothing.ok === false);
+    t.check('and distinguished from a stale one', nothing.detail !== stale.detail);
+
+    // An in-progress upload of the current week is newer than last week, so it
+    // still backs a Monday post rather than being rejected for being too fresh.
+    const current = outreach.checkPeriodData(monday, { todayIso: today, latestWeekEndIso: '2026-08-05' });
+    t.check('a current-week file is not treated as missing', current.ok === true);
+
+    const noDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-02', dailyDayCount: 0 });
+    t.check('midweek with no daily uploads is missing its period', noDailies.ok === false);
+    t.equal('with the same wording', noDailies.reason, 'Missing data from this period.');
+
+    const someDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-08-02', dailyDayCount: 2 });
+    t.check('two days in is enough to talk about this week', someDailies.ok === true);
+    t.check('and it says how much it has', someDailies.detail.indexOf('2 daily uploads') > -1);
+
+    // A stale weekly file must not block the days that run off dailies.
+    const staleWeekButDailies = outreach.checkPeriodData(wednesday, { todayIso: today, latestWeekEndIso: '2026-07-12', dailyDayCount: 3 });
+    t.check('midweek does not care that the weekly file is old', staleWeekButDailies.ok === true);
+});
+
+suite('day posts: the period question is asked once for every day', (t) => {
+    const modules = load(t);
+    const posts = modules.dayPosts;
+
+    // With no morning-pulse loaded there is nothing to ask, and that must be an
+    // empty answer rather than a crash on the render path.
+    t.check('no data modules yields no statuses', Object.keys(posts.periodStatusByDay('2026-08-05')).length === 0);
+
+    t.equal('an end date is read from metadata first', posts.latestWeekEnd('a|b', { metadata: { endDate: '2026-08-02' } }), '2026-08-02');
+    t.equal('and falls back to the key', posts.latestWeekEnd('2026-07-27|2026-08-02', null), '2026-08-02');
+    t.equal('a key with no range is used whole', posts.latestWeekEnd('2026-08-02', null), '2026-08-02');
+    t.equal('and nothing yields nothing', posts.latestWeekEnd('', null), '');
+});
+
 suite('day posts: rendering without markup is a no-op, not a crash', (t) => {
     const modules = load(t);
     const posts = modules.dayPosts;

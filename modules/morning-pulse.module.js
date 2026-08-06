@@ -2639,6 +2639,14 @@
 
         const dailyThisWeek = collectDailyRowsThisWeek();
 
+        // Asked once for the whole sweep: does the tool even hold the period
+        // this day's message claims to describe?
+        const periodCheck = outreach.checkPeriodData(plan, {
+            todayIso,
+            latestWeekEndIso: period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey),
+            dailyDayCount: dailyThisWeek.dayCount
+        });
+
         const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
             ? getCallCenterAverageForPeriod(latestKey) || {}
             : {};
@@ -2726,6 +2734,11 @@
                 `</div>` +
                 `<button id="runMyDayClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">✕</button>` +
             `</div>` +
+            (periodCheck.ok
+                ? ''
+                : `<div style="padding:12px 24px; background:#fff3e0; border-bottom:1px solid #ffcc80; font-size:0.88em; color:#e65100;">` +
+                    `<strong>${escapeHtml(periodCheck.reason)}</strong> ${escapeHtml(periodCheck.detail)}` +
+                  `</div>`) +
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
                 `Sorted by priority. Copy each message and send it, then click <strong>Sent</strong> — that flag sticks, so re-running skips them.` +
             `</div>` +

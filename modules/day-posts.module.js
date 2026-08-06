@@ -70,6 +70,16 @@
         const period = periods?.latestKey && typeof weeklyData !== 'undefined' ? weeklyData[periods.latestKey] : null;
         const inWeekly = Boolean((period?.employees || []).find(emp => String(emp?.name || '').trim() === employeeName));
 
+        // Two different questions, asked in order. Does the tool hold the period
+        // at all, and does it hold this person inside it? Answering them
+        // separately is what lets the missing-upload case name itself instead of
+        // reading as "this associate has no data".
+        const periodCheck = outreach.checkPeriodData(plan, {
+            todayIso,
+            latestWeekEndIso: latestWeekEnd(periods?.latestKey, period),
+            dailyDayCount: daily.dayCount
+        });
+
         const coverage = outreach.checkCoverage(plan, {
             inWeekly,
             dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
@@ -78,7 +88,36 @@
 
         const sentEntry = outreach.getSentEntry(outreach.loadSentLog(), plan.id, stamp, employeeName);
 
-        return { outreach, pulse, plan, stamp, periods, dailyEntry, coverage, sentEntry, todayIso };
+        return { outreach, pulse, plan, stamp, periods, dailyEntry, periodCheck, coverage, sentEntry, todayIso };
+    }
+
+    function latestWeekEnd(latestKey, period) {
+        if (period?.metadata?.endDate) return period.metadata.endDate;
+        if (latestKey && latestKey.indexOf('|') > -1) return latestKey.split('|')[1];
+        return latestKey || '';
+    }
+
+    // The period question is the same for every associate, so it can be asked
+    // once and used to mark the whole row of day buttons up front.
+    function periodStatusByDay(todayIso) {
+        const outreach = window.DevCoachModules?.dailyOutreach;
+        const pulse = window.DevCoachModules?.morningPulse;
+        const status = {};
+        if (!outreach || !pulse) return status;
+
+        const periods = pulse.resolveCheckinPeriods?.() || null;
+        const daily = pulse.collectDailyRowsThisWeek?.() || { dayCount: 0 };
+        const period = periods?.latestKey && typeof weeklyData !== 'undefined' ? weeklyData[periods.latestKey] : null;
+        const facts = {
+            todayIso,
+            latestWeekEndIso: latestWeekEnd(periods?.latestKey, period),
+            dailyDayCount: daily.dayCount
+        };
+
+        outreach.weekdayPlans().forEach(plan => {
+            status[plan.id] = outreach.checkPeriodData(plan, facts);
+        });
+        return status;
     }
 
     async function renderDayPosts(container, employeeName) {
@@ -107,14 +146,24 @@
 
         // Every day carries its own sent flag, so the row of buttons doubles as
         // a "what have I already sent her this week" summary.
+        const dayStatus = periodStatusByDay(ctx.todayIso);
         const buttons = outreach.weekdayPlans().map(plan => {
             const active = plan.id === ctx.plan.id;
             const sent = Boolean(outreach.getSentEntry(sentLog, plan.id, ctx.stamp, employeeName));
-            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (sent ? '#e8f5e9' : '#e2e8f0');
-            const color = active ? '#fff' : (sent ? '#2e7d32' : 'var(--text-secondary)');
-            return `<button type="button" class="day-post-btn" data-day="${plan.id}" title="${escapeHtml(plan.label)} — covers ${escapeHtml(plan.coverageLabel)}" ` +
-                `style="padding:9px 16px; border:none; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
-                `${sent ? '✓ ' : ''}${shortDay(plan.id)}</button>`;
+            const blocked = dayStatus[plan.id] && !dayStatus[plan.id].ok;
+
+            // A day whose period was never uploaded is marked before you click
+            // it, so you don't pick it and then find out.
+            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (blocked ? '#f5f5f5' : (sent ? '#e8f5e9' : '#e2e8f0'));
+            const color = active ? '#fff' : (blocked ? 'var(--text-tertiary)' : (sent ? '#2e7d32' : 'var(--text-secondary)'));
+            const mark = blocked ? '⚠️ ' : (sent ? '✓ ' : '');
+            const tip = blocked
+                ? `${plan.label} — ${dayStatus[plan.id].reason} ${dayStatus[plan.id].detail}`
+                : `${plan.label} — covers ${plan.coverageLabel}`;
+
+            return `<button type="button" class="day-post-btn" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
+                `style="padding:9px 16px; border:${blocked ? '1px dashed var(--border-strong)' : 'none'}; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
+                `${mark}${shortDay(plan.id)}</button>`;
         }).join('');
 
         const sentBanner = ctx.sentEntry
@@ -130,10 +179,19 @@
             : '';
 
         let bodyHtml;
-        if (!ctx.coverage.ok) {
+        if (!ctx.periodCheck.ok) {
+            // The period itself is missing, which is not the same as this
+            // associate having no numbers — say which one it is.
+            bodyHtml = `<div style="padding:28px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid #ef6c00; border-radius:10px;">` +
+                `<div style="font-size:2.2em; margin-bottom:8px;">📭</div>` +
+                `<div style="font-weight:700; color:#ef6c00; font-size:1.05em;">${escapeHtml(ctx.periodCheck.reason)}</div>` +
+                `<div style="font-size:0.92em; margin-top:8px;">${escapeHtml(ctx.periodCheck.detail)}</div>` +
+                `<div style="font-size:0.88em; margin-top:10px; color:var(--text-tertiary);">A ${escapeHtml(ctx.plan.label)} covers ${escapeHtml(ctx.plan.coverageLabel)}, so it can't be written from what's on file.</div>` +
+            `</div>`;
+        } else if (!ctx.coverage.ok) {
             bodyHtml = `<div style="padding:28px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">` +
                 `<div style="font-size:2.2em; margin-bottom:8px;">📥</div>` +
-                `<div style="font-weight:600;">Can't write this one yet.</div>` +
+                `<div style="font-weight:600;">Can't write this one for ${escapeHtml(who)} yet.</div>` +
                 `<div style="font-size:0.9em; margin-top:6px;">${escapeHtml(ctx.coverage.reason)}</div>` +
             `</div>`;
         } else {
@@ -242,6 +300,8 @@
         renderDayPosts,
         renderPostsTab,
         resolveContext,
+        periodStatusByDay,
+        latestWeekEnd,
         loadDayChoice,
         saveDayChoice,
         shortDay

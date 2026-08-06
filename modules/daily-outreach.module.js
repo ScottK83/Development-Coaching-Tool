@@ -116,6 +116,59 @@
         return WEEKDAY_IDS.map(id => PLANS[id]);
     }
 
+    function shiftDays(iso, days) {
+        const when = new Date(iso + 'T12:00:00');
+        if (Number.isNaN(when.getTime())) return iso;
+        when.setDate(when.getDate() + days);
+        return isoDate(when);
+    }
+
+    /**
+     * Does the tool actually hold the period this day's post claims to describe?
+     *
+     * This is the gap that mattered: a Monday post says "here's your last week",
+     * and nothing checked that last week was ever uploaded. With a three-week-old
+     * file on disk it would happily describe that as last week. Per-period rather
+     * than per-person, so it can be answered once, before any message is written.
+     *
+     * facts:
+     *   todayIso          the day being sent from
+     *   latestWeekEndIso  end date of the newest weekly upload
+     *   dailyDayCount     distinct days uploaded this week
+     */
+    function checkPeriodData(plan, facts) {
+        const f = facts || {};
+        const todayIso = f.todayIso || isoDate(new Date());
+        const thisWeekStart = mondayOf(new Date(todayIso + 'T12:00:00'));
+
+        if (plan.covers === 'thisWeek') {
+            const days = Number.isFinite(f.dailyDayCount) ? f.dailyDayCount : 0;
+            if (days < 1) {
+                return {
+                    ok: false,
+                    reason: 'Missing data from this period.',
+                    detail: 'No daily uploads for this week yet, so there is nothing to say about how it is going.'
+                };
+            }
+            return { ok: true, reason: '', detail: `${days} daily upload${days === 1 ? '' : 's'} this week.` };
+        }
+
+        const lastWeekStart = shiftDays(thisWeekStart, -7);
+        const end = String(f.latestWeekEndIso || '').slice(0, 10);
+
+        if (!end) {
+            return { ok: false, reason: 'Missing data from this period.', detail: 'No weekly file has been uploaded at all.' };
+        }
+        if (end < lastWeekStart) {
+            return {
+                ok: false,
+                reason: 'Missing data from this period.',
+                detail: `Last week hasn't been uploaded — the newest weekly file ends ${end}.`
+            };
+        }
+        return { ok: true, reason: '', detail: `Weekly file ends ${end}.` };
+    }
+
     /**
      * What a send is recorded against: the calendar week it went out in.
      *
@@ -289,6 +342,8 @@
         stampFor,
         sendKey,
         checkCoverage,
+        checkPeriodData,
+        shiftDays,
         buildDailyRecap,
         insertRecap,
         loadSentLog,
