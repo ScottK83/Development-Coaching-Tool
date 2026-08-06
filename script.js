@@ -578,10 +578,6 @@ function renderDebugPanel() {
 function copyDebugInfo() {
     window.DevCoachModules?.debug?.copyDebugInfo?.();
 }
-function fallbackCopyDebug(text) {
-    window.DevCoachModules?.debug?.fallbackCopyDebug?.(text);
-}
-
 // ============================================
 // NICKNAME MEMORY
 // ============================================
@@ -2167,9 +2163,6 @@ function bindManageDataNavigationHandlers() {
 }
 
 function bindQuickActionHandlers() {
-    document.getElementById('generateTodaysFocusBtn')?.addEventListener('click', generateTodaysFocus);
-    document.getElementById('copyTodaysFocusBtn')?.addEventListener('click', copyTodaysFocus);
-    document.getElementById('generateTodaysFocusCopilotBtn')?.addEventListener('click', generateTodaysFocusCopilotEmail);
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
@@ -2191,10 +2184,6 @@ function bindCoachingFormHandlers() {
     document.querySelectorAll('.period-type-btn').forEach(btn => {
         btn.addEventListener('click', () => handlePeriodTypeButtonClick(btn));
     });
-    document.getElementById('specificPeriod')?.addEventListener('change', handleSpecificPeriodChange);
-    document.getElementById('employeeSelect')?.addEventListener('change', handleEmployeeSelectChange);
-    document.getElementById('employeeSearch')?.addEventListener('input', handleEmployeeSearchInput);
-    document.getElementById('copilotOutputText')?.addEventListener('input', handleCopilotOutputInput);
     document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', generateVerintSummary);
     Object.keys(METRICS_REGISTRY).forEach(metricKey => {
         document.getElementById(metricKey)?.addEventListener('input', applyMetricHighlights);
@@ -2226,8 +2215,6 @@ function bindCoachingFormHandlers() {
 
 function bindDataAdminHandlers() {
     document.getElementById('deleteSelectedWeekBtn')?.addEventListener('click', handleDeleteSelectedWeekClick);
-    document.getElementById('selectAllTeamBtn')?.addEventListener('click', handleSelectAllTeamClick);
-    document.getElementById('deselectAllTeamBtn')?.addEventListener('click', handleDeselectAllTeamClick);
     document.getElementById('deleteWeekSelect')?.addEventListener('change', handleDeleteWeekSelectChange);
     document.getElementById('toggleTeamMemberSelectorBtn')?.addEventListener('click', handleToggleTeamMembersEmployeesPanelClick);
     applyTeamMembersEmployeesPanelState(loadTeamMembersEmployeesPanelExpandedPreference());
@@ -2281,17 +2268,6 @@ function handleSubNavMetricTrendsClick() {
 function handleSubNavTrendIntelligenceClick() {
     ensureTrendIntelligenceMountedInTrends();
     renderExecutiveSummary();
-}
-
-function handleCopilotOutputInput(event) {
-    const verintBtn = document.getElementById('generateVerintSummaryBtn');
-    const hasContent = event.target.value.trim().length > 0;
-
-    if (verintBtn) {
-        verintBtn.disabled = !hasContent;
-        verintBtn.style.opacity = hasContent ? '1' : '0.5';
-        verintBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-    }
 }
 
 function handleUploadMoreDataClick() {
@@ -3349,69 +3325,6 @@ function handlePeriodTypeButtonClick(button) {
     }
 }
 
-function handleSpecificPeriodChange(event) {
-    currentPeriod = event.target.value;
-    if (currentPeriod) {
-        updateEmployeeDropdown();
-    }
-}
-
-function handleEmployeeSelectChange(event) {
-    const selectedName = event.target.value;
-
-    if (selectedName) {
-        saveSmartDefault('lastEmployee', selectedName);
-    }
-
-    if (!selectedName) {
-        ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) element.style.display = 'none';
-        });
-        return;
-    }
-
-    const employee = getEmployeeDataForPeriod(selectedName);
-    if (!employee) {
-        alert('ℹ️ Error loading employee data');
-        return;
-    }
-
-    ['employeeInfoSection', 'metricsSection', 'aiAssistSection', 'customNotesSection'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.style.display = 'block';
-    });
-
-    const oldGenerateBtn = document.getElementById('generateEmailBtn');
-    if (oldGenerateBtn) oldGenerateBtn.style.display = 'none';
-
-    const savedNickname = getSavedNickname(selectedName);
-    const defaultNickname = getEmployeeNickname(selectedName) || employee.firstName || '';
-    document.getElementById('employeeName').value = savedNickname || defaultNickname;
-    populateMetricInputs(employee);
-
-    const surveyStatusEl = document.getElementById('surveyStatusMsg');
-    if (surveyStatusEl) {
-        const hasSurveys = (employee.surveyTotal || 0) > 0;
-        surveyStatusEl.textContent = hasSurveys ? '' : 'No surveys in this period; survey-based metrics are omitted.';
-    }
-
-    document.getElementById('employeeName').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function handleEmployeeSearchInput(event) {
-    const searchText = event.target.value.toLowerCase();
-    const dropdown = document.getElementById('employeeSelect');
-    if (!dropdown) return;
-
-    const options = dropdown.options;
-    for (let index = 1; index < options.length; index += 1) {
-        const option = options[index];
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchText) ? '' : 'none';
-    }
-}
-
 function handleDeleteSelectedWeekClick() {
     const weekSelect = document.getElementById('deleteWeekSelect');
     if (!weekSelect) return;
@@ -3458,20 +3371,6 @@ function handleDeleteSelectedWeekClick() {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
-}
-
-function handleSelectAllTeamClick() {
-    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    updateTeamSelection();
-}
-
-function handleDeselectAllTeamClick() {
-    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    updateTeamSelection();
 }
 
 function handleDeleteWeekSelectChange() {
@@ -6920,33 +6819,6 @@ async function generateGroupCoachingEmail() {
     });
 }
 
-async function generateTodaysFocus() {
-    const output = document.getElementById('todaysFocusOutput');
-    if (!output) return;
-
-    const focusData = buildTodaysFocusData();
-    if (!focusData) {
-        output.value = 'Today’s Focus\n• ✅ Team Win: No data available yet\n• ⚠️ Focus Area: Upload the latest data to generate focus\n• 🎯 Today’s Ask: Paste this week’s PowerBI export';
-        return;
-    }
-
-    const tips = await loadServerTips();
-    const focusTip = focusData.focusArea ? selectSmartTip({
-        employeeId: 'TEAM',
-        metricKey: focusData.focusArea,
-        severity: 'medium',
-        tips: tips[focusData.focusArea] || []
-    }) : null;
-
-    const teamWinLabel = focusData.teamWin ? METRICS_REGISTRY[focusData.teamWin]?.label || focusData.teamWin : 'Team metrics';
-    const focusLabel = focusData.focusArea ? METRICS_REGISTRY[focusData.focusArea]?.label || focusData.focusArea : 'Key metric';
-
-    output.value = `Today’s Focus\n` +
-        `• ✅ Team Win: ${teamWinLabel} is ahead of the team average for many teammates\n` +
-        `• ⚠️ Focus Area: ${focusLabel} is below the team average for several teammates\n` +
-        `• 🎯 Today’s Ask: ${focusTip ? focusTip.replace(/^.*?:\s*/, '') : 'Use a quick reminder before breaks to stay green'}`;
-}
-
 function buildTodaysFocusData() {
     const latestKey = getLatestWeeklyKey();
     if (!latestKey) return null;
@@ -7038,46 +6910,6 @@ function buildTodaysFocusCallouts(employees, metricsToUse, averages) {
         .filter(item => item.wins > 0)
         .sort((a, b) => b.wins - a.wins)
         .slice(0, 3);
-}
-
-function generateTodaysFocusCopilotEmail() {
-    const focusData = buildTodaysFocusData();
-    if (!focusData) {
-        showToast('Upload the latest weekly data first', 3000);
-        return;
-    }
-
-    const endDate = focusData.latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(focusData.latestWeek.metadata.endDate)
-        : (focusData.latestKey?.split('|')[1] ? formatDateMMDDYYYY(focusData.latestKey.split('|')[1]) : 'this week');
-
-    const winLabel = focusData.teamWin ? METRICS_REGISTRY[focusData.teamWin]?.label || focusData.teamWin : 'Team metrics';
-    const focusLabel = focusData.focusArea ? METRICS_REGISTRY[focusData.focusArea]?.label || focusData.focusArea : 'Key metric';
-    const calloutText = focusData.callouts.length
-        ? focusData.callouts.map(c => `${c.name} (${c.wins} wins vs avg)`).join(', ')
-        : 'No clear callouts yet';
-
-    const prompt = window.DevCoachModules?.trendIntelligence?.buildTodaysFocusCopilotPrompt?.({
-        endDate,
-        winLabel,
-        focusLabel,
-        calloutText
-    }) || '';
-
-    if (!prompt) {
-        showToast('Trend Intelligence module not available. Refresh and try again.', 3500);
-        return;
-    }
-
-    copyToClipboard(prompt, { message: '📋 CoPilot prompt copied — opening CoPilot' }).then((ok) => {
-        if (ok) window.open('https://copilot.microsoft.com', '_blank');
-    });
-}
-
-function copyTodaysFocus() {
-    const output = document.getElementById('todaysFocusOutput');
-    if (!output) return;
-    copyToClipboard(output.value || '', { message: '📋 Today’s Focus copied' });
 }
 
 
