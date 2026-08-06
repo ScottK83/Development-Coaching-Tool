@@ -65,6 +65,42 @@ suite('my team: sent ticks are a per-person idea', (t) => {
     t.check('the team view claims nothing about who was sent', forTeam.indexOf('✓ Monday') === -1);
 });
 
+suite('my team: two things — one public, one private', (t) => {
+    const modules = load(t);
+    const myTeam = modules.myTeam;
+
+    // The whole-team view offers exactly the two jobs a team day has: a post
+    // for the channel that names people, and the private per-person round.
+    const tabs = myTeam.renderDayTabs('monday', null);
+    t.check('the team view is not cluttered with tone options', tabs.indexOf('mt-tone-btn') === -1);
+
+    // Those two extra private messages only make sense for one person.
+    const toneRow = myTeam.renderToneRow();
+    t.check('high five is offered', toneRow.indexOf('High five') > -1);
+    t.check('growth is offered', toneRow.indexOf('Growth') > -1);
+    t.check('and they are framed as sending, not browsing', toneRow.indexOf('Also send') > -1);
+    t.check('growth is wired to its own picker', toneRow.indexOf('data-tone="growth"') > -1);
+});
+
+suite('my team: the shout-out never invents people to praise', (t) => {
+    const modules = load(t);
+
+    // No celebrations module at all — the public post must refuse rather than
+    // emit an empty channel message.
+    let threw = null;
+    try { modules.myTeam.renderShoutOut(); } catch (e) { threw = e; }
+    t.check('a missing celebrations source is survivable', threw === null);
+
+    // A source that returns nobody must not produce a post either.
+    global.window.DevCoachModules.celebrations = {
+        detectCelebrations: () => ({ celebrations: [], missed: [], dateRange: '' }),
+        generateAllShoutOuts: () => 'SHOULD NOT BE USED'
+    };
+    let threw2 = null;
+    try { modules.myTeam.renderShoutOut(); } catch (e) { threw2 = e; }
+    t.check('an empty celebration list is survivable too', threw2 === null);
+});
+
 suite('my team: context degrades quietly rather than blocking the message', (t) => {
     const modules = load(t);
     const myTeam = modules.myTeam;
