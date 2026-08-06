@@ -232,12 +232,21 @@
         // competition ranking gives every tied leader rank 1, so "only one to
         // hit this" should only fire when exactly one person sits at rank 1.
         var rank1CountsByMetric = {};
+        // How many people sit on each rank, per metric. Standard competition
+        // ranking gives every tied associate the same number, so a metric where
+        // fifteen people all hit 100% hands all fifteen rank 1. Telling each of
+        // them they are "#1 in Center" overstates it; "one of fifteen at 100%"
+        // is both true and a nicer thing to read.
+        var rankCountsByMetric = {};
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
-            var count = 0;
+            var counts = {};
             data.rankings.forEach(function(r) {
-                if (r.metricRanks?.[metricKey] === 1) count++;
+                var rank = r.metricRanks?.[metricKey];
+                if (!rank) return;
+                counts[rank] = (counts[rank] || 0) + 1;
             });
-            rank1CountsByMetric[metricKey] = count;
+            rankCountsByMetric[metricKey] = counts;
+            rank1CountsByMetric[metricKey] = counts[1] || 0;
         });
 
         // Ranks are still worked out across the whole center — that's what makes
@@ -269,6 +278,7 @@
                     label: meta.label,
                     icon: meta.icon,
                     rank: metricRank,
+                    tiedCount: rankCountsByMetric[metricKey]?.[metricRank] || 1,
                     soloRank1: metricRank === 1 && rank1CountsByMetric[metricKey] === 1,
                     tier: tier.value,
                     tierLabel: tier.label,
@@ -435,7 +445,7 @@
                 name: person.name,
                 firstName: person.firstName,
                 achievements: person.achievements.map(function(a) {
-                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, soloRank1: !!a.soloRank1, tier: a.tier, totalEmployees: a.totalEmployees, value: a.value };
+                    return { type: a.type, key: a.key, label: a.label, rank: a.rank, tiedCount: a.tiedCount || 1, soloRank1: !!a.soloRank1, tier: a.tier, totalEmployees: a.totalEmployees, value: a.value };
                 })
             };
         });
@@ -619,6 +629,30 @@
         return String(value);
     }
 
+    /**
+     * How to word a top spot that several people share.
+     *
+     * Deliberately about the value rather than the placing: "one of 15 at 100%"
+     * says what they did, where "#1 in Center" would tell them where they sit
+     * against their peers. Returns a ready-to-append clause, or '' when the
+     * spot is not actually shared.
+     */
+    function describeTie(achievement, valueText) {
+        var count = (achievement && achievement.tiedCount) || 1;
+        if (count < 2) return '';
+        var value = valueText || (achievement.value !== null && achievement.value !== undefined
+            ? formatMetricValue(achievement.key, achievement.value) : '');
+        return value
+            ? 'one of ' + count + ' associates at ' + value
+            : 'one of ' + count + ' associates at the top';
+    }
+
+    // Wraps a tie note in whatever punctuation the surrounding line wants,
+    // and disappears entirely when there is no tie.
+    function tieClause(note, before, after) {
+        return note ? before + note + after : '';
+    }
+
     function generateShoutOut(person, dateRange) {
         var lines = [];
         lines.push(pick(SHOUTOUT_OPENERS)(person.firstName));
@@ -632,7 +666,7 @@
             } else {
                 // Lead with the fact/value
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!');
+                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!' + tieClause(describeTie(a, valStr.trim()), ' \u2014 ', '.'));
                 } else {
                     lines.push(pick(STANDOUT_LINES)(a.label));
                 }
@@ -657,7 +691,7 @@
                     msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '') + ' \u2014 nobody else matched it!\n';
                 } else {
                     if (valStr) {
-                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!\n';
+                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
                     } else {
                         msg += '   \u2B50 Outstanding ' + a.label + '!\n';
                     }
@@ -731,7 +765,7 @@
                 lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : ''));
             } else {
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!');
+                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!' + tieClause(describeTie(a, valStr), ' You are ', ', great company to be in.'));
                 } else {
                     lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!');
                 }
@@ -1276,6 +1310,8 @@
         renderCelebrations: renderCelebrations,
         renderHistoryView: renderHistoryView,
         detectCelebrations: detectCelebrations,
+        describeTie: describeTie,
+        tieClause: tieClause,
         explainNoCelebration: explainNoCelebration,
         meetsCelebrationTarget: meetsCelebrationTarget,
         celebrationYear: celebrationYear,

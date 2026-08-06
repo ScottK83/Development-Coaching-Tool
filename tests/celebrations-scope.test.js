@@ -108,6 +108,60 @@ suite('celebrations: a failing number is dropped, and explained', (t) => {
     t.check('and does not call it a bar miss', text.indexOf('off the top') === -1);
 });
 
+suite('celebrations: a shared top spot says how many share it', (t) => {
+    const celebrations = load(t, null);
+
+    // Fifteen people at 100% all get rank 1 under standard competition
+    // ranking. Telling each of them they are "#1 in Center" overstates it.
+    t.equal('a shared top spot names the group', celebrations.describeTie({ tiedCount: 15, key: 'positiveWord', value: 100 }, '100%'),
+        'one of 15 associates at 100%');
+    t.equal('a genuinely solo spot says nothing', celebrations.describeTie({ tiedCount: 1, key: 'positiveWord', value: 100 }, '100%'), '');
+    t.equal('a missing count is treated as solo', celebrations.describeTie({ key: 'positiveWord' }, '100%'), '');
+    t.check('with no value it still counts the group', celebrations.describeTie({ tiedCount: 4 }, '').indexOf('4 associates at the top') > -1);
+
+    // The clause has to disappear cleanly, punctuation and all, when there is
+    // no tie — otherwise every solo win trails a stray dash.
+    t.equal('no tie leaves no punctuation behind', celebrations.tieClause('', ' — ', '.'), '');
+    t.equal('a tie is wrapped for its sentence', celebrations.tieClause('one of 15 associates at 100%', ' (', ')'), ' (one of 15 associates at 100%)');
+});
+
+suite('celebrations: tie counts come off the real rankings', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // Three people tied at 100% on positive word, one alone at the top of
+    // managing emotions.
+    const data = () => ({
+        periodKey: '2026-07-27|2026-08-02',
+        totalEmployees: 126,
+        teamMembers: new Set(['Alyssa Dimes', 'Oceane Ingram', 'James Garcia']),
+        rankings: [
+            { name: 'Alyssa Dimes', rank: 1, metricRanks: { positiveWord: 1 }, extraValues: { positiveWord: 100 } },
+            { name: 'Oceane Ingram', rank: 1, metricRanks: { positiveWord: 1 }, extraValues: { positiveWord: 100 } },
+            { name: 'Someone Else', rank: 1, metricRanks: { positiveWord: 1 }, extraValues: { positiveWord: 100 } },
+            { name: 'James Garcia', rank: 1, metricRanks: { managingEmotions: 1 }, extraValues: { managingEmotions: 100 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-07-27|2026-08-02');
+    const alyssa = result.celebrations.find(c => c.name === 'Alyssa Dimes');
+    const james = result.celebrations.find(c => c.name === 'James Garcia');
+
+    t.equal('everyone tied at the top is counted', alyssa.achievements[0].tiedCount, 3);
+    t.check('and a shared spot is not called solo', alyssa.achievements[0].soloRank1 === false);
+
+    t.equal('a genuinely solo top spot counts one', james.achievements[0].tiedCount, 1);
+    t.check('and is still marked solo', james.achievements[0].soloRank1 === true);
+
+    // The public post is where this was overstating things.
+    const post = celebrations.generateAllShoutOuts(result.celebrations, '');
+    t.check('the post names the tie', post.indexOf('one of 3 associates at') > -1);
+    t.check('and still calls the solo win out as unmatched', post.indexOf('nobody else matched it') > -1);
+});
+
 suite('celebrations: says why someone came up empty', (t) => {
     const celebrations = load(t, null);
     const tiers = [1, 5, 10];
