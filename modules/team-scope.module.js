@@ -209,11 +209,33 @@
         return String(employeeName || '').trim() === member;
     }
 
+    /**
+     * Where the roster came from, so a surprising headcount explains itself.
+     *
+     * The supervisor roster is the real answer; the saved tick-list is only a
+     * fallback for when it cannot be resolved. Those two can produce different
+     * numbers, and a silently smaller team with no reason given is exactly the
+     * confusion this whole consolidation was meant to end.
+     */
+    function rosterSource() {
+        const label = getMyLabel();
+        if (label && membersUnderMe().length) {
+            return { source: 'roster', label, note: `from ${label}'s roster` };
+        }
+        return {
+            source: 'saved-list',
+            label: label || null,
+            note: label
+                ? `from your saved list — no one is assigned to ${label} yet`
+                : 'from your saved list — no supervisor roster matched'
+        };
+    }
+
     function describeScope() {
         const member = getActiveMember();
-        if (member) return { label: member, memberCount: 1, isAll: false };
+        if (member) return { label: member, memberCount: 1, isAll: false, source: rosterSource() };
         const roster = getMyTeamRoster();
-        return { label: 'All of my team', memberCount: roster.length, isAll: true };
+        return { label: 'All of my team', memberCount: roster.length, isAll: true, source: rosterSource() };
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
@@ -225,6 +247,7 @@
         getMyLabel,
         setMyLabel,
         membersUnderMe,
+        rosterSource,
         legacyTeamNames,
         buildRoster,
         resolveActiveMember,

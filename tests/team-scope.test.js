@@ -118,3 +118,23 @@ suite('team scope: my label is remembered, and the roster follows it', (t) => {
     scope.setMyLabel(null);
     t.check('clearing it goes back to inference', scope.getMyLabel() === null);
 });
+
+suite('team scope: a surprising headcount explains itself', (t) => {
+    const scope = load(t);
+
+    // With no supervisor roster resolved, the team falls back to the saved
+    // list. That is a legitimate answer but a different one, and a silently
+    // smaller team with no reason given is the confusion this was meant to end.
+    const fallback = scope.rosterSource();
+    t.equal('it admits when it is on the fallback', fallback.source, 'saved-list');
+    t.check('and says why in words', fallback.note.indexOf('saved list') > -1);
+
+    // Naming a label with nobody under it is a different failure from having
+    // no label at all, and points at a different fix.
+    scope.setMyLabel('Scott');
+    const named = scope.rosterSource();
+    t.equal('still the fallback with an empty roster', named.source, 'saved-list');
+    t.check('but it names who it looked for', named.note.indexOf('Scott') > -1);
+
+    t.check('the scope description carries it', Boolean(scope.describeScope().source));
+});

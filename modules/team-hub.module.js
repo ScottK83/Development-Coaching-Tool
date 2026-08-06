@@ -99,7 +99,9 @@
             `<label for="teamScopeSelect" style="font-weight:700; color:#4527a0; font-size:0.92em;">Who</label>` +
             `<select id="teamScopeSelect" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; min-width:240px; background:var(--bg-surface-raised); color:var(--text-primary);">${options}</select>` +
             chip +
-            `<span style="margin-left:auto; font-size:0.82em; color:var(--text-tertiary);">${note}</span>` +
+            `<span style="margin-left:auto; font-size:0.82em; color:var(--text-tertiary);">${note}` +
+                (summary.source ? ` &middot; ${escapeHtml(summary.source.note)}` : '') +
+            `</span>` +
         `</div>`;
 
         const select = container.querySelector('#teamScopeSelect');
