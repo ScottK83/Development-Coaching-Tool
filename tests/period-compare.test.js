@@ -202,6 +202,36 @@ suite('period compare: rank movement only counts people in both months', (t) => 
         result.movements.every((m) => Number.isFinite(m.curRank) && Number.isFinite(m.prevRank)));
 });
 
+/* ── Upload vs weekly rebuild ── */
+
+suite('period compare: an uploaded month wins on roster drift, loses on coverage', (t) => {
+    const many = (n, prefix) => Array.from({ length: n }, (_, i) => emp(`${prefix}${i}`));
+    const monthUpload = (start, end, employees) => ({
+        [`${start}|${end}`]: { employees, metadata: { startDate: start, endDate: end, periodType: 'month' } }
+    });
+
+    // June: upload covers 24 where the weeks cover 25. People joined and left
+    // mid-month; the published report is still the month.
+    // July: upload covers 4 where the weeks cover 25 — one team filed as a month.
+    const weekly = Object.assign({},
+        week('2026-06-01', '2026-06-07', many(25, 'P')),
+        week('2026-06-08', '2026-06-14', many(25, 'P')),
+        monthUpload('2026-06-01', '2026-06-30', many(24, 'P')),
+        week('2026-07-06', '2026-07-12', many(25, 'P')),
+        week('2026-07-13', '2026-07-19', many(25, 'P')),
+        monthUpload('2026-07-01', '2026-07-31', many(4, 'P'))
+    );
+
+    const pc = loadPure(t, weekly);
+    const b = pc.getMonthBuckets(2026);
+
+    t.check('a slightly smaller upload still owns its month', b.fromUpload['2026-06'] === true);
+    t.check('a fraction-of-the-centre upload does not', !b.fromUpload['2026-07']);
+    t.check('and that month falls back to its weekly uploads', b.monthsMap['2026-07'].length === 2);
+    t.check('so the rebuilt month carries everyone, not just the uploaded slice',
+        pc.buildMonthAggregate('2026-07', 2026).employees.length === 25);
+});
+
 /* ── Partial uploads ── */
 
 suite('period compare: a one-team upload filed as a month cannot anchor a comparison', (t) => {

@@ -127,13 +127,39 @@
             if (mo) (monthsMap[mo] = monthsMap[mo] || []).push(k);
         });
 
+        // Head count for a set of period keys, by distinct name.
+        function _headCount(keys) {
+            var names = {};
+            (keys || []).forEach(function (k) {
+                var e = _entry(k);
+                ((e && e.employees) || []).forEach(function (emp) {
+                    if (emp && emp.name) names[emp.name] = 1;
+                });
+            });
+            return Object.keys(names).length;
+        }
+
         Object.keys(wData).forEach(function (k) {
             if (_periodType(k) !== 'month') return;
             if (_yearOf(k) !== yr) return;
             if (_spanDays(k) < MIN_WEEKS_FOR_MONTH * 7) return;
             var mo = String(_endDate(k)).slice(0, 7);
+
             // Two uploads covering one month: the later one wins.
             if (fromUpload[mo] && String(_endDate(monthsMap[mo][0])).localeCompare(String(_endDate(k))) >= 0) return;
+
+            // An uploaded month is authoritative for its month — the report is what
+            // gets quoted back to people — so it wins even when its head count sits
+            // a little under the weekly rebuild. People join and leave mid-month,
+            // and a 122-person report against 127 distinct names across five weeks
+            // is roster drift, not an incomplete file.
+            //
+            // It only loses when it covers a fraction of the centre: one team's
+            // report filed as "July" would otherwise discard four complete weekly
+            // uploads and leave the month looking like 18 people.
+            var weeklyKeys = fromUpload[mo] ? [] : (monthsMap[mo] || []);
+            if (weeklyKeys.length && _headCount([k]) < _headCount(weeklyKeys) * PARTIAL_MONTH_FRACTION) return;
+
             monthsMap[mo] = [k];
             fromUpload[mo] = true;
         });
