@@ -160,9 +160,13 @@
                 agg.totalCalls += Number.isInteger(tc) ? tc : 0;
                 agg.surveyTotal += Number.isInteger(st) ? st : 0;
 
-                // Reliability: cumulative hours — take the highest (most complete) value
+                // Reliability: hours missed in each period, so they add up. The
+                // comments above always said summed; the code took the highest
+                // value instead, which kept a person's single worst week and threw
+                // away every other absence. This path has no YTD anchor, so every
+                // period here is a per-period figure and all of them count.
                 var rel = parseFloat(emp.reliability);
-                if (Number.isFinite(rel) && rel > agg.reliability) agg.reliability = rel;
+                if (Number.isFinite(rel)) agg.reliability += rel;
 
                 // Rate metrics: accumulate weighted sums
                 RATE_METRICS.forEach(function (mk) {

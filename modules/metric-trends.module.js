@@ -3374,9 +3374,17 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     if (anchor && !allPeriods.length) return null;
 
     // Step 3: If no anchor, pick best source type (original behavior)
+    // One source type only, whether or not there is an anchor.
+    //
+    // Calls, surveys, transfers and now reliability all ACCUMULATE here, so a month
+    // upload sitting alongside the weeks it already covers gets counted twice. That
+    // was true before for volume, and reliability becoming additive makes it worse —
+    // double-counted hours push people over an 18-hour budget they never breached.
+    // Restricting to a single granularity was previously done only when there was no
+    // anchor; there is no reason the anchored path should be looser.
     let extensionPeriods = allPeriods;
     let sourceType = 'mixed';
-    if (!anchor && allPeriods.length) {
+    if (allPeriods.length) {
         const sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom'];
         sourceType = sourceTypePriority.find(type => allPeriods.some(item => item.periodType === type)) || allPeriods[0]?.periodType;
         extensionPeriods = allPeriods.filter(item => item.periodType === sourceType);
@@ -3385,8 +3393,12 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     // Step 4: Build aggregation
     const aggregatedEmployees = {};
 
-    // Helper to add an employee record into the aggregate
-    function addEmployeeToAggregate(emp) {
+    // Helper to add an employee record into the aggregate.
+    //
+    // isAnchor marks the seed pass over a real YTD upload. That upload already
+    // holds a running total, so reliability is SET from it; every later period
+    // carries hours missed in that period alone and is ADDED on top.
+    function addEmployeeToAggregate(emp, isAnchor) {
         if (!emp?.name) return;
 
         if (!aggregatedEmployees[emp.name]) {
@@ -3410,10 +3422,22 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
         agg.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
         agg.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
 
-        // Reliability is cumulative hours, NOT additive across periods.
-        // Always take the highest value seen (the most complete YTD number).
+        // Reliability is hours missed, and a weekly or monthly upload carries the
+        // hours missed IN THAT PERIOD — a typical sequence is 0, 0, 0, 8.5, 0, one
+        // full day (8h + half-hour lunch) among zeroes. This used to take the
+        // highest value seen, on the belief that the column was a running total.
+        // It is not, for anything but a YTD upload: maxing kept a person's single
+        // worst week and silently discarded every other absence, which understated
+        // the year against an 18-hour budget and handed people a pass.
+        //
+        // A YTD upload IS a running total, so it seeds the value rather than adding
+        // to it. Everything after it accumulates.
         var rel = Number.isFinite(parseFloat(emp.reliability)) ? parseFloat(emp.reliability) : 0;
-        if (rel > agg.reliability) agg.reliability = rel;
+        if (isAnchor) {
+            if (rel > agg.reliability) agg.reliability = rel;
+        } else {
+            agg.reliability += rel;
+        }
 
         metricKeysToAverage.forEach(metricKey => {
             const metricValue = parseFloat(emp[metricKey]);
@@ -3432,14 +3456,16 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
         });
     }
 
-    // Seed with anchor data (the real YTD — this is the truth)
+    // Seed with anchor data (the real YTD — this is the truth).
+    // Called with an explicit arg: forEach passes the index as the second
+    // argument, which would mark every employee after the first as an anchor.
     if (anchor) {
-        (anchor.entry?.employees || []).forEach(addEmployeeToAggregate);
+        (anchor.entry?.employees || []).forEach(emp => addEmployeeToAggregate(emp, true));
     }
 
     // Layer on extension periods
     extensionPeriods.forEach(({ period }) => {
-        (period?.employees || []).forEach(addEmployeeToAggregate);
+        (period?.employees || []).forEach(emp => addEmployeeToAggregate(emp, false));
     });
 
     // Step 5: Calculate weighted averages
